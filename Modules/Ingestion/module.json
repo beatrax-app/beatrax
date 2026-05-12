@@ -1,0 +1,11 @@
+{
+    "name": "Ingestion",
+    "alias": "ingestion",
+    "description": "Source adapters (CSV / CAMT / MT940 / PayPal). Parses external statements to SourceTransactionDto.",
+    "keywords": ["ingestion", "adapters", "csv"],
+    "priority": 2,
+    "providers": [
+        "Modules\\Ingestion\\Providers\\IngestionServiceProvider"
+    ],
+    "files": []
+}

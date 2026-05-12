@@ -1,0 +1,11 @@
+{
+    "name": "Core",
+    "alias": "core",
+    "description": "User, authentication, install command, period configuration, shared kernel utilities.",
+    "keywords": ["core", "auth", "shared-kernel"],
+    "priority": 0,
+    "providers": [
+        "Modules\\Core\\Providers\\CoreServiceProvider"
+    ],
+    "files": []
+}
