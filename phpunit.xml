@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+            <directory>Modules/Core/tests/Unit</directory>
+            <directory>Modules/Ledger/tests/Unit</directory>
+            <directory>Modules/Ingestion/tests/Unit</directory>
+            <directory>Modules/Import/tests/Unit</directory>
+            <directory>Modules/Categorization/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+            <directory>Modules/Core/tests/Feature</directory>
+            <directory>Modules/Ledger/tests/Feature</directory>
+            <directory>Modules/Ingestion/tests/Feature</directory>
+            <directory>Modules/Import/tests/Feature</directory>
+            <directory>Modules/Categorization/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Contracts">
+            <directory>tests/Contracts</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:vQc4qXIjcS1Wt2kPQzGpL3yvqW6CrLqzqkEYqFqW7DA="/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="sqlite_testing"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+    </php>
+</phpunit>
