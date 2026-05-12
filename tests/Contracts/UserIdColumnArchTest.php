@@ -2,12 +2,10 @@
 
 declare(strict_types=1);
 
-use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Illuminate\Database\DatabaseManager;
 
 it('every domain table has a nullable user_id column (FND-03)', function (): void {
-    $this->app->make(ConsoleKernel::class)->call('migrate:fresh');
-
+    // RefreshDatabase has already migrated the test schema; introspect it directly.
     $connection = $this->app->make(DatabaseManager::class)->connection();
     $domainTables = [
         'accounts',
