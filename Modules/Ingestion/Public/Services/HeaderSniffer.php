@@ -13,12 +13,19 @@ use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
  * adapter starts parsing. Inspects the first 8 KB of bytes, the file
  * extension, and (for ASN CSV) the header row column count and signature.
  *
+ * A leading UTF-8 BOM is stripped before parsing so files exported through
+ * tools that prepend one (Excel, some browser downloads) sniff cleanly
+ * rather than failing the header-signature compare with the BOM bytes
+ * silently glued to the first column name.
+ *
  * The exception messages are user-facing — the upload wizard renders them
- * verbatim per UI-SPEC §Error states.
+ * verbatim.
  */
 final class HeaderSniffer
 {
     private const HEAD_BYTES = 8192;
+
+    private const UTF8_BOM = "\xEF\xBB\xBF";
 
     public function sniff(string $localPath, string $declaredFormat): SniffResult
     {
@@ -35,6 +42,10 @@ final class HeaderSniffer
             $head = (string) fread($handle, self::HEAD_BYTES);
         } finally {
             fclose($handle);
+        }
+
+        if (str_starts_with($head, self::UTF8_BOM)) {
+            $head = substr($head, strlen(self::UTF8_BOM));
         }
 
         return match ($declaredFormat) {
