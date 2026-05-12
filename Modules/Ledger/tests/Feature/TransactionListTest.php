@@ -1,0 +1,166 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Modules\Core\Models\User;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Services\TransactionListQuery;
+
+beforeEach(function (): void {
+    $this->seedFixtureUserAndAccount();
+    $this->actingAs($this->fixtureUser);
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-05-15 12:00:00'));
+
+    /** @var Account $account */
+    $account = Account::query()->where('iban', 'NL00ASNB0123456789')->firstOrFail();
+    $this->account = $account;
+    $this->run = $this->makeImportRun($this->fixtureUser);
+    $this->listQuery = $this->app->make(TransactionListQuery::class);
+});
+
+afterEach(function (): void {
+    CarbonImmutable::setTestNow();
+});
+
+it('defaults to the recent window (90 days) and excludes older rows (UI-04)', function (): void {
+    // In-window: 30 days ago
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -1299,
+        'posted_at' => '2026-04-15',
+        'booked_at' => '2026-04-15 12:00:00',
+    ]);
+    // In-window: 80 days ago
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -2000,
+        'posted_at' => '2026-02-25',
+        'booked_at' => '2026-02-25 12:00:00',
+    ]);
+    // Out-of-window: 100 days ago
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -9999,
+        'posted_at' => '2026-02-05',
+        'booked_at' => '2026-02-05 12:00:00',
+    ]);
+
+    $page = $this->listQuery->recent($this->fixtureUser, daysBack: 90);
+
+    expect($page->rows)->toHaveCount(2);
+    expect($page->hasMore)->toBeFalse();
+});
+
+it('paginates with cursors when there are more rows than the page limit', function (): void {
+    // Seed 15 rows in the current window
+    for ($i = 0; $i < 15; $i++) {
+        $day = sprintf('%02d', $i + 1);
+        $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+            'amount_minor' => -1000 - $i,
+            'posted_at' => "2026-05-{$day}",
+            'booked_at' => "2026-05-{$day} 12:00:00",
+        ]);
+    }
+
+    $page1 = $this->listQuery->recent($this->fixtureUser, daysBack: 90, limit: 10);
+
+    expect($page1->rows)->toHaveCount(10);
+    expect($page1->hasMore)->toBeTrue();
+    expect($page1->nextCursorId)->not->toBeNull();
+
+    $page2 = $this->listQuery->recent($this->fixtureUser, daysBack: 90, cursorId: $page1->nextCursorId, limit: 10);
+
+    expect($page2->rows)->toHaveCount(5);
+    expect($page2->hasMore)->toBeFalse();
+    expect($page2->nextCursorId)->toBeNull();
+});
+
+it('fullHistory returns every row regardless of date', function (): void {
+    // In-window
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -1299,
+        'posted_at' => '2026-04-15',
+        'booked_at' => '2026-04-15 12:00:00',
+    ]);
+    // Out-of-window (1 year ago)
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -2500,
+        'posted_at' => '2025-05-15',
+        'booked_at' => '2025-05-15 12:00:00',
+    ]);
+
+    $page = $this->listQuery->fullHistory($this->fixtureUser);
+
+    expect($page->rows)->toHaveCount(2);
+});
+
+it('scopes the list to the requested user only', function (): void {
+    /** @var User $other */
+    $other = User::create([
+        'email' => 'other@diederik.test',
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+    ]);
+    $otherAccount = Account::create([
+        'user_id' => $other->id,
+        'name' => 'Other',
+        'slug' => 'other',
+        'kind' => 'asn',
+        'iban' => 'NL99ASNB9999999999',
+        'default_currency' => 'EUR',
+    ]);
+    $otherRun = $this->makeImportRun($other, sha: '1111111111111111111111111111111111111111111111111111111111111111');
+
+    $this->makeTransaction($other, $otherAccount, $otherRun, [
+        'amount_minor' => -50000,
+        'posted_at' => '2026-05-08',
+        'booked_at' => '2026-05-08 12:00:00',
+    ]);
+
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -1299,
+        'posted_at' => '2026-05-08',
+        'booked_at' => '2026-05-08 12:00:00',
+    ]);
+
+    $page = $this->listQuery->recent($this->fixtureUser, daysBack: 90);
+
+    expect($page->rows)->toHaveCount(1);
+    expect($page->rows[0]->amount->toMinor())->toBe(-1299);
+});
+
+it('renders the /transactions page with rows in newest-first order', function (): void {
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -1299,
+        'posted_at' => '2026-05-08',
+        'booked_at' => '2026-05-08 12:00:00',
+        'counterparty_name' => 'Cafe Local',
+        'counterparty_normalized' => 'cafe local',
+    ]);
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -2000,
+        'posted_at' => '2026-05-10',
+        'booked_at' => '2026-05-10 12:00:00',
+        'counterparty_name' => 'AH Amsterdam',
+        'counterparty_normalized' => 'ah amsterdam',
+    ]);
+
+    $response = $this->get('/transactions');
+
+    $response->assertOk();
+    $response->assertSee('AH Amsterdam');
+    $response->assertSee('Cafe Local');
+    $response->assertSeeInOrder(['AH Amsterdam', 'Cafe Local']);
+});
+
+it('renders the empty-state copy when no transactions match the window', function (): void {
+    // Older than 90 days
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -1299,
+        'posted_at' => '2025-01-01',
+        'booked_at' => '2025-01-01 12:00:00',
+    ]);
+
+    $response = $this->get('/transactions');
+
+    $response->assertOk();
+    $response->assertSee('Nothing here for this period.');
+});
