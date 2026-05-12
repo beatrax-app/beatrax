@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Modules\Core\Models\User;
 
 beforeEach(function (): void {
@@ -28,7 +29,7 @@ it('authenticates valid credentials and redirects to /', function (): void {
     ]);
 
     $response->assertRedirect('/');
-    expect(auth()->check())->toBeTrue();
+    expect($this->app->make(AuthFactory::class)->guard()->check())->toBeTrue();
 });
 
 it('rejects wrong password with the canonical error message', function (): void {
