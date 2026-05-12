@@ -67,13 +67,20 @@ final class PreviewCache
     }
 
     /**
-     * @return list<CanonicalTransaction>
+     * Returns the cached canonical batch for an import run, or `null` when
+     * the cache entry is absent or expired. Callers must distinguish
+     * "missing" (null) from "empty list" — the latter is a legitimate
+     * preview whose every row was a duplicate; the former means the
+     * confirm step has no batch to replay and must surface a re-upload
+     * prompt rather than confirming nothing.
+     *
+     * @return list<CanonicalTransaction>|null
      */
-    public function getCanonical(int $importRunId): array
+    public function getCanonical(int $importRunId): ?array
     {
         $raw = $this->cache->get($this->canonicalKey($importRunId));
         if (! is_string($raw)) {
-            return [];
+            return null;
         }
 
         /** @var array<int, array<string, mixed>> $list */

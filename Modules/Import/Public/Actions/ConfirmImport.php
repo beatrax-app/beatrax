@@ -9,6 +9,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
+use Modules\Import\Public\Exceptions\PreviewExpiredException;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 
@@ -54,6 +55,15 @@ final class ConfirmImport implements ConfirmsImports
 
         $canonical = $this->cache->getCanonical($importRunId);
         $preview = $this->cache->getPreview($importRunId);
+
+        if ($canonical === null) {
+            // Cache miss (TTL expired, cache flushed). Leave the import_run
+            // row on its previous status so the file's SHA-256 idempotency
+            // short-circuit does not lock the user out, and surface a
+            // typed exception so the wizard can render a re-upload prompt
+            // instead of silently confirming nothing.
+            throw new PreviewExpiredException($importRunId);
+        }
 
         $errorCount = 0;
         $previewDuplicateCount = 0;

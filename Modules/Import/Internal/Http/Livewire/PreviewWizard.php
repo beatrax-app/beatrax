@@ -14,6 +14,7 @@ use Modules\Import\Public\Actions\DiscardImport;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Exceptions\PreviewExpiredException;
 use Modules\Ledger\Models\ImportRun;
 
 /**
@@ -30,6 +31,8 @@ final class PreviewWizard extends Component
     public int $importRunId = 0;
 
     public string $accountName = '';
+
+    public bool $previewExpired = false;
 
     public function mount(int $id): void
     {
@@ -67,7 +70,13 @@ final class PreviewWizard extends Component
         CurrentUser $currentUser,
         UrlGenerator $urls,
     ): void {
-        ($confirmer)($this->importRunId, $currentUser->user());
+        try {
+            ($confirmer)($this->importRunId, $currentUser->user());
+        } catch (PreviewExpiredException) {
+            $this->previewExpired = true;
+
+            return;
+        }
 
         $this->redirect(
             $urls->route('imports.results', ['id' => $this->importRunId]),
@@ -91,6 +100,7 @@ final class PreviewWizard extends Component
 
         return $views->make('import::livewire.preview-wizard', [
             'preview' => $preview,
+            'previewExpired' => $this->previewExpired,
         ]);
     }
 }
