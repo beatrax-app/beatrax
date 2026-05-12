@@ -21,8 +21,12 @@ use Modules\Ledger\Public\Services\TransactionListQuery;
  * Wires the Ledger module:
  *
  * - binds the two public action contracts so other modules can inject them
- * - registers FingerprintComposer + PeriodQuery as singletons (cheap, stateless)
- * - registers the three dashboard query services as singletons (stateless)
+ * - registers FingerprintComposer as a singleton (stateless, cheap)
+ * - registers PeriodQuery as a transient binding because it depends on the
+ *   per-request CurrentUser contract; singleton scope would freeze the
+ *   first-request user under a long-lived worker
+ * - registers the three dashboard query services as singletons (stateless,
+ *   user is supplied per call)
  * - loads migrations, routes, and views
  */
 final class LedgerServiceProvider extends ServiceProvider
@@ -32,7 +36,7 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(RecordsTransactions::class, RecordTransactions::class);
         $this->app->bind(UpdatesTransactionCategory::class, UpdateTransactionCategory::class);
         $this->app->singleton(FingerprintComposer::class);
-        $this->app->singleton(PeriodQuery::class);
+        $this->app->bind(PeriodQuery::class);
         $this->app->singleton(ThisPeriodAtAGlanceQuery::class);
         $this->app->singleton(TopCategoriesByPeriodQuery::class);
         $this->app->singleton(TransactionListQuery::class);
