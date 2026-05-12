@@ -1,5 +1,7 @@
 @php
-    $fmt = static fn (int $minor): string => '€' . "\u{00A0}" . number_format($minor / 100, 2, '.', ',');
+    use Modules\Ledger\Public\ValueObjects\Money;
+
+    $fmt = static fn (Money $money): string => $money->format('nl_NL');
 @endphp
 
 <div class="space-y-6">
@@ -47,7 +49,7 @@
                                 )
                             </td>
                             <td class="px-4 py-2 text-right text-slate-900" style="font-variant-numeric: tabular-nums;">
-                                {{ $fmt($row->amount->toMinor()) }}
+                                {{ $fmt($row->amount) }}
                             </td>
                         </tr>
                     @endforeach
@@ -59,7 +61,7 @@
             <div class="flex justify-center">
                 <button
                     type="button"
-                    wire:click="loadMore({{ $page->nextCursorId }})"
+                    wire:click="loadMore({{ $page->nextCursorId }}, @js($page->nextCursorPostedAt))"
                     class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                 >Load more</button>
             </div>
