@@ -44,7 +44,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 01-04-PLAN.md — ASN CSV adapter + real fixture (empirical A1/A2 resolution)
   - [x] 01-05-PLAN.md — Import pipeline + upload wizard UI (IdempotencyContractTest GREEN)
   - [x] 01-06-PLAN.md — Dashboard /  + /transactions list (UI-01 + UI-04)
-  - [ ] 01-07-PLAN.md — Default categories + AssignCategory + /uncategorized triage (CAT-01/03/05)
+  - [x] 01-07-PLAN.md — Default categories + AssignCategory + /uncategorized triage (CAT-01/03/05)
 **UI hint**: yes
 
 ### Phase 2: ASN Statement Coverage (CAMT.053 + MT940)
