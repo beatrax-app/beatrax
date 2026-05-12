@@ -16,10 +16,12 @@ use Modules\Core\Public\Scopes\UserScope;
  * 2. A global scope filtering by the current user (when auth is bound)
  * 3. A `user()` belongs-to relationship
  *
- * `Container::getInstance()` is intentionally used here — it is a static
- * accessor on the container class itself, NOT a Laravel facade, and is the
- * documented contract-free way to resolve services from Eloquent boot hooks
- * (which cannot accept constructor parameters).
+ * `Container::getInstance()->make()` is used inside `bootBelongsToUser`
+ * because Eloquent boot hooks run as static methods and cannot accept
+ * constructor arguments — there is no path to inject the `UserScope`
+ * directly. The static accessor is on the Container class itself rather
+ * than a Laravel facade, but readers should treat it as the single
+ * acceptable container touch-point in the codebase.
  */
 trait BelongsToUser
 {
