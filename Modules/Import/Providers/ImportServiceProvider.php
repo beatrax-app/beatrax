@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Modules\Import\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Livewire\LivewireManager;
+use Modules\Import\Internal\Http\Livewire\ImportResults;
+use Modules\Import\Internal\Http\Livewire\PreviewWizard;
+use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Actions\ConfirmImport;
@@ -38,11 +42,15 @@ final class ImportServiceProvider extends ServiceProvider
         $this->app->singleton(PreviewCache::class);
     }
 
-    public function boot(): void
+    public function boot(LivewireManager $livewire): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'import');
+
+        $livewire->component('import.upload-wizard', UploadWizard::class);
+        $livewire->component('import.preview-wizard', PreviewWizard::class);
+        $livewire->component('import.import-results', ImportResults::class);
     }
 }
