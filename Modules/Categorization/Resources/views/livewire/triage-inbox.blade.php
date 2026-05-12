@@ -1,5 +1,7 @@
 @php
-    $fmt = static fn (int $minor): string => '€' . "\u{00A0}" . number_format($minor / 100, 2, '.', ',');
+    use Modules\Ledger\Public\ValueObjects\Money;
+
+    $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format('nl_NL');
 @endphp
 
 <div class="space-y-6">
@@ -55,7 +57,7 @@
                             >
                                 <td class="px-4 py-2 text-slate-900" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
                                 <td class="px-4 py-2 text-slate-900">{{ $row->counterpartyName ?? '—' }}</td>
-                                <td class="px-4 py-2 text-right text-slate-900" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->amountMinor) }}</td>
+                                <td class="px-4 py-2 text-right text-slate-900" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->amountMinor, $row->currency) }}</td>
                                 <td class="px-4 py-2">
                                     <select
                                         wire:change="selectForRow({{ $row->transactionId }}, $event.target.value ? parseInt($event.target.value, 10) : null)"
