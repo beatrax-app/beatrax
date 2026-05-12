@@ -99,7 +99,7 @@ final class ImportPipeline
                     continue;
                 }
 
-                $isDuplicate = $this->fingerprint->isExistingFingerprint($normalized);
+                $isDuplicate = $this->fingerprint->isExistingFingerprint($normalized, $user);
                 $preview[] = new PreviewRowDto(
                     rowIndex: $source->sourceRowIndex,
                     status: $isDuplicate ? 'duplicate' : 'new',
