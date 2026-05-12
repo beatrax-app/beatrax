@@ -1,0 +1,11 @@
+{
+    "name": "Import",
+    "alias": "import",
+    "description": "Import pipeline orchestrator — Parse → Normalize → Fingerprint stages and the preview-then-confirm wizard.",
+    "keywords": ["import", "pipeline", "wizard"],
+    "priority": 3,
+    "providers": [
+        "Modules\\Import\\Providers\\ImportServiceProvider"
+    ],
+    "files": []
+}

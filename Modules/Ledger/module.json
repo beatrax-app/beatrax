@@ -1,0 +1,11 @@
+{
+    "name": "Ledger",
+    "alias": "ledger",
+    "description": "Canonical Account / Transaction / Currency models, period query, Money value object — the only writer to transactions.",
+    "keywords": ["ledger", "transactions", "money", "period"],
+    "priority": 1,
+    "providers": [
+        "Modules\\Ledger\\Providers\\LedgerServiceProvider"
+    ],
+    "files": []
+}
