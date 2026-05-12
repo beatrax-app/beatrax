@@ -82,7 +82,7 @@ final class ImportPipeline
                 $accountId = $resolution->accountId;
 
                 try {
-                    $normalized = $this->normalize->run($source, $accountId, $user, $importRunId);
+                    $normalized = $this->normalize->run($source, $accountId, $user, $importRunId, $sourceFormat);
                 } catch (Throwable $e) {
                     $preview[] = new PreviewRowDto(
                         rowIndex: $source->sourceRowIndex,

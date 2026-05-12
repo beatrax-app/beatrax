@@ -15,15 +15,19 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
  * 1. Normalises the counterparty name through FingerprintComposer (lowercase,
  *    diacritic strip, punctuation collapse, 80-char truncate).
  * 2. Substitutes the literal `_no_counterparty` sentinel when the
- *    counterparty name is null / empty / punctuation-only (Pitfall 5 — the
- *    composite UNIQUE on transactions needs NOT NULL to catch duplicates
- *    that lack a usable name).
- * 3. Maps the ASN amount sign to Transaction.type via the Phase-1 stub
- *    `positive → income`, `negative → expense`, `zero → adjustment` (A13).
- *    Phase 4 introduces transfer detection which replaces this mapping.
- * 4. Mirrors the native amount + currency into the settled pair (ASN settles
- *    in EUR, so native and settled are identical until ICS / Google Play
- *    arrives in Phase 3).
+ *    counterparty name is null / empty / punctuation-only — the composite
+ *    UNIQUE on transactions requires NOT NULL to catch duplicates that
+ *    lack a usable name.
+ * 3. Maps the amount sign to Transaction.type: positive → income,
+ *    negative → expense, zero → adjustment. Future transfer-pair detection
+ *    overrides this mapping for matched cross-account flows.
+ * 4. Mirrors the native amount + currency into the settled pair. Multi-
+ *    currency adapters override these fields with their own settled
+ *    amount + FX rate.
+ *
+ * The `sourceFormat` is supplied by the orchestrating pipeline so each
+ * adapter's rows persist with its own format string for audit, rather than
+ * inheriting a single hard-coded literal.
  */
 final class NormalizeStage
 {
@@ -31,7 +35,7 @@ final class NormalizeStage
 
     public function __construct(private readonly FingerprintComposer $fingerprints) {}
 
-    public function run(SourceTransactionDto $source, int $accountId, User $user, int $importRunId): CanonicalTransaction
+    public function run(SourceTransactionDto $source, int $accountId, User $user, int $importRunId, string $sourceFormat): CanonicalTransaction
     {
         $name = $source->counterpartyName;
         if ($name === null || trim($name) === '') {
@@ -67,7 +71,7 @@ final class NormalizeStage
             normalizationVersion: $this->fingerprints->version(),
             description: $source->description,
             categoryId: null,
-            sourceFormat: 'asn-csv',
+            sourceFormat: $sourceFormat,
             importRunId: $importRunId,
             sourceRowIndex: $source->sourceRowIndex,
             sourceRef: $source->sourceRef,
