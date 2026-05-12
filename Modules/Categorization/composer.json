@@ -1,0 +1,16 @@
+{
+    "name": "diederik/categorization",
+    "description": "Categorization module — category tree and triage inbox.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Categorization\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Categorization\\Tests\\": "tests/"
+        }
+    }
+}

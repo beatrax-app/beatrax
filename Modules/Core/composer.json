@@ -1,0 +1,16 @@
+{
+    "name": "diederik/core",
+    "description": "Core module — user, authentication, install command, period configuration.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Core\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Core\\Tests\\": "tests/"
+        }
+    }
+}
