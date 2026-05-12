@@ -487,7 +487,7 @@ Phase 1 ships a `phpstan.neon` (or `larastan.neon`) with:
 
 ### Plan-phase deliverable: empirical sample task
 
-The FIRST task in the ingestion wave MUST be: **"Drop a real ASN CSV export from the user at `.planning/phases/01-foundation-asn-csv-vertical-slice/samples/asn-real-anon.csv` (anonymized) and pin column layout in `Modules\Ingestion\Internal\Adapters\Asn\AsnCsvColumnMap`."** Until that fixture exists, the AsnCsvAdapter is implemented against the [ASSUMED] layout above with a `TODO: confirm against real export` comment block, and a Pest test loads the fixture.
+The FIRST task in the ingestion wave MUST be: **"Drop a real anonymized ASN CSV export from the user at `tests/fixtures/asn-sample-1.csv`, alongside `tests/fixtures/asn-sample-1.md` documenting the empirical column layout, and pin the column indices in `Modules\Ingestion\Internal\Adapters\Asn\AsnCsvColumnMap`."** Until that fixture exists, the AsnCsvAdapter is implemented against the [ASSUMED] layout above with a `TODO: confirm against real export` comment block, and a Pest test loads the fixture.
 
 ### league/csv usage pattern
 
@@ -1846,7 +1846,7 @@ final class CurrentUserService implements Contract
 1. **Exact 2026 ASN CSV column layout**
    - What we know: Historical layout from open-source converters; "CSV met IBAN" naming convention.
    - What's unclear: Whether ASN has changed format since 2020 (community converters all date pre-2021).
-   - Recommendation: First task in the ingestion wave = drop a real export at `samples/asn-real-anon.csv`, pin in `AsnCsvColumnMap`, snapshot-test the parsed output.
+   - Recommendation: First task in the ingestion wave = drop a real export at `tests/fixtures/asn-sample-1.csv`, pin in `AsnCsvColumnMap`, snapshot-test the parsed output.
    - **RESOLVED:** Real anonymized ASN export pinned by Plan 04 T-01-04-01 BLOCKING `checkpoint:human-action`. The `AsnCsvAdapter` (Plan 04 T-01-04-03) is written test-first against `tests/fixtures/asn-sample-1.csv`; `AsnCsvColumnMap` carries an `EMPIRICAL` PHPDoc marker recording confirmation date and any deltas from the [ASSUMED] layout. Includes the Windows-1252 vs UTF-8 sub-question: Plan 04 T-01-04-02's `HeaderSniffer` runs `mb_detect_encoding` and feeds `league/csv\CharsetConverter` (per `AsnCsvHeaderProfile::SOURCE_ENCODING`); column-map detection and encoding are empirical, not assumed.
 
 2. **Are AsnCsvAdapter + RecordTransactions idempotent across PHP serialization re-encoding?**
