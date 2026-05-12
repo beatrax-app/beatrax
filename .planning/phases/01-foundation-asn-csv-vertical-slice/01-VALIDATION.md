@@ -60,9 +60,9 @@ No `--watch` / `--tdd` / `--coverage-html` flags during sampling — watch-mode 
 | CAT-01 | Category tree assignable to transaction | Feature | `pest Modules/Categorization/tests/Feature/AssignCategoryTest.php -x` | ❌ W0 | ⬜ pending |
 | CAT-03 | Override existing categorization | Feature | `pest Modules/Categorization/tests/Feature/AssignCategoryTest.php::test_overrides_existing -x` | ❌ W0 | ⬜ pending |
 | CAT-05 | Triage page lists uncategorized rows | Feature | `pest Modules/Categorization/tests/Feature/TriagePageTest.php -x` | ❌ W0 | ⬜ pending |
-| UI-01 | Dashboard shows current-period totals | Feature | `pest Modules/Ledger/tests/Feature/DashboardTest.php -x` | ❌ W0 | ⬜ pending |
-| UI-04 | Recent-window default = 90 days | Feature | `pest Modules/Ledger/tests/Feature/TransactionListTest.php::test_defaults_to_recent_window -x` | ❌ W0 | ⬜ pending |
-| UI-05 | Aesthetic compliance (calm Linear/Notion) | **manual** — UI-SPEC checker | n/a | n/a | manual |
+| UI-01 | Dashboard shows current-period totals | Feature | `pest Modules/Ledger/tests/Feature/DashboardTest.php -x` | ✅ Plan 06 | ✅ green (Plan 06) |
+| UI-04 | Recent-window default = 90 days | Feature | `pest Modules/Ledger/tests/Feature/TransactionListTest.php::test_defaults_to_recent_window -x` | ✅ Plan 06 | ✅ green (Plan 06) |
+| UI-05 | Aesthetic compliance (calm Linear/Notion) | **manual** — UI-SPEC checker | n/a | n/a | manual checker pending (run /gsd-ui-checker after Plan 07) |
 | PLT-01 | Localhost-only middleware in place | Feature | (same as FND-01) `pest tests/Feature/LoopbackOnlyTest.php -x` | ❌ W0 | ⬜ pending |
 | PLT-02 | DB path validation in install command | Feature | `pest Modules/Core/tests/Feature/InstallCommandTest.php::test_refuses_icloud_path -x` | ❌ W0 | ⬜ pending |
 | PLT-05 | `composer.json` lacks `ext-imap` | Arch | `pest tests/Contracts/NoExtImapTest.php -x` | ✅ Plan 01 | ✅ green (Plan 01) |

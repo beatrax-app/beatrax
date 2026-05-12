@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Ledger\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Livewire\LivewireManager;
+use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Ledger\Public\Actions\UpdateTransactionCategory;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
@@ -36,11 +38,13 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->singleton(TransactionListQuery::class);
     }
 
-    public function boot(): void
+    public function boot(LivewireManager $livewire): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'ledger');
+
+        $livewire->component('ledger.transactions-list', TransactionsList::class);
     }
 }

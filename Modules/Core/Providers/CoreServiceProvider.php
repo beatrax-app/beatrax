@@ -9,7 +9,9 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Internal\Console\DoctorCommand;
 use Modules\Core\Internal\Console\InstallCommand;
+use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\LoginForm;
+use Modules\Core\Internal\Http\Livewire\TopNav;
 use Modules\Core\Internal\Providers\FortifyServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
 use Modules\Core\Models\User as CoreUser;
@@ -47,6 +49,8 @@ final class CoreServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'core');
 
         $livewire->component('core.login-form', LoginForm::class);
+        $livewire->component('core.dashboard', Dashboard::class);
+        $livewire->component('core.top-nav', TopNav::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([
