@@ -393,7 +393,7 @@ final class UploadWizard extends Component
 #### Queue jobs — constructor DI for handle()
 
 ```php
-// Phase 1 has no queue jobs (D-15 sync) — pattern documented for Phase 6 readiness
+// Queue jobs are not used in this phase; the pattern is documented here for future reference.
 final class ExampleJob implements ShouldQueue
 {
     public function __construct(
@@ -601,7 +601,7 @@ Schema::create('transactions', function (Blueprint $table) {
     // Category (nullable for triage):
     $table->foreignId('category_id')->nullable()->constrained()->nullOnDelete();   // CAT-01
     // Source provenance (ING-08):
-    $table->string('source_format', 32);                                           // 'asn-csv' in Phase 1
+    $table->string('source_format', 32);                                           // e.g. 'asn-csv'
     $table->foreignId('import_run_id')->constrained();                             // ING-08 link to raw_source
     $table->unsignedInteger('source_row_index');                                   // ING-08
     $table->string('source_ref')->nullable();                                      // bank-provided per-tx ref
@@ -612,7 +612,7 @@ Schema::create('transactions', function (Blueprint $table) {
     $table->string('status', 16)->default('cleared');                              // cleared|pending
     $table->timestamps();
 
-    // INDEXES — Phase 1 dashboard queries:
+    // INDEXES — dashboard queries:
     $table->index(['user_id', 'posted_at']);                                       // primary dashboard scan
     $table->index(['account_id', 'posted_at']);                                    // per-account list
     $table->index(['category_id', 'posted_at']);                                   // top-categories per period
@@ -642,7 +642,7 @@ Schema::create('accounts', function (Blueprint $table) {
     $table->foreignId('user_id')->nullable()->constrained();
     $table->string('name');                                                        // user-supplied during wizard step
     $table->string('slug')->unique();                                              // derived from name; URL-safe
-    $table->string('kind', 16);                                                    // 'asn' in Phase 1
+    $table->string('kind', 16);                                                    // e.g. 'asn'
     $table->string('iban', 34)->unique();                                          // D-14 IBAN-based mapping
     $table->char('default_currency', 3)->default('EUR');
     $table->timestamps();
@@ -758,7 +758,7 @@ arch('every SourceAdapter passes the idempotency contract', function () {
     // Architecture test: every class implementing SourceAdapter is in the list
 })->expect('Modules\Ingestion\Public\Contracts\SourceAdapter')->toBeImplementedBy([
     AsnCsvAdapter::class,
-    // Phase 2+ : AsnCamt053Adapter, AsnMt940Adapter, etc.
+    // Future adapters (e.g. AsnCamt053Adapter, AsnMt940Adapter) are added the same way.
 ]);
 
 it('produces zero new rows when the same file is imported twice', function (
@@ -774,7 +774,7 @@ it('produces zero new rows when the same file is imported twice', function (
     expect($runTwice->duplicates)->toBe($runOnce->inserted);
 })->with([
     [AsnCsvAdapter::class, __DIR__ . '/../fixtures/asn-sample-1.csv'],
-    // Phase 2+ : add fixtures as adapters land
+    // Future adapters append entries here; the test body is format-agnostic.
 ]);
 
 it('produces zero new rows when an overlapping period is imported from a new file', function (
@@ -978,7 +978,7 @@ final class AssignCategory
             categoryId: $categoryId,
             userId: $this->currentUser->id(),
         ));
-        // Phase 7 listener will update MerchantMemory; Phase 1 listener is a no-op
+        // MerchantMemory updates are out of scope for this listener; it is a no-op for now.
     }
 }
 ```
@@ -1859,7 +1859,7 @@ final class CurrentUserService implements Contract
    - What we know: Phase 7 will own learning behaviour.
    - What's unclear: Whether the normalization algorithm version stored on `transactions.fingerprint_version` should also be on `merchant_memories` so the Phase 7 learning logic can detect stale memories.
    - Recommendation: Add `normalization_version` to `merchant_memories` now (one extra column, zero risk).
-   - **RESOLVED:** Plan 03 T-01-03-01 ships `merchant_memories` with the `normalization_version` column included in the migration (`2026_05_12_010006_create_merchant_memories_table.php`). Phase 7's CAT-02 learning can detect stale memories without a follow-up migration. The own-IBAN auto-detection sub-question (how `EloquentAccountResolver` recognises the fixture's own IBAN on first parse) is also resolved: Plan 05 T-01-05-01's `EloquentAccountResolver` looks up Account by IBAN scoped to the current user; the new `seedFixtureUserAndAccount()` helper on `tests/TestCase` (Plan 01 T-01-01-03 — see BLOCKER 2) seeds `User id=1` plus an Account row with `iban = 'NL00ASNB0123456789'` (the documented anonymization-protocol value from Plan 04 T-01-04-01), so the resolver returns Known on first parse and the `IdempotencyContractTest` does not stall on unknown-IBAN prompts.
+   - **RESOLVED:** Plan 03 T-01-03-01 ships `merchant_memories` with the `normalization_version` column included in the migration (`2026_05_12_010006_create_merchant_memories_table.php`). Phase 7's CAT-02 learning can detect stale memories without a follow-up migration. The own-IBAN auto-detection sub-question (how `EloquentAccountResolver` recognises the fixture's own IBAN on first parse) is also resolved: Plan 05 T-01-05-01's `EloquentAccountResolver` looks up Account by IBAN scoped to the current user; the `seedFixtureUserAndAccount()` helper on `tests/TestCase` (Plan 01 T-01-01-03) seeds `User id=1` plus an Account row with `iban = 'NL00ASNB0123456789'` (the documented anonymization-protocol value from Plan 04 T-01-04-01), so the resolver returns Known on first parse and the `IdempotencyContractTest` does not stall on unknown-IBAN prompts.
 
 4. **Default `period_start_day` UX in install command**
    - What we know: D-19 says the install command prompts.
