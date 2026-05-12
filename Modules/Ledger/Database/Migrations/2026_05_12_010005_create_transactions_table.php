@@ -76,6 +76,26 @@ return new class extends Migration
         // fingerprint) composite gives the lookup a covered query while still
         // preventing cross-user fingerprint collisions.
         DB::statement('CREATE UNIQUE INDEX transactions_fingerprint_sha_uq ON transactions(user_id, fingerprint)');
+
+        // SQLite cannot ALTER TABLE ADD CHECK after the fact, so the allowed
+        // transaction-type set is enforced via paired BEFORE INSERT / BEFORE
+        // UPDATE triggers. The trigger fires for every write path — Eloquent
+        // create/save AND raw insertOrIgnore — so a single application-layer
+        // bypass cannot land a bad type. The list must stay in sync with
+        // Modules\Ledger\Models\Transaction::TYPES.
+        $allowedTypes = "'expense','income','transfer_out','transfer_in','fee','refund','adjustment'";
+        DB::statement(sprintf(
+            "CREATE TRIGGER transactions_type_check_insert BEFORE INSERT ON transactions FOR EACH ROW
+             WHEN NEW.type NOT IN (%s)
+             BEGIN SELECT RAISE(ABORT, 'Invalid transactions.type value'); END",
+            $allowedTypes,
+        ));
+        DB::statement(sprintf(
+            "CREATE TRIGGER transactions_type_check_update BEFORE UPDATE OF type ON transactions FOR EACH ROW
+             WHEN NEW.type NOT IN (%s)
+             BEGIN SELECT RAISE(ABORT, 'Invalid transactions.type value'); END",
+            $allowedTypes,
+        ));
     }
 
     public function down(): void
