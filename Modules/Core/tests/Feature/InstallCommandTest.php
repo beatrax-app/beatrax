@@ -45,7 +45,7 @@ it('is idempotent — re-running with the same email is a no-op', function (): v
     expect(User::count())->toBe(1);
 });
 
-it('refuses an iCloud-Drive database path (PLT-02)', function (): void {
+it('refuses an iCloud-Drive database path', function (): void {
     $this->app->make(Repository::class)->set(
         'database.connections.sqlite.database',
         '/Users/test/Library/Mobile Documents/com~apple~CloudDocs/db.sqlite',
@@ -62,7 +62,7 @@ it('refuses an iCloud-Drive database path (PLT-02)', function (): void {
     expect(file_exists('/Users/test/Library/Mobile Documents/com~apple~CloudDocs/db.sqlite'))->toBeFalse();
 });
 
-it('refuses a Dropbox database path (PLT-02)', function (): void {
+it('refuses a Dropbox database path', function (): void {
     $this->app->make(Repository::class)->set(
         'database.connections.sqlite.database',
         '/Users/test/Dropbox/finance/db.sqlite',
@@ -77,7 +77,7 @@ it('refuses a Dropbox database path (PLT-02)', function (): void {
         ->assertFailed();
 });
 
-it('refuses a OneDrive database path (PLT-02)', function (): void {
+it('refuses a OneDrive database path', function (): void {
     $this->app->make(Repository::class)->set(
         'database.connections.sqlite.database',
         '/Users/test/OneDrive/finance/db.sqlite',
