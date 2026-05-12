@@ -46,14 +46,14 @@ final class CanonicalTransaction extends Data
     /**
      * Returns the column-name → value map ready for direct DB insert via
      * `Transaction::query()->insertOrIgnore($attrs)`. Does NOT include the
-     * fingerprint columns — the action adds those after composing them.
+     * fingerprint columns or the created_at/updated_at timestamps — the
+     * recorder action adds those (timestamps via the injected Clock, so
+     * tests can pin the value through `CarbonImmutable::setTestNow`).
      *
      * @return array<string, mixed>
      */
     public function toAttributes(): array
     {
-        $now = CarbonImmutable::now();
-
         return [
             'user_id' => $this->userId,
             'account_id' => $this->accountId,
@@ -77,8 +77,6 @@ final class CanonicalTransaction extends Data
             'source_row_index' => $this->sourceRowIndex,
             'source_ref' => $this->sourceRef,
             'status' => 'cleared',
-            'created_at' => $now->toDateTimeString(),
-            'updated_at' => $now->toDateTimeString(),
         ];
     }
 }
