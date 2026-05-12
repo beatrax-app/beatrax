@@ -20,17 +20,20 @@ use stdClass;
  *
  * Two entry points:
  *
- *  - `recent($user, daysBack=90)` — the UI-04 default for `/transactions`.
- *    Filters to `posted_at >= today - daysBack` so the list shows the
- *    rolling recent window. The Clock dependency means the cutoff is
- *    deterministic under `CarbonImmutable::setTestNow()`.
+ *  - `recent($user, daysBack=90)` — the default for `/transactions`. Filters
+ *    to `posted_at >= today - daysBack` so the list shows the rolling recent
+ *    window. The Clock dependency means the cutoff is deterministic under
+ *    `CarbonImmutable::setTestNow()`.
  *  - `fullHistory($user)` — returns every row regardless of date. The
  *    `/transactions` page toggles to this when the user clicks
  *    "Show full history".
  *
  * Cursor pagination is implemented by selecting `limit + 1` rows and
- * trimming the last one off; `nextCursorId` then carries the smallest
- * id in the trimmed page so the next page applies `WHERE id < $cursor`.
+ * trimming the last one off. The cursor is a `(posted_at, id)` pair — the
+ * next page applies `WHERE (posted_at, id) < (?, ?)` using SQLite's row-value
+ * compare. The pair (rather than `id` alone) is required because rows
+ * inserted in non-chronological order can share a `posted_at` value, and a
+ * single-column id cursor would silently drop them.
  *
  * Uses the `DatabaseManager` query builder directly (rather than the
  * Eloquent Builder) to stay clean under `phpstan-strict-rules`'
@@ -44,7 +47,7 @@ final class TransactionListQuery
         private readonly DatabaseManager $db,
     ) {}
 
-    public function recent(User $user, int $daysBack = 90, ?int $cursorId = null, int $limit = 50): TransactionListPage
+    public function recent(User $user, int $daysBack = 90, ?int $cursorId = null, int $limit = 50, ?string $cursorPostedAt = null): TransactionListPage
     {
         $cutoff = $this->clock->now()->subDays($daysBack);
 
@@ -52,20 +55,16 @@ final class TransactionListQuery
             ->where('transactions.posted_at', '>=', $cutoff->toDateString())
             ->limit($limit + 1);
 
-        if ($cursorId !== null) {
-            $query->where('transactions.id', '<', $cursorId);
-        }
+        $this->applyCursor($query, $cursorPostedAt, $cursorId);
 
         return $this->buildPage($query, $limit);
     }
 
-    public function fullHistory(User $user, ?int $cursorId = null, int $limit = 50): TransactionListPage
+    public function fullHistory(User $user, ?int $cursorId = null, int $limit = 50, ?string $cursorPostedAt = null): TransactionListPage
     {
         $query = $this->baseQuery($user)->limit($limit + 1);
 
-        if ($cursorId !== null) {
-            $query->where('transactions.id', '<', $cursorId);
-        }
+        $this->applyCursor($query, $cursorPostedAt, $cursorId);
 
         return $this->buildPage($query, $limit);
     }
@@ -80,6 +79,7 @@ final class TransactionListQuery
             ->orderByDesc('transactions.id')
             ->select([
                 'transactions.id',
+                'transactions.posted_at',
                 'transactions.booked_at',
                 'transactions.counterparty_name',
                 'transactions.category_id',
@@ -87,6 +87,29 @@ final class TransactionListQuery
                 'transactions.currency',
                 'categories.name as category_name',
             ]);
+    }
+
+    private function applyCursor(Builder $query, ?string $cursorPostedAt, ?int $cursorId): void
+    {
+        if ($cursorId === null) {
+            return;
+        }
+
+        if ($cursorPostedAt === null) {
+            // Legacy single-id cursor: behaves as the old id-only filter so an
+            // upgrade path remains backwards-compatible. Callers should supply
+            // the pair to get correct ordering across posted_at ties.
+            $query->where('transactions.id', '<', $cursorId);
+
+            return;
+        }
+
+        // Row-value tuple compare. SQLite ships this since 3.15; the project
+        // pins to a 3.45+ runtime so the syntax is always available.
+        $query->whereRaw(
+            '(transactions.posted_at, transactions.id) < (?, ?)',
+            [$cursorPostedAt, $cursorId],
+        );
     }
 
     private function buildPage(Builder $query, int $limit): TransactionListPage
@@ -98,15 +121,18 @@ final class TransactionListQuery
 
         $dtos = [];
         $lastId = null;
+        $lastPostedAt = null;
         foreach ($sliced as $row) {
             $dtos[] = $this->mapRow($row);
             $lastId = self::toInt($row->id);
+            $lastPostedAt = self::toString($row->posted_at);
         }
 
         return new TransactionListPage(
             rows: $dtos,
             hasMore: $hasMore,
             nextCursorId: $hasMore ? $lastId : null,
+            nextCursorPostedAt: $hasMore ? $lastPostedAt : null,
         );
     }
 
