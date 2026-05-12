@@ -33,17 +33,31 @@ final class InstallCommand extends Command
 
     /**
      * Path tokens that indicate a cloud-sync folder. Matched case-insensitively
-     * against `database.connections.sqlite.database` before any file IO runs.
+     * against the resolved real path of the SQLite database before any file IO
+     * runs. The list combines per-vendor product names with the canonical
+     * macOS Monterey+ mountpoint `Library/CloudStorage` which catches every
+     * cloud provider Apple registers with the system.
      *
      * @var list<string>
      */
     private const CLOUD_SYNC_TOKENS = [
+        'Library/CloudStorage',
         'Mobile Documents',
         'iCloud Drive',
+        'iCloudDrive',
+        '.icloud',
         'OneDrive',
         'Dropbox',
         'Google Drive',
-        '.icloud',
+        'GoogleDrive',
+        'google_drive',
+        'My Drive',
+        'Box Sync',
+        'Box.com',
+        'pCloud Drive',
+        'pCloudDrive',
+        'Sync.com',
+        'MEGAsync',
     ];
 
     public function __construct(
@@ -58,11 +72,14 @@ final class InstallCommand extends Command
         $dbPathValue = $this->config->get('database.connections.sqlite.database');
         $dbPath = is_string($dbPathValue) ? $dbPathValue : '';
 
+        $resolvedPath = self::resolveRealPath($dbPath);
+
         foreach (self::CLOUD_SYNC_TOKENS as $token) {
-            if (stripos($dbPath, $token) !== false) {
+            if (stripos($resolvedPath, $token) !== false) {
                 $this->error(sprintf(
-                    "Refusing to install: database path '%s' is inside a cloud-sync folder (%s).",
+                    "Refusing to install: database path '%s' (resolved to '%s') is inside a cloud-sync folder (%s).",
                     $dbPath,
+                    $resolvedPath,
                     $token,
                 ));
                 $this->line('diederik is local-only — move database.sqlite outside iCloud Drive, OneDrive, Dropbox, or any other cloud-sync folder before running install again.');
@@ -76,9 +93,9 @@ final class InstallCommand extends Command
             return self::FAILURE;
         }
 
-        // Currency reference data is owned by the Ledger module. Referenced by
-        // FQN string so InstallCommand does not import a `Modules\Ledger\Database\`
-        // class — that would cross the module boundary enforced by BoundaryRule.
+        // Currency reference data is owned by the Ledger module. Referenced
+        // by FQN string so InstallCommand does not import a class from
+        // another module's private namespace.
         $seedResult = $this->call('db:seed', [
             '--class' => 'Modules\\Ledger\\Database\\Seeders\\CurrenciesSeeder',
             '--force' => true,
@@ -87,8 +104,8 @@ final class InstallCommand extends Command
             return self::FAILURE;
         }
 
-        if (User::find(1) !== null) {
-            $this->info('User already installed (id=1). Nothing to do.');
+        if (User::query()->exists()) {
+            $this->info('A user account is already installed. Nothing to do.');
             $this->line('Password changes require a dedicated reset-password command; re-running install with a different password is intentionally a no-op.');
 
             return self::SUCCESS;
@@ -97,6 +114,17 @@ final class InstallCommand extends Command
         $email = $this->resolveStringInput('email', 'Email');
         $password = $this->resolveStringInput('password', 'Password', secret: true);
         $periodStartDay = $this->resolvePeriodStartDay();
+
+        if ($email === '') {
+            $this->error('Refusing to install: email is required.');
+
+            return self::FAILURE;
+        }
+        if ($password === '') {
+            $this->error('Refusing to install: password is required.');
+
+            return self::FAILURE;
+        }
 
         $user = User::create([
             'email' => $email,
@@ -114,6 +142,33 @@ final class InstallCommand extends Command
         ));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Resolves the database file path through `realpath` so symlink targets
+     * are detected. When the database file does not yet exist on disk (first
+     * install), falls back to the parent directory's real path. When even
+     * that fails (path is entirely synthetic), returns the original input so
+     * the token scan still gets a chance against the raw string.
+     */
+    private static function resolveRealPath(string $path): string
+    {
+        if ($path === '') {
+            return '';
+        }
+
+        $resolved = @realpath($path);
+        if (is_string($resolved) && $resolved !== '') {
+            return $resolved;
+        }
+
+        $dir = dirname($path);
+        $resolvedDir = @realpath($dir);
+        if (is_string($resolvedDir) && $resolvedDir !== '') {
+            return $resolvedDir.'/'.basename($path);
+        }
+
+        return $path;
     }
 
     /**
