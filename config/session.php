@@ -14,7 +14,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Session Lifetime — D-11: 30-day remember-me sessions
+    | Session Lifetime — 30-day remember-me sessions
     |--------------------------------------------------------------------------
     |
     | A single human uses the local app daily; 30 days of session retention
@@ -29,9 +29,13 @@ return [
     |--------------------------------------------------------------------------
     | Session Encryption
     |--------------------------------------------------------------------------
+    |
+    | Session payloads (flash data, validation errors, search inputs) can
+    | carry sensitive context. Encryption keeps that material unreadable to
+    | any process that happens to read the sessions table outside the app.
     */
 
-    'encrypt' => false,
+    'encrypt' => true,
 
     /*
     |--------------------------------------------------------------------------
