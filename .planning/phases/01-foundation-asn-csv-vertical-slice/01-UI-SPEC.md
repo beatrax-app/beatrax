@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: not applicable (Livewire 4 + Volt + Flux UI stack — shadcn is React-only)
 created: 2026-05-12
+revised: 2026-05-12
 ---
 
 # Phase 1 — UI Design Contract
@@ -59,7 +60,7 @@ Declared values (multiples of 4):
 
 **Page width:** Content max-width `max-w-5xl` (~1024px) centered with `px-2xl` on viewports ≥ 1024px. Calm aesthetic = generous whitespace, never edge-to-edge.
 
-**Dashboard grid:** Three KPI tiles (In / Out / Net) on a single row with `gap-md`. Stack to vertical only below 720px (rare on localhost desktop use, but enforced for resilience).
+**Dashboard composition:** The three KPI tiles (In / Out / Net) at the top of the dashboard are the **primary focal point** of the page — every other element (top-spending categories list, recent transactions table) sits visually subordinate to them, rendered at Body weight/size while the KPIs use the Display scale (32px semibold). Layout: three tiles on a single row with `gap-md`. Stack to vertical only below 720px (rare on localhost desktop use, but enforced for resilience).
 
 ---
 
@@ -67,12 +68,12 @@ Declared values (multiples of 4):
 
 | Role | Size | Weight | Line Height | Notes |
 |------|------|--------|-------------|-------|
-| Micro / Caption | 12px | 500 (medium) | 1.4 | Table column headers, status badge labels, "last updated" annotations |
+| Micro / Caption | 12px | 400 (regular) | 1.4 | Table column headers, status badge labels, "last updated" annotations |
 | Body | 14px | 400 (regular) | 1.5 | All running text, table cells, form labels and inputs, button labels |
 | Section heading | 20px | 600 (semibold) | 1.3 | Card titles ("This month at a glance", "Recent transactions"), page-level subsection headers |
 | Display (KPI numbers) | 32px | 600 (semibold) | 1.2 | The three top-of-dashboard amounts (In / Out / Net), and the per-row total on the wizard summary |
 
-**Total declared:** 4 sizes, 2 weights — within the 3–4 sizes / 2 weights ceiling.
+**Total declared:** 4 sizes, 2 weights (400 regular, 600 semibold) — within the 3–4 sizes / 2 weights ceiling.
 
 **Monospace:** none. Use Inter with `font-variant-numeric: tabular-nums` for every money column and date column. No second font family ships in Phase 1.
 
@@ -103,7 +104,7 @@ Declared values (multiples of 4):
 3. The "Net" KPI value on the dashboard **when positive** (negative net is rendered in `text-slate-900`, never red — calm aesthetic)
 4. The "NEW" row-status badge in the import preview (`bg-emerald-50 text-emerald-700 ring-emerald-600/20`)
 5. The success toast/banner on the import results page ("Imported N transactions")
-6. The "Apply" / "Save" button on the categorization triage page when at least one assignment is pending
+6. The "Save categories" button on the categorization triage page when at least one assignment is pending
 
 **Accent is never used for:**
 
@@ -116,7 +117,7 @@ Declared values (multiples of 4):
 
 1. The ERROR row-status badge in the import preview (`bg-rose-50 text-rose-700 ring-rose-600/20`)
 2. Inline form-validation error text under inputs
-3. Any "Discard import" / "Cancel and discard" confirmation button (Phase 1 only has the mid-wizard discard; no transaction-delete in scope)
+3. The final destructive button inside the "Discard import?" confirmation modal (Phase 1 only has the mid-wizard discard; no transaction-delete in scope)
 
 **60 / 30 / 10 audit:**
 - 60% dominant white background covers all page chrome and most surface area
@@ -136,7 +137,7 @@ All interactive components in Phase 1 must come from Flux UI. Naming below uses 
 | Login form | `flux:input`, `flux:button`, `flux:field` | Single-user, no "register" link, no social providers |
 | Top nav | `flux:navbar` with `flux:navbar.item` | Items: Dashboard, Transactions, Uncategorized (with count badge), Settings; right-side: account email + Sign out |
 | Page header | `flux:heading` + `flux:subheading` | Period range "May 2026" or "25 May → 24 Jun 2026" |
-| KPI tiles | `flux:card` (3 across) | One per metric: In / Out / Net; display number above 12px caption label |
+| KPI tiles | `flux:card` (3 across) | One per metric: In / Out / Net; display number above 12px caption label. Primary focal point of the dashboard. |
 | Category bar list | Plain HTML + Tailwind (Flux does not yet ship a horizontal-bar list component) | Each row: category name (left), monospace amount (right), `<div class="h-1 bg-slate-200"><div class="h-1 bg-slate-900" style="width:N%"></div></div>` below |
 | Transaction table | `flux:table` with `flux:table.column` | Columns: Date · Counterparty · Category · Amount (right-aligned, tabular-nums); row click opens transaction in a side panel |
 | Transaction detail (side panel) | `flux:modal` variant=flyout | Read-only fields + category dropdown |
@@ -165,9 +166,9 @@ All copy below is **prescriptive**. The executor uses this verbatim.
 | Login form submit | `Sign in` |
 | Upload form submit | `Upload statement` |
 | Preview wizard confirm | `Confirm import` |
-| Preview wizard cancel | `Discard` |
+| Preview wizard cancel (page-level trigger) | `Discard import` |
 | Triage page bulk-save | `Save categories` |
-| Settings page save | `Save` |
+| Settings page save | `Save period start` |
 
 ### Empty states
 
@@ -212,7 +213,7 @@ Phase 1 has **one** destructive action: discarding an in-progress import mid-wiz
 
 | Action | Confirmation copy |
 |--------|-------------------|
-| `Discard` button on preview wizard | `Discard this import? The parsed rows will be lost. No transactions have been saved yet.` Buttons: `Discard` (rose-600) · `Keep reviewing` (default) |
+| `Discard import` button on preview wizard (page-level trigger) | Opens modal with body: `Discard this import? The parsed rows will be lost. No transactions have been saved yet.` Modal buttons: `Discard` (rose-600, destructive final action — single-word label acceptable here because the surrounding modal copy explains the action) · `Keep reviewing` (default) |
 
 There is **no delete-transaction action in Phase 1**. Re-importing the same CSV is idempotent (the user can clear state by deleting the SQLite file out-of-band, but that is operator-level, not a UI affordance).
 
@@ -243,7 +244,7 @@ There is **no delete-transaction action in Phase 1**. Re-importing the same CSV 
 
 ### Period navigation
 
-- Prev / next arrows on the dashboard `flux:button variant=ghost` with chevron icons.
+- Prev / next arrows on the dashboard `flux:button variant=ghost` with chevron icons. Icon-only buttons must carry an accessible name: `aria-label="Previous period"` on the left chevron, `aria-label="Next period"` on the right chevron.
 - Keyboard: `←` / `→` step periods when no input is focused.
 - Today shortcut: press `t` to return to the current period.
 
@@ -266,6 +267,7 @@ There is **no delete-transaction action in Phase 1**. Re-importing the same CSV 
 
 - All interactive elements show a visible focus ring (`focus-visible:ring-2 ring-slate-900 ring-offset-2`).
 - All form inputs use `flux:field` so the label is associated automatically.
+- All icon-only buttons (period prev/next chevrons; any future ghost buttons) carry an explicit `aria-label`.
 - Color contrast: every text/background pair declared above hits WCAG AA (verified — `text-slate-900` on `bg-white` = 19.3:1; `text-emerald-600` on `bg-white` = 4.74:1; `text-slate-500` on `bg-white` = 5.41:1).
 - Buttons have a minimum hit target of 40×40 (Flux's `size=base` default).
 
