@@ -13,6 +13,7 @@ it('emits a BoundaryRule error on the bad fixture', function (): void {
         '--no-progress',
         '--error-format=raw',
         '--no-ansi',
+        '--memory-limit=1G',
     ], base_path());
     $process->run();
 
@@ -29,6 +30,7 @@ it('emits zero errors on the good fixture', function (): void {
         '--no-progress',
         '--error-format=raw',
         '--no-ansi',
+        '--memory-limit=1G',
     ], base_path());
     $process->run();
 
@@ -44,6 +46,7 @@ it('passes against empty module skeletons at level max', function (): void {
         '--no-progress',
         '--error-format=raw',
         '--no-ansi',
+        '--memory-limit=1G',
     ], base_path());
     $process->run();
 

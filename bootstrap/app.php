@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
+use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,7 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Plan 02 wires LoopbackOnly + NoStoreFinancialData here.
+        $middleware->prepend(LoopbackOnly::class);
+        $middleware->appendToGroup('web', NoStoreFinancialData::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Default exception handling.
