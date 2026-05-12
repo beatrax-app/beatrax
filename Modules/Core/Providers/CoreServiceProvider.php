@@ -10,7 +10,6 @@ use Livewire\LivewireManager;
 use Modules\Core\Internal\Console\DoctorCommand;
 use Modules\Core\Internal\Console\InstallCommand;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
-use Modules\Core\Internal\Http\Livewire\LoginForm;
 use Modules\Core\Internal\Http\Livewire\TopNav;
 use Modules\Core\Internal\Providers\FortifyServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
@@ -48,7 +47,6 @@ final class CoreServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'core');
 
-        $livewire->component('core.login-form', LoginForm::class);
         $livewire->component('core.dashboard', Dashboard::class);
         $livewire->component('core.top-nav', TopNav::class);
 
