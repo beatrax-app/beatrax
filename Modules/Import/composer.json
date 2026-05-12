@@ -1,0 +1,16 @@
+{
+    "name": "diederik/import",
+    "description": "Import module — pipeline orchestrator and wizard.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Import\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Import\\Tests\\": "tests/"
+        }
+    }
+}
