@@ -1,0 +1,27 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    # Routes files are excluded from the main analyser because they call
+    # Laravel's Route::… DSL extensively. This narrower config re-runs ONLY
+    # the BoundaryRule over those same files so a future module that imports
+    # another module's Internal namespace inside its Routes file still
+    # trips the boundary guard.
+    level: 0
+    paths:
+        - Modules
+    fileExtensions:
+        - php
+    excludePaths:
+        analyse:
+            - Modules/*/Database/Migrations/*
+            - Modules/*/Database/Seeders/*
+            - Modules/*/Resources/*
+            - Modules/*/tests/*
+            - Modules/*/Models/*
+            - Modules/*/Public/*
+            - Modules/*/Internal/*
+            - Modules/*/Providers/*
+
+rules:
+    - App\PhpStan\Rules\BoundaryRule
