@@ -39,7 +39,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. User can manually assign categories to transactions, override existing categorizations, and view a triage list of everything still uncategorized
 **Plans**: 7 plans
   - [x] 01-01-PLAN.md — Project scaffold + DI-enforcement gate + 7 contract tests (red baseline)
-  - [ ] 01-02-PLAN.md — Auth + LoopbackOnly + diederik:install + walking skeleton runnable
+  - [x] 01-02-PLAN.md — Auth + LoopbackOnly + diederik:install + walking skeleton runnable
   - [ ] 01-03-PLAN.md — Ledger schema + Money VO + FingerprintComposer + RecordTransactions
   - [ ] 01-04-PLAN.md — ASN CSV adapter + real fixture (empirical A1/A2 resolution)
   - [ ] 01-05-PLAN.md — Import pipeline + upload wizard UI (IdempotencyContractTest GREEN)
