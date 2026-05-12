@@ -7,6 +7,7 @@ namespace Modules\Ledger\Internal\Casts;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
+use Modules\Ledger\Public\Exceptions\MoneyColumnMissingException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
@@ -30,13 +31,18 @@ final class MoneyMinorCast implements CastsAttributes
      */
     public function get(Model $model, string $key, mixed $value, array $attributes): Money
     {
-        $minor = $attributes[$this->minorColumn] ?? 0;
-        $currency = $attributes[$this->currencyColumn] ?? 'EUR';
+        if (! array_key_exists($this->minorColumn, $attributes) || ! array_key_exists($this->currencyColumn, $attributes)) {
+            throw new MoneyColumnMissingException($this->minorColumn, $this->currencyColumn);
+        }
 
-        return Money::ofMinor(
-            is_numeric($minor) ? (int) $minor : 0,
-            is_string($currency) ? $currency : 'EUR',
-        );
+        $minor = $attributes[$this->minorColumn];
+        $currency = $attributes[$this->currencyColumn];
+
+        if (! is_numeric($minor) || ! is_string($currency)) {
+            throw new MoneyColumnMissingException($this->minorColumn, $this->currencyColumn);
+        }
+
+        return Money::ofMinor((int) $minor, $currency);
     }
 
     /**
