@@ -16,17 +16,18 @@
         "spatie/laravel-data": "^4.0"
     },
     "require-dev": {
-        "pestphp/pest": "^4.0",
-        "pestphp/pest-plugin-laravel": "^4.0",
-        "pestphp/pest-plugin-arch": "^4.0",
-        "spatie/pest-plugin-snapshots": "^2.0",
-        "larastan/larastan": "^3.0",
         "calebdw/larastan-livewire": "^2.0",
         "canvural/larastan-strict-rules": "^3.0",
-        "laravel/pint": "^1.18",
         "fakerphp/faker": "^1.23",
-        "symfony/process": "^7.0",
-        "mockery/mockery": "^1.6"
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.18",
+        "mockery/mockery": "^1.6",
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-arch": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "spatie/pest-plugin-snapshots": "^2.0",
+        "symfony/process": "^7.0"
     },
     "autoload": {
         "psr-4": {
