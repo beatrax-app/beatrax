@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Tests;
 
+use App\Models\User;
 use Carbon\CarbonImmutable;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Tests\TestCase as RootTestCase;
 
 /**
  * Ledger module-local TestCase. Provides a `canonical()` factory that returns
  * a CanonicalTransaction filled with sane defaults so individual tests can
- * override only the field they exercise.
+ * override only the field they exercise, plus a `makeTransaction()` helper
+ * that persists a fully-formed Transaction row for query-service tests.
  */
 abstract class TestCase extends RootTestCase
 {
@@ -72,5 +77,69 @@ abstract class TestCase extends RootTestCase
             sourceRowIndex: $merged['sourceRowIndex'],
             sourceRef: $merged['sourceRef'],
         );
+    }
+
+    /**
+     * Create an ImportRun for the given user. Provides the foreign-key target
+     * that every Transaction row needs (`transactions.import_run_id`).
+     */
+    protected function makeImportRun(User $user, string $sha = '0000000000000000000000000000000000000000000000000000000000000000'): ImportRun
+    {
+        return ImportRun::create([
+            'user_id' => $user->id,
+            'source_format' => 'asn-csv',
+            'raw_file_path' => '/tmp/fixture.csv',
+            'sha256' => $sha,
+            'uploaded_at' => CarbonImmutable::parse('2026-05-01 12:00:00'),
+            'inserted_count' => 0,
+            'duplicate_count' => 0,
+            'error_count' => 0,
+            'status' => 'previewed',
+        ]);
+    }
+
+    /**
+     * Persist one Transaction row for query-service tests. Defaults align
+     * with the Pitfall-5 sentinel and the A13 sign-to-type rules so callers
+     * can override only the field under test.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function makeTransaction(User $user, Account $account, ImportRun $run, array $overrides = []): Transaction
+    {
+        static $rowIndex = 0;
+        $rowIndex++;
+        $fingerprint = str_pad((string) $rowIndex, 64, '0', STR_PAD_LEFT);
+
+        $amountMinor = $overrides['amount_minor'] ?? -1299;
+        $type = $overrides['type'] ?? match (true) {
+            $amountMinor > 0 => 'income',
+            $amountMinor < 0 => 'expense',
+            default => 'adjustment',
+        };
+
+        $postedAt = $overrides['posted_at'] ?? '2026-05-'.sprintf('%02d', min(28, $rowIndex));
+        $bookedAt = $overrides['booked_at'] ?? $postedAt.' 12:00:00';
+
+        return Transaction::create(array_merge([
+            'user_id' => $user->id,
+            'account_id' => $account->id,
+            'type' => $type,
+            'posted_at' => $postedAt,
+            'booked_at' => $bookedAt,
+            'value_date' => $postedAt,
+            'amount_minor' => $amountMinor,
+            'currency' => 'EUR',
+            'settled_amount_minor' => $amountMinor,
+            'settled_currency' => 'EUR',
+            'counterparty_name' => "Merchant {$rowIndex}",
+            'counterparty_normalized' => "merchant {$rowIndex}",
+            'normalization_version' => 1,
+            'source_format' => 'asn-csv',
+            'import_run_id' => $run->id,
+            'source_row_index' => $rowIndex,
+            'fingerprint' => $fingerprint,
+            'fingerprint_version' => 1,
+        ], $overrides));
     }
 }
