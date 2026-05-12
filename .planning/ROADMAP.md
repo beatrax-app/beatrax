@@ -37,7 +37,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can re-upload the exact same ASN CSV (or an overlapping period) and zero new rows are created — verified by a Pest test
   4. User can open the "this month at a glance" home view and see income / expenses / net for the current month in a calm, monochrome layout
   5. User can manually assign categories to transactions, override existing categorizations, and view a triage list of everything still uncategorized
-**Plans**: TBD
+**Plans**: 7 plans
+  - [ ] 01-01-PLAN.md — Project scaffold + DI-enforcement gate + 7 contract tests (red baseline)
+  - [ ] 01-02-PLAN.md — Auth + LoopbackOnly + diederik:install + walking skeleton runnable
+  - [ ] 01-03-PLAN.md — Ledger schema + Money VO + FingerprintComposer + RecordTransactions
+  - [ ] 01-04-PLAN.md — ASN CSV adapter + real fixture (empirical A1/A2 resolution)
+  - [ ] 01-05-PLAN.md — Import pipeline + upload wizard UI (IdempotencyContractTest GREEN)
+  - [ ] 01-06-PLAN.md — Dashboard /  + /transactions list (UI-01 + UI-04)
+  - [ ] 01-07-PLAN.md — Default categories + AssignCategory + /uncategorized triage (CAT-01/03/05)
 **UI hint**: yes
 
 ### Phase 2: ASN Statement Coverage (CAMT.053 + MT940)
@@ -173,7 +180,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation + ASN CSV Vertical Slice | 0/TBD | Not started | - |
+| 1. Foundation + ASN CSV Vertical Slice | 0/7 | Not started | - |
 | 2. ASN Statement Coverage (CAMT.053 + MT940) | 0/TBD | Not started | - |
 | 3. ICS Cards + Multi-Currency Display | 0/TBD | Not started | - |
 | 4. PayPal Ingestion + Transfer Detection | 0/TBD | Not started | - |
