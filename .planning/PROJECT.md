@@ -114,6 +114,9 @@ The user's payments fan out through multiple providers — ASN for direct debits
 
 - **Tech stack**: PHP 8.5 + Laravel 13 (latest released March 2026) — User preference, mature ecosystem; pin to current versions to stay supported and avoid legacy deprecation cycles
 - **Email integration**: Provider APIs only (Gmail API, Microsoft Graph) — Avoids any dependency on `ext-imap` (removed from PHP 8.4 core) and the IMAP library churn. iCloud Mail is explicitly out of scope
+- **Modular architecture**: Code is organized into bounded modules via `nwidart/laravel-modules` — Enforces clean boundaries between Ingestion, Ledger, Categorization, Recurring, Chains, Forecasting, EmailScan, etc. Cross-module access goes through public service classes or events; no module reaches into another's models or internals
+- **Code quality gates (CI-enforced)**: Larastan at level 10 (max) with strict mode + Laravel Pint formatting + Pest unit/feature tests — Every PR must pass all three before merge. No frontend tests are required (the UI is server-rendered + thin; investment goes into backend correctness)
+- **Project slicing**: Vertical MVP per phase — Each phase ends with an end-to-end demoable capability, not an isolated layer. Phase 1 must produce a working "see my ASN month" experience before Phase 2 begins
 - **Hosting**: Local only (localhost) — Privacy requirement; financial data must never leave the machine
 - **Idempotency**: All ingestion paths (CSV upload, IMAP scan, .eml import) must be safe to re-run — Same source + same transaction must never duplicate
 - **History**: Full history retained forever — Long-term subscription-drift analysis requires it; pruning is a non-goal
@@ -129,6 +132,9 @@ The user's payments fan out through multiple providers — ASN for direct debits
 |----------|-----------|---------|
 | PHP 8.5 + Laravel 13 (latest) | User preference; strong ecosystem; staying current avoids legacy deprecation pain | — Pending |
 | Email via provider APIs (Gmail API + Microsoft Graph), not IMAP | Decouples from `ext-imap` deprecation; cleaner OAuth flow; iCloud explicitly out of scope so no IMAP fallback needed | — Pending |
+| `nwidart/laravel-modules` for module structure | Enforces bounded contexts at the directory level — Ingestion / Ledger / Chains / Recurring / Forecasting / EmailScan never accidentally reach into each other's internals | — Pending |
+| Vertical MVP phase slicing | Each phase demoable end-to-end; faster feedback; can pivot direction phase-by-phase without throwing away a layer | — Pending |
+| Larastan level 10 strict + Pint + Pest as required CI gates | Highest practical static-analysis bar; uniform formatting; tests live in Pest only; no frontend tests (server-rendered UI doesn't justify their cost here) | — Pending |
 | Local-only deployment, no cloud | Privacy of financial data is paramount; user only needs single-machine access | — Pending |
 | Mixed ingestion (CSV + IMAP + file import) instead of bank APIs | ICS and Google Play lack usable APIs; a uniform export/email model is simpler and avoids token-rotation complexity | — Pending |
 | Scan all inboxes for everything (no per-source inbox config) | Lower setup friction; catches forwarded receipts the user forgot about | — Pending |
