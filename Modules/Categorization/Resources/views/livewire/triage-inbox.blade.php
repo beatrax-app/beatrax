@@ -8,15 +8,17 @@
     <header class="space-y-1">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Uncategorized</h1>
         <p class="text-sm text-slate-500">
-            @if (count($batch->rows) === 0)
+            @if ($totalPending === 0)
                 Inbox zero.
+            @elseif ($batch->hasMore || $totalPending > count($batch->rows))
+                Showing {{ count($batch->rows) }} of {{ $totalPending }} pending.
             @else
-                {{ count($batch->rows) }} pending.
+                {{ $totalPending }} pending.
             @endif
         </p>
     </header>
 
-    @if (count($batch->rows) === 0)
+    @if (count($batch->rows) === 0 && $totalPending === 0)
         <p class="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
             Every transaction has a category. Re-open this page after your next import.
         </p>
@@ -86,6 +88,16 @@
                     class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >Save categories</button>
             </footer>
+
+            @if ($batch->hasMore && $batch->nextCursorId !== null)
+                <div class="mt-4 flex justify-center">
+                    <button
+                        type="button"
+                        wire:click="loadMore({{ $batch->nextCursorId }}, @js($batch->nextCursorPostedAt))"
+                        class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                    >Load more</button>
+                </div>
+            @endif
         </div>
     @endif
 </div>
