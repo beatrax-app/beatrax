@@ -8,8 +8,11 @@ use Spatie\LaravelData\Data;
 
 /**
  * One cursor-paginated batch of uncategorized transactions ready for the
- * triage inbox. `nextCursorId` is the smallest `id` of the rendered page
- * when more rows exist beyond it; `null` when the user has reached the end.
+ * triage inbox. The cursor pair `(nextCursorPostedAt, nextCursorId)` carries
+ * the last visible row's ordering key when more rows exist; both fields are
+ * null exactly when the user has reached the end. Using the pair rather than
+ * the id alone is what prevents rows with a matching `posted_at` and a
+ * higher `id` from silently dropping out of the inbox between pages.
  */
 final class TriageBatch extends Data
 {
@@ -18,5 +21,6 @@ final class TriageBatch extends Data
         public readonly array $rows,
         public readonly bool $hasMore,
         public readonly ?int $nextCursorId,
+        public readonly ?string $nextCursorPostedAt = null,
     ) {}
 }
