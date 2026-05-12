@@ -5,19 +5,18 @@ declare(strict_types=1);
 namespace Modules\Ledger\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Modules\Ledger\Public\Services\PeriodQuery;
 
 /**
  * Wires the Ledger module: loads migrations + routes + views, and registers
- * Public contract bindings (FingerprintComposer + PeriodQuery singletons,
- * RecordsTransactions + UpdatesTransactionCategory bindings) once the
- * implementing classes ship.
+ * Public service singletons. The RecordsTransactions / UpdatesTransactionCategory
+ * action bindings are added once those actions land in the next commit.
  */
 final class LedgerServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Public contract bindings + service singletons are wired in
-        // subsequent migrations of this provider as their implementations land.
+        $this->app->singleton(PeriodQuery::class);
     }
 
     public function boot(): void
