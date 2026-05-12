@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -113,7 +114,7 @@ it('saves staged assignments through AssignsCategory on Save categories click', 
     $tx1 = makeTriagePageTx($this->user, $this->account, $this->run, day: 1, categoryId: null);
     $tx2 = makeTriagePageTx($this->user, $this->account, $this->run, day: 2, categoryId: null);
 
-    \Livewire\Livewire::actingAs($this->user)
+    Livewire::actingAs($this->user)
         ->test('categorization.triage-inbox')
         ->call('selectForRow', $tx1->id, $this->groceries->id)
         ->call('selectForRow', $tx2->id, $this->groceries->id)
@@ -139,7 +140,7 @@ it('exposes the inline category picker on every /transactions row', function ():
 it('writes through AssignsCategory when the inline picker fires updatedCategoryId', function (): void {
     $tx = makeTriagePageTx($this->user, $this->account, $this->run, day: 9, categoryId: null);
 
-    \Livewire\Livewire::actingAs($this->user)
+    Livewire::actingAs($this->user)
         ->test('categorization.inline-category-picker', [
             'transactionId' => $tx->id,
             'categoryId' => null,

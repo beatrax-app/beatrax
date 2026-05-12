@@ -44,27 +44,27 @@ No `--watch` / `--tdd` / `--coverage-html` flags during sampling — watch-mode 
 
 | Req ID | Behaviour | Test Type | Automated Command | File Exists? | Status |
 |--------|-----------|-----------|-------------------|-------------|--------|
-| FND-01 | App refuses non-loopback bind | Feature | `pest tests/Feature/LoopbackOnlyTest.php -x` | ❌ W0 | ⬜ pending |
-| FND-02 | Single-user Fortify + Livewire login works | Feature | `pest tests/Feature/Auth/LoginFlowTest.php -x` | ❌ W0 | ⬜ pending |
-| FND-03 | Every domain table has nullable `user_id` | Arch | `pest tests/Contracts/UserIdColumnArchTest.php -x` | ✅ Plan 01 | ❌ red (Plan 03) |
-| FND-04 | No `REAL`/`FLOAT` on money columns | Arch | `pest tests/Contracts/NoFloatMoneyArchTest.php -x` | ✅ Plan 01 | ❌ red (Plan 03) |
-| FND-06 | SQLite WAL + `synchronous=NORMAL` on connection | Unit | `pest Modules/Core/tests/Unit/SqlitePragmasTest.php -x` | ❌ W0 | ⬜ pending |
-| FND-07 | Money arithmetic uses brick/money exclusively | Unit | `pest Modules/Ledger/tests/Unit/MoneyValueObjectTest.php -x` | ❌ W0 | ⬜ pending |
+| FND-01 | App refuses non-loopback bind | Feature | `pest tests/Feature/LoopbackOnlyTest.php -x` | ✅ Plan 02 | ✅ green (Plan 02) |
+| FND-02 | Single-user Fortify + Livewire login works | Feature | `pest tests/Feature/Auth/LoginFlowTest.php -x` | ✅ Plan 02 | ✅ green (Plan 02) |
+| FND-03 | Every domain table has nullable `user_id` | Arch | `pest tests/Contracts/UserIdColumnArchTest.php -x` | ✅ Plan 01 | ✅ green (Plan 03) |
+| FND-04 | No `REAL`/`FLOAT` on money columns | Arch | `pest tests/Contracts/NoFloatMoneyArchTest.php -x` | ✅ Plan 01 | ✅ green (Plan 03) |
+| FND-06 | SQLite WAL + `synchronous=NORMAL` on connection | Unit | `pest Modules/Core/tests/Unit/SqlitePragmasTest.php -x` | ✅ Plan 02 | ✅ green (Plan 02) |
+| FND-07 | Money arithmetic uses brick/money exclusively | Unit | `pest Modules/Ledger/tests/Unit/MoneyValueObjectTest.php -x` | ✅ Plan 03 | ✅ green (Plan 03) |
 | ING-01 | ASN CSV upload imports transactions | Feature | `pest Modules/Import/tests/Feature/AsnCsvImportTest.php -x` | ✅ Plan 05 | ✅ green (Plan 05) |
 | ING-06 | Same-file re-upload → 0 new rows (idempotency contract) | Feature | `pest tests/Contracts/IdempotencyContractTest.php -x` | ✅ Plan 01 | ✅ green (Plan 05) |
 | ING-07 | Source declared in UI (no auto-detect) | Feature | `pest Modules/Import/tests/Feature/UploadWizardTest.php::test_requires_source_declaration -x` | ✅ Plan 05 | ✅ green (Plan 05) |
 | ING-08 | Raw source row link preserved | Unit | `pest Modules/Ingestion/tests/Unit/AsnCsvAdapterTest.php::test_preserves_raw_payload -x` | ✅ Plan 04 | ✅ green (Plan 04) |
-| LED-01 | Accounts have type + currency | Unit | `pest Modules/Ledger/tests/Unit/AccountModelTest.php -x` | ❌ W0 | ⬜ pending |
-| LED-02 | Transaction.type enum populated | Unit | `pest Modules/Ledger/tests/Unit/TransactionTypeTest.php -x` | ❌ W0 | ⬜ pending |
-| MC-01 | Both original + settled amount columns present | Arch | `pest tests/Contracts/MoneyColumnsArchTest.php -x` | ✅ Plan 01 | ❌ red (Plan 03) |
+| LED-01 | Accounts have type + currency | Unit | `pest Modules/Ledger/tests/Unit/AccountModelTest.php -x` | ✅ Plan 03 | ✅ green (Plan 03) |
+| LED-02 | Transaction.type enum populated | Unit | `pest Modules/Ledger/tests/Unit/TransactionTypeTest.php -x` | ✅ Plan 03 | ✅ green (Plan 03) |
+| MC-01 | Both original + settled amount columns present | Arch | `pest tests/Contracts/MoneyColumnsArchTest.php -x` | ✅ Plan 01 | ✅ green (Plan 03) |
 | CAT-01 | Category tree assignable to transaction | Feature | `pest Modules/Categorization/tests/Feature/AssignCategoryTest.php -x` | ✅ Plan 07 | ✅ green (Plan 07) |
 | CAT-03 | Override existing categorization | Feature | `pest Modules/Categorization/tests/Feature/AssignCategoryTest.php::test_overrides_existing -x` | ✅ Plan 07 | ✅ green (Plan 07) |
-| CAT-05 | Triage page lists uncategorized rows | Feature | `pest Modules/Categorization/tests/Feature/TriagePageTest.php -x` | ❌ W0 | ⬜ pending |
+| CAT-05 | Triage page lists uncategorized rows | Feature | `pest Modules/Categorization/tests/Feature/TriagePageTest.php -x` | ✅ Plan 07 | ✅ green (Plan 07) |
 | UI-01 | Dashboard shows current-period totals | Feature | `pest Modules/Ledger/tests/Feature/DashboardTest.php -x` | ✅ Plan 06 | ✅ green (Plan 06) |
 | UI-04 | Recent-window default = 90 days | Feature | `pest Modules/Ledger/tests/Feature/TransactionListTest.php::test_defaults_to_recent_window -x` | ✅ Plan 06 | ✅ green (Plan 06) |
 | UI-05 | Aesthetic compliance (calm Linear/Notion) | **manual** — UI-SPEC checker | n/a | n/a | manual checker pending (run /gsd-ui-checker after Plan 07) |
-| PLT-01 | Localhost-only middleware in place | Feature | (same as FND-01) `pest tests/Feature/LoopbackOnlyTest.php -x` | ❌ W0 | ⬜ pending |
-| PLT-02 | DB path validation in install command | Feature | `pest Modules/Core/tests/Feature/InstallCommandTest.php::test_refuses_icloud_path -x` | ❌ W0 | ⬜ pending |
+| PLT-01 | Localhost-only middleware in place | Feature | (same as FND-01) `pest tests/Feature/LoopbackOnlyTest.php -x` | ✅ Plan 02 | ✅ green (Plan 02) |
+| PLT-02 | DB path validation in install command | Feature | `pest Modules/Core/tests/Feature/InstallCommandTest.php::test_refuses_icloud_path -x` | ✅ Plan 02 | ✅ green (Plan 02) |
 | PLT-05 | `composer.json` lacks `ext-imap` | Arch | `pest tests/Contracts/NoExtImapTest.php -x` | ✅ Plan 01 | ✅ green (Plan 01) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*

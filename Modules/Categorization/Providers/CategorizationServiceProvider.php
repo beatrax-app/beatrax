@@ -6,6 +6,9 @@ namespace Modules\Categorization\Providers;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
+use Livewire\LivewireManager;
+use Modules\Categorization\Internal\Http\Livewire\InlineCategoryPicker;
+use Modules\Categorization\Internal\Http\Livewire\TriageInbox;
 use Modules\Categorization\Internal\Listeners\SeedDefaultCategoryTree;
 use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
@@ -21,6 +24,8 @@ use Modules\Core\Public\Events\UserInstalled;
  * - registers `UncategorizedTriageQuery` as a stateless singleton.
  * - listens for `UserInstalled` and seeds the default category tree
  *   without coupling Core to Categorization.
+ * - registers the two Livewire components rendered on `/uncategorized`
+ *   and inside the `/transactions` rows.
  * - loads migrations, routes, and views.
  */
 final class CategorizationServiceProvider extends ServiceProvider
@@ -31,7 +36,7 @@ final class CategorizationServiceProvider extends ServiceProvider
         $this->app->singleton(UncategorizedTriageQuery::class);
     }
 
-    public function boot(Dispatcher $events): void
+    public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
@@ -39,5 +44,8 @@ final class CategorizationServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'categorization');
 
         $events->listen(UserInstalled::class, SeedDefaultCategoryTree::class);
+
+        $livewire->component('categorization.triage-inbox', TriageInbox::class);
+        $livewire->component('categorization.inline-category-picker', InlineCategoryPicker::class);
     }
 }
