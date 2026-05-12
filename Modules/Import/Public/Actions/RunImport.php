@@ -53,6 +53,17 @@ final class RunImport implements RunsImports
             ->where('sha256', $sha)
             ->first();
 
+        if ($existing !== null && $existing->status === 'confirmed') {
+            // File-layer idempotency: the SHA-256 was already imported and
+            // landed. Skip the (expensive, identical) re-parse and signal to
+            // the wizard that nothing remains to do for this upload.
+            return new ImportPreviewResult(
+                importRunId: $existing->id,
+                rows: [],
+                accountsToName: [],
+            );
+        }
+
         $importRun = $existing ?? ImportRun::create([
             'user_id' => $user->id,
             'source_format' => $sourceFormat,
