@@ -110,7 +110,11 @@ final class DoctorCommand extends Command
     }
 
     /**
-     * Runs the given command and returns [version-string, success].
+     * Runs the given command and returns [version-string, success]. When
+     * the command exits 0, the version is read from stdout only — chatty
+     * deprecation notices on stderr no longer leak into the displayed
+     * line. stderr is consulted only on failure to produce the user-facing
+     * error message.
      *
      * @param  list<string>  $command
      * @return array{0: string, 1: bool}
@@ -127,12 +131,13 @@ final class DoctorCommand extends Command
         }
 
         if (! $process->isSuccessful()) {
-            return ['(not available)', false];
+            $stderr = trim($process->getErrorOutput());
+
+            return [$stderr === '' ? '(not available)' : $stderr, false];
         }
 
         $stdout = trim($process->getOutput());
-        $output = $stdout !== '' ? $stdout : trim($process->getErrorOutput());
 
-        return [$output === '' ? '(empty)' : $output, true];
+        return [$stdout === '' ? '(empty)' : $stdout, true];
     }
 }
