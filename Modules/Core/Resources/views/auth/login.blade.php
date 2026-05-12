@@ -3,7 +3,7 @@
 @section('content')
     <main class="min-h-screen flex items-center justify-center bg-white">
         <div class="w-full max-w-sm px-6">
-            @livewire('core.login-form')
+            @include('core::auth.login-form')
         </div>
     </main>
 @endsection
