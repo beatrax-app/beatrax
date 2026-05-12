@@ -39,7 +39,13 @@
                         <tr>
                             <td class="px-4 py-2 text-slate-900" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
                             <td class="px-4 py-2 text-slate-900">{{ $row->counterpartyName ?? '—' }}</td>
-                            <td class="px-4 py-2 text-slate-500">{{ $row->categoryName ?? 'Uncategorized' }}</td>
+                            <td class="px-4 py-2 text-slate-500">
+                                @livewire(
+                                    'categorization.inline-category-picker',
+                                    ['transactionId' => $row->id, 'categoryId' => $row->categoryId],
+                                    key('cat-picker-' . $row->id)
+                                )
+                            </td>
                             <td class="px-4 py-2 text-right text-slate-900" style="font-variant-numeric: tabular-nums;">
                                 {{ $fmt($row->amount->toMinor()) }}
                             </td>
