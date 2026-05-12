@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
@@ -108,7 +109,7 @@ it('cross-user import access is blocked', function (): void {
     // Confirming someone else's run is a 404 via firstOrFail
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
         ->call('confirm');
-})->throws(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+})->throws(ModelNotFoundException::class);
 
 it('renders the canonical results summary on the results page', function (): void {
     /** @var RunsImports $importer */
