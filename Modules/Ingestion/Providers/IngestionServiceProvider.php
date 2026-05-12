@@ -4,17 +4,35 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Providers;
 
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
+use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
+use Modules\Ingestion\Public\Services\HeaderSniffer;
+use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
 /**
- * Loads Ingestion module migrations, routes, and views. Adapter bindings
- * arrive in Plan 04 (AsnCsvAdapter).
+ * Wires the Ingestion module.
+ *
+ * - HeaderSniffer is a stateless singleton injected into the upload wizard
+ *   for pre-parse validation.
+ * - SourceAdapterRegistry maps stable format identifiers to their adapter
+ *   implementation. Adapters are NOT auto-detected from file content (per
+ *   ING-07) — the user declares the source format up front. New source
+ *   formats (CAMT.053, MT940, ICS, PayPal, …) are added to the registry
+ *   map alongside their adapter class.
  */
 final class IngestionServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Plan 04 binds Ingestion\Public\Contracts\SourceAdapter implementations here.
+        $this->app->singleton(HeaderSniffer::class);
+
+        $this->app->singleton(
+            SourceAdapterRegistry::class,
+            static fn (Container $app): SourceAdapterRegistry => new SourceAdapterRegistry([
+                'asn-csv' => $app->make(AsnCsvAdapter::class),
+            ]),
+        );
     }
 
     public function boot(): void
