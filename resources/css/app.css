@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+:root {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Tabular numerals on every money cell + date cell — pinned by UI-SPEC. */
+td.money,
+td.date,
+.kpi-number,
+.tabular {
+    font-variant-numeric: tabular-nums;
+}
