@@ -487,7 +487,15 @@ Phase 1 ships a `phpstan.neon` (or `larastan.neon`) with:
 
 ### Plan-phase deliverable: empirical sample task
 
-The FIRST task in the ingestion wave MUST be: **"Drop a real anonymized ASN CSV export from the user at `tests/fixtures/asn-sample-1.csv`, alongside `tests/fixtures/asn-sample-1.md` documenting the empirical column layout, and pin the column indices in `Modules\Ingestion\Internal\Adapters\Asn\AsnCsvColumnMap`."** Until that fixture exists, the AsnCsvAdapter is implemented against the [ASSUMED] layout above with a `TODO: confirm against real export` comment block, and a Pest test loads the fixture.
+A real anonymized ASN CSV export is committed at `tests/fixtures/asn-sample-1.csv`; the empirical column layout, encoding, header, and column count are documented in `tests/fixtures/asn-sample-1.md`. The fixture covers three contiguous months (229 rows) and pins:
+
+- 20-column layout (community-reported 17/18 was outdated — the 2026 export adds `Afschriftnummer` and `Categorie`)
+- Comma delimiter
+- US-ASCII source encoding (a subset of UTF-8 — Windows-1252 is no longer the export default but the CharsetConverter is still wired up for legacy files)
+- Header row present (community-reported "headerless" was wrong)
+- `dd-mm-yyyy` dates and period-decimal signed amounts
+
+The adapter (`AsnCsvAdapter`) is built test-first against this fixture; the snapshot test pins its parsed output. The two overlap fixtures `tests/fixtures/asn-month-a.csv` and `tests/fixtures/asn-month-a-and-b.csv` drive the idempotency contract.
 
 ### league/csv usage pattern
 
@@ -790,7 +798,7 @@ it('produces zero new rows when an overlapping period is imported from a new fil
     expect($second->inserted)->toBeLessThan($first->inserted);
     expect($second->duplicates)->toBeGreaterThan(0);
 })->with([
-    [AsnCsvAdapter::class, __DIR__ . '/../fixtures/asn-jan.csv', __DIR__ . '/../fixtures/asn-jan-feb.csv'],
+    [AsnCsvAdapter::class, __DIR__ . '/../fixtures/asn-month-a.csv', __DIR__ . '/../fixtures/asn-month-a-and-b.csv'],
 ]);
 ```
 
@@ -1409,7 +1417,9 @@ Modules/<Name>/tests/
 │   └── BoundaryArchTest.php
 ├── fixtures/
 │   ├── asn-sample-1.csv
-│   └── asn-jan.csv
+│   ├── asn-sample-1.md
+│   ├── asn-month-a.csv
+│   └── asn-month-a-and-b.csv
 ├── Pest.php                              # module-local Pest config
 └── TestCase.php                          # extends framework TestCase
 ```
@@ -1847,7 +1857,7 @@ final class CurrentUserService implements Contract
    - What we know: Historical layout from open-source converters; "CSV met IBAN" naming convention.
    - What's unclear: Whether ASN has changed format since 2020 (community converters all date pre-2021).
    - Recommendation: First task in the ingestion wave = drop a real export at `tests/fixtures/asn-sample-1.csv`, pin in `AsnCsvColumnMap`, snapshot-test the parsed output.
-   - **RESOLVED:** Real anonymized ASN export pinned by Plan 04 T-01-04-01 BLOCKING `checkpoint:human-action`. The `AsnCsvAdapter` (Plan 04 T-01-04-03) is written test-first against `tests/fixtures/asn-sample-1.csv`; `AsnCsvColumnMap` carries an `EMPIRICAL` PHPDoc marker recording confirmation date and any deltas from the [ASSUMED] layout. Includes the Windows-1252 vs UTF-8 sub-question: Plan 04 T-01-04-02's `HeaderSniffer` runs `mb_detect_encoding` and feeds `league/csv\CharsetConverter` (per `AsnCsvHeaderProfile::SOURCE_ENCODING`); column-map detection and encoding are empirical, not assumed.
+   - **RESOLVED:** Real anonymized ASN export committed at `tests/fixtures/asn-sample-1.csv` (229 rows across 3 months). Empirical findings vs [ASSUMED]: layout is **20 columns** (not 17/18 — `Afschriftnummer` + `Categorie` added), source encoding is **us-ascii** (not Windows-1252), and there **is** a header row (not headerless). `AsnCsvColumnMap` and `AsnCsvHeaderProfile` constants reflect the empirical record in `tests/fixtures/asn-sample-1.md`. The Plan 04 T-01-04-01 checkpoint is satisfied; subsequent adapter, sniffer, and snapshot tests work directly against the committed fixture.
 
 2. **Are AsnCsvAdapter + RecordTransactions idempotent across PHP serialization re-encoding?**
    - What we know: Composite UNIQUE catches at DB layer regardless.
@@ -1953,7 +1963,7 @@ final class CurrentUserService implements Contract
 - [ ] `tests/Contracts/NoExtImapTest.php` — covers PLT-05
 - [ ] `tests/Contracts/BoundaryArchTest.php` — Modules cross-import enforcement
 - [ ] `tests/fixtures/asn-sample-1.csv` — anonymized real ASN export (gated on user-provided fixture)
-- [ ] `tests/fixtures/asn-jan.csv` + `tests/fixtures/asn-jan-feb.csv` — overlapping-period fixtures derived from the real export
+- [ ] `tests/fixtures/asn-month-a.csv` + `tests/fixtures/asn-month-a-and-b.csv` — overlapping-period fixtures derived from the real export
 - [ ] `Modules/<X>/tests/` skeleton inside each module (Core, Ledger, Ingestion, Import, Categorization) with a per-module `TestCase.php`
 
 ### Manual-only Validation (UI-05)

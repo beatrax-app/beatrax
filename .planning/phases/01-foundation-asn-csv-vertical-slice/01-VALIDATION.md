@@ -86,7 +86,7 @@ This is a greenfield project — **all** test infrastructure is missing and must
 - [ ] `tests/Contracts/NoExtImapTest.php` — covers PLT-05
 - [ ] `tests/Contracts/BoundaryArchTest.php` — enforces module cross-import rules (DI-only)
 - [ ] `tests/fixtures/asn-sample-1.csv` — anonymized real ASN export (gated on user-provided fixture; planner must front-load this)
-- [ ] `tests/fixtures/asn-jan.csv` + `tests/fixtures/asn-jan-feb.csv` — overlapping-period fixtures derived from the real export (drives ING-06)
+- [ ] `tests/fixtures/asn-month-a.csv` + `tests/fixtures/asn-month-a-and-b.csv` — overlapping-period fixtures derived from the real export (drives ING-06)
 - [ ] Per-module test skeletons under `Modules/Core/tests/`, `Modules/Ledger/tests/`, `Modules/Ingestion/tests/`, `Modules/Import/tests/`, `Modules/Categorization/tests/` (each with own `TestCase.php`)
 
 ---
