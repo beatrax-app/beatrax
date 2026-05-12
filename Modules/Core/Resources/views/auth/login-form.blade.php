@@ -13,7 +13,7 @@
                 type="email"
                 id="email"
                 name="email"
-                wire:model="email"
+                value="{{ old('email') }}"
                 autocomplete="username"
                 required
                 autofocus
@@ -27,7 +27,6 @@
                 type="password"
                 id="password"
                 name="password"
-                wire:model="password"
                 autocomplete="current-password"
                 required
                 class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
@@ -35,7 +34,7 @@
         </div>
 
         <label class="flex items-center gap-2 text-sm text-slate-500">
-            <input type="checkbox" name="remember" wire:model="remember" value="1" class="rounded border-slate-300" />
+            <input type="checkbox" name="remember" value="1" checked class="rounded border-slate-300" />
             Stay signed in for 30 days
         </label>
 
