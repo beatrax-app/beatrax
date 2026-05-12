@@ -40,7 +40,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 7 plans
   - [x] 01-01-PLAN.md — Project scaffold + DI-enforcement gate + 7 contract tests (red baseline)
   - [x] 01-02-PLAN.md — Auth + LoopbackOnly + diederik:install + walking skeleton runnable
-  - [ ] 01-03-PLAN.md — Ledger schema + Money VO + FingerprintComposer + RecordTransactions
+  - [x] 01-03-PLAN.md — Ledger schema + Money VO + FingerprintComposer + RecordTransactions
   - [ ] 01-04-PLAN.md — ASN CSV adapter + real fixture (empirical A1/A2 resolution)
   - [ ] 01-05-PLAN.md — Import pipeline + upload wizard UI (IdempotencyContractTest GREEN)
   - [ ] 01-06-PLAN.md — Dashboard /  + /transactions list (UI-01 + UI-04)
