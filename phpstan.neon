@@ -1,0 +1,34 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/calebdw/larastan-livewire/extension.neon
+    - vendor/canvural/larastan-strict-rules/rules.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+
+parameters:
+    level: max
+    paths:
+        - Modules
+        - app
+        - bootstrap/app.php
+    excludePaths:
+        analyse:
+            - Modules/*/Database/Migrations/*
+            - Modules/*/Database/Seeders/*
+            - Modules/*/Routes/*
+            - Modules/*/tests/*
+            - app/PhpStan/Rules/Fixtures/*
+            - database/migrations/*
+            - tests/*
+    reportUnmatchedIgnoredErrors: true
+    allowedGlobalFunctions:
+        - 'app_path'
+        - 'base_path'
+        - 'config_path'
+        - 'database_path'
+        - 'resource_path'
+        - 'storage_path'
+        - 'public_path'
+        - 'view'
+
+rules:
+    - App\PhpStan\Rules\BoundaryRule

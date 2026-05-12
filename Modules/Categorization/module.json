@@ -1,0 +1,11 @@
+{
+    "name": "Categorization",
+    "alias": "categorization",
+    "description": "Category tree, merchant memory schema, manual categorization actions and triage inbox.",
+    "keywords": ["categorization", "merchants", "triage"],
+    "priority": 4,
+    "providers": [
+        "Modules\\Categorization\\Providers\\CategorizationServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,15 @@
+parameters:
+    level: 0
+    paths:
+        - app/PhpStan/Rules/Fixtures
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        - '#has invalid type Modules\\Ledger\\Internal\\Casts\\MoneyMinorCast#'
+        - '#has invalid type Modules\\Ledger\\Public\\Contracts\\RecordsTransactions#'
+        - '#has invalid type Modules\\Ledger\\Models\\Transaction#'
+        - '#unknown class Modules\\Ledger\\Internal\\Casts\\MoneyMinorCast#'
+        - '#unknown class Modules\\Ledger\\Public\\Contracts\\RecordsTransactions#'
+        - '#unknown class Modules\\Ledger\\Models\\Transaction#'
+
+rules:
+    - App\PhpStan\Rules\BoundaryRule

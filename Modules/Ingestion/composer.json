@@ -1,0 +1,16 @@
+{
+    "name": "diederik/ingestion",
+    "description": "Ingestion module — source adapters.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Ingestion\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Ingestion\\Tests\\": "tests/"
+        }
+    }
+}
