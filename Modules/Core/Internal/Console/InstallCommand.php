@@ -76,6 +76,17 @@ final class InstallCommand extends Command
             return self::FAILURE;
         }
 
+        // Currency reference data is owned by the Ledger module. Referenced by
+        // FQN string so InstallCommand does not import a `Modules\Ledger\Database\`
+        // class — that would cross the module boundary enforced by BoundaryRule.
+        $seedResult = $this->call('db:seed', [
+            '--class' => 'Modules\\Ledger\\Database\\Seeders\\CurrenciesSeeder',
+            '--force' => true,
+        ]);
+        if ($seedResult !== 0) {
+            return self::FAILURE;
+        }
+
         if (User::find(1) !== null) {
             $this->info('User already installed (id=1). Nothing to do.');
             $this->line('Password changes require a dedicated reset-password command; re-running install with a different password is intentionally a no-op.');
