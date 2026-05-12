@@ -26,7 +26,10 @@
             class="inline-flex items-center rounded-md px-3 py-1.5 text-sm {{ $isActive('/imports/new') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
         >Imports</a>
 
-        <span class="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-slate-500">
+        <a
+            href="{{ route('uncategorized') }}"
+            class="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm {{ $isActive('/uncategorized') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+        >
             Uncategorized
             @if ($uncategorizedCount > 0)
                 <span
@@ -34,7 +37,7 @@
                     style="font-variant-numeric: tabular-nums;"
                 >{{ $uncategorizedCount }}</span>
             @endif
-        </span>
+        </a>
 
         <span class="flex-1"></span>
 
