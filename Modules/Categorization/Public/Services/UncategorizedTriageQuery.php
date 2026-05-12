@@ -18,12 +18,18 @@ use stdClass;
  * stay clean under `phpstan-strict-rules`' `staticMethod.dynamicCall`
  * rule and to keep the SELECT minimal — the triage UI needs only the
  * six columns rendered in the row DTO.
+ *
+ * Cursor pagination is a `(posted_at, id)` tuple compared via
+ * `WHERE (posted_at, id) < (?, ?)`. The pair (rather than `id` alone)
+ * is required because rows inserted in non-chronological order share
+ * `posted_at` values, and a single-column id cursor would silently drop
+ * them from later pages.
  */
 final class UncategorizedTriageQuery
 {
     public function __construct(private readonly DatabaseManager $db) {}
 
-    public function for(User $user, int $limit = 50, ?int $cursorId = null): TriageBatch
+    public function for(User $user, int $limit = 50, ?int $cursorId = null, ?string $cursorPostedAt = null): TriageBatch
     {
         $query = $this->db->connection()
             ->table('transactions')
@@ -33,6 +39,7 @@ final class UncategorizedTriageQuery
             ->orderByDesc('id')
             ->select([
                 'id',
+                'posted_at',
                 'booked_at',
                 'counterparty_name',
                 'amount_minor',
@@ -42,7 +49,11 @@ final class UncategorizedTriageQuery
             ->limit($limit + 1);
 
         if ($cursorId !== null) {
-            $query->where('id', '<', $cursorId);
+            if ($cursorPostedAt === null) {
+                $query->where('id', '<', $cursorId);
+            } else {
+                $query->whereRaw('(posted_at, id) < (?, ?)', [$cursorPostedAt, $cursorId]);
+            }
         }
 
         $rows = $query->get();
@@ -51,15 +62,18 @@ final class UncategorizedTriageQuery
 
         $dtos = [];
         $lastId = null;
+        $lastPostedAt = null;
         foreach ($sliced as $row) {
             $dtos[] = $this->mapRow($row);
             $lastId = self::toInt($row->id);
+            $lastPostedAt = self::toString($row->posted_at);
         }
 
         return new TriageBatch(
             rows: $dtos,
             hasMore: $hasMore,
             nextCursorId: $hasMore ? $lastId : null,
+            nextCursorPostedAt: $hasMore ? $lastPostedAt : null,
         );
     }
 
