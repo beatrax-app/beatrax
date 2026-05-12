@@ -1,3 +1,9 @@
+@php
+    use Modules\Ledger\Public\ValueObjects\Money;
+
+    $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format('nl_NL');
+@endphp
+
 <div class="space-y-6">
     <header class="space-y-1">
         <h1 class="text-2xl font-semibold text-slate-900 tracking-tight">Preview import</h1>
@@ -55,8 +61,8 @@
                                 <td class="px-4 py-2 text-sm text-slate-900">{{ $row->bookedAt ?? '—' }}</td>
                                 <td class="px-4 py-2 text-sm text-slate-900">{{ $row->counterpartyName ?? '—' }}</td>
                                 <td class="px-4 py-2 text-right text-sm text-slate-900">
-                                    @if ($row->amountMinor !== null)
-                                        € {{ number_format($row->amountMinor / 100, 2, '.', ',') }}
+                                    @if ($row->amountMinor !== null && $row->currency !== null)
+                                        {{ $fmt($row->amountMinor, $row->currency) }}
                                     @else
                                         —
                                     @endif

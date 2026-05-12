@@ -1,11 +1,14 @@
 @php
+    use Modules\Ledger\Public\ValueObjects\Money;
+
     /**
-     * Currency formatting per UI-SPEC §Interaction Contracts (Currency display):
-     *   "€ 1,234.56" — non-breaking space between symbol and number, period
-     *   decimal, comma thousands. Locked at the Blade boundary so the same
-     *   format ships from every render path.
+     * Currency formatting delegates to the Money value object's localised
+     * format() so multi-currency rows render with the correct symbol and
+     * decimal precision (JPY 0 digits, KWD 3 digits, EUR 2 digits, etc.).
+     * No float arithmetic happens on the minor amount — brick/money formats
+     * directly from the integer representation.
      */
-    $fmt = static fn (int $minor): string => '€' . "\u{00A0}" . number_format($minor / 100, 2, '.', ',');
+    $fmt = static fn (Money $money): string => $money->format('nl_NL');
 @endphp
 
 <div
@@ -46,13 +49,13 @@
         <div class="rounded-lg border border-slate-200 bg-white p-6">
             <p class="text-xs uppercase tracking-wide text-slate-500">In</p>
             <p class="mt-2 text-3xl font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
-                {{ $fmt($summary->inflow->toMinor()) }}
+                {{ $fmt($summary->inflow) }}
             </p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-white p-6">
             <p class="text-xs uppercase tracking-wide text-slate-500">Out</p>
             <p class="mt-2 text-3xl font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
-                {{ $fmt($summary->outflow->toMinor()) }}
+                {{ $fmt($summary->outflow) }}
             </p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-white p-6">
@@ -61,7 +64,7 @@
                 class="mt-2 text-3xl font-semibold {{ $summary->net->isNegative() ? 'text-slate-900' : 'text-emerald-600' }}"
                 style="font-variant-numeric: tabular-nums;"
             >
-                {{ $fmt($summary->net->toMinor()) }}
+                {{ $fmt($summary->net) }}
             </p>
         </div>
     </section>
@@ -78,13 +81,17 @@
                         <div class="flex items-baseline justify-between text-sm">
                             <span class="text-slate-900">{{ $cat->name }}</span>
                             <span class="text-slate-900" style="font-variant-numeric: tabular-nums;">
-                                {{ $fmt($cat->spend->toMinor()) }}
+                                {{ $fmt($cat->spend) }}
                             </span>
                         </div>
                         <div class="h-1 w-full overflow-hidden rounded-full bg-slate-200">
+                            @php
+                                $rawPct = (int) round($cat->percentageOfTotal * 100);
+                                $barWidth = $rawPct === 0 ? 0 : max(2, min(100, $rawPct));
+                            @endphp
                             <div
                                 class="h-1 bg-slate-900"
-                                style="width: {{ max(2, min(100, (int) round($cat->percentageOfTotal * 100))) }}%;"
+                                style="width: {{ $barWidth }}%;"
                             ></div>
                         </div>
                     </li>
@@ -123,7 +130,7 @@
                                 <td class="px-4 py-2 text-slate-900">{{ $row->counterpartyName ?? '—' }}</td>
                                 <td class="px-4 py-2 text-slate-500">{{ $row->categoryName ?? 'Uncategorized' }}</td>
                                 <td class="px-4 py-2 text-right text-slate-900" style="font-variant-numeric: tabular-nums;">
-                                    {{ $fmt($row->amount->toMinor()) }}
+                                    {{ $fmt($row->amount) }}
                                 </td>
                             </tr>
                         @endforeach

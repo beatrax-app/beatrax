@@ -11,14 +11,17 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Services\TransactionListQuery;
 
 /**
- * The `/transactions` list page. Defaults to the UI-04 recent window
- * (last 90 days); a "Show full history" toggle widens the query to
- * every persisted row. Pagination is cursor-based via
- * `TransactionListQuery` — pressing "Load more" hands the page's
- * `nextCursorId` back into the query.
+ * The `/transactions` list page. Defaults to a 90-day recent window;
+ * a "Show full history" toggle widens the query to every persisted row.
  *
- * Per Plan 05's Livewire convention, the query service is injected as
- * a parameter on `render()` (no boot()-based property injection).
+ * Pagination is cursor-based via `TransactionListQuery`. The cursor is a
+ * `(posted_at, id)` pair — pressing "Load more" hands both back into the
+ * query so rows sharing a `posted_at` value never silently drop between
+ * pages.
+ *
+ * The query service is injected as a parameter on `render()` (Livewire
+ * Component subclasses can't accept constructor injection under the
+ * project's strict-rules ruleset).
  */
 final class TransactionsList extends Component
 {
@@ -26,20 +29,25 @@ final class TransactionsList extends Component
 
     public ?int $cursorId = null;
 
+    public ?string $cursorPostedAt = null;
+
     public function toggleFullHistory(): void
     {
         $this->fullHistory = ! $this->fullHistory;
         $this->cursorId = null;
+        $this->cursorPostedAt = null;
     }
 
-    public function loadMore(int $nextCursor): void
+    public function loadMore(int $nextCursorId, ?string $nextCursorPostedAt = null): void
     {
-        $this->cursorId = $nextCursor;
+        $this->cursorId = $nextCursorId;
+        $this->cursorPostedAt = $nextCursorPostedAt;
     }
 
     public function reset_(): void
     {
         $this->cursorId = null;
+        $this->cursorPostedAt = null;
     }
 
     public function render(
@@ -50,8 +58,8 @@ final class TransactionsList extends Component
         $user = $currentUser->user();
 
         $page = $this->fullHistory
-            ? $listQuery->fullHistory($user, cursorId: $this->cursorId)
-            : $listQuery->recent($user, daysBack: 90, cursorId: $this->cursorId);
+            ? $listQuery->fullHistory($user, cursorId: $this->cursorId, cursorPostedAt: $this->cursorPostedAt)
+            : $listQuery->recent($user, daysBack: 90, cursorId: $this->cursorId, cursorPostedAt: $this->cursorPostedAt);
 
         return $views->make('ledger::livewire.transactions-list', [
             'page' => $page,
