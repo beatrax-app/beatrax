@@ -8,6 +8,10 @@ use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
+use Modules\Ingestion\Public\Exceptions\UnsupportedFormatException;
+use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
 beforeEach(function (): void {
     $this->resolver = new class implements AccountResolver
@@ -168,7 +172,7 @@ it('throws InvalidAmountException with the row index for malformed amount cells'
                 $this->adapter->parse($tmp, $this->resolver),
                 preserve_keys: false,
             );
-        })->toThrow(\Modules\Ingestion\Public\Exceptions\InvalidAmountException::class, 'Row 0');
+        })->toThrow(InvalidAmountException::class, 'Row 0');
     } finally {
         @unlink($tmp);
     }
@@ -184,7 +188,7 @@ it('rejects a file that fails the header sniffer before reading any data row', f
                 $this->adapter->parse($tmp, $this->resolver),
                 preserve_keys: false,
             );
-        })->toThrow(\Modules\Ingestion\Public\Exceptions\SniffMismatchException::class);
+        })->toThrow(SniffMismatchException::class);
     } finally {
         @unlink($tmp);
     }
@@ -228,13 +232,13 @@ it('matches the snapshot of the parsed fixture (drift detector)', function (): v
 });
 
 it('registers under the asn-csv key in the SourceAdapterRegistry', function (): void {
-    /** @var \Modules\Ingestion\Public\Services\SourceAdapterRegistry $registry */
-    $registry = $this->app->make(\Modules\Ingestion\Public\Services\SourceAdapterRegistry::class);
+    /** @var SourceAdapterRegistry $registry */
+    $registry = $this->app->make(SourceAdapterRegistry::class);
 
     $adapter = $registry->for('asn-csv');
     expect($adapter)->toBeInstanceOf(AsnCsvAdapter::class);
     expect($adapter->format())->toBe('asn-csv');
 
     expect(fn () => $registry->for('asn-mt940'))
-        ->toThrow(\Modules\Ingestion\Public\Exceptions\UnsupportedFormatException::class);
+        ->toThrow(UnsupportedFormatException::class);
 });

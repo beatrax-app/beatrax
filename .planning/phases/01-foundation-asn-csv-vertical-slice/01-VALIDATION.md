@@ -50,10 +50,10 @@ No `--watch` / `--tdd` / `--coverage-html` flags during sampling — watch-mode 
 | FND-04 | No `REAL`/`FLOAT` on money columns | Arch | `pest tests/Contracts/NoFloatMoneyArchTest.php -x` | ✅ Plan 01 | ❌ red (Plan 03) |
 | FND-06 | SQLite WAL + `synchronous=NORMAL` on connection | Unit | `pest Modules/Core/tests/Unit/SqlitePragmasTest.php -x` | ❌ W0 | ⬜ pending |
 | FND-07 | Money arithmetic uses brick/money exclusively | Unit | `pest Modules/Ledger/tests/Unit/MoneyValueObjectTest.php -x` | ❌ W0 | ⬜ pending |
-| ING-01 | ASN CSV upload imports transactions | Feature | `pest Modules/Import/tests/Feature/AsnCsvImportTest.php -x` | ❌ W0 | ⬜ pending |
+| ING-01 | ASN CSV upload imports transactions | Feature | `pest Modules/Import/tests/Feature/AsnCsvImportTest.php -x` | ❌ W0 | ✅ green (adapter level; full UI in Plan 05) |
 | ING-06 | Same-file re-upload → 0 new rows (idempotency contract) | Feature | `pest tests/Contracts/IdempotencyContractTest.php -x` | ✅ Plan 01 | ❌ red (Plan 05) |
 | ING-07 | Source declared in UI (no auto-detect) | Feature | `pest Modules/Import/tests/Feature/UploadWizardTest.php::test_requires_source_declaration -x` | ❌ W0 | ⬜ pending |
-| ING-08 | Raw source row link preserved | Unit | `pest Modules/Ingestion/tests/Unit/AsnCsvAdapterTest.php::test_preserves_raw_payload -x` | ❌ W0 | ⬜ pending |
+| ING-08 | Raw source row link preserved | Unit | `pest Modules/Ingestion/tests/Unit/AsnCsvAdapterTest.php::test_preserves_raw_payload -x` | ✅ Plan 04 | ✅ green (Plan 04) |
 | LED-01 | Accounts have type + currency | Unit | `pest Modules/Ledger/tests/Unit/AccountModelTest.php -x` | ❌ W0 | ⬜ pending |
 | LED-02 | Transaction.type enum populated | Unit | `pest Modules/Ledger/tests/Unit/TransactionTypeTest.php -x` | ❌ W0 | ⬜ pending |
 | MC-01 | Both original + settled amount columns present | Arch | `pest tests/Contracts/MoneyColumnsArchTest.php -x` | ✅ Plan 01 | ❌ red (Plan 03) |
