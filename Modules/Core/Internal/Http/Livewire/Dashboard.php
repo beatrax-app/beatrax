@@ -9,13 +9,14 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 
 /**
- * The `/` landing page. Renders the "this period at a glance" dashboard
- * (D-17): three KPI tiles (In / Out / Net), the top-spending categories
- * list with thin progress bars, and the recent transactions table.
+ * The `/` landing page. Renders the "this period at a glance" dashboard:
+ * three KPI tiles (In / Out / Net), the top-spending categories list with
+ * thin progress bars, and the recent transactions table.
  *
  * Period navigation: `previousPeriod()` / `nextPeriod()` step the
  * window by one calendar period; `today()` returns to the current
@@ -23,19 +24,27 @@ use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
  * keyboard listener (←, →, t) so users can sweep across months without
  * leaving the keyboard.
  *
- * First-run handling (D-18) is decided at the route layer — the
- * `/` handler checks `isFirstRun` via the same query service and
- * redirects to `/imports/new` before this component mounts. That keeps
- * the redirect a single HTTP hop (no Livewire round-trip) and matches
- * the project's overall preference for handling lifecycle decisions at
- * the controller level.
+ * First-run handling is decided at the route layer — the `/` handler
+ * checks `isFirstRun` via the same query service and redirects to
+ * `/imports/new` before this component mounts. That keeps the redirect
+ * a single HTTP hop (no Livewire round-trip) and matches the project's
+ * overall preference for handling lifecycle decisions at the controller
+ * level.
  *
- * DI: per Plan 05's established Livewire convention, services arrive as
- * parameters on each action method (the strict-rules ban property-based
- * constructor injection on Component subclasses).
+ * Service collaborators arrive as parameters on each action method (the
+ * strict-rules ruleset bans property-based constructor injection on
+ * Livewire Component subclasses).
+ *
+ * `$periodStartStr` is a client-controlled string. It is always resolved
+ * through `resolvePeriod()` which validates the YYYY-MM-DD shape and
+ * silently falls back to the current period on any non-matching input,
+ * so a malformed value from the wire payload never reaches
+ * `CarbonImmutable::parse` and 500s the page.
  */
 final class Dashboard extends Component
 {
+    private const PERIOD_DATE_FORMAT = 'Y-m-d';
+
     /**
      * Anchor date (Y-m-d) that pins the displayed period. Null = current.
      */
@@ -43,19 +52,13 @@ final class Dashboard extends Component
 
     public function previousPeriod(PeriodQuery $periods): void
     {
-        $current = $this->periodStartStr === null
-            ? $periods->current()
-            : $periods->containing(CarbonImmutable::parse($this->periodStartStr));
-
+        $current = $this->resolvePeriod($periods);
         $this->periodStartStr = $periods->previous($current)->start->toDateString();
     }
 
     public function nextPeriod(PeriodQuery $periods): void
     {
-        $current = $this->periodStartStr === null
-            ? $periods->current()
-            : $periods->containing(CarbonImmutable::parse($this->periodStartStr));
-
+        $current = $this->resolvePeriod($periods);
         $this->periodStartStr = $periods->next($current)->start->toDateString();
     }
 
@@ -71,15 +74,43 @@ final class Dashboard extends Component
         ViewFactory $views,
     ): View {
         $user = $currentUser->user();
-
-        $period = $this->periodStartStr === null
-            ? $periods->current()
-            : $periods->containing(CarbonImmutable::parse($this->periodStartStr));
+        $period = $this->resolvePeriod($periods);
 
         $summary = $glance->for($user, $period);
 
         return $views->make('core::livewire.dashboard', [
             'summary' => $summary,
         ]);
+    }
+
+    /**
+     * Resolves the displayed period. Validates `$periodStartStr` strictly
+     * against `Y-m-d`; on any mismatch or parse failure, falls back to
+     * the current period and clears the property so the bad value cannot
+     * survive the round-trip.
+     */
+    private function resolvePeriod(PeriodQuery $periods): Period
+    {
+        if ($this->periodStartStr === null) {
+            return $periods->current();
+        }
+
+        $parsed = CarbonImmutable::createFromFormat(self::PERIOD_DATE_FORMAT, $this->periodStartStr);
+        if ($parsed === false) {
+            $this->periodStartStr = null;
+
+            return $periods->current();
+        }
+
+        // Round-trip the formatted date to refuse strings that parse but
+        // do not stringify back to the original (e.g. "2026-02-30" which
+        // Carbon happily accepts as "2026-03-02").
+        if ($parsed->format(self::PERIOD_DATE_FORMAT) !== $this->periodStartStr) {
+            $this->periodStartStr = null;
+
+            return $periods->current();
+        }
+
+        return $periods->containing($parsed);
     }
 }
