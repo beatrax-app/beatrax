@@ -4,9 +4,9 @@
         <p class="text-sm text-slate-500">Review the parsed rows. Nothing is saved to your ledger until you confirm.</p>
     </header>
 
-    @if ($preview === null)
+    @if ($preview === null || $previewExpired)
         <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-            <p>The preview has expired. <a href="/imports/new" class="underline">Re-upload the file</a> to try again. That file doesn't look like a CSV. Drop in the ASN CSV export you downloaded from the ASN portal.</p>
+            <p>The preview has expired. <a href="/imports/new" class="underline">Re-upload the file</a> to try again.</p>
         </div>
     @else
         @if (count($preview->accountsToName) > 0)
