@@ -9,23 +9,29 @@ use Normalizer;
 
 /**
  * Produces the canonical SHA-256 fingerprint of a CanonicalTransaction. The
- * fingerprint is the second-layer idempotency guard (D-16) — the composite
- * UNIQUE index on `transactions(account_id, posted_at, amount_minor,
+ * fingerprint is the second-layer idempotency guard — the composite UNIQUE
+ * index on `transactions(user_id, account_id, posted_at, amount_minor,
  * currency, counterparty_normalized, source_ref)` is the first.
+ *
+ * The tuple is prefixed with `user_id` so the same row imported under two
+ * different users hashes to two different fingerprints. Without that prefix
+ * the SHA-256 UNIQUE index would silently reject the second user's row as a
+ * "duplicate" of the first user's row.
  *
  * `normalize()` collapses a raw counterparty name into a stable string used
  * inside the fingerprint tuple. NORMALIZATION_VERSION is bumped whenever the
- * algorithm changes so the column on `transactions` (`normalization_version`)
- * lets old rows be re-normalised against a new algorithm without invalidating
- * historic fingerprints.
+ * algorithm or the tuple shape changes so the column on `transactions`
+ * (`normalization_version`) lets old rows be re-normalised against a new
+ * algorithm without invalidating historic fingerprints.
  */
 final class FingerprintComposer
 {
-    public const NORMALIZATION_VERSION = 1;
+    public const NORMALIZATION_VERSION = 2;
 
     public function compose(CanonicalTransaction $tx): string
     {
         $tuple = implode('|', [
+            (string) ($tx->userId ?? 0),
             (string) $tx->accountId,
             $tx->postedAt->toDateString(),
             (string) $tx->amountMinor,
