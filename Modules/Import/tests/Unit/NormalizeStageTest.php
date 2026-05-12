@@ -46,14 +46,14 @@ function makeSourceDto(array $overrides = []): SourceTransactionDto
 
 function makeUserForNormalize(): User
 {
-    $user = new User();
+    $user = new User;
     $user->id = 42;
 
     return $user;
 }
 
 it('substitutes the _no_counterparty sentinel when counterparty name is null', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer());
+    $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['counterpartyName' => null]);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7);
@@ -63,7 +63,7 @@ it('substitutes the _no_counterparty sentinel when counterparty name is null', f
 });
 
 it('substitutes the _no_counterparty sentinel when counterparty name is empty', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer());
+    $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['counterpartyName' => '   ']);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7);
@@ -72,7 +72,7 @@ it('substitutes the _no_counterparty sentinel when counterparty name is empty', 
 });
 
 it('substitutes the _no_counterparty sentinel when name is punctuation-only', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer());
+    $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['counterpartyName' => '!!!???']);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7);
@@ -81,7 +81,7 @@ it('substitutes the _no_counterparty sentinel when name is punctuation-only', fu
 });
 
 it('maps negative amounts to expense type', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer());
+    $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['amountMinor' => -1299]);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1);
@@ -90,7 +90,7 @@ it('maps negative amounts to expense type', function (): void {
 });
 
 it('maps positive amounts to income type', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer());
+    $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['amountMinor' => 250000]);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1);
@@ -99,7 +99,7 @@ it('maps positive amounts to income type', function (): void {
 });
 
 it('maps zero amounts to adjustment type', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer());
+    $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['amountMinor' => 0]);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1);
@@ -108,7 +108,7 @@ it('maps zero amounts to adjustment type', function (): void {
 });
 
 it('normalises counterparty name via FingerprintComposer (lowercase, diacritics, truncation)', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer());
+    $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['counterpartyName' => 'Café Plein']);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1);
@@ -117,7 +117,7 @@ it('normalises counterparty name via FingerprintComposer (lowercase, diacritics,
 });
 
 it('preserves user_id, account_id, import_run_id, source_row_index and source_format', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer());
+    $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['sourceRowIndex' => 12]);
 
     $canonical = $stage->run($source, accountId: 99, user: makeUserForNormalize(), importRunId: 7);
@@ -130,7 +130,7 @@ it('preserves user_id, account_id, import_run_id, source_row_index and source_fo
 });
 
 it('mirrors native amount/currency to settled amount/currency (Phase 1 MC-01 stub)', function (): void {
-    $stage = new NormalizeStage(new FingerprintComposer());
+    $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['amountMinor' => -3999, 'currency' => 'EUR']);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1);
@@ -141,7 +141,7 @@ it('mirrors native amount/currency to settled amount/currency (Phase 1 MC-01 stu
 });
 
 it('records the normalization version from the FingerprintComposer', function (): void {
-    $composer = new FingerprintComposer();
+    $composer = new FingerprintComposer;
     $stage = new NormalizeStage($composer);
     $canonical = $stage->run(makeSourceDto(), accountId: 1, user: makeUserForNormalize(), importRunId: 1);
 
