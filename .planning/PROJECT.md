@@ -27,9 +27,9 @@ If everything else fails, the system must surface the complete picture of monthl
 - [ ] Import ASN transactions via CSV and MT940 / CAMT.053 exports
 - [ ] Import ICS Cards statements via CSV/Excel export
 - [ ] Import PayPal activity via CSV export with funding-source detail preserved
-- [ ] Scan IMAP inboxes (multiple accounts, app-password auth) for transaction receipts — including a backfill of at least 3 months of history
-- [ ] Ingest exported `.eml` / `.mbox` files as an alternative to IMAP
-- [ ] Support a future dedicated forwarding inbox (forward-only mode) without rework
+- [ ] Scan Gmail (via Gmail API + OAuth2) and Outlook / Microsoft 365 (via Microsoft Graph + OAuth2) for transaction receipts — including a backfill of at least 3 months of history
+- [ ] Ingest exported `.eml` / `.mbox` files as an alternative path (covers iCloud / Fastmail / any provider without an API)
+- [ ] Support a future dedicated forwarding inbox (Gmail/Outlook only) without rework
 - [ ] Scan all connected inboxes for any known sender pattern (no per-source inbox config required)
 - [ ] **Idempotent imports — dedup on re-import and overlapping email scans so duplicate uploads or rescans never double-count a transaction**
 
@@ -88,6 +88,7 @@ If everything else fails, the system must surface the complete picture of monthl
 - **Outbound payments / actually initiating iDEAL** — System recommends amounts to pay ICS; the user executes the payment in their bank. No payment-initiation responsibility.
 - **Investment / brokerage accounts** — Scope is day-to-day cash and card flow, not portfolio tracking.
 - **Mobile app / native client** — Web UI on localhost is sufficient. Mobile is a hosted-deployment concern, which is itself out of scope.
+- **iCloud Mail integration** — No public API; would force IMAP back into the stack. User confirmed iCloud is not where financial receipts arrive.
 - **Tax / VAT reporting** — This is a personal cash visibility tool, not bookkeeping.
 - **Multi-user / partner sharing in v1** — Single-user first. Data model is designed so this can be added later without migration pain.
 - **Receipt-image OCR** — Email + CSV is the data spine. Receipt photos are a v2+ consideration.
@@ -111,7 +112,8 @@ The user's payments fan out through multiple providers — ASN for direct debits
 
 ## Constraints
 
-- **Tech stack**: PHP / Laravel — User preference, mature ecosystem for the relevant integrations
+- **Tech stack**: PHP 8.5 + Laravel 13 (latest released March 2026) — User preference, mature ecosystem; pin to current versions to stay supported and avoid legacy deprecation cycles
+- **Email integration**: Provider APIs only (Gmail API, Microsoft Graph) — Avoids any dependency on `ext-imap` (removed from PHP 8.4 core) and the IMAP library churn. iCloud Mail is explicitly out of scope
 - **Hosting**: Local only (localhost) — Privacy requirement; financial data must never leave the machine
 - **Idempotency**: All ingestion paths (CSV upload, IMAP scan, .eml import) must be safe to re-run — Same source + same transaction must never duplicate
 - **History**: Full history retained forever — Long-term subscription-drift analysis requires it; pruning is a non-goal
@@ -125,7 +127,8 @@ The user's payments fan out through multiple providers — ASN for direct debits
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| PHP / Laravel as the framework | User preference; strong ecosystem for CSV/MT940 parsing, IMAP libraries, queues, and a clean local web UI | — Pending |
+| PHP 8.5 + Laravel 13 (latest) | User preference; strong ecosystem; staying current avoids legacy deprecation pain | — Pending |
+| Email via provider APIs (Gmail API + Microsoft Graph), not IMAP | Decouples from `ext-imap` deprecation; cleaner OAuth flow; iCloud explicitly out of scope so no IMAP fallback needed | — Pending |
 | Local-only deployment, no cloud | Privacy of financial data is paramount; user only needs single-machine access | — Pending |
 | Mixed ingestion (CSV + IMAP + file import) instead of bank APIs | ICS and Google Play lack usable APIs; a uniform export/email model is simpler and avoids token-rotation complexity | — Pending |
 | Scan all inboxes for everything (no per-source inbox config) | Lower setup friction; catches forwarded receipts the user forgot about | — Pending |
