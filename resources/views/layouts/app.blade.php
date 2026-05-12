@@ -11,6 +11,9 @@
         @livewireStyles
     </head>
     <body class="antialiased bg-white text-slate-900" style="font-family: 'Inter', system-ui, -apple-system, sans-serif;">
+        @auth
+            @livewire('core.top-nav')
+        @endauth
         @yield('content')
         @livewireScripts
     </body>
