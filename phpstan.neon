@@ -28,7 +28,6 @@ parameters:
         - 'resource_path'
         - 'storage_path'
         - 'public_path'
-        - 'view'
     # Restrict the `Listeners handle method should have 'void' return type`
     # check (canvural/larastan-strict-rules) to actual Listener directories.
     # With the upstream default of `[]` the rule matches every class with a
