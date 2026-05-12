@@ -18,7 +18,7 @@ beforeEach(function (): void {
 });
 
 it('creates an account scoped to the user with the supplied name + IBAN', function (): void {
-    $namer = new AccountNamer();
+    $namer = new AccountNamer;
     $iban = 'NL01TEST1234567890';
 
     $accountId = $namer($iban, 'My ASN Savings', $this->user);
@@ -36,7 +36,7 @@ it('creates an account scoped to the user with the supplied name + IBAN', functi
 });
 
 it('trims whitespace from the user-supplied name', function (): void {
-    $namer = new AccountNamer();
+    $namer = new AccountNamer;
 
     $accountId = $namer('NL02TEST1234567890', '  Trimmed Account  ', $this->user);
 
@@ -46,7 +46,7 @@ it('trims whitespace from the user-supplied name', function (): void {
 });
 
 it('generates a slug containing the last 4 IBAN characters for uniqueness', function (): void {
-    $namer = new AccountNamer();
+    $namer = new AccountNamer;
 
     $accountId = $namer('NL03TEST9876543210', 'Another Account', $this->user);
 
