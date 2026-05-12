@@ -16,10 +16,9 @@ use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
  * - HeaderSniffer is a stateless singleton injected into the upload wizard
  *   for pre-parse validation.
  * - SourceAdapterRegistry maps stable format identifiers to their adapter
- *   implementation. Adapters are NOT auto-detected from file content (per
- *   ING-07) — the user declares the source format up front. New source
- *   formats (CAMT.053, MT940, ICS, PayPal, …) are added to the registry
- *   map alongside their adapter class.
+ *   implementation. Adapters are NOT auto-detected from file content — the
+ *   user declares the source format up front. New source formats are added
+ *   to the registry map alongside their adapter class.
  */
 final class IngestionServiceProvider extends ServiceProvider
 {

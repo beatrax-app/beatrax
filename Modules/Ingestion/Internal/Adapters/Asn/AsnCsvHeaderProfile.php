@@ -5,18 +5,12 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Asn;
 
 /**
- * Empirical CSV profile for the ASN Online Bankieren "CSV met IBAN" export.
+ * CSV profile for the ASN Online Bankieren "CSV met IBAN" export.
  *
- * The values reflect what `tests/fixtures/asn-sample-1.csv` actually contains
- * — a real anonymized 2026 export. The audit trail (delimiter, encoding,
- * header presence, column count, full header map) lives next to the fixture
- * at `tests/fixtures/asn-sample-1.md`.
- *
- * Three values had to be corrected away from earlier community-reported
- * shapes:
- *   - HAS_HEADER = true (2026 export ships a header row)
- *   - SOURCE_ENCODING = UTF-8 (file -bI on the committed fixture)
- *   - EXPECTED_COLUMN_COUNT = 20 (Afschriftnummer + Categorie added at the tail)
+ * The values reflect what `tests/fixtures/asn-sample-1.csv` actually
+ * contains — a real anonymised 2026 export — and what `file -bI` reports
+ * for the committed fixture. The full header-cell map lives next to the
+ * fixture at `tests/fixtures/asn-sample-1.md`.
  */
 final class AsnCsvHeaderProfile
 {

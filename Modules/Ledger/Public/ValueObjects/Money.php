@@ -13,7 +13,8 @@ use Stringable;
  * Wraps `brick/money` so domain code never imports brick directly. The only
  * way to construct a Money is `ofMinor(int, string)` — there is no `ofFloat`
  * or `fromString` on purpose: floats and locale-aware string parsing are the
- * exact failure modes the FND-04 / FND-07 / MC-01 stack exists to prevent.
+ * exact failure modes the integer-only money handling rules exist to
+ * prevent.
  */
 final class Money implements Stringable
 {

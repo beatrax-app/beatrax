@@ -54,11 +54,11 @@ final class DoctorCommand extends Command
             $blockers[] = 'PHP';
         }
 
-        // The project deliberately uses the pure-PHP `webklex/php-imap`. The
-        // native ext-imap module may still be loaded on Herd / older PHP
-        // builds — that's informational, not a warning, because no diederik
-        // code paths consume it. `get_loaded_extensions()` is intentionally
-        // used here so the project-wide PLT-05 grep stays clean.
+        // The project uses the pure-PHP `webklex/php-imap` library rather
+        // than the native ext-imap module (which PHP 8.4 unbundled). The
+        // native extension may still be loaded on older builds — that is
+        // informational, not a warning, because no diederik code path
+        // consumes it.
         $loaded = in_array('imap', get_loaded_extensions(), true);
         $this->line(sprintf(
             'ext-imap   %s   info (diederik uses webklex/php-imap regardless)',

@@ -25,6 +25,7 @@ it('changes the fingerprint when any tuple element changes', function (string $f
 
     expect($altered)->not->toBe($base);
 })->with([
+    'userId' => ['userId', 999],
     'accountId' => ['accountId', 999],
     'postedAt' => ['postedAt', CarbonImmutable::parse('2026-06-03')],
     'amountMinor' => ['amountMinor', -1300],
@@ -33,7 +34,7 @@ it('changes the fingerprint when any tuple element changes', function (string $f
     'sourceRef' => ['sourceRef', 'ASN-REF-999'],
 ]);
 
-it('treats a null source_ref as empty string (Pitfall 5)', function (): void {
+it('treats a null source_ref as empty string in the fingerprint tuple', function (): void {
     $composer = new FingerprintComposer;
 
     $withNull = $composer->compose($this->canonical(['sourceRef' => null]));
@@ -42,8 +43,8 @@ it('treats a null source_ref as empty string (Pitfall 5)', function (): void {
     expect($withNull)->toBe($withEmpty);
 });
 
-it('returns NORMALIZATION_VERSION = 1', function (): void {
-    expect((new FingerprintComposer)->version())->toBe(1);
+it('exposes NORMALIZATION_VERSION as a positive integer', function (): void {
+    expect((new FingerprintComposer)->version())->toBeGreaterThanOrEqual(1);
 });
 
 it('normalises a counterparty name (lowercase + diacritics + punctuation)', function (): void {

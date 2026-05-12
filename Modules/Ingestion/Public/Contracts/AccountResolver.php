@@ -11,8 +11,8 @@ use Modules\Ingestion\Public\Dto\AccountResolution;
  * already have a row, or Unknown(iban) so the upload wizard can pause for
  * the user to name the account before proceeding.
  *
- * The default implementation lives in the Import module (added in Plan 05);
- * adapter tests pass in lightweight in-memory implementations.
+ * The default implementation lives in the Import module; adapter tests pass
+ * in lightweight in-memory implementations.
  */
 interface AccountResolver
 {

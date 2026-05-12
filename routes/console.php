@@ -2,4 +2,5 @@
 
 declare(strict_types=1);
 
-// Plan 02 wires `diederik:install` here.
+// App-wide artisan command bindings live here. Module-local artisan
+// commands are registered from each module's ServiceProvider.

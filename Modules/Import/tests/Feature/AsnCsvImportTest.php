@@ -25,7 +25,7 @@ it('imports every parsed row from the gold fixture on the first run', function (
     expect(Transaction::count())->toBe($result->inserted);
 });
 
-it('returns zero new rows when re-importing the same file (idempotency, ING-06)', function (): void {
+it('returns zero new rows when re-importing the same file', function (): void {
     $fixture = __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv';
 
     $first = $this->importer->runAndConfirm($fixture, 'asn-csv', $this->fixtureUser);

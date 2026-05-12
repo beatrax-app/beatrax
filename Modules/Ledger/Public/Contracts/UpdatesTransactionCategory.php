@@ -8,7 +8,7 @@ use Modules\Core\Models\User;
 
 /**
  * Public contract for the one path that mutates `transactions.category_id`.
- * Categorization (Plan 07+) injects this interface; the Ledger module's
+ * The Categorization module injects this interface; Ledger's
  * `UpdateTransactionCategory` action is bound as the default implementation.
  */
 interface UpdatesTransactionCategory

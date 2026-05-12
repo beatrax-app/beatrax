@@ -24,7 +24,7 @@ use Modules\Ledger\Models\ImportRun;
  *
  * Lookups always scope to the authenticated user (CurrentUser) so a forged
  * importRunId from another user produces a ModelNotFoundException via
- * `firstOrFail` — T-05-03 (cross-user import access).
+ * `firstOrFail` rather than exposing the other user's import run.
  */
 final class PreviewWizard extends Component
 {

@@ -15,9 +15,8 @@ use Modules\Ledger\Models\Category;
  * seeder never produces duplicates and keeps existing parent/child
  * relationships intact.
  *
- * The tree shape matches the phase research's Dutch-aware default set:
- * 13 top-level sections + 17 leaves under Income / Housing / Transport /
- * Insurance / Subscriptions.
+ * The tree is a Dutch-aware default set: 13 top-level sections with 17
+ * leaves under Income / Housing / Transport / Insurance / Subscriptions.
  */
 final class DefaultCategoryTreeSeeder extends Seeder
 {

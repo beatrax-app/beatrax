@@ -72,7 +72,7 @@ it('decodes the first row column-by-column against the empirical layout', functi
     expect($first->description)->toContain('Europese incasso');
 });
 
-it('preserves the full source row in rawPayload for ING-08 audit', function (): void {
+it('preserves the full source row in rawPayload for audit', function (): void {
     $dtos = iterator_to_array(
         $this->adapter->parse(base_path('tests/fixtures/asn-sample-1.csv'), $this->resolver),
         preserve_keys: false,
@@ -101,7 +101,7 @@ it('emits monotonically increasing sourceRowIndex starting at zero', function ()
     }
 });
 
-it('handles UTF-8 diacritics in counterparty names (Pitfall 10)', function (): void {
+it('handles UTF-8 diacritics in counterparty names without mojibake', function (): void {
     $dtos = iterator_to_array(
         $this->adapter->parse(base_path('tests/fixtures/asn-sample-1.csv'), $this->resolver),
         preserve_keys: false,
@@ -124,15 +124,15 @@ it('handles UTF-8 diacritics in counterparty names (Pitfall 10)', function (): v
     );
 });
 
-it('leaves counterpartyName null when the source row has no name (Pitfall 5 sentinel handoff)', function (): void {
+it('leaves counterpartyName null when the source row has no name', function (): void {
     $dtos = iterator_to_array(
         $this->adapter->parse(base_path('tests/fixtures/asn-sample-1.csv'), $this->resolver),
         preserve_keys: false,
     );
 
-    // The fixture contains BEA (POS) rows with an empty Naam cell — assert at
-    // least one comes through as null so the Normalize stage (Plan 05) is
-    // the layer that substitutes the '_no_counterparty' sentinel.
+    // The fixture contains BEA (POS) rows with an empty Naam cell. Assert
+    // at least one comes through as null so the Normalize stage is the
+    // layer that substitutes the `_no_counterparty` sentinel.
     $foundNullName = false;
     foreach ($dtos as $dto) {
         if ($dto->counterpartyName === null) {

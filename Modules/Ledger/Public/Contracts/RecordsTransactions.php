@@ -9,7 +9,7 @@ use Modules\Ledger\Public\Dto\RecordResult;
 
 /**
  * Public contract for the one path that writes rows to the `transactions`
- * table. Import (Plan 05+) injects this interface; the Ledger module's
+ * table. Consumer modules inject this interface; the Ledger module's
  * `RecordTransactions` action is bound as the default implementation.
  */
 interface RecordsTransactions

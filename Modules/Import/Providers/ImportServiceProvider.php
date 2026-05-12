@@ -28,7 +28,7 @@ use Modules\Import\Public\Services\AccountNamer;
  *    when the user supplies a name inline in the wizard.
  *  - ImportPipeline + PreviewCache are singletons; the pipeline holds the
  *    stateless three-stage chain, the cache wraps Laravel's cache repository
- *    with the locked JSON-only DTO round-trip (T-05-11).
+ *    with the JSON-only DTO round-trip used by PreviewCache.
  */
 final class ImportServiceProvider extends ServiceProvider
 {

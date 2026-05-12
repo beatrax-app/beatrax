@@ -7,14 +7,10 @@ namespace Modules\Ingestion\Internal\Adapters\Asn;
 /**
  * Column index map for the ASN Online Bankieren "CSV met IBAN" export.
  *
- * EMPIRICAL: indices reflect what `tests/fixtures/asn-sample-1.csv` —
- * a real anonymized 2026 export — actually contains. Indices 0..17 line up
- * with the historical layout documented by community converters; indices 18
- * (Afschriftnummer) and 19 (Categorie) were added in the 2026 export. The
- * full header → field mapping lives at `tests/fixtures/asn-sample-1.md`.
- *
- * If a future real export proves a different column count, update this file
- * AND the audit Markdown in lock-step.
+ * Reflects the 20-column shape committed in
+ * `tests/fixtures/asn-sample-1.csv`. The full header → field mapping
+ * lives next to the fixture at `tests/fixtures/asn-sample-1.md`; keep
+ * the two files in sync if ASN ever changes the export layout.
  */
 final class AsnCsvColumnMap
 {

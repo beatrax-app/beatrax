@@ -13,9 +13,9 @@ use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 /**
  * Default implementation of the Categorization Public `AssignsCategory`
  * contract. Routes the write through Ledger's `UpdatesTransactionCategory`
- * action (D-04 — Ledger stays the only mutator of `transactions`), and
- * fires the `TransactionCategorized` event after a successful write so
- * later phases (Phase 7 MerchantMemory) can react without coupling.
+ * action so Ledger remains the only mutator of `transactions`, and fires
+ * the `TransactionCategorized` event after a successful write so other
+ * modules can react without coupling.
  */
 final class AssignCategory implements AssignsCategory
 {
