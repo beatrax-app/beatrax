@@ -56,7 +56,7 @@ it('substitutes the _no_counterparty sentinel when counterparty name is null', f
     $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['counterpartyName' => null]);
 
-    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7);
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7, sourceFormat: 'asn-csv');
 
     expect($canonical)->toBeInstanceOf(CanonicalTransaction::class);
     expect($canonical->counterpartyNormalized)->toBe('_no_counterparty');
@@ -66,7 +66,7 @@ it('substitutes the _no_counterparty sentinel when counterparty name is empty', 
     $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['counterpartyName' => '   ']);
 
-    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7);
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7, sourceFormat: 'asn-csv');
 
     expect($canonical->counterpartyNormalized)->toBe('_no_counterparty');
 });
@@ -75,7 +75,7 @@ it('substitutes the _no_counterparty sentinel when name is punctuation-only', fu
     $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['counterpartyName' => '!!!???']);
 
-    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7);
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 7, sourceFormat: 'asn-csv');
 
     expect($canonical->counterpartyNormalized)->toBe('_no_counterparty');
 });
@@ -84,7 +84,7 @@ it('maps negative amounts to expense type', function (): void {
     $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['amountMinor' => -1299]);
 
-    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1);
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
 
     expect($canonical->type)->toBe('expense');
 });
@@ -93,7 +93,7 @@ it('maps positive amounts to income type', function (): void {
     $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['amountMinor' => 250000]);
 
-    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1);
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
 
     expect($canonical->type)->toBe('income');
 });
@@ -102,7 +102,7 @@ it('maps zero amounts to adjustment type', function (): void {
     $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['amountMinor' => 0]);
 
-    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1);
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
 
     expect($canonical->type)->toBe('adjustment');
 });
@@ -111,7 +111,7 @@ it('normalises counterparty name via FingerprintComposer (lowercase, diacritics,
     $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['counterpartyName' => 'Café Plein']);
 
-    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1);
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
 
     expect($canonical->counterpartyNormalized)->toBe('cafe plein');
 });
@@ -120,7 +120,7 @@ it('preserves user_id, account_id, import_run_id, source_row_index and source_fo
     $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['sourceRowIndex' => 12]);
 
-    $canonical = $stage->run($source, accountId: 99, user: makeUserForNormalize(), importRunId: 7);
+    $canonical = $stage->run($source, accountId: 99, user: makeUserForNormalize(), importRunId: 7, sourceFormat: 'asn-csv');
 
     expect($canonical->userId)->toBe(42);
     expect($canonical->accountId)->toBe(99);
@@ -129,11 +129,18 @@ it('preserves user_id, account_id, import_run_id, source_row_index and source_fo
     expect($canonical->sourceFormat)->toBe('asn-csv');
 });
 
+it('passes through the sourceFormat supplied by the caller', function (): void {
+    $stage = new NormalizeStage(new FingerprintComposer);
+    $canonical = $stage->run(makeSourceDto(), accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'ics-csv');
+
+    expect($canonical->sourceFormat)->toBe('ics-csv');
+});
+
 it('mirrors native amount/currency to settled amount/currency (Phase 1 MC-01 stub)', function (): void {
     $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['amountMinor' => -3999, 'currency' => 'EUR']);
 
-    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1);
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
 
     expect($canonical->settledAmountMinor)->toBe(-3999);
     expect($canonical->settledCurrency)->toBe('EUR');
@@ -143,7 +150,7 @@ it('mirrors native amount/currency to settled amount/currency (Phase 1 MC-01 stu
 it('records the normalization version from the FingerprintComposer', function (): void {
     $composer = new FingerprintComposer;
     $stage = new NormalizeStage($composer);
-    $canonical = $stage->run(makeSourceDto(), accountId: 1, user: makeUserForNormalize(), importRunId: 1);
+    $canonical = $stage->run(makeSourceDto(), accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
 
     expect($canonical->normalizationVersion)->toBe($composer->version());
 });
