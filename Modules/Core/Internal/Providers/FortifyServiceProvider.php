@@ -29,9 +29,9 @@ final class FortifyServiceProvider extends ServiceProvider
 {
     public function boot(Repository $config, Hasher $hasher, RateLimiter $rateLimiter): void
     {
-        // Defense-in-depth: even if a future change drops the session.lifetime
-        // override from config/session.php, Fortify-bound sessions must run
-        // for 30 days per the project's single-user-daily-use UX policy.
+        // Fortify-bound sessions run for 30 days regardless of the
+        // session.lifetime value in config/session.php so the "remember me"
+        // checkbox on the login form behaves consistently.
         $config->set('session.lifetime', 60 * 24 * 30);
         $config->set('session.expire_on_close', false);
 

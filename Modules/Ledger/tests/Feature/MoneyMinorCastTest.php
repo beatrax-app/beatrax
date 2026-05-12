@@ -61,7 +61,7 @@ it('round-trips Money writes through MoneyMinorCast', function (): void {
     expect($again->amount->toMinor())->toBe(-500);
 });
 
-it('round-trips the settled-amount pair via the parameterised cast (MC-01)', function (): void {
+it('round-trips the settled-amount pair via the parameterised cast', function (): void {
     $tx = Transaction::create([
         'account_id' => $this->account->id, 'type' => 'expense',
         'posted_at' => '2026-05-03', 'booked_at' => '2026-05-03 12:00:00', 'value_date' => '2026-05-03',

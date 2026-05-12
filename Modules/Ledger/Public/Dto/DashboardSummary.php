@@ -13,7 +13,7 @@ use Spatie\LaravelData\Data;
  *
  * `isFirstRun` is true exactly when the user has zero transactions across
  * all periods — the dashboard route uses it to redirect to `/imports/new`
- * per D-18.
+ * before the dashboard ever renders.
  */
 final class DashboardSummary extends Data
 {

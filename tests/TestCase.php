@@ -23,8 +23,9 @@ abstract class TestCase extends BaseTestCase
      * The canonical fixture user resolved during seedFixtureUserAndAccount().
      *
      * Typed via the App\Models\User class alias for stability — the alias is
-     * registered in CoreServiceProvider so legacy Laravel idioms keep working
-     * alongside the Modules\Core\Models\User canonical model.
+     * registered in CoreServiceProvider so framework consumers expecting the
+     * default Laravel namespace (auth.providers.users.model, notification
+     * routing) resolve the same class as the module-namespaced model.
      */
     protected ?User $fixtureUser = null;
 

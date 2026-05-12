@@ -44,7 +44,7 @@
         </div>
     </header>
 
-    {{-- KPI tiles (Display scale, primary focal point per UI-SPEC §Spacing Scale) --}}
+    {{-- KPI tiles: the primary focal point of the dashboard. --}}
     <section class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="This period totals">
         <div class="rounded-lg border border-slate-200 bg-white p-6">
             <p class="text-xs uppercase tracking-wide text-slate-500">In</p>

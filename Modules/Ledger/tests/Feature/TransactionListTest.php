@@ -23,7 +23,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('defaults to the recent window (90 days) and excludes older rows (UI-04)', function (): void {
+it('defaults to the recent window (90 days) and excludes older rows', function (): void {
     // In-window: 30 days ago
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1299,

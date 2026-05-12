@@ -14,7 +14,8 @@ use Spatie\LaravelData\Data;
  * fingerprint composition, account_id resolution, etc.).
  *
  * `rawPayload` preserves the original source cells (indexed by column
- * position) for ING-08 audit. `sourceRowIndex` is monotonically increasing
+ * position) so the source row can be re-inspected for audit without
+ * re-reading the CSV. `sourceRowIndex` is monotonically increasing
  * starting at 0 across one parse run.
  */
 final class SourceTransactionDto extends Data

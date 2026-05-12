@@ -10,7 +10,7 @@ use Throwable;
 /**
  * Thrown by HeaderSniffer when an uploaded file does not match the declared
  * source format. Message text is user-facing — the upload wizard renders it
- * verbatim per UI-SPEC §Error states.
+ * verbatim.
  */
 final class SniffMismatchException extends RuntimeException
 {

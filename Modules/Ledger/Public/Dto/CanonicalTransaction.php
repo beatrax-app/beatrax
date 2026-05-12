@@ -12,10 +12,9 @@ use Spatie\LaravelData\Data;
  * Import build CanonicalTransaction instances from any source adapter; the
  * Ledger `RecordTransactions` action is the only thing that persists them.
  *
- * `counterparty_normalized` is NEVER NULL (Pitfall 5 mitigation): the
- * NormalizeStage substitutes a sentinel when both the counterparty name and
- * description are empty, so the composite UNIQUE on transactions catches
- * duplicates even when source_ref is absent.
+ * `counterparty_normalized` is NEVER NULL: NormalizeStage substitutes a
+ * sentinel when the counterparty name is empty so the composite UNIQUE on
+ * transactions catches duplicates even when `source_ref` is absent.
  */
 final class CanonicalTransaction extends Data
 {

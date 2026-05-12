@@ -19,7 +19,8 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         UrlGenerator $urls,
         ViewFactory $views,
     ): RedirectResponse|Response {
-        // D-18 first-run redirect: zero transactions → /imports/new.
+        // First-run redirect: zero transactions → /imports/new. Keeps the
+        // dashboard from rendering empty tiles on a fresh install.
         $summary = $glance->for($currentUser->user(), $periods->current());
         if ($summary->isFirstRun) {
             return new RedirectResponse($urls->route('imports.new'));

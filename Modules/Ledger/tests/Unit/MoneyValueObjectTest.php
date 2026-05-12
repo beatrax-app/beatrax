@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Brick\Money\Exception\MoneyMismatchException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-it('round-trips an integer minor amount (FND-07)', function (): void {
+it('round-trips an integer minor amount', function (): void {
     $m = Money::ofMinor(1234, 'EUR');
 
     expect($m->toMinor())->toBe(1234);

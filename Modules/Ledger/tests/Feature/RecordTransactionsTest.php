@@ -37,7 +37,7 @@ it('inserts new rows and counts them', function (): void {
     expect(Transaction::count())->toBe(1);
 });
 
-it('treats a re-insertion of the same canonical as a duplicate (ING-06)', function (): void {
+it('treats a re-insertion of the same canonical as a duplicate', function (): void {
     $action = $this->app->make(RecordTransactions::class);
     $row = $this->canonical([
         'accountId' => $this->account->id,

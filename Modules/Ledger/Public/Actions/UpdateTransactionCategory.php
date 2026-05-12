@@ -10,9 +10,8 @@ use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 
 /**
  * Mutates `transactions.category_id` for a transaction owned by the given
- * user. Pre-wired here in Plan 03 so Plan 07's categorization UI has a
- * stable Public contract to inject without reaching into the Ledger model
- * directly.
+ * user. Exposed as a Public contract so the Categorization module can drive
+ * category assignment without reaching into the Ledger model directly.
  */
 final class UpdateTransactionCategory implements UpdatesTransactionCategory
 {

@@ -21,7 +21,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('redirects to /imports/new on first run (zero transactions, D-18)', function (): void {
+it('redirects to /imports/new on first run (zero transactions)', function (): void {
     $response = $this->get('/');
 
     $response->assertRedirect('/imports/new');
@@ -91,7 +91,7 @@ it('renders the uncategorized count badge in the top nav', function (): void {
 
     $response->assertOk();
     $response->assertSee('Uncategorized', false);
-    // The badge text — Plan 06 requires the count to appear
+    // The badge text — the uncategorized count must appear in the nav.
     $response->assertSeeText('2');
 });
 

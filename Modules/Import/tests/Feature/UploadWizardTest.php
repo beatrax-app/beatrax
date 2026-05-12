@@ -19,7 +19,7 @@ it('renders the calm upload form on GET /imports/new', function (): void {
     $response->assertSee('Upload statement', false);
 });
 
-it('requires a source format declaration (ING-07)', function (): void {
+it('requires a source format declaration', function (): void {
     $contents = file_get_contents(__DIR__.'/../../../../tests/fixtures/asn-sample-1.csv');
     $file = UploadedFile::fake()->createWithContent('asn.csv', $contents !== false ? $contents : '');
 

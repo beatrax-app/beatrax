@@ -12,19 +12,19 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
- * Persistent top navigation. Rendered from `layouts/app.blade.php`
- * within an `@auth` guard so unauthenticated pages (login, error pages)
- * do not see it.
+ * Persistent top navigation. Rendered from `layouts/app.blade.php` within
+ * an `@auth` guard so unauthenticated pages (login, error pages) do not
+ * see it.
  *
- * Items per UI-SPEC §Component Inventory:
+ * Layout:
  *
  *   Dashboard · Transactions · Uncategorized {count?} ─── {email} · Sign out
  *
  * The Uncategorized item carries a count badge when the user has any
  * uncategorized transactions; the badge falls away once "inbox zero" is
- * reached. Active-link highlighting uses the injected `Request` to read
- * the current path (no `request()` helper, no facade) — staying clean
- * under the project's DI-only constraint.
+ * reached. Active-link highlighting reads the current path from the
+ * injected `Request` rather than the `request()` helper so the component
+ * stays clean under the project's DI-only constraint.
  */
 final class TopNav extends Component
 {

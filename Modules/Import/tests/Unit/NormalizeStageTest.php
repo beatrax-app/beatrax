@@ -136,7 +136,7 @@ it('passes through the sourceFormat supplied by the caller', function (): void {
     expect($canonical->sourceFormat)->toBe('ics-csv');
 });
 
-it('mirrors native amount/currency to settled amount/currency (Phase 1 MC-01 stub)', function (): void {
+it('mirrors native amount/currency to settled amount/currency by default', function (): void {
     $stage = new NormalizeStage(new FingerprintComposer);
     $source = makeSourceDto(['amountMinor' => -3999, 'currency' => 'EUR']);
 

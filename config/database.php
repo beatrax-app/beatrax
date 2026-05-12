@@ -17,10 +17,12 @@ return [
     | Database Connections
     |--------------------------------------------------------------------------
     |
-    | The on-disk `sqlite` connection is the production-shaped local store and
-    | enables WAL with `synchronous=NORMAL` for FND-06. The `sqlite_testing`
-    | connection runs against an in-memory database for parallel test runs;
-    | WAL is not applicable to `:memory:` so the pragma keys are omitted.
+    | The on-disk `sqlite` connection is the production-shaped local store
+    | and enables WAL with `synchronous=NORMAL` so a long-running background
+    | worker can read while the foreground request writes. The
+    | `sqlite_testing` connection runs against an in-memory database for
+    | parallel test runs; WAL is not applicable to `:memory:` so the pragma
+    | keys are omitted.
     */
 
     'connections' => [
