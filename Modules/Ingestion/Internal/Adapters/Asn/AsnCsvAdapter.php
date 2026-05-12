@@ -107,6 +107,12 @@ final class AsnCsvAdapter implements SourceAdapter
     }
 
     /**
+     * Coerces a league/csv record (associative under setHeaderOffset, keyed
+     * by header name) into a positional list of strings. The library's
+     * contract for 9.x is to yield strings or null only — anything else is
+     * a precondition violation and is rejected loudly rather than papered
+     * over with type juggling.
+     *
      * @param  mixed  $record  Whatever league/csv yielded for one row.
      * @return array<int, string>
      */
@@ -118,14 +124,15 @@ final class AsnCsvAdapter implements SourceAdapter
 
         $row = [];
         foreach (array_values($record) as $cell) {
-            if (is_string($cell)) {
-                $row[] = $cell;
-            } elseif ($cell === null) {
+            if ($cell === null) {
                 $row[] = '';
-            } elseif (is_scalar($cell)) {
-                $row[] = is_bool($cell) ? ($cell ? '1' : '0') : (string) $cell;
+            } elseif (is_string($cell)) {
+                $row[] = $cell;
             } else {
-                throw new InvalidAmountException('Unexpected non-scalar cell in CSV row.');
+                throw new InvalidAmountException(sprintf(
+                    'Unexpected non-string cell in CSV row (got %s).',
+                    get_debug_type($cell),
+                ));
             }
         }
 
