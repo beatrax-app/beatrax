@@ -14,8 +14,8 @@ it('seeds the full Dutch-aware default category tree on a fresh database', funct
 
     $this->app->make(DefaultCategoryTreeSeeder::class)->run();
 
-    // 13 top-level parents + 17 children = 30 rows.
-    expect(Category::query()->count())->toBe(30);
+    // 13 top-level parents + 16 children = 29 rows.
+    expect(Category::query()->count())->toBe(29);
 });
 
 it('is idempotent — re-running the seeder produces the same row count', function (): void {
@@ -27,7 +27,7 @@ it('is idempotent — re-running the seeder produces the same row count', functi
     $seeder->run();
     $afterSecond = Category::query()->count();
 
-    expect($afterFirst)->toBe(30)
+    expect($afterFirst)->toBe(29)
         ->and($afterSecond)->toBe($afterFirst);
 });
 
@@ -55,8 +55,11 @@ it('links every leaf category to a parent and never lists a leaf as its own pare
 it('persists the income / expense / transfer kind on every row', function (): void {
     $this->app->make(DefaultCategoryTreeSeeder::class)->run();
 
-    expect(Category::query()->where('kind', 'income')->count())->toBeGreaterThanOrEqual(4);
-    expect(Category::query()->where('kind', 'expense')->count())->toBeGreaterThanOrEqual(20);
+    // 4 income (Income parent + Salary / Refunds / Other income).
+    // 24 expense (10 parents + 14 leaves under Housing / Transport / Insurance / Subscriptions).
+    // 1 transfer (Transfers (internal) parent).
+    expect(Category::query()->where('kind', 'income')->count())->toBe(4);
+    expect(Category::query()->where('kind', 'expense')->count())->toBe(24);
     expect(Category::query()->where('kind', 'transfer')->count())->toBe(1);
 });
 
@@ -70,5 +73,5 @@ it('runs from the diederik:install command via the UserInstalled listener', func
     ]);
 
     expect($exit)->toBe(0);
-    expect(Category::query()->count())->toBe(30);
+    expect(Category::query()->count())->toBe(29);
 });
