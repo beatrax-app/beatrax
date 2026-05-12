@@ -16,7 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(LoopbackOnly::class);
-        $middleware->appendToGroup('web', NoStoreFinancialData::class);
+        // Global append (not group-scoped) so the no-store header lands on
+        // every response the app emits — including non-web routes such as
+        // the /up health endpoint and any future API or CLI HTTP handler.
+        $middleware->append(NoStoreFinancialData::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Default exception handling.
