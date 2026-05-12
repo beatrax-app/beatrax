@@ -15,16 +15,19 @@ use Modules\Ledger\Models\Account;
  * `user_id` from the supplied user (the request's CurrentUser) so newly
  * named accounts can never leak across users.
  *
- * Slug derivation: `slug($name) + '-' + last4(iban)`. Last-4 of the IBAN
- * guarantees that two accounts with the same human name (e.g. "Spaarrekening")
- * do not collide on the UNIQUE slug column.
+ * Slug derivation: `slug($name) + '-' + last8(iban)`. The last 8 characters
+ * cover both BBAN groups (Dutch IBANs put the 4-digit bank check digit at
+ * the start; the discriminating bytes are at the tail). Using 8 instead of
+ * 4 dramatically lowers the chance of two distinct IBANs producing the same
+ * slug, and the per-user UNIQUE on `(user_id, slug)` plus the per-user
+ * UNIQUE on `(user_id, iban)` guarantee the same IBAN never lands twice.
  */
 final class AccountNamer implements NamesAccounts
 {
     public function __invoke(string $iban, string $userSuppliedName, User $user): int
     {
         $trimmed = trim($userSuppliedName);
-        $tail = substr($iban, -4);
+        $tail = substr($iban, -8);
 
         $account = Account::create([
             'user_id' => $user->id,
