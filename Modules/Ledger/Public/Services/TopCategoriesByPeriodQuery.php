@@ -15,9 +15,11 @@ use stdClass;
  * Top-N spending categories for a given user + period window.
  *
  * Performs the aggregation as a single `GROUP BY category_id` with an
- * integer `SUM(-amount_minor)` so the database returns money totals as
- * integers — Money is composed at the DTO boundary (no float arithmetic
- * anywhere on the hot path).
+ * integer `SUM(-settled_amount_minor)` so the database returns money totals
+ * as integers — Money is composed at the DTO boundary (no float arithmetic
+ * anywhere on the hot path). The aggregation is scoped to a single
+ * `settled_currency` so multi-currency users see a single-currency panel
+ * rather than a silently-summed mix.
  *
  * The `percentageOfTotal` field is each row's share of the panel's total
  * (not the user's overall outflow). It always sums to ~1.0 for non-empty
@@ -32,28 +34,33 @@ use stdClass;
  */
 final class TopCategoriesByPeriodQuery
 {
+    public const DEFAULT_DISPLAY_CURRENCY = 'EUR';
+
+    private const MAX_PARENT_DEPTH = 16;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     /**
      * @return array<TopCategoryRow>
      */
-    public function for(User $user, Period $period, int $limit = 5): array
+    public function for(User $user, Period $period, string $displayCurrency = self::DEFAULT_DISPLAY_CURRENCY, int $limit = 5): array
     {
         $connection = $this->db->connection();
 
         $rows = $connection
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->where('amount_minor', '<', 0)
+            ->where('settled_currency', $displayCurrency)
+            ->where('settled_amount_minor', '<', 0)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->whereNotNull('category_id')
             ->groupBy('category_id')
-            ->orderByRaw('SUM(-amount_minor) DESC')
+            ->orderByRaw('SUM(-settled_amount_minor) DESC')
             ->limit($limit)
             ->get([
                 'category_id',
-                $connection->raw('SUM(-amount_minor) AS spend_minor'),
+                $connection->raw('SUM(-settled_amount_minor) AS spend_minor'),
             ]);
 
         if ($rows->isEmpty()) {
@@ -87,7 +94,7 @@ final class TopCategoriesByPeriodQuery
             $result[] = new TopCategoryRow(
                 categoryId: $categoryId,
                 name: $this->fullPath($categoryId, $categoriesById),
-                spend: Money::ofMinor($spendMinor, 'EUR'),
+                spend: Money::ofMinor($spendMinor, $displayCurrency),
                 percentageOfTotal: $spendMinor / $total,
             );
         }
@@ -133,13 +140,23 @@ final class TopCategoriesByPeriodQuery
     }
 
     /**
+     * Walks the parent chain to build the breadcrumb path. A `visited` set
+     * and a hard depth cap guard against accidental parent cycles in the
+     * `categories` table — Eloquent does not enforce acyclicity, so any bad
+     * data (external import, manual edit) would otherwise spin this loop
+     * forever.
+     *
      * @param  array<int, stdClass>  $byId
      */
     private function fullPath(int $categoryId, array $byId): string
     {
         $parts = [];
+        $visited = [];
         $current = $categoryId;
-        while (isset($byId[$current])) {
+        $depth = 0;
+
+        while (isset($byId[$current]) && ! isset($visited[$current]) && $depth < self::MAX_PARENT_DEPTH) {
+            $visited[$current] = true;
             $row = $byId[$current];
             array_unshift($parts, self::toString($row->name));
             $parentId = $row->parent_id === null ? null : self::toInt($row->parent_id);
@@ -147,6 +164,7 @@ final class TopCategoriesByPeriodQuery
                 break;
             }
             $current = $parentId;
+            $depth++;
         }
 
         return implode(' / ', $parts);
