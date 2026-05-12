@@ -7,7 +7,7 @@ use Modules\Ledger\Models\Account;
 
 uses(RefreshDatabase::class);
 
-it('persists an account with required fields (LED-01)', function (): void {
+it('persists an account with required fields', function (): void {
     $account = Account::create([
         'name' => 'ASN spaarrekening',
         'slug' => 'asn-spaar',
@@ -22,7 +22,7 @@ it('persists an account with required fields (LED-01)', function (): void {
     expect($account->kind)->toBe('asn');
 });
 
-it('accepts a nullable user_id (FND-03)', function (): void {
+it('accepts a nullable user_id for multi-user readiness', function (): void {
     $a = Account::create([
         'name' => 'No user',
         'slug' => 'no-user',

@@ -52,7 +52,7 @@ its default `array_values` step.
 | 18 | `Afschriftnummer` | statement number | unchanged |
 | 19 | `Categorie` | ASN-side category label | unchanged (typically empty) |
 
-## Differences from the [ASSUMED] layout in research
+## Differences from the prior assumed layout
 
 Three of four `AsnCsvHeaderProfile` constants required correction:
 
@@ -80,9 +80,9 @@ the open-source converters is still correct for indices 0–17.
    accounts) — placeholder `NL00ASNB9876543210`, name forced to
    `Eigen Spaarrekening`.
 4. **Counterparty name** — synthetic merchant from a pool of 18 names. The pool
-   includes `Café Plein` (diacritic) to exercise the Pitfall-10 round-trip
-   test; a post-anonymization step forces at least one row to contain it
-   regardless of pool selection.
+   includes `Café Plein` (diacritic) to exercise the diacritic round-trip the
+   normaliser handles; a post-anonymization step forces at least one row to
+   contain it regardless of pool selection.
 5. **Address / postcode / city** — blanked.
 6. **Payment reference + description** — IBAN-like substrings replaced with
    `NL00XXXX0000000000`; any run of 8+ digits replaced with `X` of equal
