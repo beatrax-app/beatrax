@@ -2,5 +2,5 @@
 
 declare(strict_types=1);
 
-// Plan 02 wires the dashboard, login, and upload routes here.
-// Module-local web routes load via each module's ServiceProvider.
+// App-wide web routes live here. Module-local web routes are loaded from
+// each module's ServiceProvider.

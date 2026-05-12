@@ -96,7 +96,7 @@ it('assigns a category to an uncategorized transaction owned by the user', funct
     );
 });
 
-it('overrides an existing category when assigning a different one (CAT-03)', function (): void {
+it('overrides an existing category when assigning a different one', function (): void {
     // Seed the row with an existing category directly so we can isolate the
     // override-event dispatch.
     Transaction::query()->where('id', $this->tx->id)

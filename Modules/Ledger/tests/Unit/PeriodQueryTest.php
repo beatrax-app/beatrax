@@ -123,7 +123,7 @@ dataset('period_sweep', function () {
     }
 });
 
-it('period contains the instant for every (start_day, instant) pair (Pitfall 7)', function (int $startDay, string $instant): void {
+it('period contains the instant for every (start_day, instant) pair', function (int $startDay, string $instant): void {
     $query = new PeriodQuery(fakeClock($instant), fakeCurrentUser($startDay));
     $period = $query->containing(CarbonImmutable::parse($instant));
 

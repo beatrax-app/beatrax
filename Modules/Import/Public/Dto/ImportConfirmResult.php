@@ -9,8 +9,7 @@ use Spatie\LaravelData\Data;
 /**
  * Outcome of the confirm phase. The wizard's results page renders the
  * "Imported N transactions · skipped M duplicates" summary directly from
- * these counts; the cross-module IdempotencyContractTest asserts against
- * `inserted` and `duplicates` for ING-06.
+ * these counts.
  */
 final class ImportConfirmResult extends Data
 {

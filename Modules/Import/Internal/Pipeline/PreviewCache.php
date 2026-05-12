@@ -13,16 +13,13 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  * Holds the parsed canonical batch + preview payload between the upload
  * (preview) click and the confirm click. 30-minute TTL.
  *
- * **Locked contract (T-05-11):** the cache MUST round-trip via JSON +
- * spatie/laravel-data hydration. PHP's native object-deserialization path
- * is forbidden anywhere in this file (and indirectly anywhere on the
- * Internal/Pipeline path) because the deserialization-of-untrusted-data
- * class — even with `allowed_classes` — still drives DTO constructors with
- * attacker-controlled strings. The `JSON_THROW_ON_ERROR` flag makes any
- * corruption or version-skew loud rather than silently dropping rows.
+ * The cache round-trips DTOs via JSON + spatie/laravel-data hydration.
+ * PHP's native object-deserialisation path is intentionally not used here:
+ * even with `allowed_classes` it drives DTO constructors with arbitrary
+ * cached strings, and the `JSON_THROW_ON_ERROR` flag makes any corruption
+ * or schema skew loud rather than silently dropping rows.
  *
- * `Clock` is injected so the TTL window is deterministic in tests; the
- * global now-helper is banned per CLAUDE.md.
+ * `Clock` is injected so the TTL window is deterministic in tests.
  */
 final class PreviewCache
 {

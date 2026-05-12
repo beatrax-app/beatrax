@@ -100,8 +100,8 @@ abstract class TestCase extends RootTestCase
 
     /**
      * Persist one Transaction row for query-service tests. Defaults align
-     * with the Pitfall-5 sentinel and the A13 sign-to-type rules so callers
-     * can override only the field under test.
+     * with the no-counterparty sentinel and the sign-to-type rules so
+     * callers can override only the field under test.
      *
      * @param  array<string, mixed>  $overrides
      */

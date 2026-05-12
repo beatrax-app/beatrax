@@ -28,9 +28,9 @@ use Throwable;
  * never materializes the whole list.
  *
  * Amounts go through AsnAmountParser (regex + integer arithmetic, no float
- * path — Pitfall 1). Counterparty names that arrive empty stay null in the
- * DTO; substituting the '_no_counterparty' sentinel is the Normalize
- * stage's responsibility (Pitfall 5 sentinel handoff).
+ * path — IEEE-754 corrupts cent precision). Counterparty names that arrive
+ * empty stay null in the DTO; substituting the `_no_counterparty` sentinel
+ * is the Normalize stage's responsibility.
  */
 final class AsnCsvAdapter implements SourceAdapter
 {

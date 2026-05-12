@@ -16,12 +16,13 @@ use Modules\Import\Public\Contracts\RunsImports;
 /**
  * Step 1 of the wizard. The user picks a source format and uploads a CSV
  * file. On submit, the file is staged via Livewire's temporary upload
- * directory, the importer runs the preview phase, and the user is
- * redirected to /imports/{id}/preview.
+ * directory, the importer runs the preview phase (copying the upload to a
+ * stable app-owned path on the way through), and the user is redirected to
+ * /imports/{id}/preview.
  *
- * That file is too large. Drop in an ASN CSV export under 10 MB.
- * (^ this literal copy is surfaced as the messages() value for `max:10240`
- * per UI-SPEC §Error states.)
+ * The 10 MB ceiling matches the typical maximum ASN export size; the
+ * `messages()` overrides surface user-readable strings for the validation
+ * failures.
  */
 final class UploadWizard extends Component
 {
@@ -88,8 +89,9 @@ final class UploadWizard extends Component
 
     /**
      * Sanitises an uploaded filename to a safe `[A-Za-z0-9_-]+\.csv` shape.
-     * The user-supplied original name is NEVER used to construct disk paths
-     * (T-05-01 — path traversal mitigation).
+     * The user-supplied original name is never used to construct disk paths
+     * directly — path traversal characters are stripped here before any
+     * filesystem operation sees the value.
      */
     private function sanitiseFilename(string $original): string
     {

@@ -24,7 +24,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('persists a transaction with a valid type (LED-02)', function (): void {
+it('persists a transaction with a valid type', function (): void {
     $tx = Transaction::create([
         'account_id' => $this->account->id,
         'type' => 'expense',

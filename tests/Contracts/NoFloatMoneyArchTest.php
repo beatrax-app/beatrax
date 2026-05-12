@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-it('no migration declares REAL or FLOAT on a money column (FND-04)', function (): void {
+it('no migration declares REAL or FLOAT on a money column', function (): void {
     $migrationDirs = glob(base_path('Modules/*/Database/Migrations')) ?: [];
     $offenders = [];
 

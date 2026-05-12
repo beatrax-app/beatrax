@@ -11,8 +11,8 @@ use Modules\Core\Models\User;
  * transactions list and the triage inbox) inject this to assign or clear
  * the category on a transaction. Implementations route writes through the
  * Ledger Public surface so Ledger remains the single mutator of
- * `transactions.category_id` (D-04), and fire `TransactionCategorized`
- * after a successful write.
+ * `transactions.category_id`, and fire `TransactionCategorized` after a
+ * successful write.
  */
 interface AssignsCategory
 {
