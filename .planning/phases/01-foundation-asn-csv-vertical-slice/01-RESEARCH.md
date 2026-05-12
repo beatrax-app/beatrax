@@ -1841,31 +1841,36 @@ final class CurrentUserService implements Contract
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact 2026 ASN CSV column layout**
    - What we know: Historical layout from open-source converters; "CSV met IBAN" naming convention.
    - What's unclear: Whether ASN has changed format since 2020 (community converters all date pre-2021).
    - Recommendation: First task in the ingestion wave = drop a real export at `samples/asn-real-anon.csv`, pin in `AsnCsvColumnMap`, snapshot-test the parsed output.
+   - **RESOLVED:** Real anonymized ASN export pinned by Plan 04 T-01-04-01 BLOCKING `checkpoint:human-action`. The `AsnCsvAdapter` (Plan 04 T-01-04-03) is written test-first against `tests/fixtures/asn-sample-1.csv`; `AsnCsvColumnMap` carries an `EMPIRICAL` PHPDoc marker recording confirmation date and any deltas from the [ASSUMED] layout. Includes the Windows-1252 vs UTF-8 sub-question: Plan 04 T-01-04-02's `HeaderSniffer` runs `mb_detect_encoding` and feeds `league/csv\CharsetConverter` (per `AsnCsvHeaderProfile::SOURCE_ENCODING`); column-map detection and encoding are empirical, not assumed.
 
 2. **Are AsnCsvAdapter + RecordTransactions idempotent across PHP serialization re-encoding?**
    - What we know: Composite UNIQUE catches at DB layer regardless.
    - What's unclear: Whether running PHP `serialize(unserialize($x))` on a DTO before fingerprinting produces a different `counterparty_normalized` value.
    - Recommendation: Pest test that explicitly serializes a CanonicalTransaction, unserializes, then fingerprints — must match the direct path.
+   - **RESOLVED:** Phase 1 eliminates the `unserialize` boundary entirely. Plan 05 T-01-05-01's `PreviewCache` serializes via `json_encode($canonicalTransactions)` and rehydrates via `CanonicalTransaction::from($row)` (spatie/laravel-data) — no `unserialize` on user data anywhere. Plan 03's `FingerprintComposerTest` covers the normalize-determinism contract (same input → same SHA-256); the composite UNIQUE on `transactions` is the second layer of defense regardless of serialization path.
 
 3. **Should `MerchantMemory` schema include a `version` column from Phase 1?**
    - What we know: Phase 7 will own learning behaviour.
    - What's unclear: Whether the normalization algorithm version stored on `transactions.fingerprint_version` should also be on `merchant_memories` so the Phase 7 learning logic can detect stale memories.
    - Recommendation: Add `normalization_version` to `merchant_memories` now (one extra column, zero risk).
+   - **RESOLVED:** Plan 03 T-01-03-01 ships `merchant_memories` with the `normalization_version` column included in the migration (`2026_05_12_010006_create_merchant_memories_table.php`). Phase 7's CAT-02 learning can detect stale memories without a follow-up migration. The own-IBAN auto-detection sub-question (how `EloquentAccountResolver` recognises the fixture's own IBAN on first parse) is also resolved: Plan 05 T-01-05-01's `EloquentAccountResolver` looks up Account by IBAN scoped to the current user; the new `seedFixtureUserAndAccount()` helper on `tests/TestCase` (Plan 01 T-01-01-03 — see BLOCKER 2) seeds `User id=1` plus an Account row with `iban = 'NL00ASNB0123456789'` (the documented anonymization-protocol value from Plan 04 T-01-04-01), so the resolver returns Known on first parse and the `IdempotencyContractTest` does not stall on unknown-IBAN prompts.
 
 4. **Default `period_start_day` UX in install command**
    - What we know: D-19 says the install command prompts.
    - What's unclear: Whether to default-yes "1 (calendar month)" or prompt with help text first.
    - Recommendation: Prompt with explanation: "Period start day (1 = calendar month, 25 = salary cycle starting 25th): [1]" — non-blocking; default 1.
+   - **RESOLVED:** Plan 02 T-01-02-02's `diederik:install` command prompts with explanatory copy "Period start day (1-28, 1=calendar month)" and accepts a `--period-start-day` CLI flag (default 1). Persisted on `users.period_start_day` (A7); the `InstallCommandTest` covers both the option-driven and prompted paths. `Modules\Ledger\Public\Services\PeriodQuery` (Plan 03) reads the column via constructor-injected `CurrentUser` — no `config()` helper, no separate `app_config` table needed for Phase 1.
 
 5. **Settings page — ship in Phase 1 or defer?**
    - What we know: D-19 closing note says planner picks; UI-SPEC lists it for completeness.
    - Recommendation: Defer to a later micro-phase. Phase 1 ships install command + manual `.env`-style override for now. The dashboard surfaces the current period prominently; changing it is rare.
+   - **RESOLVED:** Defer to a later micro-phase. Phase 1 ships only (a) the `diederik:install` prompt (Plan 02 T-01-02-02) and (b) the implicit `users.period_start_day` column (Plan 02 migration); no in-app UI surface. This deferral is recorded in `01-CONTEXT.md` §Deferred Ideas ("Settings UI for `period_start_day` — defer to a later phase"). To change the value after install in Phase 1, the user edits the DB directly or re-runs install on a fresh DB — acceptable for a single-user localhost tool.
 
 ---
 
