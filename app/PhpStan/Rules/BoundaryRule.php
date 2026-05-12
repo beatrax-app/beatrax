@@ -14,15 +14,19 @@ use PHPStan\Rules\RuleErrorBuilder;
 /**
  * Enforces the cross-module boundary inside the `Modules\<Name>\` namespace.
  *
- * From a file at namespace `Modules\X\…`, only the following imports targeted
- * at another module Y (Y ≠ X) are allowed:
+ * From a file at namespace `Modules\X\…`, only imports targeted at another
+ * module Y (Y ≠ X) that begin with one of these prefixes are allowed:
  *   - `Modules\Y\Public\…`
  *   - `Modules\Y\Models\…`
  *
- * Anything else under `Modules\Y\` — Internal, Database, Providers, Http\Livewire —
- * is private to module Y and triggers this rule. Files outside `Modules\` are
- * not governed by this rule (facade and helper bans are enforced separately
- * by canvural/larastan-strict-rules).
+ * Anything else under `Modules\Y\` is private to module Y and triggers this
+ * rule — Internal, Database, Providers, Resources, Routes,
+ * Http\Livewire, etc. Routes and Resources currently contain no PHP
+ * classes, but the rule still forbids them so a future module that ships a
+ * controller class under `Routes/` does not silently gain a public surface.
+ *
+ * Files outside `Modules\` are not governed by this rule (facade and helper
+ * bans are enforced separately by canvural/larastan-strict-rules).
  *
  * The importer module is detected first via the declared namespace (so the
  * deliberate fixture files under `app/PhpStan/Rules/Fixtures/` exercise the
@@ -33,13 +37,14 @@ use PHPStan\Rules\RuleErrorBuilder;
  */
 final class BoundaryRule implements Rule
 {
-    private const FORBIDDEN_SUFFIXES = [
-        'Internal',
-        'Database',
-        'Providers',
+    /**
+     * Prefixes (under `Modules\<Y>\`) that are part of module Y's public
+     * surface. Any import whose tail begins with one of these is allowed.
+     */
+    private const PUBLIC_PREFIXES = [
+        'Public',
+        'Models',
     ];
-
-    private const FORBIDDEN_HTTP_LIVEWIRE_PREFIX = 'Http\\Livewire';
 
     public function getNodeType(): string
     {
@@ -122,21 +127,23 @@ final class BoundaryRule implements Rule
     }
 
     /**
-     * The FQN's tail (after `Modules\<Y>\`) decides whether the import crosses
-     * into a forbidden internal area.
+     * The FQN's tail (after `Modules\<Y>\`) decides whether the import is on
+     * the module's public surface. Anything not matching the PUBLIC_PREFIXES
+     * whitelist is treated as a boundary violation, so the rule's PHPDoc
+     * promise of "Public + Models only" stays honest as new private
+     * directories (Routes, Resources, Database, …) are added.
      */
     private function violatesBoundary(string $fqn, string $targetModule): bool
     {
         $prefix = 'Modules\\'.$targetModule.'\\';
         $tail = substr($fqn, strlen($prefix));
 
-        foreach (self::FORBIDDEN_SUFFIXES as $segment) {
+        foreach (self::PUBLIC_PREFIXES as $segment) {
             if ($tail === $segment || str_starts_with($tail, $segment.'\\')) {
-                return true;
+                return false;
             }
         }
 
-        return str_starts_with($tail, self::FORBIDDEN_HTTP_LIVEWIRE_PREFIX.'\\')
-            || $tail === self::FORBIDDEN_HTTP_LIVEWIRE_PREFIX;
+        return true;
     }
 }
