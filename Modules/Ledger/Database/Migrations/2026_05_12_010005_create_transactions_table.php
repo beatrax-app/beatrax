@@ -20,11 +20,12 @@ return new class extends Migration
             $table->dateTime('booked_at');
             $table->date('value_date');
 
-            // Native currency (FND-04 + FND-07):
+            // Native currency:
             $table->bigInteger('amount_minor');
             $table->char('currency', 3);
 
-            // Settled currency (MC-01):
+            // Settled currency (cross-currency rows record both native and
+            // settled pairs so FX information is never lost on import).
             $table->bigInteger('settled_amount_minor');
             $table->char('settled_currency', 3);
             $table->decimal('fx_rate_used', 18, 8)->nullable();
@@ -38,16 +39,16 @@ return new class extends Migration
             // Description:
             $table->text('description')->nullable();
 
-            // Category (CAT-01):
+            // Category:
             $table->foreignId('category_id')->nullable()->constrained('categories')->nullOnDelete();
 
-            // Source provenance (ING-08):
+            // Source provenance:
             $table->string('source_format', 32);
             $table->foreignId('import_run_id')->constrained('import_runs');
             $table->unsignedInteger('source_row_index');
             $table->string('source_ref')->nullable();
 
-            // Fingerprint (ING-06):
+            // Fingerprint (idempotency layer):
             $table->char('fingerprint', 64);
             $table->unsignedSmallInteger('fingerprint_version');
 
@@ -61,14 +62,20 @@ return new class extends Migration
             $table->index(['category_id', 'posted_at']);
         });
 
-        // Partial index for the uncategorized triage inbox (CAT-05).
+        // Partial index for the uncategorized triage inbox.
         DB::statement('CREATE INDEX transactions_uncategorized_idx ON transactions(user_id, posted_at) WHERE category_id IS NULL');
 
-        // Composite UNIQUE — DB-layer fingerprint enforcement (ING-06 / D-16).
-        DB::statement('CREATE UNIQUE INDEX transactions_fingerprint_uq ON transactions(account_id, posted_at, amount_minor, currency, counterparty_normalized, source_ref)');
+        // Composite UNIQUE — DB-layer fingerprint enforcement. user_id is the
+        // leading column so the same row imported under two distinct users is
+        // accepted as two distinct ledger entries.
+        DB::statement('CREATE UNIQUE INDEX transactions_fingerprint_uq ON transactions(user_id, account_id, posted_at, amount_minor, currency, counterparty_normalized, source_ref)');
 
-        // Second-layer SHA-256 fingerprint UNIQUE (defense in depth — A9).
-        DB::statement('CREATE UNIQUE INDEX transactions_fingerprint_sha_uq ON transactions(fingerprint)');
+        // Second-layer SHA-256 fingerprint UNIQUE. The SHA-256 tuple itself
+        // begins with user_id (see FingerprintComposer::compose), so the hash
+        // is already user-scoped; the UNIQUE index plus the (user_id,
+        // fingerprint) composite gives the lookup a covered query while still
+        // preventing cross-user fingerprint collisions.
+        DB::statement('CREATE UNIQUE INDEX transactions_fingerprint_sha_uq ON transactions(user_id, fingerprint)');
     }
 
     public function down(): void
