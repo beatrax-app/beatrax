@@ -144,8 +144,77 @@
 
 ## Traceability
 
-To be filled in by `/gsd-roadmapper` — each REQ-ID will map to exactly one phase.
+Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 
-| REQ-ID | Phase |
-|--------|-------|
-| (pending roadmap) | |
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| FND-01 | Phase 1 | Pending |
+| FND-02 | Phase 1 | Pending |
+| FND-03 | Phase 1 | Pending |
+| FND-04 | Phase 1 | Pending |
+| FND-05 | Phase 11 | Pending |
+| FND-06 | Phase 1 | Pending |
+| FND-07 | Phase 1 | Pending |
+| ING-01 | Phase 1 | Pending |
+| ING-02 | Phase 2 | Pending |
+| ING-03 | Phase 2 | Pending |
+| ING-04 | Phase 3 | Pending |
+| ING-05 | Phase 4 | Pending |
+| ING-06 | Phase 1 | Pending |
+| ING-07 | Phase 1 | Pending |
+| ING-08 | Phase 1 | Pending |
+| ING-09 | Phase 4 | Pending |
+| EML-01 | Phase 6 | Pending |
+| EML-02 | Phase 6 | Pending |
+| EML-03 | Phase 6 | Pending |
+| EML-04 | Phase 6 | Pending |
+| EML-05 | Phase 7 | Pending |
+| EML-06 | Phase 6 | Pending |
+| EML-07 | Phase 7 | Pending |
+| EML-08 | Phase 6 | Pending |
+| LED-01 | Phase 1 | Pending |
+| LED-02 | Phase 1 | Pending |
+| LED-03 | Phase 3 | Pending |
+| LED-04 | Phase 4 | Pending |
+| LED-05 | Phase 4 | Pending |
+| LED-06 | Phase 8 | Pending |
+| CHN-01 | Phase 5 | Pending |
+| CHN-02 | Phase 5 | Pending |
+| CHN-03 | Phase 5 | Pending |
+| CHN-04 | Phase 5 | Pending |
+| CHN-05 | Phase 5 | Pending |
+| CHN-06 | Phase 5 | Pending |
+| CHN-07 | Phase 5 | Pending |
+| CAT-01 | Phase 1 | Pending |
+| CAT-02 | Phase 7 | Pending |
+| CAT-03 | Phase 1 | Pending |
+| CAT-04 | Phase 7 | Pending |
+| CAT-05 | Phase 1 | Pending |
+| REC-01 | Phase 8 | Pending |
+| REC-02 | Phase 8 | Pending |
+| REC-03 | Phase 8 | Pending |
+| REC-04 | Phase 8 | Pending |
+| REC-05 | Phase 8 | Pending |
+| REC-06 | Phase 9 | Pending |
+| REC-07 | Phase 9 | Pending |
+| REC-08 | Phase 9 | Pending |
+| FCT-01 | Phase 10 | Pending |
+| FCT-02 | Phase 10 | Pending |
+| FCT-03 | Phase 10 | Pending |
+| FCT-04 | Phase 10 | Pending |
+| FCT-05 | Phase 10 | Pending |
+| UI-01 | Phase 1 | Pending |
+| UI-02 | Phase 5 | Pending |
+| UI-03 | Phase 8 | Pending |
+| UI-04 | Phase 1 | Pending |
+| UI-05 | Phase 1 | Pending |
+| UI-06 | Phase 3 | Pending |
+| MC-01 | Phase 1 | Pending |
+| MC-02 | Phase 3 | Pending |
+| PLT-01 | Phase 1 | Pending |
+| PLT-02 | Phase 1 | Pending |
+| PLT-03 | Phase 6 | Pending |
+| PLT-04 | Phase 6 | Pending |
+| PLT-05 | Phase 1 | Pending |
+
+**Coverage:** 68 / 68 requirements mapped (100%).
