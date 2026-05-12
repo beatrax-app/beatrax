@@ -12,6 +12,7 @@ use Modules\Categorization\Internal\Http\Livewire\TriageInbox;
 use Modules\Categorization\Internal\Listeners\SeedDefaultCategoryTree;
 use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
+use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Public\Events\UserInstalled;
 
@@ -34,6 +35,7 @@ final class CategorizationServiceProvider extends ServiceProvider
     {
         $this->app->bind(AssignsCategory::class, AssignCategory::class);
         $this->app->singleton(UncategorizedTriageQuery::class);
+        $this->app->singleton(CategoryOptionsQuery::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
