@@ -11,12 +11,16 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
+use Modules\Ledger\Public\Services\TopCategoriesByPeriodQuery;
+use Modules\Ledger\Public\Services\TransactionListQuery;
 
 /**
  * Wires the Ledger module:
  *
  * - binds the two public action contracts so other modules can inject them
  * - registers FingerprintComposer + PeriodQuery as singletons (cheap, stateless)
+ * - registers the three dashboard query services as singletons (stateless)
  * - loads migrations, routes, and views
  */
 final class LedgerServiceProvider extends ServiceProvider
@@ -27,6 +31,9 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(UpdatesTransactionCategory::class, UpdateTransactionCategory::class);
         $this->app->singleton(FingerprintComposer::class);
         $this->app->singleton(PeriodQuery::class);
+        $this->app->singleton(ThisPeriodAtAGlanceQuery::class);
+        $this->app->singleton(TopCategoriesByPeriodQuery::class);
+        $this->app->singleton(TransactionListQuery::class);
     }
 
     public function boot(): void
