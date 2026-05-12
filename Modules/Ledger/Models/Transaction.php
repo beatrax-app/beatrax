@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use InvalidArgumentException;
 use Modules\Core\Public\Concerns\BelongsToUser;
+use Modules\Ledger\Internal\Casts\MoneyMinorCast;
 
 /**
  * The canonical row in the ledger. One row per posted bank/card movement,
@@ -80,6 +81,10 @@ final class Transaction extends Model
             'normalization_version' => 'integer',
             'fingerprint_version' => 'integer',
             'source_row_index' => 'integer',
+            // Virtual Money attributes — `amount` and `settled_amount` are not
+            // real columns; the cast bridges them to the (minor, currency) pair.
+            'amount' => MoneyMinorCast::class,
+            'settled_amount' => MoneyMinorCast::class.':settled_amount_minor,settled_currency',
         ];
     }
 
