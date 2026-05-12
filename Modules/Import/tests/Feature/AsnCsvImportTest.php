@@ -50,13 +50,16 @@ it('returns mixed inserted/duplicates when an overlapping period is re-imported'
     expect($second->inserted)->toBeLessThan($first->inserted);
 });
 
-it('treats an ASN row with an empty counterparty name as a Pitfall-5 sentinel duplicate', function (): void {
+it('substitutes the no-counterparty sentinel on rows with an empty Naam column', function (): void {
     $fixture = __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv';
 
     $first = $this->importer->runAndConfirm($fixture, 'asn-csv', $this->fixtureUser);
     $sentinelRows = Transaction::query()->where('counterparty_normalized', '_no_counterparty')->count();
 
-    // Any row in the fixture where the Naam column is empty should land with
-    // the canonical sentinel — the Pitfall-5 contract.
-    expect($sentinelRows + ($first->inserted - $sentinelRows))->toBe($first->inserted);
+    // The gold fixture contains at least one nameless BEA row, so the
+    // sentinel landing path must produce a positive count. Also assert the
+    // sentinel rows are a real subset of the inserted set so a mis-count
+    // from a different counterparty cannot satisfy the test.
+    expect($sentinelRows)->toBeGreaterThan(0);
+    expect($sentinelRows)->toBeLessThanOrEqual($first->inserted);
 });
