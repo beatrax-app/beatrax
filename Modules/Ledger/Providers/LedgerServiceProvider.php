@@ -7,13 +7,17 @@ namespace Modules\Ledger\Providers;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Loads Ledger module migrations, routes, and views.
+ * Wires the Ledger module: loads migrations + routes + views, and registers
+ * Public contract bindings (FingerprintComposer + PeriodQuery singletons,
+ * RecordsTransactions + UpdatesTransactionCategory bindings) once the
+ * implementing classes ship.
  */
 final class LedgerServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Plan 03 binds Ledger\Public\Contracts\RecordsTransactions here.
+        // Public contract bindings + service singletons are wired in
+        // subsequent migrations of this provider as their implementations land.
     }
 
     public function boot(): void
