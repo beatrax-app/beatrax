@@ -7,7 +7,6 @@ namespace Modules\Ledger\Models;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use InvalidArgumentException;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Ledger\Internal\Casts\MoneyMinorCast;
 
@@ -47,10 +46,11 @@ final class Transaction extends Model
     use BelongsToUser;
 
     /**
-     * Allowed transaction-type values (LED-02). The DB CHECK constraint cannot
-     * be added via SQLite ALTER TABLE, so the model enforces the list in
-     * `booted()` for any Eloquent-driven create / save, and `RecordTransactions`
-     * re-asserts the same list before its `insertOrIgnore` write path.
+     * Allowed transaction-type values. The DB-layer BEFORE INSERT / BEFORE
+     * UPDATE triggers on `transactions` reject any value outside this list
+     * regardless of write path (Eloquent or raw insertOrIgnore), so this
+     * constant is the authoritative human-readable reference. The migration
+     * mirrors the same list inside the trigger body — keep them in sync.
      *
      * @var list<string>
      */
@@ -110,16 +110,5 @@ final class Transaction extends Model
     public function importRun(): BelongsTo
     {
         return $this->belongsTo(ImportRun::class);
-    }
-
-    protected static function booted(): void
-    {
-        self::creating(static function (Transaction $tx): void {
-            if (! in_array($tx->type, self::TYPES, true)) {
-                throw new InvalidArgumentException(
-                    "Invalid transaction type: '{$tx->type}'. Allowed: ".implode(', ', self::TYPES),
-                );
-            }
-        });
     }
 }
