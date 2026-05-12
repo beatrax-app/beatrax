@@ -97,12 +97,15 @@ it('assigns a category to an uncategorized transaction owned by the user', funct
 });
 
 it('overrides an existing category when assigning a different one (CAT-03)', function (): void {
-    /** @var AssignsCategory $action */
-    $action = $this->app->make(AssignsCategory::class);
-
-    $action($this->tx->id, $this->groceries->id, $this->user);
+    // Seed the row with an existing category directly so we can isolate the
+    // override-event dispatch.
+    Transaction::query()->where('id', $this->tx->id)
+        ->update(['category_id' => $this->groceries->id]);
 
     Event::fake([TransactionCategorized::class]);
+
+    /** @var AssignsCategory $action */
+    $action = $this->app->make(AssignsCategory::class);
     $affected = $action($this->tx->id, $this->eatingOut->id, $this->user);
 
     expect($affected)->toBe(1);
@@ -116,12 +119,13 @@ it('overrides an existing category when assigning a different one (CAT-03)', fun
 });
 
 it('clears the category when called with null', function (): void {
-    /** @var AssignsCategory $action */
-    $action = $this->app->make(AssignsCategory::class);
-
-    $action($this->tx->id, $this->groceries->id, $this->user);
+    Transaction::query()->where('id', $this->tx->id)
+        ->update(['category_id' => $this->groceries->id]);
 
     Event::fake([TransactionCategorized::class]);
+
+    /** @var AssignsCategory $action */
+    $action = $this->app->make(AssignsCategory::class);
     $affected = $action($this->tx->id, null, $this->user);
 
     expect($affected)->toBe(1);

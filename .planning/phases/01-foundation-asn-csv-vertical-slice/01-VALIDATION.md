@@ -57,8 +57,8 @@ No `--watch` / `--tdd` / `--coverage-html` flags during sampling — watch-mode 
 | LED-01 | Accounts have type + currency | Unit | `pest Modules/Ledger/tests/Unit/AccountModelTest.php -x` | ❌ W0 | ⬜ pending |
 | LED-02 | Transaction.type enum populated | Unit | `pest Modules/Ledger/tests/Unit/TransactionTypeTest.php -x` | ❌ W0 | ⬜ pending |
 | MC-01 | Both original + settled amount columns present | Arch | `pest tests/Contracts/MoneyColumnsArchTest.php -x` | ✅ Plan 01 | ❌ red (Plan 03) |
-| CAT-01 | Category tree assignable to transaction | Feature | `pest Modules/Categorization/tests/Feature/AssignCategoryTest.php -x` | ❌ W0 | ⬜ pending |
-| CAT-03 | Override existing categorization | Feature | `pest Modules/Categorization/tests/Feature/AssignCategoryTest.php::test_overrides_existing -x` | ❌ W0 | ⬜ pending |
+| CAT-01 | Category tree assignable to transaction | Feature | `pest Modules/Categorization/tests/Feature/AssignCategoryTest.php -x` | ✅ Plan 07 | ✅ green (Plan 07) |
+| CAT-03 | Override existing categorization | Feature | `pest Modules/Categorization/tests/Feature/AssignCategoryTest.php::test_overrides_existing -x` | ✅ Plan 07 | ✅ green (Plan 07) |
 | CAT-05 | Triage page lists uncategorized rows | Feature | `pest Modules/Categorization/tests/Feature/TriagePageTest.php -x` | ❌ W0 | ⬜ pending |
 | UI-01 | Dashboard shows current-period totals | Feature | `pest Modules/Ledger/tests/Feature/DashboardTest.php -x` | ✅ Plan 06 | ✅ green (Plan 06) |
 | UI-04 | Recent-window default = 90 days | Feature | `pest Modules/Ledger/tests/Feature/TransactionListTest.php::test_defaults_to_recent_window -x` | ✅ Plan 06 | ✅ green (Plan 06) |
