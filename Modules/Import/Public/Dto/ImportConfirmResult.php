@@ -8,8 +8,8 @@ use Spatie\LaravelData\Data;
 
 /**
  * Outcome of the confirm phase. The wizard's results page renders the
- * "Imported N transactions · skipped M duplicates" summary directly from
- * these counts.
+ * "Imported N transactions · skipped M duplicates · P enriched · K errors"
+ * summary directly from these counts.
  */
 final class ImportConfirmResult extends Data
 {
@@ -17,6 +17,7 @@ final class ImportConfirmResult extends Data
         public readonly int $importRunId,
         public readonly int $inserted,
         public readonly int $duplicates,
+        public readonly int $enriched,
         public readonly int $errors,
     ) {}
 }

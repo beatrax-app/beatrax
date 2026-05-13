@@ -111,13 +111,21 @@ final class RunImport implements RunsImports
         $accounts = new EloquentAccountResolver($user);
         $result = $this->pipeline->preview($stablePath, $sourceFormat, $accounts, $user, $importRun->id);
 
+        $enrichedCount = 0;
+        foreach ($result['rows'] as $row) {
+            if ($row->status === 'enriched') {
+                $enrichedCount++;
+            }
+        }
+
         $previewResult = new ImportPreviewResult(
             importRunId: $importRun->id,
             rows: $result['rows'],
             accountsToName: $result['unknownIbans'],
+            enrichedCount: $enrichedCount,
         );
 
-        $this->cache->put($importRun->id, $previewResult, $result['canonical']);
+        $this->cache->put($importRun->id, $previewResult, $result['canonical'], $result['enrichments']);
 
         return $previewResult;
     }
