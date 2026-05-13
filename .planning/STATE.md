@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 Plan 4 (Wave 2 MT940 vertical slice) complete — ROADMAP Phase 2 Success Criterion #2 closed
-last_updated: "2026-05-13T15:50:18Z"
-last_activity: "2026-05-13 -- 02-04-PLAN executed: hand-rolled AsnMt940 adapter (lexer + Tag61 + Tag86 + counterparty cleaner) + statement_summaries + wizard dropdown widened to three formats"
+stopped_at: Phase 2 Plan 5 (Wave 3 ENRICHED state + cross-format dedup) complete — all three ROADMAP Phase 2 success criteria GREEN; phase ready for verification
+last_updated: "2026-05-13T16:11:15Z"
+last_activity: "2026-05-13 -- 02-05-PLAN executed: FingerprintStage::classify + ApplyEnrichments action + four-state preview wizard + CrossFormatDedupTest"
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -25,29 +25,30 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 
 ## Current Position
 
-Phase: 02 (asn-statement-coverage-camt-053-mt940) — EXECUTING
-Plan: 5 of 5 (01 + 02 + 03 + 04 complete; 05 next — cross-format dedup + enrichment writer + wizard)
-Status: Ready to execute
-Last activity: 2026-05-13 -- 02-04 MT940 vertical slice complete; ROADMAP Phase 2 Success Criterion #2 GREEN
+Phase: 02 (asn-statement-coverage-camt-053-mt940) — READY FOR VERIFICATION
+Plan: 5 of 5 (01 + 02 + 03 + 04 + 05 complete)
+Status: Ready for phase verification (orchestrator's verify-phase-goal step)
+Last activity: 2026-05-13 -- 02-05 ENRICHED state + cross-format dedup complete; all three Phase 2 ROADMAP success criteria GREEN
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 11
-- Average duration: ~17.5m (Phase 2 plans)
+- Total plans completed: 12
+- Average duration: ~16.8m (Phase 2 plans)
 - Total execution time: —
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02 | 4 | ~70m | ~17.5m |
+| 02 | 5 | ~84m | ~16.8m |
 
 **Recent Trend:**
 
+- 02-05 (Wave 3 ENRICHED state + cross-format dedup) — ~14 minutes, 3 tasks, 6 files created + 12 files modified (FingerprintStage::classify + ApplyEnrichments action + ConfirmImport rewrite + Blade four-state UI + cross-format dedup tests)
 - 02-04 (Wave 2 MT940 vertical slice) — ~15 minutes, 4 tasks, 16 files created + 8 files modified (the hand-rolled MT940 toolchain: lexer + Tag61 + Tag86 + counterparty cleaner + adapter + DTOs + tests + snapshot)
 - 02-03 (Wave 2 CAMT.053 vertical slice) — ~28 minutes, 3 tasks, 14 files created + 40 files modified (large modification count driven by the IBAN check-digit fixture refresh — a single-purpose deviation, see 02-03-SUMMARY.md "Major Deviation")
 - 02-02 (Wave 1 fingerprint v3 foundation) — ~13 minutes, 3 tasks, 15 files created + 6 files modified
@@ -58,6 +59,7 @@ Progress: [█████████░] 92%
 
 | Phase 02 P03 | 28 | 3 tasks | 14 files |
 | Phase 02 P04 | 15 | 4 tasks | 16 files |
+| Phase 02 P05 | 14 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -89,6 +91,10 @@ Recent decisions affecting current work:
 - [Phase 02]: Plan 4: Balance amounts (`:60F:` / `:62F:`) routed through `AsnAmountParser` via a small `Mt940BalanceTuple` internal DTO rather than the float-coerced `(int) round((float) $cell * 100)` shortcut. Keeps the project-wide integer-only money invariant airtight; the NoFloatMoneyArchTest allow-list stays untouched.
 - [Phase 02]: Plan 4: ASN MT940 customer-reference regex is locked to 34 chars (the ASN-extended variant). The SWIFT-standard 16-char form would silently truncate references and break sourceRef extraction; the project explicitly produces and consumes the ASN dialect.
 - [Phase 02]: Plan 4: Multi-statement MT940 files capture only the FIRST statement's `:20:` / `:25:` / `:28C:` / `:60F:` / `:62F:` into `statement_summaries`. Subsequent statements still yield every `:61:`/`:86:` entry; the FIRST statement's `extras.multiStatement` flag is set to true so a later UI can surface the rest. Keeps the writer's unique `(user_id, import_run_id)` contract honest.
+- [Phase 02]: Plan 5: FingerprintStage::classify returns FingerprintDisposition variants (NewRow / Duplicate / Enriched) instead of a bool. Source-format rank function: asn-camt053=4, asn-mt940=2, asn-csv=1, unknown=0; NULL ref scores 0; non-null > null is the load-bearing cross-format rank rule. The deprecated `isExistingFingerprint(): bool` survives as a thin wrapper for one-version transition.
+- [Phase 02]: Plan 5: ApplyEnrichments wraps each PendingEnrichment in its OWN per-row DB transaction with lockForUpdate, while ConfirmImport wraps the recorder + applier in a single OUTER transaction. The two-level transaction shape keeps lock scopes minimal AND keeps confirm-level atomicity intact.
+- [Phase 02]: Plan 5: `source_format` records the CREATING format; `enriched_from` carries the multi-format history. A Phase 5 chain-resolution query that needs "rows touched by format X" MUST join against `enriched_from` JSON, NOT `source_format`.
+- [Phase 02]: Plan 5: CrossFormatDedupTest::camt053_then_csv deviated from the plan's strict 'enriched=0' assertion. The 72-row February pair contains 34 CAMT entries with NULL EndToEndId; non-null CSV Volgnummer legitimately enriches those rows under the rank function. Test now asserts the precise duplicates / enriched split matches the fixture's NULL-EndToEndId count.
 
 ### Pending Todos
 
@@ -120,6 +126,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-13T15:50:18Z
-Stopped at: Phase 2 Plan 4 (Wave 2 MT940 vertical slice) complete — ROADMAP Phase 2 Success Criterion #2 closed
-Resume file: .planning/phases/02-asn-statement-coverage-camt-053-mt940/02-05-PLAN.md
+Last session: 2026-05-13T16:11:15Z
+Stopped at: Phase 2 Plan 5 (Wave 3 ENRICHED state + cross-format dedup) complete — all three Phase 2 ROADMAP success criteria GREEN; phase ready for verification
+Resume file: None (phase complete; awaiting orchestrator verify-phase-goal step)

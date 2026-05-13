@@ -61,7 +61,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 02-02-PLAN.md — Wave 1 foundation: FingerprintComposer v3 (drop source_ref, add booked_at) + RederiveFingerprintsCommand + schema migrations + FingerprintDisposition/PendingEnrichment DTOs
   - [x] 02-03-PLAN.md — Wave 2 CAMT.053 vertical slice: AsnCamt053Adapter via genkgo/camt + HeaderSniffer + statement_summaries + wizard option + end-to-end (Success Criterion #1)
   - [x] 02-04-PLAN.md — Wave 2 MT940 vertical slice: hand-rolled lexer + Tag61/Tag86 parsers + counterparty cleaner + adapter + wizard option + end-to-end (Success Criterion #2)
-  - [ ] 02-05-PLAN.md — Wave 3 ENRICHED state + cross-format dedup: FingerprintStage::classify, ApplyEnrichments, pipeline integration, Blade ENRICHED row state, CrossFormatDedupTest (Success Criterion #3)
+  - [x] 02-05-PLAN.md — Wave 3 ENRICHED state + cross-format dedup: FingerprintStage::classify, ApplyEnrichments, pipeline integration, Blade ENRICHED row state, CrossFormatDedupTest (Success Criterion #3)
 
 ### Phase 3: ICS Cards + Multi-Currency Display
 **Goal**: User can import ICS Cards CSV or Excel statements with non-EUR charges preserved as both original-currency and settled-EUR, and switch transaction views between EUR-only and dual-currency.
@@ -186,7 +186,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation + ASN CSV Vertical Slice | 7/7 | Complete | - |
-| 2. ASN Statement Coverage (CAMT.053 + MT940) | 4/5 | In progress | - |
+| 2. ASN Statement Coverage (CAMT.053 + MT940) | 5/5 | Ready for verification | - |
 | 3. ICS Cards + Multi-Currency Display | 0/TBD | Not started | - |
 | 4. PayPal Ingestion + Transfer Detection | 0/TBD | Not started | - |
 | 5. Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition) | 0/TBD | Not started | - |
