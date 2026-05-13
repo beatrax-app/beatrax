@@ -6,7 +6,6 @@ namespace Modules\Core\Internal\Providers;
 
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
@@ -21,20 +20,18 @@ use Modules\Core\Models\User;
  * - Authenticates email + password directly against the User model via the
  *   injected Hasher contract.
  *
+ * Session lifetime (30 days, do-not-expire-on-close) is owned by
+ * `config/session.php` so a future change to the configured values is not
+ * silently overridden here on every request.
+ *
  * `Fortify::loginView()` / `Fortify::authenticateUsing()` are Fortify's own
  * configuration DSL — they are library static methods, not Laravel facades,
  * so the facadeless rule does not need an exemption.
  */
 final class FortifyServiceProvider extends ServiceProvider
 {
-    public function boot(Repository $config, Hasher $hasher, RateLimiter $rateLimiter): void
+    public function boot(Hasher $hasher, RateLimiter $rateLimiter): void
     {
-        // Fortify-bound sessions run for 30 days regardless of the
-        // session.lifetime value in config/session.php so the "remember me"
-        // checkbox on the login form behaves consistently.
-        $config->set('session.lifetime', 60 * 24 * 30);
-        $config->set('session.expire_on_close', false);
-
         Fortify::loginView('core::auth.login');
 
         Fortify::authenticateUsing(static function (Request $request) use ($hasher): ?User {
