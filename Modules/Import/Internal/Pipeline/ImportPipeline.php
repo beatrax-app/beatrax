@@ -8,6 +8,8 @@ use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Internal\Pipeline\Stages\NormalizeStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
+use Modules\Import\Public\Dto\EnrichedDisposition;
+use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
@@ -22,11 +24,15 @@ use Throwable;
  * Orchestrates the three stages (parse → normalize → fingerprint) into one
  * preview payload. Returns a tuple of:
  *
- *  - `rows`: per-source-row PreviewRowDto for the wizard table (NEW /
- *    DUPLICATE / ERROR per row).
+ *  - `rows`: per-source-row PreviewRowDto for the wizard table
+ *    (NEW / DUPLICATE / ENRICHED / ERROR per row).
  *  - `canonical`: list of CanonicalTransaction rows that survived the
- *    pipeline AND are not duplicates — this is what the ConfirmImport
- *    action eventually replays through RecordsTransactions.
+ *    pipeline AND are not duplicates or enrichments — this is what the
+ *    ConfirmImport action eventually replays through RecordsTransactions.
+ *  - `enrichments`: list of PendingEnrichment work-items the ConfirmImport
+ *    action applies via the AppliesEnrichments contract; each one
+ *    UPDATE-s an existing transactions row with a stronger source_ref
+ *    and appends a provenance entry to `enriched_from`.
  *  - `unknownIbans`: deduplicated list of UnknownIban prompts the wizard
  *    must render before the user can confirm.
  *
@@ -44,7 +50,7 @@ final class ImportPipeline
     ) {}
 
     /**
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, unknownIbans: list<UnknownIban>}
+     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>}
      */
     public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
     {
@@ -52,6 +58,8 @@ final class ImportPipeline
         $preview = [];
         /** @var list<CanonicalTransaction> $canonical */
         $canonical = [];
+        /** @var list<PendingEnrichment> $enrichments */
+        $enrichments = [];
         /** @var array<string, UnknownIban> $unknownIbans */
         $unknownIbans = [];
         $lastResolvedAccountId = null;
@@ -105,10 +113,20 @@ final class ImportPipeline
                     continue;
                 }
 
-                $isDuplicate = $this->fingerprint->isExistingFingerprint($normalized, $user);
+                $disposition = $this->fingerprint->classify($normalized, $user);
+                $diff = null;
+                if ($disposition instanceof EnrichedDisposition) {
+                    $diff = [
+                        'source_ref' => [
+                            'from' => $disposition->fromSourceRef,
+                            'to' => $disposition->toSourceRef,
+                        ],
+                    ];
+                }
+
                 $preview[] = new PreviewRowDto(
                     rowIndex: $source->sourceRowIndex,
-                    status: $isDuplicate ? 'duplicate' : 'new',
+                    status: $disposition->status(),
                     accountId: $accountId,
                     bookedAt: $source->bookedAt->format('d-m-Y'),
                     counterpartyName: $source->counterpartyName,
@@ -116,10 +134,18 @@ final class ImportPipeline
                     amountMinor: $source->amountMinor,
                     currency: $source->currency,
                     error: null,
+                    diff: $diff,
                 );
 
-                if (! $isDuplicate) {
+                if ($disposition->isNew()) {
                     $canonical[] = $normalized;
+                } elseif ($disposition instanceof EnrichedDisposition) {
+                    $enrichments[] = new PendingEnrichment(
+                        existingTransactionId: $disposition->existingTransactionId,
+                        newSourceRef: $disposition->toSourceRef,
+                        importRunId: $importRunId,
+                        sourceFormat: $sourceFormat,
+                    );
                 }
             }
         } catch (Throwable $e) {
@@ -144,6 +170,7 @@ final class ImportPipeline
         return [
             'rows' => $preview,
             'canonical' => $canonical,
+            'enrichments' => $enrichments,
             'unknownIbans' => array_values($unknownIbans),
         ];
     }
