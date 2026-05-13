@@ -83,7 +83,11 @@ final class RunImport implements RunsImports
             // wizard's status string and counters match the new attempt;
             // otherwise a discarded run would silently retain status =
             // 'discarded' and stale insertion counts on the re-upload.
+            // `source_format` is included so re-previewing the same file
+            // under a different adapter (once a second format ships)
+            // refreshes the audit row to match the parser actually used.
             $existing->update([
+                'source_format' => $sourceFormat,
                 'status' => 'previewed',
                 'raw_file_path' => $stablePath,
                 'uploaded_at' => $this->clock->now(),
