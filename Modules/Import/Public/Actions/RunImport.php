@@ -75,7 +75,7 @@ final class RunImport implements RunsImports
             );
         }
 
-        $stablePath = $this->copyToStableLocation($localPath, $user, $sha);
+        $stablePath = $this->copyToStableLocation($localPath, $user, $sha, $sourceFormat);
 
         if ($existing !== null) {
             // The row is being reused for a fresh preview (prior status was
@@ -125,12 +125,18 @@ final class RunImport implements RunsImports
     /**
      * Copies the upload to a deterministic, app-owned location keyed by the
      * user id and the file's SHA-256. The same file uploaded twice resolves
-     * to the same on-disk path; a no-op overwrite keeps the path stable.
+     * to the same on-disk path; a no-op overwrite keeps the path stable. The
+     * file extension matches the declared source format so the stored copy
+     * round-trips through the format-specific HeaderSniffer on re-read.
      */
-    private function copyToStableLocation(string $sourcePath, User $user, string $sha): string
+    private function copyToStableLocation(string $sourcePath, User $user, string $sha, string $sourceFormat): string
     {
         $disk = $this->storage->disk(self::STORAGE_DISK);
-        $relative = sprintf('%s/%d/%s.csv', self::STORAGE_PREFIX, $user->id, $sha);
+        $extension = match ($sourceFormat) {
+            'asn-camt053' => 'xml',
+            default => 'csv',
+        };
+        $relative = sprintf('%s/%d/%s.%s', self::STORAGE_PREFIX, $user->id, $sha, $extension);
 
         $contents = @file_get_contents($sourcePath);
         if ($contents === false) {
