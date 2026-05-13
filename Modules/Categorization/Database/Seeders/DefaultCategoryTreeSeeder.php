@@ -11,9 +11,11 @@ use Modules\Ledger\Models\Category;
  * Idempotent default category tree for a fresh diederik install. Categories
  * are seeded with `user_id = NULL` so they act as the shared starting set
  * for every user (single-user app today; partner-sharing in v2). Uses
- * `updateOrCreate` keyed by the unique `slug` column so re-running the
- * seeder never produces duplicates and keeps existing parent/child
- * relationships intact.
+ * `updateOrCreate` keyed by `(slug, user_id = NULL)` so the lookup only
+ * matches the global default-tree row — never a per-user override that
+ * happens to share the same slug. Re-running the seeder is safe: it
+ * never produces duplicates and never demotes a user-owned category to
+ * global.
  *
  * The tree is a Dutch-aware default set: 13 top-level sections with 17
  * leaves under Income / Housing / Transport / Insurance / Subscriptions.
@@ -68,26 +70,24 @@ final class DefaultCategoryTreeSeeder extends Seeder
             $order += 10;
 
             $parentModel = Category::withoutGlobalScopes()->updateOrCreate(
-                ['slug' => $parent['slug']],
+                ['slug' => $parent['slug'], 'user_id' => null],
                 [
                     'name' => $parent['name'],
                     'kind' => $parent['kind'],
                     'parent_id' => null,
                     'display_order' => $order,
-                    'user_id' => null,
                 ],
             );
 
             foreach (($parent['children'] ?? []) as $child) {
                 $order += 1;
                 Category::withoutGlobalScopes()->updateOrCreate(
-                    ['slug' => $child['slug']],
+                    ['slug' => $child['slug'], 'user_id' => null],
                     [
                         'name' => $child['name'],
                         'kind' => $child['kind'],
                         'parent_id' => $parentModel->id,
                         'display_order' => $order,
-                        'user_id' => null,
                     ],
                 );
             }
