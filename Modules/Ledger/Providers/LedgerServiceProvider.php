@@ -6,6 +6,7 @@ namespace Modules\Ledger\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Ledger\Internal\Console\RederiveFingerprintsCommand;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Ledger\Public\Actions\UpdateTransactionCategory;
@@ -28,6 +29,8 @@ use Modules\Ledger\Public\Services\TransactionListQuery;
  * - registers the three dashboard query services as singletons (stateless,
  *   user is supplied per call)
  * - loads migrations, routes, and views
+ * - registers the rederive-fingerprints artisan command behind a
+ *   runningInConsole() guard so it never binds on web requests
  */
 final class LedgerServiceProvider extends ServiceProvider
 {
@@ -50,5 +53,11 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'ledger');
 
         $livewire->component('ledger.transactions-list', TransactionsList::class);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                RederiveFingerprintsCommand::class,
+            ]);
+        }
     }
 }
