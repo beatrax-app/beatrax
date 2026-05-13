@@ -27,7 +27,9 @@ use Modules\Ledger\Public\ValueObjects\Money;
  * Money totals aggregate `settled_amount_minor` filtered by
  * `settled_currency = $displayCurrency`. Multi-currency users see a
  * single-currency total rather than a silently summed mix; non-display
- * currencies are deferred to a future per-currency breakdown panel.
+ * currencies are deferred to a future per-currency breakdown panel. The
+ * `recentTransactions` panel applies the same `settled_currency` filter
+ * so every panel on the dashboard agrees on the currency in view.
  *
  * Money is composed only at the DTO boundary (`Money::ofMinor`) — the SQL
  * layer is integer-pure to keep the dashboard query under the 50ms budget
@@ -91,7 +93,10 @@ final class ThisPeriodAtAGlanceQuery
             ->whereNull('category_id')
             ->count();
 
-        $recent = $this->listQuery->recent($user, daysBack: 90, limit: 10);
+        // Pass $displayCurrency through so the "Recent transactions" panel
+        // stays consistent with the currency-scoped tiles and Top Categories
+        // panel — a EUR view never surfaces USD/JPY rows in the recent list.
+        $recent = $this->listQuery->recent($user, daysBack: 90, limit: 10, currency: $displayCurrency);
 
         return new DashboardSummary(
             period: $period,

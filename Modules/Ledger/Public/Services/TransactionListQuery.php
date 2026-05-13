@@ -28,6 +28,13 @@ use stdClass;
  *    `/transactions` page toggles to this when the user clicks
  *    "Show full history".
  *
+ * Both entry points accept an optional `$currency` filter that, when
+ * supplied, restricts the result to rows whose `settled_currency` matches.
+ * The dashboard passes its display currency through so the "Recent
+ * transactions" panel stays consistent with the currency-scoped tiles and
+ * Top Categories panel; the `/transactions` page leaves it null to keep
+ * the full multi-currency list visible.
+ *
  * Cursor pagination is implemented by selecting `limit + 1` rows and
  * trimming the last one off. The cursor is a `(posted_at, id)` pair — the
  * next page applies `WHERE (posted_at, id) < (?, ?)` using SQLite's row-value
@@ -47,11 +54,17 @@ final class TransactionListQuery
         private readonly DatabaseManager $db,
     ) {}
 
-    public function recent(User $user, int $daysBack = 90, ?int $cursorId = null, int $limit = 50, ?string $cursorPostedAt = null): TransactionListPage
-    {
+    public function recent(
+        User $user,
+        int $daysBack = 90,
+        ?int $cursorId = null,
+        int $limit = 50,
+        ?string $cursorPostedAt = null,
+        ?string $currency = null,
+    ): TransactionListPage {
         $cutoff = $this->clock->now()->subDays($daysBack);
 
-        $query = $this->baseQuery($user)
+        $query = $this->baseQuery($user, $currency)
             ->where('transactions.posted_at', '>=', $cutoff->toDateString())
             ->limit($limit + 1);
 
@@ -60,18 +73,23 @@ final class TransactionListQuery
         return $this->buildPage($query, $limit);
     }
 
-    public function fullHistory(User $user, ?int $cursorId = null, int $limit = 50, ?string $cursorPostedAt = null): TransactionListPage
-    {
-        $query = $this->baseQuery($user)->limit($limit + 1);
+    public function fullHistory(
+        User $user,
+        ?int $cursorId = null,
+        int $limit = 50,
+        ?string $cursorPostedAt = null,
+        ?string $currency = null,
+    ): TransactionListPage {
+        $query = $this->baseQuery($user, $currency)->limit($limit + 1);
 
         $this->applyCursor($query, $cursorPostedAt, $cursorId);
 
         return $this->buildPage($query, $limit);
     }
 
-    private function baseQuery(User $user): Builder
+    private function baseQuery(User $user, ?string $currency = null): Builder
     {
-        return $this->db->connection()
+        $query = $this->db->connection()
             ->table('transactions')
             ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.user_id', $user->id)
@@ -87,6 +105,12 @@ final class TransactionListQuery
                 'transactions.currency',
                 'categories.name as category_name',
             ]);
+
+        if ($currency !== null) {
+            $query->where('transactions.settled_currency', $currency);
+        }
+
+        return $query;
     }
 
     private function applyCursor(Builder $query, ?string $cursorPostedAt, ?int $cursorId): void
