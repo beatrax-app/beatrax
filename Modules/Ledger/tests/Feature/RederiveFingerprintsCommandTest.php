@@ -143,8 +143,9 @@ it('falls back to dry-run output when neither --confirm nor --dry-run is supplie
 
 it('re-derives v3 fingerprints over a realistic-scale row set without collisions', function (): void {
     // Build 229 distinct v2 rows that all differ in at least one v3 tuple
-    // dimension. The count mirrors the 3-month ASN CAMT corpus committed
-    // in Plan 02-01 so the stress-test runs at production scale.
+    // dimension. The count mirrors the 3-month ASN CAMT fixture corpus
+    // committed under `tests/fixtures/` so the stress-test runs at
+    // production scale.
     for ($i = 0; $i < 229; $i++) {
         $day = sprintf('%02d', ($i % 28) + 1);
         $second = sprintf('%02d', $i % 60);
