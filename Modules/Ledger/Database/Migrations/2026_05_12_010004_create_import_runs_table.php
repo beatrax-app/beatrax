@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('import_runs', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users');
+            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
             $table->string('source_format', 32);
             $table->string('raw_file_path');
             $table->char('sha256', 64);
