@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Dto\TopCategoryRow;
@@ -140,7 +141,7 @@ final class TopCategoriesByPeriodQuery
             $batch = $connection
                 ->table('categories')
                 ->whereIn('id', $toFetch)
-                ->where(static function ($q) use ($userId): void {
+                ->where(static function (QueryBuilder $q) use ($userId): void {
                     $q->whereNull('user_id')->orWhere('user_id', $userId);
                 })
                 ->get(['id', 'parent_id', 'name']);
