@@ -72,7 +72,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. User can upload an ICS CSV or Excel statement and see foreign-currency charges (e.g. a USD purchase) display both the original `$X` amount and the settled EUR amount on the transaction line
   2. User can toggle the transaction list between EUR-only and dual-currency presentation and per-transaction FX rates surface when available
   3. The schema preserves original-amount, original-currency, settled-amount, settled-currency, and FX rate for every transaction (verified to never lose FX information that the source provided)
-**Plans**: TBD
+**Plans**: 5 plans
+  - [ ] 03-01-PLAN.md — Wave 0 enablement: anonymised ICS fixture, fixture record (column map / D-34 / D-35 / D-40 dispositions), phase-3 Pest group, failing scaffolds across six test files
+  - [ ] 03-02-PLAN.md — Wave 1 vertical slice: SourceTransactionDto D-42 extension + NormalizeStage substitution + D-39 FX-rate derivation + IcsCsvAdapter + registry + ICS-account naming + IdempotencyContractTest (ING-04, LED-03)
+  - [ ] 03-03-PLAN.md — Wave 2 wizard polish: two-step issuer-format picker refactor with aria-live cascade + Blade restructure + UploadWizardTest extension (D-33)
+  - [ ] 03-04-PLAN.md — Wave 2 settings page: users.default_currency_view migration + User model + /settings Livewire SFC + top-nav link + SettingsPageTest (MC-02 storage half)
+  - [ ] 03-05-PLAN.md — Wave 3 currency UX: TransactionRowDto secondaryAmount + Flux segmented toggle with #[Url] + dual-line stack + ThisPeriodAtAGlanceQuery forByCurrency + PerCurrencyTile + Dashboard branching + FX-rate detail row (MC-02 UX + UI-06 + D-46 + D-47 + D-48)
 **UI hint**: yes
 
 ### Phase 4: PayPal Ingestion + Transfer Detection
