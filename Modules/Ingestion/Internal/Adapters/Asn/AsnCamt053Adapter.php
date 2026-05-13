@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Asn;
 
 use Carbon\CarbonImmutable;
+use DateTimeZone;
 use Generator;
 use Genkgo\Camt\Camt053\DTO\Statement;
 use Genkgo\Camt\Config;
@@ -153,7 +154,14 @@ final class AsnCamt053Adapter implements SourceAdapter
             entryCount: $entryCount,
             extras: [
                 'statementId' => $stmt->getId(),
-                'createdOn' => $stmt->getCreatedOn()->format('c'),
+                // Normalise the bank-provided creation timestamp to UTC
+                // so the same logical statement produces identical extras
+                // JSON regardless of the export host's local timezone (and
+                // regardless of DST shifts that would otherwise toggle the
+                // offset between `+01:00` and `+02:00`).
+                'createdOn' => $stmt->getCreatedOn()
+                    ->setTimezone(new DateTimeZone('UTC'))
+                    ->format('Y-m-d\TH:i:s\Z'),
             ],
         );
     }
