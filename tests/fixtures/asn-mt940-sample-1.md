@@ -24,7 +24,7 @@ PII passes through.
 | **Bank-transaction families covered** | RDDT (SEPA direct debit), ICDT/RCDT (transfers), CCRD (card payment), OTHR (cash withdrawal), ACMT (bank charge) — at least one per family the hand-rolled parser needs to recognise |
 | **`:86:` structure** | structured `?NN`-prefixed subfields with SEPA narrative inside `?20–?29`, counterparty IBAN in `?31`, counterparty name in `?32` |
 | **GVC keywords present** | `SVWZ` (purpose) and `EREF` (end-to-end reference) in narrative |
-| **Own IBAN** | `NL00ASNB0123456789` (`:25:` tag) |
+| **Own IBAN** | `NL57ASNB0123456789` (`:25:` tag) |
 | **Opening balance** | `C260202EUR1000,00` (synthetic — running sum recomputed from picked entries) |
 | **Closing balance** | matches the running sum (computed at write time; do not edit by hand) |
 
@@ -54,11 +54,11 @@ merchant in every output:
 
 | Real counterparty | Synthetic merchant | Synthetic IBAN |
 |-------------------|-------------------|----------------|
-| ANWB Energie B.V. Laadpassen | Albert Heijn | NL00BANK0000000019 |
-| Stg. Rabobank Pensioenfonds | Tikkie Payments | NL00BANK0000000020 |
-| ASR ZIEKTEKOSTEN | Albert Heijn 2 | NL00BANK0000000018 |
-| AYVENS | Albert Heijn 3 | NL00BANK0000000012 |
-| VCN Verzekeringen | Vattenfall Energie | NL00BANK0000000034 |
+| ANWB Energie B.V. Laadpassen | Albert Heijn | NL67BANK0000000019 |
+| Stg. Rabobank Pensioenfonds | Tikkie Payments | NL40BANK0000000020 |
+| ASR ZIEKTEKOSTEN | Albert Heijn 2 | NL94BANK0000000018 |
+| AYVENS | Albert Heijn 3 | NL62BANK0000000012 |
+| VCN Verzekeringen | Vattenfall Energie | NL50BANK0000000034 |
 
 The complete 39-entry name map and 34-entry IBAN map are reproducible by
 sorting the source counterparty names + IBANs alphabetically and zipping
@@ -95,7 +95,7 @@ Status mapping the parser must implement:
 ## ASN `:86:` Tag layout — illustrated
 
 ```
-:86:100?20SVWZ+NL00XXXXXXXXXXXXXX-Bol.com EREF+20260215-1337416?31NL00BANK0000000027?32Bol.com
+:86:100?20SVWZ+NL00XXXXXXXXXXXXXX-Bol.com EREF+20260215-1337416?31NL45BANK0000000027?32Bol.com
 ```
 
 | Subfield | Meaning | Maps to `SourceTransactionDto` |

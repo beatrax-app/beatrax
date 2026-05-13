@@ -14,7 +14,7 @@ uses(RefreshDatabase::class);
 beforeEach(function (): void {
     $this->account = Account::create([
         'name' => 'ASN', 'slug' => 'asn', 'kind' => 'asn',
-        'iban' => 'NL00ASNB0123456789', 'default_currency' => 'EUR',
+        'iban' => 'NL57ASNB0123456789', 'default_currency' => 'EUR',
     ]);
     $this->importRun = ImportRun::create([
         'source_format' => 'asn-csv',

@@ -34,7 +34,7 @@ it('renders status badges (New / Duplicate) for parsed rows', function (): void 
 
 it('renders an inline unknown-IBAN prompt when accounts are not yet named', function (): void {
     // Drop the seeded fixture account so the ASN fixture IBAN is unknown
-    Account::query()->where('iban', 'NL00ASNB0123456789')->delete();
+    Account::query()->where('iban', 'NL57ASNB0123456789')->delete();
 
     /** @var RunsImports $importer */
     $importer = $this->app->make(RunsImports::class);

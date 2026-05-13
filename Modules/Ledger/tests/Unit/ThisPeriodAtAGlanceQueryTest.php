@@ -23,7 +23,7 @@ beforeEach(function (): void {
     $this->periods = $this->app->make(PeriodQuery::class);
     $this->user = $this->fixtureUser;
     /** @var Account $account */
-    $account = Account::query()->where('iban', 'NL00ASNB0123456789')->firstOrFail();
+    $account = Account::query()->where('iban', 'NL57ASNB0123456789')->firstOrFail();
     $this->account = $account;
     $this->run = $this->makeImportRun($this->user);
 });

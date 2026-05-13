@@ -35,7 +35,7 @@ abstract class TestCase extends BaseTestCase
      * fixture's own-IBAN without falling through to the unknown-IBAN
      * wizard step.
      *
-     * IBAN `NL00ASNB0123456789` is the load-bearing anonymisation value
+     * IBAN `NL57ASNB0123456789` is the load-bearing anonymisation value
      * baked into tests/fixtures/asn-sample-1.csv. Do NOT change this
      * literal — `EloquentAccountResolver` looks it up directly.
      *
@@ -49,7 +49,7 @@ abstract class TestCase extends BaseTestCase
         );
 
         $account = Account::query()->updateOrCreate(
-            ['iban' => 'NL00ASNB0123456789'],
+            ['iban' => 'NL57ASNB0123456789'],
             [
                 'user_id' => $this->fixtureUser->id,
                 'name' => 'ASN Fixture Account',

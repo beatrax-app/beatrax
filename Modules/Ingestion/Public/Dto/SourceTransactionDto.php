@@ -13,15 +13,16 @@ use Spatie\LaravelData\Data;
  * NormalizeStage maps these to canonical rows (counterparty_normalized,
  * fingerprint composition, account_id resolution, etc.).
  *
- * `rawPayload` preserves the original source cells (indexed by column
- * position) so the source row can be re-inspected for audit without
- * re-reading the CSV. `sourceRowIndex` is monotonically increasing
- * starting at 0 across one parse run.
+ * `rawPayload` preserves the original source cells (positionally indexed
+ * column strings for CSV adapters, nested arrays for adapters that need to
+ * carry structured metadata like SEPA references) so the source row can
+ * be re-inspected for audit without re-reading the file. `sourceRowIndex`
+ * is monotonically increasing starting at 0 across one parse run.
  */
 final class SourceTransactionDto extends Data
 {
     /**
-     * @param  array<int|string,string>  $rawPayload
+     * @param  array<int|string, mixed>  $rawPayload
      */
     public function __construct(
         public readonly CarbonImmutable $bookedAt,

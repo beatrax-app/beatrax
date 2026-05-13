@@ -32,8 +32,8 @@ its default `array_values` step.
 | Index | Header (NL) | Field | Notes |
 |-------|-------------|-------|-------|
 | 0 | `Datum` | posted date | `dd-mm-yyyy` |
-| 1 | `Je rekening` | own IBAN | always the placeholder `NL00ASNB0123456789` in this fixture |
-| 2 | `Van / naar` | counterparty IBAN | placeholders `NL00BANK00000000NN` (distinct per real counterparty); self-transfers use `NL00ASNB9876543210` |
+| 1 | `Je rekening` | own IBAN | always the placeholder `NL57ASNB0123456789` in this fixture |
+| 2 | `Van / naar` | counterparty IBAN | placeholders shaped `NLccBANK00000000NN` (distinct per real counterparty, two-digit check segment recomputed so the IBAN passes ISO 7064 mod-97 validation); self-transfers use `NL91ASNB9876543210` |
 | 3 | `Naam` | counterparty name | synthetic merchant from a 18-entry pool |
 | 4 | `Adres` | counterparty street address | blanked |
 | 5 | `Postcode` | counterparty postal code | blanked |
@@ -69,15 +69,18 @@ the open-source converters is still correct for indices 0–17.
 
 ## Anonymization protocol
 
-1. **Own IBAN** — every occurrence replaced with `NL00ASNB0123456789`. This is
+1. **Own IBAN** — every occurrence replaced with `NL57ASNB0123456789`. This is
    the placeholder seeded by `tests/TestCase::seedFixtureUserAndAccount()` so
    the `EloquentAccountResolver` returns `Known(accountId)` on the first parse
    without prompting.
 2. **Counterparty IBAN** — each distinct real IBAN maps deterministically to
-   `NL00BANK00000000NN` (zero-padded counter). One real counterparty = one
+   a placeholder shaped `NLccBANK00000000NN` (zero-padded counter NN, with
+   the two-digit check segment cc recomputed so the IBAN passes ISO 7064
+   mod-97 validation — required because the CAMT.053 parser validates
+   check digits eagerly at unmarshal). One real counterparty = one
    placeholder, so duplicate-detection logic still has variance.
 3. **Self-transfers** (counterparty IBAN equals one of the user's own ASN
-   accounts) — placeholder `NL00ASNB9876543210`, name forced to
+   accounts) — placeholder `NL91ASNB9876543210`, name forced to
    `Eigen Spaarrekening`.
 4. **Counterparty name** — synthetic merchant from a pool of 18 names. The pool
    includes `Café Plein` (diacritic) to exercise the diacritic round-trip the

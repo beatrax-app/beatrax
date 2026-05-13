@@ -122,7 +122,7 @@ it('rejects a CAMT.052 file (wrong family) with a user-readable message', functi
 
 it('rejects a non-XML payload declared as asn-camt053', function (): void {
     $tmp = tempnam(sys_get_temp_dir(), 'asn-csv-as-xml-').'.xml';
-    file_put_contents($tmp, "Datum,Je rekening,Tegenrekening\n01-04-2026,NL00ASNB0123456789,...\n");
+    file_put_contents($tmp, "Datum,Je rekening,Tegenrekening\n01-04-2026,NL57ASNB0123456789,...\n");
 
     try {
         expect(fn () => $this->sniffer->sniff($tmp, 'asn-camt053'))
