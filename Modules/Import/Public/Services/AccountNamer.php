@@ -25,9 +25,12 @@ use Modules\Ledger\Models\Account;
  *
  * Name validation lives in the service (not the Livewire layer) so every
  * caller — CLI, programmatic, future REST entrypoint — gets the same
- * 1..80 character bound. Throws InvalidAccountNameException on empty input
- * or input that exceeds 80 multibyte characters; the wizard catches it and
- * surfaces the message next to the input via Livewire's error bag.
+ * 1..80 character bound. Also rejects names whose slug derivation
+ * yields an empty body (emoji-only, punctuation-only, or scripts without
+ * a transliteration map) so every account row carries a meaningful slug.
+ * Throws InvalidAccountNameException in all failure modes; the wizard
+ * catches it and surfaces the message next to the input via Livewire's
+ * error bag.
  */
 final class AccountNamer implements NamesAccounts
 {
@@ -48,12 +51,25 @@ final class AccountNamer implements NamesAccounts
             ));
         }
 
+        // Str::slug() strips characters it cannot transliterate (emoji,
+        // pure punctuation, scripts without a transliteration map). A
+        // name composed entirely of such characters passes the length
+        // bound but produces an empty slug body — the IBAN tail would
+        // then be prepended with a lone hyphen ("-12345678"). Reject so
+        // every account row carries a meaningful slug.
+        $slugBody = Str::slug($trimmed);
+        if ($slugBody === '') {
+            throw new InvalidAccountNameException(
+                'Account name must contain at least one letter or digit.'
+            );
+        }
+
         $tail = substr($iban, -8);
 
         $account = Account::create([
             'user_id' => $user->id,
             'name' => $trimmed,
-            'slug' => Str::slug($trimmed).'-'.strtolower($tail),
+            'slug' => $slugBody.'-'.strtolower($tail),
             'kind' => 'asn',
             'iban' => $iban,
             'default_currency' => 'EUR',
