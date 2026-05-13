@@ -19,6 +19,12 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
  * file never lands. Rows whose fingerprint already exists are silently dropped
  * by `insertOrIgnore` — the DB-layer idempotency proof.
  *
+ * Every row must carry a non-null `userId`. SQLite treats NULL as distinct in
+ * UNIQUE indexes, so a row written with `user_id = NULL` would slip past the
+ * composite UNIQUE on `(user_id, account_id, posted_at, …)` on a re-import.
+ * The action rejects null-user rows before any DB write so the idempotency
+ * guarantee holds for every persisted row.
+ *
  * `created_at` / `updated_at` are stamped here (not inside the DTO) so the
  * value comes from the injected Clock and remains pinnable from tests.
  */
@@ -38,6 +44,9 @@ final class RecordTransactions implements RecordsTransactions
         $this->db->connection()->transaction(function () use ($canonical, &$inserted, &$duplicates): void {
             $now = $this->clock->now()->toDateTimeString();
             foreach ($canonical as $row) {
+                if ($row->userId === null) {
+                    throw new InvalidArgumentException('CanonicalTransaction.userId must not be null when recording transactions.');
+                }
                 if (! in_array($row->type, Transaction::TYPES, true)) {
                     throw new InvalidArgumentException("Invalid transaction type: '{$row->type}'");
                 }
