@@ -84,3 +84,39 @@ it('rejects names above the maximum length bound', function (): void {
     expect(fn () => $namer('NL07TEST4444444444', $tooLong, $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
+
+it('rejects an empty IBAN', function (): void {
+    $namer = new AccountNamer;
+
+    expect(fn () => $namer('', 'Friendly Name', $this->user))
+        ->toThrow(InvalidAccountNameException::class);
+});
+
+it('rejects an IBAN shorter than 15 characters', function (): void {
+    $namer = new AccountNamer;
+
+    expect(fn () => $namer('NL01ABC', 'Friendly Name', $this->user))
+        ->toThrow(InvalidAccountNameException::class);
+});
+
+it('rejects an IBAN longer than 34 characters', function (): void {
+    $namer = new AccountNamer;
+    $tooLong = 'NL'.str_repeat('1', 33);
+
+    expect(fn () => $namer($tooLong, 'Friendly Name', $this->user))
+        ->toThrow(InvalidAccountNameException::class);
+});
+
+it('rejects an IBAN containing lowercase letters', function (): void {
+    $namer = new AccountNamer;
+
+    expect(fn () => $namer('nl01test1234567890', 'Friendly Name', $this->user))
+        ->toThrow(InvalidAccountNameException::class);
+});
+
+it('rejects an IBAN containing whitespace or punctuation', function (): void {
+    $namer = new AccountNamer;
+
+    expect(fn () => $namer('NL01 TEST 1234 5678 90', 'Friendly Name', $this->user))
+        ->toThrow(InvalidAccountNameException::class);
+});
