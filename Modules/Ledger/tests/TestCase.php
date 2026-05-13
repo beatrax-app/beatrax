@@ -21,6 +21,14 @@ use Tests\TestCase as RootTestCase;
 abstract class TestCase extends RootTestCase
 {
     /**
+     * Row counter for `makeTransaction()`. Lives on the instance (not on a
+     * static inside the method) so each test starts from zero — deterministic
+     * fingerprints and posted_at offsets keep snapshot diffs and debug logs
+     * stable when individual tests are run in isolation.
+     */
+    private int $rowIndex = 0;
+
+    /**
      * Build a CanonicalTransaction with sensible defaults. Callers override
      * only the keys they care about.
      *
@@ -107,8 +115,8 @@ abstract class TestCase extends RootTestCase
      */
     protected function makeTransaction(User $user, Account $account, ImportRun $run, array $overrides = []): Transaction
     {
-        static $rowIndex = 0;
-        $rowIndex++;
+        $this->rowIndex++;
+        $rowIndex = $this->rowIndex;
         $fingerprint = str_pad((string) $rowIndex, 64, '0', STR_PAD_LEFT);
 
         $amountMinor = $overrides['amount_minor'] ?? -1299;
