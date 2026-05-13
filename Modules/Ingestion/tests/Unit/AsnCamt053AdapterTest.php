@@ -235,6 +235,76 @@ XML;
     }
 })->group('phase-2');
 
+it('returns a null description when the only remittance present is structured (no Ustrd block)', function (): void {
+    $xml = <<<'XML'
+<?xml version='1.0' encoding='UTF-8'?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02">
+    <BkToCstmrStmt>
+        <GrpHdr>
+            <MsgId>CAMT053-STRD-ONLY</MsgId>
+            <CreDtTm>2026-05-12T21:12:27.273942228+02:00</CreDtTm>
+        </GrpHdr>
+        <Stmt>
+            <Id>CAMT053-STRD-ONLY-0001</Id>
+            <ElctrncSeqNb>1</ElctrncSeqNb>
+            <CreDtTm>2026-05-12T21:12:27.229917934+02:00</CreDtTm>
+            <Acct>
+                <Id><IBAN>NL57ASNB0123456789</IBAN></Id>
+                <Ccy>EUR</Ccy>
+                <Svcr><FinInstnId><BIC>ASNBNL21</BIC></FinInstnId></Svcr>
+            </Acct>
+            <Bal>
+                <Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp>
+                <Amt Ccy="EUR">100.00</Amt>
+                <CdtDbtInd>CRDT</CdtDbtInd>
+                <Dt><Dt>2026-02-01</Dt></Dt>
+            </Bal>
+            <Bal>
+                <Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp>
+                <Amt Ccy="EUR">100.00</Amt>
+                <CdtDbtInd>CRDT</CdtDbtInd>
+                <Dt><Dt>2026-02-28</Dt></Dt>
+            </Bal>
+            <Ntry>
+                <NtryRef>STRD-1</NtryRef>
+                <Amt Ccy="EUR">1.23</Amt>
+                <CdtDbtInd>DBIT</CdtDbtInd>
+                <Sts>BOOK</Sts>
+                <BookgDt><Dt>2026-02-02</Dt></BookgDt>
+                <ValDt><Dt>2026-02-02</Dt></ValDt>
+                <BkTxCd>
+                    <Domn><Cd>PMNT</Cd><Fmly><Cd>RDDT</Cd><SubFmlyCd>ESDD</SubFmlyCd></Fmly></Domn>
+                </BkTxCd>
+                <NtryDtls>
+                    <TxDtls>
+                        <Refs><EndToEndId>STRD-E2E</EndToEndId></Refs>
+                        <RmtInf>
+                            <Strd>
+                                <CdtrRefInf>
+                                    <Ref>STRUCTURED-ONLY-REF</Ref>
+                                </CdtrRefInf>
+                            </Strd>
+                        </RmtInf>
+                    </TxDtls>
+                </NtryDtls>
+            </Ntry>
+        </Stmt>
+    </BkToCstmrStmt>
+</Document>
+XML;
+
+    $tmp = tempnam(sys_get_temp_dir(), 'camt-strd-').'.xml';
+    file_put_contents($tmp, $xml);
+
+    try {
+        $dtos = iterator_to_array($this->adapter->parse($tmp, $this->resolver), preserve_keys: false);
+        expect($dtos)->toHaveCount(1);
+        expect($dtos[0]->description)->toBeNull();
+    } finally {
+        @unlink($tmp);
+    }
+})->group('phase-2');
+
 it('emits monotonically increasing sourceRowIndex starting at zero', function (): void {
     $dtos = iterator_to_array(
         $this->adapter->parse(base_path('tests/fixtures/asn-camt053-sample-1.xml'), $this->resolver),
