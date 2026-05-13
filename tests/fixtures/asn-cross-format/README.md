@@ -63,8 +63,8 @@ to each.
 
 | Field | Action |
 |-------|--------|
-| Own IBAN | Replaced with `NL00ASNB0123456789` everywhere |
-| Counterparty IBAN | Maps deterministically to `NL00BANK00000000NN` (one per real IBAN) |
+| Own IBAN | Replaced with `NL57ASNB0123456789` everywhere |
+| Counterparty IBAN | Maps deterministically to `NLccBANK00000000NN` (one per real IBAN; the two-digit check segment cc is recomputed per placeholder so every IBAN passes ISO 7064 mod-97 validation) |
 | Counterparty name | Maps deterministically to a 39-entry synthetic merchant pool |
 | `<Ustrd>` + `<AddtlNtryInf>` + CSV `Omschrijving` + CSV `Betalingskenmerk` | Cascade-replace residual names → synth; IBAN-like substrings → `NL00XXXX0000000000`; 8+ digit runs → `X×len`; PII denylist for personal names, the user's address, employer-specific pension fund, user-owned domain, identifying neighbourhood-specific retailers |
 | Amounts / balances / dates / currencies / sequence numbers / SEPA reference IDs | Preserved structurally real |

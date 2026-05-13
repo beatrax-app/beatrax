@@ -1,0 +1,389 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Ingestion\Internal\Adapters\Asn;
+
+use Carbon\CarbonImmutable;
+use DateTimeImmutable;
+use Generator;
+use Genkgo\Camt\Camt053\DTO\Statement;
+use Genkgo\Camt\Config;
+use Genkgo\Camt\DTO\Creditor;
+use Genkgo\Camt\DTO\Debtor;
+use Genkgo\Camt\DTO\Entry;
+use Genkgo\Camt\DTO\EntryTransactionDetail;
+use Genkgo\Camt\DTO\IbanAccount;
+use Genkgo\Camt\DTO\Message;
+use Genkgo\Camt\DTO\RelatedParty;
+use Genkgo\Camt\DTO\UltimateCreditor;
+use Genkgo\Camt\DTO\UltimateDebtor;
+use Genkgo\Camt\Reader;
+use Modules\Ingestion\Public\Contracts\AccountResolver;
+use Modules\Ingestion\Public\Contracts\SourceAdapter;
+use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Public\Services\HeaderSniffer;
+use Money\Money;
+use Throwable;
+
+/**
+ * Streaming-by-row parser for ASN's CAMT.053 (ISO 20022 bank-to-customer
+ * statement) XML export. Delegates the file-level unmarshal to genkgo/camt,
+ * then walks every Statement -> Entry -> TransactionDetail and yields one
+ * SourceTransactionDto per TxDtls (batch entries are split into N rows).
+ *
+ * Reference policy:
+ *  - `sourceRef` is the TxDtls EndToEndId when present, NULL otherwise.
+ *    Weaker SEPA refs (AcctSvcrRef, InstrId, TxId, MsgId, MandateId) are
+ *    NEVER promoted to sourceRef — they live verbatim under
+ *    `rawPayload['sepa']` so downstream chain resolution can read them
+ *    without re-parsing the XML.
+ *
+ * Booking-date normalisation:
+ *  - When `<BookgDt>` carries a date-only element, the second-precision
+ *    `bookedAt` field is zeroed to `00:00:00`. This matches the CSV
+ *    adapter's `startOfDay()` semantics so a CSV row and a CAMT entry
+ *    representing the same logical transaction produce identical
+ *    FingerprintComposer v3 hashes.
+ *
+ * Security:
+ *  - Before any Reader construction, `libxml_set_external_entity_loader(null)`
+ *    disables every SYSTEM / PUBLIC entity reference resolution for the
+ *    duration of the parse, mitigating XXE attacks regardless of the
+ *    underlying PHP / libxml defaults.
+ *
+ * Money handling:
+ *  - genkgo/camt exposes amounts as `Money\Money` (moneyphp/money). The
+ *    adapter converts to integer minor units at the boundary; `Money\Money`
+ *    types are not allowed to escape into the Public DTO surface.
+ */
+final class AsnCamt053Adapter implements SourceAdapter
+{
+    public function __construct(
+        private readonly HeaderSniffer $sniffer,
+    ) {}
+
+    public function format(): string
+    {
+        return AsnCamt053HeaderProfile::FORMAT;
+    }
+
+    public function parse(string $localPath, AccountResolver $accounts): Generator
+    {
+        $this->sniffer->sniff($localPath, AsnCamt053HeaderProfile::FORMAT);
+
+        $message = $this->readMessage($localPath);
+        $msgId = $message->getGroupHeader()->getMessageId();
+        $index = 0;
+
+        foreach ($message->getRecords() as $record) {
+            if (! $record instanceof Statement) {
+                continue;
+            }
+
+            $ownIban = $this->extractOwnIban($record);
+            $accounts->resolve($ownIban);
+
+            foreach ($record->getEntries() as $entry) {
+                $txDtlsList = $entry->getTransactionDetails();
+
+                if ($txDtlsList === []) {
+                    yield $this->buildDto($entry, null, $ownIban, $index, $msgId, isBatch: false);
+                    $index++;
+
+                    continue;
+                }
+
+                $isBatch = count($txDtlsList) > 1;
+                foreach ($txDtlsList as $txDtls) {
+                    yield $this->buildDto($entry, $txDtls, $ownIban, $index, $msgId, isBatch: $isBatch);
+                    $index++;
+                }
+            }
+        }
+    }
+
+    /**
+     * Hardens libxml and delegates the unmarshal to genkgo/camt. Errors from
+     * the library (malformed XML, unknown CAMT.053 sub-version) are re-thrown
+     * as InvalidAmountException so the upload pipeline can surface them as a
+     * single per-file ERROR preview row.
+     */
+    private function readMessage(string $localPath): Message
+    {
+        // Install an external-entity loader that allows local-filesystem reads
+        // (needed for the CAMT.053 XSD files genkgo/camt ships in
+        // `vendor/genkgo/camt/assets/`) but rejects every remote URI scheme.
+        // The CAMT.053 XSDs reference each other by relative path so the
+        // loader must let those through; an attacker-controlled
+        // `<!ENTITY xxe SYSTEM "http://…">` reference is denied at the
+        // loader boundary regardless of PHP / libxml defaults.
+        libxml_set_external_entity_loader(
+            static function (?string $publicId, ?string $systemId, array $context): ?string {
+                if ($systemId === null) {
+                    return null;
+                }
+
+                $scheme = parse_url($systemId, PHP_URL_SCHEME);
+                if ($scheme === null || $scheme === false || $scheme === '' || $scheme === 'file') {
+                    return $systemId;
+                }
+
+                // Block http://, https://, ftp://, php://, expect://, … any
+                // network or wrapper scheme an attacker could weaponise.
+                return null;
+            }
+        );
+
+        $previousErrorState = libxml_use_internal_errors(true);
+        try {
+            // XSD validation is disabled deliberately. The CAMT.053 XSDs
+            // genkgo/camt ships are pedantic and would reject any synthetic
+            // test fragment or future ASN extension that adds an unforeseen
+            // optional element. Structural correctness is enforced by the
+            // sniffer's namespace match plus the downstream IBAN / amount
+            // validators inside genkgo/camt's decoder; security against XXE
+            // is enforced by the external-entity loader installed above.
+            $config = Config::getDefault();
+            $config->disableXsdValidation();
+            $reader = new Reader($config);
+
+            try {
+                return $reader->readFile($localPath);
+            } catch (Throwable $e) {
+                throw new InvalidAmountException(
+                    sprintf('Failed to parse CAMT.053 XML: %s', $e->getMessage()),
+                    0,
+                    $e,
+                );
+            }
+        } finally {
+            libxml_use_internal_errors($previousErrorState);
+            // Restore the default libxml entity loader so a subsequent caller
+            // is not constrained by our hardening rules.
+            libxml_set_external_entity_loader(null);
+        }
+    }
+
+    private function buildDto(
+        Entry $entry,
+        ?EntryTransactionDetail $txDtls,
+        string $ownIban,
+        int $rowIndex,
+        ?string $msgId,
+        bool $isBatch,
+    ): SourceTransactionDto {
+        // Money: per-TxDtls amount on a batch entry, else the entry-level total.
+        // genkgo/camt's Decoder already negates the Money for entries flagged
+        // DBIT, so the value returned here is signed; no second flip needed.
+        $money = $isBatch && $txDtls?->getAmountDetails() !== null
+            ? $txDtls->getAmountDetails()
+            : $entry->getAmount();
+        $signed = $this->moneyToMinor($money);
+        if ($isBatch && $txDtls?->getAmountDetails() !== null) {
+            // The per-TxDtls AmtDtls/InstdAmt is NOT auto-signed by genkgo/camt
+            // (only the entry-level Amt is); apply the CreditDebitIndicator
+            // explicitly so batch splits agree in sign with the entry total.
+            $cdi = $txDtls->getCreditDebitIndicator() ?? $entry->getCreditDebitIndicator();
+            if ($cdi === 'DBIT' && $signed > 0) {
+                $signed = -$signed;
+            }
+        }
+        $currency = $money->getCurrency()->getCode();
+
+        $cdi = $txDtls?->getCreditDebitIndicator() ?? $entry->getCreditDebitIndicator();
+
+        $endToEndId = $txDtls?->getReference()?->getEndToEndId();
+        $sourceRef = ($endToEndId !== null && $endToEndId !== '' && $endToEndId !== 'NOTPROVIDED')
+            ? $endToEndId
+            : null;
+
+        [$counterpartyName, $counterpartyIban] = $this->extractCounterparty($txDtls, $cdi);
+        $description = $this->extractRemittance($txDtls);
+
+        $booking = $entry->getBookingDate() ?? $entry->getValueDate() ?? new DateTimeImmutable;
+        $value = $entry->getValueDate() ?? $booking;
+
+        // ASN exports the BookgDt as a date-only element on every row in the
+        // empirical corpus; the matching CSV adapter zeroes the time so the
+        // FingerprintComposer v3 hash agrees between the two formats. Force
+        // 00:00:00 here so a midnight-shifted timestamp never sneaks in via
+        // a future BookgDtTm-precision change.
+        $bookedAt = CarbonImmutable::instance($booking)->startOfDay();
+
+        return new SourceTransactionDto(
+            bookedAt: $bookedAt,
+            postedAt: CarbonImmutable::instance($booking)->startOfDay(),
+            valueDate: CarbonImmutable::instance($value)->startOfDay(),
+            ownIban: $ownIban,
+            counterpartyIban: $counterpartyIban,
+            counterpartyName: $counterpartyName,
+            currency: $currency,
+            amountMinor: $signed,
+            sourceRef: $sourceRef,
+            description: $description,
+            rawPayload: $this->serialiseSepaFragment($entry, $txDtls, $msgId),
+            sourceRowIndex: $rowIndex,
+        );
+    }
+
+    /**
+     * Converts a moneyphp/money amount string into integer minor units. The
+     * library returns the minor count as a numeric string ("399" for €3.99),
+     * so the cast is exact for any value that fits in PHP_INT_MAX.
+     */
+    private function moneyToMinor(Money $money): int
+    {
+        return (int) $money->getAmount();
+    }
+
+    private function extractOwnIban(Statement $stmt): string
+    {
+        $account = $stmt->getAccount();
+        if ($account instanceof IbanAccount) {
+            return $account->getIban()->getIban();
+        }
+
+        return $account->getIdentification();
+    }
+
+    /**
+     * Walks the TxDtls related-party list and returns the counterparty pair
+     * appropriate for the entry's credit/debit direction. For an outbound
+     * DBIT entry, the counterparty is the Creditor; for an inbound CRDT
+     * entry, the counterparty is the Debtor. Falls back to the first related
+     * party of any type when the directional match is absent.
+     *
+     * @return array{0: ?string, 1: ?string} [counterparty name, counterparty IBAN]
+     */
+    private function extractCounterparty(?EntryTransactionDetail $txDtls, ?string $cdi): array
+    {
+        if ($txDtls === null) {
+            return [null, null];
+        }
+
+        $parties = $txDtls->getRelatedParties();
+        if ($parties === []) {
+            return [null, null];
+        }
+
+        $preferred = $cdi === 'CRDT'
+            ? [Debtor::class, UltimateDebtor::class]
+            : [Creditor::class, UltimateCreditor::class];
+
+        foreach ($preferred as $cls) {
+            foreach ($parties as $party) {
+                if ($party->getRelatedPartyType() instanceof $cls) {
+                    return [$this->relatedPartyName($party), $this->relatedPartyIban($party)];
+                }
+            }
+        }
+
+        $first = $parties[0];
+
+        return [$this->relatedPartyName($first), $this->relatedPartyIban($first)];
+    }
+
+    private function relatedPartyName(RelatedParty $party): ?string
+    {
+        $type = $party->getRelatedPartyType();
+        $name = $type->getName();
+        if ($name === null) {
+            return null;
+        }
+
+        $trimmed = trim($name);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function relatedPartyIban(RelatedParty $party): ?string
+    {
+        $account = $party->getAccount();
+        if ($account instanceof IbanAccount) {
+            return $account->getIban()->getIban();
+        }
+
+        return null;
+    }
+
+    /**
+     * Concatenates the TxDtls unstructured remittance blocks into a single
+     * whitespace-collapsed description string. Returns null when no
+     * unstructured block is present.
+     */
+    private function extractRemittance(?EntryTransactionDetail $txDtls): ?string
+    {
+        if ($txDtls === null) {
+            return null;
+        }
+
+        $rmt = $txDtls->getRemittanceInformation();
+        if ($rmt === null) {
+            return null;
+        }
+
+        $messages = [];
+        foreach ($rmt->getUnstructuredBlocks() as $block) {
+            $messages[] = $block->getMessage();
+        }
+
+        if ($messages === []) {
+            // Some sub-version decoders only populate the deprecated message
+            // property; fall back to it so the description is not lost.
+            $legacy = $rmt->getMessage();
+            if (is_string($legacy) && trim($legacy) !== '') {
+                return $this->collapseWhitespace($legacy);
+            }
+
+            return null;
+        }
+
+        return $this->collapseWhitespace(implode(' ', $messages));
+    }
+
+    private function collapseWhitespace(string $s): string
+    {
+        $normalised = preg_replace('/\s+/u', ' ', $s);
+
+        return trim(is_string($normalised) ? $normalised : $s);
+    }
+
+    /**
+     * Builds the `rawPayload['sepa']` fragment carrying every secondary
+     * reference observed on the entry + TxDtls. Phase 5 chain resolution
+     * reads these directly without re-parsing the source XML.
+     *
+     * @return array{sepa: array<string, mixed>}
+     */
+    private function serialiseSepaFragment(Entry $entry, ?EntryTransactionDetail $txDtls, ?string $msgId): array
+    {
+        $btc = $entry->getBankTransactionCode();
+        $ref = $txDtls?->getReference();
+        $addtl = $txDtls?->getAdditionalTransactionInformation();
+
+        return [
+            'sepa' => [
+                'msgId' => $msgId,
+                'acctSvcrRef' => $entry->getAccountServicerReference(),
+                'entryRef' => $entry->getReference(),
+                'batchPaymentId' => $entry->getBatchPaymentId(),
+                'btc' => [
+                    'domain' => $btc?->getDomain()?->getCode(),
+                    'family' => $btc?->getDomain()?->getFamily()->getCode(),
+                    'subFamily' => $btc?->getDomain()?->getFamily()->getSubFamilyCode(),
+                    'proprietary' => $btc?->getProprietary()?->getCode(),
+                ],
+                'endToEndId' => $ref?->getEndToEndId(),
+                'instrId' => $ref?->getInstructionId(),
+                'txId' => $ref?->getTransactionId(),
+                'mandateId' => $ref?->getMandateId(),
+                'pmtInfId' => $ref?->getPaymentInformationId(),
+                'creditDebitIndicator' => $txDtls?->getCreditDebitIndicator(),
+                'remittanceUnstructured' => $this->extractRemittance($txDtls),
+                'addtlTxInf' => $addtl === null ? null : (string) $addtl,
+            ],
+        ];
+    }
+}

@@ -22,7 +22,7 @@ by the deterministic anonymiser before being deleted.
 | **Bank-transaction families observed** | `RDDT` (109 — SEPA direct debits), `CCRD` (84 — card payments), `ICDT` (13 — issued credit transfers), `RCDT` (4 — received credit transfers), `RRCT` (12), `MDOP` (6), `ACMT` (6), `OTHR` (6), `IRCT` (1) |
 | **Opening balance (OPBD)** | `2158.91 EUR` at 2026-02-01 |
 | **Closing balance (CLBD)** | `801.35 EUR` at 2026-04-30 |
-| **Own IBAN (anonymised)** | `NL00ASNB0123456789` (Phase-1 canonical placeholder) |
+| **Own IBAN (anonymised)** | `NL57ASNB0123456789` (Phase-1 canonical placeholder) |
 | **BIC** | `ASNBNL21` (preserved — public BIC, not PII) |
 
 ## Why `001.02` and not `001.08`
@@ -40,11 +40,14 @@ Applied verbatim from `asn-sample-1.md` (Phase 1 canonical), with three
 CAMT-specific additions for elements that have no CSV equivalent.
 
 1. **Own IBAN** — every `<Stmt>/<Acct>/<Id>/<IBAN>` replaced with
-   `NL00ASNB0123456789`. The placeholder seeded by
+   `NL57ASNB0123456789`. The placeholder seeded by
    `tests/TestCase::seedFixtureUserAndAccount()` is unchanged so
    `EloquentAccountResolver` returns `Known(accountId)` on first parse.
 2. **Counterparty IBAN** — each of the 34 distinct real IBANs maps
-   deterministically to `NL00BANK00000000NN` (zero-padded counter, sorted
+   deterministically to a placeholder shaped `NLccBANK00000000NN`
+   (zero-padded counter NN, with the two-digit check segment cc recomputed
+   so the IBAN passes ISO 7064 mod-97 validation — required because the
+   CAMT.053 parser validates check digits eagerly at unmarshal time, sorted
    alphabetically by source IBAN). One real counterparty = one placeholder,
    so duplicate-detection logic still has variance. 139 element-level
    replacements landed across `<CdtrAcct>/<Id>/<IBAN>` and

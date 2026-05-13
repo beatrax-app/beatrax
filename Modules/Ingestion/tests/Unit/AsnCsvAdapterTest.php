@@ -46,7 +46,7 @@ it('parses the real fixture into SourceTransactionDtos', function (): void {
     foreach ($dtos as $dto) {
         expect($dto->amountMinor)->toBeInt();
         expect($dto->currency)->toBe('EUR');
-        expect($dto->ownIban)->toBe('NL00ASNB0123456789');
+        expect($dto->ownIban)->toBe('NL57ASNB0123456789');
         expect($dto->sourceRowIndex)->toBeInt();
         expect($dto->rawPayload)->toBeArray();
     }
@@ -62,8 +62,8 @@ it('decodes the first row column-by-column against the empirical layout', functi
 
     expect($first->postedAt->toDateString())->toBe('2026-02-02');
     expect($first->valueDate->toDateString())->toBe('2026-02-02');
-    expect($first->ownIban)->toBe('NL00ASNB0123456789');
-    expect($first->counterpartyIban)->toBe('NL00BANK0000000001');
+    expect($first->ownIban)->toBe('NL57ASNB0123456789');
+    expect($first->counterpartyIban)->toBe('NL68BANK0000000001');
     expect($first->counterpartyName)->toBe('KPN Mobiel');
     expect($first->amountMinor)->toBe(-399);
     expect($first->currency)->toBe('EUR');
@@ -151,7 +151,7 @@ it('asks the AccountResolver for the own IBAN of every parsed row', function ():
 
     expect($this->resolver->askedFor)->toHaveCount(count($dtos));
     // Fixture pins the own IBAN to a single placeholder.
-    expect(array_unique($this->resolver->askedFor))->toBe(['NL00ASNB0123456789']);
+    expect(array_unique($this->resolver->askedFor))->toBe(['NL57ASNB0123456789']);
 });
 
 it('throws InvalidAmountException with the row index for malformed amount cells', function (): void {
@@ -163,7 +163,7 @@ it('throws InvalidAmountException with the row index for malformed amount cells'
         'Verwerkingsdatum', 'Valutadatum', 'Code', 'Type', 'Volgnummer',
         'Betalingskenmerk', 'Omschrijving', 'Afschriftnummer', 'Categorie',
     ]);
-    $badRow = '01-02-2026,NL00ASNB0123456789,NL00BANK0000000099,Foo,,,,EUR,0.00,EUR,NOT-AN-AMOUNT,01-02-2026,01-02-2026,9999,XXX,1,,Desc,1,';
+    $badRow = '01-02-2026,NL57ASNB0123456789,NL41BANK0000000099,Foo,,,,EUR,0.00,EUR,NOT-AN-AMOUNT,01-02-2026,01-02-2026,9999,XXX,1,,Desc,1,';
     file_put_contents($tmp, $header."\n".$badRow."\n");
 
     try {

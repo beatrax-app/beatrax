@@ -13,7 +13,7 @@ beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-05-15 12:00:00'));
 
     /** @var Account $account */
-    $account = Account::query()->where('iban', 'NL00ASNB0123456789')->firstOrFail();
+    $account = Account::query()->where('iban', 'NL57ASNB0123456789')->firstOrFail();
     $this->account = $account;
     $this->run = $this->makeImportRun($this->fixtureUser);
     $this->listQuery = $this->app->make(TransactionListQuery::class);
