@@ -9,13 +9,22 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Dto\PendingEnrichment;
+use Modules\Import\Public\Services\SourceRefRanker;
+use Psr\Log\LoggerInterface;
 
 /**
  * Applies pending cross-format enrichments produced by the import
  * pipeline. Each enrichment is wrapped in a per-row DB transaction with
  * `lockForUpdate()` so two concurrent imports targeting the same row's
- * source_ref either serialise or short-circuit on the ref-equality
- * check rather than racing on the UPDATE.
+ * source_ref either serialise or short-circuit on a rank re-evaluation
+ * rather than racing on the UPDATE.
+ *
+ * Rank re-evaluation at write time:
+ *  - The stored source_ref is read again inside the locked transaction
+ *    and re-ranked against the incoming PendingEnrichment via
+ *    `SourceRefRanker`. If the stored ref now outranks (or ties) the
+ *    incoming ref, the enrichment is dropped as a no-op so a cached
+ *    weaker reference can never overwrite a freshly-stored stronger one.
  *
  * The enriched_from JSON column accumulates a full append-only
  * provenance trail. Every successful application appends one entry of
@@ -33,6 +42,8 @@ final class ApplyEnrichments implements AppliesEnrichments
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
+        private readonly SourceRefRanker $ranker,
+        private readonly LoggerInterface $logger,
     ) {}
 
     public function __invoke(array $enrichments, User $user): int
@@ -59,7 +70,7 @@ final class ApplyEnrichments implements AppliesEnrichments
                 ->where('id', $enrichment->existingTransactionId)
                 ->where('user_id', $user->id)
                 ->lockForUpdate()
-                ->first(['id', 'source_ref', 'enriched_from']);
+                ->first(['id', 'source_ref', 'source_format', 'enriched_from']);
 
             if ($row === null) {
                 return false;
@@ -67,6 +78,31 @@ final class ApplyEnrichments implements AppliesEnrichments
 
             $existingRef = is_string($row->source_ref) ? $row->source_ref : null;
             if ($existingRef !== null && $existingRef === $enrichment->newSourceRef) {
+                return false;
+            }
+
+            // Re-evaluate the rank ordering against the stored ref at
+            // write time, not just the preview-time snapshot. Between
+            // preview and confirm, a parallel import (or a re-preview)
+            // may already have stored a stronger reference; without this
+            // check the cached PendingEnrichment would silently
+            // overwrite the stronger value with a weaker one.
+            $existingFormat = is_string($row->source_format) ? $row->source_format : '';
+            $incomingRank = $this->ranker->rank($enrichment->newSourceRef, $enrichment->sourceFormat);
+            $existingRank = $this->ranker->rank($existingRef, $existingFormat);
+
+            if ($incomingRank <= $existingRank) {
+                $this->logger->debug(
+                    'Skipping enrichment: stored source_ref is already at least as strong',
+                    [
+                        'transaction_id' => $enrichment->existingTransactionId,
+                        'existing_format' => $existingFormat,
+                        'existing_rank' => $existingRank,
+                        'incoming_format' => $enrichment->sourceFormat,
+                        'incoming_rank' => $incomingRank,
+                    ],
+                );
+
                 return false;
             }
 

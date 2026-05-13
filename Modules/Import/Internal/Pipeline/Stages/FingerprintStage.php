@@ -7,6 +7,7 @@ namespace Modules\Import\Internal\Pipeline\Stages;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Dto\FingerprintDisposition;
+use Modules\Import\Public\Services\SourceRefRanker;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
@@ -30,10 +31,10 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
  *                           and a provenance entry appended to
  *                           `enriched_from`.
  *
- * The rank function fixes the canonical source-format ordering:
- * `asn-camt053` (EndToEndId, 4) > `asn-mt940` (EREF / :61: customer ref,
- * 2) > `asn-csv` (Volgnummer, 1) > unknown (0). A NULL or empty incoming
- * source_ref scores 0 so it never beats a non-null stored one.
+ * Ranking is delegated to `SourceRefRanker` so the preview-time
+ * classifier and the write-time enrichment applier share a single
+ * canonical ordering (`asn-camt053` > `asn-mt940` > `asn-csv` > unknown,
+ * with NULL or empty refs ranked at zero).
  *
  * The lookup explicitly filters by `user_id` (rather than relying on
  * BelongsToUser's global scope, which falls through to "no scope" in
@@ -46,6 +47,7 @@ final class FingerprintStage
     public function __construct(
         private readonly FingerprintComposer $fingerprints,
         private readonly DatabaseManager $db,
+        private readonly SourceRefRanker $ranker,
     ) {}
 
     public function classify(CanonicalTransaction $tx, User $user): FingerprintDisposition
@@ -67,8 +69,8 @@ final class FingerprintStage
         $rawId = $existing->id;
         $existingId = is_int($rawId) ? $rawId : (int) (is_numeric($rawId) ? $rawId : 0);
 
-        $incomingRank = $this->refRank($tx->sourceRef, $tx->sourceFormat);
-        $existingRank = $this->refRank($existingRef, $existingFormat);
+        $incomingRank = $this->ranker->rank($tx->sourceRef, $tx->sourceFormat);
+        $existingRank = $this->ranker->rank($existingRef, $existingFormat);
 
         if ($incomingRank > $existingRank && $tx->sourceRef !== null) {
             return FingerprintDisposition::enriched(
@@ -79,36 +81,5 @@ final class FingerprintStage
         }
 
         return FingerprintDisposition::duplicate();
-    }
-
-    /**
-     * Source-format rank function.
-     *
-     * Returns 0 for any NULL / empty reference (so an absent ref never
-     * beats a present one) and otherwise the canonical strength score
-     * for the format that produced the ref.
-     */
-    private function refRank(?string $ref, string $format): int
-    {
-        if ($ref === null || $ref === '') {
-            return 0;
-        }
-
-        return match ($format) {
-            'asn-camt053' => 4,
-            'asn-mt940' => 2,
-            'asn-csv' => 1,
-            default => 0,
-        };
-    }
-
-    /**
-     * @deprecated Use classify(). Retained for one-version transition so
-     *             existing callers in the pipeline compile while the
-     *             classify-based migration lands.
-     */
-    public function isExistingFingerprint(CanonicalTransaction $tx, User $user): bool
-    {
-        return $this->classify($tx, $user)->status() !== 'new';
     }
 }
