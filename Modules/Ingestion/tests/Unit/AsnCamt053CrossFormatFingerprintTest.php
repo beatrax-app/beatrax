@@ -99,9 +99,10 @@ it('produces identical v3 fingerprints for the same row across CSV and CAMT.053'
     }
 
     // The two fixtures cover the same calendar period (February 2026) on the
-    // same own IBAN. The cross-format dedup invariant requires that the
-    // majority of CAMT entries find an exact CSV twin under the v3 tuple.
-    // Use a fraction-based assertion so a future fixture refresh that
-    // tweaks one or two row-level fields does not break the contract.
-    expect($matched)->toBeGreaterThan((int) (count($camtDtos) * 0.5));
+    // same own IBAN. The cross-format dedup invariant requires that
+    // essentially every CAMT entry find an exact CSV twin under the v3
+    // tuple; a regression that mis-normalises counterparty names or
+    // mis-aligns booking dates would silently halve the match rate, so
+    // the threshold sits at 95% to fail loud rather than tolerate drift.
+    expect($matched)->toBeGreaterThanOrEqual((int) ceil(count($camtDtos) * 0.95));
 })->group('phase-2');
