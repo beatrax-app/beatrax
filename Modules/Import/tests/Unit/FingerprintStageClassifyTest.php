@@ -216,38 +216,3 @@ it('scopes the existing-row lookup by user_id', function (): void {
 
     expect($disposition->status())->toBe('new');
 })->group('phase-2');
-
-it('classify retains backward compat through deprecated isExistingFingerprint', function (): void {
-    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001', $this->composer);
-    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001');
-
-    expect($this->stage->isExistingFingerprint($tx, $this->fixtureUser))->toBeTrue();
-
-    $fresh = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-002');
-    // Different counterparty-normalized would change the fingerprint; we use a
-    // different account_id here to confirm "not found" returns false.
-    $fresh = new CanonicalTransaction(
-        userId: $fresh->userId,
-        accountId: 99_999,
-        type: $fresh->type,
-        postedAt: $fresh->postedAt,
-        bookedAt: $fresh->bookedAt,
-        valueDate: $fresh->valueDate,
-        amountMinor: $fresh->amountMinor,
-        currency: $fresh->currency,
-        settledAmountMinor: $fresh->settledAmountMinor,
-        settledCurrency: $fresh->settledCurrency,
-        fxRateUsed: null,
-        counterpartyName: $fresh->counterpartyName,
-        counterpartyIban: null,
-        counterpartyNormalized: $fresh->counterpartyNormalized,
-        normalizationVersion: $fresh->normalizationVersion,
-        description: null,
-        categoryId: null,
-        sourceFormat: $fresh->sourceFormat,
-        importRunId: 0,
-        sourceRowIndex: 0,
-        sourceRef: null,
-    );
-    expect($this->stage->isExistingFingerprint($fresh, $this->fixtureUser))->toBeFalse();
-})->group('phase-2');
