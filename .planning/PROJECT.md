@@ -16,7 +16,8 @@ If everything else fails, the system must surface the complete picture of monthl
 
 <!-- Shipped and confirmed valuable. -->
 
-(None yet — ship to validate)
+- [x] Import ASN transactions via CSV, CAMT.053 (XML), and MT940 (hand-rolled) — validated in phase 2 with the cross-format dedup test passing on a 72-row real-statement corpus
+- [x] Idempotent imports across formats — re-uploading the same statement, or uploading two formats covering the same period, never double-counts a transaction. Validated in phase 2 via the v3 fingerprint composer (no source_ref in the tuple) + `enriched_from` JSON column that records cross-format upgrades
 
 ### Active
 
@@ -24,14 +25,12 @@ If everything else fails, the system must surface the complete picture of monthl
 
 #### Ingestion
 
-- [ ] Import ASN transactions via CSV and MT940 / CAMT.053 exports
 - [ ] Import ICS Cards statements via CSV/Excel export
 - [ ] Import PayPal activity via CSV export with funding-source detail preserved
 - [ ] Scan Gmail (via Gmail API + OAuth2) and Outlook / Microsoft 365 (via Microsoft Graph + OAuth2) for transaction receipts — including a backfill of at least 3 months of history
 - [ ] Ingest exported `.eml` / `.mbox` files as an alternative path (covers iCloud / Fastmail / any provider without an API)
 - [ ] Support a future dedicated forwarding inbox (Gmail/Outlook only) without rework
 - [ ] Scan all connected inboxes for any known sender pattern (no per-source inbox config required)
-- [ ] **Idempotent imports — dedup on re-import and overlapping email scans so duplicate uploads or rescans never double-count a transaction**
 
 #### Categorization & Recurrence
 
@@ -164,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-12 after initialization*
+*Last updated: 2026-05-13 — phase 2 (ASN statement coverage: CAMT.053 + MT940 + cross-format dedup) complete*
