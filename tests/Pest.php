@@ -33,3 +33,18 @@ foreach (
 
     pest()->extend($testCase)->in(__DIR__.'/../'.$module.'/tests/Unit');
 }
+
+/*
+ * Phase-2 group convention.
+ *
+ * There is NO global registration here — the `phase-2` group is created
+ * implicitly by tests chaining ->group('phase-2') on each it(...) call
+ * (see e.g. FingerprintComposerV3Test, AsnCamt053AdapterTest, etc.).
+ *
+ * The focused dev loop is:
+ *     vendor/bin/pest --group=phase-2 --bail
+ *
+ * If a Phase 2 test forgets the ->group('phase-2') chain, the focused
+ * run will silently skip it — review individual test files when in
+ * doubt, not this bootstrap.
+ */
