@@ -12,7 +12,7 @@ it('persists an account with required fields', function (): void {
         'name' => 'ASN spaarrekening',
         'slug' => 'asn-spaar',
         'kind' => 'asn',
-        'iban' => 'NL00ASNB0123456789',
+        'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);
 

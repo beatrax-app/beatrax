@@ -29,6 +29,10 @@ arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules');
 
+arch('Money\\Money types stay inside the ASN adapter folder')
+    ->expect('Money\\Money')
+    ->toOnlyBeUsedIn('Modules\\Ingestion\\Internal\\Adapters\\Asn');
+
 arch('RederiveFingerprintsCommand is never imported by any HTTP or routing namespace')
     ->expect('Modules\\Ledger\\Internal\\Console\\RederiveFingerprintsCommand')
     ->not->toBeUsedIn([

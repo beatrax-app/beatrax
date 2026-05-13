@@ -26,7 +26,7 @@ beforeEach(function (): void {
         'name' => 'ASN',
         'slug' => 'asn',
         'kind' => 'asn',
-        'iban' => 'NL00ASNB0123456789',
+        'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);
 
