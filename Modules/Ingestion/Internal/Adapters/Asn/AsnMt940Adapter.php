@@ -46,10 +46,17 @@ use Throwable;
  *
  * Multi-statement files:
  *  - When a file carries multiple `:20:` blocks, the FIRST statement's
- *    metadata is captured for `statement_summaries`. Subsequent
+ *    metadata is captured for `statement_summaries` and the persisted
+ *    `entry_count` reflects only that first statement. Subsequent
  *    statements' entries still yield SourceTransactionDto rows; the
  *    `extras` envelope on the statement metadata carries
  *    `multiStatement: true` so downstream views can surface the fact.
+ *
+ * Source-format integrity:
+ *  - `:25:` (own IBAN) and `:60F:`/`:60M:` (currency-bearing opening
+ *    balance) must precede the first `:61:`. A `:61:` tag observed
+ *    before either is rejected as a parse error so empty IBAN and
+ *    silent-default-EUR currency can never reach the import pipeline.
  */
 final class AsnMt940Adapter implements SourceAdapter
 {
@@ -135,18 +142,33 @@ final class AsnMt940Adapter implements SourceAdapter
                     break;
 
                 case '61':
+                    if ($ownIban === null) {
+                        throw new InvalidAmountException(
+                            'MT940 :61: encountered before :25:; file is malformed.',
+                        );
+                    }
+                    if ($currency === null) {
+                        throw new InvalidAmountException(
+                            'MT940 :61: encountered before any balance tag set a currency.',
+                        );
+                    }
                     if ($pendingTag61 !== null) {
-                        yield $this->buildDto($pendingTag61, null, $ownIban ?? '', $currency ?? 'EUR', $rowIndex);
+                        yield $this->buildDto($pendingTag61, null, $ownIban, $currency, $rowIndex);
                         $rowIndex++;
                     }
                     $pendingTag61 = $this->tag61->parse($content);
-                    $entryCount++;
+                    if (! $firstStatementFrozen) {
+                        $entryCount++;
+                    }
                     break;
 
                 case '86':
                     if ($pendingTag61 !== null) {
                         $narrative = $this->tag86->parse($content);
-                        yield $this->buildDto($pendingTag61, $narrative, $ownIban ?? '', $currency ?? 'EUR', $rowIndex);
+                        // $ownIban + $currency are guaranteed non-null by the
+                        // :61: branch above, which is the only path that can
+                        // populate $pendingTag61.
+                        yield $this->buildDto($pendingTag61, $narrative, (string) $ownIban, (string) $currency, $rowIndex);
                         $rowIndex++;
                         $pendingTag61 = null;
                     }
@@ -155,7 +177,7 @@ final class AsnMt940Adapter implements SourceAdapter
         }
 
         if ($pendingTag61 !== null) {
-            yield $this->buildDto($pendingTag61, null, $ownIban ?? '', $currency ?? 'EUR', $rowIndex);
+            yield $this->buildDto($pendingTag61, null, (string) $ownIban, (string) $currency, $rowIndex);
         }
 
         if ($statementId !== null && $ownIban !== null) {
