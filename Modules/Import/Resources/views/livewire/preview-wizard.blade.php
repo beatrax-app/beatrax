@@ -30,8 +30,13 @@
                                     id="accountName"
                                     wire:model="accountName"
                                     placeholder="e.g. ASN Spaarrekening"
+                                    required
+                                    maxlength="80"
                                     class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                                 />
+                                @error('accountName')
+                                    <p class="text-xs text-rose-700">{{ $message }}</p>
+                                @enderror
                             </div>
                             <button
                                 type="button"
