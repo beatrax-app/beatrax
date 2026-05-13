@@ -77,6 +77,16 @@
                                         <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20" title="Will be added to your ledger.">New</span>
                                     @elseif ($row->status === 'duplicate')
                                         <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20" title="Already imported — will be skipped.">Duplicate</span>
+                                    @elseif ($row->status === 'enriched')
+                                        <span class="inline-flex items-center rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-600/20" title="Existing row will be updated with a stronger source reference.">Enriched</span>
+                                        @if ($row->diff && isset($row->diff['source_ref']))
+                                            <div class="mt-1 text-xs text-slate-500 font-mono">
+                                                source_ref:
+                                                <span class="text-slate-400">{{ $row->diff['source_ref']['from'] ?? '∅' }}</span>
+                                                →
+                                                <span class="text-sky-700">{{ $row->diff['source_ref']['to'] }}</span>
+                                            </div>
+                                        @endif
                                     @else
                                         <span class="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20" title="{{ $row->error }}">Error</span>
                                     @endif
