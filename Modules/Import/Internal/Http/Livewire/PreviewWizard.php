@@ -14,7 +14,9 @@ use Modules\Import\Public\Actions\DiscardImport;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Exceptions\InvalidAccountNameException;
 use Modules\Import\Public\Exceptions\PreviewExpiredException;
+use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ledger\Models\ImportRun;
 
 /**
@@ -46,8 +48,17 @@ final class PreviewWizard extends Component
         RunsImports $importer,
         CurrentUser $currentUser,
     ): void {
+        $this->resetErrorBag('accountName');
+
         $user = $currentUser->user();
-        ($namer)($iban, $name, $user);
+
+        try {
+            ($namer)($iban, $name, $user);
+        } catch (InvalidAccountNameException $e) {
+            $this->addError('accountName', $e->getMessage());
+
+            return;
+        }
 
         /** @var ImportRun $importRun */
         $importRun = ImportRun::query()
@@ -63,6 +74,20 @@ final class PreviewWizard extends Component
         );
 
         $this->accountName = '';
+    }
+
+    /**
+     * Validation rules for the inline account-naming form. Mirrors the
+     * service-layer bound in AccountNamer so client-side feedback matches
+     * what the service would reject.
+     *
+     * @return array<string, string>
+     */
+    protected function rules(): array
+    {
+        return [
+            'accountName' => 'required|string|min:'.AccountNamer::NAME_MIN_LENGTH.'|max:'.AccountNamer::NAME_MAX_LENGTH,
+        ];
     }
 
     public function confirm(
