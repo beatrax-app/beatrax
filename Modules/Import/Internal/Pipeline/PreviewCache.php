@@ -7,11 +7,13 @@ namespace Modules\Import\Internal\Pipeline;
 use Illuminate\Contracts\Cache\Repository;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Dto\ImportPreviewResult;
+use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Holds the parsed canonical batch + preview payload between the upload
- * (preview) click and the confirm click. 30-minute TTL.
+ * Holds the parsed canonical batch, the pending-enrichments list, and
+ * the preview payload between the upload (preview) click and the
+ * confirm click. 30-minute TTL.
  *
  * The cache round-trips DTOs via JSON + spatie/laravel-data hydration.
  * PHP's native object-deserialisation path is intentionally not used here:
@@ -30,8 +32,9 @@ final class PreviewCache
 
     /**
      * @param  list<CanonicalTransaction>  $canonical
+     * @param  list<PendingEnrichment>  $enrichments
      */
-    public function put(int $importRunId, ImportPreviewResult $result, array $canonical): void
+    public function put(int $importRunId, ImportPreviewResult $result, array $canonical, array $enrichments = []): void
     {
         $ttl = $this->clock->now()->addMinutes(30);
 
@@ -41,14 +44,25 @@ final class PreviewCache
             $ttl,
         );
 
-        $payload = json_encode(
+        $canonicalPayload = json_encode(
             array_map(static fn (CanonicalTransaction $c): array => $c->toArray(), $canonical),
             JSON_THROW_ON_ERROR,
         );
 
         $this->cache->put(
             $this->canonicalKey($importRunId),
-            $payload,
+            $canonicalPayload,
+            $ttl,
+        );
+
+        $enrichmentsPayload = json_encode(
+            array_map(static fn (PendingEnrichment $p): array => $p->toArray(), $enrichments),
+            JSON_THROW_ON_ERROR,
+        );
+
+        $this->cache->put(
+            $this->enrichmentsKey($importRunId),
+            $enrichmentsPayload,
             $ttl,
         );
     }
@@ -89,10 +103,34 @@ final class PreviewCache
         ));
     }
 
+    /**
+     * Returns the cached pending-enrichments list for an import run, or
+     * `null` when the cache entry is absent or expired. An empty list is
+     * a legitimate value (a preview with no cross-format enrichments).
+     *
+     * @return list<PendingEnrichment>|null
+     */
+    public function getEnrichments(int $importRunId): ?array
+    {
+        $raw = $this->cache->get($this->enrichmentsKey($importRunId));
+        if (! is_string($raw)) {
+            return null;
+        }
+
+        /** @var array<int, array<string, mixed>> $list */
+        $list = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+
+        return array_values(array_map(
+            static fn (array $row): PendingEnrichment => PendingEnrichment::from($row),
+            $list,
+        ));
+    }
+
     public function forget(int $importRunId): void
     {
         $this->cache->forget($this->previewKey($importRunId));
         $this->cache->forget($this->canonicalKey($importRunId));
+        $this->cache->forget($this->enrichmentsKey($importRunId));
     }
 
     private function previewKey(int $importRunId): string
@@ -103,5 +141,10 @@ final class PreviewCache
     private function canonicalKey(int $importRunId): string
     {
         return sprintf('import.%d.canonical', $importRunId);
+    }
+
+    private function enrichmentsKey(int $importRunId): string
+    {
+        return sprintf('import.%d.enrichments', $importRunId);
     }
 }
