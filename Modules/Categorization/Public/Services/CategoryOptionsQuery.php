@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Categorization\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\JoinClause;
 use Modules\Categorization\Public\Dto\CategoryOption;
 use Modules\Core\Models\User;
 use stdClass;
@@ -13,9 +14,10 @@ use stdClass;
  * Loads the flattened category list (Parent / Leaf) for pickers and inboxes.
  *
  * Visibility rule: a row is offered when its `user_id` is null (the seeded
- * default tree) OR matches the supplied user. This prevents custom
- * categories belonging to one user from leaking into another user's picker
- * once multi-user support lands.
+ * default tree) OR matches the supplied user. Both halves of the self-join
+ * (leaf AND parent) apply the rule, so a leaf whose `parent_id` accidentally
+ * points to a foreign user's category never leaks the foreign parent name
+ * into the path breadcrumb.
  *
  * The DTO `CategoryOption` is ordered by `c.display_order` so the keyboard
  * picker's `1`-`9` shortcut always maps to the same nine items across
@@ -34,7 +36,12 @@ final class CategoryOptionsQuery
 
         $rows = $this->db->connection()
             ->table('categories as c')
-            ->leftJoin('categories as p', 'c.parent_id', '=', 'p.id')
+            ->leftJoin('categories as p', static function (JoinClause $join) use ($userId): void {
+                $join->on('c.parent_id', '=', 'p.id')
+                    ->where(static function ($q) use ($userId): void {
+                        $q->whereNull('p.user_id')->orWhere('p.user_id', $userId);
+                    });
+            })
             ->where(static function ($q) use ($userId): void {
                 $q->whereNull('c.user_id')->orWhere('c.user_id', $userId);
             })
