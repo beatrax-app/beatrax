@@ -26,6 +26,7 @@
         </testsuite>
     </testsuites>
     <php>
+        <ini name="memory_limit" value="1G"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_KEY" value="base64:vQc4qXIjcS1Wt2kPQzGpL3yvqW6CrLqzqkEYqFqW7DA="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
