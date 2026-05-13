@@ -3,7 +3,7 @@
 `asn-mt940-sample-1.sta` is a **synthesised** ASN MT940 statement. The bank
 no longer ships an MT940 download channel on the modern online-banking
 surface — only CAMT.053 and CSV are exposed. To keep the hand-rolled MT940
-adapter testable in Phase 2 (D-25), the fixture is derived from a curated
+adapter testable end-to-end, the fixture is derived from a curated
 subset of `asn-camt053-sample-1.xml` and rendered into ASN's published
 MT940 dialect.
 
@@ -38,7 +38,7 @@ the table:
 
 | Option | Tradeoff |
 |--------|----------|
-| Skip MT940 entirely | Plan 02-04 + cross-format scenarios that depend on `.sta` cannot ship |
+| Skip MT940 entirely | The MT940 adapter + cross-format scenarios that depend on `.sta` cannot ship |
 | **Synthesise from the anonymised CAMT corpus** (chosen) | Loses one degree of "real wire" realism, but preserves the same anonymised data through three formats, which is exactly what the cross-format dedup tests need |
 
 The fixture-generation script lives at `/tmp/anonymize_phase2.py` (not committed —
@@ -62,7 +62,7 @@ merchant in every output:
 
 The complete 39-entry name map and 34-entry IBAN map are reproducible by
 sorting the source counterparty names + IBANs alphabetically and zipping
-against the 39-name Phase-1 merchant pool documented in `asn-sample-1.md`.
+against the 39-name canonical merchant pool documented in `asn-sample-1.md`.
 
 ## ASN `:61:` Tag layout — illustrated
 

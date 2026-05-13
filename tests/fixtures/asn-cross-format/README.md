@@ -55,8 +55,8 @@ entries:
 
 ## Anonymisation protocol
 
-Same as `asn-sample-1.md` (Phase-1 canonical) with the Phase-2 free-text
-extensions for `<Ustrd>` / `<AddtlNtryInf>`. The mapping is built once
+Same as `asn-sample-1.md` (the canonical CSV fixture protocol) with the
+free-text extensions for `<Ustrd>` / `<AddtlNtryInf>`. The mapping is built once
 from the union of names + IBANs across all four output files (3-month
 CAMT, Feb CAMT, Feb CSV, synthesised MT940) and applied consistently
 to each.
@@ -73,10 +73,10 @@ to each.
 
 | Scenario | Test | What it asserts |
 |----------|------|----------------|
-| Import CSV first → import CAMT second | `CrossFormatDedupTest::csv_then_camt053` | Zero duplicates; existing rows get `enriched_from` JSON appended with the CAMT format + run id; `source_ref` upgrades from CSV value to CAMT `EndToEndId` per D-28 |
-| Import CAMT first → import CSV second | `CrossFormatDedupTest::camt053_then_csv` | Zero duplicates; existing rows stay; CSV import marks them SKIP (CSV `source_ref` is strictly weaker than CAMT `EndToEndId` per D-28's ordering) |
+| Import CSV first → import CAMT second | `CrossFormatDedupTest::csv_then_camt053` | Zero duplicates; existing rows get `enriched_from` JSON appended with the CAMT format + run id; `source_ref` upgrades from CSV value to CAMT `EndToEndId` per the source-ref ranking contract |
+| Import CAMT first → import CSV second | `CrossFormatDedupTest::camt053_then_csv` | Zero duplicates; existing rows stay; CSV import marks them SKIP (CSV `source_ref` is strictly weaker than CAMT `EndToEndId` per the source-ref ranking contract) |
 | Idempotent re-import | `CrossFormatDedupTest::same_format_replay` | Re-uploading either format produces zero new rows and zero new `enriched_from` entries |
-| Fingerprint v3 stability | `IdempotencyContractTest::cross_format_pair_fingerprints_match` | For every row in `february.csv`, an entry exists in `february.camt053.xml` with the **same** v3 fingerprint (no `source_ref` in the tuple per D-21) |
+| Fingerprint v3 stability | `IdempotencyContractTest::cross_format_pair_fingerprints_match` | For every row in `february.csv`, an entry exists in `february.camt053.xml` with the **same** v3 fingerprint (no `source_ref` in the v3 fingerprint tuple) |
 
 ## Caveats
 
