@@ -63,3 +63,20 @@ it('treats absent entry date as null while keeping the value date populated', fu
     expect($parsed->valueDate->toDateString())->toBe('2026-04-01');
     expect($parsed->entryDate)->toBeNull();
 })->group('phase-2');
+
+it('resolves the entry-date year via the SWIFT year-rollover rule when entry month > value month', function (): void {
+    // Value date 2026-01-02 with entry date 12-31 means the entry happened
+    // on the previous calendar year's last day.
+    $parsed = $this->parser->parse('2601021231C100,00NTRFREF-XMAS');
+
+    expect($parsed->valueDate->toDateString())->toBe('2026-01-02');
+    expect($parsed->entryDate?->toDateString())->toBe('2025-12-31');
+})->group('phase-2');
+
+it('keeps the entry-date year equal to the value-date year when entry month <= value month', function (): void {
+    // Same year case (typical): value 2026-04-02, entry 2026-04-01.
+    $parsed = $this->parser->parse('2604020401C100,00NTRFREF-SAME');
+
+    expect($parsed->valueDate->toDateString())->toBe('2026-04-02');
+    expect($parsed->entryDate?->toDateString())->toBe('2026-04-01');
+})->group('phase-2');
