@@ -1,8 +1,8 @@
 ---
 phase: 01-foundation-asn-csv-vertical-slice
-fixed_at: 2026-05-13T00:23:49Z
+fixed_at: 2026-05-13T09:58:00Z
 review_path: .planning/phases/01-foundation-asn-csv-vertical-slice/01-REVIEW.md
-iteration: 3
+iteration: 5
 fix_scope: all
 findings_in_scope: 7
 fixed: 7
@@ -10,97 +10,120 @@ skipped: 0
 status: all_fixed
 ---
 
-# Phase 1: Code Review Fix Report (Iteration 3)
+# Phase 1: Code Review Fix Report (Iteration 5)
 
-**Fixed at:** 2026-05-13T00:23:49Z
+**Fixed at:** 2026-05-13T09:58:00Z
 **Source review:** `.planning/phases/01-foundation-asn-csv-vertical-slice/01-REVIEW.md`
-**Iteration:** 3 (final iteration of the `--auto` fix loop)
+**Iteration:** 5 (retry — prior fixer-agent stream timed out before landing any commits)
 **Fix scope:** all
 
 **Summary:**
 
-- Findings in scope: 7 (1 Blocker, 6 Warnings)
+- Findings in scope: 7 (4 Blockers, 3 Warnings)
 - Fixed: 7
 - Skipped: 0
 - Status: all_fixed
 
-Each fix lands as an atomic `fix(01): {id} ...` commit with paired regression tests. Tier-1 verification (re-read modified ranges) and Tier-2 verification (`php -l`) pass for every commit. The test suite was not executed in-worktree (no `vendor/` dependency tree present); per CLAUDE.md the project's Larastan-level-10 / Pint / Pest gates run from the main checkout.
+Each blocker landed as an atomic `fix(01): {id} ...` commit. W-01 and W-02 fold into the B-01 and B-02 commits per the prompt's own grouping ("also closes W-02" / "also fixes W-01 simultaneously"), and B-04 folds into B-01 because both changes are in the same test file and neither test runs in isolation. The independent W-03 finding gets its own commit. Both quality gates pass at the end of the run:
+
+```
+vendor/bin/phpstan analyse  → No errors
+vendor/bin/pest              → Tests: 1 skipped, 239 passed (6746 assertions)
+vendor/bin/pint --test       → passed
+```
 
 ## Fixed Issues
 
-### B-03: `DefaultCategoryTreeSeeder` matches per-user duplicates and silently demotes them to global
+### B-01: RecordTransactions idempotency regression on null user_id (closes W-02)
 
 **Files modified:**
-- `Modules/Categorization/Database/Seeders/DefaultCategoryTreeSeeder.php`
-- `Modules/Categorization/tests/Unit/DefaultCategoryTreeSeederTest.php`
+- `Modules/Ledger/Public/Actions/RecordTransactions.php`
+- `Modules/Ledger/Public/Contracts/RecordsTransactions.php`
+- `Modules/Ledger/tests/Feature/RecordTransactionsTest.php`
 
-**Commit:** `aee0aea`
+**Commit:** `b924786`
 
-**Applied fix:** Keyed both `updateOrCreate` calls (parent + child loop) by `(slug, user_id = NULL)` so the seeder lookup only ever matches the global default-tree row. Dropped the now-redundant `'user_id' => null` entry from the update payload. Updated the class PHPDoc to describe the new key. Added a regression test that pre-seeds a per-user `groceries` row, runs the seeder, and asserts (a) the user row's `user_id` and `name` are unchanged and (b) a separate `user_id = NULL` global row also exists.
+**Applied fix:** SQLite treats `NULL` as distinct in UNIQUE indexes, so a row written with `user_id = NULL` would slip past the composite UNIQUE on `(user_id, account_id, posted_at, ...)` on a re-import and silently duplicate. Production callers (NormalizeStage) always supply a real user, but the contract allowed `CanonicalTransaction.userId` to be null, so a misconfigured caller could bypass idempotency.
 
-### W-08: `TransactionListQuery::recent` filters by `settled_currency` but renders `amount_minor` / `currency`
+- `RecordTransactions::__invoke` now throws `InvalidArgumentException` as soon as it encounters a row with `userId === null`, before any DB write.
+- `RecordsTransactions` interface PHPDoc spells out the precondition so implementers see it without reading the action body.
+- `RecordTransactionsTest`'s `beforeEach` now seeds a user, propagates `userId` into every `canonical([...])` call, and a new regression test pins the null-user rejection behaviour.
+
+This also closes the prompt's W-02 (the contract tightening was the W-02 ask).
+
+**Note: requires human verification** — the additional precondition runs inside the existing `$this->db->connection()->transaction(...)` wrapper, so the throw correctly rolls back any preceding inserts in the same batch. Worth confirming the failure surface in `ConfirmImport` is acceptable (no try/catch today, the exception bubbles to a 500 if the production normalisation ever regresses — which would be the right failure mode for a contract violation).
+
+### B-02: PHPStan errors (15 across 6 files) (closes W-01)
 
 **Files modified:**
-- `Modules/Ledger/Public/Services/TransactionListQuery.php`
-- `Modules/Ledger/tests/Feature/TransactionListTest.php`
-
-**Commit:** `5f90b78`
-
-**Applied fix:** Branched the SELECT in `baseQuery()` on the presence of `$currency`. When a filter is supplied, the query projects `settled_amount_minor as display_minor` and `settled_currency as display_currency`; otherwise it projects the native `amount_minor` / `currency`. `mapRow()` now reads `display_minor` / `display_currency` so the dashboard's "Recent transactions" panel renders every row in the same currency as its KPI tiles and Top Categories panel, while the `/transactions` full-history view (no filter) keeps its multi-currency shape. Added two tests covering the EUR-filtered view (a native-USD/settled-EUR row renders as EUR) and the unfiltered full-history view (native USD remains USD).
-
-### W-09: `UpdateTransactionCategory` does not verify the category belongs to the user
-
-**Files modified:**
+- `Modules/Categorization/Public/Services/CategoryOptionsQuery.php`
+- `Modules/Core/Internal/Console/InstallCommand.php`
+- `Modules/Core/Internal/Http/Livewire/Dashboard.php`
+- `Modules/Import/Internal/Pipeline/Stages/FingerprintStage.php`
 - `Modules/Ledger/Public/Actions/UpdateTransactionCategory.php`
-- `Modules/Ledger/tests/Feature/UpdateTransactionCategoryTest.php`
-
-**Commit:** `aae270e`
-
-**Applied fix:** Before the `transactions.category_id` update, verify with `Category::withoutGlobalScopes()` that the category id either has `user_id = NULL` (default tree) OR belongs to the supplied user. Foreign category ids return `0` (mirrors the FK-miss behaviour callers already handle) and leave the row untouched. Updated the action's PHPDoc to describe the new defence-in-depth predicate. Added two feature tests: foreign-user category id is refused; global default-tree category id is accepted.
-
-**Note: requires human verification** — the cross-user defence is correct, but the `return 0` short-circuit on a foreign category id is semantically distinct from a successful no-op (e.g. user not allowed to mutate). Worth confirming `AssignCategory` and the `InlineCategoryPicker` UX do the right thing on `affected == 0` for this new path (today they treat it the same as a missing transaction).
-
-### W-10: `TopCategoriesByPeriodQuery::loadCategories` does not scope the parent walk by user_id
-
-**Files modified:**
 - `Modules/Ledger/Public/Services/TopCategoriesByPeriodQuery.php`
-- `Modules/Ledger/tests/Unit/ThisPeriodAtAGlanceQueryTest.php`
 
-**Commit:** `07cc2e9`
+**Commit:** `ccdddc9`
 
-**Applied fix:** Plumbed `$user->id` through `for() → loadCategories(...)` and applied the `whereNull('user_id')->orWhere('user_id', $userId)` predicate to every level of the recursive walk. A `parent_id` pointing cross-tenant now terminates the chain at the filtered-out parent (the existing cycle guard handles the early break). Added the W-05-style regression test that creates a foreign-user parent + a local leaf whose `parent_id` points at the foreign parent, then asserts the dashboard breadcrumb omits the foreign parent name and shows only the local leaf.
+**Applied fix:** Six independent defects, fixed at the root each time:
 
-### W-11: `PreviewWizard::rules()` is declared but never invoked
+- **`Dashboard::resolvePeriod()`** compared `CarbonImmutable|null === false`. The Carbon 3 `createFromFormat()` signature returns `CarbonImmutable|null`, so the check now compares against `null` (which also feeds a non-null value into the `format()` round-trip and `PeriodQuery::containing()` call on the same path). This is the prompt's W-01 — the user-controlled `periodStartStr` still falls through to `$periods->current()` on any parse failure.
+- **`InstallCommand::resolveRealPath()`** re-checked `realpath()` output for `!== ''` after `is_string()`. Larastan refines `realpath()`'s return to `non-empty-string|false`, so the secondary check was always true. Dropped both redundant `!== ''` checks.
+- **`InstallCommand::handle()`** called `User::query()->exists()`. `exists()` is in `Eloquent\Builder`'s `forwardCallsTo` passthru list, which Larastan surfaces as a static method, tripping `staticMethod.dynamicCall`. Routed the lookup through `DatabaseManager->connection()->table('users')->exists()` and added `DatabaseManager` to the command's constructor.
+- **`FingerprintStage::isExistingFingerprint()`** had `Transaction::query()->...->exists()` hitting the same static-passthru rule. Replaced with raw query builder on `transactions` via `DatabaseManager`, also injected.
+- **`UpdateTransactionCategory::__invoke()`** had `Category::query()->...->exists()` and `->whereNull()` matching the rule. The action's own NULL-or-current-user predicate already replicates Category's global scope's intent, so the lookup now uses the raw query builder directly. Closure parameter typed as `Illuminate\Database\Query\Builder` to keep the inner `whereNull()` / `orWhere()` chain resolvable.
+- **`CategoryOptionsQuery::for()`** and **`TopCategoriesByPeriodQuery::loadCategories()`** passed bare closures (`static function ($q)`) into raw query builder `->where()` callbacks. Typed the parameter as `Illuminate\Database\Query\Builder` so PHPStan resolves the `whereNull()` / `orWhere()` chain to real methods.
+
+Full `vendor/bin/phpstan analyse` reports zero errors; all existing tests still pass.
+
+### B-03: TransactionTypeTest assertion now matches SQLite-trigger enforcement
 
 **Files modified:**
-- `Modules/Import/Internal/Http/Livewire/PreviewWizard.php`
+- `Modules/Ledger/tests/Unit/TransactionTypeTest.php`
 
-**Commit:** `adfc794`
+**Commit:** `0942125`
 
-**Applied fix:** `nameAccount()` now syncs `$this->accountName = $name` (covers callers that bypass the `wire:model` lifecycle, e.g. `Livewire::test(...)->call('nameAccount', ...)`) and calls `$this->validate()`, which reads the declared `rules()` map. The Livewire `ValidationException` populates the error bag and short-circuits the flow before the service is touched. The service-layer `InvalidAccountNameException` remains the authoritative second check. Inline comment added explaining why the property sync is needed.
+**Applied fix:** The allowed-types invariant on `transactions.type` was moved from a `Transaction::creating` model hook to a pair of SQLite `BEFORE INSERT` / `BEFORE UPDATE` triggers (so every write path — Eloquent `create/save` AND raw `insertOrIgnore` from the recorder — hits the same gate). The trigger raises `RAISE(ABORT, 'Invalid transactions.type value')`, surfaced as `Illuminate\Database\QueryException`, not the old `InvalidArgumentException` from the hook.
 
-### W-12: `AccountNamer` does not guard against `Str::slug()` returning an empty string
+Updated the test to expect `QueryException` with the trigger's message text. The sibling `InvalidArgumentException` check inside `RecordTransactions` (application-layer pre-check for batches) is still exercised by `RecordTransactionsTest`'s bogus-type batch test.
+
+### B-04: RecordTransactionsTest fingerprint_version assertion (folded into B-01 commit)
 
 **Files modified:**
-- `Modules/Import/Public/Services/AccountNamer.php`
-- `Modules/Import/tests/Unit/AccountNamerTest.php`
+- `Modules/Ledger/tests/Feature/RecordTransactionsTest.php` (line 96/111)
 
-**Commit:** `3d9467a`
+**Commit:** `b924786` (same commit as B-01)
 
-**Applied fix:** After the existing length bound, derive the slug body once into `$slugBody` and throw `InvalidAccountNameException('Account name must contain at least one letter or digit.')` when it is empty. Updated the slug composition to reuse `$slugBody` to avoid a second `Str::slug` call. Updated the class PHPDoc to mention the new validation. Added four unit tests covering emoji-only input, punctuation-only input, sub-minimum length (whitespace-only), and above-maximum length.
+**Applied fix:** The "persists the SHA-256 fingerprint" test pinned `fingerprint_version === 1`, but `FingerprintComposer::NORMALIZATION_VERSION` was bumped to `2` in iteration 4 when the tuple was rebuilt around `user_id`. The fix replaces the literal `1` with `FingerprintComposer::NORMALIZATION_VERSION` so the test tracks the constant forward, and renames the `it(...)` description to "stamped with the current normalization version" so the intent is timeless.
 
-### W-13: `DiscardImport` is allowed against an already-confirmed import run
+**Why folded into B-01:** the same test calls `$this->canonical([...])` without `userId`, which now correctly throws under the B-01 rejection. The two changes cannot land independently — splitting them would leave one commit with a broken test suite. The combined commit ships them atomically.
 
-**Files modified (new file + edits):**
-- `Modules/Import/Public/Exceptions/ImportAlreadyConfirmedException.php` (new)
-- `Modules/Import/Public/Actions/DiscardImport.php`
-- `Modules/Import/tests/Feature/DiscardImportTest.php` (new)
+### W-01: Dashboard CarbonImmutable nullable comparison (folded into B-02 commit)
 
-**Commit:** `9145ccc`
+**Files modified:**
+- `Modules/Core/Internal/Http/Livewire/Dashboard.php` (line 99)
 
-**Applied fix:** Added a typed `ImportAlreadyConfirmedException` in the Import module's Public namespace (matches the existing `InvalidAccountNameException` / `PreviewExpiredException` shape) carrying the offending `importRunId`. `DiscardImport::__invoke` throws the exception when the loaded run already has `status = 'confirmed'`, leaving the audit row untouched. Mirrors the early-return guard in `ConfirmImport::__invoke`. Added a new feature test file covering both the happy path (previewed → discarded) and the refusal path (confirmed → exception + status preserved).
+**Commit:** `ccdddc9` (same commit as B-02)
 
-The Livewire `PreviewWizard::discard()` action is only reachable from the pre-confirm preview page (status `previewed`), so no UI catch is required; the typed exception protects programmatic / future-CLI callers.
+**Applied fix:** `$parsed === false` on a `CarbonImmutable|null` return value → `$parsed === null`. See B-02 above. This is one of the 15 PHPStan errors B-02 resolves; per the prompt's own grouping it lands in the same commit.
+
+### W-02: RecordsTransactions contract tightening (folded into B-01 commit)
+
+**Files modified:**
+- `Modules/Ledger/Public/Contracts/RecordsTransactions.php`
+
+**Commit:** `b924786` (same commit as B-01)
+
+**Applied fix:** The interface PHPDoc now spells out the non-null-userId precondition for every implementer, so the runtime guard in `RecordTransactions` is documented at the public-API boundary. See B-01 above.
+
+### W-03: Document FingerprintComposer::NORMALIZATION_VERSION semantics
+
+**Files modified:**
+- `Modules/Ledger/Public/Services/FingerprintComposer.php`
+
+**Commit:** `20258a8`
+
+**Applied fix:** Inline PHPDoc on the constant now records the current scheme: the user-scoped tuple shape (`user_id | account_id | posted_at | amount_minor | currency | counterparty_normalized | source_ref`) plus the `normalize()` rules (lowercase + NFD diacritic strip + non-alphanumeric collapse + 80-char truncate). Reads as a self-contained spec — a reader who sees `normalization_version = 2` on a stored row no longer has to dig through migration history or `git log` to learn what that means.
 
 ## Skipped Issues
 
@@ -108,6 +131,6 @@ _None._ All 7 in-scope findings were fixed.
 
 ---
 
-_Fixed: 2026-05-13T00:23:49Z_
+_Fixed: 2026-05-13T09:58:00Z_
 _Fixer: Claude (gsd-code-fixer)_
-_Iteration: 3 of 3 (final `--auto` iteration)_
+_Iteration: 5 (retry of the iteration-5 fixer pass after the prior agent stream-timed out)_
