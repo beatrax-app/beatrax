@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\Import\Internal\Pipeline;
 
 use Illuminate\Contracts\Cache\Repository;
+use JsonException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PendingEnrichment;
+use Modules\Import\Public\Exceptions\PreviewCacheCorruptedException;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
@@ -67,11 +69,24 @@ final class PreviewCache
         );
     }
 
+    /**
+     * Returns the cached preview result for an import run, or `null` when
+     * the cache key is absent / expired. A present-but-malformed payload
+     * throws `PreviewCacheCorruptedException` so the wizard can tell the
+     * difference between "your preview window elapsed" (re-upload) and
+     * "the cache backend lost the shape" (still re-upload, but the cause
+     * is a backend regression worth logging).
+     */
     public function getPreview(int $importRunId): ?ImportPreviewResult
     {
-        $raw = $this->cache->get($this->previewKey($importRunId));
-        if (! is_array($raw)) {
+        $key = $this->previewKey($importRunId);
+        if (! $this->cache->has($key)) {
             return null;
+        }
+
+        $raw = $this->cache->get($key);
+        if (! is_array($raw)) {
+            throw new PreviewCacheCorruptedException($importRunId, $key);
         }
 
         return ImportPreviewResult::from($raw);
@@ -79,23 +94,36 @@ final class PreviewCache
 
     /**
      * Returns the cached canonical batch for an import run, or `null` when
-     * the cache entry is absent or expired. Callers must distinguish
+     * the cache entry is absent / expired. Callers must distinguish
      * "missing" (null) from "empty list" — the latter is a legitimate
      * preview whose every row was a duplicate; the former means the
      * confirm step has no batch to replay and must surface a re-upload
      * prompt rather than confirming nothing.
      *
+     * A present-but-malformed payload (non-string value, or a value that
+     * fails JSON decode) throws `PreviewCacheCorruptedException` so the
+     * cause is visible to the wizard and the logs.
+     *
      * @return list<CanonicalTransaction>|null
      */
     public function getCanonical(int $importRunId): ?array
     {
-        $raw = $this->cache->get($this->canonicalKey($importRunId));
-        if (! is_string($raw)) {
+        $key = $this->canonicalKey($importRunId);
+        if (! $this->cache->has($key)) {
             return null;
         }
 
-        /** @var array<int, array<string, mixed>> $list */
-        $list = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+        $raw = $this->cache->get($key);
+        if (! is_string($raw)) {
+            throw new PreviewCacheCorruptedException($importRunId, $key);
+        }
+
+        try {
+            /** @var array<int, array<string, mixed>> $list */
+            $list = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new PreviewCacheCorruptedException($importRunId, $key, $e);
+        }
 
         return array_values(array_map(
             static fn (array $row): CanonicalTransaction => CanonicalTransaction::from($row),
@@ -105,20 +133,33 @@ final class PreviewCache
 
     /**
      * Returns the cached pending-enrichments list for an import run, or
-     * `null` when the cache entry is absent or expired. An empty list is
+     * `null` when the cache entry is absent / expired. An empty list is
      * a legitimate value (a preview with no cross-format enrichments).
+     *
+     * A present-but-malformed payload throws
+     * `PreviewCacheCorruptedException` for the same reason as
+     * `getCanonical()`.
      *
      * @return list<PendingEnrichment>|null
      */
     public function getEnrichments(int $importRunId): ?array
     {
-        $raw = $this->cache->get($this->enrichmentsKey($importRunId));
-        if (! is_string($raw)) {
+        $key = $this->enrichmentsKey($importRunId);
+        if (! $this->cache->has($key)) {
             return null;
         }
 
-        /** @var array<int, array<string, mixed>> $list */
-        $list = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+        $raw = $this->cache->get($key);
+        if (! is_string($raw)) {
+            throw new PreviewCacheCorruptedException($importRunId, $key);
+        }
+
+        try {
+            /** @var array<int, array<string, mixed>> $list */
+            $list = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new PreviewCacheCorruptedException($importRunId, $key, $e);
+        }
 
         return array_values(array_map(
             static fn (array $row): PendingEnrichment => PendingEnrichment::from($row),
