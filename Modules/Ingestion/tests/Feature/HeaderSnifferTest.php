@@ -74,7 +74,7 @@ it('rejects an unreadable / non-existent file', function (): void {
 it('rejects an unknown declared format', function (): void {
     expect(fn () => $this->sniffer->sniff(
         base_path('tests/fixtures/asn-sample-1.csv'),
-        'asn-mt940',
+        'asn-no-such-format',
     ))->toThrow(SniffMismatchException::class, 'Unsupported sniff target');
 });
 
@@ -155,4 +155,64 @@ it('accepts a CAMT.053 XML with a leading UTF-8 BOM + XML declaration + comments
     $result = $this->sniffer->sniff($tmp, 'asn-camt053');
 
     expect($result->format)->toBe('asn-camt053');
+})->group('phase-2');
+
+it('accepts an ASN MT940 .sta file', function (): void {
+    $result = $this->sniffer->sniff(
+        base_path('tests/fixtures/asn-mt940-sample-1.sta'),
+        'asn-mt940',
+    );
+
+    expect($result->format)->toBe('asn-mt940');
+})->group('phase-2');
+
+it('accepts an MT940 file with a leading SWIFT block-1 envelope', function (): void {
+    $body = '{1:F01ASNBNL21XXXX0000000000}{2:O9400000000ASNBNL21XXXX00000000000000000000N}{3:{108:MT940}}{4:'
+        ."\n:20:STMT-2026-04\n:25:NL57ASNB0123456789\n:28C:1/1\n:60F:C260401EUR1000,00\n"
+        .":61:2604010401C100,00NTRF NONREF\n-}";
+    $tmp = tempnam(sys_get_temp_dir(), 'mt940-envelope-').'.sta';
+    file_put_contents($tmp, $body);
+
+    try {
+        $result = $this->sniffer->sniff($tmp, 'asn-mt940');
+        expect($result->format)->toBe('asn-mt940');
+    } finally {
+        @unlink($tmp);
+    }
+})->group('phase-2');
+
+it('rejects a CSV file declared as asn-mt940', function (): void {
+    $tmp = tempnam(sys_get_temp_dir(), 'csv-as-mt940-').'.sta';
+    file_put_contents($tmp, "Datum,Je rekening\n01-04-2026,NL57ASNB0123456789\n");
+
+    try {
+        expect(fn () => $this->sniffer->sniff($tmp, 'asn-mt940'))
+            ->toThrow(SniffMismatchException::class, 'MT940');
+    } finally {
+        @unlink($tmp);
+    }
+})->group('phase-2');
+
+it('rejects an XML file declared as asn-mt940', function (): void {
+    $tmp = tempnam(sys_get_temp_dir(), 'xml-as-mt940-').'.sta';
+    file_put_contents($tmp, '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"/>');
+
+    try {
+        expect(fn () => $this->sniffer->sniff($tmp, 'asn-mt940'))
+            ->toThrow(SniffMismatchException::class);
+    } finally {
+        @unlink($tmp);
+    }
+})->group('phase-2');
+
+it('rejects an MT940 file with a wrong extension declared as asn-mt940', function (): void {
+    $tmp = tempnam(sys_get_temp_dir(), 'mt940-no-ext-').'.xml';
+    file_put_contents($tmp, ":20:STMT-2026-04\n:25:NL57ASNB0123456789\n");
+
+    try {
+        expect(fn () => $this->sniffer->sniff($tmp, 'asn-mt940'))
+            ->toThrow(SniffMismatchException::class, 'MT940');
+    } finally {
+        @unlink($tmp);
+    }
 })->group('phase-2');

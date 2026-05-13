@@ -6,6 +6,7 @@ namespace Modules\Ingestion\Public\Services;
 
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
+use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940HeaderProfile;
 use Modules\Ingestion\Public\Dto\SniffResult;
 use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 
@@ -53,11 +54,57 @@ final class HeaderSniffer
         return match ($declaredFormat) {
             AsnCsvHeaderProfile::FORMAT => $this->sniffAsnCsv($localPath, $head),
             AsnCamt053HeaderProfile::FORMAT => $this->sniffAsnCamt053($localPath, $head),
+            AsnMt940HeaderProfile::FORMAT => $this->sniffAsnMt940($localPath, $head),
             default => throw new SniffMismatchException(sprintf(
                 'Unsupported sniff target: %s',
                 $declaredFormat,
             )),
         };
+    }
+
+    /**
+     * Validates that the path looks like an MT940 export — `.sta`, `.mt940`,
+     * `.940`, or `.txt` extension AND a `:20:` Transaction Reference Number
+     * tag at the start of the body (after stripping any optional SWIFT
+     * block-1 envelope `{1:...}{2:...}{4: ... -}`).
+     */
+    private function sniffAsnMt940(string $path, string $head): SniffResult
+    {
+        if (preg_match('/\.(sta|mt940|940|txt)$/i', $path) !== 1) {
+            throw new SniffMismatchException(
+                "That file doesn't look like an MT940 export. Drop in the ASN MT940 file (.sta / .mt940 / .txt)."
+            );
+        }
+
+        $body = $this->stripSwiftEnvelope($head);
+
+        if (preg_match(AsnMt940HeaderProfile::SIGNATURE_REGEX, $body) !== 1) {
+            throw new SniffMismatchException(
+                'This file does not look like MT940 (no :20: tag at the start). If ASN changed their export format, file an issue.'
+            );
+        }
+
+        return new SniffResult(
+            format: AsnMt940HeaderProfile::FORMAT,
+            delimiter: '',
+            hasHeader: false,
+            encoding: AsnMt940HeaderProfile::SOURCE_ENCODING,
+            columnCount: 0,
+        );
+    }
+
+    /**
+     * Returns the contents of an MT940 SWIFT block-4 envelope when present,
+     * otherwise the head text unchanged. Used by the sniffer to look past
+     * the wrapper for the `:20:` signature tag.
+     */
+    private function stripSwiftEnvelope(string $head): string
+    {
+        if (preg_match(AsnMt940HeaderProfile::SWIFT_ENVELOPE_REGEX, $head, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return $head;
     }
 
     /**
