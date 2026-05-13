@@ -54,7 +54,7 @@ Inherited verbatim from `01-UI-SPEC.md`. No new tokens, no exceptions for this p
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| xs | 4px | Icon-to-label gaps, badge inline padding |
+| xs | 4px | Icon-to-label gaps, badge inline padding, dual-currency row inner gap between native and settled lines (D-47) |
 | sm | 8px | Compact element spacing, form field internal padding, two-line stack inner gap (D-47 native ↔ settled line spacing) |
 | md | 16px | Default element spacing, between segmented-control options |
 | lg | 24px | Section padding inside cards; gap between sibling sections; gap between Settings form fields |
@@ -76,7 +76,7 @@ Inherited verbatim from `01-UI-SPEC.md`. Phase 3 introduces no new sizes or weig
 
 | Role | Size | Weight | Line Height | Usage in Phase 3 |
 |------|------|--------|-------------|-------------------|
-| Micro / Caption | 12px | 400 (regular) | 1.4 | "EUR · This period totals" sub-label on stacked KPI rows; FX-rate caption on the detail page ("Effective rate"); segmented-control option labels ("EUR only" / "Original currency") |
+| Micro / Caption | 12px | 400 (regular) | 1.4 | "EUR · This period totals" sub-label on stacked KPI rows; FX-rate caption on the detail page ("Effective rate"); segmented-control option labels ("EUR only" / "Original currency"); **secondary settled-EUR line on dual-currency rows (D-47)** |
 | Body | 14px | 400 (regular) | 1.5 | Settings page form labels, native amount on the dual-currency row, two-step wizard picker option text |
 | Section heading | 20px | 600 (semibold) | 1.3 | Settings page heading ("Settings"), detail-page subsection heads if rendered |
 | Display (KPI numbers) | 32px | 600 (semibold) | 1.2 | Per-currency KPI amounts on the dashboard (unchanged from Phase 1) |
@@ -84,7 +84,7 @@ Inherited verbatim from `01-UI-SPEC.md`. Phase 3 introduces no new sizes or weig
 **Dual-currency row typography (D-47):**
 
 - **Primary line (native amount):** Body 14px weight 400 in `text-slate-900` — the same weight and color as the amount column today; the "primary" framing is positional, not typographic.
-- **Secondary line (settled EUR amount):** Body 14px weight 400 in `text-slate-500` (`text-muted-foreground` equivalent). Placed directly under the native amount with `mt-0.5` (a 2px optical gap; the calm aesthetic forbids `mt-sm`-and-above multi-line stacks).
+- **Secondary line (settled EUR amount):** **Micro / Caption 12px weight 400** in `text-slate-500` (`text-muted-foreground` equivalent). Placed directly under the native amount with `mt-1` — a 4px optical gap using the `xs` spacing token. The 12px Micro role establishes the hierarchy: native amount is what the user paid in the merchant's currency (the primary signal); the settled-EUR figure underneath is supporting metadata for "what hit the EUR account".
 - **For EUR-native rows** (no FX): only the primary line renders. Single-line height matches Phase 1 row height exactly — original-currency mode does not change row height for EUR-native rows.
 
 **FX-rate label on the detail page (D-48):** Body 14px regular for the label ("Effective rate"); Body 14px regular `text-slate-900` for the value with tabular-nums. Format locked: **`€0.929 / USD`** (one EUR buys 0.929 USD? — see "Currency display" interaction contract below for the locked orientation and precision).
@@ -130,6 +130,22 @@ Inherited verbatim from `01-UI-SPEC.md`. Phase 3 introduces no new color tokens.
 
 ---
 
+## Focal Points (per Phase 3 surface)
+
+Each new Phase 3 surface declares exactly one primary visual anchor so the executor and checker share a single hierarchical reading of every page. Focal points use the accent (emerald-600) where action is the user's job; they sit on dominant white surface so the 10% accent budget reads as the loudest thing in view.
+
+| Surface | Primary focal point |
+|---------|---------------------|
+| `/settings` | The emerald-600 **`Save settings`** submit button — the only accented element on the page; all form chrome is slate-50/slate-200, so the button is the unambiguous reading endpoint. |
+| `/imports/new` (post-cascade two-step picker) | The **file-drop / file input zone** — once issuer and format are chosen, the file zone is the next required action and carries the page's visual weight (slate-200 dashed border on white, full content-column width). The two-step cascade above it is supporting chrome, not anchor. |
+| `/transactions` (currency toggle context) | The **selected segmented-control pill** (`emerald-600`) on the currency-view toggle — the only accented element in the page header. The dual-currency two-line stack inside the table is **content, not focal**: it carries no accent and never competes with the toggle for hierarchy. |
+| `/` (dashboard, original-currency mode) | Unchanged from Phase 1 — the **net KPI tile** of the first currency row (typically EUR) remains the focal point. Per-currency caption labels (12px slate-500) are subordinate; subsequent currency rows visually rhyme with the first. |
+| `/transactions/{id}` (FX line addition) | Unchanged — the detail page's existing focal hierarchy applies. The new "Effective rate" `<dl>` row is informational metadata under the amount stack, never a focal point. |
+
+These declarations are one-liners by design — they close hierarchical ambiguity without re-specifying anything already covered in the Color or Typography sections.
+
+---
+
 ## Component Inventory (Phase 3 additions only)
 
 Phase 3 introduces **one** new Flux component (`flux:radio.group variant="segmented"`) and three hand-rolled Tailwind primitives. All other surfaces extend or reuse Phase 1 components.
@@ -140,7 +156,7 @@ Phase 3 introduces **one** new Flux component (`flux:radio.group variant="segmen
 | Two-step wizard picker (`/imports/new`) | Hand-rolled two-`flux:select` cascade OR two-`<select>` cascade matching the existing wizard's hand-rolled select style | Issuer select rebuilds the format select options on change. Existing wizard hand-rolls `<select>` with Tailwind classes; planner decides whether Phase 3 migrates to `flux:select` or keeps the hand-rolled pattern (both are acceptable; consistency-with-existing argues hand-rolled, but Flux-first argues `flux:select`). **Locked: hand-rolled `<select>` cascade** — minimises blast radius and keeps Flux's first appearance scoped to the segmented control. |
 | "Name your ICS Account" inline step (preview wizard) | Hand-rolled `<input type="text">` matching the existing IBAN-naming step's pattern | Generalised trigger from "IBAN not found" to "no Account of the appropriate type exists". Suggested placeholder: `e.g. ICS card`. Save button reuses the emerald-600 CTA pattern. |
 | Per-currency KPI tile row (`/` original mode) | Reuse the Phase 1 `rounded-lg border border-slate-200 bg-white p-6` card pattern | Each currency's three tiles (In / Out / Net) sit in a `grid grid-cols-1 md:grid-cols-3 gap-md` exactly as Phase 1's single row does. Rows stack vertically with `gap-2xl` between currencies and a 12px caption label above each row (e.g. `EUR`, then below it the three tiles). |
-| Dual-currency two-line stack (`/transactions` original mode) | Hand-rolled inside the existing transactions table `<td>` for the Amount column | Two `<span class="block">` elements, primary `text-slate-900`, secondary `mt-0.5 text-xs text-slate-500`. Right-aligned, tabular-nums on both lines. |
+| Dual-currency two-line stack (`/transactions` original mode) | Hand-rolled inside the existing transactions table `<td>` for the Amount column | Two `<span class="block">` elements, primary `text-sm text-slate-900` (14px Body), secondary `mt-1 text-xs text-slate-500` (4px optical gap using the `xs` spacing token; 12px Micro role). Right-aligned, tabular-nums on both lines. |
 | FX-rate line (transaction detail page) | Hand-rolled `<dl>` row matching whatever detail-page pattern Phase 3 introduces | Phase 3 inserts one row: `<dt>Effective rate</dt><dd>€0.929 / USD</dd>` only rendered when `fx_rate_used IS NOT NULL`. |
 | Settings form (`/settings`) | Hand-rolled — two `<input>` controls (one `<select>` for `default_currency_view`, one numeric `<input>` for `period_start_day`) | Matches the existing login form's hand-rolled Tailwind pattern. Reuses the slate-50 input background + slate-200 border + emerald-600 submit. |
 | Top nav "Settings" link | New `<a>` inside the existing `top-nav.blade.php` partial | Inserts between "Uncategorized" and the user-email block. Uses the same `$isActive('/settings')` helper pattern already in place. |
@@ -213,14 +229,14 @@ Subsequent ICS uploads skip the prompt entirely.
 For an FX row:
 
 ```
-$12.99 USD         ← primary line, text-slate-900
-€12.07 EUR         ← secondary line, text-slate-500, mt-0.5
+$12.99 USD         ← primary line, text-sm text-slate-900 (14px Body)
+€12.07 EUR         ← secondary line, text-xs text-slate-500 (12px Micro), mt-1 (4px xs gap)
 ```
 
 For an EUR-native row in either mode:
 
 ```
-€12.07 EUR         ← single line, text-slate-900
+€12.07 EUR         ← single line, text-sm text-slate-900
 ```
 
 **Currency code suffix:** ISO 4217 three-letter code (`USD`, `EUR`, `GBP`). The symbol prefix + ISO suffix is redundant by design — the suffix prevents misreading `$12.99` as Canadian or Australian dollars when the column is scanned quickly. Locked verbose form: **`$12.99 USD`** not `$12.99` alone.
