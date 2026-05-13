@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Actions;
 
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
-use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 
@@ -25,13 +26,15 @@ use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
  */
 final class UpdateTransactionCategory implements UpdatesTransactionCategory
 {
+    public function __construct(private readonly DatabaseManager $db) {}
+
     public function __invoke(int $transactionId, ?int $categoryId, User $user): int
     {
         if ($categoryId !== null) {
-            $categoryVisible = Category::query()
-                ->withoutGlobalScopes()
+            $categoryVisible = $this->db->connection()
+                ->table('categories')
                 ->where('id', $categoryId)
-                ->where(static function ($q) use ($user): void {
+                ->where(static function (QueryBuilder $q) use ($user): void {
                     $q->whereNull('user_id')->orWhere('user_id', $user->id);
                 })
                 ->exists();
