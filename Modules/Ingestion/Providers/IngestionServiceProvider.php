@@ -8,6 +8,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053Adapter;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
+use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940Adapter;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
@@ -32,6 +33,7 @@ final class IngestionServiceProvider extends ServiceProvider
             static fn (Container $app): SourceAdapterRegistry => new SourceAdapterRegistry([
                 'asn-csv' => $app->make(AsnCsvAdapter::class),
                 'asn-camt053' => $app->make(AsnCamt053Adapter::class),
+                'asn-mt940' => $app->make(AsnMt940Adapter::class),
             ]),
         );
     }
