@@ -63,27 +63,21 @@ it('exposes a populated source_ref diff on every enriched preview row', function
 })->group('phase-2');
 
 it('renders the empty-set placeholder when a preview row carries a null from-ref', function (): void {
-    // Synthesise a transactions row with NULL source_ref so the enriched
-    // preview row's diff carries a null `from` value. The CSV fixture in
-    // this corpus always populates Volgnummer, so we drive the path
-    // through the existing PreviewWizardTest seeding pattern instead.
+    // Seed: import the CSV so v3 fingerprints matching the CAMT fixture
+    // are persisted, then strip the CSV source_ref on every seeded row
+    // so a subsequent CAMT preview produces enriched rows whose diff
+    // reports `from: null`. The CSV fixture in this corpus always
+    // populates Volgnummer, so the null `from` value can only be
+    // synthesised by clearing the column post-seed.
     $importer = $this->importer;
 
-    // First import the CAMT, then nullify source_ref on every CAMT row,
-    // then preview the CSV — every CAMT row matches its CSV counterpart
-    // by v3 fingerprint and the CSV ref is non-null, which still loses
-    // rank against the (now-null) CAMT row's stored ref because CAMT
-    // format outranks CSV format. So we have to flip the scenario:
-    // import CSV first, nullify its source_ref column, then import CAMT.
     $importer->runAndConfirm(
         base_path('tests/fixtures/asn-cross-format/february.csv'),
         'asn-csv',
         $this->fixtureUser,
     );
 
-    Transaction::query()
-        ->where('source_format', 'asn-csv')
-        ->update(['source_ref' => null]);
+    clearSourceRefOnSeededCsvRows();
 
     $preview = $importer->runFromUpload(
         base_path('tests/fixtures/asn-cross-format/february.camt053.xml'),
@@ -108,3 +102,17 @@ it('renders the empty-set placeholder when a preview row carries a null from-ref
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
         ->assertSee('∅', false);
 })->group('phase-2');
+
+/**
+ * Resets the `source_ref` column to NULL on every previously-seeded CSV
+ * transaction so a follow-up CAMT preview yields enriched rows whose diff
+ * carries `from: null`. The CSV format never produces a NULL Volgnummer
+ * in practice, so this synthetic mutation is the only way to drive the
+ * UI's empty-set placeholder code path.
+ */
+function clearSourceRefOnSeededCsvRows(): void
+{
+    Transaction::query()
+        ->where('source_format', 'asn-csv')
+        ->update(['source_ref' => null]);
+}
