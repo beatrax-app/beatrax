@@ -28,3 +28,19 @@ arch('Modules\\Categorization\\Internal is only used inside Modules\\Categorizat
 arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules');
+
+arch('RederiveFingerprintsCommand is never imported by any HTTP or routing namespace')
+    ->expect('Modules\\Ledger\\Internal\\Console\\RederiveFingerprintsCommand')
+    ->not->toBeUsedIn([
+        'Modules\\Ledger\\Internal\\Http',
+        'Modules\\Ledger\\Public\\Http',
+        'Modules\\Ledger\\Routes',
+        'Modules\\Core\\Internal\\Http',
+        'Modules\\Core\\Public\\Http',
+        'Modules\\Ingestion\\Internal\\Http',
+        'Modules\\Ingestion\\Public\\Http',
+        'Modules\\Import\\Internal\\Http',
+        'Modules\\Import\\Public\\Http',
+        'Modules\\Categorization\\Internal\\Http',
+        'Modules\\Categorization\\Public\\Http',
+    ]);

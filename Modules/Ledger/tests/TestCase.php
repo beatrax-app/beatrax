@@ -6,6 +6,7 @@ namespace Modules\Ledger\Tests;
 
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -149,5 +150,113 @@ abstract class TestCase extends RootTestCase
             'fingerprint' => $fingerprint,
             'fingerprint_version' => 1,
         ], $overrides));
+    }
+
+    /**
+     * Insert one raw transaction row stamped at normalization_version=2.
+     * Uses DatabaseManager directly so the stored fingerprint stays exactly
+     * as supplied — Eloquent observers and fillable bypass rules would
+     * otherwise rewrite the value mid-test.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function seedV2Row(array $overrides = []): int
+    {
+        /** @var DatabaseManager $db */
+        $db = $this->app->make(DatabaseManager::class);
+
+        $this->rowIndex++;
+        $rowIndex = $this->rowIndex;
+
+        $defaults = [
+            'user_id' => $this->user->id ?? null,
+            'account_id' => $this->account->id ?? null,
+            'type' => 'expense',
+            'posted_at' => '2026-04-12',
+            'booked_at' => '2026-04-12 09:14:33',
+            'value_date' => '2026-04-12',
+            'amount_minor' => -1299,
+            'currency' => 'EUR',
+            'settled_amount_minor' => -1299,
+            'settled_currency' => 'EUR',
+            'counterparty_name' => "Merchant {$rowIndex}",
+            'counterparty_normalized' => "merchant {$rowIndex}",
+            'normalization_version' => 2,
+            'source_format' => 'asn-csv',
+            'import_run_id' => $this->importRun->id ?? null,
+            'source_row_index' => $rowIndex,
+            'source_ref' => "REF-{$rowIndex}",
+            'fingerprint' => str_pad((string) $rowIndex, 64, '0', STR_PAD_LEFT),
+            'fingerprint_version' => 2,
+            'status' => 'cleared',
+            'created_at' => CarbonImmutable::now()->toDateTimeString(),
+            'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+        ];
+
+        $row = array_merge($defaults, $overrides);
+
+        return (int) $db->connection()->table('transactions')->insertGetId($row);
+    }
+
+    /**
+     * Seed two rows that share every v3 tuple dimension but differ on
+     * `source_ref`. Under the v2 UNIQUE the rows coexist; once the v3
+     * fingerprint algorithm runs they would collide — exactly what the
+     * rederive command's pre-check must catch and abort on.
+     */
+    protected function seedCollidingV2Rows(): void
+    {
+        $shared = [
+            'posted_at' => '2026-04-12',
+            'booked_at' => '2026-04-12 09:14:33',
+            'value_date' => '2026-04-12',
+            'amount_minor' => -1299,
+            'counterparty_name' => 'AH Amsterdam',
+            'counterparty_normalized' => 'ah amsterdam',
+        ];
+
+        $this->seedV2Row(array_merge($shared, [
+            'source_ref' => 'REF-A',
+            'fingerprint' => str_repeat('a', 64),
+        ]));
+        $this->seedV2Row(array_merge($shared, [
+            'source_ref' => 'REF-B',
+            'fingerprint' => str_repeat('b', 64),
+        ]));
+    }
+
+    /**
+     * Seed two v2 rows whose v3 tuples differ (different bookedAt seconds
+     * + different counterparty_normalized) so re-derive runs cleanly.
+     */
+    protected function seedTwoNonCollidingV2Rows(): void
+    {
+        $this->seedV2Row([
+            'booked_at' => '2026-04-12 09:14:33',
+            'counterparty_name' => 'AH Amsterdam',
+            'counterparty_normalized' => 'ah amsterdam',
+            'amount_minor' => -1299,
+            'source_ref' => 'REF-1',
+        ]);
+        $this->seedV2Row([
+            'booked_at' => '2026-04-12 09:14:34',
+            'counterparty_name' => 'Jumbo Amsterdam',
+            'counterparty_normalized' => 'jumbo amsterdam',
+            'amount_minor' => -2499,
+            'source_ref' => 'REF-2',
+        ]);
+    }
+
+    /**
+     * Seed one row that already carries normalization_version=3 so the
+     * rederive command treats it as up-to-date and skips it.
+     */
+    protected function seedOneV3Row(): void
+    {
+        $this->seedV2Row([
+            'normalization_version' => 3,
+            'fingerprint_version' => 3,
+            'source_ref' => 'EREF-V3',
+        ]);
     }
 }

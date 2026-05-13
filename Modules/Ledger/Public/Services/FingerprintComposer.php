@@ -10,8 +10,8 @@ use Normalizer;
 /**
  * Produces the canonical SHA-256 fingerprint of a CanonicalTransaction. The
  * fingerprint is the second-layer idempotency guard — the composite UNIQUE
- * index on `transactions(user_id, account_id, posted_at, amount_minor,
- * currency, counterparty_normalized, source_ref)` is the first.
+ * index on `transactions(user_id, account_id, posted_at, booked_at,
+ * amount_minor, currency, counterparty_normalized)` is the first.
  *
  * The tuple is prefixed with `user_id` so the same row imported under two
  * different users hashes to two different fingerprints. Without that prefix
@@ -28,18 +28,26 @@ final class FingerprintComposer
 {
     /**
      * Version stamp persisted on every transaction row as
-     * `normalization_version`. v2 = the user-scoped tuple this class
-     * composes today (`user_id | account_id | posted_at | amount_minor |
-     * currency | counterparty_normalized | source_ref`) combined with the
+     * `normalization_version`. The current algorithm hashes the tuple
+     * `user_id | account_id | posted_at | booked_at | amount_minor |
+     * currency | counterparty_normalized` combined with the
      * counterparty-normalisation rules implemented in `normalize()`:
      * lowercased, NFD-stripped of combining marks, non-alphanumeric runs
      * collapsed to single spaces, whitespace-collapsed, trim-and-truncated
-     * to 80 UTF-8 characters. Bump the constant whenever either the
-     * tuple shape or the normalize() output changes; a stored row with a
-     * lower version stamp signals "re-derive the fingerprint before
-     * comparing against the current algorithm".
+     * to 80 UTF-8 characters. `booked_at` carries second-resolution so
+     * two same-day same-merchant same-amount entries posted seconds apart
+     * never collide. `source_ref` is intentionally absent: the same
+     * real-world transaction surfaces in CSV and CAMT.053 exports with
+     * different reference values, and the fingerprint must equate those.
+     *
+     * Bump the constant whenever either the tuple shape or the
+     * `normalize()` output changes; a stored row with a lower version
+     * stamp signals "re-derive the fingerprint before comparing against
+     * the current algorithm". Re-derive existing rows via the
+     * `diederik:rederive-fingerprints` artisan command when bumping past
+     * this version.
      */
-    public const NORMALIZATION_VERSION = 2;
+    public const NORMALIZATION_VERSION = 3;
 
     public function compose(CanonicalTransaction $tx): string
     {
@@ -47,10 +55,10 @@ final class FingerprintComposer
             (string) ($tx->userId ?? 0),
             (string) $tx->accountId,
             $tx->postedAt->toDateString(),
+            $tx->bookedAt->toDateTimeString(),
             (string) $tx->amountMinor,
             $tx->currency,
             $tx->counterpartyNormalized,
-            $tx->sourceRef ?? '',
         ]);
 
         return hash('sha256', $tuple);
