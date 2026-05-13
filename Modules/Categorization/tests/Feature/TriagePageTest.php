@@ -150,3 +150,34 @@ it('writes through AssignsCategory when the inline picker fires updatedCategoryI
 
     expect(Transaction::find($tx->id)->category_id)->toBe($this->groceries->id);
 });
+
+it("silently ignores a foreign user's category id when set on the inline picker", function (): void {
+    /** @var User $foreignUser */
+    $foreignUser = User::create([
+        'email' => 'foreign-picker@diederik.test',
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+    ]);
+    /** @var Category $foreignCategory */
+    $foreignCategory = Category::create([
+        'user_id' => $foreignUser->id,
+        'name' => 'Foreign Category',
+        'slug' => 'foreign-category',
+        'kind' => 'expense',
+        'display_order' => 1,
+    ]);
+    $tx = makeTriagePageTx($this->user, $this->account, $this->run, day: 11, categoryId: null);
+
+    // A scripted client could call `$wire.set('categoryId', <foreign id>)`.
+    // The action must reject the write so the column stays NULL rather than
+    // landing a cross-tenant reference.
+    Livewire::actingAs($this->user)
+        ->test('categorization.inline-category-picker', [
+            'transactionId' => $tx->id,
+            'categoryId' => null,
+        ])
+        ->set('categoryId', $foreignCategory->id)
+        ->assertSuccessful();
+
+    expect(Transaction::find($tx->id)->category_id)->toBeNull();
+});
