@@ -26,6 +26,19 @@ use Normalizer;
  */
 final class FingerprintComposer
 {
+    /**
+     * Version stamp persisted on every transaction row as
+     * `normalization_version`. v2 = the user-scoped tuple this class
+     * composes today (`user_id | account_id | posted_at | amount_minor |
+     * currency | counterparty_normalized | source_ref`) combined with the
+     * counterparty-normalisation rules implemented in `normalize()`:
+     * lowercased, NFD-stripped of combining marks, non-alphanumeric runs
+     * collapsed to single spaces, whitespace-collapsed, trim-and-truncated
+     * to 80 UTF-8 characters. Bump the constant whenever either the
+     * tuple shape or the normalize() output changes; a stored row with a
+     * lower version stamp signals "re-derive the fingerprint before
+     * comparing against the current algorithm".
+     */
     public const NORMALIZATION_VERSION = 2;
 
     public function compose(CanonicalTransaction $tx): string
