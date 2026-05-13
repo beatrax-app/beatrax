@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Models;
 
+use ArrayObject;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
@@ -37,6 +39,7 @@ use Modules\Ledger\Internal\Casts\MoneyMinorCast;
  * @property int $import_run_id
  * @property int $source_row_index
  * @property string|null $source_ref
+ * @property ArrayObject<int, array<string, mixed>>|null $enriched_from
  * @property string $fingerprint
  * @property int $fingerprint_version
  * @property string $status
@@ -65,6 +68,7 @@ final class Transaction extends Model
         'counterparty_name', 'counterparty_iban', 'counterparty_normalized', 'normalization_version',
         'description', 'category_id',
         'source_format', 'import_run_id', 'source_row_index', 'source_ref',
+        'enriched_from',
         'fingerprint', 'fingerprint_version',
         'status',
     ];
@@ -81,6 +85,7 @@ final class Transaction extends Model
             'normalization_version' => 'integer',
             'fingerprint_version' => 'integer',
             'source_row_index' => 'integer',
+            'enriched_from' => AsArrayObject::class,
             // Virtual Money attributes — `amount` and `settled_amount` are not
             // real columns; the cast bridges them to the (minor, currency) pair.
             'amount' => MoneyMinorCast::class,
