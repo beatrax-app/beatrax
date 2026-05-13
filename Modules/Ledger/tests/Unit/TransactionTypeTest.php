@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -47,7 +48,12 @@ it('persists a transaction with a valid type', function (): void {
     expect($tx->type)->toBe('expense');
 });
 
-it('rejects an invalid transaction type', function (): void {
+it('rejects an invalid transaction type at the DB layer', function (): void {
+    // The allowed-types invariant is enforced by paired BEFORE INSERT /
+    // BEFORE UPDATE triggers on the `transactions` table. The trigger
+    // raises RAISE(ABORT, 'Invalid transactions.type value'), which the
+    // driver surfaces as a QueryException — covering every write path,
+    // including raw insertOrIgnore from the recorder action.
     expect(fn () => Transaction::create([
         'account_id' => $this->account->id,
         'type' => 'nonsense',
@@ -65,5 +71,5 @@ it('rejects an invalid transaction type', function (): void {
         'source_row_index' => 0,
         'fingerprint' => str_repeat('b', 64),
         'fingerprint_version' => 1,
-    ]))->toThrow(InvalidArgumentException::class, 'Invalid transaction type');
+    ]))->toThrow(QueryException::class, 'Invalid transactions.type value');
 });
