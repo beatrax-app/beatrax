@@ -85,6 +85,46 @@ it('refuses to update a transaction owned by a different user', function (): voi
     expect($affected)->toBe(0);
 });
 
+it('refuses to assign a category owned by a different user', function (): void {
+    /** @var User $other */
+    $other = User::create([
+        'email' => 'other@example.com',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+    ]);
+    /** @var Category $foreignCategory */
+    $foreignCategory = Category::create([
+        'user_id' => $other->id,
+        'name' => 'Other groceries',
+        'slug' => 'other-groceries',
+        'kind' => 'expense',
+    ]);
+
+    $action = $this->app->make(UpdateTransactionCategory::class);
+    $affected = $action($this->tx->id, $foreignCategory->id, $this->user);
+
+    expect($affected)->toBe(0);
+    $this->actingAs($this->user);
+    expect(Transaction::find($this->tx->id)->category_id)->toBeNull();
+});
+
+it('allows assigning a global default-tree category (user_id = NULL)', function (): void {
+    /** @var Category $globalCategory */
+    $globalCategory = Category::create([
+        'user_id' => null,
+        'name' => 'Global category',
+        'slug' => 'global-cat',
+        'kind' => 'expense',
+    ]);
+
+    $action = $this->app->make(UpdateTransactionCategory::class);
+    $affected = $action($this->tx->id, $globalCategory->id, $this->user);
+
+    expect($affected)->toBe(1);
+    $this->actingAs($this->user);
+    expect(Transaction::find($this->tx->id)->category_id)->toBe($globalCategory->id);
+});
+
 it('binds the UpdatesTransactionCategory contract to UpdateTransactionCategory', function (): void {
     $resolved = $this->app->make(UpdatesTransactionCategory::class);
 
