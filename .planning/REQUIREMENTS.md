@@ -160,7 +160,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | ING-03 | Phase 2 | Complete |
 | ING-04 | Phase 3 | Pending |
 | ING-05 | Phase 4 | Pending |
-| ING-06 | Phase 1 | Complete |
+| ING-06 | Phase 2 | Complete |
 | ING-07 | Phase 1 | Pending |
 | ING-08 | Phase 1 | Pending |
 | ING-09 | Phase 4 | Pending |
