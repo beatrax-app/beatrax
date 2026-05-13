@@ -22,22 +22,22 @@ by the deterministic anonymiser before being deleted.
 | **Bank-transaction families observed** | `RDDT` (109 — SEPA direct debits), `CCRD` (84 — card payments), `ICDT` (13 — issued credit transfers), `RCDT` (4 — received credit transfers), `RRCT` (12), `MDOP` (6), `ACMT` (6), `OTHR` (6), `IRCT` (1) |
 | **Opening balance (OPBD)** | `2158.91 EUR` at 2026-02-01 |
 | **Closing balance (CLBD)** | `801.35 EUR` at 2026-04-30 |
-| **Own IBAN (anonymised)** | `NL57ASNB0123456789` (Phase-1 canonical placeholder) |
+| **Own IBAN (anonymised)** | `NL57ASNB0123456789` (canonical placeholder, shared with the CSV fixture) |
 | **BIC** | `ASNBNL21` (preserved — public BIC, not PII) |
 
 ## Why `001.02` and not `001.08`
 
 ASN's CAMT.053 download endpoint currently serves the older `001.02`
 sub-version of the schema (`xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02"`).
-The 02-RESEARCH document anticipated `001.08`; the live empirical export contradicts
-the assumption. `genkgo/camt 2.10` supports all three published sub-versions
+An earlier expectation was `001.08`; the live empirical export contradicts
+that assumption. `genkgo/camt 2.10` supports all three published sub-versions
 (`001.02`, `001.03`, `001.08`), so the adapter pins detection on the
 `xmlns` URI rather than assuming the newest variant.
 
 ## Anonymisation protocol
 
-Applied verbatim from `asn-sample-1.md` (Phase 1 canonical), with three
-CAMT-specific additions for elements that have no CSV equivalent.
+Applied verbatim from `asn-sample-1.md` (the canonical CSV fixture protocol),
+with three CAMT-specific additions for elements that have no CSV equivalent.
 
 1. **Own IBAN** — every `<Stmt>/<Acct>/<Id>/<IBAN>` replaced with
    `NL57ASNB0123456789`. The placeholder seeded by
@@ -54,8 +54,8 @@ CAMT-specific additions for elements that have no CSV equivalent.
    `<DbtrAcct>/<Id>/<IBAN>`.
 3. **Counterparty name** — 39 distinct real
    `<RltdPties>/<Cdtr>/<Nm>` + `<Dbtr>/<Nm>` (plus the `Ultmt*` siblings)
-   map alphabetically to the Phase-1 synthetic merchant pool. 142
-   element-level replacements applied.
+   map alphabetically to the canonical 39-entry synthetic merchant pool
+   shared with the CSV fixture. 142 element-level replacements applied.
 4. **Free-text fields** (`<Ustrd>`, `<AddtlNtryInf>`, `<Strd>/<CdtrRefInf>/<Ref>`):
    - Cascade-replace any residual counterparty name that leaks into the
      free text (sorted by length desc so longer names win over substrings).
@@ -91,7 +91,7 @@ CAMT-specific additions for elements that have no CSV equivalent.
 ## Counterparty mapping (truncated)
 
 Deterministic mapping built by sorting real names alphabetically and
-zipping with the 39-entry Phase-1 merchant pool. First 10 of 39:
+zipping with the 39-entry canonical merchant pool. First 10 of 39:
 
 | Real name | Synthetic merchant |
 |-----------|-------------------|
