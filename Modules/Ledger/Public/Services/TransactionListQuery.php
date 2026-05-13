@@ -29,11 +29,14 @@ use stdClass;
  *    "Show full history".
  *
  * Both entry points accept an optional `$currency` filter that, when
- * supplied, restricts the result to rows whose `settled_currency` matches.
- * The dashboard passes its display currency through so the "Recent
- * transactions" panel stays consistent with the currency-scoped tiles and
- * Top Categories panel; the `/transactions` page leaves it null to keep
- * the full multi-currency list visible.
+ * supplied, restricts the result to rows whose `settled_currency` matches
+ * AND projects the settled pair (`settled_amount_minor` /
+ * `settled_currency`) as the rendered amount. This keeps the dashboard
+ * coherent: a EUR view shows every row's amount in EUR, even when the
+ * native pair is USD (e.g. a Google Play USD charge settled to EUR by
+ * the card issuer). The `/transactions` page leaves `$currency` null,
+ * which keeps the full multi-currency list visible and renders each
+ * row's native pair.
  *
  * Cursor pagination is implemented by selecting `limit + 1` rows and
  * trimming the last one off. The cursor is a `(posted_at, id)` pair — the
@@ -89,6 +92,17 @@ final class TransactionListQuery
 
     private function baseQuery(User $user, ?string $currency = null): Builder
     {
+        // When a currency filter is supplied, project the settled pair as
+        // `display_minor` / `display_currency` so the rendered amount
+        // matches the filter. Otherwise project the native pair so the
+        // full-history view shows every row in its original currency.
+        $amountMinorColumn = $currency === null
+            ? 'transactions.amount_minor as display_minor'
+            : 'transactions.settled_amount_minor as display_minor';
+        $currencyColumn = $currency === null
+            ? 'transactions.currency as display_currency'
+            : 'transactions.settled_currency as display_currency';
+
         $query = $this->db->connection()
             ->table('transactions')
             ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
@@ -101,8 +115,8 @@ final class TransactionListQuery
                 'transactions.booked_at',
                 'transactions.counterparty_name',
                 'transactions.category_id',
-                'transactions.amount_minor',
-                'transactions.currency',
+                $amountMinorColumn,
+                $currencyColumn,
                 'categories.name as category_name',
             ]);
 
@@ -173,7 +187,7 @@ final class TransactionListQuery
             counterpartyName: $counterpartyName,
             categoryId: $categoryId,
             categoryName: $categoryName,
-            amount: Money::ofMinor(self::toInt($row->amount_minor), self::toString($row->currency)),
+            amount: Money::ofMinor(self::toInt($row->display_minor), self::toString($row->display_currency)),
         );
     }
 
