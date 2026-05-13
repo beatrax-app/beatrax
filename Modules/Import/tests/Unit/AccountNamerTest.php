@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Import\Public\Exceptions\InvalidAccountNameException;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ledger\Models\Account;
 
@@ -53,4 +54,33 @@ it('generates a slug containing the last 4 IBAN characters for uniqueness', func
     /** @var Account $account */
     $account = Account::query()->find($accountId);
     expect($account->slug)->toContain('3210');
+});
+
+it('rejects names that contain no alphanumeric characters (emoji only)', function (): void {
+    $namer = new AccountNamer;
+
+    expect(fn () => $namer('NL04TEST1111111111', '🎉🎉', $this->user))
+        ->toThrow(InvalidAccountNameException::class);
+});
+
+it('rejects names that contain only punctuation', function (): void {
+    $namer = new AccountNamer;
+
+    expect(fn () => $namer('NL05TEST2222222222', '====', $this->user))
+        ->toThrow(InvalidAccountNameException::class);
+});
+
+it('rejects names below the minimum length bound', function (): void {
+    $namer = new AccountNamer;
+
+    expect(fn () => $namer('NL06TEST3333333333', '   ', $this->user))
+        ->toThrow(InvalidAccountNameException::class);
+});
+
+it('rejects names above the maximum length bound', function (): void {
+    $namer = new AccountNamer;
+    $tooLong = str_repeat('a', AccountNamer::NAME_MAX_LENGTH + 1);
+
+    expect(fn () => $namer('NL07TEST4444444444', $tooLong, $this->user))
+        ->toThrow(InvalidAccountNameException::class);
 });
