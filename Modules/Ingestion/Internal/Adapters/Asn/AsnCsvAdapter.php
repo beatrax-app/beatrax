@@ -13,6 +13,7 @@ use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
+use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Throwable;
 
 /**
@@ -42,6 +43,16 @@ final class AsnCsvAdapter implements SourceAdapter
     public function format(): string
     {
         return AsnCsvHeaderProfile::FORMAT;
+    }
+
+    /**
+     * ASN's CSV export carries per-row data only — no opening balance,
+     * closing balance, period bounds, or statement number at the file
+     * level — so this adapter never produces a StatementSummaryData.
+     */
+    public function statementMetadata(): ?StatementSummaryData
+    {
+        return null;
     }
 
     public function parse(string $localPath, AccountResolver $accounts): Generator

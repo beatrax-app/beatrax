@@ -9,6 +9,7 @@ use DateTimeImmutable;
 use Generator;
 use Genkgo\Camt\Camt053\DTO\Statement;
 use Genkgo\Camt\Config;
+use Genkgo\Camt\DTO\Balance;
 use Genkgo\Camt\DTO\Creditor;
 use Genkgo\Camt\DTO\Debtor;
 use Genkgo\Camt\DTO\Entry;
@@ -24,6 +25,7 @@ use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
+use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Money\Money;
 use Throwable;
 
@@ -60,6 +62,8 @@ use Throwable;
  */
 final class AsnCamt053Adapter implements SourceAdapter
 {
+    private ?StatementSummaryData $lastStatementMetadata = null;
+
     public function __construct(
         private readonly HeaderSniffer $sniffer,
     ) {}
@@ -69,6 +73,18 @@ final class AsnCamt053Adapter implements SourceAdapter
         return AsnCamt053HeaderProfile::FORMAT;
     }
 
+    /**
+     * Returns the statement-level metadata captured during the most recent
+     * `parse()` run. The `importRunId` and `accountId` are zeroed
+     * placeholders at this point — the pipeline overrides both via the
+     * DTO's `withImportRunId()` / `withAccountId()` helpers before invoking
+     * the writer.
+     */
+    public function statementMetadata(): ?StatementSummaryData
+    {
+        return $this->lastStatementMetadata;
+    }
+
     public function parse(string $localPath, AccountResolver $accounts): Generator
     {
         $this->sniffer->sniff($localPath, AsnCamt053HeaderProfile::FORMAT);
@@ -76,6 +92,8 @@ final class AsnCamt053Adapter implements SourceAdapter
         $message = $this->readMessage($localPath);
         $msgId = $message->getGroupHeader()->getMessageId();
         $index = 0;
+        $this->lastStatementMetadata = null;
+        $entryCount = 0;
 
         foreach ($message->getRecords() as $record) {
             if (! $record instanceof Statement) {
@@ -91,6 +109,7 @@ final class AsnCamt053Adapter implements SourceAdapter
                 if ($txDtlsList === []) {
                     yield $this->buildDto($entry, null, $ownIban, $index, $msgId, isBatch: false);
                     $index++;
+                    $entryCount++;
 
                     continue;
                 }
@@ -100,8 +119,52 @@ final class AsnCamt053Adapter implements SourceAdapter
                     yield $this->buildDto($entry, $txDtls, $ownIban, $index, $msgId, isBatch: $isBatch);
                     $index++;
                 }
+                $entryCount++;
+            }
+
+            // Each CAMT.053 export typically carries a single <Stmt>; if a
+            // future file carries more, the LAST statement wins for the
+            // metadata snapshot because that is what the user would expect
+            // to see when looking at "the statement they just imported".
+            $this->lastStatementMetadata = $this->buildStatementMetadata($record, $ownIban, $entryCount);
+        }
+    }
+
+    private function buildStatementMetadata(Statement $stmt, string $ownIban, int $entryCount): StatementSummaryData
+    {
+        $opening = $this->findBalance($stmt, Balance::TYPE_OPENING);
+        $closing = $this->findBalance($stmt, Balance::TYPE_CLOSING);
+
+        return new StatementSummaryData(
+            importRunId: 0,
+            accountId: 0,
+            ibanOwner: $ownIban,
+            statementNumber: $stmt->getElectronicSequenceNumber() ?? $stmt->getLegalSequenceNumber(),
+            periodStart: $stmt->getFromDate() === null ? null : CarbonImmutable::instance($stmt->getFromDate()),
+            periodEnd: $stmt->getToDate() === null ? null : CarbonImmutable::instance($stmt->getToDate()),
+            openingBalanceMinor: $opening === null ? null : $this->moneyToMinor($opening->getAmount()),
+            openingBalanceCurrency: $opening?->getAmount()->getCurrency()->getCode(),
+            openingBalanceDate: $opening === null ? null : CarbonImmutable::instance($opening->getDate()),
+            closingBalanceMinor: $closing === null ? null : $this->moneyToMinor($closing->getAmount()),
+            closingBalanceCurrency: $closing?->getAmount()->getCurrency()->getCode(),
+            closingBalanceDate: $closing === null ? null : CarbonImmutable::instance($closing->getDate()),
+            entryCount: $entryCount,
+            extras: [
+                'statementId' => $stmt->getId(),
+                'createdOn' => $stmt->getCreatedOn()->format('c'),
+            ],
+        );
+    }
+
+    private function findBalance(Statement $stmt, string $type): ?Balance
+    {
+        foreach ($stmt->getBalances() as $balance) {
+            if ($balance->getType() === $type) {
+                return $balance;
             }
         }
+
+        return null;
     }
 
     /**
