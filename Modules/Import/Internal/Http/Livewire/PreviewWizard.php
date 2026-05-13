@@ -50,6 +50,14 @@ final class PreviewWizard extends Component
     ): void {
         $this->resetErrorBag('accountName');
 
+        // Keep the property in sync with the argument so `$this->validate()`
+        // applies the declared rules() even when the action is invoked
+        // outside the wire:model lifecycle (programmatic Livewire::call,
+        // future REST adapter). A ValidationException short-circuits the
+        // flow before the service is touched.
+        $this->accountName = $name;
+        $this->validate();
+
         $user = $currentUser->user();
 
         try {
