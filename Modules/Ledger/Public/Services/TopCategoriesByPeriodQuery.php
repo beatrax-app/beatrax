@@ -81,7 +81,7 @@ final class TopCategoriesByPeriodQuery
             $categoryIds[] = self::toInt($row->category_id);
         }
 
-        $categoriesById = $this->loadCategories($categoryIds);
+        $categoriesById = $this->loadCategories($categoryIds, $user->id);
 
         $result = [];
         foreach ($rows as $row) {
@@ -108,10 +108,16 @@ final class TopCategoriesByPeriodQuery
      * without per-row queries. SQLite handles small recursive `WHERE id IN`
      * fan-outs efficiently for the modest category tree expected in v1.
      *
+     * The visibility predicate (`user_id IS NULL OR user_id = $userId`)
+     * applies to every level of the walk. A `parent_id` that points
+     * cross-tenant (corrupt import, future cross-user share, manual SQL
+     * edit) terminates the chain at the filtered-out parent rather than
+     * leaking the foreign user's category name into the breadcrumb.
+     *
      * @param  list<int>  $startingIds
      * @return array<int, stdClass>
      */
-    private function loadCategories(array $startingIds): array
+    private function loadCategories(array $startingIds, int $userId): array
     {
         $connection = $this->db->connection();
         /** @var array<int, stdClass> $known */
@@ -122,6 +128,9 @@ final class TopCategoriesByPeriodQuery
             $batch = $connection
                 ->table('categories')
                 ->whereIn('id', $toFetch)
+                ->where(static function ($q) use ($userId): void {
+                    $q->whereNull('user_id')->orWhere('user_id', $userId);
+                })
                 ->get(['id', 'parent_id', 'name']);
 
             $nextFetch = [];

@@ -241,6 +241,51 @@ it('returns top categories sorted by spend descending with percentageOfTotal sum
     expect(abs($total - 1.0))->toBeLessThan(0.0001);
 });
 
+it('does not surface a foreign user\'s parent name in the breadcrumb', function (): void {
+    // Foreign user owns a parent category named "Foreign Parent".
+    /** @var User $foreignUser */
+    $foreignUser = User::create([
+        'email' => 'foreign@diederik.test',
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+    ]);
+    /** @var Category $foreignParent */
+    $foreignParent = Category::create([
+        'user_id' => $foreignUser->id,
+        'name' => 'Foreign Parent',
+        'slug' => 'foreign-parent',
+        'kind' => 'expense',
+        'display_order' => 1,
+    ]);
+
+    // Current user has a leaf whose parent_id (accidentally / via future
+    // cross-user share / manual edit) points at the foreign parent.
+    /** @var Category $localLeaf */
+    $localLeaf = Category::create([
+        'user_id' => $this->user->id,
+        'parent_id' => $foreignParent->id,
+        'name' => 'Local Leaf',
+        'slug' => 'local-leaf',
+        'kind' => 'expense',
+        'display_order' => 1,
+    ]);
+
+    $this->makeTransaction($this->user, $this->account, $this->run, [
+        'amount_minor' => -1299,
+        'posted_at' => '2026-05-05',
+        'booked_at' => '2026-05-05 12:00:00',
+        'category_id' => $localLeaf->id,
+    ]);
+
+    $period = $this->periods->current();
+    $summary = $this->query->for($this->user, $period);
+
+    expect($summary->topCategories)->toHaveCount(1);
+    // Walk terminates at the filtered-out foreign parent; only the leaf
+    // name appears in the breadcrumb.
+    expect($summary->topCategories[0]->name)->toBe('Local Leaf');
+});
+
 it('renders the full category path for nested categories', function (): void {
     /** @var Category $subs */
     $subs = Category::create([
