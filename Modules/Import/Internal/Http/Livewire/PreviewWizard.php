@@ -16,7 +16,6 @@ use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Exceptions\InvalidAccountNameException;
 use Modules\Import\Public\Exceptions\PreviewExpiredException;
-use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ledger\Models\ImportRun;
 
 /**
@@ -50,13 +49,13 @@ final class PreviewWizard extends Component
     ): void {
         $this->resetErrorBag('accountName');
 
-        // Keep the property in sync with the argument so `$this->validate()`
-        // applies the declared rules() even when the action is invoked
-        // outside the wire:model lifecycle (programmatic Livewire::call,
-        // future REST adapter). A ValidationException short-circuits the
-        // flow before the service is touched.
+        // Keep the property in sync with the argument so the error bag
+        // surfaces next to the bound input on re-render. Validation
+        // itself is delegated to AccountNamer: the service is the single
+        // authoritative validator (trim + length bound + slug-body
+        // guard), so a Livewire-side rules() declaration would either
+        // duplicate that logic or drift from it.
         $this->accountName = $name;
-        $this->validate();
 
         $user = $currentUser->user();
 
@@ -82,20 +81,6 @@ final class PreviewWizard extends Component
         );
 
         $this->accountName = '';
-    }
-
-    /**
-     * Validation rules for the inline account-naming form. Mirrors the
-     * service-layer bound in AccountNamer so client-side feedback matches
-     * what the service would reject.
-     *
-     * @return array<string, string>
-     */
-    protected function rules(): array
-    {
-        return [
-            'accountName' => 'required|string|min:'.AccountNamer::NAME_MIN_LENGTH.'|max:'.AccountNamer::NAME_MAX_LENGTH,
-        ];
     }
 
     public function confirm(
