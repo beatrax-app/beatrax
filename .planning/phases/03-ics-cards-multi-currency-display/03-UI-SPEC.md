@@ -1,10 +1,11 @@
 ---
 phase: 3
 slug: ics-cards-multi-currency-display
-status: draft
+status: approved
 shadcn_initialized: false
 preset: not applicable (Livewire 4 + Volt + Flux UI stack — shadcn is React-only)
 created: 2026-05-13
+reviewed_at: 2026-05-13
 inherits_from: .planning/phases/01-foundation-asn-csv-vertical-slice/01-UI-SPEC.md
 ---
 
