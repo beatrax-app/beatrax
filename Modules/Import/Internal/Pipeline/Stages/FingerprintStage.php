@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Pipeline\Stages;
 
+use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
-use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
@@ -26,13 +26,17 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
  */
 final class FingerprintStage
 {
-    public function __construct(private readonly FingerprintComposer $fingerprints) {}
+    public function __construct(
+        private readonly FingerprintComposer $fingerprints,
+        private readonly DatabaseManager $db,
+    ) {}
 
     public function isExistingFingerprint(CanonicalTransaction $tx, User $user): bool
     {
         $fingerprint = $this->fingerprints->compose($tx);
 
-        return Transaction::query()
+        return $this->db->connection()
+            ->table('transactions')
             ->where('user_id', $user->id)
             ->where('fingerprint', $fingerprint)
             ->exists();

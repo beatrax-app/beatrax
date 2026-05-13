@@ -96,7 +96,7 @@ final class Dashboard extends Component
         }
 
         $parsed = CarbonImmutable::createFromFormat(self::PERIOD_DATE_FORMAT, $this->periodStartStr);
-        if ($parsed === false) {
+        if ($parsed === null) {
             $this->periodStartStr = null;
 
             return $periods->current();

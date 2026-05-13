@@ -7,6 +7,7 @@ namespace Modules\Core\Internal\Console;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
 
@@ -63,6 +64,7 @@ final class InstallCommand extends Command
     public function __construct(
         private readonly Repository $config,
         private readonly Dispatcher $events,
+        private readonly DatabaseManager $db,
     ) {
         parent::__construct();
     }
@@ -104,7 +106,7 @@ final class InstallCommand extends Command
             return self::FAILURE;
         }
 
-        if (User::query()->exists()) {
+        if ($this->db->connection()->table('users')->exists()) {
             $this->info('A user account is already installed. Nothing to do.');
             $this->line('Password changes require a dedicated reset-password command; re-running install with a different password is intentionally a no-op.');
 
@@ -158,13 +160,13 @@ final class InstallCommand extends Command
         }
 
         $resolved = @realpath($path);
-        if (is_string($resolved) && $resolved !== '') {
+        if (is_string($resolved)) {
             return $resolved;
         }
 
         $dir = dirname($path);
         $resolvedDir = @realpath($dir);
-        if (is_string($resolvedDir) && $resolvedDir !== '') {
+        if (is_string($resolvedDir)) {
             return $resolvedDir.'/'.basename($path);
         }
 

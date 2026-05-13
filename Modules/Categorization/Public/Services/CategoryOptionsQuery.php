@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Categorization\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Categorization\Public\Dto\CategoryOption;
 use Modules\Core\Models\User;
@@ -38,11 +39,11 @@ final class CategoryOptionsQuery
             ->table('categories as c')
             ->leftJoin('categories as p', static function (JoinClause $join) use ($userId): void {
                 $join->on('c.parent_id', '=', 'p.id')
-                    ->where(static function ($q) use ($userId): void {
+                    ->where(static function (QueryBuilder $q) use ($userId): void {
                         $q->whereNull('p.user_id')->orWhere('p.user_id', $userId);
                     });
             })
-            ->where(static function ($q) use ($userId): void {
+            ->where(static function (QueryBuilder $q) use ($userId): void {
                 $q->whereNull('c.user_id')->orWhere('c.user_id', $userId);
             })
             ->orderBy('c.display_order')
