@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Public\Services;
 
+use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
 use Modules\Ingestion\Public\Dto\SniffResult;
 use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
@@ -11,7 +12,8 @@ use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 /**
  * Validates that a local file matches a declared source format before any
  * adapter starts parsing. Inspects the first 8 KB of bytes, the file
- * extension, and (for ASN CSV) the header row column count and signature.
+ * extension, the CSV header row, and (for the XML formats) the document
+ * namespace URI.
  *
  * A leading UTF-8 BOM is stripped before parsing so files exported through
  * tools that prepend one (Excel, some browser downloads) sniff cleanly
@@ -50,11 +52,44 @@ final class HeaderSniffer
 
         return match ($declaredFormat) {
             AsnCsvHeaderProfile::FORMAT => $this->sniffAsnCsv($localPath, $head),
+            AsnCamt053HeaderProfile::FORMAT => $this->sniffAsnCamt053($localPath, $head),
             default => throw new SniffMismatchException(sprintf(
                 'Unsupported sniff target: %s',
                 $declaredFormat,
             )),
         };
+    }
+
+    /**
+     * Validates that the path looks like a CAMT.053 XML export — `.xml`
+     * extension AND a CAMT.053 family namespace URI inside the document
+     * head. The CAMT.052 / 054 sister families fail loudly so the user
+     * gets a clear "wrong family" message rather than a cryptic parser
+     * error 50 KB into the file.
+     */
+    private function sniffAsnCamt053(string $path, string $head): SniffResult
+    {
+        if (preg_match('/\.xml$/i', $path) !== 1) {
+            throw new SniffMismatchException(
+                "That file doesn't look like an XML file. Drop in the ASN CAMT.053 XML export."
+            );
+        }
+
+        if (preg_match(AsnCamt053HeaderProfile::XML_NAMESPACE_REGEX, $head) !== 1) {
+            throw new SniffMismatchException(
+                'This XML file does not declare an ISO 20022 CAMT.053 namespace. '
+                .'If you uploaded a CAMT.052 or CAMT.054 file by mistake, re-download '
+                .'the CAMT.053 statement from the ASN portal.'
+            );
+        }
+
+        return new SniffResult(
+            format: AsnCamt053HeaderProfile::FORMAT,
+            delimiter: '',
+            hasHeader: false,
+            encoding: AsnCamt053HeaderProfile::SOURCE_ENCODING,
+            columnCount: 0,
+        );
     }
 
     private function sniffAsnCsv(string $path, string $head): SniffResult
