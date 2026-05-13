@@ -239,6 +239,6 @@ it('registers under the asn-csv key in the SourceAdapterRegistry', function (): 
     expect($adapter)->toBeInstanceOf(AsnCsvAdapter::class);
     expect($adapter->format())->toBe('asn-csv');
 
-    expect(fn () => $registry->for('asn-mt940'))
+    expect(fn () => $registry->for('asn-no-such-format'))
         ->toThrow(UnsupportedFormatException::class);
 });
