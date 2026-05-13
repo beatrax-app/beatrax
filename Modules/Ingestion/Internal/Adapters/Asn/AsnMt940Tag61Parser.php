@@ -24,6 +24,17 @@ use Throwable;
  *   D  → negative (debit)
  *   RC → negative (reversal of credit, treated as debit-like)
  *   RD → positive (reversal of debit, treated as credit-like)
+ *
+ * Date handling:
+ *  - The value date (YYMMDD) is mandatory; the two-digit year is mapped
+ *    to a four-digit calendar year via the SWIFT sliding-window rule
+ *    (closest year within +/-50 of "now") so the parser stays correct
+ *    past the year 2100.
+ *  - The optional entry date (MMDD, no year) inherits the value-date
+ *    year, except that when the entry month is later than the value
+ *    month the entry date is rolled back one calendar year — the
+ *    standard SWIFT year-boundary convention for late-December entries
+ *    on early-January value dates.
  */
 final class AsnMt940Tag61Parser
 {
@@ -59,11 +70,19 @@ final class AsnMt940Tag61Parser
             throw new InvalidAmountException(sprintf('Unparseable :61: line: %s', $content));
         }
 
-        $valueDate = $this->parseDate('20'.$m['year'].'-'.$m['month'].'-'.$m['day']);
+        $valueYear = $this->resolveSwiftYear((int) $m['year']);
+        $valueMonth = (int) $m['month'];
+        $valueDate = $this->parseDate(sprintf('%04d-%02d-%02d', $valueYear, $valueMonth, (int) $m['day']));
 
-        $entryDate = ($m['entry_month'] !== '' && $m['entry_day'] !== '')
-            ? $this->parseDate('20'.$m['year'].'-'.$m['entry_month'].'-'.$m['entry_day'])
-            : null;
+        $entryDate = null;
+        if ($m['entry_month'] !== '' && $m['entry_day'] !== '') {
+            $entryMonth = (int) $m['entry_month'];
+            // SWIFT year-rollover rule: when the entry month is later than
+            // the value month, the entry date belongs to the previous year
+            // (e.g. value 2026-01-02, entry 12-31 means entry 2025-12-31).
+            $entryYear = $entryMonth > $valueMonth ? $valueYear - 1 : $valueYear;
+            $entryDate = $this->parseDate(sprintf('%04d-%02d-%02d', $entryYear, $entryMonth, (int) $m['entry_day']));
+        }
 
         $amountInteger = $this->parseAmountToMinor($m['amount']);
 
@@ -121,6 +140,28 @@ final class AsnMt940Tag61Parser
         }
 
         return $parsed;
+    }
+
+    /**
+     * Resolves an MT940 two-digit year (YY) to its four-digit calendar year
+     * using the SWIFT sliding-window convention: pick the closest year
+     * within +/-50 of "now" so the parser keeps working past the year 2100
+     * without a code change.
+     */
+    private function resolveSwiftYear(int $yy): int
+    {
+        $today = CarbonImmutable::now();
+        $century = ((int) ($today->year / 100)) * 100;
+        $candidate = $century + $yy;
+
+        if ($candidate - $today->year > 50) {
+            return $candidate - 100;
+        }
+        if ($today->year - $candidate > 50) {
+            return $candidate + 100;
+        }
+
+        return $candidate;
     }
 
     private function nullIfEmpty(?string $value): ?string
