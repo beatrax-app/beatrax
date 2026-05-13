@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('merchants', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users');
+            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
             $table->string('name');
             $table->string('normalized_name', 80);
             $table->foreignId('default_category_id')->nullable()->constrained('categories')->nullOnDelete();
