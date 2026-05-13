@@ -6,6 +6,7 @@ use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053Adapter;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
@@ -169,6 +170,67 @@ it('normalises a date-only BookgDt to 00:00:00 so cross-format dedup with CSV su
     // whose bookedAt is `startOfDay()`.
     foreach ($dtos as $dto) {
         expect($dto->bookedAt->format('H:i:s'))->toBe('00:00:00');
+    }
+})->group('phase-2');
+
+it('rejects a CAMT entry that is missing both BookgDt and ValDt to keep the fingerprint deterministic', function (): void {
+    $xml = <<<'XML'
+<?xml version='1.0' encoding='UTF-8'?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02">
+    <BkToCstmrStmt>
+        <GrpHdr>
+            <MsgId>CAMT053-NO-DATES</MsgId>
+            <CreDtTm>2026-05-12T21:12:27.273942228+02:00</CreDtTm>
+        </GrpHdr>
+        <Stmt>
+            <Id>CAMT053-NO-DATES-0001</Id>
+            <ElctrncSeqNb>1</ElctrncSeqNb>
+            <CreDtTm>2026-05-12T21:12:27.229917934+02:00</CreDtTm>
+            <Acct>
+                <Id><IBAN>NL57ASNB0123456789</IBAN></Id>
+                <Ccy>EUR</Ccy>
+                <Svcr><FinInstnId><BIC>ASNBNL21</BIC></FinInstnId></Svcr>
+            </Acct>
+            <Bal>
+                <Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp>
+                <Amt Ccy="EUR">100.00</Amt>
+                <CdtDbtInd>CRDT</CdtDbtInd>
+                <Dt><Dt>2026-02-01</Dt></Dt>
+            </Bal>
+            <Bal>
+                <Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp>
+                <Amt Ccy="EUR">100.00</Amt>
+                <CdtDbtInd>CRDT</CdtDbtInd>
+                <Dt><Dt>2026-02-28</Dt></Dt>
+            </Bal>
+            <Ntry>
+                <NtryRef>NO-DATES</NtryRef>
+                <Amt Ccy="EUR">1.23</Amt>
+                <CdtDbtInd>DBIT</CdtDbtInd>
+                <Sts>BOOK</Sts>
+                <BkTxCd>
+                    <Domn><Cd>PMNT</Cd><Fmly><Cd>RDDT</Cd><SubFmlyCd>ESDD</SubFmlyCd></Fmly></Domn>
+                </BkTxCd>
+                <NtryDtls>
+                    <TxDtls>
+                        <Refs><EndToEndId>NODATE-E2E</EndToEndId></Refs>
+                    </TxDtls>
+                </NtryDtls>
+            </Ntry>
+        </Stmt>
+    </BkToCstmrStmt>
+</Document>
+XML;
+
+    $tmp = tempnam(sys_get_temp_dir(), 'camt-no-dates-').'.xml';
+    file_put_contents($tmp, $xml);
+
+    try {
+        expect(function () use ($tmp): void {
+            iterator_to_array($this->adapter->parse($tmp, $this->resolver), preserve_keys: false);
+        })->toThrow(InvalidAmountException::class, 'missing both BookgDt and ValDt');
+    } finally {
+        @unlink($tmp);
     }
 })->group('phase-2');
 

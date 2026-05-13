@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Asn;
 
 use Carbon\CarbonImmutable;
-use DateTimeImmutable;
 use Generator;
 use Genkgo\Camt\Camt053\DTO\Statement;
 use Genkgo\Camt\Config;
@@ -48,6 +47,9 @@ use Throwable;
  *    adapter's `startOfDay()` semantics so a CSV row and a CAMT entry
  *    representing the same logical transaction produce identical
  *    FingerprintComposer v3 hashes.
+ *  - An `<Ntry>` that carries neither `<BookgDt>` nor `<ValDt>` is rejected
+ *    as a parse error so the fingerprint is never derived from the wall
+ *    clock; this preserves the idempotency contract on re-imports.
  *
  * Security:
  *  - Before any Reader construction, `libxml_set_external_entity_loader(null)`
@@ -265,7 +267,13 @@ final class AsnCamt053Adapter implements SourceAdapter
         [$counterpartyName, $counterpartyIban] = $this->extractCounterparty($txDtls, $cdi);
         $description = $this->extractRemittance($txDtls);
 
-        $booking = $entry->getBookingDate() ?? $entry->getValueDate() ?? new DateTimeImmutable;
+        $booking = $entry->getBookingDate() ?? $entry->getValueDate();
+        if ($booking === null) {
+            throw new InvalidAmountException(sprintf(
+                'CAMT entry at row %d is missing both BookgDt and ValDt; cannot fingerprint deterministically.',
+                $rowIndex,
+            ));
+        }
         $value = $entry->getValueDate() ?? $booking;
 
         // ASN exports the BookgDt as a date-only element on every row in the
