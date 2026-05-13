@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 2 Plan 1 (Wave 0 enablement) complete — genkgo/camt installed, ASN fixture corpus committed, phase-2 Pest group documented"
-last_updated: "2026-05-13T14:35:00Z"
-last_activity: "2026-05-13 -- 02-01-PLAN executed: genkgo/camt 2.10.3 + 7 ASN fixtures + phase-2 group"
+stopped_at: "Phase 2 Plan 2 (Wave 1 fingerprint v3 foundation) complete — FingerprintComposer v3, RederiveFingerprintsCommand, four schema migrations applied, FingerprintDisposition + PendingEnrichment DTOs"
+last_updated: "2026-05-13T14:49:54Z"
+last_activity: "2026-05-13 -- 02-02-PLAN executed: FingerprintComposer v3 + rederive command + 4 migrations + 5 DTOs"
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 12
-  completed_plans: 8
-  percent: 67
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State
@@ -26,29 +26,30 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 02 (asn-statement-coverage-camt-053-mt940) — EXECUTING
-Plan: 2 of 5 (01 complete; 02 next — Fingerprint v3 foundation)
+Plan: 3 of 5 (01 + 02 complete; 03 next — ASN CSV adapter)
 Status: Ready to execute
-Last activity: 2026-05-13 -- 02-01 wave-0 enablement complete
+Last activity: 2026-05-13 -- 02-02 fingerprint v3 foundation complete
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 8
-- Average duration: —
+- Total plans completed: 9
+- Average duration: ~13.5m (Phase 2 plans)
 - Total execution time: —
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02 | 1 | ~14m | ~14m |
+| 02 | 2 | ~27m | ~13.5m |
 
 **Recent Trend:**
 
-- Last plan: 02-01 (Wave 0 enablement) — ~14 minutes, 3 tasks, 7 fixture files created + 3 config files modified
+- 02-02 (Wave 1 fingerprint v3 foundation) — ~13 minutes, 3 tasks, 15 files created + 6 files modified
+- 02-01 (Wave 0 enablement) — ~14 minutes, 3 tasks, 7 fixture files created + 3 config files modified
 - Trend: —
 
 *Updated after each plan completion*
@@ -72,6 +73,9 @@ Recent decisions affecting current work:
 - Phase 2: pin `genkgo/camt` to `^2.10` (installed 2.10.3) — supports CAMT.053.001.02 / 001.03 / 001.08; downstream adapter must detect sub-version on `xmlns` URI
 - Phase 2: empirical CAMT.053 from ASN is sub-version `001.02`, not the `001.08` the research doc anticipated — Wave 2 adapter must not assume the newest variant
 - Phase 2: ASN MT940 fixture is synthesised from the anonymised CAMT corpus because ASN no longer ships an MT940 download channel; cross-format MT940 pair is absent and the affected `CrossFormatDedupTest` scenarios will be `->skip()`-ed in Wave 3
+- [Phase 02]: Plan 2: FingerprintComposer bumped to v3 — tuple drops source_ref and widens with booked_at (second-resolution) so CSV/CAMT entries for the same logical transaction hash identically; same-day-same-merchant-same-amount entries no longer collide
+- [Phase 02]: Plan 2: diederik:rederive-fingerprints artisan command at Modules/Ledger/Internal/Console/ — registered behind runningInConsole() and statically forbidden from any Http/Routes namespace by a pest-plugin-arch BoundaryArchTest rule + a phase-2-grouped mirror; discharges threat T-02-02-01 in two layers
+- [Phase 02]: Plan 2: transactions.enriched_from JSON column cast as AsArrayObject for the append-only provenance trail; import_runs.enriched_count integer column for the wizard results summary; transactions composite UNIQUE recreated over the v3 tuple so DB-layer enforcement matches the SHA-256 hash
 
 ### Pending Todos
 
@@ -103,6 +107,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-13T14:35:00Z
-Stopped at: Phase 2 Plan 1 (Wave 0 enablement) complete
-Resume file: .planning/phases/02-asn-statement-coverage-camt-053-mt940/02-02-PLAN.md
+Last session: 2026-05-13T14:49:54Z
+Stopped at: Phase 2 Plan 2 (Wave 1 fingerprint v3 foundation) complete
+Resume file: .planning/phases/02-asn-statement-coverage-camt-053-mt940/02-03-PLAN.md

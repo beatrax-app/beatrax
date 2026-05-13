@@ -26,7 +26,7 @@
 - [ ] **ING-03**: User can upload an ASN MT940 export as a fallback ingestion path (older statement periods)
 - [ ] **ING-04**: User can upload an ICS Cards CSV or Excel statement and have its transactions imported, with original-currency + settled-EUR preserved per line where applicable
 - [ ] **ING-05**: User can upload a PayPal activity CSV and have its transactions imported, with the event-log rolled up by `Transaction ID` / `Reference Txn ID` so fees, holds, and currency-conversion rows enrich a single canonical transaction (rather than landing as duplicates)
-- [ ] **ING-06**: Re-uploading the same statement file (or an overlapping period) does not create duplicate transactions — idempotent by a fingerprint of `(account_id, posted_at, amount_minor, currency, normalized_counterparty, source_ref)` enforced at the DB layer
+- [x] **ING-06**: Re-uploading the same statement file (or an overlapping period) does not create duplicate transactions — idempotent by a fingerprint of `(account_id, posted_at, amount_minor, currency, normalized_counterparty, source_ref)` enforced at the DB layer
 - [ ] **ING-07**: User can declare which source format an upload is (no auto-detection), eliminating a class of misclassification errors
 - [ ] **ING-08**: Every imported row preserves a link back to its raw source row (for audit / debugging)
 - [ ] **ING-09**: PayPal Reporting API (Transaction Search) is supported as an optional alternative to CSV upload; user authorizes via OAuth2 and the app pulls activity directly. Phase research verifies feasibility for the user's account type (personal vs business). CSV path remains as the supported fallback in case Transaction Search is gated behind a business account.
@@ -160,7 +160,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | ING-03 | Phase 2 | Pending |
 | ING-04 | Phase 3 | Pending |
 | ING-05 | Phase 4 | Pending |
-| ING-06 | Phase 1 | Pending |
+| ING-06 | Phase 1 | Complete |
 | ING-07 | Phase 1 | Pending |
 | ING-08 | Phase 1 | Pending |
 | ING-09 | Phase 4 | Pending |
