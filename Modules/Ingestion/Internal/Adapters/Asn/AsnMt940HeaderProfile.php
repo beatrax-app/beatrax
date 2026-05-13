@@ -22,8 +22,12 @@ final class AsnMt940HeaderProfile
     /** @var list<string> */
     public const FILE_EXTENSIONS = ['sta', 'mt940', '940', 'txt'];
 
-    /** Matches the SWIFT block-4 envelope content (greedy, terminated by `-}`). */
-    public const SWIFT_ENVELOPE_REGEX = '/\{4:\s*([\s\S]+?)-\}/';
+    /**
+     * Matches the SWIFT block-4 envelope content. The terminator `-}` may
+     * be separated by whitespace because exporters that emit the EOM `-`
+     * marker on its own line then close the envelope on the next line.
+     */
+    public const SWIFT_ENVELOPE_REGEX = '/\{4:\s*([\s\S]+?)\s*-\s*\}/';
 
     /** Matches the `:20:` Transaction Reference Number tag — first tag of every statement. */
     public const SIGNATURE_REGEX = '/(?:^|[\r\n])\s*:20:/';
