@@ -200,12 +200,21 @@ abstract class TestCase extends RootTestCase
 
     /**
      * Seed two rows that share every v3 tuple dimension but differ on
-     * `source_ref`. Under the v2 UNIQUE the rows coexist; once the v3
-     * fingerprint algorithm runs they would collide — exactly what the
-     * rederive command's pre-check must catch and abort on.
+     * `source_ref`. The current schema's composite UNIQUE on transactions
+     * already enforces the v3 tuple so the rows cannot coexist with the
+     * index in place — this helper drops it for the duration of the test,
+     * simulating data that pre-dates the v3 index swap. The dropped index
+     * is the trigger for the rederive command's collision pre-check; the
+     * RefreshDatabase trait restores a clean schema for the next test.
      */
     protected function seedCollidingV2Rows(): void
     {
+        /** @var DatabaseManager $db */
+        $db = $this->app->make(DatabaseManager::class);
+        $connection = $db->connection();
+
+        $connection->statement('DROP INDEX IF EXISTS transactions_fingerprint_uq');
+
         $shared = [
             'posted_at' => '2026-04-12',
             'booked_at' => '2026-04-12 09:14:33',

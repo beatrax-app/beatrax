@@ -22,6 +22,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property CarbonImmutable|null $confirmed_at
  * @property int $inserted_count
  * @property int $duplicate_count
+ * @property int $enriched_count
  * @property int $error_count
  * @property string $status
  */
@@ -39,6 +40,7 @@ final class ImportRun extends Model
         'confirmed_at',
         'inserted_count',
         'duplicate_count',
+        'enriched_count',
         'error_count',
         'status',
     ];
@@ -51,6 +53,7 @@ final class ImportRun extends Model
             'confirmed_at' => 'immutable_datetime',
             'inserted_count' => 'integer',
             'duplicate_count' => 'integer',
+            'enriched_count' => 'integer',
             'error_count' => 'integer',
         ];
     }
