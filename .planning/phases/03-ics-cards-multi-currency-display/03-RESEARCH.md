@@ -794,25 +794,29 @@ Caveat: `MoneyLocaleFormatter` uses PHP's `NumberFormatter` (intl extension). Ve
 
 **Discuss-phase signal:** A1, A2, A3 will be answered by Wave 0 with no user input needed. A6 should be verified by a planner spike (~2 minutes — try `#[Url]` on a Volt component). A8 needs a one-line check during Plan 1 execution. The rest are low risk or verified.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Currency formatter symbol output for non-EUR — what does PHP's `NumberFormatter` produce on macOS/Herd today?**
    - What we know: `MoneyLocaleFormatter` uses `NumberFormatter(locale, CURRENCY)`. On `en_US`, USD renders as `$12.99`. On `nl_NL`, USD renders as `US$ 12,99` (note the `US$` qualifier prefix Dutch locale uses for non-domestic currencies).
    - What's unclear: which one matches the UI's "calm" aesthetic best — short prefix (`$12.99`) for compact rows, or locale-correct (`US$ 12,99`) for Dutch nationals. CONTEXT D-48 + Claude's discretion §"Currency formatting" defer this to the planner.
    - Recommendation: Plan 5 builds the dual-line transaction view; the planner picks one and documents it. Either is defensible. Use snapshot tests so the choice is auditable.
+   - **RESOLVED:** Format non-EUR with locale `en_US` (e.g. `$74.43`); format EUR with locale `nl_NL` (e.g. `€68,86`). Per-transaction FX rate detail formats as `€0.929 / USD` via `NumberFormatter::CURRENCY` for the EUR base + ` / ` + ISO suffix (3 decimal places via `number_format($rate, 3, '.', '')`). Locked in plan 03-06 Task 2 (`Money::format()` parameterless default) and plan 03-07 (transaction detail FX-rate row).
 
 2. **Does the `IdempotencyContractTest` dataset need an `ics-csv` row?**
    - What we know: Phase 2 added `asn-camt053` and `asn-mt940` dataset rows with same-file fallback. Phase 3 should follow the same pattern.
    - What's unclear: whether the ICS fixture corpus will support a true overlap pair (two months, one of which is a subset) by Wave 0 close.
    - Recommendation: Plan 1 (Wave 0) produces at minimum `tests/fixtures/ics-sample-1.csv`. The Pest dataset adds an `ics-csv` row with same-file fallback (mirroring `asn-camt053` / `asn-mt940`). If the user provides a multi-month export, derive `ics-month-a.csv` and `ics-month-a-and-b.csv` as overlap derivatives.
+   - **RESOLVED:** Add an `ics-csv` row to the contract dataset using the same-file fallback shape (mirrors `asn-camt053` / `asn-mt940`). Wired in plan 03-02 Task 3.
 
 3. **Is the `transactions.source_ref` column unique-able for ICS?**
    - What we know: Phase 1 schema has no `UNIQUE(account_id, source_ref)` — the only UNIQUE on the table is the v3 fingerprint composite. So ICS rows with non-null `source_ref` cannot collide via a unique-constraint exception even on the same `source_ref` value (the fingerprint guards instead).
    - What's unclear: nothing — this is the intended state. Listed here so planners don't accidentally add a UNIQUE on `source_ref` when the ICS adapter populates it from an auth code.
    - Recommendation: No action.
+   - **RESOLVED:** Keep the existing non-unique `transactions.source_ref` column. Idempotency continues to be enforced by the `(source_id, external_id)` composite already used for ASN — ICS reuses that composite key via `SourceTransactionDto`. No schema change in Phase 3.
 
 4. **Should the wizard pre-select `'ics-csv'` when the user has previously imported an ICS file?**
    - Out of scope for Phase 3 (D-38 is wizard wording, not stickiness). Mentioned because the two-step picker shape opens the door to remembering the last-used issuer.
+   - **RESOLVED:** Deferred — no pre-selection in v1. The user manually picks issuer + format on every import (matches D-33 two-step picker UX). Revisit only if the user explicitly requests sticky selection in a later phase.
 
 ## Environment Availability
 
