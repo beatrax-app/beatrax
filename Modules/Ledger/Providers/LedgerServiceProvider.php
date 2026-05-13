@@ -8,6 +8,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Ledger\Internal\Console\RederiveFingerprintsCommand;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
+use Modules\Ledger\Internal\Services\FingerprintRederiveService;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Ledger\Public\Actions\UpdateTransactionCategory;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
@@ -46,6 +47,7 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->singleton(ThisPeriodAtAGlanceQuery::class);
         $this->app->singleton(TopCategoriesByPeriodQuery::class);
         $this->app->singleton(TransactionListQuery::class);
+        $this->app->bind(FingerprintRederiveService::class);
     }
 
     public function boot(LivewireManager $livewire): void

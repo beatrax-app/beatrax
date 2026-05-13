@@ -2,23 +2,36 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Migrations\Migration;
+use Modules\Ledger\Internal\Services\FingerprintRederiveService;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        /** @var Kernel $kernel */
-        $kernel = Container::getInstance()->make(Kernel::class);
-        $exitCode = $kernel->call('diederik:rederive-fingerprints', ['--confirm' => true]);
+        // Migration classes are anonymous and instantiated by Laravel's
+        // migrator with no constructor arguments, so the FingerprintRederiveService
+        // has to be resolved from the application container at the migration
+        // boundary. This is the documented exception to the DI-only rule:
+        // schema migrations cannot themselves receive constructor injection.
+        /** @var FingerprintRederiveService $service */
+        $service = app(FingerprintRederiveService::class);
 
-        if ($exitCode !== 0) {
-            throw new RuntimeException(
-                'Fingerprint re-derive migration failed. See the command output above. '
-                .'Existing rows have been left on the previous normalization_version.'
-            );
+        $outcome = $service->run(apply: true);
+
+        if ($outcome->isCollision()) {
+            $count = count($outcome->collisions);
+            $json = json_encode($outcome->collisions, JSON_PRETTY_PRINT);
+
+            throw new RuntimeException(sprintf(
+                "Fingerprint v%d re-derive migration ABORTED.\n"
+                .'%d collision(s) detected; existing rows have been left on the previous '
+                ."normalization_version.\n%s\n"
+                .'Manual reconciliation required before re-running.',
+                $outcome->targetVersion,
+                $count,
+                is_string($json) ? $json : '[json_encode failed]',
+            ));
         }
     }
 
