@@ -59,7 +59,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 5 plans
   - [x] 02-01-PLAN.md — Wave 0: composer require genkgo/camt, anonymised CAMT.053 + MT940 fixtures, phase-2 Pest group registration
   - [x] 02-02-PLAN.md — Wave 1 foundation: FingerprintComposer v3 (drop source_ref, add booked_at) + RederiveFingerprintsCommand + schema migrations + FingerprintDisposition/PendingEnrichment DTOs
-  - [ ] 02-03-PLAN.md — Wave 2 CAMT.053 vertical slice: AsnCamt053Adapter via genkgo/camt + HeaderSniffer + statement_summaries + wizard option + end-to-end (Success Criterion #1)
+  - [x] 02-03-PLAN.md — Wave 2 CAMT.053 vertical slice: AsnCamt053Adapter via genkgo/camt + HeaderSniffer + statement_summaries + wizard option + end-to-end (Success Criterion #1)
   - [ ] 02-04-PLAN.md — Wave 2 MT940 vertical slice: hand-rolled lexer + Tag61/Tag86 parsers + counterparty cleaner + adapter + wizard option + end-to-end (Success Criterion #2)
   - [ ] 02-05-PLAN.md — Wave 3 ENRICHED state + cross-format dedup: FingerprintStage::classify, ApplyEnrichments, pipeline integration, Blade ENRICHED row state, CrossFormatDedupTest (Success Criterion #3)
 

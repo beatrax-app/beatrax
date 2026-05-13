@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 2 Plan 2 (Wave 1 fingerprint v3 foundation) complete — FingerprintComposer v3, RederiveFingerprintsCommand, four schema migrations applied, FingerprintDisposition + PendingEnrichment DTOs"
-last_updated: "2026-05-13T14:49:54Z"
-last_activity: "2026-05-13 -- 02-02-PLAN executed: FingerprintComposer v3 + rederive command + 4 migrations + 5 DTOs"
+stopped_at: Phase 2 Plan 3 (Wave 2 CAMT.053 vertical slice) complete — ROADMAP Phase 2 Success Criterion #1 closed
+last_updated: "2026-05-13T15:28:33.455Z"
+last_activity: "2026-05-13 -- 02-03-PLAN executed: AsnCamt053Adapter end-to-end + statement_summaries + IBAN check-digit fixture refresh"
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 83
 ---
 
 # Project State
@@ -26,33 +26,36 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 02 (asn-statement-coverage-camt-053-mt940) — EXECUTING
-Plan: 3 of 5 (01 + 02 complete; 03 next — ASN CSV adapter)
+Plan: 4 of 5 (01 + 02 + 03 complete; 04 next — ASN MT940 vertical slice)
 Status: Ready to execute
-Last activity: 2026-05-13 -- 02-02 fingerprint v3 foundation complete
+Last activity: 2026-05-13 -- 02-03 CAMT.053 vertical slice complete; ROADMAP Phase 2 Success Criterion #1 GREEN
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 9
-- Average duration: ~13.5m (Phase 2 plans)
+- Total plans completed: 10
+- Average duration: ~18.3m (Phase 2 plans)
 - Total execution time: —
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02 | 2 | ~27m | ~13.5m |
+| 02 | 3 | ~55m | ~18.3m |
 
 **Recent Trend:**
 
+- 02-03 (Wave 2 CAMT.053 vertical slice) — ~28 minutes, 3 tasks, 14 files created + 40 files modified (large modification count driven by the IBAN check-digit fixture refresh — a single-purpose deviation, see 02-03-SUMMARY.md "Major Deviation")
 - 02-02 (Wave 1 fingerprint v3 foundation) — ~13 minutes, 3 tasks, 15 files created + 6 files modified
 - 02-01 (Wave 0 enablement) — ~14 minutes, 3 tasks, 7 fixture files created + 3 config files modified
 - Trend: —
 
 *Updated after each plan completion*
+
+| Phase 02 P03 | 28 | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -76,6 +79,10 @@ Recent decisions affecting current work:
 - [Phase 02]: Plan 2: FingerprintComposer bumped to v3 — tuple drops source_ref and widens with booked_at (second-resolution) so CSV/CAMT entries for the same logical transaction hash identically; same-day-same-merchant-same-amount entries no longer collide
 - [Phase 02]: Plan 2: diederik:rederive-fingerprints artisan command at Modules/Ledger/Internal/Console/ — registered behind runningInConsole() and statically forbidden from any Http/Routes namespace by a pest-plugin-arch BoundaryArchTest rule + a phase-2-grouped mirror; discharges threat T-02-02-01 in two layers
 - [Phase 02]: Plan 2: transactions.enriched_from JSON column cast as AsArrayObject for the append-only provenance trail; import_runs.enriched_count integer column for the wizard results summary; transactions composite UNIQUE recreated over the v3 tuple so DB-layer enforcement matches the SHA-256 hash
+- [Phase 02]: Plan 3: Option B (ImportPipeline reads adapter state post-iteration) rather than Option A (ParseStage returns tuple). Adapters become stateful singletons holding the last `?StatementSummaryData`; acceptable in single-user sequential-request app, documented in 02-03-SUMMARY.md.
+- [Phase 02]: Plan 3: Disable XSD validation in the CAMT.053 adapter via `Config::disableXsdValidation()`. Bundled XSDs reject minimal test fragments and any future ASN extension; XXE security is enforced by a custom `libxml_set_external_entity_loader` (allow-list local + no-scheme URIs, reject every remote scheme), structural correctness by genkgo/camt's IBAN validator + MoneyFactory.
+- [Phase 02]: Plan 3: Re-anonymise IBAN check digits across every fixture (NL00 → valid mod-97 cc). Forced by genkgo/camt's eager IBAN validation — no library bypass. Only the 2-digit check segment changes per IBAN; bank code, account number, BIC, counterparty names, SEPA refs, amounts, dates all preserved verbatim. 25 fixture files + 14 test files rewritten in one pass.
+- [Phase 02]: Plan 3: StatementSummary model at `Modules/Ledger/Models/` matching existing Ledger model convention (Account / Category / Currency / ImportRun / Transaction all live there). `Modules/Ledger/Public/Models/` split deferred to a separate refactor plan if desired across the codebase.
 
 ### Pending Todos
 
@@ -107,6 +114,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-13T14:49:54Z
-Stopped at: Phase 2 Plan 2 (Wave 1 fingerprint v3 foundation) complete
-Resume file: .planning/phases/02-asn-statement-coverage-camt-053-mt940/02-03-PLAN.md
+Last session: 2026-05-13T15:25:08Z
+Stopped at: Phase 2 Plan 3 (Wave 2 CAMT.053 vertical slice) complete — ROADMAP Phase 2 Success Criterion #1 closed
+Resume file: .planning/phases/02-asn-statement-coverage-camt-053-mt940/02-04-PLAN.md

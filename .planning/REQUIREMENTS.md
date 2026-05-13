@@ -22,7 +22,7 @@
 ### Ingestion — Bank & Card Sources
 
 - [ ] **ING-01**: User can upload an ASN CSV export and have its transactions imported into the canonical transaction store
-- [ ] **ING-02**: User can upload an ASN CAMT.053 (XML) export and have its transactions imported, using `EndToEndId` / `AcctSvcrRef` as the stable source reference
+- [x] **ING-02**: User can upload an ASN CAMT.053 (XML) export and have its transactions imported, using `EndToEndId` / `AcctSvcrRef` as the stable source reference
 - [ ] **ING-03**: User can upload an ASN MT940 export as a fallback ingestion path (older statement periods)
 - [ ] **ING-04**: User can upload an ICS Cards CSV or Excel statement and have its transactions imported, with original-currency + settled-EUR preserved per line where applicable
 - [ ] **ING-05**: User can upload a PayPal activity CSV and have its transactions imported, with the event-log rolled up by `Transaction ID` / `Reference Txn ID` so fees, holds, and currency-conversion rows enrich a single canonical transaction (rather than landing as duplicates)
@@ -156,7 +156,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | FND-06 | Phase 1 | Pending |
 | FND-07 | Phase 1 | Pending |
 | ING-01 | Phase 1 | Pending |
-| ING-02 | Phase 2 | Pending |
+| ING-02 | Phase 2 | Complete |
 | ING-03 | Phase 2 | Pending |
 | ING-04 | Phase 3 | Pending |
 | ING-05 | Phase 4 | Pending |
