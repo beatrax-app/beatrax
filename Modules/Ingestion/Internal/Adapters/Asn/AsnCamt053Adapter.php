@@ -391,6 +391,14 @@ final class AsnCamt053Adapter implements SourceAdapter
      * Concatenates the TxDtls unstructured remittance blocks into a single
      * whitespace-collapsed description string. Returns null when no
      * unstructured block is present.
+     *
+     * A TxDtls that carries only structured remittance (`<Strd>` rather
+     * than `<Ustrd>`) yields null. The canonical unstructured-blocks API
+     * is the only path consulted; the library's deprecated
+     * `getMessage()` fallback would silently stringify structured data
+     * and produce indistinguishable output for "no remittance" vs
+     * "structured-only remittance", which masks data that downstream
+     * resolution may legitimately need to handle differently.
      */
     private function extractRemittance(?EntryTransactionDetail $txDtls): ?string
     {
@@ -409,13 +417,6 @@ final class AsnCamt053Adapter implements SourceAdapter
         }
 
         if ($messages === []) {
-            // Some sub-version decoders only populate the deprecated message
-            // property; fall back to it so the description is not lost.
-            $legacy = $rmt->getMessage();
-            if (is_string($legacy) && trim($legacy) !== '') {
-                return $this->collapseWhitespace($legacy);
-            }
-
             return null;
         }
 
