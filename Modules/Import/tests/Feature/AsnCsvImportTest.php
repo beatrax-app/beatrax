@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
+use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
@@ -48,6 +50,34 @@ it('returns mixed inserted/duplicates when an overlapping period is re-imported'
     expect($second->inserted)->toBeGreaterThan(0);
     expect($second->duplicates)->toBeGreaterThan(0);
     expect($second->inserted)->toBeLessThan($first->inserted);
+});
+
+it('refreshes import_runs.source_format when reusing an existing row', function (): void {
+    $fixture = __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv';
+    $sha = hash_file('sha256', $fixture);
+    expect($sha)->toBeString();
+
+    // Simulate a prior previewed row created under a different adapter
+    // (the value the latest preview claims must override the old one).
+    /** @var ImportRun $stale */
+    $stale = ImportRun::create([
+        'user_id' => $this->fixtureUser->id,
+        'source_format' => 'legacy',
+        'raw_file_path' => '/tmp/legacy.csv',
+        'sha256' => $sha,
+        'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
+        'status' => 'discarded',
+    ]);
+
+    $preview = $this->importer->runFromUpload(
+        $fixture,
+        'asn-csv',
+        $this->fixtureUser,
+        'asn-sample-1.csv',
+    );
+
+    expect($preview->importRunId)->toBe($stale->id);
+    expect(ImportRun::query()->find($stale->id)?->source_format)->toBe('asn-csv');
 });
 
 it('substitutes the no-counterparty sentinel on rows with an empty Naam column', function (): void {
