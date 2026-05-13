@@ -27,6 +27,10 @@ use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
  *  - Total line count is capped at `MAX_LINE_COUNT`. The wizard's
  *    `max:10240` rule already bounds input bytes; this guards against a
  *    crafted file whose every byte is a newline.
+ *  - Each line is read with a `stream_get_line` length cap of
+ *    `MAX_BUFFER_BYTES + 1` so a single pathologically long line cannot
+ *    allocate hundreds of MB before the tag-buffer check fires. A line
+ *    that exceeds the cap is rejected immediately.
  *  - Each tag buffer is capped at `MAX_BUFFER_BYTES`. Real `:86:`
  *    narratives never exceed a few hundred bytes per tag.
  *
@@ -87,11 +91,18 @@ final class AsnMt940Lexer
         $buffer = '';
         $lineCount = 0;
 
-        while (($raw = fgets($handle)) !== false) {
+        while (($raw = stream_get_line($handle, self::MAX_BUFFER_BYTES + 1, "\n")) !== false) {
             if (++$lineCount > self::MAX_LINE_COUNT) {
                 throw new InvalidAmountException(sprintf(
                     'MT940 line limit exceeded (%d).',
                     self::MAX_LINE_COUNT,
+                ));
+            }
+
+            if (strlen($raw) > self::MAX_BUFFER_BYTES) {
+                throw new InvalidAmountException(sprintf(
+                    'MT940 line exceeds buffer cap (%d bytes).',
+                    self::MAX_BUFFER_BYTES,
                 ));
             }
 
