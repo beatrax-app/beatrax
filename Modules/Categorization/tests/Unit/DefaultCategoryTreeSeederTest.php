@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Categorization\Database\Seeders\DefaultCategoryTreeSeeder;
+use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 
 uses(RefreshDatabase::class);
@@ -61,6 +62,39 @@ it('persists the income / expense / transfer kind on every row', function (): vo
     expect(Category::query()->where('kind', 'income')->count())->toBe(4);
     expect(Category::query()->where('kind', 'expense')->count())->toBe(24);
     expect(Category::query()->where('kind', 'transfer')->count())->toBe(1);
+});
+
+it('never demotes a per-user category that shares a slug with a global default', function (): void {
+    /** @var User $user */
+    $user = User::create([
+        'email' => 'partner@diederik.test',
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+    ]);
+
+    // Pre-existing per-user override using a slug that overlaps the
+    // default tree (e.g. the user customised their own "groceries").
+    $userOverride = Category::create([
+        'user_id' => $user->id,
+        'name' => 'My Groceries',
+        'slug' => 'groceries',
+        'kind' => 'expense',
+        'display_order' => 99,
+    ]);
+
+    $this->app->make(DefaultCategoryTreeSeeder::class)->run();
+
+    // The user's row is untouched: same id, same user_id, same name.
+    $userOverride->refresh();
+    expect($userOverride->user_id)->toBe($user->id);
+    expect($userOverride->name)->toBe('My Groceries');
+
+    // A separate global row exists with user_id = NULL.
+    $globalCount = Category::withoutGlobalScopes()
+        ->where('slug', 'groceries')
+        ->whereNull('user_id')
+        ->count();
+    expect($globalCount)->toBe(1);
 });
 
 it('runs from the diederik:install command via the UserInstalled listener', function (): void {
