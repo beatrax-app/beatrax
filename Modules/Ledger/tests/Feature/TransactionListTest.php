@@ -151,6 +151,54 @@ it('renders the /transactions page with rows in newest-first order', function ()
     $response->assertSeeInOrder(['AH Amsterdam', 'Cafe Local']);
 });
 
+it('renders the settled pair when a currency filter is supplied', function (): void {
+    // Native EUR / settled EUR — both views show EUR.
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -1299,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -1299,
+        'settled_currency' => 'EUR',
+        'posted_at' => '2026-05-08',
+        'booked_at' => '2026-05-08 12:00:00',
+    ]);
+    // Native USD / settled EUR — only the settled half appears in a EUR view.
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -1000,
+        'currency' => 'USD',
+        'settled_amount_minor' => -920,
+        'settled_currency' => 'EUR',
+        'posted_at' => '2026-05-10',
+        'booked_at' => '2026-05-10 12:00:00',
+    ]);
+
+    $page = $this->listQuery->recent($this->fixtureUser, daysBack: 90, currency: 'EUR');
+
+    expect($page->rows)->toHaveCount(2);
+    foreach ($page->rows as $row) {
+        expect($row->amount->currency())->toBe('EUR');
+    }
+    // Order is posted_at DESC: USD-native/EUR-settled row first.
+    expect($page->rows[0]->amount->toMinor())->toBe(-920);
+    expect($page->rows[1]->amount->toMinor())->toBe(-1299);
+});
+
+it('renders the native pair when no currency filter is supplied', function (): void {
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -1000,
+        'currency' => 'USD',
+        'settled_amount_minor' => -920,
+        'settled_currency' => 'EUR',
+        'posted_at' => '2026-05-10',
+        'booked_at' => '2026-05-10 12:00:00',
+    ]);
+
+    $page = $this->listQuery->fullHistory($this->fixtureUser);
+
+    expect($page->rows)->toHaveCount(1);
+    expect($page->rows[0]->amount->currency())->toBe('USD');
+    expect($page->rows[0]->amount->toMinor())->toBe(-1000);
+});
+
 it('renders the empty-state copy when no transactions match the window', function (): void {
     // Older than 90 days
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
