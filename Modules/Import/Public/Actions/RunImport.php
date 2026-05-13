@@ -77,14 +77,32 @@ final class RunImport implements RunsImports
 
         $stablePath = $this->copyToStableLocation($localPath, $user, $sha);
 
-        $importRun = $existing ?? ImportRun::create([
-            'user_id' => $user->id,
-            'source_format' => $sourceFormat,
-            'raw_file_path' => $stablePath,
-            'sha256' => $sha,
-            'uploaded_at' => $this->clock->now(),
-            'status' => 'previewed',
-        ]);
+        if ($existing !== null) {
+            // The row is being reused for a fresh preview (prior status was
+            // 'previewed' or 'discarded'). Reset the audit fields so the
+            // wizard's status string and counters match the new attempt;
+            // otherwise a discarded run would silently retain status =
+            // 'discarded' and stale insertion counts on the re-upload.
+            $existing->update([
+                'status' => 'previewed',
+                'raw_file_path' => $stablePath,
+                'uploaded_at' => $this->clock->now(),
+                'confirmed_at' => null,
+                'inserted_count' => 0,
+                'duplicate_count' => 0,
+                'error_count' => 0,
+            ]);
+            $importRun = $existing;
+        } else {
+            $importRun = ImportRun::create([
+                'user_id' => $user->id,
+                'source_format' => $sourceFormat,
+                'raw_file_path' => $stablePath,
+                'sha256' => $sha,
+                'uploaded_at' => $this->clock->now(),
+                'status' => 'previewed',
+            ]);
+        }
 
         $accounts = new EloquentAccountResolver($user);
         $result = $this->pipeline->preview($stablePath, $sourceFormat, $accounts, $user, $importRun->id);
