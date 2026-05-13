@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
@@ -284,6 +285,74 @@ it('does not surface a foreign user\'s parent name in the breadcrumb', function 
     // Walk terminates at the filtered-out foreign parent; only the leaf
     // name appears in the breadcrumb.
     expect($summary->topCategories[0]->name)->toBe('Local Leaf');
+});
+
+it('does not probe categories beyond a filtered-out parent in the walk', function (): void {
+    /** @var User $foreignUser */
+    $foreignUser = User::create([
+        'email' => 'foreign-walk@diederik.test',
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+    ]);
+    // Three-level chain: local leaf → foreign mid → (would-be) global root.
+    // The foreign mid is filtered out by the visibility predicate; the
+    // global root is unreachable through it.
+    /** @var Category $globalRoot */
+    $globalRoot = Category::create([
+        'user_id' => null,
+        'name' => 'Global Root',
+        'slug' => 'global-root',
+        'kind' => 'expense',
+        'display_order' => 1,
+    ]);
+    /** @var Category $foreignMid */
+    $foreignMid = Category::create([
+        'user_id' => $foreignUser->id,
+        'parent_id' => $globalRoot->id,
+        'name' => 'Foreign Mid',
+        'slug' => 'foreign-mid',
+        'kind' => 'expense',
+        'display_order' => 1,
+    ]);
+    /** @var Category $localLeaf */
+    $localLeaf = Category::create([
+        'user_id' => $this->user->id,
+        'parent_id' => $foreignMid->id,
+        'name' => 'Local Leaf',
+        'slug' => 'local-leaf-walk',
+        'kind' => 'expense',
+        'display_order' => 1,
+    ]);
+
+    $this->makeTransaction($this->user, $this->account, $this->run, [
+        'amount_minor' => -1299,
+        'posted_at' => '2026-05-05',
+        'booked_at' => '2026-05-05 12:00:00',
+        'category_id' => $localLeaf->id,
+    ]);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $connection = $db->connection();
+    $connection->enableQueryLog();
+    $connection->flushQueryLog();
+
+    $period = $this->periods->current();
+    $summary = $this->query->for($this->user, $period);
+
+    $categoriesQueries = array_values(array_filter(
+        $connection->getQueryLog(),
+        static fn (array $entry): bool => str_contains(strtolower((string) $entry['query']), 'from "categories"'),
+    ));
+
+    // Exactly 2 batches: the leaf (returns 1 row), then the foreign mid
+    // (returns 0 rows). The global root is never enqueued because the
+    // foreign mid was attempted-but-filtered.
+    expect($categoriesQueries)->toHaveCount(2);
+    expect($summary->topCategories)->toHaveCount(1);
+    expect($summary->topCategories[0]->name)->toBe('Local Leaf');
+
+    $connection->disableQueryLog();
 });
 
 it('renders the full category path for nested categories', function (): void {

@@ -114,6 +114,12 @@ final class TopCategoriesByPeriodQuery
      * edit) terminates the chain at the filtered-out parent rather than
      * leaking the foreign user's category name into the breadcrumb.
      *
+     * The `$attempted` set tracks ids that have already been queried
+     * (regardless of whether they came back from the database) so the
+     * grandparent of a filtered-out parent is never enqueued. Without
+     * this guard, every visibility miss costs an extra empty SELECT on
+     * `categories` before the loop terminates.
+     *
      * @param  list<int>  $startingIds
      * @return array<int, stdClass>
      */
@@ -122,9 +128,15 @@ final class TopCategoriesByPeriodQuery
         $connection = $this->db->connection();
         /** @var array<int, stdClass> $known */
         $known = [];
+        /** @var array<int, true> $attempted */
+        $attempted = [];
 
         $toFetch = array_values(array_unique($startingIds));
         while ($toFetch !== []) {
+            foreach ($toFetch as $id) {
+                $attempted[$id] = true;
+            }
+
             $batch = $connection
                 ->table('categories')
                 ->whereIn('id', $toFetch)
@@ -138,7 +150,7 @@ final class TopCategoriesByPeriodQuery
                 $id = self::toInt($row->id);
                 $known[$id] = $row;
                 $parentId = $row->parent_id === null ? null : self::toInt($row->parent_id);
-                if ($parentId !== null && ! isset($known[$parentId])) {
+                if ($parentId !== null && ! isset($known[$parentId]) && ! isset($attempted[$parentId])) {
                     $nextFetch[] = $parentId;
                 }
             }
