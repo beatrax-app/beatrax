@@ -207,6 +207,58 @@ it('cross-user safety: a PendingEnrichment for another user\'s row returns 0', f
     expect($fresh->enriched_from)->toBeNull();
 })->group('phase-2');
 
+it('rank no-op: a cached weaker PendingEnrichment never overwrites a freshly-stored stronger source_ref', function (): void {
+    // Seed: row stored with a weak CSV ref (rank 1). Pretend the preview
+    // pipeline classified an enrichment that would promote to MT940
+    // (rank 2). Between preview and confirm, a parallel CAMT import has
+    // stored a CAMT EREF (rank 4) on the same row. Replaying the cached
+    // MT940 PendingEnrichment must NOT overwrite the now-stronger CAMT
+    // ref — re-ranking at write time has to detect the parallel update.
+    $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001', $this->composer);
+    $tx->source_format = 'asn-camt053';
+    $tx->source_ref = 'EREF-PARALLEL';
+    $tx->save();
+
+    $count = ($this->applier)([
+        new PendingEnrichment(
+            existingTransactionId: $tx->id,
+            newSourceRef: 'MT940-WEAK',
+            importRunId: 99,
+            sourceFormat: 'asn-mt940',
+        ),
+    ], $this->fixtureUser);
+
+    expect($count)->toBe(0);
+
+    /** @var Transaction $fresh */
+    $fresh = Transaction::query()->findOrFail($tx->id);
+    expect($fresh->source_ref)->toBe('EREF-PARALLEL');
+    expect($fresh->source_format)->toBe('asn-camt053');
+    expect($fresh->enriched_from)->toBeNull();
+})->group('phase-2');
+
+it('rank no-op: an equal-rank cached enrichment does not overwrite an equally-strong stored ref', function (): void {
+    // Both incoming and stored are CAMT-rank (4) but with different ref
+    // values. The existing equality short-circuit already handles
+    // ref===ref; this test pins the new same-rank-different-value path.
+    $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-OLD', $this->composer);
+
+    $count = ($this->applier)([
+        new PendingEnrichment(
+            existingTransactionId: $tx->id,
+            newSourceRef: 'EREF-NEW',
+            importRunId: 99,
+            sourceFormat: 'asn-camt053',
+        ),
+    ], $this->fixtureUser);
+
+    expect($count)->toBe(0);
+
+    /** @var Transaction $fresh */
+    $fresh = Transaction::query()->findOrFail($tx->id);
+    expect($fresh->source_ref)->toBe('EREF-OLD');
+})->group('phase-2');
+
 it('binds the AppliesEnrichments contract to ApplyEnrichments', function (): void {
     $resolved = $this->app->make(AppliesEnrichments::class);
 
