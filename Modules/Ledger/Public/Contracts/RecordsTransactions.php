@@ -19,6 +19,11 @@ interface RecordsTransactions
      * Duplicates (rows whose fingerprint already exists) are silently skipped
      * and counted in the returned result.
      *
+     * Every row must carry a non-null `userId`. Implementations MUST reject
+     * the batch (without persisting any row) when a row's `userId` is null,
+     * because SQLite treats NULL as distinct in the UNIQUE indexes that guard
+     * idempotency and a null-user row could not be deduplicated on re-import.
+     *
      * @param  iterable<CanonicalTransaction>  $canonical
      */
     public function __invoke(iterable $canonical): RecordResult;
