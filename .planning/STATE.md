@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 Plan 3 (Wave 2 CAMT.053 vertical slice) complete — ROADMAP Phase 2 Success Criterion #1 closed
-last_updated: "2026-05-13T15:28:33.455Z"
-last_activity: "2026-05-13 -- 02-03-PLAN executed: AsnCamt053Adapter end-to-end + statement_summaries + IBAN check-digit fixture refresh"
+stopped_at: Phase 2 Plan 4 (Wave 2 MT940 vertical slice) complete — ROADMAP Phase 2 Success Criterion #2 closed
+last_updated: "2026-05-13T15:50:18Z"
+last_activity: "2026-05-13 -- 02-04-PLAN executed: hand-rolled AsnMt940 adapter (lexer + Tag61 + Tag86 + counterparty cleaner) + statement_summaries + wizard dropdown widened to three formats"
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 12
-  completed_plans: 10
-  percent: 83
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -26,28 +26,29 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 02 (asn-statement-coverage-camt-053-mt940) — EXECUTING
-Plan: 4 of 5 (01 + 02 + 03 complete; 04 next — ASN MT940 vertical slice)
+Plan: 5 of 5 (01 + 02 + 03 + 04 complete; 05 next — cross-format dedup + enrichment writer + wizard)
 Status: Ready to execute
-Last activity: 2026-05-13 -- 02-03 CAMT.053 vertical slice complete; ROADMAP Phase 2 Success Criterion #1 GREEN
+Last activity: 2026-05-13 -- 02-04 MT940 vertical slice complete; ROADMAP Phase 2 Success Criterion #2 GREEN
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 10
-- Average duration: ~18.3m (Phase 2 plans)
+- Total plans completed: 11
+- Average duration: ~17.5m (Phase 2 plans)
 - Total execution time: —
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02 | 3 | ~55m | ~18.3m |
+| 02 | 4 | ~70m | ~17.5m |
 
 **Recent Trend:**
 
+- 02-04 (Wave 2 MT940 vertical slice) — ~15 minutes, 4 tasks, 16 files created + 8 files modified (the hand-rolled MT940 toolchain: lexer + Tag61 + Tag86 + counterparty cleaner + adapter + DTOs + tests + snapshot)
 - 02-03 (Wave 2 CAMT.053 vertical slice) — ~28 minutes, 3 tasks, 14 files created + 40 files modified (large modification count driven by the IBAN check-digit fixture refresh — a single-purpose deviation, see 02-03-SUMMARY.md "Major Deviation")
 - 02-02 (Wave 1 fingerprint v3 foundation) — ~13 minutes, 3 tasks, 15 files created + 6 files modified
 - 02-01 (Wave 0 enablement) — ~14 minutes, 3 tasks, 7 fixture files created + 3 config files modified
@@ -56,6 +57,7 @@ Progress: [████████░░] 83%
 *Updated after each plan completion*
 
 | Phase 02 P03 | 28 | 3 tasks | 14 files |
+| Phase 02 P04 | 15 | 4 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -83,6 +85,10 @@ Recent decisions affecting current work:
 - [Phase 02]: Plan 3: Disable XSD validation in the CAMT.053 adapter via `Config::disableXsdValidation()`. Bundled XSDs reject minimal test fragments and any future ASN extension; XXE security is enforced by a custom `libxml_set_external_entity_loader` (allow-list local + no-scheme URIs, reject every remote scheme), structural correctness by genkgo/camt's IBAN validator + MoneyFactory.
 - [Phase 02]: Plan 3: Re-anonymise IBAN check digits across every fixture (NL00 → valid mod-97 cc). Forced by genkgo/camt's eager IBAN validation — no library bypass. Only the 2-digit check segment changes per IBAN; bank code, account number, BIC, counterparty names, SEPA refs, amounts, dates all preserved verbatim. 25 fixture files + 14 test files rewritten in one pass.
 - [Phase 02]: Plan 3: StatementSummary model at `Modules/Ledger/Models/` matching existing Ledger model convention (Account / Category / Currency / ImportRun / Transaction all live there). `Modules/Ledger/Public/Models/` split deferred to a separate refactor plan if desired across the codebase.
+- [Phase 02]: Plan 4: Hand-rolled MT940 toolchain — Lexer + Tag61Parser + Tag86Parser + CounterpartyCleaner + Adapter — no kingsquare/php-mt940 or other library dependency. Each class is single-purpose, tested independently, then composed via constructor DI in AsnMt940Adapter. The pattern proves the codebase can carry a streaming line-based parser end-to-end without a stateful runtime.
+- [Phase 02]: Plan 4: Balance amounts (`:60F:` / `:62F:`) routed through `AsnAmountParser` via a small `Mt940BalanceTuple` internal DTO rather than the float-coerced `(int) round((float) $cell * 100)` shortcut. Keeps the project-wide integer-only money invariant airtight; the NoFloatMoneyArchTest allow-list stays untouched.
+- [Phase 02]: Plan 4: ASN MT940 customer-reference regex is locked to 34 chars (the ASN-extended variant). The SWIFT-standard 16-char form would silently truncate references and break sourceRef extraction; the project explicitly produces and consumes the ASN dialect.
+- [Phase 02]: Plan 4: Multi-statement MT940 files capture only the FIRST statement's `:20:` / `:25:` / `:28C:` / `:60F:` / `:62F:` into `statement_summaries`. Subsequent statements still yield every `:61:`/`:86:` entry; the FIRST statement's `extras.multiStatement` flag is set to true so a later UI can surface the rest. Keeps the writer's unique `(user_id, import_run_id)` contract honest.
 
 ### Pending Todos
 
@@ -114,6 +120,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-13T15:25:08Z
-Stopped at: Phase 2 Plan 3 (Wave 2 CAMT.053 vertical slice) complete — ROADMAP Phase 2 Success Criterion #1 closed
-Resume file: .planning/phases/02-asn-statement-coverage-camt-053-mt940/02-04-PLAN.md
+Last session: 2026-05-13T15:50:18Z
+Stopped at: Phase 2 Plan 4 (Wave 2 MT940 vertical slice) complete — ROADMAP Phase 2 Success Criterion #2 closed
+Resume file: .planning/phases/02-asn-statement-coverage-camt-053-mt940/02-05-PLAN.md
