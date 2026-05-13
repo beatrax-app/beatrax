@@ -6,6 +6,7 @@ use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940Adapter;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
@@ -174,7 +175,59 @@ it('flags multi-statement files in statementMetadata extras', function (): void 
     expect($meta->extras['multiStatement'])->toBeTrue();
 })->group('phase-2');
 
-it('rejects a non-MT940 file at the sniff stage', function (): void {
+it('pins entryCount to the first statement on multi-statement files', function (): void {
+    // Statement A carries TWO :61: lines, statement B carries ONE. The
+    // metadata snapshot pins to statement A, so entry_count must report 2.
+    $body = ":20:STMT-A\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
+        .":61:2604010401C100,00NTRFA-1\n:86:100?32X\n"
+        .":61:2604020402D50,00NTRFA-2\n:86:100?32Y\n"
+        .":62F:C260430EUR1050,00\n-\n"
+        .":20:STMT-B\n:25:NL57ASNB0123456789\n:60F:C260501EUR1050,00\n"
+        .":61:2605010501C200,00NTRFB-1\n:86:100?32Z\n"
+        .":62F:C260531EUR1250,00\n-\n";
+    $tmp = writeMt940Temp($body);
+
+    $dtos = iterator_to_array($this->adapter->parse($tmp, $this->resolver), preserve_keys: false);
+    $meta = $this->adapter->statementMetadata();
+
+    expect($dtos)->toHaveCount(3);
+    expect($meta)->not->toBeNull();
+    expect($meta->entryCount)->toBe(2);
+})->group('phase-2');
+
+it('rejects a :61: that arrives before :25: (own IBAN missing)', function (): void {
+    // :60F: comes first so the currency check would pass; the test pins the
+    // missing-IBAN failure mode in isolation.
+    $body = ":20:STMT-NO-IBAN\n:60F:C260401EUR1000,00\n"
+        .":61:2604010401C100,00NTRFINV-001\n:86:100?32X\n"
+        .":62F:C260430EUR1100,00\n-\n";
+    $tmp = writeMt940Temp($body);
+
+    try {
+        expect(fn () => iterator_to_array($this->adapter->parse($tmp, $this->resolver), preserve_keys: false))
+            ->toThrow(InvalidAmountException::class, 'before :25:');
+    } finally {
+        @unlink($tmp);
+    }
+})->group('phase-2');
+
+it('rejects a :61: that arrives before any balance tag has set a currency', function (): void {
+    // :25: comes first so the IBAN check would pass; this pins the
+    // missing-currency failure mode in isolation.
+    $body = ":20:STMT-NO-CCY\n:25:NL57ASNB0123456789\n"
+        .":61:2604010401C100,00NTRFINV-001\n:86:100?32X\n"
+        .":62F:C260430EUR1100,00\n-\n";
+    $tmp = writeMt940Temp($body);
+
+    try {
+        expect(fn () => iterator_to_array($this->adapter->parse($tmp, $this->resolver), preserve_keys: false))
+            ->toThrow(InvalidAmountException::class, 'before any balance tag');
+    } finally {
+        @unlink($tmp);
+    }
+})->group('phase-2');
+
+it('rejects a CSV body in a .sta file at the signature stage', function (): void {
     $tmp = tempnam(sys_get_temp_dir(), 'wrong-').'.sta';
     file_put_contents($tmp, "Datum,Je rekening\n01-04-2026,NL57ASNB0123456789\n");
 
