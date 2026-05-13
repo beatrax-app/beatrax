@@ -23,20 +23,35 @@ use Modules\Ledger\Models\Account;
  * slug, and the per-user UNIQUE on `(user_id, slug)` plus the per-user
  * UNIQUE on `(user_id, iban)` guarantee the same IBAN never lands twice.
  *
- * Name validation lives in the service (not the Livewire layer) so every
+ * Validation lives in the service (not the Livewire layer) so every
  * caller — CLI, programmatic, future REST entrypoint — gets the same
- * 1..80 character bound. Also rejects names whose slug derivation
- * yields an empty body (emoji-only, punctuation-only, or scripts without
- * a transliteration map) so every account row carries a meaningful slug.
- * Throws InvalidAccountNameException in all failure modes; the wizard
- * catches it and surfaces the message next to the input via Livewire's
- * error bag.
+ * 1..80 character bound on the name plus the structural IBAN guard
+ * (uppercase alphanumeric, 15..34 characters per ISO 13616). The IBAN
+ * shape check is defence-in-depth against malformed values landing in
+ * `accounts.iban`, where future merchant joins and SEPA-export features
+ * would later trip over them.
+ *
+ * Also rejects names whose slug derivation yields an empty body
+ * (emoji-only, punctuation-only, or scripts without a transliteration
+ * map) so every account row carries a meaningful slug. Throws
+ * InvalidAccountNameException in all failure modes; the wizard catches
+ * it and surfaces the message next to the input via Livewire's error
+ * bag.
  */
 final class AccountNamer implements NamesAccounts
 {
     public const NAME_MIN_LENGTH = 1;
 
     public const NAME_MAX_LENGTH = 80;
+
+    /**
+     * Minimum and maximum IBAN length per ISO 13616. The 15-character
+     * floor admits the shortest national format (Norway, 15 chars);
+     * the 34-character ceiling is the published global maximum.
+     */
+    private const IBAN_MIN_LENGTH = 15;
+
+    private const IBAN_MAX_LENGTH = 34;
 
     public function __invoke(string $iban, string $userSuppliedName, User $user): int
     {
@@ -62,6 +77,26 @@ final class AccountNamer implements NamesAccounts
             throw new InvalidAccountNameException(
                 'Account name must contain at least one letter or digit.'
             );
+        }
+
+        // Structural IBAN guard. Mod-97 checksum validation is intentionally
+        // not enforced here — a future ingestion path that funnels
+        // counterparty IBANs from MT940 / CAMT extracts will sometimes carry
+        // already-truncated values that the user still wants to attach a
+        // friendly name to. The shape check catches the common-case
+        // corruption (empty string, single char, lowercase, embedded
+        // whitespace) without rejecting legitimate edge cases.
+        $pattern = sprintf(
+            '/^[A-Z0-9]{%d,%d}$/',
+            self::IBAN_MIN_LENGTH,
+            self::IBAN_MAX_LENGTH,
+        );
+        if (preg_match($pattern, $iban) !== 1) {
+            throw new InvalidAccountNameException(sprintf(
+                'IBAN must be %d..%d uppercase alphanumeric characters.',
+                self::IBAN_MIN_LENGTH,
+                self::IBAN_MAX_LENGTH,
+            ));
         }
 
         $tail = substr($iban, -8);
