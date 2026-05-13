@@ -2,15 +2,16 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Builder;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('statement_summaries', static function (Blueprint $table): void {
+        $this->schema()->create('statement_summaries', static function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
             $table->foreignId('import_run_id')->constrained('import_runs')->cascadeOnDelete();
@@ -42,6 +43,18 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('statement_summaries');
+        $this->schema()->dropIfExists('statement_summaries');
+    }
+
+    private function schema(): Builder
+    {
+        // Anonymous migrations are instantiated by Laravel's migrator with
+        // no constructor arguments, so the schema builder is resolved
+        // from the container at the migration boundary. This is the
+        // standing Laravel-migration exception to the DI-only rule.
+        /** @var DatabaseManager $db */
+        $db = app(DatabaseManager::class);
+
+        return $db->connection($this->getConnection())->getSchemaBuilder();
     }
 };

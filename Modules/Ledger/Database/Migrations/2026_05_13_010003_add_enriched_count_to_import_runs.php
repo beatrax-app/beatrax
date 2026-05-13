@@ -2,23 +2,36 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Builder;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('import_runs', static function (Blueprint $table): void {
+        $this->schema()->table('import_runs', static function (Blueprint $table): void {
             $table->unsignedInteger('enriched_count')->default(0)->after('duplicate_count');
         });
     }
 
     public function down(): void
     {
-        Schema::table('import_runs', static function (Blueprint $table): void {
+        $this->schema()->table('import_runs', static function (Blueprint $table): void {
             $table->dropColumn('enriched_count');
         });
+    }
+
+    private function schema(): Builder
+    {
+        // Anonymous migrations are instantiated by Laravel's migrator with
+        // no constructor arguments, so the schema builder is resolved
+        // from the container at the migration boundary. This is the
+        // standing Laravel-migration exception to the DI-only rule.
+        /** @var DatabaseManager $db */
+        $db = app(DatabaseManager::class);
+
+        return $db->connection($this->getConnection())->getSchemaBuilder();
     }
 };
