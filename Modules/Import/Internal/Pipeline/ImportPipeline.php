@@ -13,6 +13,8 @@ use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
+use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
+use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Throwable;
 
@@ -37,6 +39,8 @@ final class ImportPipeline
         private readonly ParseStage $parse,
         private readonly NormalizeStage $normalize,
         private readonly FingerprintStage $fingerprint,
+        private readonly SourceAdapterRegistry $adapters,
+        private readonly RecordsStatementSummary $statementSummaries,
     ) {}
 
     /**
@@ -50,6 +54,7 @@ final class ImportPipeline
         $canonical = [];
         /** @var array<string, UnknownIban> $unknownIbans */
         $unknownIbans = [];
+        $lastResolvedAccountId = null;
 
         try {
             foreach ($this->parse->run($localPath, $sourceFormat, $accounts) as $source) {
@@ -80,6 +85,7 @@ final class ImportPipeline
 
                 /** @var KnownAccount $resolution */
                 $accountId = $resolution->accountId;
+                $lastResolvedAccountId = $accountId;
 
                 try {
                     $normalized = $this->normalize->run($source, $accountId, $user, $importRunId, $sourceFormat);
@@ -133,10 +139,36 @@ final class ImportPipeline
             );
         }
 
+        $this->persistStatementMetadata($sourceFormat, $importRunId, $lastResolvedAccountId, $user);
+
         return [
             'rows' => $preview,
             'canonical' => $canonical,
             'unknownIbans' => array_values($unknownIbans),
         ];
+    }
+
+    /**
+     * Asks the adapter for any statement-level metadata captured during the
+     * preview parse and persists it via the injected writer. Skipped when
+     * the adapter returns null (CSV path) or when no account was resolved
+     * during the parse loop (all-unknown-IBAN paths can't carry a
+     * statement summary because there is no account_id FK to attach it to).
+     */
+    private function persistStatementMetadata(string $sourceFormat, int $importRunId, ?int $accountId, User $user): void
+    {
+        if ($accountId === null) {
+            return;
+        }
+
+        $metadata = $this->adapters->for($sourceFormat)->statementMetadata();
+        if ($metadata === null) {
+            return;
+        }
+
+        ($this->statementSummaries)(
+            $user,
+            $metadata->withImportRunId($importRunId)->withAccountId($accountId),
+        );
     }
 }

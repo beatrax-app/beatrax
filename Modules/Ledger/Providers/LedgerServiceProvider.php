@@ -10,10 +10,12 @@ use Modules\Ledger\Internal\Console\RederiveFingerprintsCommand;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Ledger\Public\Actions\UpdateTransactionCategory;
+use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Ledger\Public\Services\StatementSummaryWriter;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Ledger\Public\Services\TopCategoriesByPeriodQuery;
 use Modules\Ledger\Public\Services\TransactionListQuery;
@@ -38,6 +40,7 @@ final class LedgerServiceProvider extends ServiceProvider
     {
         $this->app->bind(RecordsTransactions::class, RecordTransactions::class);
         $this->app->bind(UpdatesTransactionCategory::class, UpdateTransactionCategory::class);
+        $this->app->bind(RecordsStatementSummary::class, StatementSummaryWriter::class);
         $this->app->singleton(FingerprintComposer::class);
         $this->app->bind(PeriodQuery::class);
         $this->app->singleton(ThisPeriodAtAGlanceQuery::class);
