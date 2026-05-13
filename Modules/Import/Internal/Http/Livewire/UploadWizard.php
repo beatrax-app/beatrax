@@ -15,10 +15,10 @@ use Modules\Import\Public\Contracts\RunsImports;
 
 /**
  * Step 1 of the wizard. The user picks a source format and uploads a
- * statement file (CSV or CAMT.053 XML). On submit, the file is staged via
- * Livewire's temporary upload directory, the importer runs the preview
- * phase (copying the upload to a stable app-owned path on the way through),
- * and the user is redirected to /imports/{id}/preview.
+ * statement file (CSV, CAMT.053 XML, or MT940). On submit, the file is
+ * staged via Livewire's temporary upload directory, the importer runs the
+ * preview phase (copying the upload to a stable app-owned path on the way
+ * through), and the user is redirected to /imports/{id}/preview.
  *
  * The 10 MB ceiling matches the typical maximum ASN export size; the
  * `messages()` overrides surface user-readable strings for the validation
@@ -38,6 +38,7 @@ final class UploadWizard extends Component
     public const SUPPORTED_FORMATS = [
         'asn-csv',
         'asn-camt053',
+        'asn-mt940',
     ];
 
     public ?TemporaryUploadedFile $file = null;
@@ -50,7 +51,7 @@ final class UploadWizard extends Component
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'max:10240', 'mimes:csv,txt,xml'],
+            'file' => ['required', 'file', 'max:10240', 'mimes:csv,txt,xml,sta,mt940,940'],
             'sourceFormat' => ['required', 'in:'.implode(',', self::SUPPORTED_FORMATS)],
         ];
     }
@@ -62,7 +63,7 @@ final class UploadWizard extends Component
     {
         return [
             'file.max' => 'That file is too large. Drop in an ASN statement export under 10 MB.',
-            'file.mimes' => "That file doesn't look like an ASN export. Drop in the CSV or CAMT.053 XML you downloaded from the ASN portal.",
+            'file.mimes' => "That file doesn't look like an ASN export. Drop in the CSV, MT940 (.sta / .mt940 / .txt), or CAMT.053 XML you downloaded from the ASN portal.",
         ];
     }
 
@@ -115,6 +116,7 @@ final class UploadWizard extends Component
 
         $extension = match ($this->sourceFormat) {
             'asn-camt053' => '.xml',
+            'asn-mt940' => '.sta',
             default => '.csv',
         };
 
