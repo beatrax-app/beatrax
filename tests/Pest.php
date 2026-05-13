@@ -34,6 +34,23 @@ foreach (
     pest()->extend($testCase)->in(__DIR__.'/../'.$module.'/tests/Unit');
 }
 
+/**
+ * Writes the given MT940 body to a fresh tempnam-keyed `.sta` file and
+ * registers a shutdown cleanup so the temp file is removed when the PHP
+ * process exits. Shared by the MT940 lexer / Tag61 / Tag86 / adapter /
+ * import tests.
+ */
+function writeMt940Temp(string $body): string
+{
+    $tmp = tempnam(sys_get_temp_dir(), 'mt940-').'.sta';
+    file_put_contents($tmp, $body);
+    register_shutdown_function(static function () use ($tmp): void {
+        @unlink($tmp);
+    });
+
+    return $tmp;
+}
+
 /*
  * Phase-2 group convention.
  *
