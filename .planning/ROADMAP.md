@@ -57,7 +57,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can upload an ASN MT940 export covering older statement periods and have it ingested via the same pipeline
   3. Importing CAMT.053 and CSV exports that cover the same period produces a single set of transactions — no cross-format duplicates
 **Plans**: 5 plans
-  - [ ] 02-01-PLAN.md — Wave 0: composer require genkgo/camt, anonymised CAMT.053 + MT940 fixtures, phase-2 Pest group registration
+  - [x] 02-01-PLAN.md — Wave 0: composer require genkgo/camt, anonymised CAMT.053 + MT940 fixtures, phase-2 Pest group registration
   - [ ] 02-02-PLAN.md — Wave 1 foundation: FingerprintComposer v3 (drop source_ref, add booked_at) + RederiveFingerprintsCommand + schema migrations + FingerprintDisposition/PendingEnrichment DTOs
   - [ ] 02-03-PLAN.md — Wave 2 CAMT.053 vertical slice: AsnCamt053Adapter via genkgo/camt + HeaderSniffer + statement_summaries + wizard option + end-to-end (Success Criterion #1)
   - [ ] 02-04-PLAN.md — Wave 2 MT940 vertical slice: hand-rolled lexer + Tag61/Tag86 parsers + counterparty cleaner + adapter + wizard option + end-to-end (Success Criterion #2)
@@ -185,8 +185,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation + ASN CSV Vertical Slice | 0/7 | Not started | - |
-| 2. ASN Statement Coverage (CAMT.053 + MT940) | 0/TBD | Not started | - |
+| 1. Foundation + ASN CSV Vertical Slice | 7/7 | Complete | - |
+| 2. ASN Statement Coverage (CAMT.053 + MT940) | 1/5 | In progress | - |
 | 3. ICS Cards + Multi-Currency Display | 0/TBD | Not started | - |
 | 4. PayPal Ingestion + Transfer Detection | 0/TBD | Not started | - |
 | 5. Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition) | 0/TBD | Not started | - |
