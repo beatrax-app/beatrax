@@ -94,11 +94,24 @@ it('aborts when total line count exceeds the line cap', function (): void {
     })->toThrow(InvalidAmountException::class, 'line limit');
 })->group('phase-2');
 
-it('aborts when a single tag buffer exceeds the buffer cap', function (): void {
+it('aborts when a single source line exceeds the per-line buffer cap', function (): void {
+    // 17,000 'A's on a single :86: line — the bounded read should refuse
+    // the line outright before any tag-buffer concatenation runs.
     $body = ':86:'.str_repeat('A', 17_000)."\n";
     $tmp = writeMt940Temp($body);
 
     expect(function () use ($tmp): void {
         iterator_to_array($this->lexer->tokenize($tmp), preserve_keys: false);
-    })->toThrow(InvalidAmountException::class, 'buffer limit');
+    })->toThrow(InvalidAmountException::class, 'line exceeds buffer cap');
+})->group('phase-2');
+
+it('aborts when continuation lines grow the tag buffer past the cap', function (): void {
+    // Each continuation line is under the per-line cap (1,000 chars) but
+    // 20 of them concatenated exceed the 16,384-byte tag buffer cap.
+    $body = ":86:HEAD\n".str_repeat(str_repeat('B', 1000)."\n", 20);
+    $tmp = writeMt940Temp($body);
+
+    expect(function () use ($tmp): void {
+        iterator_to_array($this->lexer->tokenize($tmp), preserve_keys: false);
+    })->toThrow(InvalidAmountException::class, 'tag buffer limit');
 })->group('phase-2');
