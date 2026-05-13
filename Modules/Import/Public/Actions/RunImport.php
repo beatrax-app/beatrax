@@ -134,6 +134,7 @@ final class RunImport implements RunsImports
         $disk = $this->storage->disk(self::STORAGE_DISK);
         $extension = match ($sourceFormat) {
             'asn-camt053' => 'xml',
+            'asn-mt940' => 'sta',
             default => 'csv',
         };
         $relative = sprintf('%s/%d/%s.%s', self::STORAGE_PREFIX, $user->id, $sha, $extension);
