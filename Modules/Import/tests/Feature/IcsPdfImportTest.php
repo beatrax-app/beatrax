@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use Livewire\Livewire;
+use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
 use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
+use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
 
 /*
@@ -186,9 +189,52 @@ it('never persists card-number text into transactions.raw_payload', function ():
 })->group('phase-3');
 
 it('prompts the user to name the ICS Account on the first ICS upload', function (): void {
-    expect(true)->toBe(false, 'scaffold — implemented in plan 03-03');
+    // Remove the seeded ICS Account so this run is the user's first
+    // ICS upload (the seedFixtureUserAndAccount() helper provides an
+    // ICS account for the wire-level tests above; the wizard-naming
+    // path requires the row to be absent).
+    Account::query()
+        ->where('user_id', $this->fixtureUser->id)
+        ->where('kind', 'ics_card')
+        ->delete();
+
+    $importer = $this->app->make(RunsImports::class);
+    $preview = $importer->runFromUpload(
+        $this->tinyPdf,
+        'ics-pdf',
+        $this->fixtureUser,
+        'ics-sample-tiny.pdf',
+    );
+
+    Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
+        ->assertSee('Name your ICS card account.', false)
+        ->assertSee("first time you've imported ICS data", false)
+        ->assertSee('Save name', false)
+        ->assertDontSee('Confirm import', false);
 })->group('phase-3');
 
 it('skips the name-your-account step on subsequent ICS uploads', function (): void {
-    expect(true)->toBe(false, 'scaffold — implemented in plan 03-03');
+    // The seedFixtureUserAndAccount() helper already provided an ICS
+    // Account for the user, so this run mirrors the second-and-later
+    // ICS upload behaviour: the rows preview renders straight away,
+    // no naming prompt.
+    expect(
+        Account::query()
+            ->where('user_id', $this->fixtureUser->id)
+            ->where('kind', 'ics_card')
+            ->exists()
+    )->toBeTrue();
+
+    $importer = $this->app->make(RunsImports::class);
+    $preview = $importer->runFromUpload(
+        $this->tinyPdf,
+        'ics-pdf',
+        $this->fixtureUser,
+        'ics-sample-tiny.pdf',
+    );
+
+    Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
+        ->assertDontSee('Name your ICS card account.', false)
+        ->assertDontSee("first time you've imported ICS data", false)
+        ->assertSee('Confirm import', false);
 })->group('phase-3');
