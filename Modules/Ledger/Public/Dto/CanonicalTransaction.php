@@ -18,6 +18,9 @@ use Spatie\LaravelData\Data;
  */
 final class CanonicalTransaction extends Data
 {
+    /**
+     * @param  array<int|string, mixed>|null  $rawPayload
+     */
     public function __construct(
         public readonly ?int $userId,
         public readonly int $accountId,
@@ -40,6 +43,7 @@ final class CanonicalTransaction extends Data
         public readonly int $importRunId,
         public readonly int $sourceRowIndex,
         public readonly ?string $sourceRef,
+        public readonly ?array $rawPayload = null,
     ) {}
 
     /**
@@ -75,6 +79,7 @@ final class CanonicalTransaction extends Data
             'import_run_id' => $this->importRunId,
             'source_row_index' => $this->sourceRowIndex,
             'source_ref' => $this->sourceRef,
+            'raw_payload' => $this->rawPayload === null ? null : json_encode($this->rawPayload),
             'status' => 'cleared',
         ];
     }

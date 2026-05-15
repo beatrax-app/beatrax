@@ -108,6 +108,7 @@ final class NormalizeStage
             importRunId: $importRunId,
             sourceRowIndex: $source->sourceRowIndex,
             sourceRef: $source->sourceRef,
+            rawPayload: $source->rawPayload === [] ? null : $source->rawPayload,
         );
     }
 }
