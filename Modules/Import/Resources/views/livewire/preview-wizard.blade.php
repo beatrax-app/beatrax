@@ -14,6 +14,37 @@
         <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
             <p>The preview has expired. <a href="/imports/new" class="underline">Re-upload the file</a> to try again.</p>
         </div>
+    @elseif ($needsIcsAccountName)
+        <section class="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-6">
+            <div class="space-y-3">
+                <p class="text-sm font-medium text-slate-900">Name your ICS card account.</p>
+                <p class="text-sm text-slate-500">This is the first time you've imported ICS data. Give this card a name so it shows up consistently across the app.</p>
+                <div class="flex items-end gap-2">
+                    <div class="flex-1 space-y-1">
+                        <label class="block text-xs text-slate-500" for="icsAccountName">Account name</label>
+                        <input
+                            type="text"
+                            id="icsAccountName"
+                            wire:model="icsAccountName"
+                            placeholder="e.g. ICS card"
+                            required
+                            maxlength="80"
+                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                        />
+                        @error('icsAccountName')
+                            <p class="text-xs text-rose-700">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <button
+                        type="button"
+                        wire:click="saveIcsAccountName"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                    >
+                        Save name
+                    </button>
+                </div>
+            </div>
+        </section>
     @else
         @if (count($preview->accountsToName) > 0)
             <section class="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-6">

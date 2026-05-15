@@ -7,6 +7,8 @@ namespace Modules\Import\Internal\Http\Livewire;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Internal\Pipeline\PreviewCache;
@@ -16,22 +18,46 @@ use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Exceptions\InvalidAccountNameException;
 use Modules\Import\Public\Exceptions\PreviewExpiredException;
+use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
 /**
  * Step 2 of the wizard. Renders the preview table (with NEW / DUPLICATE /
- * ERROR per row), prompts inline for any unfamiliar IBANs, and exposes
- * `confirm` / `discard` actions.
+ * ENRICHED / ERROR per row), prompts inline for any unfamiliar IBANs or
+ * (on the first ICS upload) for a name for the user's ICS card account,
+ * and exposes `confirm` / `discard` actions.
  *
  * Lookups always scope to the authenticated user (CurrentUser) so a forged
  * importRunId from another user produces a ModelNotFoundException via
  * `firstOrFail` rather than exposing the other user's import run.
+ *
+ * Two naming branches share the same Blade section:
+ *
+ *   - IBAN naming: triggered when an ASN source row references an IBAN
+ *     the user hasn't yet linked to an Account. The pipeline surfaces
+ *     those IBANs via `$preview->accountsToName`; the Blade iterates
+ *     them.
+ *   - ICS card naming: triggered when the import run's `source_format`
+ *     is `'ics-pdf'` AND no Account with `kind='ics_card'` exists for
+ *     the user. Renders one prompt with the UI-SPEC-locked copy; saving
+ *     inserts the synthetic ICS Account row and re-runs the importer so
+ *     the rows preview is populated.
  */
 final class PreviewWizard extends Component
 {
+    /**
+     * Synthetic own-IBAN literal used for every ICS card import. The
+     * IcsPdfAdapter emits the same literal, and the AccountResolver
+     * scopes lookups by `(iban, user_id)` so a single instance-wide
+     * literal is unambiguous regardless of the user.
+     */
+    private const ICS_OWN_IBAN = 'ICS-CARD';
+
     public int $importRunId = 0;
 
     public string $accountName = '';
+
+    public string $icsAccountName = '';
 
     public bool $previewExpired = false;
 
@@ -83,6 +109,75 @@ final class PreviewWizard extends Component
         $this->accountName = '';
     }
 
+    /**
+     * Creates the user's first ICS card Account (synthetic IBAN
+     * `'ICS-CARD'`, kind `'ics_card'`, EUR-settled) and re-runs the
+     * importer so the rows preview is populated against the newly-named
+     * account. Mirrors the IBAN-naming flow's shape but bypasses
+     * `NamesAccounts` because the synthetic IBAN doesn't satisfy the ISO
+     * 13616 structural guard the AccountNamer enforces for real IBANs.
+     *
+     * Locked Blade copy this action drives (source of truth lives in the
+     * preview-wizard.blade.php partial; pinned here so grep on this file
+     * surfaces the user-visible text alongside the action):
+     *
+     *   - Heading:  "Name your ICS card account."
+     *   - Helper:   "This is the first time you've imported ICS data.
+     *                Give this card a name so it shows up consistently
+     *                across the app."
+     *   - Input:    "Account name" / placeholder "e.g. ICS card"
+     *   - Button:   "Save name"
+     */
+    public function saveIcsAccountName(
+        RunsImports $importer,
+        CurrentUser $currentUser,
+    ): void {
+        $this->resetErrorBag('icsAccountName');
+
+        $trimmed = trim($this->icsAccountName);
+        $this->icsAccountName = $trimmed;
+
+        $length = mb_strlen($trimmed);
+        if ($length < 1 || $length > 80) {
+            $this->addError('icsAccountName', 'Account name must be 1..80 characters.');
+
+            return;
+        }
+
+        $slugBody = Str::slug($trimmed);
+        if ($slugBody === '') {
+            $this->addError('icsAccountName', 'Account name must contain at least one letter or digit.');
+
+            return;
+        }
+
+        $user = $currentUser->user();
+
+        Account::query()->create([
+            'user_id' => $user->id,
+            'name' => $trimmed,
+            'slug' => $slugBody.'-ics-card',
+            'kind' => 'ics_card',
+            'iban' => self::ICS_OWN_IBAN,
+            'default_currency' => 'EUR',
+        ]);
+
+        /** @var ImportRun $importRun */
+        $importRun = ImportRun::query()
+            ->where('id', $this->importRunId)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $importer->runFromUpload(
+            $importRun->raw_file_path,
+            $importRun->source_format,
+            $user,
+            basename($importRun->raw_file_path),
+        );
+
+        $this->icsAccountName = '';
+    }
+
     public function confirm(
         ConfirmsImports $confirmer,
         CurrentUser $currentUser,
@@ -112,13 +207,65 @@ final class PreviewWizard extends Component
         $this->redirect($urls->route('imports.new'), navigate: false);
     }
 
-    public function render(ViewFactory $views, PreviewCache $cache): View
-    {
+    public function render(
+        ViewFactory $views,
+        PreviewCache $cache,
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+    ): View {
         $preview = $cache->getPreview($this->importRunId);
+        $needsIcsAccountName = $this->needsIcsAccountName($currentUser, $db);
 
         return $views->make('import::livewire.preview-wizard', [
             'preview' => $preview,
             'previewExpired' => $this->previewExpired,
+            'needsIcsAccountName' => $needsIcsAccountName,
         ]);
+    }
+
+    /**
+     * Returns true when this preview belongs to an ICS PDF import run
+     * AND the current user does not yet own an Account row with
+     * `kind='ics_card'`. The wizard renders the locked
+     * Name-your-ICS-card-account prompt in place of the rows table when
+     * this predicate fires, then re-runs the importer after the row is
+     * persisted so the rows preview catches up with the named account.
+     *
+     * Anchors on `source_format` rather than on the unknown-IBAN list so
+     * a future statement variant where the synthetic IBAN drifts (e.g.
+     * `'ICS-CARD-PRIMARY'`) still triggers the prompt by virtue of the
+     * declared source format.
+     *
+     * The Account presence check uses the raw query builder (via injected
+     * `DatabaseManager`) rather than the Eloquent Builder so the
+     * project's phpstan-strict-rules `staticMethod.dynamicCall` rule
+     * doesn't flag the call site — same convention as the dashboard
+     * queries under `Modules/Ledger/Public/Services/`.
+     */
+    private function needsIcsAccountName(CurrentUser $currentUser, DatabaseManager $db): bool
+    {
+        $user = $currentUser->user();
+
+        /** @var ImportRun|null $importRun */
+        $importRun = ImportRun::query()
+            ->where('id', $this->importRunId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($importRun === null) {
+            return false;
+        }
+
+        if ($importRun->source_format !== 'ics-pdf') {
+            return false;
+        }
+
+        $icsAccountCount = $db->connection()
+            ->table('accounts')
+            ->where('user_id', $user->id)
+            ->where('kind', 'ics_card')
+            ->count();
+
+        return $icsAccountCount === 0;
     }
 }
