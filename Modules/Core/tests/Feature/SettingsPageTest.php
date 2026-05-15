@@ -2,33 +2,98 @@
 
 declare(strict_types=1);
 
+use Livewire\Livewire;
+use Modules\Core\Internal\Http\Livewire\SettingsPage;
+use Modules\Core\Models\User;
+
 /*
- * Failing scaffolds for the new minimal Settings page. Driven Green by
- * plan 03-04. Covers MC-02's storage half (the round-trip of
- * `default_currency_view` into a Livewire mode) and discharges Phase
- * 1's deferred `period_start_day` Settings surface.
+ * Feature tests for the minimal /settings page (plan 03-04). Covers
+ * MC-02's storage half (the round-trip of `default_currency_view` into
+ * the users row) and discharges Phase 1's deferred `period_start_day`
+ * Settings surface. Plan 03-05 owns the consumer side (TransactionsList
+ * default-mode fallback).
  */
 
+beforeEach(function (): void {
+    $this->user = User::create([
+        'email' => 'wessel@example.com',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+    $this->actingAs($this->user);
+});
+
 it('renders the Settings page with the user current preferences pre-filled', function (): void {
-    expect(true)->toBe(false, 'scaffold — implemented in plan 03-04');
+    $this->user->update([
+        'default_currency_view' => 'original',
+        'period_start_day' => 25,
+    ]);
+
+    Livewire::test(SettingsPage::class)
+        ->assertSet('defaultCurrencyView', 'original')
+        ->assertSet('periodStartDay', 25)
+        ->assertSee('Settings')
+        ->assertSee('Save settings');
 })->group('phase-3');
 
 it('persists default_currency_view when changed via the toggle', function (): void {
-    expect(true)->toBe(false, 'scaffold — implemented in plan 03-04');
+    Livewire::test(SettingsPage::class)
+        ->set('defaultCurrencyView', 'original')
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertSet('saved', true);
+
+    expect($this->user->fresh()->default_currency_view)->toBe('original');
 })->group('phase-3');
 
 it('persists period_start_day when changed', function (): void {
-    expect(true)->toBe(false, 'scaffold — implemented in plan 03-04');
+    Livewire::test(SettingsPage::class)
+        ->set('periodStartDay', 25)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($this->user->fresh()->period_start_day)->toBe(25);
 })->group('phase-3');
 
 it('rejects period_start_day outside 1..28', function (): void {
-    expect(true)->toBe(false, 'scaffold — implemented in plan 03-04');
+    $low = Livewire::test(SettingsPage::class)
+        ->set('periodStartDay', 0)
+        ->call('save')
+        ->assertHasErrors(['periodStartDay']);
+
+    expect($low->errors()->first('periodStartDay'))->toBe('Choose a day from 1 to 28.');
+
+    $high = Livewire::test(SettingsPage::class)
+        ->set('periodStartDay', 29)
+        ->call('save')
+        ->assertHasErrors(['periodStartDay']);
+
+    expect($high->errors()->first('periodStartDay'))->toBe('Choose a day from 1 to 28.');
+
+    // Database row stays at the beforeEach default; nothing was persisted.
+    expect($this->user->fresh()->period_start_day)->toBe(1);
 })->group('phase-3');
 
 it('rejects default_currency_view outside {eur_only, original}', function (): void {
-    expect(true)->toBe(false, 'scaffold — implemented in plan 03-04');
+    $component = Livewire::test(SettingsPage::class)
+        ->set('defaultCurrencyView', 'garbage')
+        ->call('save')
+        ->assertHasErrors(['defaultCurrencyView']);
+
+    expect($component->errors()->first('defaultCurrencyView'))->toBe('Pick one of the available options.');
+
+    expect($this->user->fresh()->default_currency_view)->toBe('eur_only');
 })->group('phase-3');
 
-it('round-trips default_currency_view = original into the TransactionsList default mode', function (): void {
-    expect(true)->toBe(false, 'scaffold — implemented in plan 03-04');
+it('round-trips default_currency_view = original into the user row', function (): void {
+    Livewire::test(SettingsPage::class)
+        ->set('defaultCurrencyView', 'original')
+        ->set('periodStartDay', 25)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $this->user->refresh();
+    expect($this->user->default_currency_view)->toBe('original');
+    expect($this->user->period_start_day)->toBe(25);
 })->group('phase-3');
