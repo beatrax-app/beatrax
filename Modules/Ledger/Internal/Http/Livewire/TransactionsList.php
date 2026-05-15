@@ -70,12 +70,6 @@ final class TransactionsList extends Component
         $this->cursorPostedAt = $nextCursorPostedAt;
     }
 
-    public function reset_(): void
-    {
-        $this->cursorId = null;
-        $this->cursorPostedAt = null;
-    }
-
     public function render(
         CurrentUser $currentUser,
         TransactionListQuery $listQuery,
