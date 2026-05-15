@@ -15,6 +15,14 @@ use Spatie\LaravelData\Data;
  * Holds a Money value object rather than a raw integer + currency string —
  * keeps the rendering layer one method call away from a typed amount and
  * matches the brick/money contract the rest of the codebase already uses.
+ *
+ * The optional `secondaryAmount` carries the settled-EUR amount when this
+ * row is rendered in original-currency mode AND the native currency differs
+ * from the settled currency — drives the two-line stack on the transactions
+ * list (native primary line + settled secondary line). For EUR-native rows
+ * it stays null so the rendering layer collapses to a single line; in
+ * EUR-only mode (currency filter supplied) it is null on every row because
+ * the primary amount already carries the settled-EUR pair.
  */
 final class TransactionRowDto extends Data
 {
@@ -25,5 +33,6 @@ final class TransactionRowDto extends Data
         public readonly ?int $categoryId,
         public readonly ?string $categoryName,
         public readonly Money $amount,
+        public readonly ?Money $secondaryAmount = null,
     ) {}
 }
