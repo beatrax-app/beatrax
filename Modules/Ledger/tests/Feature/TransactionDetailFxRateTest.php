@@ -7,14 +7,10 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Models\Account;
 
 /*
- * Feature tests for the `/transactions/{id}` detail-page FX rate
- * surface. Covers UI-06 detail half — the "Effective rate" `<dl>`
- * row and the "Includes any ICS markup." helper text below it.
- *
- * The detail page renders a calm-aesthetic two-column metadata
- * block; the FX-rate row is conditional on `fx_rate_used` being
- * non-null. Cross-user requests resolve to 404 in mount() before
- * any row data reaches the view.
+ * Feature tests for the `/transactions/{id}` detail-page FX-rate row:
+ * the "Effective rate" `<dl>` line conditional on `fx_rate_used` being
+ * non-null, the three-decimal display format, the "Includes any ICS
+ * markup." helper text, and the 404 invariant for cross-user lookups.
  */
 
 beforeEach(function (): void {

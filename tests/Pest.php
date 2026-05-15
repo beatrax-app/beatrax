@@ -56,36 +56,3 @@ function writeMt940Temp(string $body): string
 
     return $tmp;
 }
-
-/*
- * Phase-2 group convention.
- *
- * There is NO global registration here — the `phase-2` group is created
- * implicitly by tests chaining ->group('phase-2') on each it(...) call
- * (see e.g. FingerprintComposerV3Test, AsnCamt053AdapterTest, etc.).
- *
- * The focused dev loop is:
- *     vendor/bin/pest --group=phase-2 --bail
- *
- * If a Phase 2 test forgets the ->group('phase-2') chain, the focused
- * run will silently skip it — review individual test files when in
- * doubt, not this bootstrap.
- */
-
-/*
- * Phase-3 group convention.
- *
- * Same shape as Phase 2: no global registration here — the `phase-3`
- * group is created implicitly by tests chaining ->group('phase-3') on
- * each it(...) call (ICS PDF adapter, ICS PDF extractor, ICS amount /
- * date parsers, ICS import wire-level, Settings page round-trip, the
- * currency-view toggle / dashboard / detail surfaces in Ledger, plus
- * the repo-wide AnonymisedFixtureSweep guard).
- *
- * The focused dev loop is:
- *     vendor/bin/pest --group=phase-3 --bail
- *
- * If a Phase 3 test forgets the ->group('phase-3') chain, the focused
- * run will silently skip it — review individual test files when in
- * doubt, not this bootstrap.
- */

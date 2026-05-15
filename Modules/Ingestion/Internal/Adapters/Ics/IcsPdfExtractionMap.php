@@ -13,9 +13,8 @@ namespace Modules\Ingestion\Internal\Adapters\Ics;
  * Token shapes are revolving-credit-statement nomenclature
  * (`Vorig openstaand saldo` / `Totaal ontvangen betalingen` /
  * `Totaal nieuwe uitgaven` / `Nieuw openstaand saldo` /
- * `Bestedingslimiet` / `Minimaal te betalen bedrag`), not the
- * current-account nomenclature an earlier draft of the parser
- * anticipated.
+ * `Bestedingslimiet` / `Minimaal te betalen bedrag`) — what the Mijn
+ * ICS consumer portal emits on real statements.
  */
 final class IcsPdfExtractionMap
 {

@@ -1,10 +1,10 @@
 # ICS PDF — tiny synthetic fixture
 
 `ics-sample-tiny.pdf` is a deterministically-generated, ~849-byte
-synthetic PDF used by `tests/Contracts/IdempotencyContractTest.php`
-(extended in plan 03-02) to exercise the wire-level re-import path
-through the real `pdftotext` binary without depending on the human-
-provided raw export under `local/ics/`.
+synthetic PDF used by `tests/Contracts/IdempotencyContractTest.php` to
+exercise the wire-level re-import path through the real `pdftotext`
+binary without depending on the human-provided raw export under
+`local/ics/`.
 
 NOT a real ICS export. The byte content is hand-crafted PDF 1.4 — one
 Catalog, one Pages, one Page (Letter), one Type1 Helvetica font, one
@@ -24,19 +24,16 @@ generator). Open the script for the full hand-crafted PDF byte
 sequence; the only "magic" is the line offsets table the `xref`
 section needs.
 
-## Deviation note — generator choice
+## Generator choice
 
-The plan's primary path was `cupsfilter` (ships with macOS), but
-`cupsfilter` on this host produces ~16–18 KB output even for a
-six-line input — the Cairo / CoreGraphics pipeline embeds a Type1
-subsetted font + a /MediaBox /CropBox /BleedBox /TrimBox /ArtBox
-header that alone exceeds the 10 KB budget. The plan's documented
-fallback ("hand-crafted ~400-byte PDF byte string") is the chosen
-path. The output is well under the 10 KB acceptance gate.
-
-The fallback generator lives at `scripts/generate_tiny_ics_pdf.php`.
-Any future contributor can regenerate the fixture from scratch by
-running the script — no system-level tools required.
+A hand-crafted minimal PDF 1.4 byte stream is used in preference to
+`cupsfilter`, which on macOS produces ~16–18 KB output even for a
+six-line input (the Cairo / CoreGraphics pipeline embeds a Type1
+subsetted font + multiple bounding-box headers that already exceed a
+small budget). The committed generator at
+`scripts/generate_tiny_ics_pdf.php` produces a fixture well under 1 KB
+and requires no system-level tools, so any contributor can regenerate
+the fixture from scratch with just `php`.
 
 ## Synthetic content
 
@@ -53,20 +50,17 @@ Nieuw openstaand saldo EUR 1,00
 
 Load-bearing literals:
 
-- `SYNTHETIC` — the Wave 2 contract test asserts the parsed
-  transaction's merchant string contains this token.
+- `SYNTHETIC` — the contract test asserts the parsed transaction's
+  merchant string contains this token.
 - `KAARTHOUDER`, `****-****-****-XXXX` — canonical anonymisation
-  placeholders. The Task 7 sweep test confirms they survive a round
-  trip through `pdftotext`.
+  placeholders. The repo-wide anonymised-fixture sweep test confirms
+  they survive a round trip through `pdftotext`.
 - `Vorig openstaand saldo`, `Totaal ontvangen betalingen`,
   `Totaal nieuwe uitgaven`, `Nieuw openstaand saldo` — empirical
-  statement-summary anchor tokens (sourced from
-  `ics-sample-1.md`'s "Statement summary tokens (D-51)" section).
-  The CONTEXT.md aspirational tokens (`Periode`, `Beginsaldo`,
-  `Eindsaldo`, `Totaal nieuw saldo`, `Totaal betaald`) do NOT appear
-  in real Mijn ICS consumer-portal exports — this synthetic fixture
-  uses the empirical token set so the Wave 2 wire-level contract test
-  stays internally consistent with `ics-sample-1.txt`.
+  statement-summary anchor tokens (sourced from `ics-sample-1.md`'s
+  statement-summary tokens section). The synthetic fixture uses the
+  same token set as `ics-sample-1.txt` so the wire-level contract
+  test stays internally consistent with the empirical fixture.
 
 ## Reproducibility
 

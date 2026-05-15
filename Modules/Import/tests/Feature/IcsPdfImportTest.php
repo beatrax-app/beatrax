@@ -14,10 +14,11 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
 
 /*
- * Wire-level coverage for the ICS PDF import path. The first seven
- * cases are driven Green by plan 03-02 (adapter + extractor +
- * registry wiring); the trailing two ("name your account" wizard
- * branches) stay Red — they belong to plan 03-03's wizard-UI work.
+ * Wire-level coverage for the ICS PDF import path: idempotency on
+ * re-import (both SHA-identical and SHA-different-but-content-identical
+ * shapes), persistence of native + settled + fx_rate_used for foreign-
+ * currency rows, raw_payload preservation with card-number scrubbing,
+ * and the first-time "name your ICS card account" wizard branch.
  */
 
 beforeEach(function (): void {
