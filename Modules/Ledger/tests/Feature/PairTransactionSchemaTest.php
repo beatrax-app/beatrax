@@ -12,7 +12,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Tests\TestCase;
 
 /*
- * Schema-shape + DTO gate for the Wave 2 pair-transaction backbone:
+ * Schema-shape + DTO gate for the pair-transaction backbone:
  *
  *   1. transactions.pair_transaction_id self-FK exists with ON DELETE SET NULL
  *   2. pair_transaction_id defaults to NULL

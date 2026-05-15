@@ -10,13 +10,12 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 
 /*
- * Coverage for the three-pass PayPal Transaction-ID rollup walker.
+ * Coverage for the three-pass PayPal Transaction-ID rollup walker. The
+ * walker folds a flat list of PayPal Activity Download rows (parents +
+ * child-fee + child-fx siblings) into one SourceTransactionDto per
+ * logical payment.
  *
- * The walker is the headline complexity of Phase 4 Wave 1: it folds a
- * flat list of PayPal Activity Download rows (parents + child-fee +
- * child-fx siblings) into one SourceTransactionDto per logical payment.
- * Empirical chain shapes sourced from Wave 0 findings (04-WAVE-0-FINDINGS.md
- * sections c, d, e):
+ * Empirical chain shapes covered:
  *
  *   - Single-level depth — parents have children, children never have
  *     grandchildren
@@ -25,9 +24,9 @@ use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
  *     + USD FX, all sharing the parent's Transaction ID via Reference
  *     Txn ID)
  *
- * Pitfall 2 safety net is tested explicitly: when a parent USD + EUR FX
- * pair share a Reference Txn ID, the walker MUST identify the foreign
- * leg by `Currency != 'EUR'` rather than by row order.
+ * FX-direction safety net is tested explicitly: when a parent USD +
+ * EUR FX pair share a Reference Txn ID, the walker MUST identify the
+ * foreign leg by `Currency != 'EUR'` rather than by row order.
  */
 
 beforeEach(function (): void {
@@ -96,7 +95,7 @@ it('rolls up a single flat parent payment row into one canonical DTO', function 
 })->group('phase-4');
 
 it('folds a 4-row USD currency-conversion chain into ONE DTO with the dual-amount pair populated', function (): void {
-    // Empirical Wave 0 chain shape from paypal-sample-1.csv lines 28-29 + 84-85:
+    // Empirical chain shape from paypal-sample-1.csv lines 28-29 + 84-85:
     // - parent USD -10,46
     // - Bankstorting EUR  9,27 (funding-source)
     // - EUR Algemene valutaomrekening -9,27 (settled leg)
@@ -141,9 +140,9 @@ it('folds a 4-row USD currency-conversion chain into ONE DTO with the dual-amoun
         'Reference Txn ID' => 'O-00000000000000034',
     ]);
 
-    // Reorder the rows so the parent does NOT come first — this is the
-    // Pitfall 2 safety net: the walker MUST identify the foreign leg via
-    // Currency != 'EUR', not by row order.
+    // Reorder the rows so the parent does NOT come first — the
+    // FX-direction safety net: the walker MUST identify the foreign
+    // leg via Currency != 'EUR', not by row order.
     $rows = [$funding, $fxEur, $parent, $fxUsd];
 
     $dtos = $this->rollup->rollup($rows, 'nl');
@@ -319,12 +318,11 @@ it('drops a malformed FX child but still emits the parent DTO without the FX pai
     expect($this->rollup->skippedMalformedRowCount())->toBe(1);
 })->group('phase-4');
 
-it('produces 41 logical-payment groups when given the full Wave 0 fixture rows', function (): void {
+it('produces 41 logical-payment groups when given the full redacted fixture rows', function (): void {
     // End-to-end: load the 86-row redacted fixture and assert the
-    // walker collapses it into exactly 41 canonical DTOs — the number
-    // Wave 0 reported (04-WAVE-0-FINDINGS.md section c "Reference Txn
-    // ID chain shapes": 39 parents w/ 1 child + 2 parents w/ 3 children
-    // = 41 distinct logical-payment groups).
+    // walker collapses it into exactly 41 canonical DTOs (39 parents
+    // with 1 child each + 2 parents with 3 children = 41 distinct
+    // logical-payment groups).
     $fixture = base_path('Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv');
     $handle = fopen($fixture, 'r');
     if ($handle === false) {
@@ -358,16 +356,11 @@ it('produces 41 logical-payment groups when given the full Wave 0 fixture rows',
 
     expect($dtos)->toHaveCount(41);
     expect($this->rollup->skippedHoldCount())->toBe(0);
-    // The fixture's 40 orphan-ref rows are TREATED as standalone parents
-    // by the walker — only counts as "orphan" if the row is a CHILD-classified
-    // type pointing at an absent parent. In the fixture every orphan-ref
-    // row IS a child-classified Bankstorting / Algemene valutaomrekening /
-    // Algemene kaartstorting row whose RefId points to a parent inside the
-    // file. Wave 0 reports the only true orphans appear inside child rows
-    // whose RefId is to a parent outside this period; section (c) confirms
-    // 40 rows point OUTSIDE the file — most are parent rows whose RefId
-    // is a billing-agreement ID. The walker's contract is: a row whose
-    // RefId is absent AND the row is classified parent stays a parent;
-    // a row whose RefId is absent AND the row is classified child becomes
-    // a standalone parent and gets counted as orphan.
+    // The walker's contract: a row whose RefId is absent (or points
+    // outside the file) AND the row is classified parent stays a
+    // parent; a row whose RefId points outside the file AND the row is
+    // classified child becomes a standalone parent and is counted via
+    // orphanChildCount(). In this fixture every child-classified row's
+    // RefId points to a parent inside the file, so the orphan-child
+    // counter is zero.
 })->group('phase-4');

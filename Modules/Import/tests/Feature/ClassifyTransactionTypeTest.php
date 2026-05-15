@@ -9,22 +9,22 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /*
- * Coverage for the Wave 2 ClassifyTransactionType pipeline stage.
+ * Coverage for the ClassifyTransactionType pipeline stage.
  *
- * The stage decouples typing from pairing (D-76 / Pitfall 3):
+ * The stage decouples typing from pairing:
  *
  *   1. Refund / fee / adjustment rows preserve their pre-classified type
  *   2. counterparty_iban matching one of the user's OWN Account.iban rows
  *      flips the type to transfer_out (negative) or transfer_in (positive)
  *   3. PayPal-specific source-format event-type map: parent event type
  *      resolves via PaypalCsvEventTypeMap::transactionType()
- *   4. Subtractive income detector (D-77): positive amount NOT classified
- *      as transfer/refund/fee becomes income
+ *   4. Subtractive income rule: positive amount NOT classified as
+ *      transfer/refund/fee becomes income
  *   5. Default: NormalizeStage's amount-sign default survives unchanged
  *
- * Pitfall 3 invariant: the stage NEVER queries the transactions table —
- * the grep gate in this file asserts zero `Transaction::` occurrences in
- * the stage source (comment-stripped).
+ * Listener-purity invariant: the stage NEVER queries the transactions
+ * table — the grep gate in this file asserts zero `Transaction::`
+ * occurrences in the stage source (comment-stripped).
  */
 
 beforeEach(function (): void {
@@ -119,7 +119,7 @@ function classifyCanonical(array $overrides = []): CanonicalTransaction
     );
 }
 
-it('flips a positive non-transfer row to income (D-77 subtractive rule)', function (): void {
+it('flips a positive non-transfer row to income (subtractive income rule)', function (): void {
     $tx = classifyCanonical([
         'accountId' => $this->asnAccount->id,
         'type' => 'income',  // NormalizeStage's positive-amount default
@@ -281,7 +281,7 @@ it('does not flip across users — counterparty matches a different user\'s acco
     expect($result->type)->toBe('expense');
 });
 
-it('never queries the transactions table from within ClassifyTransactionType (Pitfall 3 grep gate)', function (): void {
+it('never queries the transactions table from within ClassifyTransactionType (listener-purity grep gate)', function (): void {
     $stagePath = realpath(__DIR__.'/../../Internal/Pipeline/Stages/ClassifyTransactionType.php');
     expect($stagePath)->toBeString();
     /** @var string $stagePath */

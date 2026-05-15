@@ -9,12 +9,12 @@ use Modules\Ingestion\Public\Exceptions\InvalidDateException;
 /*
  * Coverage for the PayPal date parser.
  *
- * Empirical format sourced from the Wave 0 fixture at
- * Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv — every
- * Datum cell is rendered as M/D/YYYY (US numeric date), even though the
- * surrounding amount cells use NL-locale comma decimals. Examples from
- * the fixture: 4/1/2026, 4/19/2026, 5/8/2026. See paypal-sample-1.md
- * "Empirical column layout" section.
+ * Every Datum cell in the PayPal Activity Download is rendered as
+ * M/D/YYYY (US numeric date), even though the surrounding amount cells
+ * use NL-locale comma decimals. Representative values from the
+ * redacted fixture at
+ * Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv: 4/1/2026,
+ * 4/19/2026, 5/8/2026.
  *
  * ISO 8601 (yyyy-mm-dd) is accepted as a forward-compatibility fallback
  * for the case where a future PayPal export shifts to that shape; if it

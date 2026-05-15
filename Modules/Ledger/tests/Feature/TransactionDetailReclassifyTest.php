@@ -9,11 +9,11 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 
 /*
- * Feature tests for Wave 3's manual reclassify action on
- * `/transactions/{id}` (D-78). The Livewire `reclassify` action
- * owns the user-override path: single-click type change, atomic
- * break-pair invariant on non-transfer reclassify, and cross-user
- * 404 safety inherited from the existing Phase 3-07 detail page.
+ * Feature tests for the manual reclassify action on
+ * `/transactions/{id}`. The Livewire `reclassify` action owns the
+ * user-override path: single-click type change, atomic break-pair
+ * invariant on non-transfer reclassify, and cross-user 404 safety
+ * inherited from the detail page's existing user-scoping.
  */
 
 beforeEach(function (): void {
@@ -148,7 +148,7 @@ it('crossUser404 — User B cannot reclassify User A\'s transaction', function (
 
     // The detail-page HTTP route itself must return 404 for a cross-user
     // request — this is the canonical user-facing invariant that mirrors
-    // the Phase 3-07 cross-user test on the same detail page surface.
+    // the existing cross-user test on the same detail page surface.
     $this->get(route('transactions.show', $tx->id))->assertStatus(404);
 
     // Defence-in-depth at the action layer: mount() refuses to seat the
