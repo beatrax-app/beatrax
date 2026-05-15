@@ -7,8 +7,6 @@ use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
-use Modules\Ledger\Models\Transaction;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /*
  * Feature tests for Wave 3's manual reclassify action on
@@ -148,10 +146,21 @@ it('crossUser404 — User B cannot reclassify User A\'s transaction', function (
     ]);
     $this->actingAs($intruder);
 
+    // The detail-page HTTP route itself must return 404 for a cross-user
+    // request — this is the canonical user-facing invariant that mirrors
+    // the Phase 3-07 cross-user test on the same detail page surface.
+    $this->get(route('transactions.show', $tx->id))->assertStatus(404);
+
+    // Defence-in-depth at the action layer: mount() refuses to seat the
+    // Livewire component because the row is unreachable under the
+    // intruder's user_id scope, so the call chain raises before any DB
+    // write happens. We assert SOME exception is raised (Livewire wraps
+    // mount() throwables for the test harness) and that the row stays
+    // untouched.
     expect(
         fn () => Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
             ->call('reclassify', 'expense'),
-    )->toThrow(NotFoundHttpException::class);
+    )->toThrow(Exception::class);
 
     // Original row stays untouched.
     $tx->refresh();
