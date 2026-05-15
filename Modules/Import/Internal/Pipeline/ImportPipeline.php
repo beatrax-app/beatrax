@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Import\Internal\Pipeline;
 
 use Modules\Core\Models\User;
+use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Internal\Pipeline\Stages\NormalizeStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
@@ -44,6 +45,7 @@ final class ImportPipeline
     public function __construct(
         private readonly ParseStage $parse,
         private readonly NormalizeStage $normalize,
+        private readonly ClassifyTransactionType $classifier,
         private readonly FingerprintStage $fingerprint,
         private readonly SourceAdapterRegistry $adapters,
         private readonly RecordsStatementSummary $statementSummaries,
@@ -97,6 +99,7 @@ final class ImportPipeline
 
                 try {
                     $normalized = $this->normalize->run($source, $accountId, $user, $importRunId, $sourceFormat);
+                    $normalized = $this->classifier->run($normalized, $user);
                 } catch (Throwable $e) {
                     $preview[] = new PreviewRowDto(
                         rowIndex: $source->sourceRowIndex,
