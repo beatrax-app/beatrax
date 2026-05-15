@@ -47,7 +47,7 @@ final class CanonicalTransaction extends Data
     ) {}
 
     /**
-     * Immutable clone-with-override for `type`. The Wave 2
+     * Immutable clone-with-override for `type`. The
      * ClassifyTransactionType pipeline stage uses this to flip the
      * NormalizeStage-derived default (`expense` / `income`) to the
      * transfer / refund / fee variants required by the pair-detection

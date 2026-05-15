@@ -14,15 +14,14 @@ namespace Modules\Ingestion\Internal\Adapters\Paypal;
  * signature (a discriminator subset), while this map owns the full
  * canonical-name → header-cell table — two distinct responsibilities.
  *
- * Empirical column shape locked in `paypal-sample-1.md` "Empirical
- * column layout" section. Wave 0 surfaced an NL-locale export only; an
- * EN-locale entry lands the moment a second-language sample appears.
+ * Currently registered locales: `nl`. An EN-locale entry lands the
+ * moment a second-language sample is available.
  *
- * `counterpartyIban` maps to the `Bankrekening` column, which the Wave 0
- * fixture surfaced as empty on every row (the funding-source child rows
- * carry no IBAN). Resolving the cell still returns the empty string,
- * matching the column shape — the rollup walker is responsible for
- * promoting that to `null` before constructing the SourceTransactionDto.
+ * `counterpartyIban` maps to the `Bankrekening` column, which the NL
+ * export ships as empty on every row (the funding-source child rows
+ * carry no IBAN). Resolving the cell returns the empty string, matching
+ * the column shape — the rollup walker is responsible for promoting
+ * that to `null` before constructing the SourceTransactionDto.
  */
 final class PaypalCsvColumnMap
 {

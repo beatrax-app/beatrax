@@ -21,11 +21,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * conditional "Effective rate" row that appears only when the
  * transaction carries a non-null `fx_rate_used` value.
  *
- * Adds the Wave-3 Reclassify control: a single-click type override
- * that atomically breaks the `pair_transaction_id` relationship on
- * both sides when the new type is non-transfer (D-78). Transfer-to-
- * transfer reclassifies preserve the pair — that path remains a
- * one-sided type swap.
+ * Renders the Reclassify control: a single-click type override that
+ * atomically breaks the `pair_transaction_id` relationship on both
+ * sides when the new type is non-transfer. Transfer-to-transfer
+ * reclassifies preserve the pair — that path remains a one-sided type
+ * swap.
  *
  * Multi-user readiness: every Eloquent query carries an explicit
  * `where('user_id', $currentUser->user()->id)` predicate. A request
@@ -87,7 +87,7 @@ final class TransactionDetail extends Component
 
     /**
      * Manually override the transaction's `type`. The user-facing entry
-     * point for Wave 3's reclassify action (D-78).
+     * point for the reclassify action.
      *
      * Allow-listed via `Transaction::TYPES` — any other value raises
      * `InvalidArgumentException` before any DB read. Same-user scoping

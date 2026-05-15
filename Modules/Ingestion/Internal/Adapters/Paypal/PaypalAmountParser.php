@@ -8,12 +8,12 @@ use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 /**
  * Pure parser that converts a PayPal NL-locale amount cell into signed
- * integer minor units. The empirical Activity Download export this
- * adapter targets renders amounts as comma-decimal with two fractional
- * digits and an optional single leading sign — e.g. "-9,27", "10,46",
- * "0,00". No visible thousands separator appears in the single-month
- * Wave 0 fixture, so this parser stays strict on the simpler
- * comma-decimal shape.
+ * integer minor units. The Activity Download export this adapter
+ * targets renders amounts as comma-decimal with two fractional digits
+ * and an optional single leading sign — e.g. "-9,27", "10,46", "0,00".
+ * No visible thousands separator appears in observed single-month
+ * exports, so this parser stays strict on the simpler comma-decimal
+ * shape.
  *
  * The parser is integer-only by construction: the regex captures the
  * whole and fractional groups and combines them via
@@ -26,10 +26,10 @@ use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
  * accepting them would silently merge accidentally-concatenated cells.
  *
  * US-locale period-decimal (`"12.99"`) is rejected. PayPal exports
- * under an EN-locale account would carry that shape; if and when such
- * an account first lands, a second profile-aware parser arm will be
- * added rather than blanket-accepting both separator conventions and
- * losing the loud-failure property.
+ * under an EN-locale account would carry that shape; a second profile-
+ * aware parser arm will be added once such an account is observed,
+ * rather than blanket-accepting both separator conventions and losing
+ * the loud-failure property.
  */
 final class PaypalAmountParser
 {
