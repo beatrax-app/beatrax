@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 
 /**
@@ -151,7 +152,10 @@ final class PaypalTransactionRollup
         }
 
         // Pass 3: fold each parent + its inside-file children into ONE
-        // SourceTransactionDto.
+        // SourceTransactionDto. A malformed amount cell on the parent
+        // means we cannot construct a sensible DTO — drop the whole
+        // logical-payment group and bump the malformed-row counter so
+        // the wizard's audit panel can surface the skip.
         /** @var list<SourceTransactionDto> $rolledUp */
         $rolledUp = [];
         $canonicalIndex = 0;
@@ -160,7 +164,13 @@ final class PaypalTransactionRollup
             $parentTxnId = $this->columns->value('transactionId', $language, $parentRow) ?? '';
             $children = $childrenByParent[$parentTxnId] ?? [];
 
-            $rolledUp[] = $this->buildDto($parentRow, $children, $language, $canonicalIndex);
+            try {
+                $rolledUp[] = $this->buildDto($parentRow, $children, $language, $canonicalIndex);
+            } catch (InvalidAmountException) {
+                $this->skippedMalformedRowCount++;
+
+                continue;
+            }
             $canonicalIndex++;
         }
 
@@ -216,7 +226,17 @@ final class PaypalTransactionRollup
 
             $childCurrency = $this->columns->value('currency', $language, $childRow) ?? 'EUR';
             $childGross = $this->columns->value('gross', $language, $childRow) ?? '0,00';
-            $childAmountMinor = $this->amounts->parseMinor($childGross);
+            try {
+                $childAmountMinor = $this->amounts->parseMinor($childGross);
+            } catch (InvalidAmountException) {
+                // A malformed child amount cell drops just the FX child —
+                // the parent still emits a canonical DTO without the FX
+                // pair filled in. Counted via skippedMalformedRowCount so
+                // the audit signal stays visible.
+                $this->skippedMalformedRowCount++;
+
+                continue;
+            }
 
             if ($childCurrency === 'EUR' && $nativeCurrency !== 'EUR') {
                 // child = EUR settled leg; parent already holds the
