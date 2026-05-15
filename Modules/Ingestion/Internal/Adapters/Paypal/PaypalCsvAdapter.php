@@ -17,13 +17,12 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
 /**
  * Streaming parser for the PayPal "Activity Download" CSV export.
  *
- * The adapter wires the Wave 0 language profile + event-type map +
- * locale-specific parsers into a single Generator that yields one
- * canonical `SourceTransactionDto` per logical PayPal payment. PayPal
- * CSV is an event log (parent + fee + currency-conversion + funding-
- * source siblings), not a transaction log; the rollup walker folds
- * those event rows into the per-payment canonical shape per D-61 /
- * D-62 / D-63 / D-65.
+ * The adapter wires the language profile + event-type map + locale-
+ * specific parsers into a single Generator that yields one canonical
+ * `SourceTransactionDto` per logical PayPal payment. PayPal CSV is an
+ * event log (parent + fee + currency-conversion + funding-source
+ * siblings), not a transaction log; the rollup walker folds those event
+ * rows into the per-payment canonical shape.
  *
  * Pipeline:
  *
@@ -39,18 +38,18 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
  *   4. PaypalTransactionRollup folds raw rows into canonical DTOs; the
  *      walker exposes hold-skip count + orphan-child count for audit.
  *   5. After iteration, statementMetadata() exposes a StatementSummary
- *      row carrying the period dates (min/max bookedAt), reconciliation
- *      gate (sum(net) vs opening/closing), and walker counters.
+ *      row carrying the period dates (min/max bookedAt), net-sum total,
+ *      and walker counters (skippedHoldCount, orphanChildCount).
  *
- * Synthetic-IBAN account modeling (D-66): every PayPal row carries
+ * Synthetic-IBAN account modeling: every PayPal row carries
  * `ownIban = 'PAYPAL'`. The AccountResolver scopes lookups by
  * (iban, user_id), so one literal works across all users.
  *
- * Reconciliation gate (D-60 g): when the CSV has no explicit
- * opening/closing balance rows (the empirical NL Activity Download
- * shape), the adapter computes `opening = closing - sum(net)` so the
- * gate trivially reports `'ok'`. Real exports with an unsettled balance
- * surface non-zero values and the wizard renders the soft-warning panel.
+ * The PayPal Activity Download does not ship explicit opening / closing
+ * balance rows — the per-event `Saldo` cell resets to zero after every
+ * funding sweep — so no opening-vs-closing reconciliation gate is
+ * computed for this adapter. The walker counters above carry the
+ * audit signal instead.
  */
 final class PaypalCsvAdapter implements SourceAdapter
 {
@@ -160,13 +159,12 @@ final class PaypalCsvAdapter implements SourceAdapter
     /**
      * Assembles the statement-level metadata DTO.
      *
-     * The empirical NL Activity Download has no explicit opening /
-     * closing balance rows, so `opening = closing - sum(net)` is used:
-     * the gate then reports `'ok'` whenever the rollup walker reproduced
-     * every event correctly. A non-zero gap would indicate either the
-     * walker dropped a row OR PayPal shipped an unexpected event-type
-     * shape; either way the wizard renders a soft-warning panel and the
-     * user can investigate.
+     * The PayPal Activity Download has no explicit opening / closing
+     * balance rows, so the summary records `closing = sum(net)` and
+     * `opening = 0` as bookkeeping placeholders only — no reconciliation
+     * gate is published in `extras`. The walker counters
+     * (`skippedHoldCount`, `orphanChildCount`, optionally
+     * `skippedMalformedRowCount`) carry the audit signal for this format.
      *
      * @param  list<CarbonImmutable>  $bookedDates
      */
@@ -186,10 +184,16 @@ final class PaypalCsvAdapter implements SourceAdapter
             $periodEnd = null;
         }
 
-        $closingMinor = $netSumMinor;
-        $openingMinor = 0;
-        $reconciliationGap = ($closingMinor - $openingMinor) - $netSumMinor;
-        $reconciliationStatus = $reconciliationGap === 0 ? 'ok' : 'mismatch';
+        $extras = [
+            'language' => $language,
+            'skippedHoldCount' => $this->rollup->skippedHoldCount(),
+            'orphanChildCount' => $this->rollup->orphanChildCount(),
+        ];
+
+        $skippedMalformedRowCount = $this->rollup->skippedMalformedRowCount();
+        if ($skippedMalformedRowCount > 0) {
+            $extras['skippedMalformedRowCount'] = $skippedMalformedRowCount;
+        }
 
         return new StatementSummaryData(
             importRunId: 0,
@@ -198,20 +202,14 @@ final class PaypalCsvAdapter implements SourceAdapter
             statementNumber: null,
             periodStart: $periodStart,
             periodEnd: $periodEnd,
-            openingBalanceMinor: $openingMinor,
+            openingBalanceMinor: 0,
             openingBalanceCurrency: 'EUR',
             openingBalanceDate: $periodStart,
-            closingBalanceMinor: $closingMinor,
+            closingBalanceMinor: $netSumMinor,
             closingBalanceCurrency: 'EUR',
             closingBalanceDate: $periodEnd,
             entryCount: $entryCount,
-            extras: [
-                'language' => $language,
-                'skippedHoldCount' => $this->rollup->skippedHoldCount(),
-                'orphanChildCount' => $this->rollup->orphanChildCount(),
-                'reconciliationStatus' => $reconciliationStatus,
-                'reconciliationGap' => $reconciliationGap,
-            ],
+            extras: $extras,
         );
     }
 }
