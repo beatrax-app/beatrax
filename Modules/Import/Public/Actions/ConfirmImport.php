@@ -54,15 +54,19 @@ final class ConfirmImport implements ConfirmsImports
             ->firstOrFail();
 
         if ($importRun->status === 'confirmed') {
-            // Re-confirm idempotent result: the original confirm already
-            // committed `inserted_count` rows and detected `duplicate_count`
-            // collisions. A second confirm makes no new writes, so it
-            // returns the previously-persisted duplicate total verbatim
-            // and surfaces zero inserts / errors for "this run".
+            // Re-confirm idempotent result. The SHA-256 short-circuit in
+            // RunImport routes a same-file re-upload here, so the caller
+            // expects "this attempt as a fresh import" semantics: zero
+            // inserts (nothing new lands) and every row in the file
+            // counted as a duplicate (it already lives in the ledger).
+            // The original confirm persisted `inserted_count` rows and
+            // skipped `duplicate_count` collisions, so the file's full
+            // row count is the sum — that is the duplicate total a
+            // hypothetical re-import would now observe.
             return new ImportConfirmResult(
                 importRunId: $importRunId,
                 inserted: 0,
-                duplicates: $importRun->duplicate_count,
+                duplicates: $importRun->inserted_count + $importRun->duplicate_count,
                 enriched: $importRun->enriched_count,
                 errors: 0,
             );
