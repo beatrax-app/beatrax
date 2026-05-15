@@ -95,7 +95,7 @@
 - [ ] **UI-03**: From any fixed payment, user can drill into its history and amount-drift trend
 - [ ] **UI-04**: UI defaults to the recent window (last 3–6 months); a "show full history" toggle opens the rest
 - [ ] **UI-05**: Aesthetic is calm and content-first (Linear / Notion style), monochrome with one accent color
-- [ ] **UI-06**: All currency amounts surface their original currency when different from settled (e.g. "$12.99 USD → €12.07 EUR")
+- [x] **UI-06**: All currency amounts surface their original currency when different from settled (e.g. "$12.99 USD → €12.07 EUR")
 
 ### Multi-Currency
 
@@ -208,7 +208,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | UI-03 | Phase 8 | Pending |
 | UI-04 | Phase 1 | Pending |
 | UI-05 | Phase 1 | Pending |
-| UI-06 | Phase 3 | Pending |
+| UI-06 | Phase 3 | Complete |
 | MC-01 | Phase 1 | Pending |
 | MC-02 | Phase 3 | Complete |
 | PLT-01 | Phase 1 | Pending |

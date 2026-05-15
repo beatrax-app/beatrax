@@ -77,7 +77,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 03-02-PLAN.md — Wave 2 wire-level slice: SourceTransactionDto D-42 extension + NormalizeStage substitution + D-39 FX-rate derivation + IcsCsvAdapter + registry + IdempotencyContractTest dataset (ING-04, LED-03)
   - [x] 03-03-PLAN.md — Wave 3 wizard polish: two-step issuer-format picker refactor with aria-live cascade + Blade restructure + UploadWizardTest extension + PreviewWizard ICS-Account naming step (D-33, D-36, D-38)
   - [x] 03-04-PLAN.md — Wave 3 settings page: users.default_currency_view migration + User model + /settings Livewire SFC + top-nav link + SettingsPageTest (MC-02 storage half)
-  - [ ] 03-05-PLAN.md — Wave 4 transactions toggle: TransactionRowDto secondaryAmount + TransactionListQuery projection + Flux segmented toggle with #[Url] + dual-line stack on /transactions (MC-02 list half + UI-06 + D-44 + D-47)
+  - [x] 03-05-PLAN.md — Wave 4 transactions toggle: TransactionRowDto secondaryAmount + TransactionListQuery projection + Flux segmented toggle with #[Url] + dual-line stack on /transactions (MC-02 list half + UI-06 + D-44 + D-47)
   - [ ] 03-06-PLAN.md — Wave 5 dashboard branching: ThisPeriodAtAGlanceQuery forByCurrency + PerCurrencyTile DTO + Money formatter locale-aware default + Dashboard.render branching + per-currency tile rows (MC-02 dashboard half + D-46)
   - [ ] 03-07-PLAN.md — Wave 5 transaction detail FX-row: TransactionDetail Livewire SFC + Blade + /transactions/{id} route + conditional Effective rate row (UI-06 + D-48)
 **UI hint**: yes

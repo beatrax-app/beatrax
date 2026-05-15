@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-04-PLAN.md (minimal /settings page + default_currency_view storage)
-last_updated: "2026-05-15T17:37:50.309Z"
+stopped_at: Completed 03-05-PLAN.md (TransactionsList currency-view toggle + dual-line FX render)
+last_updated: "2026-05-15T17:51:42.353Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 19
-  completed_plans: 16
-  percent: 84
+  completed_plans: 17
+  percent: 89
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 03 (ics-cards-multi-currency-display) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [████████░░] 84%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [████████░░] 84%
 | Phase 03 P02 | 27 | 6 tasks | 28 files |
 | Phase 03 P03 | 11min | - tasks | - files |
 | Phase 03 P04 | 6min | 3 tasks | 9 files |
+| Phase 03 P05 | ~6m | 2 tasks tasks | 6 files files |
 
 ## Accumulated Context
 
@@ -114,6 +115,11 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 03 Plan 04: /settings route uses Route::view + page-level Blade wrapper + @livewire alias — matches the existing dashboard/wizard/triage pattern in this codebase; class-as-handler alternative rejected for consistency.
 - [Phase ?]: Phase 03 Plan 04: SettingsPage messages() maps periodStartDay.required + .integer + .min + .max ALL to the single locked string 'Choose a day from 1 to 28.' so any boundary failure yields the same calm sentence — UI-SPEC error-copy locked.
 - [Phase ?]: Phase 03 Plan 04: tests seed default_currency_view='eur_only' explicitly in beforeEach rather than depending on the migration default — starting state never depends on fixture-history mutation.
+- [Phase ?]: Phase 03 Plan 05: TransactionsList #[Url(as: 'currency', except: '')] string property + mount(CurrentUser) fallback to default_currency_view ('eur_only' → 'eur', else 'original'). Defensive render() mapping: only 'eur' maps to query currency='EUR'; every other value (including unrecognised junk) maps to null — no Livewire-property string reaches the SQL filter.
+- [Phase ?]: Phase 03 Plan 05: TransactionRowDto.secondaryAmount nullable Money — drives D-47 dual-line render. TransactionListQuery projects secondary_minor/secondary_currency only in original mode (null filter); mapRow filters out EUR-native rows via settled_currency != display_currency. EUR-only mode never SELECTs the secondary pair.
+- [Phase ?]: Phase 03 Plan 05: Money formatter routing landed in the Blade fmt closure (EUR → nl_NL, else en_US) rather than as a new Money::format() default. Keeps Money value object a pure brick/money wrapper; promote to a Public helper only when a third consumer arrives.
+- [Phase ?]: Phase 03 Plan 05: snapshot Money formatter output: '€ 68,86' (EUR nl_NL with non-breaking space), '$74.43' (USD en_US no space). Negative: '€ -12,07' / '-$12.99'. ext-intl present (intl 8.5.0alpha1, ICU 77.1); no fallback formatter needed. ISO suffix verbose form not implemented in 03-05 — deferred.
+- [Phase ?]: Phase 03 Plan 05: TransactionListQuerySecondaryAmountTest lives under tests/Feature/ because Ledger module's Pest.php only adds RefreshDatabase to Feature; secondaryAmount tests need live SQLite to seed transactions.
 
 ### Pending Todos
 
@@ -145,6 +151,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-15T17:37:50.303Z
-Stopped at: Completed 03-04-PLAN.md (minimal /settings page + default_currency_view storage)
+Last session: 2026-05-15T17:51:42.349Z
+Stopped at: Completed 03-05-PLAN.md (TransactionsList currency-view toggle + dual-line FX render)
 Resume file: 
+None
