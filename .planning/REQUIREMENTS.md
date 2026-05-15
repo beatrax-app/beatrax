@@ -48,7 +48,7 @@
 - [ ] **LED-02**: Each transaction has a `type` (expense / income / transfer-out / transfer-in / fee / refund) instead of being mixed into a polymorphic table
 - [x] **LED-03**: Each transaction stores both original-currency amount and settled-EUR amount where the source provides it, plus the FX rate when available
 - [x] **LED-04**: Internal transfers (ASN → ICS, PayPal → bank) are linked via a `pair_transaction_id` so they are not double-counted as income on the receiving side
-- [ ] **LED-05**: An income detector flags inflows that are genuine income (salary, refunds, third-party transfers) vs internal moves between owned accounts
+- [x] **LED-05**: An income detector flags inflows that are genuine income (salary, refunds, third-party transfers) vs internal moves between owned accounts
 - [ ] **LED-06**: Recurring income (e.g. monthly salary) is detected the same way recurring expenses are — by merchant/source clustering and cadence inference
 
 ### Chain Resolution
@@ -176,7 +176,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | LED-02 | Phase 1 | Pending |
 | LED-03 | Phase 3 | Complete |
 | LED-04 | Phase 4 | Complete |
-| LED-05 | Phase 4 | Pending |
+| LED-05 | Phase 4 | Complete |
 | LED-06 | Phase 8 | Pending |
 | CHN-01 | Phase 5 | Pending |
 | CHN-02 | Phase 5 | Pending |

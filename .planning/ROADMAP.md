@@ -96,7 +96,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 04-01-PLAN.md — Wave 0 enablement: anonymisation script + redacted PayPal CSV fixture + Wave-0 findings + language/event-type-map skeletons + TransactionImported event scaffold + IdempotencyContractTest RED dataset row
   - [x] 04-02-PLAN.md — Wave 1 vertical slice: PayPal CSV adapter + rollup walker + parsers + HeaderSniffer arm + SourceAdapterRegistry + three-issuer wizard + PayPal account-naming branch + IdempotencyContractTest GREEN + end-to-end import feature test (SC #1)
   - [x] 04-03-PLAN.md — Wave 2 transfer-pair backbone: pair_transaction_id migration + partial index + ClassifyTransactionType pipeline stage + Modules/Transfers/ bounded module + PairTransferCandidates listener (SC #3)
-  - [ ] 04-04-PLAN.md — Wave 3 income demoability: TransactionDetail Reclassify action with atomic break-pair invariant + DashboardIncomeTest regression test (SC #4)
+  - [x] 04-04-PLAN.md — Wave 3 income demoability: TransactionDetail Reclassify action with atomic break-pair invariant + DashboardIncomeTest regression test (SC #4)
   - [ ] 04-05-PLAN.md — Wave 4 deferral close-out: ROADMAP SC #2 rewrite + REQUIREMENTS.md ING-09 Deferred section + BoundaryArchTest::noPaypalApiRoute arch invariant
 
 ### Phase 5: Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition)

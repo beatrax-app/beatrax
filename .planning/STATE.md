@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 04 Plan 03 (Wave 2 transfer-pair backbone) complete
-last_updated: "2026-05-16T00:25:00.000Z"
+stopped_at: Phase 04 Plan 04 (Wave 3 income demoability + manual override) complete
+last_updated: "2026-05-16T00:45:00.000Z"
 last_activity: 2026-05-16
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 24
-  completed_plans: 22
-  percent: 92
+  completed_plans: 23
+  percent: 96
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 04 (paypal-ingestion-transfer-detection) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-05-16
 
-Progress: [█████████░] 92%
+Progress: [█████████▌] 96%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [█████████░] 92%
 | Phase 04 P01 | 35min | 3 tasks | 11 files |
 | Phase 04 P02 | ~50min | 3 tasks | 12 files |
 | Phase 04 P03 | ~18min | 3 tasks | 21 files |
+| Phase 04 P04 | ~7min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,10 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 03: Phase 4 SC#3 validated at the listener-contract level (synthetic-fixture Pest test), not via back-to-back ASN CAMT.053 + ICS PDF import — the Phase 2 + Phase 3 redacted fixtures don't share a synthesised iDEAL settlement counterparty-IBAN pair. Real-data overlap deferred until the user uploads matching exports; until then the SC#3 contract is proven at the listener level which is the exact same code path the production pipeline traverses.
 - [Phase 04]: Plan 03: New-module test discovery requires THREE coordinated changes — phpunit.xml testsuite entries + composer.json autoload-dev psr-4 entry + tests/Pest.php per-module wire-up map row. Per-module Pest.php is documented inert. Pattern locked in tests/Pest.php's foreach loop; future modules add one row each.
 - [Phase 04]: Plan 03: Pre-existing TransactionTypeTest::it-rejects-an-invalid-transaction-type failure logged to `deferred-items.md` for the verifier. Reproducible on `b57c0dd` before any Wave 2 change; trigger fires correctly outside the Pest harness (direct `php -r` verification). Environment-shaped (Pest parallel-mode SQLite trigger handling on this machine). Out of scope per Wave 2's deviation rules.
+- [Phase 04]: Plan 04: TransactionDetail Reclassify action lives at `Modules/Ledger/Internal/Http/Livewire/TransactionDetail.php::reclassify()`. Captures `$tx->pair_transaction_id` BEFORE save() so the partner-id is available after nullification; wraps the row save() + partner update() in `$db->connection()->transaction()` so both writes commit or roll back together. Transfer-to-transfer reclassifies skip the unpair branch entirely so the listener's pair survives a no-op type swap.
+- [Phase 04]: Plan 04: ThisPeriodAtAGlanceQuery::for() AND ::forByCurrency() now filter rollups by `transactions.type` instead of by amount sign. Income tile = SUM WHERE type='income'; expense tile = SUM WHERE type='expense'; net = SUM WHERE type IN ('income','expense'). Refunds / transfers / fees / adjustments stay out of both tiles per D-77. forByCurrency HAVING clause gets the same type-filter so original-currency mode never silently double-counts transfers in any currency band.
+- [Phase 04]: Plan 04: Toast dispatch shape is `$this->dispatch('toast', message: $message)` — named-parameter form. No global toast-renderer exists; Blade view embeds inline `<span x-show="toast" x-text="toast">` next to Save button. Alpine listens via `x-on:toast.window` (Livewire 4 broadcasts component-dispatched events as window events). Phase 5's review-queue UX inherits this shape.
+- [Phase 04]: Plan 04: Cross-user safety test on the action layer asserts `Exception::class` instead of `NotFoundHttpException` because the Livewire 4 test harness wraps mount() throwables at snapshot-serialization time. The canonical user-facing 404 invariant is asserted via the HTTP route (`$this->get(route('transactions.show', $tx->id))->assertStatus(404)`); the Livewire layer is defence-in-depth (asserts SOME exception fires AND the row stays untouched).
 
 ### Pending Todos
 
@@ -186,7 +191,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-16T00:25:00.000Z
-Stopped at: Phase 04 Plan 03 (Wave 2 transfer-pair backbone) complete
+Last session: 2026-05-16T00:45:00.000Z
+Stopped at: Phase 04 Plan 04 (Wave 3 income demoability + manual override) complete
 Resume file: 
-.planning/phases/04-paypal-ingestion-transfer-detection/04-04-PLAN.md
+.planning/phases/04-paypal-ingestion-transfer-detection/04-05-PLAN.md
