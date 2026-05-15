@@ -97,7 +97,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 04-02-PLAN.md — Wave 1 vertical slice: PayPal CSV adapter + rollup walker + parsers + HeaderSniffer arm + SourceAdapterRegistry + three-issuer wizard + PayPal account-naming branch + IdempotencyContractTest GREEN + end-to-end import feature test (SC #1)
   - [x] 04-03-PLAN.md — Wave 2 transfer-pair backbone: pair_transaction_id migration + partial index + ClassifyTransactionType pipeline stage + Modules/Transfers/ bounded module + PairTransferCandidates listener (SC #3)
   - [x] 04-04-PLAN.md — Wave 3 income demoability: TransactionDetail Reclassify action with atomic break-pair invariant + DashboardIncomeTest regression test (SC #4)
-  - [ ] 04-05-PLAN.md — Wave 4 deferral close-out: ROADMAP SC #2 rewrite + REQUIREMENTS.md ING-09 Deferred section + BoundaryArchTest::noPaypalApiRoute arch invariant
+  - [x] 04-05-PLAN.md — Wave 4 deferral close-out: ROADMAP SC #2 rewrite + REQUIREMENTS.md ING-09 Deferred section + BoundaryArchTest::noPaypalApiRoute arch invariant
 
 ### Phase 5: Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition)
 **Goal**: User can see exactly where every charge came from — PayPal payments traced back to the funding card or account, and the monthly ASN → ICS lump-sum iDEAL settlement decomposed into the individual ICS card transactions it covers.
@@ -200,7 +200,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Foundation + ASN CSV Vertical Slice | 7/7 | Complete | - |
 | 2. ASN Statement Coverage (CAMT.053 + MT940) | 5/5 | Ready for verification | - |
 | 3. ICS Cards + Multi-Currency Display | 6/7 | In Progress|  |
-| 4. PayPal Ingestion + Transfer Detection | 0/5 | Ready for execution | - |
+| 4. PayPal Ingestion + Transfer Detection | 5/5 | Ready for verification | - |
 | 5. Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition) | 0/TBD | Not started | - |
 | 6. Email Receipt Ingestion Infrastructure | 0/TBD | Not started | - |
 | 7. Email Template Matchers + Categorization Learning | 0/TBD | Not started | - |

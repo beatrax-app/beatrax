@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
+status: verifying
 stopped_at: Phase 04 Plan 04 (Wave 3 income demoability + manual override) complete
-last_updated: "2026-05-16T00:45:00.000Z"
-last_activity: 2026-05-16
+last_updated: "2026-05-15T22:47:04.426Z"
+last_activity: 2026-05-15
 progress:
   total_phases: 11
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 24
-  completed_plans: 23
-  percent: 96
+  completed_plans: 24
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 
 Phase: 04 (paypal-ingestion-transfer-detection) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-05-16
+Status: Phase complete — ready for verification
+Last activity: 2026-05-15
 
-Progress: [█████████▌] 96%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [█████████▌] 96%
 | Phase 04 P02 | ~50min | 3 tasks | 12 files |
 | Phase 04 P03 | ~18min | 3 tasks | 21 files |
 | Phase 04 P04 | ~7min | 2 tasks | 5 files |
+| Phase 04 P05 | ~2min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -160,6 +161,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 04: ThisPeriodAtAGlanceQuery::for() AND ::forByCurrency() now filter rollups by `transactions.type` instead of by amount sign. Income tile = SUM WHERE type='income'; expense tile = SUM WHERE type='expense'; net = SUM WHERE type IN ('income','expense'). Refunds / transfers / fees / adjustments stay out of both tiles per D-77. forByCurrency HAVING clause gets the same type-filter so original-currency mode never silently double-counts transfers in any currency band.
 - [Phase 04]: Plan 04: Toast dispatch shape is `$this->dispatch('toast', message: $message)` — named-parameter form. No global toast-renderer exists; Blade view embeds inline `<span x-show="toast" x-text="toast">` next to Save button. Alpine listens via `x-on:toast.window` (Livewire 4 broadcasts component-dispatched events as window events). Phase 5's review-queue UX inherits this shape.
 - [Phase 04]: Plan 04: Cross-user safety test on the action layer asserts `Exception::class` instead of `NotFoundHttpException` because the Livewire 4 test harness wraps mount() throwables at snapshot-serialization time. The canonical user-facing 404 invariant is asserted via the HTTP route (`$this->get(route('transactions.show', $tx->id))->assertStatus(404)`); the Livewire layer is defence-in-depth (asserts SOME exception fires AND the row stays untouched).
+- [Phase 04]: Plan 05: ROADMAP Phase 4 SC #2 rewritten as deferred-with-trigger; REQUIREMENTS ING-09 entry rewritten + new 'Deferred / Future-Revisit (Phase 4 close-out)' section added between v2 Requirements and Out of Scope; traceability ING-09 row flipped Pending -> Deferred.
+- [Phase 04]: Plan 05: BoundaryArchTest::noPaypalApiRoute appended via 'it(...)' Pest syntax with RecursiveIteratorIterator file-walk + comment-strip regex (mirrors UserIdColumnArchTest pattern). Scope routes/ + Modules/ only; .planning/ and tests/ excluded to avoid self-referential failure. Failure-mode proved via temporary sentinel under Modules/Ingestion/Internal/Adapters/Paypal/, never committed.
+- [Phase 04]: Plan 05: Phase 4 close-out gate met — SC #1 GREEN (04-02), SC #2 DEFERRED-WITH-TRIGGER (04-05), SC #3 GREEN (04-03 + 04-04), SC #4 GREEN (04-04). ING-09 Reporting API revisit conditional on PayPal Business upgrade; arch test must be retracted in that future plan.
 
 ### Pending Todos
 
@@ -191,7 +195,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-16T00:45:00.000Z
+Last session: 2026-05-15T22:43:38.296Z
 Stopped at: Phase 04 Plan 04 (Wave 3 income demoability + manual override) complete
 Resume file: 
-.planning/phases/04-paypal-ingestion-transfer-detection/04-05-PLAN.md
+None
