@@ -79,3 +79,69 @@ it('redirects to the preview page after a successful upload', function (): void 
     expect(ImportRun::count())->toBe(1);
     expect(ImportRun::query()->first()?->status)->toBe('previewed');
 });
+
+it('opens the wizard with ASN as the default issuer and asn-csv as the default format', function (): void {
+    Livewire::test(UploadWizard::class)
+        ->assertSet('issuer', 'asn')
+        ->assertSet('sourceFormat', 'asn-csv');
+})->group('phase-3');
+
+it('returns only the PDF format when the issuer is ICS', function (): void {
+    $component = Livewire::test(UploadWizard::class)->set('issuer', 'ics');
+
+    /** @var UploadWizard $instance */
+    $instance = $component->instance();
+    $available = $instance->availableFormats();
+
+    expect($available)->toBe([
+        ['value' => 'ics-pdf', 'label' => 'PDF'],
+    ]);
+})->group('phase-3');
+
+it('returns the three ASN formats when the issuer is ASN', function (): void {
+    $component = Livewire::test(UploadWizard::class)->set('issuer', 'asn');
+
+    /** @var UploadWizard $instance */
+    $instance = $component->instance();
+    $available = $instance->availableFormats();
+
+    expect($available)->toBe([
+        ['value' => 'asn-csv', 'label' => 'CSV'],
+        ['value' => 'asn-camt053', 'label' => 'CAMT.053 (XML)'],
+        ['value' => 'asn-mt940', 'label' => 'MT940'],
+    ]);
+})->group('phase-3');
+
+it('resets sourceFormat to the first leaf when the issuer changes', function (): void {
+    Livewire::test(UploadWizard::class)
+        ->set('issuer', 'ics')
+        ->assertSet('sourceFormat', 'ics-pdf')
+        ->set('issuer', 'asn')
+        ->assertSet('sourceFormat', 'asn-csv');
+})->group('phase-3');
+
+it('lets the user pick ICS issuer and ics-pdf format and submit', function (): void {
+    $pdfPath = base_path('Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf');
+    $contents = file_get_contents($pdfPath);
+    $file = UploadedFile::fake()->createWithContent('ics-statement.pdf', $contents !== false ? $contents : '');
+
+    Livewire::test(UploadWizard::class)
+        ->set('issuer', 'ics')
+        ->set('sourceFormat', 'ics-pdf')
+        ->set('file', $file)
+        ->call('submit')
+        ->assertHasNoErrors()
+        ->assertRedirect();
+
+    expect(ImportRun::query()->where('source_format', 'ics-pdf')->count())->toBe(1);
+})->group('phase-3');
+
+it('renders the two-step picker on the upload page', function (): void {
+    $response = $this->get('/imports/new');
+
+    $response->assertOk();
+    $response->assertSee('Source', false);
+    $response->assertSee('Format', false);
+    $response->assertSee('Drop in an ASN or ICS export.', false);
+    $response->assertSee('wire:model.live="issuer"', false);
+})->group('phase-3');
