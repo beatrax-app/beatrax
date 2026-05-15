@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Pipeline\Stages;
 
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Modules\Core\Models\User;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -21,9 +23,14 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
  * 3. Maps the amount sign to Transaction.type: positive → income,
  *    negative → expense, zero → adjustment. Future transfer-pair detection
  *    overrides this mapping for matched cross-account flows.
- * 4. Mirrors the native amount + currency into the settled pair. Multi-
- *    currency adapters override these fields with their own settled
- *    amount + FX rate.
+ * 4. Substitutes the native amount + currency into the settled pair when
+ *    the source DTO omits `settledAmountMinor` / `settledCurrency` (every
+ *    EUR-native row). When the source supplies a different settled
+ *    currency (foreign-currency rows from the ICS PDF adapter and future
+ *    PayPal adapter), the canonical row carries both legs verbatim AND
+ *    derives `fxRateUsed = settled / native` via `Brick\Math\BigDecimal`
+ *    at scale 8 with HALF_UP rounding. Float arithmetic is forbidden on
+ *    the money path — the decimal(18,8) column requires exact precision.
  *
  * The `sourceFormat` is supplied by the orchestrating pipeline so each
  * adapter's rows persist with its own format string for audit, rather than
@@ -53,6 +60,32 @@ final class NormalizeStage
             default => 'adjustment',
         };
 
+        // Substitute settled = native when the source did not supply a
+        // settled pair. Phase 1/2 ASN adapters leave both fields null;
+        // the ICS PDF adapter and future PayPal adapter fill them in only
+        // for genuine foreign-currency rows.
+        $settledMinor = $source->settledAmountMinor ?? $source->amountMinor;
+        $settledCurrency = $source->settledCurrency ?? $source->currency;
+
+        // Derive the effective post-markup rate when (and only when) both
+        // legs are present, currencies differ, and the native amount is
+        // non-zero. BigDecimal preserves the decimal(18,8) column's exact
+        // precision; float `/` is forbidden on the money path.
+        $fxRateUsed = null;
+        if (
+            $source->settledAmountMinor !== null
+            && $source->settledCurrency !== null
+            && $source->amountMinor !== 0
+            && $source->settledCurrency !== $source->currency
+        ) {
+            $fxRateUsed = (string) BigDecimal::of((string) $source->settledAmountMinor)
+                ->dividedBy(
+                    BigDecimal::of((string) $source->amountMinor),
+                    8,
+                    RoundingMode::HALF_UP,
+                );
+        }
+
         return new CanonicalTransaction(
             userId: $user->id,
             accountId: $accountId,
@@ -62,9 +95,9 @@ final class NormalizeStage
             valueDate: $source->valueDate,
             amountMinor: $source->amountMinor,
             currency: $source->currency,
-            settledAmountMinor: $source->amountMinor,
-            settledCurrency: $source->currency,
-            fxRateUsed: null,
+            settledAmountMinor: $settledMinor,
+            settledCurrency: $settledCurrency,
+            fxRateUsed: $fxRateUsed,
             counterpartyName: $source->counterpartyName,
             counterpartyIban: $source->counterpartyIban,
             counterpartyNormalized: $normalized,
