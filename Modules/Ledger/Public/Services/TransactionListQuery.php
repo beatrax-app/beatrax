@@ -103,22 +103,39 @@ final class TransactionListQuery
             ? 'transactions.currency as display_currency'
             : 'transactions.settled_currency as display_currency';
 
+        // Original-currency mode also exposes the settled pair as a
+        // `secondary_minor` / `secondary_currency` projection so the row
+        // DTO can carry the settled-EUR Money alongside the native Money.
+        // The Blade view renders a two-line stack for rows whose settled
+        // currency differs from the rendered (native) currency; EUR-native
+        // rows collapse to a single line. In EUR-only mode the secondary
+        // pair is intentionally omitted from the SELECT — the rendered
+        // amount already IS the settled-EUR figure and a second line would
+        // be redundant; keeping it out also keeps the API surface from
+        // accidentally exposing the other-currency leg in EUR-only mode.
+        $select = [
+            'transactions.id',
+            'transactions.posted_at',
+            'transactions.booked_at',
+            'transactions.counterparty_name',
+            'transactions.category_id',
+            $amountMinorColumn,
+            $currencyColumn,
+            'categories.name as category_name',
+        ];
+
+        if ($currency === null) {
+            $select[] = 'transactions.settled_amount_minor as secondary_minor';
+            $select[] = 'transactions.settled_currency as secondary_currency';
+        }
+
         $query = $this->db->connection()
             ->table('transactions')
             ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.user_id', $user->id)
             ->orderByDesc('transactions.posted_at')
             ->orderByDesc('transactions.id')
-            ->select([
-                'transactions.id',
-                'transactions.posted_at',
-                'transactions.booked_at',
-                'transactions.counterparty_name',
-                'transactions.category_id',
-                $amountMinorColumn,
-                $currencyColumn,
-                'categories.name as category_name',
-            ]);
+            ->select($select);
 
         if ($currency !== null) {
             $query->where('transactions.settled_currency', $currency);
@@ -181,13 +198,26 @@ final class TransactionListQuery
         $categoryName = $row->category_name === null ? null : self::toString($row->category_name);
         $counterpartyName = $row->counterparty_name === null ? null : self::toString($row->counterparty_name);
 
+        $displayCurrency = self::toString($row->display_currency);
+        $secondaryAmount = null;
+        if (property_exists($row, 'secondary_currency') && property_exists($row, 'secondary_minor')) {
+            $secondaryCurrency = self::toString($row->secondary_currency);
+            // The secondary line only renders for true FX rows: native
+            // currency differs from settled currency. EUR-native rows have
+            // mirrored pairs and stay on a single line.
+            if ($secondaryCurrency !== '' && $secondaryCurrency !== $displayCurrency) {
+                $secondaryAmount = Money::ofMinor(self::toInt($row->secondary_minor), $secondaryCurrency);
+            }
+        }
+
         return new TransactionRowDto(
             id: self::toInt($row->id),
             bookedAt: $bookedAt->format('d-m-Y'),
             counterpartyName: $counterpartyName,
             categoryId: $categoryId,
             categoryName: $categoryName,
-            amount: Money::ofMinor(self::toInt($row->display_minor), self::toString($row->display_currency)),
+            amount: Money::ofMinor(self::toInt($row->display_minor), $displayCurrency),
+            secondaryAmount: $secondaryAmount,
         );
     }
 
