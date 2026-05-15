@@ -28,4 +28,6 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
 
         return new Response($views->make('core::dashboard')->render());
     })->name('dashboard');
+
+    Route::view('/settings', 'core::settings')->name('settings');
 });
