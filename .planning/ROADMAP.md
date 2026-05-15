@@ -64,12 +64,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 02-05-PLAN.md — Wave 3 ENRICHED state + cross-format dedup: FingerprintStage::classify, ApplyEnrichments, pipeline integration, Blade ENRICHED row state, CrossFormatDedupTest (Success Criterion #3)
 
 ### Phase 3: ICS Cards + Multi-Currency Display
-**Goal**: User can import ICS Cards CSV or Excel statements with non-EUR charges preserved as both original-currency and settled-EUR, and switch transaction views between EUR-only and dual-currency.
+**Goal**: User can import ICS Cards PDF statements (Mijn ICS consumer portal export) with non-EUR charges preserved as both original-currency and settled-EUR, and switch transaction views between EUR-only and dual-currency.
 **Mode:** mvp
 **Depends on**: Phase 2
 **Requirements**: ING-04, LED-03, MC-02, UI-06
 **Success Criteria** (what must be TRUE):
-  1. User can upload an ICS CSV or Excel statement and see foreign-currency charges (e.g. a USD purchase) display both the original `$X` amount and the settled EUR amount on the transaction line
+  1. User can upload an ICS PDF statement and see foreign-currency charges (e.g. a USD purchase) display both the original `$X` amount and the settled EUR amount on the transaction line
   2. User can toggle the transaction list between EUR-only and dual-currency presentation and per-transaction FX rates surface when available
   3. The schema preserves original-amount, original-currency, settled-amount, settled-currency, and FX rate for every transaction (verified to never lose FX information that the source provided)
 **Plans**: 7 plans

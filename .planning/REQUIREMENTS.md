@@ -24,7 +24,7 @@
 - [ ] **ING-01**: User can upload an ASN CSV export and have its transactions imported into the canonical transaction store
 - [x] **ING-02**: User can upload an ASN CAMT.053 (XML) export and have its transactions imported, using `EndToEndId` / `AcctSvcrRef` as the stable source reference
 - [x] **ING-03**: User can upload an ASN MT940 export as a fallback ingestion path (older statement periods)
-- [x] **ING-04**: User can upload an ICS Cards CSV or Excel statement and have its transactions imported, with original-currency + settled-EUR preserved per line where applicable
+- [x] **ING-04**: User can upload an ICS Cards PDF statement (the Mijn ICS consumer portal export format) and have its transactions imported, with original-currency + settled-EUR preserved per line where applicable
 - [ ] **ING-05**: User can upload a PayPal activity CSV and have its transactions imported, with the event-log rolled up by `Transaction ID` / `Reference Txn ID` so fees, holds, and currency-conversion rows enrich a single canonical transaction (rather than landing as duplicates)
 - [x] **ING-06**: Re-uploading the same statement file (or an overlapping period) does not create duplicate transactions — idempotent by a v3 fingerprint of `(user_id, account_id, posted_at, booked_at, amount_minor, currency, counterparty_normalized)` enforced at the DB layer. Cross-format re-imports (CSV ↔ CAMT.053 ↔ MT940) ENRICH existing rows with stronger source_ref via the rank function (asn-camt053 > asn-mt940 > asn-csv) rather than inserting duplicates.
 - [ ] **ING-07**: User can declare which source format an upload is (no auto-detection), eliminating a class of misclassification errors
