@@ -8,7 +8,6 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Str;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Internal\Pipeline\PreviewCache;
@@ -18,6 +17,7 @@ use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Exceptions\InvalidAccountNameException;
 use Modules\Import\Public\Exceptions\PreviewExpiredException;
+use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
@@ -113,9 +113,12 @@ final class PreviewWizard extends Component
      * Creates the user's first ICS card Account (synthetic IBAN
      * `'ICS-CARD'`, kind `'ics_card'`, EUR-settled) and re-runs the
      * importer so the rows preview is populated against the newly-named
-     * account. Mirrors the IBAN-naming flow's shape but bypasses
-     * `NamesAccounts` because the synthetic IBAN doesn't satisfy the ISO
-     * 13616 structural guard the AccountNamer enforces for real IBANs.
+     * account. Mirrors the IBAN-naming flow's shape but cannot use
+     * `NamesAccounts` end-to-end because the synthetic IBAN does not
+     * satisfy the structural guard `AccountNamer` enforces for real
+     * IBANs. The name-validation half is shared with the IBAN path via
+     * `AccountNamer::validateName()` so the 1..80 character bound and
+     * the slug-body guard stay in lock step across both flows.
      *
      * Locked Blade copy this action drives (source of truth lives in the
      * preview-wizard.blade.php partial; pinned here so grep on this file
@@ -134,22 +137,15 @@ final class PreviewWizard extends Component
     ): void {
         $this->resetErrorBag('icsAccountName');
 
-        $trimmed = trim($this->icsAccountName);
+        try {
+            [$trimmed, $slugBody] = AccountNamer::validateName($this->icsAccountName);
+        } catch (InvalidAccountNameException $e) {
+            $this->addError('icsAccountName', $e->getMessage());
+
+            return;
+        }
+
         $this->icsAccountName = $trimmed;
-
-        $length = mb_strlen($trimmed);
-        if ($length < 1 || $length > 80) {
-            $this->addError('icsAccountName', 'Account name must be 1..80 characters.');
-
-            return;
-        }
-
-        $slugBody = Str::slug($trimmed);
-        if ($slugBody === '') {
-            $this->addError('icsAccountName', 'Account name must contain at least one letter or digit.');
-
-            return;
-        }
 
         $user = $currentUser->user();
 
