@@ -298,7 +298,6 @@ it('never queries the transactions table from within ClassifyTransactionType (Pi
     $stripped = preg_replace('!//.*$!m', '', $stripped);
     expect($stripped)->toBeString();
     /** @var string $stripped */
-
     expect($stripped)->not->toContain('Transaction::');
 });
 
