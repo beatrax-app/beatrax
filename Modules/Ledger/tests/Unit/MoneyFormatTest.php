@@ -8,8 +8,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
  * Unit tests for the locale-aware `Money::format()` default. EUR amounts
  * render in nl_NL (Dutch — comma decimal, € with non-breaking space);
  * non-EUR amounts render in en_US (US English — period decimal, symbol
- * prefix). An explicit locale argument overrides the auto-selection so
- * Phase 1/2 call sites that hard-code `format('nl_NL')` keep working.
+ * prefix). An explicit locale argument overrides the auto-selection.
  */
 
 it('formats EUR with nl_NL locale by default', function (): void {

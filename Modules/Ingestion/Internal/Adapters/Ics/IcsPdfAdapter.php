@@ -40,8 +40,8 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
  * stable per-transaction identifier (authorisation code / slip number /
  * transaction reference), so `sourceRef` is always `null`. The v3
  * FingerprintComposer tuple is therefore the only dedup anchor for ICS
- * PDF rows — the same posture Phase 2's MT940 adapter takes when an
- * `EREF` keyword is absent.
+ * PDF rows — the same posture the MT940 adapter takes when an `EREF`
+ * keyword is absent.
  *
  * Currency-policy: EUR-native rows leave the DTO's settled pair `null`
  * (NormalizeStage mirrors native into settled and leaves `fxRateUsed`

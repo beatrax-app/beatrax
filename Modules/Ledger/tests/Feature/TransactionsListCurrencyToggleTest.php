@@ -9,10 +9,11 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Models\Account;
 
 /*
- * Feature tests for the /transactions currency-view toggle UX. Covers
- * MC-02 list half and UI-06 dual-currency two-line stack: URL-bound
- * #[Url(except: '')] property, mount() user-preference fallback, and
- * the conditional secondary-line render on FX rows in original mode.
+ * Feature tests for the /transactions currency-view toggle UX: the
+ * URL-bound #[Url(except: '')] property, mount() falling back to the
+ * user's `default_currency_view` preference when the URL has no
+ * override, and the conditional secondary-line render on FX rows in
+ * original mode.
  */
 
 beforeEach(function (): void {

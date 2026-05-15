@@ -7,11 +7,10 @@ use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 
 /*
- * Feature tests for the minimal /settings page (plan 03-04). Covers
- * MC-02's storage half (the round-trip of `default_currency_view` into
- * the users row) and discharges Phase 1's deferred `period_start_day`
- * Settings surface. Plan 03-05 owns the consumer side (TransactionsList
- * default-mode fallback).
+ * Feature tests for the /settings page. Covers the round-trip of
+ * `default_currency_view` and `period_start_day` into the users row via
+ * the SettingsPage Livewire component, including validation rejection
+ * for out-of-bounds values and the unchanged-row guarantee.
  */
 
 beforeEach(function (): void {

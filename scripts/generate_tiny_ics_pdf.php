@@ -5,22 +5,21 @@ declare(strict_types=1);
 
 /**
  * Generates `Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf` —
- * a tiny, deterministically parseable, synthetic PDF used by the
- * Wave 2 ICS PDF idempotency-contract test to exercise the real
- * pdftotext binary path without depending on a real ICS export.
+ * a tiny, deterministically parseable, synthetic PDF used by the ICS
+ * PDF idempotency-contract test to exercise the real pdftotext binary
+ * path without depending on a real ICS export.
  *
  * The implementation hand-crafts a minimal PDF 1.4 byte stream
  * (one Page, one Type1 Helvetica font, one Tj-based content stream)
- * which avoids the multi-kilobyte overhead of cupsfilter / Cairo
- * pipelines and keeps the committed fixture under 1 KB.
+ * which keeps the committed fixture under 1 KB.
  *
  * The synthetic content embeds the canonical anonymisation
  * placeholders (`KAARTHOUDER`, `****-****-****-XXXX`) and the
  * empirical statement-summary anchor tokens (`Vorig openstaand
  * saldo`, `Totaal ontvangen betalingen`, `Totaal nieuwe uitgaven`,
  * `Nieuw openstaand saldo`) plus ONE EUR-native transaction row
- * whose load-bearing literal is `SYNTHETIC` — the Wave 2 contract
- * test anchors on that literal to assert one row was parsed.
+ * whose load-bearing literal is `SYNTHETIC` — the contract test
+ * anchors on that literal to assert one row was parsed.
  *
  * Re-running this script overwrites the committed fixture
  * byte-identically (no entropy in the generator).
@@ -37,7 +36,7 @@ $output = $repoRoot.'/Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf';
 //   - one EUR-native transaction row mirroring the real layout shape
 //     (transactiedatum + boekdatum columns, no native-currency column,
 //     trailing settled-EUR amount, `Af` direction marker). The
-//     `SYNTHETIC` literal is the Wave 2 contract test's anchor.
+//     `SYNTHETIC` literal is the contract test's anchor.
 $contentLines = [
     '15 april 2026',
     'KAARTHOUDER ****-****-****-XXXX',

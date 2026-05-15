@@ -12,8 +12,7 @@ use Modules\Ledger\Public\Services\TransactionListQuery;
  * Money on the row DTO whenever the rendered amount is the native pair
  * AND the row is a true FX row (settled currency differs from native
  * currency). EUR-native rows render a single line; FX rows render the
- * native amount primary + settled-EUR secondary line (D-47 dual-line
- * stack on /transactions).
+ * native amount primary + settled-EUR secondary line.
  */
 
 beforeEach(function (): void {

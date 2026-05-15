@@ -13,9 +13,8 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
  *
  * The writer is idempotent on `(user_id, import_run_id)` — calling it twice
  * for the same import run upserts the existing row rather than throwing.
- * Phase 2 only writes the row from the confirm path, but the upsert
- * semantics let a re-preview refresh the metadata without leaving stale
- * rows behind.
+ * The upsert semantics let a re-preview refresh the metadata without
+ * leaving stale rows behind.
  */
 interface RecordsStatementSummary
 {
