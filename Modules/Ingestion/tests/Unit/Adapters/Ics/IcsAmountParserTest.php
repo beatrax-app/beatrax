@@ -32,6 +32,14 @@ it('parses a USD amount with the ISO symbol: $ 12,99 → 1299', function (): voi
     expect($parser->parse('$ 12,99'))->toBe(1299);
 })->group('phase-3');
 
+it('parses a Dutch thousands+decimal amount: 1.416,50 → 141650', function (): void {
+    $parser = new IcsAmountParser;
+
+    expect($parser->parse('1.416,50'))->toBe(141650);
+    expect($parser->parse('€ 1.416,50'))->toBe(141650);
+    expect($parser->parse('€ 2.500,00'))->toBe(250000);
+})->group('phase-3');
+
 it('rejects a malformed amount string by throwing InvalidAmountException', function (): void {
     $parser = new IcsAmountParser;
 
