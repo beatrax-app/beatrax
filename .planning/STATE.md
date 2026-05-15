@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-01 — Wave 0 ICS PDF enablement
-last_updated: "2026-05-15T16:26:30.667Z"
+stopped_at: Completed 03-02 — Wave 2 ICS PDF wire-level slice
+last_updated: "2026-05-15T17:07:40.684Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 19
-  completed_plans: 13
-  percent: 68
+  completed_plans: 14
+  percent: 74
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 03 (ics-cards-multi-currency-display) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [███████░░░] 68%
+Progress: [███████░░░] 74%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [███████░░░] 68%
 | Phase 02 P04 | 15 | 4 tasks | 16 files |
 | Phase 02 P05 | 14 | 3 tasks | 6 files |
 | Phase 03 P01 | 18 | 7 tasks | 20 files |
+| Phase 03 P02 | 27 | 6 tasks | 28 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,11 @@ Recent decisions affecting current work:
 - [Phase 03]: Plan 1: empirical PDF disposition map — D-34 source_ref unavailable (NULL, fingerprint-only dedup), D-35 FX shape (b) two-line block, D-37 source PDF never renders full PAN (only last-four), D-40 markup rolled into settled, D-53 no Pagina X van Y page footer (page index lives inline on summary header line).
 - [Phase 03]: Plan 1: tiny synthetic PDF generated via hand-crafted 849-byte PDF 1.4 byte stream (scripts/generate_tiny_ics_pdf.php); cupsfilter exceeded the 10 KB budget by ~7 KB. Plan 03-02's IdempotencyContractTest dataset will reference this tiny PDF.
 - [Phase 03]: Plan 1: anonymisation script (scripts/anonymize_ics_text.php) committed in-repo with zero Composer deps — Phase 1's anonymisation was throwaway under /tmp; from Phase 3 onwards the redaction tool ships alongside the redacted fixture so future re-runs are auditable.
+- [Phase ?]: Phase 03 Plan 02: IcsPdfAdapter uses 'ICS-CARD' as instance-wide synthetic own-IBAN (not per-user 'ICS-CARD-{id}'); AccountResolver already user-scopes lookups so per-user uniqueness was redundant and would have required cross-module reach.
+- [Phase ?]: Phase 03 Plan 02: PdfTextExtractor declared non-final so unit tests can substitute it via anonymous-class extension returning fixture text verbatim. Production wiring is unchanged (constructor DI through SourceAdapterRegistry); only the test-double substitution pattern depends on the relaxed declaration.
+- [Phase ?]: Phase 03 Plan 02: transactions.raw_payload JSON column added (deferred from the Phase 1 schema). Required by D-49; the migration suite had not declared it. CanonicalTransaction extended with nullable rawPayload field; Transaction model casts as 'array'; NormalizeStage threads source->rawPayload through. Archive-only — Phase 3 queries never read it.
+- [Phase ?]: Phase 03 Plan 02: tiny synthetic PDF regenerated (981 bytes) to embed a transaction row matching the empirical layout ('12 apr. 12 apr. SYNTHETIC ICS TINY 1,00 Af') + statement-header date '15 april 2026'. The original 03-01 tiny PDF used a non-empirical shape that the production adapter correctly rejected.
+- [Phase ?]: Phase 03 Plan 02: Singleton-forget cascade for test-substituted PdfTextExtractor — forgetInstance(SourceAdapterRegistry) + IcsPdfAdapter + ImportPipeline + ParseStage before re-resolving RunsImports. Pattern documented in the FX-row test case so future contributors don't trip the singleton-stale-extractor gotcha.
 
 ### Pending Todos
 
@@ -131,6 +137,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-15T16:26:30.663Z
-Stopped at: Completed 03-01 — Wave 0 ICS PDF enablement
+Last session: 2026-05-15T17:07:40.676Z
+Stopped at: Completed 03-02 — Wave 2 ICS PDF wire-level slice
 Resume file: None

@@ -24,7 +24,7 @@
 - [ ] **ING-01**: User can upload an ASN CSV export and have its transactions imported into the canonical transaction store
 - [x] **ING-02**: User can upload an ASN CAMT.053 (XML) export and have its transactions imported, using `EndToEndId` / `AcctSvcrRef` as the stable source reference
 - [x] **ING-03**: User can upload an ASN MT940 export as a fallback ingestion path (older statement periods)
-- [ ] **ING-04**: User can upload an ICS Cards CSV or Excel statement and have its transactions imported, with original-currency + settled-EUR preserved per line where applicable
+- [x] **ING-04**: User can upload an ICS Cards CSV or Excel statement and have its transactions imported, with original-currency + settled-EUR preserved per line where applicable
 - [ ] **ING-05**: User can upload a PayPal activity CSV and have its transactions imported, with the event-log rolled up by `Transaction ID` / `Reference Txn ID` so fees, holds, and currency-conversion rows enrich a single canonical transaction (rather than landing as duplicates)
 - [x] **ING-06**: Re-uploading the same statement file (or an overlapping period) does not create duplicate transactions — idempotent by a v3 fingerprint of `(user_id, account_id, posted_at, booked_at, amount_minor, currency, counterparty_normalized)` enforced at the DB layer. Cross-format re-imports (CSV ↔ CAMT.053 ↔ MT940) ENRICH existing rows with stronger source_ref via the rank function (asn-camt053 > asn-mt940 > asn-csv) rather than inserting duplicates.
 - [ ] **ING-07**: User can declare which source format an upload is (no auto-detection), eliminating a class of misclassification errors
@@ -46,7 +46,7 @@
 
 - [ ] **LED-01**: Each account (ASN, ICS, PayPal, plus any future) has a distinct record with a type and currency
 - [ ] **LED-02**: Each transaction has a `type` (expense / income / transfer-out / transfer-in / fee / refund) instead of being mixed into a polymorphic table
-- [ ] **LED-03**: Each transaction stores both original-currency amount and settled-EUR amount where the source provides it, plus the FX rate when available
+- [x] **LED-03**: Each transaction stores both original-currency amount and settled-EUR amount where the source provides it, plus the FX rate when available
 - [ ] **LED-04**: Internal transfers (ASN → ICS, PayPal → bank) are linked via a `pair_transaction_id` so they are not double-counted as income on the receiving side
 - [ ] **LED-05**: An income detector flags inflows that are genuine income (salary, refunds, third-party transfers) vs internal moves between owned accounts
 - [ ] **LED-06**: Recurring income (e.g. monthly salary) is detected the same way recurring expenses are — by merchant/source clustering and cadence inference
@@ -158,7 +158,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | ING-01 | Phase 1 | Pending |
 | ING-02 | Phase 2 | Complete |
 | ING-03 | Phase 2 | Complete |
-| ING-04 | Phase 3 | Pending |
+| ING-04 | Phase 3 | Complete |
 | ING-05 | Phase 4 | Pending |
 | ING-06 | Phase 2 | Complete |
 | ING-07 | Phase 1 | Pending |
@@ -174,7 +174,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | EML-08 | Phase 6 | Pending |
 | LED-01 | Phase 1 | Pending |
 | LED-02 | Phase 1 | Pending |
-| LED-03 | Phase 3 | Pending |
+| LED-03 | Phase 3 | Complete |
 | LED-04 | Phase 4 | Pending |
 | LED-05 | Phase 4 | Pending |
 | LED-06 | Phase 8 | Pending |
