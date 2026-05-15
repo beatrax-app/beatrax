@@ -282,7 +282,7 @@ final class PaypalTransactionRollup
             counterpartyName: ($counterpartyName === null || $counterpartyName === '') ? null : $counterpartyName,
             currency: $nativeCurrency,
             amountMinor: $nativeAmountMinor,
-            sourceRef: $parentTxnId = $this->columns->value('transactionId', $language, $parentRow),
+            sourceRef: $this->columns->value('transactionId', $language, $parentRow),
             description: $description,
             rawPayload: [
                 'format' => 'paypal-csv',
