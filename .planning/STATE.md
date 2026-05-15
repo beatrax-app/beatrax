@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 04 Plan 02 (Wave 1 PayPal CSV vertical slice) complete
-last_updated: "2026-05-15T23:00:00.000Z"
-last_activity: 2026-05-15
+stopped_at: Phase 04 Plan 03 (Wave 2 transfer-pair backbone) complete
+last_updated: "2026-05-16T00:25:00.000Z"
+last_activity: 2026-05-16
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 24
-  completed_plans: 21
-  percent: 88
+  completed_plans: 22
+  percent: 92
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 04 (paypal-ingestion-transfer-detection) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
-Last activity: 2026-05-15
+Last activity: 2026-05-16
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [█████████░] 88%
 | Phase 03 P07 | 4 | 1 tasks | 5 files |
 | Phase 04 P01 | 35min | 3 tasks | 11 files |
 | Phase 04 P02 | ~50min | 3 tasks | 12 files |
+| Phase 04 P03 | ~18min | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,17 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 02: TestCase::seedFixtureUserAndAccount now also seeds a PayPal Account (synthetic IBAN `PAYPAL`, kind `paypal`, EUR). Cross-module IdempotencyContractTest + per-module *ImportTest files now resolve the synthetic IBAN without per-test setup boilerplate.
 - [Phase 04]: Plan 02: PreviewWizard hosts a method-triad per non-IBAN issuer (save{X}AccountName + needs{X}AccountName + {X}_OWN_IBAN constant + Blade @elseif branch). Three branches in place — IBAN naming, ICS-card naming, PayPal naming — each a verbatim mirror swapping only synthetic-IBAN + kind + slug-suffix + Blade copy.
 - [Phase 04]: Plan 02: Reconciliation soft-warning panel queries the preview-time-written `statement_summaries.extras` row via DatabaseManager + json_decode at render. Informational only — does NOT block Confirm. Same posture as Phase 2 multi-statement MT940 flag.
+- [Phase 04]: Plan 03: `pair_transaction_id` self-FK on transactions ships with ON DELETE SET NULL + partial index `transactions_unpaired_transfer_idx` over (user_id, account_id, booked_at) WHERE pair_transaction_id IS NULL AND type IN ('transfer_out', 'transfer_in'). NOT in the v3 fingerprint tuple — no version bump or re-derive. Migration mirrors `add_raw_payload_to_transactions.php` anonymous-class shape verbatim.
+- [Phase 04]: Plan 03: ClassifyTransactionType pipeline stage decouples typing from pair detection (D-76 / Pitfall 3). Sits between NormalizeStage and FingerprintStage. 5-step algorithm: preserve refund/fee/adjustment → cross-account-IBAN flip → PayPal event-type map → subtractive income detector (D-77) → keep NormalizeStage's amount-sign default. The stage NEVER queries the transactions table — grep gate enforces this in ClassifyTransactionTypeTest.
+- [Phase 04]: Plan 03: ClassifyTransactionType uses raw `DatabaseManager::connection()->table('accounts')->count() > 0` for the cross-account-IBAN predicate (matches PreviewWizard::needsIcsAccountName / TopCategoriesByPeriodQuery pattern) — Larastan strict-rules `staticMethod.dynamicCall` forbids `Eloquent::query()->exists()`. PaypalCsvEventTypeMap is the only Public/ surface the stage imports beyond models.
+- [Phase 04]: Plan 03: PaypalTransactionRollup now stamps `language` onto every emitted rawPayload (alongside `format` and `events`). Single-line change in `buildDto()`. ClassifyTransactionType's step 3 reads it to look up parent event types via `PaypalCsvEventTypeMap::transactionType()`. Threading language via a pipeline parameter would have leaked HeaderSniffer knowledge into Import.
+- [Phase 04]: Plan 03: New bounded module `Modules/Transfers/` with EMPTY Public/ surface (D-80). Composer manifest, TransfersServiceProvider, Internal/Listeners/PairTransferCandidates. No migrations, no routes, no views, no Public/ surface. Phase 5's chain resolver is the projected first consumer — promote to Public when it arrives.
+- [Phase 04]: Plan 03: PairTransferCandidates listener is synchronous + in-tx — no `ShouldHandleEventsAfterCommit`, no `ShouldQueue`, no nested `DB::transaction()` wrapper. Inherits the outer RecordTransactions transaction frame so same-import-batch partner rows pair atomically. WINDOW_DAYS = 3 (D-73 tolerance) as a private constant for greppability.
+- [Phase 04]: Plan 03: Listener uses raw DatabaseManager whereBetween/whereIn/whereNull/orderBy chain for the partner lookup (strict-rules-clean), then loads the partner via `Transaction::query()->where('user_id', $user->id)->where('id', $partnerId)->firstOrFail()` for the symmetric save(). Two-step hybrid: search via raw query builder; write via Eloquent (preserves timestamps + BEFORE-UPDATE type trigger).
+- [Phase 04]: Plan 03: Listener defensively asserts `$event->transaction->user_id === $event->user->id` and throws RuntimeException on mismatch (T-04-W2-02). Same-user invariant is also enforced via `->where('user_id', $user->id)` on every Account + Transaction query. Cross-user feature test exercises both layers.
+- [Phase 04]: Plan 03: Phase 4 SC#3 validated at the listener-contract level (synthetic-fixture Pest test), not via back-to-back ASN CAMT.053 + ICS PDF import — the Phase 2 + Phase 3 redacted fixtures don't share a synthesised iDEAL settlement counterparty-IBAN pair. Real-data overlap deferred until the user uploads matching exports; until then the SC#3 contract is proven at the listener level which is the exact same code path the production pipeline traverses.
+- [Phase 04]: Plan 03: New-module test discovery requires THREE coordinated changes — phpunit.xml testsuite entries + composer.json autoload-dev psr-4 entry + tests/Pest.php per-module wire-up map row. Per-module Pest.php is documented inert. Pattern locked in tests/Pest.php's foreach loop; future modules add one row each.
+- [Phase 04]: Plan 03: Pre-existing TransactionTypeTest::it-rejects-an-invalid-transaction-type failure logged to `deferred-items.md` for the verifier. Reproducible on `b57c0dd` before any Wave 2 change; trigger fires correctly outside the Pest harness (direct `php -r` verification). Environment-shaped (Pest parallel-mode SQLite trigger handling on this machine). Out of scope per Wave 2's deviation rules.
 
 ### Pending Todos
 
@@ -174,7 +186,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-15T23:00:00.000Z
-Stopped at: Phase 04 Plan 02 (Wave 1 PayPal CSV vertical slice) complete
+Last session: 2026-05-16T00:25:00.000Z
+Stopped at: Phase 04 Plan 03 (Wave 2 transfer-pair backbone) complete
 Resume file: 
-.planning/phases/04-paypal-ingestion-transfer-detection/04-03-PLAN.md
+.planning/phases/04-paypal-ingestion-transfer-detection/04-04-PLAN.md
