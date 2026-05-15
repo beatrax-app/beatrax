@@ -154,7 +154,7 @@ foreach ($refTxnIdHeaders as $name) {
 }
 
 if ($txnIdCol === null) {
-    fwrite(STDERR, "Could not find a Transaction ID column. Expected one of: ".implode(', ', $txnIdHeaders)."\n");
+    fwrite(STDERR, 'Could not find a Transaction ID column. Expected one of: '.implode(', ', $txnIdHeaders)."\n");
     exit(1);
 }
 
