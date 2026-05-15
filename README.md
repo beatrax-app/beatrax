@@ -16,11 +16,13 @@ instead of buried across statements.
 - SQLite 3.45+
 - Node.js 20+ (for the Vite asset pipeline)
 - macOS recommended; Laravel Herd ships a compatible PHP binary out of the box
+- Poppler (`pdftotext` binary) for ICS PDF statement parsing — `brew install poppler` on macOS; verify with `pdftotext -v`. See https://poppler.freedesktop.org/ for source builds on other platforms.
 
 ## Install
 
 ```sh
 composer install
+pdftotext -v          # confirms poppler is on PATH (required for ICS PDF imports — see Prerequisites)
 php artisan diederik:install   # ships in Plan 02
 ```
 

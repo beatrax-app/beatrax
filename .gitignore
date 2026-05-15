@@ -43,6 +43,12 @@ yarn-error.log
 # Uploaded statements — Plan 05 starts writing here
 /storage/imports
 
+# Raw ICS Cards PDF statements — never commit financial data.
+# The extracted-and-redacted .txt fixture under
+# Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt IS committed; the
+# raw .pdf lives here on the user's machine only.
+/local/
+
 # Module activation state
 /modules_statuses.json
 

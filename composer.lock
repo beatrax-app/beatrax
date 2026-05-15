@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a8ea010609117f4d7dcf3b04952c8b87",
+    "content-hash": "c17b0ef4c9718e24097725238e75325e",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -4438,6 +4438,64 @@
                 }
             ],
             "time": "2026-02-21T12:49:54+00:00"
+        },
+        {
+            "name": "spatie/pdf-to-text",
+            "version": "1.55.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/spatie/pdf-to-text.git",
+                "reference": "c5c6c7fa8aaa34de7eb6cde42b45aec480c8afb6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/spatie/pdf-to-text/zipball/c5c6c7fa8aaa34de7eb6cde42b45aec480c8afb6",
+                "reference": "c5c6c7fa8aaa34de7eb6cde42b45aec480c8afb6",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.4",
+                "symfony/process": "^7.0|^8.0"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.18",
+                "pestphp/pest": "^4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Spatie\\PdfToText\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Freek Van der Herten",
+                    "email": "freek@spatie.be",
+                    "homepage": "https://spatie.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Extract text from a pdf",
+            "homepage": "https://github.com/spatie/pdf-to-text",
+            "keywords": [
+                "pdf-to-text",
+                "spatie"
+            ],
+            "support": {
+                "issues": "https://github.com/spatie/pdf-to-text/issues",
+                "source": "https://github.com/spatie/pdf-to-text/tree/1.55.0"
+            },
+            "funding": [
+                {
+                    "url": "https://spatie.be/open-source/support-us",
+                    "type": "custom"
+                }
+            ],
+            "time": "2025-11-24T16:51:50+00:00"
         },
         {
             "name": "spatie/php-structure-discoverer",
