@@ -6,6 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Public\Exceptions\InvalidDateException;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 
 /**
@@ -166,7 +167,7 @@ final class PaypalTransactionRollup
 
             try {
                 $rolledUp[] = $this->buildDto($parentRow, $children, $language, $canonicalIndex);
-            } catch (InvalidAmountException) {
+            } catch (InvalidAmountException|InvalidDateException) {
                 $this->skippedMalformedRowCount++;
 
                 continue;
