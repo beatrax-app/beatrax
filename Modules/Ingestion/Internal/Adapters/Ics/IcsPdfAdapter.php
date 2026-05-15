@@ -482,9 +482,9 @@ final class IcsPdfAdapter implements SourceAdapter
      * Period dates derive from min/max booked_at across the parsed rows
      * because the Mijn ICS statement carries no explicit `Periode` field.
      * Opening / closing balances + period totals are parsed from the
-     * statement-summary header block. Masked-card metadata lands in
-     * `extras` per the project's archive-only-for-future-multi-card
-     * convention.
+     * four-column summary header row on page 1. Credit-limit and
+     * minimum-due are parsed from the two-column block lower on page 1.
+     * Masked-card metadata lands in `extras` for downstream audit.
      *
      * @param  list<CarbonImmutable>  $bookedDates
      */
@@ -495,12 +495,27 @@ final class IcsPdfAdapter implements SourceAdapter
         int $entryCount,
         ?string $cardLast4,
     ): StatementSummaryData {
-        $opening = $this->parseSummaryAmount($rawText, IcsPdfExtractionMap::SUMMARY_OPENING);
-        $closing = $this->parseSummaryAmount($rawText, IcsPdfExtractionMap::SUMMARY_CLOSING);
-        $received = $this->parseSummaryAmount($rawText, IcsPdfExtractionMap::SUMMARY_RECEIVED);
-        $charges = $this->parseSummaryAmount($rawText, IcsPdfExtractionMap::SUMMARY_CHARGES);
-        $creditLimit = $this->parseSummaryAmount($rawText, IcsPdfExtractionMap::SUMMARY_CREDIT_LIMIT);
-        $minDue = $this->parseSummaryAmount($rawText, IcsPdfExtractionMap::SUMMARY_MIN_DUE);
+        $fourColumn = $this->parseFourColumnSummary($rawText);
+        $twoColumn = $this->parseTwoColumnLimitBlock($rawText);
+
+        $opening = $fourColumn['opening'] ?? null;
+        $received = $fourColumn['received'] ?? null;
+        $charges = $fourColumn['charges'] ?? null;
+        $closing = $fourColumn['closing'] ?? null;
+        $creditLimit = $twoColumn['creditLimit'] ?? null;
+        $minDue = $twoColumn['minDue'] ?? null;
+
+        // Sign convention: opening, closing and period-charges on a
+        // revolving-credit statement are displayed as positive amounts
+        // with an `Af` direction marker meaning "owed to ICS"; persist
+        // them as signed-negative so the ledger semantics line up with
+        // the rest of the project (debits negative, credits positive).
+        // Period-received credits stay positive (the `Bij` direction);
+        // credit-limit and minimum-due are informational values that
+        // remain positive.
+        $opening = $opening === null ? null : -$opening;
+        $closing = $closing === null ? null : -$closing;
+        $charges = $charges === null ? null : -$charges;
 
         $periodStart = null;
         $periodEnd = null;
@@ -538,60 +553,113 @@ final class IcsPdfAdapter implements SourceAdapter
     }
 
     /**
-     * Parses the integer minor-units value associated with a given
-     * statement-summary token from the raw extracted text. Each token
-     * appears as a column-header; the corresponding value sits one or
-     * more lines below in the value row. We anchor on the token + the
-     * subsequent `€` prefix to capture the integer cents.
+     * Parses the four-column summary header row on page 1 in a single
+     * regex pass. The row carries opening + received + charges + closing
+     * in a single fixed order on the line directly below the four-token
+     * header. Returns the four positive integer-minor values keyed by
+     * `opening`, `received`, `charges`, `closing`; missing tokens map to
+     * absent array keys.
+     *
+     * @return array{opening?: int, received?: int, charges?: int, closing?: int}
      */
-    private function parseSummaryAmount(string $text, string $token): ?int
+    private function parseFourColumnSummary(string $text): array
     {
-        // Find the FIRST `€ <amount>` token that appears AFTER the
-        // search token in the raw extracted text. The page-1 summary
-        // row always appears once before the transactions-table region.
-        $pos = strpos($text, $token);
-        if ($pos === false) {
-            return null;
+        $pattern = '/'.preg_quote(IcsPdfExtractionMap::SUMMARY_OPENING, '/')
+            .'.+?'.preg_quote(IcsPdfExtractionMap::SUMMARY_RECEIVED, '/')
+            .'.+?'.preg_quote(IcsPdfExtractionMap::SUMMARY_CHARGES, '/')
+            .'.+?'.preg_quote(IcsPdfExtractionMap::SUMMARY_CLOSING, '/')
+            .'[\s\S]*?'
+            .'€\s+([\d.,]+)\s+(?:Af|Bij)\s+'
+            .'€\s+([\d.,]+)\s+(?:Af|Bij)\s+'
+            .'€\s+([\d.,]+)\s+(?:Af|Bij)\s+'
+            .'€\s+([\d.,]+)\s+(?:Af|Bij)/u';
+
+        if (preg_match($pattern, $text, $m) !== 1) {
+            return [];
         }
 
-        $tail = substr($text, $pos);
-        // The amount line uses `€ 606,96` shape with optional thousands
-        // separator. Direction markers (`Af` / `Bij`) follow the amount
-        // but do NOT carry a sign on the numeric token itself.
-        if (preg_match('/€\s+([\d.,]+)/u', $tail, $m) !== 1) {
-            return null;
+        $opening = $this->safeParseAmount($m[1]);
+        $received = $this->safeParseAmount($m[2]);
+        $charges = $this->safeParseAmount($m[3]);
+        $closing = $this->safeParseAmount($m[4]);
+
+        $out = [];
+        if ($opening !== null) {
+            $out['opening'] = $opening;
+        }
+        if ($received !== null) {
+            $out['received'] = $received;
+        }
+        if ($charges !== null) {
+            $out['charges'] = $charges;
+        }
+        if ($closing !== null) {
+            $out['closing'] = $closing;
         }
 
+        return $out;
+    }
+
+    /**
+     * Parses the two-column block at the foot of page 1 that carries
+     * Bestedingslimiet (credit limit, left column) and Minimaal te betalen
+     * bedrag (minimum due, right column) on adjacent lines. Returns the
+     * two positive integer-minor values keyed by `creditLimit` and
+     * `minDue`; missing tokens map to absent array keys.
+     *
+     * @return array{creditLimit?: int, minDue?: int}
+     */
+    private function parseTwoColumnLimitBlock(string $text): array
+    {
+        $pattern = '/'.preg_quote(IcsPdfExtractionMap::SUMMARY_CREDIT_LIMIT, '/')
+            .'\s+'.preg_quote(IcsPdfExtractionMap::SUMMARY_MIN_DUE, '/')
+            .'[\s\S]*?'
+            .'€\s+([\d.,]+)\s+'
+            .'€\s+([\d.,]+)/u';
+
+        if (preg_match($pattern, $text, $m) !== 1) {
+            return [];
+        }
+
+        $creditLimit = $this->safeParseAmount($m[1]);
+        $minDue = $this->safeParseAmount($m[2]);
+
+        $out = [];
+        if ($creditLimit !== null) {
+            $out['creditLimit'] = $creditLimit;
+        }
+        if ($minDue !== null) {
+            $out['minDue'] = $minDue;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Parses one Dutch-formatted amount string into minor units, returning
+     * null when the input is not a valid amount cell rather than throwing.
+     */
+    private function safeParseAmount(string $raw): ?int
+    {
         try {
-            $minor = $this->amounts->parse($m[1]);
+            return $this->amounts->parse($raw);
         } catch (InvalidAmountException) {
             return null;
         }
-
-        // Opening / closing balances on a revolving-credit statement are
-        // displayed as positive amounts with an `Af` direction marker
-        // meaning "owed to ICS"; persist them as signed-negative so the
-        // ledger semantics line up with the rest of the project (debits
-        // are negative, credits positive). Direction marker detection
-        // would be the more robust shape; for v1 we trust the column
-        // semantics on each token to drive sign.
-        if ($token === IcsPdfExtractionMap::SUMMARY_OPENING || $token === IcsPdfExtractionMap::SUMMARY_CLOSING || $token === IcsPdfExtractionMap::SUMMARY_CHARGES) {
-            $minor = -$minor;
-        }
-
-        return $minor;
     }
 
     /**
      * Reads the `Volgnummer N` token from the statement header. The
-     * fixture renders the volgnummer as a standalone integer on the
-     * value row (line 11), preceded by `KLANTNUMMER`.
+     * value row directly under the `Volgnummer  Bladnummer` two-column
+     * header carries the statement date, customer id, sequence number,
+     * and sheet index `N van M`. The sequence number is the integer that
+     * immediately precedes `\d+\s+van\s+\d+`.
      */
     private function parseStatementNumber(string $text): ?string
     {
         if (
             preg_match(
-                '/Volgnummer\s+Bladnummer\s*\n[^0-9]*\S+\s+\d+\s+(\d+)\s+\d+\s+van\s+\d+/m',
+                '/Volgnummer\s+Bladnummer\s*\n[^\n]*?(\d+)\s+\d+\s+van\s+\d+/m',
                 $text,
                 $m,
             ) === 1
