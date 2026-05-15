@@ -7,7 +7,7 @@ declare(strict_types=1);
  * Reads a raw PayPal "Activity Download" CSV and writes a redacted copy
  * suitable for committing as a test fixture.
  *
- * Redaction protocol (per the phase-4 fixture-handling brief):
+ * Redaction protocol:
  *
  *   - Transaction reference IDs (`Transactiereferentie` /
  *     `Transaction ID`) and back-references (`Reference Txn ID`) are
@@ -22,14 +22,14 @@ declare(strict_types=1);
  *   - Merchant `Naam` / `Name` cells: PRESERVED VERBATIM. In PayPal's
  *     NL export this column carries the counterparty merchant name
  *     ("Google Cloud EMEA Limited", "Netflix.com", "Jagex Limited"),
- *     not the cardholder. Per D-58 "merchant strings preserved
- *     verbatim". The cardholder name is not present anywhere in the
- *     Activity Download CSV.
+ *     not the cardholder; merchant strings are public-domain. The
+ *     cardholder name is not present anywhere in the Activity Download
+ *     CSV.
  *
  *   - IBAN-shaped tokens (CC + 2 digits + ≥10 alnum) → the
- *     deterministic placeholder `NL00ASNB0000000000`. The placeholder
- *     reuses the Phase 2 mod-97-valid synthetic IBAN form so PayPal
- *     CSV fixtures stay consistent with the CAMT/MT940 corpus.
+ *     deterministic placeholder `NL00ASNB0000000000`, a mod-97-valid
+ *     synthetic IBAN form shared with the ASN CAMT/MT940 fixture
+ *     corpus so PayPal CSV fixtures stay consistent.
  *
  *   - Address-shaped columns (`Address`, `Adres`, `Country Code`,
  *     `Land`, `Stad`, `City`, `State`, `Provincie`) → empty string.
@@ -191,9 +191,9 @@ $emailRegex = '/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/u';
 $ibanRegex = '/\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b/u';
 
 // Merchant `Naam` column is PRESERVED — it carries the counterparty
-// name (e.g., "Google Payment Ireland Ltd.", "Netflix.com"), which per
-// D-58 is a merchant string preserved verbatim. The cardholder name
-// does not appear anywhere in PayPal's Activity Download CSV.
+// name (e.g., "Google Payment Ireland Ltd.", "Netflix.com"), which is
+// public-domain merchant data. The cardholder name does not appear
+// anywhere in PayPal's Activity Download CSV.
 $emailHeaders = ['Van e-mailadres', 'Naar e-mailadres', 'From Email Address', 'To Email Address'];
 $ibanHeaders = ['Bankrekening', 'Counterparty IBAN', 'IBAN'];
 $addressHeaders = [
@@ -360,14 +360,14 @@ foreach ($rows as $row) {
 fclose($out);
 
 // ----------------------------------------------------------------------
-// Reference-integrity check. Per Pitfall 5 the redacted CSV must keep
-// every parent/child link inside the file: a non-empty
-// `Reference Txn ID` must either be a synthetic ID we minted (and that
-// also appears in some row's Transaction ID column) OR an external
-// reference that wasn't itself emitted as a Transaction ID — those are
-// orphan-children whose parent rows live outside this report window
-// (D-61). We accept orphans; we abort only if the rewrite produced a
-// reference into a synthetic ID that doesn't exist as a Transaction ID.
+// Reference-integrity check. The redacted CSV must keep every
+// parent/child link inside the file: a non-empty `Reference Txn ID`
+// must either be a synthetic ID we minted (and that also appears in
+// some row's Transaction ID column) OR an external reference that
+// wasn't itself emitted as a Transaction ID — those are orphan
+// children whose parent rows live outside this report window. We
+// accept orphans; we abort only if the rewrite produced a reference
+// into a synthetic ID that doesn't exist as a Transaction ID.
 // ----------------------------------------------------------------------
 $txnIds = [];
 foreach ($rows as $row) {
@@ -388,18 +388,18 @@ if ($refTxnIdCol !== null) {
             continue;
         }
         if (! isset($txnIds[$ref])) {
-            // Per D-61: a Reference Txn ID that doesn't resolve inside
-            // the file is a legitimate orphan-child whose parent lives
-            // outside the report window (e.g., a billing-agreement ID,
-            // or a child row whose parent was created in the prior
-            // statement period). They're acceptable; we only count them.
+            // A Reference Txn ID that doesn't resolve inside the file
+            // is a legitimate orphan child whose parent lives outside
+            // the report window (e.g., a billing-agreement ID, or a
+            // child row whose parent was created in the prior statement
+            // period). They're acceptable; we only count them.
             $orphanCount++;
         }
     }
 }
 
 fwrite(STDERR, sprintf(
-    "Anonymised %d rows. Mapped %d distinct IDs. Detected %d orphan-child rows whose parent is outside this file (acceptable per D-61).\n",
+    "Anonymised %d rows. Mapped %d distinct IDs. Detected %d orphan-child rows whose parent is outside this file (acceptable).\n",
     count($rows),
     count($realToSynthetic),
     $orphanCount,

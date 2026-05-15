@@ -12,10 +12,10 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Transfers\Internal\Listeners\PairTransferCandidates;
 
 /*
- * Coverage for the Wave 2 PairTransferCandidates listener.
+ * Coverage for the PairTransferCandidates listener.
  *
  * The listener subscribes to TransactionImported (fired sync in-tx by
- * RecordTransactions) and runs the deterministic Layer-1 match:
+ * RecordTransactions) and runs the deterministic match:
  *
  *   - same user
  *   - counterparty_iban matches one of the user's own Account.iban rows
@@ -110,7 +110,7 @@ function pairTx(
     ], $overrides));
 }
 
-it('pairs an ASN→ICS settlement when both legs are present (Phase 4 SC#3)', function (): void {
+it('pairs an ASN→ICS settlement when both legs are present', function (): void {
     $asnLeg = pairTx($this->primaryUser, $this->asnAccount, $this->importRun, [
         'type' => 'transfer_out',
         'amount_minor' => -12345,
@@ -378,7 +378,7 @@ it('writes both sides symmetrically and the Eloquent pair() relation walks both 
     expect($ics->pair?->id)->toBe($asn->id);
 });
 
-it('refuses to pair when the event payload\'s user does not match the transaction\'s user_id (T-04-W2-02)', function (): void {
+it('refuses to pair when the event payload\'s user does not match the transaction\'s user_id (cross-user safety)', function (): void {
     $userB = User::query()->create([
         'email' => 'pair-tamper@diederik.test',
         'password' => 'fixture-password',

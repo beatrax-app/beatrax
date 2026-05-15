@@ -8,11 +8,11 @@ use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 /*
  * Coverage for the NL-locale PayPal amount parser.
  *
- * Empirical format sourced from the Wave 0 fixture at
- * Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv — the
- * user's PayPal account renders amounts in NL locale (comma decimal,
- * no visible thousands separator in this single-month export). See
- * paypal-sample-1.md "Empirical column layout" section.
+ * The user's PayPal account renders amounts in NL locale (comma
+ * decimal, no visible thousands separator in observed single-month
+ * exports). See the redacted fixture at
+ * Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv for
+ * representative values.
  *
  * Integer-only arithmetic invariant: NO (float), NO floatval(), NO
  * round(). Same NoFloatMoneyArchTest gate every other amount parser

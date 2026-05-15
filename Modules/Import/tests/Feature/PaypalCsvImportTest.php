@@ -10,11 +10,11 @@ use Modules\Ledger\Models\Transaction;
 
 /*
  * Wire-level coverage for the PayPal CSV import path:
- *  - end-to-end import of the redacted Wave 0 fixture (Phase 4 SC #1
- *    demoability) — 41 canonical rows persist with the right native +
- *    settled pair shapes and source_format = 'paypal-csv'
- *  - idempotency on re-import (the IdempotencyContractTest contract
- *    row stays GREEN — this test exists alongside it to anchor the
+ *  - end-to-end import of the redacted fixture — 41 canonical rows
+ *    persist with the right native + settled pair shapes and
+ *    source_format = 'paypal-csv'
+ *  - idempotency on re-import (the IdempotencyContractTest dataset
+ *    covers the contract; this test exists alongside it to anchor the
  *    PayPal-specific narrative)
  *  - "name your PayPal account" wizard branch fires when no PayPal
  *    Account exists for the user, hides once one is named
@@ -27,7 +27,7 @@ beforeEach(function (): void {
     $this->fixture = base_path('Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv');
 });
 
-it('imports the Wave 0 fixture end-to-end with 41 canonical rows', function (): void {
+it('imports the redacted fixture end-to-end with 41 canonical rows', function (): void {
     $result = $this->importer->runAndConfirm($this->fixture, 'paypal-csv', $this->fixtureUser);
 
     expect($result->inserted)->toBe(41);
@@ -48,7 +48,7 @@ it('persists source_ref as the parent Transaction ID on every imported row', fun
     foreach (Transaction::all() as $row) {
         expect($row->source_ref)->toBeString();
         expect($row->source_ref)->not->toBe('');
-        // Wave 0 anonymisation pads Transaction IDs to `O-<17-digit-counter>`.
+        // The redaction script pads Transaction IDs to `O-<17-digit-counter>`.
         expect((bool) preg_match('/^O-\d{17}$/', (string) $row->source_ref))->toBeTrue();
     }
 })->group('phase-4');
