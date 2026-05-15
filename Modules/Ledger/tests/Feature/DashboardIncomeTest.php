@@ -8,18 +8,15 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 
 /*
- * Wave 3 regression tests for Phase 4 SC #4 (detection half).
+ * Regression tests for the subtractive income rule on the dashboard
+ * "this period at a glance" rollup.
  *
- * The dashboard's "this period at a glance" rollup MUST classify
- * by `transactions.type`, not by amount sign. A `transfer_in` row
- * (the ICS leg of an ASN→ICS settlement) is a positive amount but
- * MUST NOT inflate the income tile; a `transfer_out` row is a
- * negative amount but MUST NOT inflate the expense tile; refunds
- * are positive too but stay out of the income tile per CONTEXT.md
- * D-77 (the subtractive income rule).
- *
- * Until this plan the query summed by amount sign — every positive
- * amount counted as inflow. These tests pin the Wave 3 contract.
+ * The rollup MUST classify by `transactions.type`, not by amount sign.
+ * A `transfer_in` row (the ICS leg of an ASN→ICS settlement) is a
+ * positive amount but MUST NOT inflate the income tile; a
+ * `transfer_out` row is a negative amount but MUST NOT inflate the
+ * expense tile; refunds are positive too but stay out of the income
+ * tile.
  */
 
 beforeEach(function (): void {
@@ -54,7 +51,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('excludesTransfers — transfer_in and refund rows never inflate the income tile (Phase 4 SC #4)', function (): void {
+it('excludesTransfers — transfer_in and refund rows never inflate the income tile', function (): void {
     // a) Genuine income: type=income, amount=+1000 EUR.
     $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'income',
@@ -74,7 +71,7 @@ it('excludesTransfers — transfer_in and refund rows never inflate the income t
         'counterparty_name' => 'iDEAL bulk settlement',
         'counterparty_iban' => 'NL57ASNB0123456789',
     ]);
-    // c) Refund: type=refund, amount=+200 EUR — also excluded per D-77.
+    // c) Refund: type=refund, amount=+200 EUR — also excluded.
     $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'refund',
         'amount_minor' => 20000,

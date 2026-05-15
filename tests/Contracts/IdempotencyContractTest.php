@@ -35,9 +35,6 @@ dataset('idempotent_adapters', [
         'overlapBase' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf',
         'overlapNext' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf',
     ],
-    // Phase 4 Wave 0 baseline. The adapter does not yet exist, so this
-    // row REDs on adapter resolution (unknown source format
-    // 'paypal-csv'). Wave 1 brings it GREEN when PaypalCsvAdapter ships.
     'paypal-csv' => [
         'adapterFormat' => 'paypal-csv',
         'fixture' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv',

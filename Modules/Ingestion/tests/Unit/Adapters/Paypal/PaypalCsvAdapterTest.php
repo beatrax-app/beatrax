@@ -12,9 +12,9 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
 
 /*
  * Coverage for the PayPal CSV adapter — the composite class that wires
- * the rollup walker + locale-specific parsers + Wave 0 language profile
- * + event-type map into the SourceAdapter contract every ingestion
- * pipeline consumes. Tests run against the redacted Wave 0 fixture at
+ * the rollup walker + locale-specific parsers + language profile +
+ * event-type map into the SourceAdapter contract every ingestion
+ * pipeline consumes. Tests run against the redacted fixture at
  * Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv.
  */
 
@@ -40,7 +40,7 @@ it('reports its stable format identifier as paypal-csv', function (): void {
     expect($this->adapter->format())->toBe('paypal-csv');
 })->group('phase-4');
 
-it('parses the Wave 0 fixture into 41 canonical SourceTransactionDto rows', function (): void {
+it('parses the redacted fixture into 41 canonical SourceTransactionDto rows', function (): void {
     /** @var list<SourceTransactionDto> $dtos */
     $dtos = iterator_to_array($this->adapter->parse($this->fixture, $this->resolver), false);
 
@@ -62,7 +62,7 @@ it('emits monotonically increasing sourceRowIndex starting at zero', function ()
     }
 })->group('phase-4');
 
-it('yields the dual-amount pair for the Cloudflare USD chain (Pitfall 2 safety net)', function (): void {
+it('yields the dual-amount pair for the Cloudflare USD chain (FX-direction safety net)', function (): void {
     /** @var list<SourceTransactionDto> $dtos */
     $dtos = iterator_to_array($this->adapter->parse($this->fixture, $this->resolver), false);
 

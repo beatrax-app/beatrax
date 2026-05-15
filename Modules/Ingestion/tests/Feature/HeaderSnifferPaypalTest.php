@@ -12,7 +12,7 @@ beforeEach(function (): void {
     $this->sniffer = $this->app->make(HeaderSniffer::class);
 });
 
-it('accepts the redacted PayPal Wave 0 fixture and reports its profile', function (): void {
+it('accepts the redacted PayPal fixture and reports its profile', function (): void {
     $result = $this->sniffer->sniff(
         base_path('Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv'),
         PaypalCsvLanguageProfile::FORMAT,
