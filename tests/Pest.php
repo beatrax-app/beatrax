@@ -32,6 +32,12 @@ foreach (
         ->in(__DIR__.'/../'.$module.'/tests/Feature');
 
     pest()->extend($testCase)->in(__DIR__.'/../'.$module.'/tests/Unit');
+
+    // Integration directory: present where a module has tests that
+    // exec external binaries (Modules/Ingestion/tests/Integration/
+    // smokes the real `pdftotext` binary). Tagged ->group('integration')
+    // so CI hosts without the binary can --exclude-group=integration.
+    pest()->extend($testCase)->in(__DIR__.'/../'.$module.'/tests/Integration');
 }
 
 /**
