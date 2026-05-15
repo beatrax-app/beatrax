@@ -398,10 +398,16 @@ final class IcsPdfAdapter implements SourceAdapter
     }
 
     /**
-     * Drops country-code suffix and any trailing whitespace runs to leave
-     * just the merchant token from the Mijn ICS "Omschrijving" column.
-     * The full original description still lives in the DTO's `description`
-     * field; this is only the counterparty-cleaned variant.
+     * Strips the trailing two-letter country code and collapses internal
+     * multi-space runs from the Mijn ICS "Omschrijving" column. Returns
+     * the cleaned counterparty string, which may still include city or
+     * address fragments — the upstream column merges merchant, street,
+     * and city into a single free-text field, and the trailing country
+     * code is the only stable terminator the adapter can detect without
+     * a per-merchant heuristic. The full original description still
+     * lives in the DTO's `description` field; this returns only the
+     * trimmed counterparty variant used for FingerprintComposer
+     * normalisation.
      */
     private function extractCounterpartyName(string $description): ?string
     {
