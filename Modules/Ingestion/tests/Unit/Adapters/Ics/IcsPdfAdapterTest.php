@@ -212,6 +212,39 @@ it('exposes statement-summary tokens via statementMetadata() after parse() compl
     expect($extras['cardLast4'])->toBe('XXXX');
 })->group('phase-3');
 
+it('parses the six empirical summary amounts column-by-column from the four-token header + the two-column limit block', function (): void {
+    iterator_to_array($this->adapter->parse($this->tinyPdf, $this->resolver), false);
+
+    $metadata = $this->adapter->statementMetadata();
+
+    expect($metadata)->toBeInstanceOf(StatementSummaryData::class);
+    /** @var StatementSummaryData $metadata */
+    // Opening balance and closing balance are stored as signed-negative
+    // minor units (debits = owed to ICS). The four-column header row on
+    // page 1 carries `€ 606,96  Af  € 606,96  Bij  € 1.416,50  Af
+    // € 1.416,50  Af` — opening 606.96, received 606.96, charges
+    // 1416.50, closing 1416.50.
+    expect($metadata->openingBalanceMinor)->toBe(-60696);
+    expect($metadata->closingBalanceMinor)->toBe(-141650);
+
+    /** @var array<string, mixed> $extras */
+    $extras = $metadata->extras;
+    expect($extras['totalReceivedMinor'])->toBe(60696);
+    expect($extras['totalChargesMinor'])->toBe(-141650);
+    expect($extras['creditLimitMinor'])->toBe(250000);
+    expect($extras['minimumDueMinor'])->toBe(141650);
+})->group('phase-3');
+
+it('reads the statement sequence number from the Volgnummer column', function (): void {
+    iterator_to_array($this->adapter->parse($this->tinyPdf, $this->resolver), false);
+
+    $metadata = $this->adapter->statementMetadata();
+
+    expect($metadata)->toBeInstanceOf(StatementSummaryData::class);
+    /** @var StatementSummaryData $metadata */
+    expect($metadata->statementNumber)->toBe('2');
+})->group('phase-3');
+
 it('registers under the ics-pdf key in the SourceAdapterRegistry', function (): void {
     $registry = app(SourceAdapterRegistry::class);
 
