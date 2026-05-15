@@ -7,6 +7,7 @@ use Modules\Core\Providers\CoreServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
+use Modules\Transfers\Providers\TransfersServiceProvider;
 
 return [
     CoreServiceProvider::class,
@@ -14,4 +15,5 @@ return [
     IngestionServiceProvider::class,
     ImportServiceProvider::class,
     CategorizationServiceProvider::class,
+    TransfersServiceProvider::class,
 ];
