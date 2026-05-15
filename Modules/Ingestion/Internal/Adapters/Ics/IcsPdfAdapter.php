@@ -132,9 +132,13 @@ final class IcsPdfAdapter implements SourceAdapter
         $bookedDates = [];
         $entryCount = 0;
         $ownIban = $this->ownIban();
-        // Single resolve() call so the wizard's UnknownAccount branching
-        // path still fires for ICS imports (matches every other adapter's
-        // shape).
+        // Fire-and-forget resolve() so the wizard's UnknownAccount
+        // branching path still fires for ICS imports (matches every
+        // other adapter's shape). The returned AccountResolution is
+        // intentionally discarded: ParseStage re-resolves per row
+        // downstream of this adapter, so a return-value capture here
+        // would be redundant. Any failure (e.g. database connection
+        // drop) still propagates correctly.
         $accounts->resolve($ownIban);
 
         foreach ($this->iterateTransactionBlocks($cleaned) as $block) {
