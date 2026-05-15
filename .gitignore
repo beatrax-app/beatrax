@@ -43,11 +43,15 @@ yarn-error.log
 # Uploaded statements — Plan 05 starts writing here
 /storage/imports
 
-# Raw ICS Cards PDF statements — never commit financial data.
-# The extracted-and-redacted .txt fixture under
-# Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt IS committed; the
-# raw .pdf lives here on the user's machine only.
-/local/
+# Raw ICS Cards PDF statements + raw PayPal Activity Download CSVs — never
+# commit financial data. The extracted-and-redacted .txt fixture under
+# Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt and the redacted
+# PayPal CSV under Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv
+# ARE committed; the raw .pdf / .csv lives here on the user's machine only.
+/local/*
+!/local/paypal/
+/local/paypal/*
+!/local/paypal/.gitkeep
 
 # Module activation state
 /modules_statuses.json
