@@ -30,10 +30,10 @@ abstract class TestCase extends BaseTestCase
     protected ?User $fixtureUser = null;
 
     /**
-     * Seeds the canonical fixture User + ASN Account + ICS Account so
-     * the contract tests and the per-module *ImportTest files can
-     * resolve their respective own-IBANs without falling through to the
-     * unknown-IBAN wizard step.
+     * Seeds the canonical fixture User + ASN Account + ICS Account +
+     * PayPal Account so the contract tests and the per-module
+     * *ImportTest files can resolve their respective own-IBANs without
+     * falling through to the unknown-IBAN wizard step.
      *
      * IBAN `NL57ASNB0123456789` is the load-bearing anonymisation value
      * baked into tests/fixtures/asn-sample-1.csv. Do NOT change this
@@ -44,7 +44,11 @@ abstract class TestCase extends BaseTestCase
      * AccountResolver scopes lookups by `user_id` already, so a single
      * instance-wide literal is unambiguous.
      *
-     * @return array{user: User, account: Account, icsAccount: Account}
+     * IBAN `PAYPAL` is the synthetic own-IBAN literal the
+     * `PaypalCsvAdapter` emits for every parsed PayPal Activity
+     * Download row. Same scoping shape as `ICS-CARD`.
+     *
+     * @return array{user: User, account: Account, icsAccount: Account, paypalAccount: Account}
      */
     public function seedFixtureUserAndAccount(): array
     {
@@ -77,6 +81,24 @@ abstract class TestCase extends BaseTestCase
             ],
         );
 
-        return ['user' => $this->fixtureUser, 'account' => $account, 'icsAccount' => $icsAccount];
+        $paypalAccount = Account::query()->updateOrCreate(
+            [
+                'user_id' => $this->fixtureUser->id,
+                'iban' => 'PAYPAL',
+            ],
+            [
+                'name' => 'PayPal (fixture)',
+                'slug' => 'paypal-fixture',
+                'kind' => 'paypal',
+                'default_currency' => 'EUR',
+            ],
+        );
+
+        return [
+            'user' => $this->fixtureUser,
+            'account' => $account,
+            'icsAccount' => $icsAccount,
+            'paypalAccount' => $paypalAccount,
+        ];
     }
 }

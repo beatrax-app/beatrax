@@ -10,6 +10,7 @@ use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053Adapter;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940Adapter;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
+use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvAdapter;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
@@ -36,6 +37,7 @@ final class IngestionServiceProvider extends ServiceProvider
                 'asn-camt053' => $app->make(AsnCamt053Adapter::class),
                 'asn-mt940' => $app->make(AsnMt940Adapter::class),
                 'ics-pdf' => $app->make(IcsPdfAdapter::class),
+                'paypal-csv' => $app->make(PaypalCsvAdapter::class),
             ]),
         );
     }
