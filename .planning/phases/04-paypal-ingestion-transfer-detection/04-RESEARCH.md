@@ -124,7 +124,8 @@ The architectural responsibility map below pins ownership tier-by-tier so the pl
 |------------|-------------|----------------|-----------|
 | PayPal CSV parsing (raw rows → `SourceTransactionDto[]`) | Ingestion module (`Internal/Adapters/Paypal/PaypalCsvAdapter`) | — | Adapter contract is Ingestion's; mirrors `AsnCsvAdapter`, `IcsPdfAdapter`. |
 | Transaction-ID rollup walker | Ingestion module (`Internal/Adapters/Paypal/PaypalTransactionRollup`) | — | Pure source-format concern — buffering and event-type semantics live inside the adapter composition. Tested independently via Pest dataset against the redacted fixture. |
-| Language-profile / event-type-map data | Ingestion module (`PaypalCsvLanguageProfile`, `PaypalCsvEventTypeMap`) | — | Format-shape config — never imported outside the Paypal adapter. |
+| Language profile data (header tokens, locale signature) | Ingestion module — Internal (`Internal/Adapters/Paypal/PaypalCsvLanguageProfile`) | — | Format-shape detection — only the Paypal adapter + HeaderSniffer arm inside the same module consume it; stays Internal. |
+| Event-type map (action classification + Transaction::TYPES mapping) | Ingestion module — Public (`Public/Paypal/PaypalCsvEventTypeMap`) | Import module (`Internal/Pipeline/Stages/ClassifyTransactionType` injects it) | Cross-module consumer (Import's ClassifyTransactionType step) requires it on the Public surface — placing it under `Internal/Adapters/Paypal/` would violate the `nwidart/laravel-modules` Public/Internal contract. The class is a pure-data lookup with no side effects, so Public placement is safe. |
 | Synthetic IBAN `'PAYPAL'` constant + adapter `ownIban()` | Ingestion module (Paypal adapter) | Ledger module (`Account.iban` storage) | Adapter emits the synthetic literal; the Account row is owned by Ledger and seeded via the wizard naming step. Same shape as Phase 3 `'ICS-CARD'`. |
 | `pair_transaction_id` schema column | Ledger module (new migration) | — | Schema is owned by Ledger per D-04. Forward-only migration; no backfill needed (column defaults NULL). |
 | `TransactionImported` event | Import module (`Public/Events/TransactionImported`) | — | The event carries the persisted-Transaction model — Import's pipeline is the natural origin. Public surface so cross-module listeners (Transfers, future Categorization-rules, future Chain resolver) can subscribe. |
@@ -226,10 +227,10 @@ The architectural responsibility map below pins ownership tier-by-tier so the pl
               │   Modules/Ingestion/Internal/Adapters/Paypal/        │
               │     PaypalCsvAdapter (lazy Generator)               │
               │       composes:                                     │
-              │         PaypalCsvLanguageProfile (D-59)             │
-              │         PaypalCsvEventTypeMap (D-62)                │
-              │         PaypalAmountParser (US locale)              │
-              │         PaypalDateParser (US locale)                │
+              │         PaypalCsvLanguageProfile (D-59) [Internal]  │
+              │         PaypalCsvEventTypeMap (D-62) [Public/Paypal]│
+              │         PaypalAmountParser (US locale) [Internal]   │
+              │         PaypalDateParser (US locale) [Internal]     │
               │         PaypalTransactionRollup (D-61 walker)       │
               │     yields: SourceTransactionDto per ROLLED-UP      │
               │             logical payment (not per raw CSV row)   │
@@ -268,16 +269,18 @@ A reader can trace a PayPal CSV upload from the wizard to the final `pair_transa
 ```
 Modules/
 ├── Ingestion/
-│   └── Internal/
-│       └── Adapters/
-│           └── Paypal/                     ← NEW directory
-│               ├── PaypalCsvAdapter.php
-│               ├── PaypalCsvLanguageProfile.php
-│               ├── PaypalCsvEventTypeMap.php
-│               ├── PaypalCsvColumnMap.php           # if language profile resolves to fixed positions
-│               ├── PaypalAmountParser.php
-│               ├── PaypalDateParser.php
-│               └── PaypalTransactionRollup.php     # single-purpose walker
+│   ├── Public/
+│   │   └── Paypal/                         ← NEW directory (Public surface — cross-module-safe)
+│   │       └── PaypalCsvEventTypeMap.php   # consumed by Modules/Import (ClassifyTransactionType)
+│   ├── Internal/
+│   │   └── Adapters/
+│   │       └── Paypal/                     ← NEW directory (Internal — Ingestion-only)
+│   │           ├── PaypalCsvAdapter.php
+│   │           ├── PaypalCsvLanguageProfile.php
+│   │           ├── PaypalCsvColumnMap.php           # if language profile resolves to fixed positions
+│   │           ├── PaypalAmountParser.php
+│   │           ├── PaypalDateParser.php
+│   │           └── PaypalTransactionRollup.php     # single-purpose walker
 │   └── tests/
 │       └── fixtures/
 │           └── paypal/                     ← NEW directory
@@ -1066,7 +1069,7 @@ Phase 4 is pure code + schema + fixture work; no new tools, daemons, services, o
 - [ ] `scripts/anonymize_paypal_csv.php` — idempotent regex-driven anonymisation script
 - [ ] `local/paypal/` directory + `.gitignore` entry (verify: `/local/` already covers it — confirmed by grep — but the planner should re-verify during Wave 0)
 - [ ] `Modules/Ingestion/Internal/Adapters/Paypal/PaypalCsvLanguageProfile.php` skeleton populated with Wave-0-empirical token vocabulary
-- [ ] `Modules/Ingestion/Internal/Adapters/Paypal/PaypalCsvEventTypeMap.php` skeleton populated with Wave-0-empirical event-type → classification map
+- [ ] `Modules/Ingestion/Public/Paypal/PaypalCsvEventTypeMap.php` skeleton populated with Wave-0-empirical event-type → classification map
 - [ ] `Modules/Import/Public/Events/TransactionImported.php` event class (Wave 0 deliverable — listener depends on it)
 - [ ] Contract-test scaffold extension: add `'paypal-csv'` row to `tests/Contracts/IdempotencyContractTest.php` dataset (failing red baseline)
 - [ ] `04-WAVE-0-FINDINGS.md` — committed empirical reporting set per D-60 (a–g)
