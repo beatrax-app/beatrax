@@ -75,7 +75,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 7 plans
   - [x] 03-01-PLAN.md — Wave 0 enablement: anonymised ICS fixture, fixture record (column map / D-34 / D-35 / D-40 dispositions), phase-3 Pest group, failing scaffolds across six test files
   - [x] 03-02-PLAN.md — Wave 2 wire-level slice: SourceTransactionDto D-42 extension + NormalizeStage substitution + D-39 FX-rate derivation + IcsCsvAdapter + registry + IdempotencyContractTest dataset (ING-04, LED-03)
-  - [ ] 03-03-PLAN.md — Wave 3 wizard polish: two-step issuer-format picker refactor with aria-live cascade + Blade restructure + UploadWizardTest extension + PreviewWizard ICS-Account naming step (D-33, D-36, D-38)
+  - [x] 03-03-PLAN.md — Wave 3 wizard polish: two-step issuer-format picker refactor with aria-live cascade + Blade restructure + UploadWizardTest extension + PreviewWizard ICS-Account naming step (D-33, D-36, D-38)
   - [ ] 03-04-PLAN.md — Wave 3 settings page: users.default_currency_view migration + User model + /settings Livewire SFC + top-nav link + SettingsPageTest (MC-02 storage half)
   - [ ] 03-05-PLAN.md — Wave 4 transactions toggle: TransactionRowDto secondaryAmount + TransactionListQuery projection + Flux segmented toggle with #[Url] + dual-line stack on /transactions (MC-02 list half + UI-06 + D-44 + D-47)
   - [ ] 03-06-PLAN.md — Wave 5 dashboard branching: ThisPeriodAtAGlanceQuery forByCurrency + PerCurrencyTile DTO + Money formatter locale-aware default + Dashboard.render branching + per-currency tile rows (MC-02 dashboard half + D-46)
@@ -194,7 +194,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Foundation + ASN CSV Vertical Slice | 7/7 | Complete | - |
 | 2. ASN Statement Coverage (CAMT.053 + MT940) | 5/5 | Ready for verification | - |
-| 3. ICS Cards + Multi-Currency Display | 0/TBD | Not started | - |
+| 3. ICS Cards + Multi-Currency Display | 3/7 | In Progress|  |
 | 4. PayPal Ingestion + Transfer Detection | 0/TBD | Not started | - |
 | 5. Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition) | 0/TBD | Not started | - |
 | 6. Email Receipt Ingestion Infrastructure | 0/TBD | Not started | - |

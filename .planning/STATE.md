@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-02 — Wave 2 ICS PDF wire-level slice
-last_updated: "2026-05-15T17:07:40.684Z"
+stopped_at: Completed 03-03-PLAN.md (wizard cascade + ICS-naming branch)
+last_updated: "2026-05-15T17:27:42.509Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 19
-  completed_plans: 14
-  percent: 74
+  completed_plans: 15
+  percent: 79
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 03 (ics-cards-multi-currency-display) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [███████░░░] 74%
+Progress: [████████░░] 79%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [███████░░░] 74%
 | Phase 02 P05 | 14 | 3 tasks | 6 files |
 | Phase 03 P01 | 18 | 7 tasks | 20 files |
 | Phase 03 P02 | 27 | 6 tasks | 28 files |
+| Phase 03 P03 | 11min | - tasks | - files |
 
 ## Accumulated Context
 
@@ -106,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 03 Plan 02: transactions.raw_payload JSON column added (deferred from the Phase 1 schema). Required by D-49; the migration suite had not declared it. CanonicalTransaction extended with nullable rawPayload field; Transaction model casts as 'array'; NormalizeStage threads source->rawPayload through. Archive-only — Phase 3 queries never read it.
 - [Phase ?]: Phase 03 Plan 02: tiny synthetic PDF regenerated (981 bytes) to embed a transaction row matching the empirical layout ('12 apr. 12 apr. SYNTHETIC ICS TINY 1,00 Af') + statement-header date '15 april 2026'. The original 03-01 tiny PDF used a non-empirical shape that the production adapter correctly rejected.
 - [Phase ?]: Phase 03 Plan 02: Singleton-forget cascade for test-substituted PdfTextExtractor — forgetInstance(SourceAdapterRegistry) + IcsPdfAdapter + ImportPipeline + ParseStage before re-resolving RunsImports. Pattern documented in the FX-row test case so future contributors don't trip the singleton-stale-extractor gotcha.
+- [Phase ?]: PreviewWizard ICS-naming bypasses NamesAccounts service: the synthetic IBAN 'ICS-CARD' fails AccountNamer's ISO 13616 structural guard, so the wizard validates name + slug inline and inserts the Account row directly with kind='ics_card'.
+- [Phase ?]: Cascading picker leaf wire-format is the source of truth — Source select (issuer property) is UX-only; HeaderSniffer / SourceAdapterRegistry / pipelines dispatch on the leaf sourceFormat. Future format additions extend availableFormats() in PHP without Blade changes.
+- [Phase ?]: Raw DatabaseManager::table()->count() used in PreviewWizard::needsIcsAccountName instead of Eloquent's exists()/count() to clear PHPStan strict-rules staticMethod.dynamicCall — matches the Modules/Ledger/Public/Services/ThisPeriodAtAGlanceQuery convention.
 
 ### Pending Todos
 
@@ -137,6 +141,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-15T17:07:40.676Z
-Stopped at: Completed 03-02 — Wave 2 ICS PDF wire-level slice
-Resume file: None
+Last session: 2026-05-15T17:27:42.496Z
+Stopped at: Completed 03-03-PLAN.md (wizard cascade + ICS-naming branch)
+Resume file: 
