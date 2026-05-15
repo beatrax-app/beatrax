@@ -6,7 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
 use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Public\Exceptions\InvalidDateException;
 
 /**
  * Parses PayPal Activity Download Datum cells into a startOfDay
@@ -31,7 +31,7 @@ final class PaypalDateParser
     {
         $trimmed = trim($raw);
         if ($trimmed === '') {
-            throw new InvalidAmountException('Empty PayPal date string.');
+            throw new InvalidDateException('Empty PayPal date string.');
         }
 
         // Shape A: M/D/YYYY (US numeric — the empirical PayPal Activity
@@ -40,7 +40,7 @@ final class PaypalDateParser
             try {
                 $parsed = CarbonImmutable::createFromFormat('!n/j/Y', $trimmed);
             } catch (InvalidFormatException $e) {
-                throw new InvalidAmountException(sprintf(
+                throw new InvalidDateException(sprintf(
                     "Cannot parse PayPal date: '%s' (%s)",
                     $raw,
                     $e->getMessage(),
@@ -58,7 +58,7 @@ final class PaypalDateParser
             try {
                 $parsed = CarbonImmutable::createFromFormat('!Y-m-d', $trimmed);
             } catch (InvalidFormatException $e) {
-                throw new InvalidAmountException(sprintf(
+                throw new InvalidDateException(sprintf(
                     "Cannot parse PayPal date: '%s' (%s)",
                     $raw,
                     $e->getMessage(),
@@ -70,7 +70,7 @@ final class PaypalDateParser
             }
         }
 
-        throw new InvalidAmountException(sprintf(
+        throw new InvalidDateException(sprintf(
             "Cannot parse PayPal date: '%s' (expected M/D/YYYY or YYYY-MM-DD)",
             $raw,
         ));
