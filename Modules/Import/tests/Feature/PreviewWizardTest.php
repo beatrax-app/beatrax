@@ -112,7 +112,7 @@ it('cross-user import access is blocked', function (): void {
         ->call('confirm');
 })->throws(ModelNotFoundException::class);
 
-it('returns the persisted duplicate_count (not inserted_count) when an already-confirmed run is re-confirmed', function (): void {
+it('returns inserted_count plus duplicate_count when an already-confirmed run is re-confirmed', function (): void {
     /** @var RunsImports $importer */
     $importer = $this->app->make(RunsImports::class);
     $firstResult = $importer->runAndConfirm(
@@ -126,18 +126,17 @@ it('returns the persisted duplicate_count (not inserted_count) when an already-c
     $run = ImportRun::query()->findOrFail($firstResult->importRunId);
     expect($run->status)->toBe('confirmed');
     // Pin a non-zero duplicate_count so the idempotent re-confirm has
-    // something distinguishable to return; the original fixture's first
-    // run inserts every row as new (duplicates = 0), so without this
-    // override the regression would still pass under the buggy
-    // `inserted_count` substitution.
+    // something distinguishable to compose; the original fixture's first
+    // run inserts every row as new (duplicates = 0).
     $run->update(['duplicate_count' => 7]);
+    $expectedDuplicates = $run->inserted_count + 7;
 
     /** @var ConfirmsImports $confirmer */
     $confirmer = $this->app->make(ConfirmsImports::class);
     $second = ($confirmer)($firstResult->importRunId, $this->fixtureUser);
 
     expect($second->inserted)->toBe(0);
-    expect($second->duplicates)->toBe(7);
+    expect($second->duplicates)->toBe($expectedDuplicates);
     expect($second->enriched)->toBe($run->enriched_count);
     expect($second->errors)->toBe(0);
 });
