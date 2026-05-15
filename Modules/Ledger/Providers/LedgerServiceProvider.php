@@ -7,6 +7,7 @@ namespace Modules\Ledger\Providers;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Ledger\Internal\Console\RederiveFingerprintsCommand;
+use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Internal\Services\FingerprintRederiveService;
 use Modules\Ledger\Public\Actions\RecordTransactions;
@@ -58,6 +59,7 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'ledger');
 
         $livewire->component('ledger.transactions-list', TransactionsList::class);
+        $livewire->component('ledger.transaction-detail', TransactionDetail::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([
