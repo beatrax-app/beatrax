@@ -7,6 +7,7 @@ namespace Modules\Ingestion\Public\Services;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940HeaderProfile;
+use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfHeaderProfile;
 use Modules\Ingestion\Public\Dto\SniffResult;
 use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 
@@ -55,11 +56,41 @@ final class HeaderSniffer
             AsnCsvHeaderProfile::FORMAT => $this->sniffAsnCsv($localPath, $head),
             AsnCamt053HeaderProfile::FORMAT => $this->sniffAsnCamt053($localPath, $head),
             AsnMt940HeaderProfile::FORMAT => $this->sniffAsnMt940($localPath, $head),
+            IcsPdfHeaderProfile::FORMAT => $this->sniffIcsPdf($localPath, $head),
             default => throw new SniffMismatchException(sprintf(
                 'Unsupported sniff target: %s',
                 $declaredFormat,
             )),
         };
+    }
+
+    /**
+     * Validates that the path looks like an ICS PDF export — `.pdf`
+     * extension AND a literal `%PDF-` prefix in the first five bytes of
+     * the file. The magic-byte check rejects a renamed `.pdf` upload of
+     * a completely different file type before pdftotext is invoked.
+     */
+    private function sniffIcsPdf(string $path, string $head): SniffResult
+    {
+        if (preg_match('/\.pdf$/i', $path) !== 1) {
+            throw new SniffMismatchException(
+                "That file doesn't look like a PDF. Drop in the ICS PDF export you downloaded from the Mijn ICS portal."
+            );
+        }
+
+        if (! str_starts_with($head, IcsPdfHeaderProfile::MIME_MAGIC)) {
+            throw new SniffMismatchException(
+                'This file does not start with %PDF-. If you exported a different file format from ICS by mistake, re-download the monthly statement PDF.'
+            );
+        }
+
+        return new SniffResult(
+            format: IcsPdfHeaderProfile::FORMAT,
+            delimiter: '',
+            hasHeader: false,
+            encoding: IcsPdfHeaderProfile::SOURCE_ENCODING,
+            columnCount: 0,
+        );
     }
 
     /**
