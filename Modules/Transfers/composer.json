@@ -1,0 +1,16 @@
+{
+    "name": "diederik/transfers",
+    "description": "Transfers module — cross-account pair detection listener.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Transfers\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Transfers\\Tests\\": "tests/"
+        }
+    }
+}
