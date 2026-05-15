@@ -1,4 +1,6 @@
 @php
+    use Brick\Math\BigDecimal;
+    use Brick\Math\RoundingMode;
     use Carbon\CarbonImmutable;
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -8,6 +10,15 @@
     $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
         ? $money->format('nl_NL')
         : $money->format('en_US');
+
+    // FX-rate display: scale the persisted decimal(18,8) string to three
+    // decimals via BigDecimal so the value never crosses the float
+    // boundary. number_format() with a float cast would silently corrupt
+    // FX precision; the integer-only money rule extends to rate display.
+    $fxRateDisplay = $transaction->fx_rate_used === null
+        ? null
+        : (string) BigDecimal::of($transaction->fx_rate_used)
+            ->toScale(3, RoundingMode::HALF_UP);
 @endphp
 
 <div>
@@ -40,11 +51,11 @@
                     </dd>
                 </div>
 
-                @if ($transaction->fx_rate_used !== null)
+                @if ($fxRateDisplay !== null)
                     <div class="space-y-1" data-testid="fx-rate-row">
                         <dt class="text-sm text-slate-500">Effective rate</dt>
                         <dd class="text-sm text-slate-900" style="font-variant-numeric: tabular-nums;">
-                            €{{ number_format((float) $transaction->fx_rate_used, 3, '.', '') }} / {{ $transaction->currency }}
+                            €{{ $fxRateDisplay }} / {{ $transaction->currency }}
                         </dd>
                         <p class="text-xs text-slate-500">Includes any ICS markup.</p>
                     </div>
