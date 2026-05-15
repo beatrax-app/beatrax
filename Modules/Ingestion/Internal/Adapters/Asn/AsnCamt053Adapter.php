@@ -432,8 +432,8 @@ final class AsnCamt053Adapter implements SourceAdapter
 
     /**
      * Builds the `rawPayload['sepa']` fragment carrying every secondary
-     * reference observed on the entry + TxDtls. Phase 5 chain resolution
-     * reads these directly without re-parsing the source XML.
+     * reference observed on the entry + TxDtls. Downstream chain
+     * resolution reads these directly without re-parsing the source XML.
      *
      * @return array{sepa: array<string, mixed>}
      */

@@ -50,13 +50,13 @@
     {{-- KPI tiles: the primary focal point of the dashboard.
 
          When the user's default_currency_view is 'eur_only', `$tiles` is
-         null and the single Phase 1 row of In / Out / Net tiles renders
-         from `$summary`. When 'original', `$tiles` is a list of
-         PerCurrencyTile values (one per currency present in the period
-         with non-zero activity, alphabetical by ISO code); the section
-         stacks one labeled tile-row per currency. An EUR-only month in
-         original mode collapses to a single labeled row that visually
-         matches the EUR-only layout. --}}
+         null and a single row of In / Out / Net tiles renders from
+         `$summary`. When 'original', `$tiles` is a list of PerCurrencyTile
+         values (one per currency present in the period with non-zero
+         activity, alphabetical by ISO code); the section stacks one
+         labeled tile-row per currency. An EUR-only month in original
+         mode collapses to a single labeled row that visually matches the
+         EUR-only layout. --}}
     @if ($tiles === null)
         <section class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="This period totals">
             <div class="rounded-lg border border-slate-200 bg-white p-6">

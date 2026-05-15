@@ -10,11 +10,11 @@ use Modules\Ledger\Models\Transaction;
 
 /*
  * Render-level tests for the dashboard's original-currency mode. The
- * Livewire SFC branches on the user's default_currency_view: 'eur_only'
- * renders the Phase 1 single-row layout verbatim; 'original' renders one
- * labeled tile-row per currency present in the period (alphabetical by
- * ISO code). EUR-only months in original mode collapse to a single
- * captioned row.
+ * Livewire component branches on the user's `default_currency_view`:
+ * 'eur_only' renders a single row of In / Out / Net tiles; 'original'
+ * renders one labeled tile-row per currency present in the period
+ * (alphabetical by ISO code). EUR-only months in original mode collapse
+ * to a single captioned row that visually matches the EUR-only layout.
  */
 
 beforeEach(function (): void {
@@ -124,7 +124,7 @@ it('renders the original-mode tile rows in alphabetical order', function (): voi
     expect($gbpPos)->toBeLessThan($usdPos);
 })->group('phase-3');
 
-it('renders the single Phase 1 layout when default_currency_view is eur_only', function (): void {
+it('renders the single In/Out/Net layout when default_currency_view is eur_only', function (): void {
     // beforeEach already seeds default_currency_view = 'eur_only'.
     makeDashboardRenderTxn($this, -1299, 'EUR', '2026-05-08');
     // Add a USD transaction; in eur_only mode it must not produce a USD caption.

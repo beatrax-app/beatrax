@@ -6,11 +6,12 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Schema\Builder;
 
 /*
- * Schema-shape gate for the Wave 1 migrations. Asserts the four
- * migrations under .../Database/Migrations/2026_05_13_010001..010004
- * landed the columns + UNIQUE-index swap that downstream Wave 2 and
- * Wave 3 plans depend on. Pest-based so it runs under
- * vendor/bin/pest --group=phase-2 without coupling to a TTY or PsySH.
+ * Schema-shape gate for the Ledger module migrations under
+ * .../Database/Migrations/2026_05_13_010001..010004. Asserts that the
+ * downstream columns + per-user UNIQUE-index swap on `transactions` are
+ * in place so the ingestion pipeline + statement-summary writer can
+ * rely on them at run time. Pest-based so it runs in the standard test
+ * suite without coupling to a TTY or PsySH.
  */
 
 beforeEach(function (): void {

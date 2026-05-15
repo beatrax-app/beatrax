@@ -159,7 +159,7 @@ it('mirrors settled = native and leaves fx_rate_used NULL when source omits the 
         'amountMinor' => -1500,
         'currency' => 'EUR',
         // settledAmountMinor / settledCurrency / fxRateUsed all default to null —
-        // the Phase 1/2 ASN call shape. NormalizeStage must mirror native into
+        // the EUR-native ASN row shape. NormalizeStage must mirror native into
         // the settled pair without deriving any rate.
     ]);
 

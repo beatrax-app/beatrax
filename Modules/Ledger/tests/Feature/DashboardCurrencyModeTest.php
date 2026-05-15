@@ -159,7 +159,7 @@ it('returns one summary in eur_only mode (settled-EUR sum)', function (): void {
 
     // Regression guard: for() returns a DashboardSummary (not an array),
     // and the inflow/outflow/net pair is the settled-EUR sum that the
-    // Phase 1 dashboard renders.
+    // eur_only dashboard mode renders.
     expect($summary)->toBeInstanceOf(DashboardSummary::class);
     expect($summary->inflow->currency())->toBe('EUR');
     expect($summary->inflow->toMinor())->toBe(250000);

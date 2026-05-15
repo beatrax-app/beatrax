@@ -26,11 +26,11 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
  * 4. Substitutes the native amount + currency into the settled pair when
  *    the source DTO omits `settledAmountMinor` / `settledCurrency` (every
  *    EUR-native row). When the source supplies a different settled
- *    currency (foreign-currency rows from the ICS PDF adapter and future
- *    PayPal adapter), the canonical row carries both legs verbatim AND
- *    derives `fxRateUsed = settled / native` via `Brick\Math\BigDecimal`
- *    at scale 8 with HALF_UP rounding. Float arithmetic is forbidden on
- *    the money path — the decimal(18,8) column requires exact precision.
+ *    currency (foreign-currency rows), the canonical row carries both
+ *    legs verbatim AND derives `fxRateUsed = settled / native` via
+ *    `Brick\Math\BigDecimal` at scale 8 with HALF_UP rounding. Float
+ *    arithmetic is forbidden on the money path — the decimal(18,8)
+ *    column requires exact precision.
  *
  * The `sourceFormat` is supplied by the orchestrating pipeline so each
  * adapter's rows persist with its own format string for audit, rather than
@@ -61,9 +61,10 @@ final class NormalizeStage
         };
 
         // Substitute settled = native when the source did not supply a
-        // settled pair. Phase 1/2 ASN adapters leave both fields null;
-        // the ICS PDF adapter and future PayPal adapter fill them in only
-        // for genuine foreign-currency rows.
+        // settled pair. EUR-native source rows leave the settled fields
+        // null and inherit the native pair here; foreign-currency rows
+        // (where the source supplies a settled-EUR leg alongside the
+        // native amount and currency) carry both pairs verbatim.
         $settledMinor = $source->settledAmountMinor ?? $source->amountMinor;
         $settledCurrency = $source->settledCurrency ?? $source->currency;
 

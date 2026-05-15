@@ -36,7 +36,6 @@ declare(strict_types=1);
  *
  * Pure PHP core only — no Composer deps. Runs from a fresh clone.
  */
-
 if ($argc < 3) {
     fwrite(STDERR, "Usage: php scripts/anonymize_ics_text.php <input.txt> <output.txt>\n");
     exit(1);
@@ -67,10 +66,10 @@ $cardLast4Count = 0;
 
 // 1. Card-last-four line: `Uw Card met als laatste vier cijfers NNNN` -> XXXX.
 //    Also injects a synthetic full-card placeholder `****-****-****-XXXX`
-//    on the same line so the fixture documents Wave 2's expected
-//    full-card redaction shape (the empirical ICS PDF only renders the
-//    last-four, but the canonical placeholder is the four-group form so
-//    downstream tests can grep for either tail).
+//    on the same line so the fixture carries the canonical four-group
+//    redaction shape (the empirical ICS PDF only renders the last-four,
+//    but the canonical placeholder is the four-group form so downstream
+//    tests can grep for either tail).
 //    Must run BEFORE the generic 12+ digit run pattern.
 $contents = preg_replace_callback(
     '/(Uw Card met als laatste vier cijfers\s+)\d{4}/u',
@@ -124,8 +123,8 @@ $contents = preg_replace_callback(
 ) ?? $contents;
 
 // 5. Compact IBAN-shaped tokens (no spaces): country + 2 check digits +
-//    >= 10 alnum. The deterministic placeholder mirrors the Phase 2
-//    anonymised-IBAN check-digit convention.
+//    >= 10 alnum. Replaced with the project-wide anonymised-IBAN
+//    placeholder so the redacted fixture stays grep-stable.
 $contents = preg_replace_callback(
     '/\b[A-Z]{2}\d{2}[A-Z0-9]{10,}\b/u',
     function (array $m) use (&$ibanCount): string {
