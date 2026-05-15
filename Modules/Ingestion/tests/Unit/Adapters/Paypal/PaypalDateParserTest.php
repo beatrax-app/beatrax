@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalDateParser;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Public\Exceptions\InvalidDateException;
 
 /*
  * Coverage for the PayPal date parser.
@@ -41,14 +41,14 @@ it('parses the yyyy-mm-dd ISO format as a forward-compatibility fallback', funct
         ->toBeTrue();
 })->group('phase-4');
 
-it('rejects an invalid date string by throwing InvalidAmountException', function (): void {
+it('rejects an invalid date string by throwing InvalidDateException', function (): void {
     expect(fn () => $this->parser->parse('not-a-date'))
-        ->toThrow(InvalidAmountException::class);
+        ->toThrow(InvalidDateException::class);
 })->group('phase-4');
 
 it('rejects an empty date string', function (): void {
     expect(fn () => $this->parser->parse(''))
-        ->toThrow(InvalidAmountException::class);
+        ->toThrow(InvalidDateException::class);
 })->group('phase-4');
 
 it('returns a CarbonImmutable at startOfDay (00:00:00) to match the fingerprint composer', function (): void {
