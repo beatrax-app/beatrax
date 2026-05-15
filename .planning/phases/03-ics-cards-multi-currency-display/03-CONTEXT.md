@@ -2,7 +2,82 @@
 
 **Gathered:** 2026-05-13
 **Revised:** 2026-05-15 — ICS source format reversed from CSV to PDF (Mijn ICS consumer portal is PDF-only; D-31 reversed, D-31a/D-32a/D-49–D-56 added, D-34/D-35/D-40 reframed for PDF text extraction). Plans 03-03 through 03-07 remain intact; plans 03-01 and 03-02 will be rebuilt against this revised context.
+**Wave 0 empirical addendum (2026-05-15, post 03-01):** D-51, D-53, D-37 revised against the real Mijn ICS consumer-portal fixture — see [Wave 0 Empirical Findings (revises D-51 / D-53 / D-37)](#wave-0-empirical-findings-revises-d-51--d-53--d-37) below.
 **Status:** Ready for planning (rebuild of plans 03-01 and 03-02)
+
+## Wave 0 Empirical Findings (revises D-51 / D-53 / D-37)
+
+Plan 03-01 extracted-and-redacted a real Feb 2026 Mijn ICS consumer statement and committed
+it as `Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt`. The empirical layout contradicts
+three locked decisions; the addendum below is the **authoritative** version for Wave 2 onward.
+
+### D-51 (REVISED): Statement-summary tokens
+
+The CONTEXT.md original anticipated `Periode` / `Beginsaldo` / `Eindsaldo` / `Totaal nieuw saldo`
+/ `Totaal betaald` — these tokens **do not appear** in the empirical Mijn ICS consumer statement.
+The real statement uses revolving-credit nomenclature:
+
+| Empirical token | Maps to `StatementSummaryData` field |
+|---|---|
+| `Vorig openstaand saldo` | `openingBalanceMinor` (negative if "Af" follows the amount) |
+| `Totaal ontvangen betalingen` | (period-total credits — capture as `totalCreditsMinor` if the DTO has it; else surface in `extras.totalReceivedMinor`) |
+| `Totaal nieuwe uitgaven` | `periodChargesMinor` (period-total debits) |
+| `Nieuw openstaand saldo` | `closingBalanceMinor` |
+| `Bestedingslimiet` | `extras.creditLimitMinor` (informational; no DTO field) |
+| `Minimaal te betalen bedrag` | `extras.minimumDueMinor` (informational; no DTO field) |
+
+**There is no explicit `Periode` field.** The statement summary header line carries the
+statement issue date only (`15 februari 2026`) and the body paragraph carries the
+data-bijgewerkt-tot date (`Uw betalingen … zijn bijgewerkt tot 15 februari 2026`).
+**Period dates derive from min/max booked_at across the parsed transaction rows** — the
+adapter computes them after iteration and exposes them via `statementMetadata()`. This
+matches Phase 2's CAMT/MT940 pattern when the source carries period totals but not explicit
+period bounds.
+
+### D-53 (REVISED): Per-page noise pattern
+
+The original `/^Pagina \d+ van \d+$/m` regex matches **nothing** in the empirical fixture. The
+page index lives **inline** on the statement-summary header line in the form `1 van 2` /
+`2 van 2`, anchored at the right edge of the page after `Bladnummer`. The per-page noise
+stripper must instead:
+
+- Strip the recurring cardholder banner line (line containing `KAARTHOUDER`)
+- Strip the masked-card watermark line (line containing `****-****-****-`)
+- Strip the issue-date / customer-number / volgnummer / bladnummer header block (anchor:
+  `Datum                Volgnummer                Bladnummer` or first-page variant `Datum
+  ICS-klantnummer Volgnummer Bladnummer`)
+
+Wave 2's `IcsPdfExtractionMap::PAGE_NOISE_PATTERNS` constant ships these three patterns, not
+the original `Pagina X van Y` pattern.
+
+### D-37 (REVISED): No full-PAN in source PDF
+
+The empirical Mijn ICS consumer statement renders the card number as last-four only
+(`Uw Card met als laatste vier cijfers 1333`). There is **no full 16-digit PAN to redact**.
+Plan 03-01's redaction script synthesises a `****-****-****-XXXX` placeholder on the
+card-watermark line so grep-based contract tests still find it; the empirical fixture's
+last-four would have been `1333` but is also redacted to `XXXX` (no real digit retention).
+
+Plan 03-02's `IcsPdfAdapter::extractCardLast4()` parses the last-four from the body line
+`Uw Card met als laatste vier cijfers <FOUR_DIGITS>` and writes it to
+`statement_summaries.extras.cardLast4`. The committed fixture's `1333` → `XXXX` redaction
+means the unit/feature tests assert `cardLast4 === 'XXXX'` against the committed fixture;
+the integration test against `local/ics/raw-ics-statement.pdf` (gitignored) would assert the
+real last-four if run by the developer.
+
+### Impact on Wave 2 (plan 03-02)
+
+- `IcsPdfExtractionMap::SUMMARY_TOKENS` ships the empirical six tokens above, not the
+  CONTEXT.md original five
+- `IcsPdfExtractionMap::PAGE_NOISE_PATTERNS` ships the three empirical patterns above
+- `IcsPdfAdapter` derives `period_start_at` / `period_end_at` from min/max booked_at,
+  not from a `Periode` token
+- `IcsPdfAdapter::extractCardLast4()` reads from `Uw Card met als laatste vier cijfers
+  <FOUR_DIGITS>` (committed-fixture asserts `'XXXX'`)
+- The 03-01 Red scaffold case
+  `it('exposes statement-summary tokens via statementMetadata() after parse() completes')`
+  was written with the empirical token names, so 03-02's implementation drives it Green
+  directly
 
 <domain>
 ## Phase Boundary
