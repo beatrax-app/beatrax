@@ -24,6 +24,9 @@ function makeSourceDto(array $overrides = []): SourceTransactionDto
         'description' => 'AH groceries',
         'rawPayload' => [],
         'sourceRowIndex' => 0,
+        'settledAmountMinor' => null,
+        'settledCurrency' => null,
+        'fxRateUsed' => null,
     ];
 
     $merged = array_merge($defaults, $overrides);
@@ -41,6 +44,9 @@ function makeSourceDto(array $overrides = []): SourceTransactionDto
         description: $merged['description'],
         rawPayload: $merged['rawPayload'],
         sourceRowIndex: $merged['sourceRowIndex'],
+        settledAmountMinor: $merged['settledAmountMinor'],
+        settledCurrency: $merged['settledCurrency'],
+        fxRateUsed: $merged['fxRateUsed'],
     );
 }
 
@@ -146,6 +152,74 @@ it('mirrors native amount/currency to settled amount/currency by default', funct
     expect($canonical->settledCurrency)->toBe('EUR');
     expect($canonical->fxRateUsed)->toBeNull();
 });
+
+it('mirrors settled = native and leaves fx_rate_used NULL when source omits the settled pair', function (): void {
+    $stage = new NormalizeStage(new FingerprintComposer);
+    $source = makeSourceDto([
+        'amountMinor' => -1500,
+        'currency' => 'EUR',
+        // settledAmountMinor / settledCurrency / fxRateUsed all default to null —
+        // the Phase 1/2 ASN call shape. NormalizeStage must mirror native into
+        // the settled pair without deriving any rate.
+    ]);
+
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');
+
+    expect($canonical->settledAmountMinor)->toBe(-1500);
+    expect($canonical->settledCurrency)->toBe('EUR');
+    expect($canonical->fxRateUsed)->toBeNull();
+})->group('phase-3');
+
+it('derives fx_rate_used when source supplies a different settled currency', function (): void {
+    $stage = new NormalizeStage(new FingerprintComposer);
+    $source = makeSourceDto([
+        'amountMinor' => 1299,
+        'currency' => 'USD',
+        'settledAmountMinor' => 1207,
+        'settledCurrency' => 'EUR',
+    ]);
+
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'ics-pdf');
+
+    expect($canonical->amountMinor)->toBe(1299);
+    expect($canonical->currency)->toBe('USD');
+    expect($canonical->settledAmountMinor)->toBe(1207);
+    expect($canonical->settledCurrency)->toBe('EUR');
+    // 1207 / 1299 = 0.92917628944... → 0.92917629 at scale 8 with HALF_UP.
+    expect($canonical->fxRateUsed)->toBe('0.92917629');
+})->group('phase-3');
+
+it('leaves fx_rate_used NULL when source-supplied settled currency equals native currency', function (): void {
+    $stage = new NormalizeStage(new FingerprintComposer);
+    $source = makeSourceDto([
+        'amountMinor' => 1299,
+        'currency' => 'EUR',
+        'settledAmountMinor' => 1299,
+        'settledCurrency' => 'EUR',
+    ]);
+
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'ics-pdf');
+
+    expect($canonical->settledAmountMinor)->toBe(1299);
+    expect($canonical->settledCurrency)->toBe('EUR');
+    expect($canonical->fxRateUsed)->toBeNull();
+})->group('phase-3');
+
+it('leaves fx_rate_used NULL when amountMinor is zero', function (): void {
+    $stage = new NormalizeStage(new FingerprintComposer);
+    $source = makeSourceDto([
+        'amountMinor' => 0,
+        'currency' => 'USD',
+        'settledAmountMinor' => 0,
+        'settledCurrency' => 'EUR',
+    ]);
+
+    $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'ics-pdf');
+
+    expect($canonical->settledAmountMinor)->toBe(0);
+    expect($canonical->settledCurrency)->toBe('EUR');
+    expect($canonical->fxRateUsed)->toBeNull();
+})->group('phase-3');
 
 it('records the normalization version from the FingerprintComposer', function (): void {
     $composer = new FingerprintComposer;
