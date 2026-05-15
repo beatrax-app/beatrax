@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <header class="space-y-1">
         <h1 class="text-2xl font-semibold text-slate-900 tracking-tight">Upload statement</h1>
-        <p class="text-sm text-slate-500">Drop in an ASN or ICS export.</p>
+        <p class="text-sm text-slate-500">Drop in an ASN, ICS, or PayPal export.</p>
         <p class="sr-only" id="upload-statement-mime-hint">That file doesn't look like a supported statement export. Drop in an ASN CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, or ICS PDF.</p>
     </header>
 
@@ -16,6 +16,7 @@
             >
                 <option value="asn">ASN</option>
                 <option value="ics">ICS</option>
+                <option value="paypal">PayPal</option>
             </select>
             @error('issuer')
                 <p class="text-sm text-rose-600">{{ $message }}</p>

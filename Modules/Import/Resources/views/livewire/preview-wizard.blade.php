@@ -45,7 +45,49 @@
                 </div>
             </div>
         </section>
+    @elseif ($needsPaypalAccountName)
+        <section class="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-6">
+            <div class="space-y-3">
+                <p class="text-sm font-medium text-slate-900">Name your PayPal account.</p>
+                <p class="text-sm text-slate-500">This is the first time you've imported PayPal data. Give this wallet a name so it shows up consistently across the app.</p>
+                <div class="flex items-end gap-2">
+                    <div class="flex-1 space-y-1">
+                        <label class="block text-xs text-slate-500" for="paypalAccountName">Account name</label>
+                        <input
+                            type="text"
+                            id="paypalAccountName"
+                            wire:model="paypalAccountName"
+                            placeholder="e.g. PayPal"
+                            required
+                            maxlength="80"
+                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                        />
+                        @error('paypalAccountName')
+                            <p class="text-xs text-rose-700">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <button
+                        type="button"
+                        wire:click="savePaypalAccountName"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                    >
+                        Save name
+                    </button>
+                </div>
+            </div>
+        </section>
     @else
+        @if ($reconciliationWarning !== null)
+            <section class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                <p>
+                    <strong class="font-medium">Reconciliation gap.</strong>
+                    The imported rows do not sum to the expected closing-minus-opening balance change
+                    (difference: {{ $fmt($reconciliationWarning['gapMinor'], $reconciliationWarning['currency']) }}).
+                    Some events may not have rolled up correctly. You can still confirm the import; investigate after if needed.
+                </p>
+            </section>
+        @endif
+
         @if (count($preview->accountsToName) > 0)
             <section class="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-6">
                 @foreach ($preview->accountsToName as $unknown)
