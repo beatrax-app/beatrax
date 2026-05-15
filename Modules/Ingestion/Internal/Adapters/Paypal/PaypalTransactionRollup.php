@@ -257,6 +257,7 @@ final class PaypalTransactionRollup
             description: $description,
             rawPayload: [
                 'format' => 'paypal-csv',
+                'language' => $language,
                 'events' => $events,
             ],
             sourceRowIndex: $canonicalIndex,

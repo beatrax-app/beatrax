@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Tests\TestCase;
 
 /*
  * Schema-shape + DTO gate for the Wave 2 pair-transaction backbone:
@@ -196,9 +198,9 @@ it('returns a NEW CanonicalTransaction instance from withType() preserving every
 });
 
 /**
- * @return array{0: \App\Models\User, 1: Account, 2: Account, 3: ImportRun}
+ * @return array{0: User, 1: Account, 2: Account, 3: ImportRun}
  */
-function pairSchemaFixture(\Tests\TestCase $testCase): array
+function pairSchemaFixture(TestCase $testCase): array
 {
     $fixture = $testCase->seedFixtureUserAndAccount();
     $user = $fixture['user'];
@@ -222,7 +224,7 @@ function pairSchemaFixture(\Tests\TestCase $testCase): array
  * @return array<string, mixed>
  */
 function pairSchemaRow(
-    \App\Models\User $user,
+    User $user,
     Account $account,
     ImportRun $run,
     array $overrides = [],
