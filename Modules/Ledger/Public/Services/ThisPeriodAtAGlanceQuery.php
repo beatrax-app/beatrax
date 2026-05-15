@@ -73,13 +73,13 @@ final class ThisPeriodAtAGlanceQuery
         }
 
         // Inflow / outflow rollups filter by `transactions.type`, NOT by
-        // amount sign — D-77's subtractive income rule. A `transfer_in`
+        // amount sign — the subtractive income rule. A `transfer_in`
         // row carries a positive amount but is an internal move between
-        // own accounts and MUST NOT inflate the income tile (Phase 4
-        // SC #4). Symmetric on the expense side: `transfer_out` carries
-        // a negative amount but stays out of the expense tile. Refunds,
-        // fees, and adjustments are likewise excluded — only the two
-        // canonical "money truly flowing in / out" types feed the tiles.
+        // own accounts and MUST NOT inflate the income tile. Symmetric
+        // on the expense side: `transfer_out` carries a negative amount
+        // but stays out of the expense tile. Refunds, fees, and
+        // adjustments are likewise excluded — only the two canonical
+        // "money truly flowing in / out" types feed the tiles.
         $row = $connection
             ->table('transactions')
             ->where('user_id', $user->id)
@@ -144,10 +144,10 @@ final class ThisPeriodAtAGlanceQuery
     {
         $connection = $this->db->connection();
 
-        // Per-currency tiles apply the SAME type filter as `for()` so the
-        // original-currency mode never silently double-counts internal
-        // transfers as income / expense in any currency band. Symmetric
-        // contract with the EUR-only rollup above (D-77).
+        // Per-currency tiles apply the SAME type filter as `for()` so
+        // the original-currency mode never silently double-counts
+        // internal transfers as income / expense in any currency band.
+        // Symmetric contract with the EUR-only rollup above.
         $rows = $connection
             ->table('transactions')
             ->where('user_id', $user->id)
