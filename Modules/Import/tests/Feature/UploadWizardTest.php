@@ -52,8 +52,12 @@ it('rejects a file larger than 10 MB with the locked oversized copy', function (
 });
 
 it('rejects a non-CSV upload with the bad-MIME copy from the sniffer', function (): void {
-    // .pdf extension fails the 'mimes:csv,txt' Livewire rule
-    $badMime = UploadedFile::fake()->create('not-a-csv.pdf', 5);
+    // .exe extension fails the Livewire mimes rule (which now admits
+    // csv,txt,xml,sta,mt940,940,pdf). The .pdf extension is admitted at
+    // the validator layer now that ICS PDF imports are supported; the
+    // content-vs-declared-format mismatch for a .pdf-with-asn-csv-format
+    // upload is caught downstream at the HeaderSniffer boundary.
+    $badMime = UploadedFile::fake()->create('not-a-csv.exe', 5);
 
     Livewire::test(UploadWizard::class)
         ->set('sourceFormat', 'asn-csv')
