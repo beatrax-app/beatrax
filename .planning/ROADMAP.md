@@ -73,7 +73,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can toggle the transaction list between EUR-only and dual-currency presentation and per-transaction FX rates surface when available
   3. The schema preserves original-amount, original-currency, settled-amount, settled-currency, and FX rate for every transaction (verified to never lose FX information that the source provided)
 **Plans**: 7 plans
-  - [ ] 03-01-PLAN.md — Wave 0 enablement: anonymised ICS fixture, fixture record (column map / D-34 / D-35 / D-40 dispositions), phase-3 Pest group, failing scaffolds across six test files
+  - [x] 03-01-PLAN.md — Wave 0 enablement: anonymised ICS fixture, fixture record (column map / D-34 / D-35 / D-40 dispositions), phase-3 Pest group, failing scaffolds across six test files
   - [ ] 03-02-PLAN.md — Wave 2 wire-level slice: SourceTransactionDto D-42 extension + NormalizeStage substitution + D-39 FX-rate derivation + IcsCsvAdapter + registry + IdempotencyContractTest dataset (ING-04, LED-03)
   - [ ] 03-03-PLAN.md — Wave 3 wizard polish: two-step issuer-format picker refactor with aria-live cascade + Blade restructure + UploadWizardTest extension + PreviewWizard ICS-Account naming step (D-33, D-36, D-38)
   - [ ] 03-04-PLAN.md — Wave 3 settings page: users.default_currency_view migration + User model + /settings Livewire SFC + top-nav link + SettingsPageTest (MC-02 storage half)

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 context revised — ICS PDF pivot
-last_updated: "2026-05-15T14:31:56.918Z"
-last_activity: 2026-05-13 -- Phase 03 execution started
+stopped_at: Completed 03-01 — Wave 0 ICS PDF enablement
+last_updated: "2026-05-15T16:26:30.667Z"
+last_activity: 2026-05-15
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 19
-  completed_plans: 12
-  percent: 63
+  completed_plans: 13
+  percent: 68
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 03 (ics-cards-multi-currency-display) — EXECUTING
-Plan: 1 of 7
-Status: Executing Phase 03
-Last activity: 2026-05-13 -- Phase 03 execution started
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-05-15
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 68%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [██████████] 100%
 | Phase 02 P03 | 28 | 3 tasks | 14 files |
 | Phase 02 P04 | 15 | 4 tasks | 16 files |
 | Phase 02 P05 | 14 | 3 tasks | 6 files |
+| Phase 03 P01 | 18 | 7 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,10 @@ Recent decisions affecting current work:
 - [Phase 02]: Plan 5: ApplyEnrichments wraps each PendingEnrichment in its OWN per-row DB transaction with lockForUpdate, while ConfirmImport wraps the recorder + applier in a single OUTER transaction. The two-level transaction shape keeps lock scopes minimal AND keeps confirm-level atomicity intact.
 - [Phase 02]: Plan 5: `source_format` records the CREATING format; `enriched_from` carries the multi-format history. A Phase 5 chain-resolution query that needs "rows touched by format X" MUST join against `enriched_from` JSON, NOT `source_format`.
 - [Phase 02]: Plan 5: CrossFormatDedupTest::camt053_then_csv deviated from the plan's strict 'enriched=0' assertion. The 72-row February pair contains 34 CAMT entries with NULL EndToEndId; non-null CSV Volgnummer legitimately enriches those rows under the rank function. Test now asserts the precise duplicates / enriched split matches the fixture's NULL-EndToEndId count.
+- [Phase 03]: Plan 1: ICS PDF source uses revolving-credit summary nomenclature (Vorig openstaand saldo / Totaal ontvangen betalingen / Totaal nieuwe uitgaven / Nieuw openstaand saldo / Bestedingslimiet / Minimaal te betalen bedrag), NOT the current-account tokens CONTEXT.md D-51 anticipated; CONTEXT.md addendum required before 03-02.
+- [Phase 03]: Plan 1: empirical PDF disposition map — D-34 source_ref unavailable (NULL, fingerprint-only dedup), D-35 FX shape (b) two-line block, D-37 source PDF never renders full PAN (only last-four), D-40 markup rolled into settled, D-53 no Pagina X van Y page footer (page index lives inline on summary header line).
+- [Phase 03]: Plan 1: tiny synthetic PDF generated via hand-crafted 849-byte PDF 1.4 byte stream (scripts/generate_tiny_ics_pdf.php); cupsfilter exceeded the 10 KB budget by ~7 KB. Plan 03-02's IdempotencyContractTest dataset will reference this tiny PDF.
+- [Phase 03]: Plan 1: anonymisation script (scripts/anonymize_ics_text.php) committed in-repo with zero Composer deps — Phase 1's anonymisation was throwaway under /tmp; from Phase 3 onwards the redaction tool ships alongside the redacted fixture so future re-runs are auditable.
 
 ### Pending Todos
 
@@ -126,6 +131,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-15T14:31:56.907Z
-Stopped at: Phase 3 context revised — ICS PDF pivot
-Resume file: .planning/phases/03-ics-cards-multi-currency-display/03-CONTEXT.md
+Last session: 2026-05-15T16:26:30.663Z
+Stopped at: Completed 03-01 — Wave 0 ICS PDF enablement
+Resume file: None
