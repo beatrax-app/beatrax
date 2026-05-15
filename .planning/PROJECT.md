@@ -18,6 +18,8 @@ If everything else fails, the system must surface the complete picture of monthl
 
 - [x] Import ASN transactions via CSV, CAMT.053 (XML), and MT940 (hand-rolled) — validated in phase 2 with the cross-format dedup test passing on a 72-row real-statement corpus
 - [x] Idempotent imports across formats — re-uploading the same statement, or uploading two formats covering the same period, never double-counts a transaction. Validated in phase 2 via the v3 fingerprint composer (no source_ref in the tuple) + `enriched_from` JSON column that records cross-format upgrades
+- [x] Import ICS Cards PDF statements (Mijn ICS consumer portal export) with foreign-currency charges preserved as both original and settled-EUR. Validated in phase 3 against a real Feb 2026 Mijn ICS statement with 3 real FX rows (USD + GBP); column-aware statement-summary parser locked to the empirical revolving-credit token set; tier-1 SHA + tier-2 v3 fingerprint dedup both Green for `'ics-pdf'`
+- [x] Multi-currency views — per-page currency toggle on `/transactions` (URL-bound via Livewire `#[Url]` with user-default fallback), per-currency tile rows on the dashboard in `original` mode (alphabetical, zero-activity filtered), conditional Effective-rate row on transaction detail. Validated in phase 3 with locale-aware `Money::format()` (EUR → nl_NL, others → en_US) and BigDecimal-only money arithmetic end-to-end
 
 ### Active
 
@@ -25,7 +27,7 @@ If everything else fails, the system must surface the complete picture of monthl
 
 #### Ingestion
 
-- [ ] Import ICS Cards statements via CSV/Excel export
+<!-- ICS Cards PDF ingestion validated in phase 3 — moved to Validated. -->
 - [ ] Import PayPal activity via CSV export with funding-source detail preserved
 - [ ] Scan Gmail (via Gmail API + OAuth2) and Outlook / Microsoft 365 (via Microsoft Graph + OAuth2) for transaction receipts — including a backfill of at least 3 months of history
 - [ ] Ingest exported `.eml` / `.mbox` files as an alternative path (covers iCloud / Fastmail / any provider without an API)
@@ -67,9 +69,8 @@ If everything else fails, the system must surface the complete picture of monthl
 
 #### Multi-Currency
 
-- [ ] Preserve original currency and amount for foreign-currency charges from PayPal, ICS, Google Play
-- [ ] Store the EUR settled amount the account actually saw
-- [ ] Allow reports to switch between EUR and source currency
+<!-- ICS multi-currency preservation + EUR settled amount + per-page report toggle validated in phase 3 (see Validated). -->
+- [ ] Extend the same dual-amount preservation to PayPal and Google Play sources
 
 #### Platform & Privacy
 
@@ -163,4 +164,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-13 — phase 2 (ASN statement coverage: CAMT.053 + MT940 + cross-format dedup) complete*
+*Last updated: 2026-05-15 — phase 3 (ICS Cards PDF ingestion + multi-currency display: per-page toggle, dashboard per-currency tiles, transaction-detail FX rate row) complete*
