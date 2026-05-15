@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
+use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -110,6 +111,36 @@ it('cross-user import access is blocked', function (): void {
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
         ->call('confirm');
 })->throws(ModelNotFoundException::class);
+
+it('returns the persisted duplicate_count (not inserted_count) when an already-confirmed run is re-confirmed', function (): void {
+    /** @var RunsImports $importer */
+    $importer = $this->app->make(RunsImports::class);
+    $firstResult = $importer->runAndConfirm(
+        __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv',
+        'asn-csv',
+        $this->fixtureUser,
+        'asn-sample-1.csv',
+    );
+
+    /** @var ImportRun $run */
+    $run = ImportRun::query()->findOrFail($firstResult->importRunId);
+    expect($run->status)->toBe('confirmed');
+    // Pin a non-zero duplicate_count so the idempotent re-confirm has
+    // something distinguishable to return; the original fixture's first
+    // run inserts every row as new (duplicates = 0), so without this
+    // override the regression would still pass under the buggy
+    // `inserted_count` substitution.
+    $run->update(['duplicate_count' => 7]);
+
+    /** @var ConfirmsImports $confirmer */
+    $confirmer = $this->app->make(ConfirmsImports::class);
+    $second = ($confirmer)($firstResult->importRunId, $this->fixtureUser);
+
+    expect($second->inserted)->toBe(0);
+    expect($second->duplicates)->toBe(7);
+    expect($second->enriched)->toBe($run->enriched_count);
+    expect($second->errors)->toBe(0);
+});
 
 it('renders the canonical results summary on the results page', function (): void {
     /** @var RunsImports $importer */
