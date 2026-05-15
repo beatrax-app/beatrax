@@ -234,3 +234,94 @@
 - OFX / QIF export of multi-currency rows — out of v1 scope.
 - Per-currency budgets / spending limits — out of scope.
 - Settings UI for `period_start_day` — folded INTO Phase 3 (D-45) as co-discharge of Phase 1 D-19.
+
+---
+
+## Re-discussion 2026-05-15 — ICS source format pivot (CSV → PDF)
+
+**Trigger:** User discovered Mijn ICS consumer portal exports PDF statements only — no CSV or Excel option exists. The previously locked D-31 ("CSV only, no phpoffice/phpspreadsheet") had to be reversed. Scope (per user command): reverse D-31, decide PDF parsing library, re-frame D-34/D-35/D-40 as PDF-extraction questions. Keep plans 03-03 through 03-07 intact — only plans 03-01 and 03-02 need rebuilding.
+
+**Areas discussed:** PDF parsing library, fixture anonymisation protocol, rawPayload retention, multi-PDF backfill UX, statement_summaries card-metadata archiving. Plus implementation-flag confirmations on multi-statement PDFs, statement_summaries population, Dutch-locale parsing, page header/footer noise stripping, wizard validator/HeaderSniffer extension, and extraction-step idempotency. Password-protected PDFs excluded by user.
+
+### Q1 — PDF parsing library (locks D-31a)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| `spatie/pdf-to-text` (poppler `pdftotext` binary) | Spatially-preserved extraction via `-layout`; requires `brew install poppler`. Most accurate column recovery. | ✓ |
+| `smalot/pdfparser` (pure PHP) | Zero system deps; tabular extraction from per-glyph coordinates is more fragile. | |
+| Both — smalot default, pdftotext fallback | Belt-and-braces; two code paths to maintain. | |
+| Decide after Wave 0 — try smalot first, switch only if columns don't recover | Defers decision; adds extraction-spike step to Wave 0. | |
+
+**User's choice:** spatie/pdf-to-text (Recommended).
+**Notes:** Locks D-31a. `PdfTextExtractor` service isolates the `exec()` boundary. macOS prerequisite: `brew install poppler` (documented in README). Phase 3 introduces this codebase's first text-extraction-driven ingestion path.
+
+### Q2 — PDF fixture anonymisation protocol (locks updated D-32)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Extract-then-redact-text | Wave 0 runs `pdftotext -layout`, anonymises the *.txt, commits the redacted *.txt. Raw PDF gitignored. | ✓ |
+| Redact-PDF-in-place + commit redacted PDF | Use qpdf/pdftk/Preview to overlay redactions; commit redacted PDF; adapter runs end-to-end against real PDF. | |
+| Both — committed redacted PDF AND extracted-text snapshot | Belt-and-braces; doubles fixture maintenance. | |
+
+**User's choice:** Extract-then-redact-text (Recommended).
+**Notes:** Sidesteps PDF binary redaction entirely (CID fonts, watermarks, multi-page headers). Fixture lives at `Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt`. Raw PDFs stay under gitignored `local/ics/`. Parser is unit-testable against committed text; the `exec()` integration smoke test is `@group integration` (skippable on CI hosts without poppler).
+
+### Q3 — `rawPayload` content for ICS PDF rows (locks D-49)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Per-transaction extracted-text block | Contiguous text lines for one logical transaction (~200 bytes/row). Honors D-40's markup-recoverability promise. | ✓ |
+| Full extracted-statement text per row | Trivially simple; ~20 KB/row waste; breaks per-row semantics. | |
+| Just parsed structured fields | Smallest storage; loses D-40 recoverability. | |
+
+**User's choice:** Per-transaction extracted-text block (Recommended).
+**Notes:** New D-49 added. Storage shape: `{ "format": "ics-pdf", "extractedText": "<contiguous text block>" }` — discriminator field matches Phase 1/2 adapter payload conventions.
+
+### Q4 — PDF backfill UX (locks D-54 single-file scope)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Single-PDF per upload | Matches existing wizard contract; backfill = N sessions. Smallest blast radius. | ✓ |
+| Multi-select / zip-upload in Phase 3 | Adds drag-multiple-files; expands plan 03-03 surface. | |
+| Defer to Wave 0 — decide based on backlog size | Defers until backlog actually exists. | |
+
+**User's choice:** Single-PDF per upload (Recommended).
+**Notes:** Captured "multi-PDF backfill" in Deferred Ideas for a later phase if backfill friction becomes a real chore. Fingerprint v3 dedup makes order and repetition harmless across N independent single-file imports.
+
+### Q5 — `statement_summaries.extras` card-metadata archiving (locks D-56)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Yes — capture in `extras` JSON only (issuer, cardLast4, cardholderName=STRIPPED) | Archive-only; phase-3 doesn't read; multi-card phase inherits history. | ✓ |
+| No — D-37's no-card rule applies strictly to statement_summaries too | Strict D-37 reading; multi-card phase needs re-import. | |
+
+**User's choice:** Yes — capture in `extras` JSON only (Recommended).
+**Notes:** Locks D-56. Phase 3 never reads the field — identical posture to Phase 2's `extras.multiStatement` flag.
+
+### Bulk confirmations (implementation flags, recommendation accepted as-is)
+
+| Topic | Recommendation | Outcome |
+|-------|----------------|---------|
+| Multi-statement PDFs | One PDF = one statement (Mijn ICS exports one month per download) | Accepted → **D-50** |
+| `statement_summaries` population from PDF header | Yes, populate (Periode, Beginsaldo, Eindsaldo, Totaal). Stateful-adapter pattern from plan 02-03. | Accepted → **D-51** |
+| Dutch-locale parsing | New `IcsAmountParser` + `IcsDateParser` next to Phase 2's ASN helpers; explicit nl_NL formats, no `setLocale()` | Accepted → **D-52** |
+| Page header/footer noise stripping | First-pass regex strip before transaction iteration; patterns captured by Wave 0 in `IcsPdfExtractionMap` | Accepted → **D-53** |
+| Wizard validator + HeaderSniffer extension | Add `pdf` to mimes list, `%PDF-` magic-byte sniff, `ics-pdf` leaf key | Accepted → **D-54** |
+| Idempotency layering | No PDF-hashing layer; existing `import_runs.sha256` (file-level) + fingerprint v3 (row-level) sufficient | Accepted → **D-55** |
+
+### Reframed decisions (D-34 / D-35 / D-40)
+
+- **D-34 (REFRAMED):** Question shifts from "CSV column for per-transaction reference" to "extracted text token for per-transaction identifier (auth code, slip number, transaction reference)". Deferred to Wave 0 PDF-extraction inspection.
+- **D-35 (REFRAMED):** Question shifts from "one CSV row vs two" to "single text line / two-line block / footnote-style FX rendering". Deferred to Wave 0; parser handles whichever shape Wave 0 reports.
+- **D-40 (REFRAMED):** Question shifts from "separate markup row in CSV" to "markup as separate text line / footnote / implicit in displayed rate". Spirit unchanged (markup invisible at canonical layer; recoverable from rawPayload).
+
+### Excluded from this re-discussion (by user)
+
+- **Password-protected PDFs.** Mijn ICS doesn't ship password-protected statements today; captured as a Deferred Idea for if that ever changes.
+
+### Plans impact
+
+- **03-01 (Wave 0 enablement)** — REBUILD. Anonymisation protocol changes (extract-then-redact-text); fixture deliverable changes (*.txt instead of *.csv); fixture record reports on extraction map (anchor tokens, per-page noise, FX-line shape, Dutch tokens, statement-summary tokens) instead of column indices.
+- **03-02 (Adapter wiring)** — REBUILD. `IcsPdfAdapter` + `PdfTextExtractor` + `IcsPdfExtractionMap` + `IcsAmountParser` + `IcsDateParser` replace `IcsCsvAdapter` + `IcsCsvHeaderProfile` + `IcsCsvColumnMap`. Composer adds `spatie/pdf-to-text`. NormalizeStage + SourceTransactionDto + HeaderSniffer changes remain in scope (PDF-flavored).
+- **03-03 (Wizard refactor)** — INTACT, one-token rename: leaf key `ics-csv` → `ics-pdf`.
+- **03-04 / 03-05 / 03-06 / 03-07** — INTACT (Settings page, transactions toggle, dashboard tiles, detail FX-row are all format-agnostic; operate on canonical data).
