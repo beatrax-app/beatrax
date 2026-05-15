@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-03-PLAN.md (wizard cascade + ICS-naming branch)
-last_updated: "2026-05-15T17:27:42.509Z"
+stopped_at: Completed 03-04-PLAN.md (minimal /settings page + default_currency_view storage)
+last_updated: "2026-05-15T17:37:50.309Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 19
-  completed_plans: 15
-  percent: 79
+  completed_plans: 16
+  percent: 84
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 03 (ics-cards-multi-currency-display) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [████████░░] 79%
+Progress: [████████░░] 84%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [████████░░] 79%
 | Phase 03 P01 | 18 | 7 tasks | 20 files |
 | Phase 03 P02 | 27 | 6 tasks | 28 files |
 | Phase 03 P03 | 11min | - tasks | - files |
+| Phase 03 P04 | 6min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,9 @@ Recent decisions affecting current work:
 - [Phase ?]: PreviewWizard ICS-naming bypasses NamesAccounts service: the synthetic IBAN 'ICS-CARD' fails AccountNamer's ISO 13616 structural guard, so the wizard validates name + slug inline and inserts the Account row directly with kind='ics_card'.
 - [Phase ?]: Cascading picker leaf wire-format is the source of truth — Source select (issuer property) is UX-only; HeaderSniffer / SourceAdapterRegistry / pipelines dispatch on the leaf sourceFormat. Future format additions extend availableFormats() in PHP without Blade changes.
 - [Phase ?]: Raw DatabaseManager::table()->count() used in PreviewWizard::needsIcsAccountName instead of Eloquent's exists()/count() to clear PHPStan strict-rules staticMethod.dynamicCall — matches the Modules/Ledger/Public/Services/ThisPeriodAtAGlanceQuery convention.
+- [Phase ?]: Phase 03 Plan 04: /settings route uses Route::view + page-level Blade wrapper + @livewire alias — matches the existing dashboard/wizard/triage pattern in this codebase; class-as-handler alternative rejected for consistency.
+- [Phase ?]: Phase 03 Plan 04: SettingsPage messages() maps periodStartDay.required + .integer + .min + .max ALL to the single locked string 'Choose a day from 1 to 28.' so any boundary failure yields the same calm sentence — UI-SPEC error-copy locked.
+- [Phase ?]: Phase 03 Plan 04: tests seed default_currency_view='eur_only' explicitly in beforeEach rather than depending on the migration default — starting state never depends on fixture-history mutation.
 
 ### Pending Todos
 
@@ -141,6 +145,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-15T17:27:42.496Z
-Stopped at: Completed 03-03-PLAN.md (wizard cascade + ICS-naming branch)
+Last session: 2026-05-15T17:37:50.303Z
+Stopped at: Completed 03-04-PLAN.md (minimal /settings page + default_currency_view storage)
 Resume file: 

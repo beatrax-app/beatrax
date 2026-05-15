@@ -100,7 +100,7 @@
 ### Multi-Currency
 
 - [ ] **MC-01**: Foreign-currency charges from PayPal, ICS, Google Play preserve original currency + amount alongside the settled EUR amount, captured at import time (cannot be reconstructed later)
-- [ ] **MC-02**: User can switch between EUR-only and dual-currency views on transaction lists and reports
+- [x] **MC-02**: User can switch between EUR-only and dual-currency views on transaction lists and reports
 
 ### Platform & Privacy
 
@@ -210,7 +210,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | UI-05 | Phase 1 | Pending |
 | UI-06 | Phase 3 | Pending |
 | MC-01 | Phase 1 | Pending |
-| MC-02 | Phase 3 | Pending |
+| MC-02 | Phase 3 | Complete |
 | PLT-01 | Phase 1 | Pending |
 | PLT-02 | Phase 1 | Pending |
 | PLT-03 | Phase 6 | Pending |
