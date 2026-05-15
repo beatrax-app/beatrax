@@ -55,29 +55,7 @@ final class AccountNamer implements NamesAccounts
 
     public function __invoke(string $iban, string $userSuppliedName, User $user): int
     {
-        $trimmed = trim($userSuppliedName);
-        $length = mb_strlen($trimmed);
-
-        if ($length < self::NAME_MIN_LENGTH || $length > self::NAME_MAX_LENGTH) {
-            throw new InvalidAccountNameException(sprintf(
-                'Account name must be %d..%d characters.',
-                self::NAME_MIN_LENGTH,
-                self::NAME_MAX_LENGTH,
-            ));
-        }
-
-        // Str::slug() strips characters it cannot transliterate (emoji,
-        // pure punctuation, scripts without a transliteration map). A
-        // name composed entirely of such characters passes the length
-        // bound but produces an empty slug body — the IBAN tail would
-        // then be prepended with a lone hyphen ("-12345678"). Reject so
-        // every account row carries a meaningful slug.
-        $slugBody = Str::slug($trimmed);
-        if ($slugBody === '') {
-            throw new InvalidAccountNameException(
-                'Account name must contain at least one letter or digit.'
-            );
-        }
+        [$trimmed, $slugBody] = self::validateName($userSuppliedName);
 
         // Structural IBAN guard. Mod-97 checksum validation is intentionally
         // not enforced here — a future ingestion path that funnels
@@ -111,5 +89,46 @@ final class AccountNamer implements NamesAccounts
         ]);
 
         return $account->id;
+    }
+
+    /**
+     * Validates a user-supplied account name and returns the
+     * `[trimmedName, slugBody]` pair. Shared by both the IBAN-naming
+     * path (the wizard's ASN flow) and the synthetic-IBAN naming path
+     * (the wizard's ICS-card flow), so the 1..80 character bound and
+     * the slug-body guard stay in lock step across both call sites.
+     *
+     * Throws `InvalidAccountNameException` with the same user-facing
+     * messages the IBAN path emits.
+     *
+     * @return array{0: string, 1: string}
+     */
+    public static function validateName(string $userSuppliedName): array
+    {
+        $trimmed = trim($userSuppliedName);
+        $length = mb_strlen($trimmed);
+
+        if ($length < self::NAME_MIN_LENGTH || $length > self::NAME_MAX_LENGTH) {
+            throw new InvalidAccountNameException(sprintf(
+                'Account name must be %d..%d characters.',
+                self::NAME_MIN_LENGTH,
+                self::NAME_MAX_LENGTH,
+            ));
+        }
+
+        // Str::slug() strips characters it cannot transliterate (emoji,
+        // pure punctuation, scripts without a transliteration map). A
+        // name composed entirely of such characters passes the length
+        // bound but produces an empty slug body — the account row would
+        // then carry a non-meaningful slug. Reject so every account row
+        // carries a slug derived from a meaningful name.
+        $slugBody = Str::slug($trimmed);
+        if ($slugBody === '') {
+            throw new InvalidAccountNameException(
+                'Account name must contain at least one letter or digit.'
+            );
+        }
+
+        return [$trimmed, $slugBody];
     }
 }
