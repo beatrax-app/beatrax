@@ -73,29 +73,23 @@ if (! is_readable($inputPath)) {
 }
 
 // ----------------------------------------------------------------------
-// Read the file. PayPal's NL export ships with a UTF-8 BOM as the first
-// three bytes; strip it for parsing but keep the byte-perfect header
-// row in `$headers` so column-name lookups stay exact.
+// Open the file directly with fopen(). PayPal's NL export ships with a
+// UTF-8 BOM as the first three bytes; sniff the first three bytes,
+// rewind, and then peel them off before the first fgetcsv() so the
+// header row keeps its byte-perfect shape for column-name lookups.
 // ----------------------------------------------------------------------
-$raw = file_get_contents($inputPath);
-if ($raw === false) {
+$bom = "\xEF\xBB\xBF";
+$tmpIn = fopen($inputPath, 'r');
+if ($tmpIn === false) {
     fwrite(STDERR, "Could not read input file: {$inputPath}\n");
     exit(1);
 }
 
-$bom = "\xEF\xBB\xBF";
-$hadBom = strncmp($raw, $bom, 3) === 0;
-if ($hadBom) {
-    $raw = substr($raw, 3);
+$first3 = fread($tmpIn, 3);
+$hadBom = ($first3 === $bom);
+if (! $hadBom) {
+    rewind($tmpIn);
 }
-
-$tmpIn = tmpfile();
-if ($tmpIn === false) {
-    fwrite(STDERR, "Could not allocate tmp buffer.\n");
-    exit(1);
-}
-fwrite($tmpIn, $raw);
-rewind($tmpIn);
 
 // ----------------------------------------------------------------------
 // Pass 1 — read every row, build $realToSynthetic from the union of the
