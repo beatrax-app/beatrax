@@ -79,7 +79,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 03-04-PLAN.md — Wave 3 settings page: users.default_currency_view migration + User model + /settings Livewire SFC + top-nav link + SettingsPageTest (MC-02 storage half)
   - [x] 03-05-PLAN.md — Wave 4 transactions toggle: TransactionRowDto secondaryAmount + TransactionListQuery projection + Flux segmented toggle with #[Url] + dual-line stack on /transactions (MC-02 list half + UI-06 + D-44 + D-47)
   - [x] 03-06-PLAN.md — Wave 5 dashboard branching: ThisPeriodAtAGlanceQuery forByCurrency + PerCurrencyTile DTO + Money formatter locale-aware default + Dashboard.render branching + per-currency tile rows (MC-02 dashboard half + D-46)
-  - [ ] 03-07-PLAN.md — Wave 5 transaction detail FX-row: TransactionDetail Livewire SFC + Blade + /transactions/{id} route + conditional Effective rate row (UI-06 + D-48)
+  - [x] 03-07-PLAN.md — Wave 5 transaction detail FX-row: TransactionDetail Livewire SFC + Blade + /transactions/{id} route + conditional Effective rate row (UI-06 + D-48)
 **UI hint**: yes
 
 ### Phase 4: PayPal Ingestion + Transfer Detection
