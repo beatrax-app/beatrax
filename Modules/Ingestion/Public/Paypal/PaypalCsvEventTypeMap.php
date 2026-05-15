@@ -8,10 +8,10 @@ use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException
 use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
 
 /**
- * Empirical event-type → canonical-action map for PayPal Activity
- * Download CSV rows.
+ * Event-type → canonical-action map for PayPal Activity Download CSV
+ * rows.
  *
- * Action vocabulary (D-62):
+ * Action vocabulary:
  *
  *   - 'skip'      — row is dropped at the adapter boundary
  *                   (Hold / Authorization / Reserve / Reversal of
@@ -25,20 +25,15 @@ use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
  *                   becomes its own canonical row.
  *   - 'child-fx'  — row rides under its parent's rawPayload manifest
  *                   and contributes the EUR-leg or non-EUR-leg of
- *                   the dual-amount pair (D-63).
+ *                   the dual-amount pair.
  *
  * Map entries are language-keyed; the adapter looks up via the
  * detected language code from `PaypalCsvLanguageProfile::detected()`.
  *
- * Wave 0 entries (locked from `04-WAVE-0-FINDINGS.md` (b)):
- *
- *   nl → 5 observed event types + 4 EN forward-compatible skips for
- *        Hold / Authorization / Reserve / Reversal. The EN skips
- *        cover the case where PayPal hasn't localised those strings
- *        (empirically common — `Reference Txn ID` is also un-localised
- *        in the user's NL export); when a localised NL form first
- *        appears in a future export, the entry gets a CONTEXT.md
- *        addendum + a fixture extension.
+ * The NL entries cover the five observed event types plus four EN
+ * forward-compatible skips for Hold / Authorization / Reserve /
+ * Reversal — PayPal frequently ships those strings un-localised
+ * (`Reference Txn ID` is similarly un-localised in NL exports).
  *
  * Any event type encountered that is NOT in the map raises
  * `UnknownPaypalEventTypeException` — silent mis-classification is
@@ -53,7 +48,7 @@ final class PaypalCsvEventTypeMap
      */
     private const MAP = [
         'nl' => [
-            // Observed in the Wave 0 fixture
+            // Observed event types in the NL Activity Download.
             'Vooraf goedgekeurde betaling – rekening betaald door gebruiker' => 'parent',
             'Express Checkout-betaling' => 'parent',
             'Bankstorting naar PP-rekening' => 'child-fee',
@@ -79,11 +74,10 @@ final class PaypalCsvEventTypeMap
      */
     private const TRANSACTION_TYPE = [
         'nl' => [
-            // Both observed parent forms in the Wave 0 fixture map to
-            // 'expense'. Wave 0 surfaced no refund / withdrawal /
-            // transfer rows; their NL strings are deferred until
-            // empirically observed (see 04-WAVE-0-FINDINGS.md
-            // "Deferred / future-event-type-coverage").
+            // Both observed parent event types map to 'expense'.
+            // Refund / withdrawal / transfer NL strings will be added
+            // here when their corresponding parent event types are
+            // observed in a real export.
             'Vooraf goedgekeurde betaling – rekening betaald door gebruiker' => 'expense',
             'Express Checkout-betaling' => 'expense',
         ],

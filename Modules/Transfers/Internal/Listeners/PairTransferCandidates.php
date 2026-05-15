@@ -10,49 +10,52 @@ use Modules\Import\Public\Events\TransactionImported;
 use RuntimeException;
 
 /**
- * Deterministic Layer-1 pair-detection listener (D-73 / D-75).
+ * Deterministic pair-detection listener that links transfer legs.
  *
  * Subscribes to `TransactionImported` (fired synchronously inside
  * `RecordTransactions`' outer DB transaction) and runs a single,
- * deterministic match for every newly-inserted transfer_in / transfer_out
- * row:
+ * deterministic match for every newly-inserted transfer_in /
+ * transfer_out row:
  *
  *   - same user (cross-user pairing is impossible — every query filters
- *     on $user->id, T-04-W2-01/02 mitigation)
+ *     on $user->id)
  *   - counterparty_iban matches one of the user's own Account.iban rows
  *     (synthetic IBANs `'ICS-CARD'` and `'PAYPAL'` participate as
  *      ordinary Account.iban values)
  *   - amount equal-and-opposite, same currency
- *   - booked_at within ±3 days (D-73 tolerance)
+ *   - booked_at within ±WINDOW_DAYS calendar days
  *   - both legs typed transfer_in / transfer_out
- *   - neither leg already paired (defensive — the listener is idempotent
- *     on re-fire)
+ *   - neither leg already paired (defensive — the listener is
+ *     idempotent on re-fire)
  *
- * When matched, BOTH rows get `pair_transaction_id` written to point at
- * each other inside the same handle() call. The listener inherits the
- * outer `RecordTransactions` DB transaction frame so the symmetric write
- * is atomic — no nested DB::transaction() wrapper (Pitfall 1).
+ * When matched, BOTH rows get `pair_transaction_id` written to point
+ * at each other inside the same handle() call. The listener inherits
+ * the outer `RecordTransactions` DB transaction frame so the symmetric
+ * write is atomic — no nested DB::transaction() wrapper.
  *
- * The listener is intentionally NOT `ShouldHandleEventsAfterCommit` and
- * NOT `ShouldQueue`: same-import-batch pair-detection requires observing
- * partner rows that were inserted earlier in the same outer transaction.
+ * The listener is intentionally NOT `ShouldHandleEventsAfterCommit`
+ * and NOT `ShouldQueue`: same-import-batch pair-detection requires
+ * observing partner rows that were inserted earlier in the same outer
+ * transaction.
  *
  * The listener LINKS — it never re-types rows. Type assignment is the
  * `ClassifyTransactionType` pipeline stage's job; the listener only
  * looks for already-typed transfer legs to connect.
  *
- * Account + partner lookups use the raw `DatabaseManager` query builder
- * rather than Eloquent because the project applies
- * `phpstan-strict-rules`' `staticMethod.dynamicCall` rule (which forbids
- * `Eloquent\Builder::whereBetween()`, `whereIn()`, `orderBy()`, etc.).
- * The matching Eloquent model is loaded only once a partner id is
- * resolved, so the symmetric save() pair is still an Eloquent write.
+ * Account + partner lookups use the raw `DatabaseManager` query
+ * builder rather than Eloquent because the project applies
+ * `phpstan-strict-rules`' `staticMethod.dynamicCall` rule (which
+ * forbids `Eloquent\Builder::whereBetween()`, `whereIn()`,
+ * `orderBy()`, etc.). The symmetric write also uses raw `update()`
+ * statements so no extra Eloquent re-fetch is required to seat the
+ * partner row.
  */
 final class PairTransferCandidates
 {
     /**
-     * ±3-day window per D-73. A constant so the tolerance is greppable
-     * + adjustable in one place.
+     * Symmetric ±WINDOW_DAYS calendar-day tolerance for the
+     * booked_at-based partner search. A constant so the tolerance is
+     * greppable and adjustable in one place.
      */
     private const WINDOW_DAYS = 3;
 
@@ -64,10 +67,10 @@ final class PairTransferCandidates
     public function handle(TransactionImported $event): void
     {
         // Defensive: refuse to pair when the event payload's user does
-        // not match the transaction's owning user (T-04-W2-02). The
-        // event is in-process / in-transaction so this should never
-        // happen in production — surfacing as an exception means any
-        // future regression in event construction trips fast and loud.
+        // not match the transaction's owning user. The event is in-
+        // process / in-transaction so this should never happen in
+        // production — surfacing as an exception means any future
+        // regression in event construction trips fast and loud.
         if ($event->transaction->user_id !== $event->user->id) {
             throw new RuntimeException(
                 'TransactionImported.user.id does not match transaction.user_id — refusing to pair.'
@@ -77,7 +80,7 @@ final class PairTransferCandidates
         $tx = $event->transaction;
         $user = $event->user;
 
-        // Layer-1 only fires when the row is itself a transfer leg.
+        // Only fire when the row is itself a transfer leg.
         if (! in_array($tx->type, ['transfer_out', 'transfer_in'], true)) {
             return;
         }
@@ -144,9 +147,9 @@ final class PairTransferCandidates
             ->first(['id']);
 
         if ($partnerRow === null) {
-            // Half-pair state per D-74. Partner may land later — when
-            // it does, that import's listener event will find this
-            // (still-unpaired) row and close the pair.
+            // Half-pair state. Partner may land later — when it does,
+            // that import's listener event will find this (still-
+            // unpaired) row and close the pair.
             return;
         }
         $partnerId = self::toInt($partnerRow->id ?? null);

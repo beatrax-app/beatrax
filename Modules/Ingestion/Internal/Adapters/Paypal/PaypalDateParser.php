@@ -13,15 +13,14 @@ use Modules\Ingestion\Public\Exceptions\InvalidDateException;
  * `CarbonImmutable`.
  *
  * The startOfDay normalisation matches the project-wide
- * FingerprintComposer v3 day-precision invariant established by the
- * ASN CSV / CAMT.053 / MT940 / ICS PDF adapters, so cross-format dedup
+ * FingerprintComposer v3 day-precision invariant the ASN CSV /
+ * CAMT.053 / MT940 / ICS PDF adapters use, so cross-format dedup
  * hashes remain comparable.
  *
- * Empirical shape sourced from the Wave 0 fixture: PayPal exports
- * the Datum column as M/D/YYYY (US numeric date), independent of the
- * account's display locale. The ISO `yyyy-mm-dd` shape is accepted as a
- * forward-compatibility fallback for the case where a future PayPal
- * export shifts to that shape.
+ * PayPal exports the Datum column as M/D/YYYY (US numeric date),
+ * independent of the account's display locale. The ISO `yyyy-mm-dd`
+ * shape is accepted as a forward-compatibility fallback for the case
+ * where a future PayPal export shifts to that shape.
  *
  * Stateless; no global locale mutation.
  */

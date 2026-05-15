@@ -11,58 +11,53 @@ use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Decouples typing from pairing per D-76 / Pitfall 3.
+ * Pipeline stage that resolves a canonical row's `type` from the
+ * combination of source-adapter pre-classification, the user's account
+ * graph, and the PayPal event-type map. Sits between NormalizeStage and
+ * FingerprintStage; runs once per canonical row before the row is
+ * fingerprinted or persisted.
  *
- * Sits between NormalizeStage and FingerprintStage in the pipeline; runs
- * once per canonical row before the row is fingerprinted, classified, or
- * persisted. The stage is a pure pre-load transformer: it NEVER queries
- * the `transactions` table, NEVER mutates `pair_transaction_id`, and
- * NEVER re-types rows the adapter already classified as `refund` /
- * `fee` / `adjustment`.
+ * The stage is a pure pre-load transformer: it never queries the
+ * `transactions` table, never mutates `pair_transaction_id`, and never
+ * re-types rows the adapter already classified as `refund` / `fee` /
+ * `adjustment`.
  *
- * Algorithm (verbatim from RESEARCH.md Example 3 / D-76 / D-77):
+ * Algorithm:
  *
- *   1. Preserve already-classified rows
- *      ─ `refund` / `fee` / `adjustment` → returned unchanged. These
- *        are pre-classified by the adapter (PayPal Refund event type,
- *        ASN refund mapper) and the pair-detection listener has no
- *        opinion on them.
+ *   1. Preserve already-classified rows. `refund` / `fee` / `adjustment`
+ *      come back unchanged — they are pre-classified by the adapter
+ *      (PayPal Refund event type, ASN refund mapper) and downstream
+ *      pair-detection has no opinion on them.
  *
- *   2. Cross-account-IBAN check (UNIVERSAL — every source format)
- *      ─ When `$tx->counterpartyIban` is non-null AND matches one of
- *        the user's OWN Account.iban rows (excluding the row's own
- *        account), the row is a transfer leg. Sign-of-amount picks the
- *        direction: negative → transfer_out, positive → transfer_in.
- *      ─ The Account query filters by `$user->id` so a counterparty
- *        IBAN that happens to belong to a different user's account
- *        never triggers a flip (T-04-W2-01 mitigation).
+ *   2. Cross-account-IBAN check (universal across source formats). When
+ *      `$tx->counterpartyIban` is non-null AND matches one of the user's
+ *      OWN Account.iban rows (excluding the row's own account), the row
+ *      is a transfer leg. Sign-of-amount picks the direction: negative →
+ *      transfer_out, positive → transfer_in. The Account query filters
+ *      by `$user->id` so a counterparty IBAN that happens to belong to a
+ *      different user's account never triggers a flip.
  *
- *   3. PayPal source-format event-type map
- *      ─ Only fires when `rawPayload.format === 'paypal-csv'`. Reads
- *        the FIRST event's `type` from `rawPayload.events`, looks up
- *        via `PaypalCsvEventTypeMap::transactionType()`, and applies
- *        the resulting `Transaction::TYPES` value if it doesn't
- *        collide with a transfer (step 2 takes precedence — a PayPal
- *        General Withdrawal whose counterparty IBAN matches a known
- *        own ASN account becomes `transfer_out` regardless).
- *      ─ An unknown parent event type catches the typed exception and
- *        falls through to step 4 — the adapter would already have
- *        raised an UnknownPaypalEventTypeException at parse time when
- *        the event truly cannot be classified.
+ *   3. PayPal source-format event-type map. Fires when
+ *      `rawPayload.format === 'paypal-csv'`. Reads the FIRST event's
+ *      `type` from `rawPayload.events`, looks up via
+ *      `PaypalCsvEventTypeMap::transactionType()`, and applies the
+ *      resulting `Transaction::TYPES` value if it doesn't collide with a
+ *      transfer (step 2 takes precedence — a PayPal General Withdrawal
+ *      whose counterparty IBAN matches a known own ASN account becomes
+ *      `transfer_out` regardless). An unmapped parent event type catches
+ *      the typed exception and falls through to step 4.
  *
- *   4. Subtractive income detector (D-77)
- *      ─ Positive amount AND type not in {transfer_in, transfer_out,
- *        refund, fee} → income. The detector is intentionally cheap;
- *        counterparty-heuristic salary detection is a future phase.
+ *   4. Subtractive income rule. Positive amount AND type not in
+ *      {transfer_in, transfer_out, refund, fee} → income. Cheap and
+ *      deterministic; counterparty-heuristic salary detection is a
+ *      future concern.
  *
- *   5. Default
- *      ─ Return the row unchanged so NormalizeStage's amount-sign
- *        default (negative → expense) survives.
+ *   5. Default. Return the row unchanged so NormalizeStage's amount-sign
+ *      default (negative → expense) survives.
  *
- * Cross-user safety: every Account lookup filters on `$user->id`
- * (T-04-W2-01). The stage is a single read against `accounts`; it does
- * NOT query `transactions` (Pitfall 3 — listener-side concerns stay
- * listener-side).
+ * Cross-user safety: every Account lookup filters on `$user->id`. The
+ * stage is a single read against `accounts`; it does NOT query
+ * `transactions` — listener-side concerns stay listener-side.
  */
 final class ClassifyTransactionType
 {
@@ -130,7 +125,7 @@ final class ClassifyTransactionType
             }
         }
 
-        // Step 4 — subtractive income detector (D-77).
+        // Step 4 — subtractive income rule.
         if (
             $tx->amountMinor > 0
             && ! in_array($tx->type, ['transfer_in', 'transfer_out', 'refund', 'fee'], true)

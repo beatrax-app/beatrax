@@ -46,16 +46,16 @@ use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
  *        - `settledAmountMinor` / `settledCurrency` = EUR leg of any
  *          `child-fx` pair, else null
  *        - `fxRateUsed` = null (NormalizeStage derives it later from
- *          the native/settled pair per Phase 3 D-39)
+ *          the native/settled pair)
  *        - `rawPayload` = `{ format: 'paypal-csv', events: [{ type,
  *          row }, ...] }` with parent first then children in CSV order
- *        - `sourceRef` = parent's Transaction ID (D-64)
+ *        - `sourceRef` = parent's Transaction ID
  *        - `sourceRowIndex` = monotonically increasing across the
  *          rolled-up output (0, 1, 2, ...), NOT the raw CSV row index
  *
- * Pitfall 2 safety net (FX direction): the walker identifies the
- * foreign leg by `Currency != 'EUR'`, NEVER by row order. Both legs
- * of a PayPal currency-conversion pair are labelled with the same
+ * FX-direction safety net: the walker identifies the foreign leg by
+ * `Currency != 'EUR'`, NEVER by row order. Both legs of a PayPal
+ * currency-conversion pair are labelled with the same
  * `Algemene valutaomrekening` event type and share a `Reference Txn ID`,
  * but only the non-EUR leg carries the native-currency amount.
  */
@@ -209,7 +209,7 @@ final class PaypalTransactionRollup
         $settledAmountMinor = null;
         $settledCurrency = null;
 
-        // FX-direction safety net (Pitfall 2): scan child-fx siblings
+        // FX-direction safety net: scan child-fx siblings
         // and identify the foreign leg by Currency != 'EUR', NOT by row
         // order. The walker tolerates both orientations:
         //   - parent native foreign + child EUR settled

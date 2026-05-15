@@ -39,9 +39,9 @@ use Modules\Ledger\Models\ImportRun;
  *     them.
  *   - ICS card naming: triggered when the import run's `source_format`
  *     is `'ics-pdf'` AND no Account with `kind='ics_card'` exists for
- *     the user. Renders one prompt with the UI-SPEC-locked copy; saving
- *     inserts the synthetic ICS Account row and re-runs the importer so
- *     the rows preview is populated.
+ *     the user. Renders one naming prompt; saving inserts the synthetic
+ *     ICS Account row and re-runs the importer so the rows preview is
+ *     populated.
  *   - PayPal naming: same shape as the ICS branch but keyed on
  *     `source_format = 'paypal-csv'` and `kind = 'paypal'`; saves the
  *     synthetic-IBAN Account with iban `'PAYPAL'`, default currency

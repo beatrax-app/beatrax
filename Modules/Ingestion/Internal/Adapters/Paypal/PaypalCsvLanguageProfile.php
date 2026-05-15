@@ -10,15 +10,13 @@ namespace Modules\Ingestion\Internal\Adapters\Paypal;
  *
  * PayPal localises both column headers and event-type values per the
  * account locale. This profile carries the empirical token vocabulary
- * locked from the committed Wave 0 fixture at
- * `Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv`. The
- * `detect()` factory inspects the CSV's header row and returns a
- * profile instance carrying the matched language code; the adapter
- * uses the instance's `detected()` getter when looking up event types
- * in `PaypalCsvEventTypeMap`.
+ * for each supported locale. The `detect()` factory inspects the CSV's
+ * header row and returns a profile instance carrying the matched
+ * language code; the adapter uses the instance's `detected()` getter
+ * when looking up event types in `PaypalCsvEventTypeMap`.
  *
- * Wave 0 ships ONE language entry (nl). A second-language entry is
- * incremental work once a second-language sample arrives.
+ * Currently registered locales: `nl`. A second-language entry is
+ * incremental work once a second-language sample is available.
  */
 final class PaypalCsvLanguageProfile
 {

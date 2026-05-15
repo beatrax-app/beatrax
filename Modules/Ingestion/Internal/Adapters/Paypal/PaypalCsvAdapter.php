@@ -112,11 +112,11 @@ final class PaypalCsvAdapter implements SourceAdapter
         }
         $language = $languageProfile->detected();
 
-        // Buffer all raw rows for the rollup walker (D-61). PayPal's
-        // per-event shape means we cannot yield row-by-row from
-        // league/csv directly — the walker needs the full set to
-        // resolve Reference-Txn-ID parent/child links before emitting
-        // canonical DTOs.
+        // Buffer all raw rows for the rollup walker. PayPal's per-event
+        // shape means we cannot yield row-by-row from league/csv
+        // directly — the walker needs the full set to resolve
+        // Reference-Txn-ID parent/child links before emitting canonical
+        // DTOs.
         // Under setHeaderOffset(0) league/csv 9.x yields records as
         // string-keyed arrays whose values are string|null (null for
         // ragged short rows). Coerce null cells to empty string so the

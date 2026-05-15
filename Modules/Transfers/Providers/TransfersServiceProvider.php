@@ -12,14 +12,14 @@ use Modules\Transfers\Internal\Listeners\PairTransferCandidates;
 /**
  * Wires the Transfers module:
  *
- *  - subscribes the deterministic Layer-1 PairTransferCandidates
- *    listener to the cross-module TransactionImported event fired by
+ *  - subscribes the deterministic PairTransferCandidates listener to
+ *    the cross-module TransactionImported event fired by
  *    `Modules\Ledger\Public\Actions\RecordTransactions`.
  *
- * Phase 4 ships no `Public/` API surface — the listener is the entire
- * module. A future phase (5+) that needs to query "is row X paired?"
- * will add `Modules\Transfers\Public\Services\PairLookup`; the module
- * boundary stays clean until then.
+ * The module ships no `Public/` API surface today — the listener is
+ * the entire module. The boundary stays clean until a future consumer
+ * needs a public service (e.g. a `PairLookup` query for downstream
+ * chain-resolution).
  *
  * The provider does NOT call loadMigrationsFrom() / loadRoutesFrom() /
  * loadViewsFrom() — there are no migrations (the pair_transaction_id
@@ -30,8 +30,8 @@ final class TransfersServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // No bindings in Phase 4 — the listener is auto-resolved via
-        // constructor DI when the dispatcher invokes it.
+        // No bindings — the listener is auto-resolved via constructor
+        // DI when the dispatcher invokes it.
     }
 
     public function boot(Dispatcher $events): void
