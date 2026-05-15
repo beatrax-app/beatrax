@@ -76,10 +76,20 @@ final class Dashboard extends Component
         $user = $currentUser->user();
         $period = $this->resolvePeriod($periods);
 
+        // `$summary` is always computed: the top-spending and recent-
+        // transactions panels remain settled-EUR-only regardless of mode.
+        // The per-currency split applies only to the KPI tiles at the top
+        // of the page.
         $summary = $glance->for($user, $period);
+
+        $tiles = null;
+        if ($user->default_currency_view === 'original') {
+            $tiles = $glance->forByCurrency($user, $period);
+        }
 
         return $views->make('core::livewire.dashboard', [
             'summary' => $summary,
+            'tiles' => $tiles,
         ]);
     }
 
