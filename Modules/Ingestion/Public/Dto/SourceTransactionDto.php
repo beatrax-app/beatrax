@@ -18,6 +18,13 @@ use Spatie\LaravelData\Data;
  * carry structured metadata like SEPA references) so the source row can
  * be re-inspected for audit without re-reading the file. `sourceRowIndex`
  * is monotonically increasing starting at 0 across one parse run.
+ *
+ * `settledAmountMinor` and `settledCurrency` carry the foreign-currency
+ * settled-EUR pair when the source row provides it (ICS PDF, future
+ * PayPal); EUR-native sources leave them `null` and NormalizeStage
+ * mirrors the native pair into the canonical settled fields. `fxRateUsed`
+ * is always `null` at the adapter boundary — NormalizeStage derives it
+ * from the native + settled pair when the currencies differ.
  */
 final class SourceTransactionDto extends Data
 {
@@ -37,5 +44,8 @@ final class SourceTransactionDto extends Data
         public readonly ?string $description,
         public readonly array $rawPayload,
         public readonly int $sourceRowIndex,
+        public readonly ?int $settledAmountMinor = null,
+        public readonly ?string $settledCurrency = null,
+        public readonly ?string $fxRateUsed = null,
     ) {}
 }
