@@ -7,8 +7,10 @@ namespace Modules\Ledger\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\DashboardSummary;
+use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\ValueObjects\Money;
+use stdClass;
 
 /**
  * The dashboard's data composer. Builds a single `DashboardSummary` payload
@@ -111,6 +113,61 @@ final class ThisPeriodAtAGlanceQuery
     }
 
     /**
+     * Original-currency mode for the dashboard KPI tiles. Returns one tile-
+     * row per distinct `settled_currency` present in the period with non-
+     * zero activity (either inflow or outflow). Rows are ordered
+     * alphabetically by ISO currency code so the rendered tile stack is
+     * deterministic across renders. Zero-activity currencies — those whose
+     * inflow and outflow both sum to zero in the period — are omitted by
+     * the HAVING clause so the UI never paints empty rows.
+     *
+     * A period with only EUR-native activity collapses to a single tile-
+     * row that visually matches the EUR-only mode output. Mixed-currency
+     * periods (e.g. EUR + USD) return one tile-row per currency in
+     * alphabetical order — EUR first, USD second.
+     *
+     * Same user-scoping guard as `for()` — every row is filtered by
+     * `user_id` before grouping so the aggregate cannot leak across user
+     * boundaries.
+     *
+     * @return list<PerCurrencyTile>
+     */
+    public function forByCurrency(User $user, Period $period): array
+    {
+        $connection = $this->db->connection();
+
+        $rows = $connection
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('posted_at', '>=', $period->start->toDateString())
+            ->where('posted_at', '<', $period->endExclusive->toDateString())
+            ->groupBy('settled_currency')
+            ->havingRaw(
+                '(COALESCE(SUM(CASE WHEN settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END), 0) <> 0)
+                 OR (COALESCE(SUM(CASE WHEN settled_amount_minor < 0 THEN -settled_amount_minor ELSE 0 END), 0) <> 0)'
+            )
+            ->selectRaw(
+                'settled_currency,
+                 COALESCE(SUM(CASE WHEN settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END), 0) AS inflow_minor,
+                 COALESCE(SUM(CASE WHEN settled_amount_minor < 0 THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
+                 COALESCE(SUM(settled_amount_minor), 0) AS net_minor'
+            )
+            ->orderBy('settled_currency')
+            ->get();
+
+        return array_values($rows->map(static function (stdClass $row): PerCurrencyTile {
+            $currency = self::toString($row->settled_currency);
+
+            return new PerCurrencyTile(
+                currency: $currency,
+                inflow: Money::ofMinor(self::toInt($row->inflow_minor), $currency),
+                outflow: Money::ofMinor(self::toInt($row->outflow_minor), $currency),
+                net: Money::ofMinor(self::toInt($row->net_minor), $currency),
+            );
+        })->all());
+    }
+
+    /**
      * Coerces a raw query-builder scalar into an int. SUM expressions over
      * an integer column always come back as a numeric string or null in the
      * SQLite driver, so the guard keeps PHPStan's `cast.int` rule happy
@@ -119,5 +176,16 @@ final class ThisPeriodAtAGlanceQuery
     private static function toInt(mixed $value): int
     {
         return is_numeric($value) ? (int) $value : 0;
+    }
+
+    /**
+     * Coerces a raw query-builder scalar into a string. The grouped column
+     * (`settled_currency`) always returns a string in the SQLite driver,
+     * but the guard keeps PHPStan's strict-rules `cast.string` rule happy
+     * without leaking `mixed` into the Money construction.
+     */
+    private static function toString(mixed $value): string
+    {
+        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
     }
 }
