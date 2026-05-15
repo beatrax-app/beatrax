@@ -25,6 +25,10 @@ arch('Modules\\Categorization\\Internal is only used inside Modules\\Categorizat
     ->expect('Modules\\Categorization\\Internal')
     ->toOnlyBeUsedIn('Modules\\Categorization');
 
+arch('Modules\\Transfers\\Internal is only used inside Modules\\Transfers')
+    ->expect('Modules\\Transfers\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Transfers');
+
 arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules');
