@@ -39,7 +39,7 @@ it('inserts new rows and counts them', function (): void {
         'userId' => $this->user->id,
         'accountId' => $this->account->id,
         'importRunId' => $this->importRun->id,
-    ])]);
+    ])], $this->user);
 
     expect($result)->toBeInstanceOf(RecordResult::class);
     expect($result->inserted)->toBe(1);
@@ -55,8 +55,8 @@ it('treats a re-insertion of the same canonical as a duplicate', function (): vo
         'importRunId' => $this->importRun->id,
     ]);
 
-    $first = $action([$row]);
-    $second = $action([$row]);
+    $first = $action([$row], $this->user);
+    $second = $action([$row], $this->user);
 
     expect($first->inserted)->toBe(1);
     expect($first->duplicates)->toBe(0);
@@ -93,7 +93,7 @@ it('rolls back the whole batch when one row has an invalid type', function (): v
         ]),
     ];
 
-    expect(fn () => $action($batch))->toThrow(InvalidArgumentException::class);
+    expect(fn () => $action($batch, $this->user))->toThrow(InvalidArgumentException::class);
     expect(Transaction::count())->toBe(0);
 });
 
@@ -103,7 +103,7 @@ it('persists the SHA-256 fingerprint stamped with the current normalization vers
         'userId' => $this->user->id,
         'accountId' => $this->account->id,
         'importRunId' => $this->importRun->id,
-    ])]);
+    ])], $this->user);
 
     $tx = Transaction::query()->first();
     expect($tx->fingerprint)->toHaveLength(64);
@@ -128,7 +128,7 @@ it('refuses a batch that contains a row with a null user_id', function (): void 
         ]),
     ];
 
-    expect(fn () => $action($batch))->toThrow(
+    expect(fn () => $action($batch, $this->user))->toThrow(
         InvalidArgumentException::class,
         'CanonicalTransaction.userId must not be null',
     );
