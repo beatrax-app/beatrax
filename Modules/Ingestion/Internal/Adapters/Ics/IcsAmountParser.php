@@ -37,8 +37,12 @@ final class IcsAmountParser
             throw new InvalidAmountException('Empty amount string.');
         }
 
-        // Strip currency symbols and ISO 4217 alpha-3 codes.
-        $stripped = preg_replace('/[€$£¥]|\b[A-Z]{3}\b/u', '', $trimmed);
+        // Strip currency symbols and the ISO 4217 alpha-3 codes the
+        // project's ingestion paths actually emit. The constrained set
+        // matches the supported display currencies; a naive `\b[A-Z]{3}\b`
+        // would consume any three-uppercase token (which the parser
+        // never sees today, but a defensive narrower regex is cheap).
+        $stripped = preg_replace('/[€$£¥]|\b(?:EUR|USD|GBP|JPY|CHF|CAD|AUD)\b/u', '', $trimmed);
         if ($stripped === null) {
             throw new InvalidAmountException(sprintf('Invalid amount string: %s', $raw));
         }
