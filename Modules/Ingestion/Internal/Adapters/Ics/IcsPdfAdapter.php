@@ -12,7 +12,6 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
-use Throwable;
 
 /**
  * Streaming parser for Mijn ICS consumer-portal monthly-statement PDFs.
@@ -102,15 +101,11 @@ final class IcsPdfAdapter implements SourceAdapter
         $this->sniffer->sniff($localPath, IcsPdfHeaderProfile::FORMAT);
         $this->lastStatementMetadata = null;
 
-        try {
-            $text = $this->extractor->extract($localPath);
-        } catch (Throwable $e) {
-            throw new InvalidAmountException(
-                sprintf('Failed to extract ICS PDF text: %s', $e->getMessage()),
-                0,
-                $e,
-            );
-        }
+        // Extraction failures keep their typed identity so callers (the
+        // upload wizard, the importer) can render a tailored
+        // "pdftotext binary missing — install poppler" message rather
+        // than seeing an amount-parser exception.
+        $text = $this->extractor->extract($localPath);
 
         // Read summary tokens FROM THE RAW TEXT before stripping noise so
         // the statement-level metadata can be assembled even though the
