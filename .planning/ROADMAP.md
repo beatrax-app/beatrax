@@ -83,13 +83,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 **UI hint**: yes
 
 ### Phase 4: PayPal Ingestion + Transfer Detection
-**Goal**: User can import PayPal activity — via CSV (canonical) and optionally the PayPal Reporting API — with the event-log rolled up into a single canonical transaction per payment, and have ASN↔ICS / PayPal↔bank moves correctly flagged as internal transfers rather than income.
+**Goal**: User can import PayPal activity — via CSV (canonical; the Reporting API path is deferred behind a business-account trigger per ING-09) — with the event-log rolled up into a single canonical transaction per payment, and have ASN↔ICS / PayPal↔bank moves correctly flagged as internal transfers rather than income.
 **Mode:** mvp
 **Depends on**: Phase 3
 **Requirements**: ING-05, ING-09, LED-04, LED-05
 **Success Criteria** (what must be TRUE):
   1. User can upload a PayPal activity CSV and see one transaction per payment (fees, holds, and currency-conversion rows enriching that single row rather than appearing as duplicates)
-  2. User can optionally authorize PayPal via OAuth2 and pull recent activity directly through the Reporting API, with the CSV path remaining as the supported fallback
+  2. PayPal Reporting API integration is documented as deferred behind a business-account upgrade trigger (see REQUIREMENTS.md "Deferred / future-revisit" → ING-09); CSV remains the supported PayPal ingestion path
   3. Internal moves between the user's own accounts (ASN → ICS, PayPal → bank) appear as paired transfer-out / transfer-in rows linked via `pair_transaction_id` and never inflate income totals
   4. Genuine income (salary, refunds, third-party transfers in) is flagged distinctly from internal transfers, with manual override available
 **Plans**: 5 plans

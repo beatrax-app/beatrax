@@ -48,3 +48,46 @@ arch('RederiveFingerprintsCommand is never imported by any HTTP or routing names
         'Modules\\Categorization\\Internal\\Http',
         'Modules\\Categorization\\Public\\Http',
     ]);
+
+it('does not allow a paypal-api route or class to exist (noPaypalApiRoute)', function (): void {
+    // Defensive arch invariant: the PayPal Reporting API integration is
+    // deferred behind a business-account upgrade trigger. If a future task
+    // accidentally lands a paypal-api adapter, a Reporting API client class,
+    // or a route segment using `paypal-api`, this test fails loudly. The
+    // grep strips `/* ... */` and `// ...` comments first so legitimate
+    // PHPDoc references stay legal.
+    $hits = [];
+
+    foreach (['routes', 'Modules'] as $root) {
+        $absoluteRoot = base_path($root);
+        if (! is_dir($absoluteRoot)) {
+            continue;
+        }
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator(
+                $absoluteRoot,
+                RecursiveDirectoryIterator::SKIP_DOTS
+            )
+        );
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            if (! $file->isFile()) {
+                continue;
+            }
+            $path = $file->getPathname();
+            if (preg_match('/\.(php|blade\.php)$/', $path) !== 1) {
+                continue;
+            }
+            $contents = (string) file_get_contents($path);
+            $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+            if (preg_match('/PaypalApiAdapter|PaypalReportingApi|paypal-api/i', $stripped) === 1) {
+                $hits[] = $path;
+            }
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "No paypal-api route or class should exist. Found in:\n  ".implode("\n  ", $hits)
+    );
+});

@@ -29,7 +29,7 @@
 - [x] **ING-06**: Re-uploading the same statement file (or an overlapping period) does not create duplicate transactions — idempotent by a v3 fingerprint of `(user_id, account_id, posted_at, booked_at, amount_minor, currency, counterparty_normalized)` enforced at the DB layer. Cross-format re-imports (CSV ↔ CAMT.053 ↔ MT940) ENRICH existing rows with stronger source_ref via the rank function (asn-camt053 > asn-mt940 > asn-csv) rather than inserting duplicates.
 - [ ] **ING-07**: User can declare which source format an upload is (no auto-detection), eliminating a class of misclassification errors
 - [ ] **ING-08**: Every imported row preserves a link back to its raw source row (for audit / debugging)
-- [ ] **ING-09**: PayPal Reporting API (Transaction Search) is supported as an optional alternative to CSV upload; user authorizes via OAuth2 and the app pulls activity directly. Phase research verifies feasibility for the user's account type (personal vs business). CSV path remains as the supported fallback in case Transaction Search is gated behind a business account.
+- [ ] **ING-09**: Moved to "Deferred / future-revisit" section below. PayPal Transaction Search is gated behind a business account; the user is on a personal account. CSV path (ING-05) remains the supported PayPal ingestion entry.
 
 ### Ingestion — Email Receipts (API-based)
 
@@ -124,6 +124,16 @@
 
 ---
 
+## Deferred / Future-Revisit (Phase 4 close-out)
+
+Requirements scoped to a v1 phase but deferred to a future-revisit window pending a clear trigger. Distinct from the v2 Requirements section above (v2 is "post-v1 ambitions"); Deferred is "in-scope but blocked".
+
+| REQ-ID | Description | Trigger |
+|--------|-------------|---------|
+| ING-09 | PayPal Reporting API (Transaction Search) via OAuth2 | When the user upgrades to a PayPal Business account, revisit. The CSV ingestion path (ING-05) covers the same data without API gating. |
+
+---
+
 ## Out of Scope (Hard Exclusions)
 
 - Cloud hosting / multi-device sync — privacy requirement
@@ -163,7 +173,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | ING-06 | Phase 2 | Complete |
 | ING-07 | Phase 1 | Pending |
 | ING-08 | Phase 1 | Pending |
-| ING-09 | Phase 4 | Pending |
+| ING-09 | Phase 4 | Deferred |
 | EML-01 | Phase 6 | Pending |
 | EML-02 | Phase 6 | Pending |
 | EML-03 | Phase 6 | Pending |
