@@ -29,6 +29,12 @@ dataset('idempotent_adapters', [
         'overlapBase' => __DIR__.'/../fixtures/asn-mt940-sample-1.sta',
         'overlapNext' => __DIR__.'/../fixtures/asn-mt940-sample-1.sta',
     ],
+    'ics-pdf' => [
+        'adapterFormat' => 'ics-pdf',
+        'fixture' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf',
+        'overlapBase' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf',
+        'overlapNext' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf',
+    ],
 ]);
 
 it('produces zero new rows when the same file is imported twice', function (

@@ -143,6 +143,7 @@ final class RunImport implements RunsImports
         $extension = match ($sourceFormat) {
             'asn-camt053' => 'xml',
             'asn-mt940' => 'sta',
+            'ics-pdf' => 'pdf',
             default => 'csv',
         };
         $relative = sprintf('%s/%d/%s.%s', self::STORAGE_PREFIX, $user->id, $sha, $extension);

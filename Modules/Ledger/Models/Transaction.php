@@ -39,6 +39,7 @@ use Modules\Ledger\Internal\Casts\MoneyMinorCast;
  * @property int $import_run_id
  * @property int $source_row_index
  * @property string|null $source_ref
+ * @property array<int|string, mixed>|null $raw_payload
  * @property ArrayObject<int, array<string, mixed>>|null $enriched_from
  * @property string $fingerprint
  * @property int $fingerprint_version
@@ -68,6 +69,7 @@ final class Transaction extends Model
         'counterparty_name', 'counterparty_iban', 'counterparty_normalized', 'normalization_version',
         'description', 'category_id',
         'source_format', 'import_run_id', 'source_row_index', 'source_ref',
+        'raw_payload',
         'enriched_from',
         'fingerprint', 'fingerprint_version',
         'status',
@@ -85,6 +87,7 @@ final class Transaction extends Model
             'normalization_version' => 'integer',
             'fingerprint_version' => 'integer',
             'source_row_index' => 'integer',
+            'raw_payload' => 'array',
             'enriched_from' => AsArrayObject::class,
             // Virtual Money attributes — `amount` and `settled_amount` are not
             // real columns; the cast bridges them to the (minor, currency) pair.
