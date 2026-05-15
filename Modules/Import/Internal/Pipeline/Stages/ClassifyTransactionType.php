@@ -6,9 +6,9 @@ namespace Modules\Import\Internal\Pipeline\Stages;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
-use Throwable;
 
 /**
  * Decouples typing from pairing per D-76 / Pitfall 3.
@@ -118,13 +118,14 @@ final class ClassifyTransactionType
                     $mappedType = $this->eventTypes->transactionType($parentEventType, $language);
 
                     return $tx->withType($mappedType);
-                } catch (Throwable) {
-                    // Unknown parent event type — fall through to the
-                    // subtractive default. The adapter would have raised
-                    // a typed exception at parse time when the event was
-                    // genuinely unmappable; here we treat unknown parent
-                    // types as "use the amount-sign default" rather than
-                    // hard-aborting the import.
+                } catch (UnknownPaypalEventTypeException) {
+                    // Unknown parent event type OR missing TRANSACTION_TYPE
+                    // mapping — fall through to the subtractive default.
+                    // The adapter would have raised a typed exception at
+                    // parse time when the event was genuinely unmappable;
+                    // here we treat unmapped parent types as "use the
+                    // amount-sign default" rather than hard-aborting the
+                    // import.
                 }
             }
         }

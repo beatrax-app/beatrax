@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Public\Paypal;
 
+use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException;
 use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
 
 /**
@@ -102,8 +103,8 @@ final class PaypalCsvEventTypeMap
     public function transactionType(string $eventType, string $language): string
     {
         if (! isset(self::TRANSACTION_TYPE[$language][$eventType])) {
-            throw new UnknownPaypalEventTypeException(
-                "PayPal CSV uses an unrecognised parent event type '{$eventType}' for language '{$language}'. This parent event type has no Transaction::TYPES mapping — file an issue with the redacted CSV."
+            throw new MissingPaypalTransactionTypeMapException(
+                "PayPal CSV parent event type '{$eventType}' for language '{$language}' has no Transaction::TYPES mapping. This is a code-internal inconsistency: every event type classified as 'parent' in MAP must have a corresponding TRANSACTION_TYPE entry."
             );
         }
 
