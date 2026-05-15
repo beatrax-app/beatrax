@@ -61,6 +61,61 @@
                     </div>
                 @endif
             </dl>
+
+            <section
+                aria-labelledby="reclassify-heading"
+                class="border-t border-slate-200 pt-6 space-y-3"
+                data-testid="reclassify-control"
+            >
+                <div class="space-y-1">
+                    <h2 id="reclassify-heading" class="text-base font-medium text-slate-900">
+                        Reclassify
+                    </h2>
+                    <p class="text-sm text-slate-500">
+                        Override the detected type. If this transaction is paired with another,
+                        choosing a non-transfer type will unpair both sides.
+                    </p>
+                </div>
+
+                <div
+                    class="flex items-center gap-3"
+                    x-data="{ toast: null }"
+                    x-on:toast.window="toast = $event.detail?.message ?? null; setTimeout(() => toast = null, 3000)"
+                >
+                    <label class="sr-only" for="reclassify-type">Choose new transaction type</label>
+                    <select
+                        wire:model.live="reclassifyType"
+                        id="reclassify-type"
+                        class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    >
+                        <option value="">Choose a type…</option>
+                        @foreach (\Modules\Ledger\Models\Transaction::TYPES as $type)
+                            @if ($type !== $transaction->type)
+                                <option value="{{ $type }}">{{ $type }}</option>
+                            @endif
+                        @endforeach
+                    </select>
+
+                    <button
+                        type="button"
+                        wire:click="reclassify($wire.reclassifyType)"
+                        @disabled($reclassifyType === '')
+                        class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                        Save
+                    </button>
+
+                    <span
+                        x-show="toast"
+                        x-cloak
+                        x-transition.opacity
+                        class="text-sm text-slate-600"
+                        role="status"
+                        aria-live="polite"
+                        x-text="toast"
+                    ></span>
+                </div>
+            </section>
         </div>
     </main>
 </div>
