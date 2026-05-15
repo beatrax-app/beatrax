@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Symfony\Component\Process\Process;
+use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
 
 /**
  * Repo-wide anonymisation-sweep guard. Reads the committed ICS PDF
@@ -11,10 +11,11 @@ use Symfony\Component\Process\Process;
  * future contributor pastes a raw ICS export into the fixture
  * directory.
  *
- * Case 5 (`->group('integration')`) shells out to `pdftotext` via
- * `Symfony\Component\Process\Process` to round-trip the tiny synthetic
- * PDF; CI hosts without poppler installed can exclude the integration
- * group via `vendor/bin/pest --exclude-group=integration`.
+ * Case 5 (`->group('integration')`) round-trips the tiny synthetic PDF
+ * through the project's `PdfTextExtractor`, which wraps the real
+ * `pdftotext` binary with the same flag set the ingestion path uses.
+ * CI hosts without poppler installed can exclude the integration group
+ * via `vendor/bin/pest --exclude-group=integration`.
  */
 $fixtureTxt = __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt';
 $fixtureTinyPdf = __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf';
@@ -76,23 +77,12 @@ it('the redacted ICS text fixture contains a card-number placeholder', function 
 })->group('phase-3');
 
 it('the tiny synthetic ICS PDF, after pdftotext extraction, contains zero PII-shaped strings', function () use ($fixtureTinyPdf): void {
-    $process = new Process([
-        'pdftotext',
-        '-layout',
-        '-enc', 'UTF-8',
-        '-eol', 'unix',
-        '-nopgbrk',
-        $fixtureTinyPdf,
-        '-',
-    ]);
-    $process->run();
-
-    expect($process->isSuccessful())->toBeTrue(
-        'pdftotext must extract the tiny synthetic PDF cleanly. Stderr: '
-        .$process->getErrorOutput()
-    );
-
-    $extracted = $process->getOutput();
+    // Round-trip the fixture through the project's PdfTextExtractor so
+    // the assertion exercises the exact flag set the ingestion path
+    // uses — any future change to those flags is automatically reflected
+    // here without a manual sync.
+    $extractor = new PdfTextExtractor;
+    $extracted = $extractor->extract($fixtureTinyPdf);
 
     expect(preg_match_all('/[0-9]{12,}/', $extracted))->toBe(0,
         'pdftotext output for the tiny synthetic PDF must contain zero '
