@@ -38,8 +38,14 @@ use Throwable;
  * Size cap: 10 MiB matches the wizard's existing `max:10240` Livewire
  * upload rule (kilobytes), so an over-sized upload is rejected at the
  * extractor boundary regardless of which entry point invoked it.
+ *
+ * Subclassable for unit-test substitution: the ICS PDF adapter is type-
+ * hinted on this concrete class (no interface exists for a single
+ * subprocess wrapper) so unit tests extend it with an anonymous class
+ * that overrides `extract()` to return committed fixture text. The
+ * class is not marked `final` for that reason.
  */
-final class PdfTextExtractor
+class PdfTextExtractor
 {
     /** 10 MiB — mirrors the Livewire upload `max:10240` (KB) rule. */
     public const MAX_BYTES = 10 * 1024 * 1024;
