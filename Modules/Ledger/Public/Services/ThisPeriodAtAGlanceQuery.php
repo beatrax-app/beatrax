@@ -72,6 +72,14 @@ final class ThisPeriodAtAGlanceQuery
             );
         }
 
+        // Inflow / outflow rollups filter by `transactions.type`, NOT by
+        // amount sign — D-77's subtractive income rule. A `transfer_in`
+        // row carries a positive amount but is an internal move between
+        // own accounts and MUST NOT inflate the income tile (Phase 4
+        // SC #4). Symmetric on the expense side: `transfer_out` carries
+        // a negative amount but stays out of the expense tile. Refunds,
+        // fees, and adjustments are likewise excluded — only the two
+        // canonical "money truly flowing in / out" types feed the tiles.
         $row = $connection
             ->table('transactions')
             ->where('user_id', $user->id)
@@ -79,9 +87,9 @@ final class ThisPeriodAtAGlanceQuery
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->selectRaw(
-                'COALESCE(SUM(CASE WHEN settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END), 0) AS inflow_minor,
-                 COALESCE(SUM(CASE WHEN settled_amount_minor < 0 THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
-                 COALESCE(SUM(settled_amount_minor), 0) AS net_minor'
+                "COALESCE(SUM(CASE WHEN type = 'income' THEN settled_amount_minor ELSE 0 END), 0) AS inflow_minor,
+                 COALESCE(SUM(CASE WHEN type = 'expense' THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
+                 COALESCE(SUM(CASE WHEN type IN ('income', 'expense') THEN settled_amount_minor ELSE 0 END), 0) AS net_minor"
             )
             ->first();
 
@@ -136,6 +144,10 @@ final class ThisPeriodAtAGlanceQuery
     {
         $connection = $this->db->connection();
 
+        // Per-currency tiles apply the SAME type filter as `for()` so the
+        // original-currency mode never silently double-counts internal
+        // transfers as income / expense in any currency band. Symmetric
+        // contract with the EUR-only rollup above (D-77).
         $rows = $connection
             ->table('transactions')
             ->where('user_id', $user->id)
@@ -143,14 +155,14 @@ final class ThisPeriodAtAGlanceQuery
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->groupBy('settled_currency')
             ->havingRaw(
-                '(COALESCE(SUM(CASE WHEN settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END), 0) <> 0)
-                 OR (COALESCE(SUM(CASE WHEN settled_amount_minor < 0 THEN -settled_amount_minor ELSE 0 END), 0) <> 0)'
+                "(COALESCE(SUM(CASE WHEN type = 'income' THEN settled_amount_minor ELSE 0 END), 0) <> 0)
+                 OR (COALESCE(SUM(CASE WHEN type = 'expense' THEN -settled_amount_minor ELSE 0 END), 0) <> 0)"
             )
             ->selectRaw(
-                'settled_currency,
-                 COALESCE(SUM(CASE WHEN settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END), 0) AS inflow_minor,
-                 COALESCE(SUM(CASE WHEN settled_amount_minor < 0 THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
-                 COALESCE(SUM(settled_amount_minor), 0) AS net_minor'
+                "settled_currency,
+                 COALESCE(SUM(CASE WHEN type = 'income' THEN settled_amount_minor ELSE 0 END), 0) AS inflow_minor,
+                 COALESCE(SUM(CASE WHEN type = 'expense' THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
+                 COALESCE(SUM(CASE WHEN type IN ('income', 'expense') THEN settled_amount_minor ELSE 0 END), 0) AS net_minor"
             )
             ->orderBy('settled_currency')
             ->get();
