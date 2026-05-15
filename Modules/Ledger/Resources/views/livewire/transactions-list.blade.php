@@ -1,7 +1,13 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->format('nl_NL');
+    // EUR amounts render in Dutch locale (e.g. `€ 68,86`); non-EUR amounts
+    // render in US English locale (e.g. `$74.43`) so the symbol prefix
+    // matches the user's mental model of the foreign currency. brick/money
+    // routes the locale through ext-intl's NumberFormatter under the hood.
+    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
+        ? $money->format('nl_NL')
+        : $money->format('en_US');
 @endphp
 
 <div class="space-y-6">
@@ -12,13 +18,19 @@
                 {{ $fullHistory ? 'Full history.' : 'Recent transactions (last 90 days).' }}
             </p>
         </div>
-        <button
-            type="button"
-            wire:click="toggleFullHistory"
-            class="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
-        >
-            {{ $fullHistory ? 'Show recent only' : 'Show full history' }}
-        </button>
+        <div class="flex items-center gap-2">
+            <flux:radio.group wire:model.live="currency" variant="segmented" aria-label="Currency view">
+                <flux:radio value="eur" label="EUR only" />
+                <flux:radio value="original" label="Original currency" />
+            </flux:radio.group>
+            <button
+                type="button"
+                wire:click="toggleFullHistory"
+                class="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+            >
+                {{ $fullHistory ? 'Show recent only' : 'Show full history' }}
+            </button>
+        </div>
     </header>
 
     @if (count($page->rows) === 0)
@@ -48,8 +60,11 @@
                                     key('cat-picker-' . $row->id)
                                 )
                             </td>
-                            <td class="px-4 py-2 text-right text-slate-900" style="font-variant-numeric: tabular-nums;">
-                                {{ $fmt($row->amount) }}
+                            <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
+                                <span class="block text-sm text-slate-900">{{ $fmt($row->amount) }}</span>
+                                @if ($currency === 'original' && $row->secondaryAmount !== null)
+                                    <span class="mt-1 block text-xs text-slate-500">{{ $fmt($row->secondaryAmount) }}</span>
+                                @endif
                             </td>
                         </tr>
                     @endforeach
