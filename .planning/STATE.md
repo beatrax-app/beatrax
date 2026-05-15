@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 4 context gathered
-last_updated: "2026-05-15T19:47:14.895Z"
+status: executing
+stopped_at: Phase 04 Plan 01 (Wave 0 enablement) complete
+last_updated: "2026-05-15T21:30:37.815Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 11
   completed_phases: 3
-  total_plans: 19
-  completed_plans: 19
-  percent: 100
+  total_plans: 24
+  completed_plans: 20
+  percent: 83
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-12)
 
 **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-**Current focus:** Phase 03 — ics-cards-multi-currency-display
+**Current focus:** Phase 04 — paypal-ingestion-transfer-detection
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Ready to plan
+Phase: 04 (paypal-ingestion-transfer-detection) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [██████████] 100%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████████] 100%
 | Phase 03 P05 | ~6m | 2 tasks tasks | 6 files files |
 | Phase 03 P06 | 6 | 3 tasks | 8 files |
 | Phase 03 P07 | 4 | 1 tasks | 5 files |
+| Phase 04 P01 | 35min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,12 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 03]: Plan 06: Dashboard.render() always computes $summary (top-spending + recent-transactions stay settled-EUR in both modes); only KPI tile section branches via @if ($tiles === null). Same card chrome reused verbatim; $fmt closure routes EUR nl_NL, else en_US (mirrors 03-05)
 - [Phase 03-07]: TransactionDetail Livewire SFC via class-as-handler route: Route::get('/transactions/{transactionId}', TransactionDetail::class)->whereNumber()->name('transactions.show'). Page envelope via View::macro('extends', 'layouts.app') inside render() — no separate Blade wrapper file. mount() uses raw Query Builder exists() to clear PHPStan staticMethod.dynamicCall (same pattern as PreviewWizard::needsIcsAccountName in 03-04); render() uses Eloquent firstOrFail() for the typed-model read
 - [Phase 03-07]: Cross-user 404 test added beyond the 4 plan-scaffolded cases — creates a second User row and assertStatus(404) against the first user's transaction URL. UserIdColumnArchTest covers the schema invariant; this test covers the runtime invariant on the new detail-page surface
+- [Phase ?]: Phase 04 Plan 01: PayPal Activity Download CSV ships in NL locale; PaypalCsvLanguageProfile::LANGUAGE_SIGNATURES['nl'] locks the 7-token discriminator (Datum, Tijd, Tijdzone, Omschrijving, Valuta, Transactiereferentie, Reference Txn ID)
+- [Phase ?]: Phase 04 Plan 01: PaypalCsvEventTypeMap['nl'] locks 5 empirical event types + 4 EN forward-compatible 'skip' entries (Hold/Authorization/Reserve/Reversal of General Account Hold); no NL skip forms observed in this fixture
+- [Phase ?]: Phase 04 Plan 01: TransactionImported event final readonly class (Transaction + User payload, NO ShouldHandleEventsAfterCommit / NO ShouldQueue); RecordTransactions dispatches sync in the outer DB transaction so Wave 2 listener sees just-inserted partners (Pitfall 1). RecordsTransactions contract widens to accept User $user
+- [Phase ?]: Phase 04 Plan 01: Merchant Naam column PRESERVED verbatim in redacted PayPal fixture (deviates from plan's literal 'names → KAARTHOUDER'). In PayPal's NL Activity Download Naam is the COUNTERPARTY merchant name, not the cardholder. Per D-58 'merchant strings preserved verbatim'
+- [Phase ?]: Phase 04 Plan 01: Empirical FX (D-60 e) is 4-row chain per USD purchase — USD parent + EUR Bankstorting + EUR Algemene valutaomrekening + USD Algemene valutaomrekening sharing parent Transaction ID via Reference Txn ID. Walker MUST detect FX by Currency != EUR on a row whose sibling is EUR Algemene-valutaomrekening (Pitfall 2)
+- [Phase ?]: Phase 04 Plan 01: Empirical reconciliation (D-60 g) CLEAN — sum(Netto) = 0.00 in both EUR and USD across 86 rows. Pull-only funding model; PayPal balance never accumulates. No explicit opening/closing balance rows; adapter computes opening = closing − sum(net)
 
 ### Pending Todos
 
@@ -159,7 +166,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-15T19:47:14.888Z
-Stopped at: Phase 4 context gathered
+Last session: 2026-05-15T21:30:37.809Z
+Stopped at: Phase 04 Plan 01 (Wave 0 enablement) complete
 Resume file: 
-.planning/phases/04-paypal-ingestion-transfer-detection/04-CONTEXT.md
+.planning/phases/04-paypal-ingestion-transfer-detection/04-02-PLAN.md
