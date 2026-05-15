@@ -109,8 +109,12 @@ final class PairTransferCandidates
         }
         $partnerAccountId = self::toInt($partnerAccountRow->id ?? null);
 
-        $windowStart = $tx->booked_at->subDays(self::WINDOW_DAYS);
-        $windowEnd = $tx->booked_at->addDays(self::WINDOW_DAYS);
+        // Normalise to whole-day boundaries so the window is symmetric
+        // ±WINDOW_DAYS calendar days regardless of the row's time-of-day
+        // (different adapters book at different times: ASN at 12:00:00,
+        // PayPal at startOfDay, etc.).
+        $windowStart = $tx->booked_at->copy()->startOfDay()->subDays(self::WINDOW_DAYS);
+        $windowEnd = $tx->booked_at->copy()->endOfDay()->addDays(self::WINDOW_DAYS);
 
         // Partner query — uses the partial index from the migration:
         //

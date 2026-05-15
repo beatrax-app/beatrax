@@ -151,6 +151,67 @@ it('leaves a half-pair unpaired when only one leg is in the ledger', function ()
     expect($asnReloaded->type)->toBe('transfer_out');
 });
 
+it('pairs partner rows that are exactly 3 calendar days away regardless of time-of-day (symmetric window)', function (): void {
+    // ASN row books at noon on May 15. Partner books at 23:59 on May 18 —
+    // exactly 3 calendar days later but a different time-of-day than the
+    // ASN leg. With a naive subDays/addDays around a 12:00 booked_at the
+    // partner would land outside the window (it sits at 11:59 past the
+    // upper bound). The whole-day boundaries make the window symmetric.
+    $asnLeg = pairTx($this->primaryUser, $this->asnAccount, $this->importRun, [
+        'type' => 'transfer_out',
+        'amount_minor' => -500,
+        'settled_amount_minor' => -500,
+        'counterparty_iban' => 'ICS-CARD',
+        'booked_at' => '2026-05-15 12:00:00',
+    ]);
+    $icsLeg = pairTx($this->primaryUser, $this->icsAccount, $this->importRun, [
+        'type' => 'transfer_in',
+        'amount_minor' => 500,
+        'settled_amount_minor' => 500,
+        'counterparty_iban' => 'NL57ASNB0123456789',
+        'booked_at' => '2026-05-18 23:59:00',
+    ]);
+
+    $this->events->dispatch(new TransactionImported($asnLeg, $this->primaryUser));
+    $this->events->dispatch(new TransactionImported($icsLeg, $this->primaryUser));
+
+    /** @var Transaction $asnReloaded */
+    $asnReloaded = Transaction::query()->findOrFail($asnLeg->id);
+    /** @var Transaction $icsReloaded */
+    $icsReloaded = Transaction::query()->findOrFail($icsLeg->id);
+    expect($asnReloaded->pair_transaction_id)->toBe($icsLeg->id);
+    expect($icsReloaded->pair_transaction_id)->toBe($asnLeg->id);
+});
+
+it('does not pair partners that are 4+ calendar days away', function (): void {
+    // Boundary check on the upper end: a partner that books on day +4
+    // is outside the symmetric ±3 calendar-day window and MUST NOT pair.
+    $asnLeg = pairTx($this->primaryUser, $this->asnAccount, $this->importRun, [
+        'type' => 'transfer_out',
+        'amount_minor' => -500,
+        'settled_amount_minor' => -500,
+        'counterparty_iban' => 'ICS-CARD',
+        'booked_at' => '2026-05-15 12:00:00',
+    ]);
+    $icsLeg = pairTx($this->primaryUser, $this->icsAccount, $this->importRun, [
+        'type' => 'transfer_in',
+        'amount_minor' => 500,
+        'settled_amount_minor' => 500,
+        'counterparty_iban' => 'NL57ASNB0123456789',
+        'booked_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $this->events->dispatch(new TransactionImported($asnLeg, $this->primaryUser));
+    $this->events->dispatch(new TransactionImported($icsLeg, $this->primaryUser));
+
+    /** @var Transaction $asnReloaded */
+    $asnReloaded = Transaction::query()->findOrFail($asnLeg->id);
+    /** @var Transaction $icsReloaded */
+    $icsReloaded = Transaction::query()->findOrFail($icsLeg->id);
+    expect($asnReloaded->pair_transaction_id)->toBeNull();
+    expect($icsReloaded->pair_transaction_id)->toBeNull();
+});
+
 it('closes the half-pair when the partner arrives in a later import', function (): void {
     // First import: ASN side lands without partner.
     $asnLeg = pairTx($this->primaryUser, $this->asnAccount, $this->importRun, [
