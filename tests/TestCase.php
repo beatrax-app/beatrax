@@ -30,16 +30,21 @@ abstract class TestCase extends BaseTestCase
     protected ?User $fixtureUser = null;
 
     /**
-     * Seeds the canonical fixture User + ASN Account so the contract tests
-     * and Modules\Import\Tests\Feature\AsnCsvImportTest can resolve the
-     * fixture's own-IBAN without falling through to the unknown-IBAN
-     * wizard step.
+     * Seeds the canonical fixture User + ASN Account + ICS Account so
+     * the contract tests and the per-module *ImportTest files can
+     * resolve their respective own-IBANs without falling through to the
+     * unknown-IBAN wizard step.
      *
      * IBAN `NL57ASNB0123456789` is the load-bearing anonymisation value
      * baked into tests/fixtures/asn-sample-1.csv. Do NOT change this
      * literal — `EloquentAccountResolver` looks it up directly.
      *
-     * @return array{user: User, account: Account}
+     * IBAN `ICS-CARD` is the synthetic own-IBAN literal the
+     * `IcsPdfAdapter` emits for every parsed ICS PDF row. The
+     * AccountResolver scopes lookups by `user_id` already, so a single
+     * instance-wide literal is unambiguous.
+     *
+     * @return array{user: User, account: Account, icsAccount: Account}
      */
     public function seedFixtureUserAndAccount(): array
     {
@@ -59,6 +64,19 @@ abstract class TestCase extends BaseTestCase
             ],
         );
 
-        return ['user' => $this->fixtureUser, 'account' => $account];
+        $icsAccount = Account::query()->updateOrCreate(
+            [
+                'user_id' => $this->fixtureUser->id,
+                'iban' => 'ICS-CARD',
+            ],
+            [
+                'name' => 'ICS card (fixture)',
+                'slug' => 'ics-card-fixture',
+                'kind' => 'ics_card',
+                'default_currency' => 'EUR',
+            ],
+        );
+
+        return ['user' => $this->fixtureUser, 'account' => $account, 'icsAccount' => $icsAccount];
     }
 }

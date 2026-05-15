@@ -31,13 +31,23 @@ declare(strict_types=1);
 $repoRoot = dirname(__DIR__);
 $output = $repoRoot.'/Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf';
 
+// Synthetic content embedding:
+//   - canonical anonymisation placeholders (KAARTHOUDER, ****-****-****-XXXX);
+//   - the six empirical statement-summary anchor tokens with stub € amounts;
+//   - one EUR-native transaction row mirroring the real layout shape
+//     (transactiedatum + boekdatum columns, no native-currency column,
+//     trailing settled-EUR amount, `Af` direction marker). The
+//     `SYNTHETIC` literal is the Wave 2 contract test's anchor.
 $contentLines = [
+    '15 april 2026',
     'KAARTHOUDER ****-****-****-XXXX',
-    'Vorig openstaand saldo EUR 0,00',
-    'Totaal ontvangen betalingen EUR 0,00',
-    'Totaal nieuwe uitgaven EUR 1,00',
-    'Nieuw openstaand saldo EUR 1,00',
-    '12-04-2026 SYNTHETIC ICS TINY EUR 1,00',
+    'Vorig openstaand saldo  EUR 0,00',
+    'Totaal ontvangen betalingen  EUR 0,00',
+    'Totaal nieuwe uitgaven  EUR 1,00',
+    'Nieuw openstaand saldo  EUR 1,00',
+    'Bestedingslimiet  EUR 100,00',
+    'Minimaal te betalen bedrag  EUR 1,00',
+    '12 apr. 12 apr. SYNTHETIC ICS TINY  1,00  Af',
 ];
 
 $content = 'BT /F1 10 Tf 50 750 Td ('.$contentLines[0].') Tj';
