@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 04 Plan 01 (Wave 0 enablement) complete
-last_updated: "2026-05-15T21:30:37.815Z"
+stopped_at: Phase 04 Plan 02 (Wave 1 PayPal CSV vertical slice) complete
+last_updated: "2026-05-15T23:00:00.000Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 24
-  completed_plans: 20
-  percent: 83
+  completed_plans: 21
+  percent: 88
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 04 (paypal-ingestion-transfer-detection) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [████████░░] 83%
 | Phase 03 P06 | 6 | 3 tasks | 8 files |
 | Phase 03 P07 | 4 | 1 tasks | 5 files |
 | Phase 04 P01 | 35min | 3 tasks | 11 files |
+| Phase 04 P02 | ~50min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,13 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 04 Plan 01: Merchant Naam column PRESERVED verbatim in redacted PayPal fixture (deviates from plan's literal 'names → KAARTHOUDER'). In PayPal's NL Activity Download Naam is the COUNTERPARTY merchant name, not the cardholder. Per D-58 'merchant strings preserved verbatim'
 - [Phase ?]: Phase 04 Plan 01: Empirical FX (D-60 e) is 4-row chain per USD purchase — USD parent + EUR Bankstorting + EUR Algemene valutaomrekening + USD Algemene valutaomrekening sharing parent Transaction ID via Reference Txn ID. Walker MUST detect FX by Currency != EUR on a row whose sibling is EUR Algemene-valutaomrekening (Pitfall 2)
 - [Phase ?]: Phase 04 Plan 01: Empirical reconciliation (D-60 g) CLEAN — sum(Netto) = 0.00 in both EUR and USD across 86 rows. Pull-only funding model; PayPal balance never accumulates. No explicit opening/closing balance rows; adapter computes opening = closing − sum(net)
+- [Phase 04]: Plan 02: PayPal Activity Download amount cells are NL-locale (comma decimal), not US-locale period decimal — empirically verified vs Wave 0 fixture. PaypalAmountParser locks the comma-decimal regex and explicitly rejects period decimal as a loud-failure signal that a future EN-locale account will need a second parser-arm rather than silent acceptance.
+- [Phase 04]: Plan 02: PaypalTransactionRollup parent-vs-child classification keys on EVENT-TYPE action (`parent` vs `child-fee` vs `child-fx`), NOT solely on Reference Txn ID. Parent-classified rows with orphan billing-agreement refs stay parents (no orphan-child bump); child-classified rows with absent parents are promoted to standalone parents AND increment `orphanChildCount`. Preserves the empirical 41-logical-payment-group count in the Wave 0 fixture.
+- [Phase 04]: Plan 02: Pitfall 2 safety net (FX-direction blindness) — rollup walker scans child-fx siblings and identifies the foreign leg by `Currency != 'EUR'`, NEVER by row order. The Cloudflare USD chain (parent appears BELOW its children in the empirical CSV-time order) is the load-bearing test case proving the walker is row-order-blind.
+- [Phase 04]: Plan 02: PaypalCsvAdapter constructor composed over PaypalTransactionRollup only (which already DIs parsers + column map + event-type map). Removed redundant parser injection points; single-responsibility delegation.
+- [Phase 04]: Plan 02: TestCase::seedFixtureUserAndAccount now also seeds a PayPal Account (synthetic IBAN `PAYPAL`, kind `paypal`, EUR). Cross-module IdempotencyContractTest + per-module *ImportTest files now resolve the synthetic IBAN without per-test setup boilerplate.
+- [Phase 04]: Plan 02: PreviewWizard hosts a method-triad per non-IBAN issuer (save{X}AccountName + needs{X}AccountName + {X}_OWN_IBAN constant + Blade @elseif branch). Three branches in place — IBAN naming, ICS-card naming, PayPal naming — each a verbatim mirror swapping only synthetic-IBAN + kind + slug-suffix + Blade copy.
+- [Phase 04]: Plan 02: Reconciliation soft-warning panel queries the preview-time-written `statement_summaries.extras` row via DatabaseManager + json_decode at render. Informational only — does NOT block Confirm. Same posture as Phase 2 multi-statement MT940 flag.
 
 ### Pending Todos
 
@@ -166,7 +174,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-15T21:30:37.809Z
-Stopped at: Phase 04 Plan 01 (Wave 0 enablement) complete
+Last session: 2026-05-15T23:00:00.000Z
+Stopped at: Phase 04 Plan 02 (Wave 1 PayPal CSV vertical slice) complete
 Resume file: 
-.planning/phases/04-paypal-ingestion-transfer-detection/04-02-PLAN.md
+.planning/phases/04-paypal-ingestion-transfer-detection/04-03-PLAN.md
