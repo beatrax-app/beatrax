@@ -6,15 +6,16 @@
     "license": "proprietary",
     "require": {
         "php": "^8.5",
-        "laravel/framework": "^13.0",
-        "laravel/fortify": "^1.21",
-        "livewire/livewire": "^4.0",
-        "livewire/flux": "^2.0",
-        "nwidart/laravel-modules": "^13.0",
         "brick/money": "^0.11",
         "genkgo/camt": "^2.10",
+        "laravel/fortify": "^1.21",
+        "laravel/framework": "^13.0",
         "league/csv": "^9.28",
-        "spatie/laravel-data": "^4.0"
+        "livewire/flux": "^2.0",
+        "livewire/livewire": "^4.0",
+        "nwidart/laravel-modules": "^13.0",
+        "spatie/laravel-data": "^4.0",
+        "spatie/pdf-to-text": "^1.0"
     },
     "require-dev": {
         "calebdw/larastan-livewire": "^2.0",
