@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 03-05-PLAN.md (TransactionsList currency-view toggle + dual-line FX render)
-last_updated: "2026-05-15T17:51:42.353Z"
+last_updated: "2026-05-15T18:04:05.273Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 19
-  completed_plans: 17
-  percent: 89
+  completed_plans: 18
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 03 (ics-cards-multi-currency-display) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [█████████░] 89%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [█████████░] 89%
 | Phase 03 P03 | 11min | - tasks | - files |
 | Phase 03 P04 | 6min | 3 tasks | 9 files |
 | Phase 03 P05 | ~6m | 2 tasks tasks | 6 files files |
+| Phase 03 P06 | 6 | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 03 Plan 05: Money formatter routing landed in the Blade fmt closure (EUR → nl_NL, else en_US) rather than as a new Money::format() default. Keeps Money value object a pure brick/money wrapper; promote to a Public helper only when a third consumer arrives.
 - [Phase ?]: Phase 03 Plan 05: snapshot Money formatter output: '€ 68,86' (EUR nl_NL with non-breaking space), '$74.43' (USD en_US no space). Negative: '€ -12,07' / '-$12.99'. ext-intl present (intl 8.5.0alpha1, ICU 77.1); no fallback formatter needed. ISO suffix verbose form not implemented in 03-05 — deferred.
 - [Phase ?]: Phase 03 Plan 05: TransactionListQuerySecondaryAmountTest lives under tests/Feature/ because Ledger module's Pest.php only adds RefreshDatabase to Feature; secondaryAmount tests need live SQLite to seed transactions.
+- [Phase ?]: [Phase 03]: Plan 06: PerCurrencyTile DTO + ThisPeriodAtAGlanceQuery::forByCurrency() ADDED ALONGSIDE existing for(); HAVING filters zero-activity, ORDER BY alphabetical; Spatie Data DTO with readonly currency + inflow/outflow/net Money triple
+- [Phase ?]: [Phase 03]: Plan 06: Money::format() widened to format(?string $locale = null) with EUR -> nl_NL / else -> en_US default. Every Phase 1/2 explicit-locale call site preserved; only new call sites benefit. Snapshots on ICU 77.1: EUR € 68,86 (NBSP), USD $74.43, negative -$74.43
+- [Phase ?]: [Phase 03]: Plan 06: Dashboard.render() always computes $summary (top-spending + recent-transactions stay settled-EUR in both modes); only KPI tile section branches via @if ($tiles === null). Same card chrome reused verbatim; $fmt closure routes EUR nl_NL, else en_US (mirrors 03-05)
 
 ### Pending Todos
 
@@ -151,7 +155,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-15T17:51:42.349Z
+Last session: 2026-05-15T18:03:55.379Z
 Stopped at: Completed 03-05-PLAN.md (TransactionsList currency-view toggle + dual-line FX render)
 Resume file: 
 None

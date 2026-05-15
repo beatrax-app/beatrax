@@ -78,7 +78,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 03-03-PLAN.md — Wave 3 wizard polish: two-step issuer-format picker refactor with aria-live cascade + Blade restructure + UploadWizardTest extension + PreviewWizard ICS-Account naming step (D-33, D-36, D-38)
   - [x] 03-04-PLAN.md — Wave 3 settings page: users.default_currency_view migration + User model + /settings Livewire SFC + top-nav link + SettingsPageTest (MC-02 storage half)
   - [x] 03-05-PLAN.md — Wave 4 transactions toggle: TransactionRowDto secondaryAmount + TransactionListQuery projection + Flux segmented toggle with #[Url] + dual-line stack on /transactions (MC-02 list half + UI-06 + D-44 + D-47)
-  - [ ] 03-06-PLAN.md — Wave 5 dashboard branching: ThisPeriodAtAGlanceQuery forByCurrency + PerCurrencyTile DTO + Money formatter locale-aware default + Dashboard.render branching + per-currency tile rows (MC-02 dashboard half + D-46)
+  - [x] 03-06-PLAN.md — Wave 5 dashboard branching: ThisPeriodAtAGlanceQuery forByCurrency + PerCurrencyTile DTO + Money formatter locale-aware default + Dashboard.render branching + per-currency tile rows (MC-02 dashboard half + D-46)
   - [ ] 03-07-PLAN.md — Wave 5 transaction detail FX-row: TransactionDetail Livewire SFC + Blade + /transactions/{id} route + conditional Effective rate row (UI-06 + D-48)
 **UI hint**: yes
 
@@ -194,7 +194,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Foundation + ASN CSV Vertical Slice | 7/7 | Complete | - |
 | 2. ASN Statement Coverage (CAMT.053 + MT940) | 5/5 | Ready for verification | - |
-| 3. ICS Cards + Multi-Currency Display | 3/7 | In Progress|  |
+| 3. ICS Cards + Multi-Currency Display | 6/7 | In Progress|  |
 | 4. PayPal Ingestion + Transfer Detection | 0/TBD | Not started | - |
 | 5. Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition) | 0/TBD | Not started | - |
 | 6. Email Receipt Ingestion Infrastructure | 0/TBD | Not started | - |
