@@ -97,7 +97,7 @@ final class ConfirmImport implements ConfirmsImports
             $errorCount,
             $previewDuplicateCount,
         ): ImportConfirmResult {
-            $recorderResult = ($this->recorder)($canonical);
+            $recorderResult = ($this->recorder)($canonical, $user);
             $enrichedCount = ($this->applyEnrichments)($enrichments, $user);
 
             // The pipeline filters fingerprint-duplicates out of `$canonical`

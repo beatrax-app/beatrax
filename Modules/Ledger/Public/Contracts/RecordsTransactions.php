@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Contracts;
 
+use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Dto\RecordResult;
 
@@ -24,7 +25,12 @@ interface RecordsTransactions
      * because SQLite treats NULL as distinct in the UNIQUE indexes that guard
      * idempotency and a null-user row could not be deduplicated on re-import.
      *
+     * The `$user` parameter is forwarded into the `TransactionImported`
+     * event payload that fires per persisted row, so cross-module
+     * listeners (e.g., transfer-pair detection) receive the importing
+     * User model without an extra DB lookup per row.
+     *
      * @param  iterable<CanonicalTransaction>  $canonical
      */
-    public function __invoke(iterable $canonical): RecordResult;
+    public function __invoke(iterable $canonical, User $user): RecordResult;
 }

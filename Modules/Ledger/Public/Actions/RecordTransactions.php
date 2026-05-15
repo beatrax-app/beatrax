@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Actions;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Public\Events\TransactionImported;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\RecordResult;
@@ -27,6 +30,13 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
  *
  * `created_at` / `updated_at` are stamped here (not inside the DTO) so the
  * value comes from the injected Clock and remains pinnable from tests.
+ *
+ * For every row that `insertOrIgnore` actually persists (effected === 1) a
+ * `TransactionImported` event is dispatched synchronously through the
+ * constructor-injected Dispatcher. The dispatch sits inside the existing
+ * outer DB transaction so cross-module listeners (e.g., transfer-pair
+ * detection) observe just-inserted partner rows within the same import
+ * batch's atomic frame. Duplicates never produce an event.
  */
 final class RecordTransactions implements RecordsTransactions
 {
@@ -34,14 +44,15 @@ final class RecordTransactions implements RecordsTransactions
         private readonly DatabaseManager $db,
         private readonly FingerprintComposer $fingerprints,
         private readonly Clock $clock,
+        private readonly Dispatcher $events,
     ) {}
 
-    public function __invoke(iterable $canonical): RecordResult
+    public function __invoke(iterable $canonical, User $user): RecordResult
     {
         $inserted = 0;
         $duplicates = 0;
 
-        $this->db->connection()->transaction(function () use ($canonical, &$inserted, &$duplicates): void {
+        $this->db->connection()->transaction(function () use ($canonical, $user, &$inserted, &$duplicates): void {
             $now = $this->clock->now()->toDateTimeString();
             foreach ($canonical as $row) {
                 if ($row->userId === null) {
@@ -62,6 +73,17 @@ final class RecordTransactions implements RecordsTransactions
                 $effected = Transaction::insertOrIgnore($attrs);
                 if ($effected === 1) {
                     $inserted++;
+
+                    /** @var Transaction $persisted */
+                    $persisted = Transaction::query()
+                        ->where('user_id', $row->userId)
+                        ->where('fingerprint', $fingerprint)
+                        ->firstOrFail();
+
+                    $this->events->dispatch(new TransactionImported(
+                        transaction: $persisted,
+                        user: $user,
+                    ));
                 } else {
                     $duplicates++;
                 }
