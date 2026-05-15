@@ -15,12 +15,13 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Public\Contracts\RunsImports;
 
 /**
- * Step 1 of the wizard. The user picks an issuer (ASN / ICS) and a format
- * for that issuer, then uploads a statement file (CSV, CAMT.053 XML, MT940,
- * or ICS PDF). On submit, the file is staged via Livewire's temporary
- * upload directory, the importer runs the preview phase (copying the
- * upload to a stable app-owned path on the way through), and the user is
- * redirected to /imports/{id}/preview.
+ * Step 1 of the wizard. The user picks an issuer (ASN / ICS / PayPal)
+ * and a format for that issuer, then uploads a statement file (CSV,
+ * CAMT.053 XML, MT940, ICS PDF, or PayPal Activity Download CSV). On
+ * submit, the file is staged via Livewire's temporary upload directory,
+ * the importer runs the preview phase (copying the upload to a stable
+ * app-owned path on the way through), and the user is redirected to
+ * /imports/{id}/preview.
  *
  * Two cascading selects drive the page: changing `$issuer` rebuilds the
  * Format select options via `availableFormats()` and resets
@@ -50,6 +51,7 @@ final class UploadWizard extends Component
         'asn-camt053',
         'asn-mt940',
         'ics-pdf',
+        'paypal-csv',
     ];
 
     public ?TemporaryUploadedFile $file = null;
@@ -60,7 +62,7 @@ final class UploadWizard extends Component
      * and resets `$sourceFormat` to that issuer's first leaf via
      * `updatedIssuer()`.
      */
-    #[Validate('required|in:asn,ics')]
+    #[Validate('required|in:asn,ics,paypal')]
     public string $issuer = 'asn';
 
     public string $sourceFormat = 'asn-csv';
@@ -72,8 +74,8 @@ final class UploadWizard extends Component
     {
         return [
             'file' => ['required', 'file', 'max:10240', 'mimes:csv,txt,xml,sta,mt940,940,pdf'],
-            'issuer' => ['required', 'in:asn,ics'],
-            'sourceFormat' => ['required', 'in:asn-csv,asn-camt053,asn-mt940,ics-pdf'],
+            'issuer' => ['required', 'in:asn,ics,paypal'],
+            'sourceFormat' => ['required', 'in:asn-csv,asn-camt053,asn-mt940,ics-pdf,paypal-csv'],
         ];
     }
 
@@ -106,6 +108,9 @@ final class UploadWizard extends Component
             ],
             'ics' => [
                 ['value' => 'ics-pdf', 'label' => 'PDF'],
+            ],
+            'paypal' => [
+                ['value' => 'paypal-csv', 'label' => 'Activity Download (CSV)'],
             ],
             default => [],
         };
@@ -180,6 +185,7 @@ final class UploadWizard extends Component
             'asn-camt053' => '.xml',
             'asn-mt940' => '.sta',
             'ics-pdf' => '.pdf',
+            'paypal-csv' => '.csv',
             default => '.csv',
         };
 
