@@ -85,6 +85,7 @@ final class PreviewWizard extends Component
         NamesAccounts $namer,
         RunsImports $importer,
         CurrentUser $currentUser,
+        PreviewCache $cache,
     ): void {
         $this->resetErrorBag('accountName');
 
@@ -95,6 +96,21 @@ final class PreviewWizard extends Component
         // guard), so a Livewire-side rules() declaration would either
         // duplicate that logic or drift from it.
         $this->accountName = $name;
+
+        // Bound the action to the IBANs the wizard actually surfaced as
+        // unknown for this preview. A crafted wire request that tries to
+        // name an arbitrary IBAN gets rejected before it reaches the
+        // namer. The downstream AccountNamer also user-scopes every write
+        // — this check is defence-in-depth.
+        $preview = $cache->getPreview($this->importRunId);
+        $allowedIbans = $preview === null
+            ? []
+            : array_map(static fn ($unknown): string => $unknown->iban, $preview->accountsToName);
+        if (! in_array($iban, $allowedIbans, true)) {
+            $this->addError('accountName', 'This IBAN is not part of the current preview.');
+
+            return;
+        }
 
         $user = $currentUser->user();
 
