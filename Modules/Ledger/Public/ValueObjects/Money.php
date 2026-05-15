@@ -62,9 +62,27 @@ final class Money implements Stringable
         return $this->inner->isNegative();
     }
 
-    public function format(string $locale = 'nl_NL'): string
+    /**
+     * Formats the money for display via ICU's `NumberFormatter` (ext-intl)
+     * under the hood. When `$locale` is null, the locale is selected from
+     * the Money's currency code: EUR amounts render in Dutch locale
+     * (`nl_NL` — comma decimal, symbol with non-breaking space, e.g.
+     * `€ 68,86`); every other currency renders in US English (`en_US` —
+     * period decimal, symbol prefix without space, e.g. `$74.43`). This
+     * matches the calm-aesthetic UI contract: the user reads foreign-
+     * currency amounts in the form they'd see on a card statement, while
+     * EUR amounts stay in the Dutch convention familiar to a NL user.
+     *
+     * An explicit `$locale` argument overrides the auto-selection — useful
+     * when a caller needs to force a specific locale regardless of
+     * currency (e.g. legacy nl_NL-only Blade closures that pre-date the
+     * locale-aware default).
+     */
+    public function format(?string $locale = null): string
     {
-        return $this->inner->formatTo($locale);
+        $resolved = $locale ?? ($this->currency() === 'EUR' ? 'nl_NL' : 'en_US');
+
+        return $this->inner->formatTo($resolved);
     }
 
     public function __toString(): string
