@@ -12,6 +12,7 @@
             <directory>Modules/Ingestion/tests/Unit</directory>
             <directory>Modules/Import/tests/Unit</directory>
             <directory>Modules/Categorization/tests/Unit</directory>
+            <directory>Modules/Transfers/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
@@ -20,6 +21,7 @@
             <directory>Modules/Ingestion/tests/Feature</directory>
             <directory>Modules/Import/tests/Feature</directory>
             <directory>Modules/Categorization/tests/Feature</directory>
+            <directory>Modules/Transfers/tests/Feature</directory>
         </testsuite>
         <testsuite name="Contracts">
             <directory>tests/Contracts</directory>
