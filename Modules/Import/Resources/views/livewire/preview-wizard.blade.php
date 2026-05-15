@@ -77,17 +77,6 @@
             </div>
         </section>
     @else
-        @if ($reconciliationWarning !== null)
-            <section class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-                <p>
-                    <strong class="font-medium">Reconciliation gap.</strong>
-                    The imported rows do not sum to the expected closing-minus-opening balance change
-                    (difference: {{ $fmt($reconciliationWarning['gapMinor'], $reconciliationWarning['currency']) }}).
-                    Some events may not have rolled up correctly. You can still confirm the import; investigate after if needed.
-                </p>
-            </section>
-        @endif
-
         @if (count($preview->accountsToName) > 0)
             <section class="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-6">
                 @foreach ($preview->accountsToName as $unknown)

@@ -63,6 +63,8 @@ final class PaypalTransactionRollup
 
     private int $orphanChildCount = 0;
 
+    private int $skippedMalformedRowCount = 0;
+
     public function __construct(
         private readonly PaypalCsvEventTypeMap $events,
         private readonly PaypalAmountParser $amounts,
@@ -81,6 +83,7 @@ final class PaypalTransactionRollup
     {
         $this->skippedHoldCount = 0;
         $this->orphanChildCount = 0;
+        $this->skippedMalformedRowCount = 0;
 
         // Pass 1: drop skipped event types, index surviving rows by
         // their Transaction ID, and record per-row classification so
@@ -172,6 +175,11 @@ final class PaypalTransactionRollup
     public function orphanChildCount(): int
     {
         return $this->orphanChildCount;
+    }
+
+    public function skippedMalformedRowCount(): int
+    {
+        return $this->skippedMalformedRowCount;
     }
 
     /**

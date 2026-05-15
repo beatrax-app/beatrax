@@ -289,14 +289,12 @@ final class PreviewWizard extends Component
         $preview = $cache->getPreview($this->importRunId);
         $needsIcsAccountName = $this->needsIcsAccountName($currentUser, $db);
         $needsPaypalAccountName = $this->needsPaypalAccountName($currentUser, $db);
-        $reconciliation = $this->reconciliationWarning($currentUser, $db);
 
         return $views->make('import::livewire.preview-wizard', [
             'preview' => $preview,
             'previewExpired' => $this->previewExpired,
             'needsIcsAccountName' => $needsIcsAccountName,
             'needsPaypalAccountName' => $needsPaypalAccountName,
-            'reconciliationWarning' => $reconciliation,
         ]);
     }
 
@@ -390,66 +388,5 @@ final class PreviewWizard extends Component
             ->count();
 
         return $paypalAccountCount === 0;
-    }
-
-    /**
-     * Reads the statement_summaries row written by the preview-time
-     * pipeline for the current import run and surfaces a reconciliation
-     * soft-warning when `extras.reconciliationStatus === 'mismatch'`.
-     *
-     * The warning is informational — it does NOT block the Confirm
-     * action. Same posture as the multi-statement MT940 flag from
-     * Phase 2: a single-user local app can always investigate a soft
-     * gap, so a hard block would create more friction than the bug-
-     * detection value warrants. The data still rides in
-     * `statement_summaries.extras` so a future audit pass can grep
-     * for non-zero gaps.
-     *
-     * Returns null when the import run has no statement_summaries row
-     * (CSV paths that produce none) OR when the row's reconciliation
-     * status is `'ok'`. The Blade view checks for null before
-     * rendering the warning panel.
-     *
-     * @return array{gapMinor: int, currency: string}|null
-     */
-    private function reconciliationWarning(CurrentUser $currentUser, DatabaseManager $db): ?array
-    {
-        $user = $currentUser->user();
-
-        $summary = $db->connection()
-            ->table('statement_summaries')
-            ->where('user_id', $user->id)
-            ->where('import_run_id', $this->importRunId)
-            ->select(['extras', 'closing_balance_currency'])
-            ->first();
-
-        if ($summary === null) {
-            return null;
-        }
-
-        $extrasJson = $summary->extras ?? null;
-        if (! is_string($extrasJson) || $extrasJson === '') {
-            return null;
-        }
-
-        $extras = json_decode($extrasJson, true);
-        if (! is_array($extras)) {
-            return null;
-        }
-
-        $status = $extras['reconciliationStatus'] ?? null;
-        if ($status !== 'mismatch') {
-            return null;
-        }
-
-        $gap = $extras['reconciliationGap'] ?? null;
-        $gapMinor = is_int($gap) ? $gap : 0;
-        $currency = $summary->closing_balance_currency ?? null;
-        $currencyString = is_string($currency) ? $currency : 'EUR';
-
-        return [
-            'gapMinor' => $gapMinor,
-            'currency' => $currencyString,
-        ];
     }
 }

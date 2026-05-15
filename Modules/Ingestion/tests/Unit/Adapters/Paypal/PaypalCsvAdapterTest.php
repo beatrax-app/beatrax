@@ -107,19 +107,12 @@ it('exposes a populated StatementSummaryData via statementMetadata() after parse
     expect($extras['language'])->toBe('nl');
     expect($extras)->toHaveKey('skippedHoldCount');
     expect($extras['skippedHoldCount'])->toBe(0);
-    expect($extras)->toHaveKey('reconciliationStatus');
-})->group('phase-4');
-
-it('writes reconciliationStatus = ok for the Wave 0 fixture (sum(net) = 0)', function (): void {
-    iterator_to_array($this->adapter->parse($this->fixture, $this->resolver), false);
-
-    $metadata = $this->adapter->statementMetadata();
-    expect($metadata)->toBeInstanceOf(StatementSummaryData::class);
-    /** @var StatementSummaryData $metadata */
-    /** @var array<string, mixed> $extras */
-    $extras = $metadata->extras ?? [];
-    expect($extras['reconciliationStatus'])->toBe('ok');
-    expect($extras['reconciliationGap'])->toBe(0);
+    expect($extras)->toHaveKey('orphanChildCount');
+    // No reconciliation gate is published for PayPal — the format has no
+    // explicit opening/closing balance rows, so the walker counters are
+    // the only audit signal.
+    expect($extras)->not->toHaveKey('reconciliationStatus');
+    expect($extras)->not->toHaveKey('reconciliationGap');
 })->group('phase-4');
 
 it('registers under the paypal-csv key in the SourceAdapterRegistry', function (): void {
