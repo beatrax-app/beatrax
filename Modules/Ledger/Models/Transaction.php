@@ -41,6 +41,7 @@ use Modules\Ledger\Internal\Casts\MoneyMinorCast;
  * @property string|null $source_ref
  * @property array<int|string, mixed>|null $raw_payload
  * @property ArrayObject<int, array<string, mixed>>|null $enriched_from
+ * @property int|null $pair_transaction_id
  * @property string $fingerprint
  * @property int $fingerprint_version
  * @property string $status
@@ -71,6 +72,7 @@ final class Transaction extends Model
         'source_format', 'import_run_id', 'source_row_index', 'source_ref',
         'raw_payload',
         'enriched_from',
+        'pair_transaction_id',
         'fingerprint', 'fingerprint_version',
         'status',
     ];
@@ -118,5 +120,17 @@ final class Transaction extends Model
     public function importRun(): BelongsTo
     {
         return $this->belongsTo(ImportRun::class);
+    }
+
+    /**
+     * The paired-partner relationship. Populated for `transfer_out` /
+     * `transfer_in` rows whose cross-account counterpart landed in the
+     * ledger and was matched by the deterministic Layer-1 listener.
+     *
+     * @return BelongsTo<Transaction, $this>
+     */
+    public function pair(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class, 'pair_transaction_id');
     }
 }

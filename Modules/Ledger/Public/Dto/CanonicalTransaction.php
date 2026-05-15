@@ -47,6 +47,41 @@ final class CanonicalTransaction extends Data
     ) {}
 
     /**
+     * Immutable clone-with-override for `type`. The Wave 2
+     * ClassifyTransactionType pipeline stage uses this to flip the
+     * NormalizeStage-derived default (`expense` / `income`) to the
+     * transfer / refund / fee variants required by the pair-detection
+     * listener.
+     */
+    public function withType(string $type): self
+    {
+        return new self(
+            userId: $this->userId,
+            accountId: $this->accountId,
+            type: $type,
+            postedAt: $this->postedAt,
+            bookedAt: $this->bookedAt,
+            valueDate: $this->valueDate,
+            amountMinor: $this->amountMinor,
+            currency: $this->currency,
+            settledAmountMinor: $this->settledAmountMinor,
+            settledCurrency: $this->settledCurrency,
+            fxRateUsed: $this->fxRateUsed,
+            counterpartyName: $this->counterpartyName,
+            counterpartyIban: $this->counterpartyIban,
+            counterpartyNormalized: $this->counterpartyNormalized,
+            normalizationVersion: $this->normalizationVersion,
+            description: $this->description,
+            categoryId: $this->categoryId,
+            sourceFormat: $this->sourceFormat,
+            importRunId: $this->importRunId,
+            sourceRowIndex: $this->sourceRowIndex,
+            sourceRef: $this->sourceRef,
+            rawPayload: $this->rawPayload,
+        );
+    }
+
+    /**
      * Returns the column-name → value map ready for direct DB insert via
      * `Transaction::query()->insertOrIgnore($attrs)`. Does NOT include the
      * fingerprint columns or the created_at/updated_at timestamps — the
