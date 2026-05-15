@@ -39,6 +39,11 @@
             @endif
         </a>
 
+        <a
+            href="{{ route('settings') }}"
+            class="inline-flex items-center rounded-md px-3 py-1.5 text-sm {{ $isActive('/settings') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+        >Settings</a>
+
         <span class="flex-1"></span>
 
         <span class="text-sm text-slate-500">{{ $userEmail }}</span>
