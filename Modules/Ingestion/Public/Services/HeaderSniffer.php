@@ -8,8 +8,10 @@ use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfHeaderProfile;
+use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
 use Modules\Ingestion\Public\Dto\SniffResult;
 use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
+use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvLanguageException;
 
 /**
  * Validates that a local file matches a declared source format before any
@@ -57,11 +59,70 @@ final class HeaderSniffer
             AsnCamt053HeaderProfile::FORMAT => $this->sniffAsnCamt053($localPath, $head),
             AsnMt940HeaderProfile::FORMAT => $this->sniffAsnMt940($localPath, $head),
             IcsPdfHeaderProfile::FORMAT => $this->sniffIcsPdf($localPath, $head),
+            PaypalCsvLanguageProfile::FORMAT => $this->sniffPaypalCsv($localPath, $head),
             default => throw new SniffMismatchException(sprintf(
                 'Unsupported sniff target: %s',
                 $declaredFormat,
             )),
         };
+    }
+
+    /**
+     * Validates that the path looks like a PayPal "Activity Download"
+     * CSV — `.csv` extension AND a header row whose token set matches
+     * one of the registered language profiles.
+     *
+     * Unlike `sniffAsnCsv()`, this method does NOT enforce a fixed
+     * column count: PayPal exports vary in column count across language
+     * profiles and across export-format revisions. The header-token
+     * signature (a discriminator subset of the locale's expected
+     * columns) is sufficient to distinguish a PayPal Activity Download
+     * from any other CSV.
+     *
+     * Raises `UnsupportedPaypalCsvLanguageException` when the header
+     * tokens match the CSV shape but no registered language profile
+     * recognises them, so the wizard renders a typed-exception
+     * user-facing message ("supported locales: nl") rather than a
+     * generic sniff-mismatch.
+     */
+    private function sniffPaypalCsv(string $path, string $head): SniffResult
+    {
+        if (preg_match('/\.csv$/i', $path) !== 1) {
+            throw new SniffMismatchException(
+                "That file doesn't look like a CSV. Drop in the PayPal Activity Download CSV you downloaded from the PayPal portal."
+            );
+        }
+
+        $firstLine = strtok($head, "\r\n");
+        if ($firstLine === false) {
+            throw new SniffMismatchException('The file is empty.');
+        }
+
+        $columns = str_getcsv($firstLine, PaypalCsvLanguageProfile::DELIMITER, '"', '');
+        // Trim each token so the language-profile detection compares
+        // against the verbatim header tokens regardless of stray
+        // whitespace (`"Bruto "` / `"Kosten "` ship with a trailing
+        // space inside the quoted cell in the empirical NL export; the
+        // language signature lists them without the trailing space and
+        // tolerates either shape).
+        $columns = array_map(static fn (?string $c): string => trim($c ?? ''), $columns);
+
+        $profile = PaypalCsvLanguageProfile::detect($columns);
+        if ($profile === null) {
+            throw new UnsupportedPaypalCsvLanguageException(
+                'PayPal CSV header tokens did not match any registered language profile. '
+                .'Supported locales: '.implode(', ', PaypalCsvLanguageProfile::supported())
+                .'. If your account exports in a different language, file an issue with the redacted CSV.'
+            );
+        }
+
+        return new SniffResult(
+            format: PaypalCsvLanguageProfile::FORMAT,
+            delimiter: PaypalCsvLanguageProfile::DELIMITER,
+            hasHeader: PaypalCsvLanguageProfile::HAS_HEADER,
+            encoding: PaypalCsvLanguageProfile::SOURCE_ENCODING,
+            columnCount: count($columns),
+        );
     }
 
     /**

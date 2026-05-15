@@ -31,6 +31,13 @@ final class SourceRefRanker
             'asn-camt053' => 4,
             'asn-mt940' => 2,
             'asn-csv' => 1,
+            // PayPal Activity Download CSV rides in the same band as
+            // asn-csv (D-64). PayPal rows never collide with ASN rows
+            // under the v3 fingerprint tuple due to disjoint account_id
+            // values, so the equivalent rank is correct: cross-format
+            // enrichment between PayPal and any ASN format is a
+            // deliberate non-goal handled by Phase 5's chain resolver.
+            'paypal-csv' => 1,
             default => 0,
         };
     }
