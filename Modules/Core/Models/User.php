@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property string $email
  * @property string $password
  * @property int $period_start_day
+ * @property string $default_currency_view
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -29,7 +30,7 @@ final class User extends Authenticatable
     use Notifiable;
 
     /** @var list<string> */
-    protected $fillable = ['email', 'password', 'period_start_day'];
+    protected $fillable = ['email', 'password', 'period_start_day', 'default_currency_view'];
 
     /** @var list<string> */
     protected $hidden = ['password', 'remember_token'];
@@ -40,6 +41,7 @@ final class User extends Authenticatable
         return [
             'password' => 'hashed',
             'period_start_day' => 'integer',
+            'default_currency_view' => 'string',
         ];
     }
 }
