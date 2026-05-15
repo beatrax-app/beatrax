@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -29,6 +30,16 @@ use Illuminate\Database\Schema\Builder;
  */
 return new class extends Migration
 {
+    /**
+     * Memoised DatabaseManager handle. Anonymous migrations cannot
+     * receive constructor injection (Laravel's migrator instantiates
+     * them with no arguments), so the DatabaseManager is resolved once
+     * from the container at the migration boundary and cached for the
+     * duration of the up/down call rather than re-resolved by every
+     * helper method.
+     */
+    private ?DatabaseManager $resolvedDb = null;
+
     public function up(): void
     {
         $this->schema()->table('transactions', static function (Blueprint $table): void {
@@ -70,24 +81,17 @@ return new class extends Migration
 
     private function schema(): Builder
     {
-        // Anonymous migrations are instantiated by Laravel's migrator with
-        // no constructor arguments, so the schema builder is resolved
-        // from the container at the migration boundary. This is the
-        // standing Laravel-migration exception to the DI-only rule.
-        /** @var DatabaseManager $db */
-        $db = app(DatabaseManager::class);
-
-        return $db->connection($this->getConnection())->getSchemaBuilder();
+        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
     }
 
     private function db(): DatabaseManager
     {
-        // Same DI-only exception as schema(): anonymous migrations cannot
-        // accept constructor arguments, so the database manager is
-        // resolved from the container at the migration boundary.
-        /** @var DatabaseManager $db */
-        $db = app(DatabaseManager::class);
+        if ($this->resolvedDb === null) {
+            /** @var DatabaseManager $db */
+            $db = Container::getInstance()->make(DatabaseManager::class);
+            $this->resolvedDb = $db;
+        }
 
-        return $db;
+        return $this->resolvedDb;
     }
 };
