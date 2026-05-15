@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Transfers\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Events\TransactionImported;
-use Modules\Ledger\Models\Transaction;
 use RuntimeException;
 
 /**
@@ -58,6 +58,7 @@ final class PairTransferCandidates
 
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly Clock $clock,
     ) {}
 
     public function handle(TransactionImported $event): void
@@ -151,25 +152,39 @@ final class PairTransferCandidates
         $partnerId = self::toInt($partnerRow->id ?? null);
 
         // Symmetric write: BOTH sides get pair_transaction_id set in
-        // the same handle() call. The two model saves inherit the
+        // the same handle() call. The two raw updates inherit the
         // outer RecordTransactions transaction frame — no nested
-        // DB::transaction() wrapper (Pitfall 1, anti-pattern noted in
-        // PATTERNS.md).
+        // DB::transaction() wrapper.
         //
-        // Load the partner via Eloquent (single-row read) so the save
-        // path uses the same model timestamps + casts as every other
-        // write. The where('user_id', ...) reasserts user scoping
-        // belt-and-braces.
-        /** @var Transaction $partner */
-        $partner = Transaction::query()
+        // Raw `update()` (rather than re-loading the partner through
+        // Eloquent and calling save()) skips the extra SELECT round-
+        // trip: the partner id was already returned by the
+        // partner-lookup query above. The user_id predicate reasserts
+        // user scoping belt-and-braces.
+        $now = $this->clock->now()->toDateTimeString();
+
+        $connection
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('id', $tx->id)
+            ->update([
+                'pair_transaction_id' => $partnerId,
+                'updated_at' => $now,
+            ]);
+        $connection
+            ->table('transactions')
             ->where('user_id', $user->id)
             ->where('id', $partnerId)
-            ->firstOrFail();
+            ->update([
+                'pair_transaction_id' => $tx->id,
+                'updated_at' => $now,
+            ]);
 
+        // Keep the event payload's in-memory model in sync with the
+        // persisted change so downstream listeners observing the same
+        // event see the post-pair state.
         $tx->pair_transaction_id = $partnerId;
-        $tx->save();
-        $partner->pair_transaction_id = $tx->id;
-        $partner->save();
+        $tx->syncOriginalAttribute('pair_transaction_id');
     }
 
     /**
