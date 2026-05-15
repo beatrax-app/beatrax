@@ -264,6 +264,61 @@ it('emits monotonically increasing sourceRowIndex over the rolled-up canonical r
     }
 })->group('phase-4');
 
+it('skips a parent row with a malformed Bruto cell and bumps skippedMalformedRowCount', function (): void {
+    $rows = [
+        paypalRow([
+            'Transactiereferentie' => 'O-00000000000000001',
+            'Bruto ' => '-8,10',
+            'Netto' => '-8,10',
+        ]),
+        paypalRow([
+            'Transactiereferentie' => 'O-00000000000000002',
+            'Bruto ' => 'NOT-A-NUMBER',
+            'Netto' => '-1,00',
+        ]),
+    ];
+
+    $dtos = $this->rollup->rollup($rows, 'nl');
+
+    // The well-formed parent still produces its canonical DTO; the
+    // malformed parent is dropped.
+    expect($dtos)->toHaveCount(1);
+    expect($dtos[0]->sourceRef)->toBe('O-00000000000000001');
+    expect($this->rollup->skippedMalformedRowCount())->toBe(1);
+})->group('phase-4');
+
+it('drops a malformed FX child but still emits the parent DTO without the FX pair filled in', function (): void {
+    $parent = paypalRow([
+        'Omschrijving' => 'Vooraf goedgekeurde betaling – rekening betaald door gebruiker',
+        'Valuta' => 'USD',
+        'Bruto ' => '-10,46',
+        'Netto' => '-10,46',
+        'Transactiereferentie' => 'O-00000000000000034',
+        'Naam' => 'Cloudflare Inc',
+        'Reference Txn ID' => '',
+    ]);
+    $badChildFx = paypalRow([
+        'Omschrijving' => 'Algemene valutaomrekening',
+        'Valuta' => 'EUR',
+        'Bruto ' => '1,234.56',  // US-locale period decimal — rejected by the NL parser
+        'Netto' => '-9,27',
+        'Transactiereferentie' => 'O-00000000000000035',
+        'Naam' => '',
+        'Reference Txn ID' => 'O-00000000000000034',
+    ]);
+
+    $dtos = $this->rollup->rollup([$parent, $badChildFx], 'nl');
+
+    expect($dtos)->toHaveCount(1);
+    $dto = $dtos[0];
+    expect($dto->currency)->toBe('USD');
+    expect($dto->amountMinor)->toBe(-1046);
+    // The malformed FX child was dropped — no settled pair on the DTO.
+    expect($dto->settledAmountMinor)->toBeNull();
+    expect($dto->settledCurrency)->toBeNull();
+    expect($this->rollup->skippedMalformedRowCount())->toBe(1);
+})->group('phase-4');
+
 it('produces 41 logical-payment groups when given the full Wave 0 fixture rows', function (): void {
     // End-to-end: load the 86-row redacted fixture and assert the
     // walker collapses it into exactly 41 canonical DTOs — the number
