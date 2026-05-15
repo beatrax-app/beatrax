@@ -544,10 +544,10 @@ final class IcsPdfAdapter implements SourceAdapter
             periodStart: $periodStart,
             periodEnd: $periodEnd,
             openingBalanceMinor: $opening,
-            openingBalanceCurrency: $opening === null ? null : 'EUR',
+            openingBalanceCurrency: $opening === null ? null : IcsPdfHeaderProfile::STATEMENT_CURRENCY,
             openingBalanceDate: $periodStart,
             closingBalanceMinor: $closing,
-            closingBalanceCurrency: $closing === null ? null : 'EUR',
+            closingBalanceCurrency: $closing === null ? null : IcsPdfHeaderProfile::STATEMENT_CURRENCY,
             closingBalanceDate: $periodEnd,
             entryCount: $entryCount,
             extras: [

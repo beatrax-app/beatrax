@@ -26,4 +26,14 @@ final class IcsPdfHeaderProfile
 
     /** UTF-8 is the encoding pdftotext emits with `-enc UTF-8`. */
     public const SOURCE_ENCODING = 'UTF-8';
+
+    /**
+     * Statement-settlement currency. The Mijn ICS consumer portal
+     * settles every statement in EUR — opening / closing balance,
+     * period charges, period credits, credit limit and minimum-due are
+     * all in EUR regardless of whether the underlying transactions are
+     * native EUR or foreign-currency (foreign rows carry an inline
+     * Wisselkoers conversion that lands the settled leg in EUR).
+     */
+    public const STATEMENT_CURRENCY = 'EUR';
 }
