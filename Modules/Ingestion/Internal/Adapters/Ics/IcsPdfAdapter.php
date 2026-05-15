@@ -91,6 +91,15 @@ final class IcsPdfAdapter implements SourceAdapter
         return IcsPdfHeaderProfile::FORMAT;
     }
 
+    /**
+     * Returns the statement-level metadata produced by the most recent
+     * `parse()` call, or null when parse() has not yet been iterated to
+     * completion. The metadata is assembled in the generator's terminator
+     * step, so callers must exhaust the iterator (e.g. via
+     * `iterator_to_array($generator, false)` or a `foreach` walk to the
+     * end) before reading this value — partial iteration leaves
+     * statementMetadata() at null.
+     */
     public function statementMetadata(): ?StatementSummaryData
     {
         return $this->lastStatementMetadata;
