@@ -6,11 +6,29 @@
       0 => 'Laravel\\Fortify\\FortifyServiceProvider',
     ),
   ),
+  'laravel/horizon' => 
+  array (
+    'aliases' => 
+    array (
+      'Horizon' => 'Laravel\\Horizon\\Horizon',
+    ),
+    'providers' => 
+    array (
+      0 => 'Laravel\\Horizon\\HorizonServiceProvider',
+    ),
+  ),
   'laravel/passkeys' => 
   array (
     'providers' => 
     array (
       0 => 'Laravel\\Passkeys\\PasskeysServiceProvider',
+    ),
+  ),
+  'laravel/sentinel' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Laravel\\Sentinel\\SentinelServiceProvider',
     ),
   ),
   'livewire/flux' => 
