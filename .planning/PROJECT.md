@@ -145,6 +145,18 @@ The user's payments fan out through multiple providers — ASN for direct debits
 | Income is a first-class concept, not "negative expense" | Cash-flow forecasting must balance both sides; salary and refunds are structurally different from outflows | — Pending |
 | Calm + readable aesthetic (Linear / Notion vibe) | User preference; this is a tool for daily glance, not a dense reporting console | — Pending |
 | Secrets in config file, not DB | Simplest portable approach for a single user; keeps secrets out of DB backups | — Pending |
+| Async chain resolution via Laravel Horizon + Redis (stack override, phase 5) | The chain-resolver job needs `ShouldBeUniqueUntilProcessing` per-user locking and a real dashboard. The original "no Horizon, no Redis" posture is flipped; the corresponding rows in `research/STACK.md` are moved out of "What NOT to Use" and into recommended. | — Active phase 5 |
+| Redis runs as a loopback-bound Docker container `redis:7-alpine` (stack override, phase 5) | Single network-only carve-out from the no-Docker rule. Container is bound to `127.0.0.1:6379` only — never reachable beyond loopback — and persists via a named volume, not a bind mount, so the Sail-on-Mac performance trap does not apply. | — Active phase 5 |
+
+### Stack additions (Phase 5)
+
+The chain-resolution phase flipped the queue stack from the original "no Horizon, no Redis, no Docker" posture to a Horizon-supervised, Redis-backed model with a narrow Docker carve-out for the Redis container. Detailed rationale, version pins, and the loopback-bind invariant live in `research/STACK.md` under the section of the same name.
+
+| Addition | Version | Carve-out scope |
+|----------|---------|-----------------|
+| `laravel/horizon` | `^5.46` | full recommendation |
+| `predis/predis` | `^3.4` | full recommendation |
+| Docker Engine | any recent | one named container only (`diederik-redis`), loopback-bound, named-volume persistence |
 
 ## Evolution
 
@@ -164,4 +176,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-15 — phase 3 (ICS Cards PDF ingestion + multi-currency display: per-page toggle, dashboard per-currency tiles, transaction-detail FX rate row) complete*
+*Last updated: 2026-05-16 — phase 5 wave 0 (Horizon + Redis queue infrastructure flip; Docker carve-out for loopback Redis container) in progress*

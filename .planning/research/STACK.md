@@ -70,14 +70,30 @@ Confidence: HIGH on Livewire+Volt+Flux as the recommendation. MEDIUM on "don't u
 
 | Component | Choice | Why |
 |-----------|--------|-----|
-| Queue driver | `database` | One human, one machine, low job rate. Avoids Redis dependency entirely. SQLite handles a queue table fine in WAL mode. Promote to `redis` only if IMAP backfill jobs ever bottleneck. |
+| Queue driver | `redis` | Required for `ShouldBeUniqueUntilProcessing` semantics around the chain-resolver job and for `/horizon` dashboard observability. Backed by a loopback-bound Docker `redis:7-alpine` container — see "Stack additions (Phase 5)". |
 | Scheduler | Laravel scheduler via `php artisan schedule:work` (foreground) | The user wants no cron setup. `schedule:work` is a long-running daemon that fires the scheduler every minute — wrap in `launchd` (macOS native) for auto-start on login. |
-| Worker | `php artisan queue:work --tries=3 --backoff=60` | Standard. Wrap in launchd alongside the scheduler. |
-| Horizon | **No** | Horizon needs Redis. Not worth the dependency for a single-user app. The `database` driver + a Filament-notifications-style minimal "failed jobs" view in the app is enough. |
+| Worker | `php artisan horizon` | Horizon supervises Redis-backed queue workers and ships the `/horizon` dashboard. In dev runs manually in a second terminal; a launchd plist will wrap it in a later phase. |
+| Horizon | **Yes** | Installed in the chain-resolution phase for queue observability via `/horizon` dashboard plus `ShouldBeUniqueUntilProcessing` lock semantics. Docker-bound Redis carve-out documented under "Stack additions (Phase 5)". |
 | Reverb / Octane | **No** | Reverb (WebSockets) and Octane (long-lived workers) solve scale problems this project doesn't have. |
 | IMAP background worker | Custom artisan command extending `Webklex\IMAP\Commands\ImapIdleCommand`, run via launchd, with a fallback `imap:scan --since=now-15min` cron-style fallback every 15 minutes | IDLE is "real-time" but flaky over long-lived TCP. The fallback ensures missed messages get picked up. |
 
-Confidence: HIGH on database queue + launchd. MEDIUM on the IDLE+fallback pattern — it's the right shape but the exact retry/backoff numbers will need tuning.
+Confidence: HIGH on Redis + Horizon + launchd. MEDIUM on the IDLE+fallback pattern — it's the right shape but the exact retry/backoff numbers will need tuning.
+
+### Stack additions (Phase 5)
+
+When the chain-resolution phase landed, the stack picked up two new Composer dependencies and one out-of-process service. The original "no Horizon, no Redis, no Docker" posture is preserved everywhere it can be — the carve-outs below are narrow and documented.
+
+| Addition | Version | Posture | Rationale |
+|----------|---------|---------|-----------|
+| `laravel/horizon` | `^5.46` | recommended | Queue dashboard, supervisor, `ShouldBeUniqueUntilProcessing` enforcement against the per-user chain-resolver lock. |
+| `predis/predis` | `^3.4` | recommended | Pure-PHP Redis client; mirrors the project's anti-PECL posture (`webklex/php-imap` over `ddeboer/imap`). |
+| Docker Engine (Redis only) | any recent | recommended (carve-out) | One named container `diederik-redis` (`redis:7-alpine`), loopback-bound on `127.0.0.1:6379`. Named-volume persistence (no bind mounts) means the Sail-on-Mac bind-mount performance trap from the "What NOT to Use" table never applies. |
+
+**Loopback-bind invariant.** The `docker run` invocation MUST pass `-p 127.0.0.1:6379:6379` (NOT the default `-p 6379:6379` which binds `0.0.0.0`). The README "Setup" section commits to this form; `config/database.php` defaults to `127.0.0.1` for the same reason.
+
+**Worker execution.** `php artisan horizon` is the canonical worker. In dev, it runs manually in a second terminal alongside `php artisan serve` / Herd. A `launchd` plist that auto-starts Horizon on login will ship in a later phase alongside the existing scheduler / queue-worker plist plan.
+
+**Failed job storage.** Horizon's retry semantics require a `failed_jobs` table; the phase ships a migration that provisions it inside the existing SQLite store. Failed-job inspection happens through the `/horizon` dashboard, not through a Laravel-Notifications-style in-app drawer.
 
 ### Secrets / Credentials
 
@@ -176,8 +192,7 @@ php artisan tinker
 | **PHP `fgetcsv()` directly** | Encoding handling is fragile (BOMs, Windows-1252 in ICS exports), header mapping is manual, no streaming abstraction. | `league/csv` |
 | **Plain floats / cents-as-int for money** | Floating-point silently corrupts FX conversions; manual integer cents is OK for EUR-only but breaks when ICS settles a USD Google Play charge to EUR. The project explicitly requires multi-currency. | `brick/money` |
 | **`abandoned/older sepa-xml libs` for parsing** | `digitick/sepa-xml`, `php-sepa-xml/php-sepa-xml` generate SEPA payment-initiation XML; they don't parse statements. | `genkgo/camt` for parsing CAMT.053 |
-| **Laravel Horizon** for this project | Pulls in Redis. For one user, the cost/benefit is negative. | `database` queue driver, plain `queue:work` daemon |
-| **Laravel Sail / Docker on macOS** | Bind-mount file I/O on Docker Desktop for Mac is the well-known performance trap; you'll wait 2s for hot-reloads. | Laravel Herd (native binaries) |
+| **Laravel Sail (full Docker dev stack on macOS)** | Bind-mount file I/O on Docker Desktop for Mac is the well-known performance trap; you'll wait 2s for hot-reloads when PHP + DB + assets all run in containers. | Laravel Herd (native binaries). **Carve-out:** one network-only Redis container is acceptable (see "Stack additions (Phase 5)") because it persists via a named volume — no source-tree bind mount, so the trap does not apply. |
 | **Laravel Jetstream / Breeze (legacy starter kits)** | Officially superseded by the Laravel 12 starter kits; no longer receiving updates. | Laravel 12 Livewire Starter Kit (Volt + Flux) |
 | **kingsquare/php-mt940 as the *primary* ingestion path** | Codebase last touched in 2020 — works, but won't gain new bank engines. | Prefer CAMT.053 via genkgo/camt where ASN offers both; use MT940 as a fallback for older statements. |
 | **Storing IMAP passwords in `.env`** | `.env` files leak into git history, editor "recent files," cloud sync clipboards. | A separate `storage/app/secrets/imap.json` with chmod 600, or macOS Keychain via `security` CLI. |
