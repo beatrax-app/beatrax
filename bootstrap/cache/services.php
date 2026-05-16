@@ -44,7 +44,8 @@
     40 => 'Modules\\Import\\Providers\\ImportServiceProvider',
     41 => 'Modules\\Categorization\\Providers\\CategorizationServiceProvider',
     42 => 'Modules\\Chains\\Providers\\ChainsServiceProvider',
-    43 => 'Modules\\Transfers\\Providers\\TransfersServiceProvider',
+    43 => 'Modules\\EmailScan\\Providers\\EmailScanServiceProvider',
+    44 => 'Modules\\Transfers\\Providers\\TransfersServiceProvider',
   ),
   'eager' => 
   array (
@@ -78,7 +79,8 @@
     27 => 'Modules\\Import\\Providers\\ImportServiceProvider',
     28 => 'Modules\\Categorization\\Providers\\CategorizationServiceProvider',
     29 => 'Modules\\Chains\\Providers\\ChainsServiceProvider',
-    30 => 'Modules\\Transfers\\Providers\\TransfersServiceProvider',
+    30 => 'Modules\\EmailScan\\Providers\\EmailScanServiceProvider',
+    31 => 'Modules\\Transfers\\Providers\\TransfersServiceProvider',
   ),
   'deferred' => 
   array (

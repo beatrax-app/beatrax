@@ -1,0 +1,39 @@
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('local-user%40example.test')/messages",
+    "value": [
+        {
+            "id": "paypal-sample-receipt",
+            "subject": "Bedankt voor je betaling aan Synthetic Merchant BV",
+            "receivedDateTime": "2026-05-11T09:14:21Z",
+            "from": {
+                "emailAddress": {
+                    "name": "PayPal",
+                    "address": "service@paypal.com"
+                }
+            }
+        },
+        {
+            "id": "ics-sample-statement-notice",
+            "subject": "Je nieuwe maandafschrift staat klaar",
+            "receivedDateTime": "2026-05-12T06:00:13Z",
+            "from": {
+                "emailAddress": {
+                    "name": "ICS Cards",
+                    "address": "noreply@ics.nl"
+                }
+            }
+        },
+        {
+            "id": "googleplay-sample-purchase",
+            "subject": "Your Google Play Order Receipt",
+            "receivedDateTime": "2026-05-13T17:45:49Z",
+            "from": {
+                "emailAddress": {
+                    "name": "Google Play",
+                    "address": "googleplay-noreply@google.com"
+                }
+            }
+        }
+    ],
+    "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/messages?%24top=100&%24skip=100"
+}
