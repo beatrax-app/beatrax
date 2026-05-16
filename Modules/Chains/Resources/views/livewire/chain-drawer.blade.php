@@ -1,0 +1,68 @@
+{{-- Chain drill-down drawer (UI-02 / CHN-04, D-90 / D-91 / D-92 / D-93).
+
+     Project's first Flux flyout. The Livewire SFC dispatches
+     `chain-drawer:open` (from the TransactionDetail "View chain"
+     button) to set $transactionId; the Flux modal opens on the same
+     event via a paired Alpine listener on the trigger button.
+
+     The view receives:
+       - $tree: ?ChainTree   (null = pre-mount / not yet resolved)
+       - $fanoutPage: int    (explicit context — issue #13 fix; the
+                              child partial declares matching @props
+                              so the binding contract is visible at
+                              both ends).
+
+     The sticky header carries `sticky top-0 bg-white z-10` per
+     UI-SPEC § Interaction Contracts; the drawer body itself never
+     scrolls (D-93). Long ICS bulk-settle fan-outs paginate INSIDE
+     each fan-out container via the "Show 10 more · X of N" affordance
+     rendered in the chain-node partial. --}}
+
+<div>
+    <flux:modal name="chain-drawer-{{ $tree?->rootTransactionId ?? 0 }}" flyout position="right" class="md:w-2xl">
+        <flux:heading size="lg" class="sticky top-0 bg-white z-10 pb-3 -mx-6 px-6">
+            @if ($tree !== null && count($tree->nodes) > 0 && $tree->nodes[0]->counterpartyName !== '')
+                Chain for {{ $tree->nodes[0]->counterpartyName }}
+            @elseif ($tree !== null && count($tree->nodes) > 0 && $tree->nodes[0]->accountName !== '')
+                Chain for {{ $tree->nodes[0]->accountName }}
+            @else
+                Chain
+            @endif
+        </flux:heading>
+
+        @if ($tree === null)
+            <div class="px-6 pt-md">
+                <h3 class="text-base font-semibold text-slate-900">Chain not yet resolved</h3>
+                <p class="mt-2 text-sm text-slate-500">
+                    The chain resolver is still running. Open the review queue or refresh in a moment.
+                </p>
+            </div>
+        @elseif (count($tree->nodes) === 0)
+            <div class="px-6 pt-md">
+                <h3 class="text-base font-semibold text-slate-900">No funding chain found</h3>
+                <p class="mt-2 text-sm text-slate-500">
+                    This transaction has no detected funding chain. If you expected one, file a candidate from the review queue.
+                </p>
+            </div>
+        @elseif (count($tree->nodes) === 1)
+            {{-- Only the root node walked back — no funder leg followed. --}}
+            <div class="px-6 py-md space-y-md">
+                @include('chains::livewire.partials.chain-node', ['node' => $tree->nodes[0], 'fanoutPage' => $fanoutPage])
+                <div class="rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-xs text-slate-500">No funding chain found beyond this leg.</p>
+                </div>
+            </div>
+        @else
+            <div class="px-6 py-md space-y-md">
+                @foreach ($tree->nodes as $node)
+                    {{-- Issue #13 fix: pass $fanoutPage explicitly to the
+                         partial. The partial declares
+                         @props(['node', 'fanoutPage']) at its top so the
+                         binding contract is portable and obvious — no
+                         implicit parent-scope inheritance. --}}
+                    @include('chains::livewire.partials.chain-node', ['node' => $node, 'fanoutPage' => $fanoutPage])
+                @endforeach
+            </div>
+        @endif
+    </flux:modal>
+</div>

@@ -11,6 +11,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Chains\Internal\CardStatementStateMachine;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
+use Modules\Chains\Internal\Http\Livewire\ChainDrawer;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
@@ -88,9 +89,9 @@ final class ChainsServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'chains');
         }
-        // Livewire component registrations land here once the
-        // chains.chain-review-queue and chains.chain-drawer SFCs ship.
-        unset($livewire);
+        // Wave 4 (plan 05-05) — chain drawer Livewire SFC (UI-02 /
+        // CHN-04). The `/chains/review` queue SFC ships in plan 05-05b.
+        $livewire->component('chains.chain-drawer', ChainDrawer::class);
 
         $this->registerJobFailedListener($events);
     }
