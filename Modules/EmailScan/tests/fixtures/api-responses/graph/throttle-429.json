@@ -1,0 +1,11 @@
+{
+    "error": {
+        "code": "TooManyRequests",
+        "message": "Application is over its quota for this resource.",
+        "innerError": {
+            "date": "2026-05-13T18:05:00",
+            "request-id": "synthetic-429-request-id",
+            "client-request-id": "synthetic-429-client-request-id"
+        }
+    }
+}

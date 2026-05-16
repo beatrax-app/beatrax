@@ -1,0 +1,28 @@
+Return-Path: <googleplay-noreply@google.com>
+Received: from mail-google.com (mail-google.com [203.0.113.30])
+	by inbound.example.test (Postfix) with ESMTPS id 4PaYDQ7nPGz3wXyT
+	for <local-user@example.test>; Wed, 13 May 2026 17:45:50 +0000 (UTC)
+From: "Google Play" <googleplay-noreply@google.com>
+To: "Synthetic User" <local-user@example.test>
+Subject: Your Google Play Order Receipt
+Date: Wed, 13 May 2026 17:45:49 +0000
+Message-ID: <synthetic-googleplay-20260513174549@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hi Synthetic User,
+
+Thanks for your order. The following purchase has been confirmed and the
+charge will appear on the payment method you selected.
+
+Order details (synthetic, not derived from a real transaction):
+- Item: Synthetic Subscription App (monthly plan)
+- Order number: GPA.0000-0000-0000-00000
+- Order date: May 13, 2026
+- Total: USD 4.99
+- Tax: USD 0.00
+
+You can view your order history at https://play.google.com/store/account.
+
+(c) 2026 Google LLC. Synthetic anonymised footer.
