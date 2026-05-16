@@ -1,0 +1,199 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
+use Livewire\Livewire;
+use Modules\Core\Models\User;
+use Modules\Import\Internal\Http\Livewire\PreviewWizard;
+
+/*
+ * PreviewWizard polling status surface (D-103 / D-105). After
+ * ConfirmImport dispatches the chain resolver, the wizard polls the
+ * `chain_resolution_runs` audit table via `wire:poll.2s` and
+ * surfaces the running / pending / complete / failed state inline.
+ *
+ * Issue #1 + #8 lock: the query MUST filter by exact `user_id` match.
+ * NEVER `payload LIKE '%userId:N%'` — the substring pattern
+ * conflates user_id=1 with user_id=11, leaking cross-user failure
+ * state.
+ *
+ * On status === 'complete', the wizard auto-navigates to the import
+ * summary route (`imports.results`).
+ */
+
+function wcrUser(string $email): User
+{
+    return User::query()->create([
+        'email' => $email,
+        'password' => 'fixture',
+        'period_start_day' => 1,
+    ]);
+}
+
+beforeEach(function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $this->db = $db;
+
+    $this->user = wcrUser('wizard-chain-status@diederik.test');
+    $this->otherUser = wcrUser('wizard-chain-status-other@diederik.test');
+
+    // Seed an import_run for the user — the wizard's polling action
+    // needs an import_run id to auto-navigate on complete.
+    $this->importRunId = (int) $this->db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $this->user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/wcr.csv',
+        'sha256' => str_repeat('w', 64),
+        'uploaded_at' => CarbonImmutable::now()->toDateTimeString(),
+        'status' => 'confirmed',
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+});
+
+it('reads chain_resolution_runs by exact user_id match — running status surfaces (issue #1 + #8 audit-table contract)', function (): void {
+    $now = CarbonImmutable::now()->toDateTimeString();
+    $this->db->connection()->table('chain_resolution_runs')->insert([
+        'user_id' => $this->user->id,
+        'status' => 'running',
+        'linked_count' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test(PreviewWizard::class, ['id' => $this->importRunId])
+        ->call('refreshChainResolutionStatus')
+        ->assertSet('chainResolutionStatus', 'running');
+});
+
+it('surfaces pending status when chain_resolution_runs.status=pending', function (): void {
+    $now = CarbonImmutable::now()->toDateTimeString();
+    $this->db->connection()->table('chain_resolution_runs')->insert([
+        'user_id' => $this->user->id,
+        'status' => 'pending',
+        'linked_count' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test(PreviewWizard::class, ['id' => $this->importRunId])
+        ->call('refreshChainResolutionStatus')
+        ->assertSet('chainResolutionStatus', 'pending');
+});
+
+it('auto-navigates to imports.results on chain_resolution_runs.status=complete', function (): void {
+    $now = CarbonImmutable::now()->toDateTimeString();
+    $this->db->connection()->table('chain_resolution_runs')->insert([
+        'user_id' => $this->user->id,
+        'status' => 'complete',
+        'linked_count' => 7,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test(PreviewWizard::class, ['id' => $this->importRunId])
+        ->call('refreshChainResolutionStatus')
+        ->assertSet('chainResolutionStatus', 'complete')
+        ->assertSet('chainResolutionLinkedCount', 7)
+        ->assertRedirect(route('imports.results', ['id' => $this->importRunId]));
+});
+
+it('surfaces failed status + truncated last_error when chain_resolution_runs.status=failed', function (): void {
+    $longError = str_repeat('e', 500);
+    $now = CarbonImmutable::now()->toDateTimeString();
+    $this->db->connection()->table('chain_resolution_runs')->insert([
+        'user_id' => $this->user->id,
+        'status' => 'failed',
+        'last_error' => $longError,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    $component = Livewire::actingAs($this->user)
+        ->test(PreviewWizard::class, ['id' => $this->importRunId])
+        ->call('refreshChainResolutionStatus')
+        ->assertSet('chainResolutionStatus', 'failed');
+
+    // last_error truncated to <= 200 chars.
+    $component->assertSet('chainResolutionError', substr($longError, 0, 200));
+});
+
+it('cross-user isolation — user A does NOT observe user B\'s chain_resolution_runs row (issue #1 + #8)', function (): void {
+    $now = CarbonImmutable::now()->toDateTimeString();
+    $this->db->connection()->table('chain_resolution_runs')->insert([
+        'user_id' => $this->otherUser->id,
+        'status' => 'running',
+        'linked_count' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test(PreviewWizard::class, ['id' => $this->importRunId])
+        ->call('refreshChainResolutionStatus')
+        ->assertSet('chainResolutionStatus', null);
+});
+
+it('substring-attack guard — user_id matching is exact, not LIKE (issue #8)', function (): void {
+    // Insert a failed run for the OTHER user (id distinct from this->user->id).
+    // A `payload LIKE '%userId:N%'` substring query (the forbidden
+    // pattern) would falsely match other users whose ids share a
+    // digit prefix. The exact-match query MUST return null.
+    $now = CarbonImmutable::now()->toDateTimeString();
+    $this->db->connection()->table('chain_resolution_runs')->insert([
+        'user_id' => $this->otherUser->id,
+        'status' => 'failed',
+        'last_error' => 'OtherUserError',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    // Verify user A sees null.
+    Livewire::actingAs($this->user)
+        ->test(PreviewWizard::class, ['id' => $this->importRunId])
+        ->call('refreshChainResolutionStatus')
+        ->assertSet('chainResolutionStatus', null);
+
+    // Sanity: user B DOES see their failed row (also need to seed
+    // their own import_run since the wizard requires one).
+    $otherImportRunId = (int) $this->db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $this->otherUser->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/wcr-other.csv',
+        'sha256' => str_repeat('o', 64),
+        'uploaded_at' => CarbonImmutable::now()->toDateTimeString(),
+        'status' => 'confirmed',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+    Livewire::actingAs($this->otherUser)
+        ->test(PreviewWizard::class, ['id' => $otherImportRunId])
+        ->call('refreshChainResolutionStatus')
+        ->assertSet('chainResolutionStatus', 'failed');
+});
+
+it('PreviewWizard does NOT contain a substring LIKE payload pattern (issue #1 + #8 lock)', function (): void {
+    $wizardPath = base_path('Modules/Import/Internal/Http/Livewire/PreviewWizard.php');
+    expect(file_exists($wizardPath))->toBeTrue();
+    $contents = (string) file_get_contents($wizardPath);
+    // Strip comments so legitimate PHPDoc references stay legal.
+    $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+    // The forbidden substring patterns must NOT appear in code.
+    expect($stripped)->not->toMatch('/payload.*?like.*?userId/i');
+    expect($stripped)->not->toMatch("/'%userId:/");
+    // The safe audit-table query must appear.
+    expect($contents)->toContain('chain_resolution_runs');
+});
+
+it('returns null when no chain_resolution_runs row exists at all', function (): void {
+    Livewire::actingAs($this->user)
+        ->test(PreviewWizard::class, ['id' => $this->importRunId])
+        ->call('refreshChainResolutionStatus')
+        ->assertSet('chainResolutionStatus', null);
+});
