@@ -33,6 +33,10 @@ arch('Modules\\Chains\\Internal is only used inside Modules\\Chains')
     ->expect('Modules\\Chains\\Internal')
     ->toOnlyBeUsedIn('Modules\\Chains');
 
+arch('Modules\\EmailScan\\Internal is only used inside Modules\\EmailScan')
+    ->expect('Modules\\EmailScan\\Internal')
+    ->toOnlyBeUsedIn('Modules\\EmailScan');
+
 arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules')
@@ -44,6 +48,15 @@ arch('no Laravel facade usage in module code')
         // use in module code; ResolveChainLinksJob documents this on
         // its class-level docblock when it ships.
         'Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
+        // Same carve-out applies to the three EmailScan queued jobs:
+        // backfill, incremental scan, and discovery scan all call
+        // Cache::driver('redis') from uniqueVia() so the per-inbox /
+        // per-user single-flight lock fires before the constructor DI
+        // completes. The job class docblocks repeat this rationale
+        // when each lands in later plans.
+        'Modules\\EmailScan\\Internal\\Jobs\\BackfillInboxJob',
+        'Modules\\EmailScan\\Internal\\Jobs\\IncrementalScanJob',
+        'Modules\\EmailScan\\Internal\\Jobs\\DiscoveryScanJob',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')
@@ -203,5 +216,155 @@ it('does not allow a paypal-api route or class to exist (noPaypalApiRoute)', fun
     expect($hits)->toBe(
         [],
         "No paypal-api route or class should exist. Found in:\n  ".implode("\n  ", $hits)
+    );
+});
+
+it('does not allow any file under Modules/EmailScan/ to mutate the transactions table (noTransactionWritesFromEmailScan)', function (): void {
+    // Phase 6 / Phase 7 architectural boundary: the EmailScan module
+    // owns the fetch + persist .eml + index pipeline only. Transitions
+    // out of `inbox_messages.status='fetched'` and any write against
+    // the transactions table belong to the matcher phase. This rule
+    // mirrors the resolver-side noResolverWritesTransactions invariant
+    // (Chains module) for the EmailScan module's subtree. The grep
+    // strips block + line comments first so legitimate PHPDoc
+    // references stay legal.
+    $hits = [];
+    $emailScanDir = base_path('Modules/EmailScan');
+    if (! is_dir($emailScanDir)) {
+        // Module folder lands in a later wave; until it does the rule
+        // is trivially satisfied.
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            $emailScanDir,
+            RecursiveDirectoryIterator::SKIP_DOTS,
+        ),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (
+            preg_match('/Transaction::query|Transaction::where|Transaction::create/', $stripped) === 1
+            || preg_match("/->table\(['\"]transactions['\"]\)[^;]*->(update|insert|delete)\\s*\\(/", $stripped) === 1
+        ) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "Modules/EmailScan/ must not mutate the transactions table. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+it('does not allow any file other than InboxScanStateMachine to mutate inbox_scan_state (noOtherInboxScanStateMutator)', function (): void {
+    // Only the InboxScanStateMachine class may transition the per-inbox
+    // scan-state row. Other module code reads the row but never writes
+    // it. Migrations are exempt because they seed initial rows + the
+    // schema itself. The grep targets the `->update(...)` shape on the
+    // table so insertOrIgnore + migration inserts stay legal; the
+    // pattern catches both the simple stub variant (lands in an early
+    // plan) and the lockForUpdate-bearing variant (lands later) since
+    // both surfaces still go through the table-builder ->update() call.
+    $hits = [];
+    $emailScanDir = base_path('Modules/EmailScan');
+    if (! is_dir($emailScanDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $allowedFile = base_path('Modules/EmailScan/Internal/InboxScanStateMachine.php');
+    $migrationsDir = base_path('Modules/EmailScan/Database/Migrations');
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            $emailScanDir,
+            RecursiveDirectoryIterator::SKIP_DOTS,
+        ),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if ($path === $allowedFile) {
+            continue;
+        }
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        if (str_starts_with($path, $migrationsDir.DIRECTORY_SEPARATOR)) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (
+            preg_match("/->table\(['\"]inbox_scan_state['\"]\)[^;]*->update\\s*\\(/", $stripped) === 1
+            || preg_match('/InboxScanState::query\(\)[^;]*->update\(/', $stripped) === 1
+        ) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "Only InboxScanStateMachine may mutate inbox_scan_state. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+it('does not allow any Modules/EmailScan migration to declare an OAuth-secret column (noOAuthTokensInEmailScanSchema)', function (): void {
+    // Baseline invariant: OAuth client secrets and refresh tokens
+    // live exclusively in the chmod-600 JSON repository on disk; no
+    // EmailScan migration may add a column named refresh_token /
+    // client_secret / access_token (case-insensitive). The grep
+    // strips block + line comments so legitimate PHPDoc references
+    // stay legal. Trivially satisfied while no EmailScan migrations
+    // exist, and a guard rail for the migration plans that follow.
+    $hits = [];
+    $migrationsDir = base_path('Modules/EmailScan/Database/Migrations');
+    if (! is_dir($migrationsDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            $migrationsDir,
+            RecursiveDirectoryIterator::SKIP_DOTS,
+        ),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (preg_match('/refresh_token|client_secret|access_token/i', $stripped) === 1) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "No EmailScan migration may declare an OAuth-secret column. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
