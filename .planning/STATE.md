@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-05-16T02:16:43.844Z"
-last_activity: 2026-05-16 -- Phase 05 planning complete
+stopped_at: Completed 05-01-PLAN.md code tasks; checkpoint Task 3 awaiting operator verification of Docker Redis + Horizon boot
+last_updated: "2026-05-16T15:50:36.829Z"
+last_activity: 2026-05-16
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 31
-  completed_plans: 24
-  percent: 77
+  completed_plans: 25
+  percent: 81
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-12)
 
 **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-**Current focus:** Phase 04 — paypal-ingestion-transfer-detection
+**Current focus:** Phase 05 — chain-resolution-paypal-funding-ics-bulk-ideal-decomposition
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 05 (chain-resolution-paypal-funding-ics-bulk-ideal-decomposition) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-05-16 -- Phase 05 planning complete
+Last activity: 2026-05-16
 
-Progress: [██████████] 100%
+Progress: [████████░░] 81%
 
 ## Performance Metrics
 
@@ -74,6 +74,7 @@ Progress: [██████████] 100%
 | Phase 04 P03 | ~18min | 3 tasks | 21 files |
 | Phase 04 P04 | ~7min | 2 tasks | 5 files |
 | Phase 04 P05 | ~2min | 1 tasks | 3 files |
+| Phase 05 P01 | 18min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -165,6 +166,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 05: ROADMAP Phase 4 SC #2 rewritten as deferred-with-trigger; REQUIREMENTS ING-09 entry rewritten + new 'Deferred / Future-Revisit (Phase 4 close-out)' section added between v2 Requirements and Out of Scope; traceability ING-09 row flipped Pending -> Deferred.
 - [Phase 04]: Plan 05: BoundaryArchTest::noPaypalApiRoute appended via 'it(...)' Pest syntax with RecursiveIteratorIterator file-walk + comment-strip regex (mirrors UserIdColumnArchTest pattern). Scope routes/ + Modules/ only; .planning/ and tests/ excluded to avoid self-referential failure. Failure-mode proved via temporary sentinel under Modules/Ingestion/Internal/Adapters/Paypal/, never committed.
 - [Phase 04]: Plan 05: Phase 4 close-out gate met — SC #1 GREEN (04-02), SC #2 DEFERRED-WITH-TRIGGER (04-05), SC #3 GREEN (04-03 + 04-04), SC #4 GREEN (04-04). ING-09 Reporting API revisit conditional on PayPal Business upgrade; arch test must be retracted in that future plan.
+- [Phase ?]: [Phase 05]: Plan 01: laravel/horizon ^5.46 + predis/predis ^3.4 installed; container-resolved Gate contract inside HorizonServiceProvider::gate() avoids the larastan-strict noFacadeRule trip
+- [Phase ?]: [Phase 05]: Plan 01: Stack-policy flip lives in .planning/research/STACK.md (canonical) + a pointer in .planning/PROJECT.md; Horizon removed from 'What NOT to Use' and reworded as 'Yes — recommended'; Sail/Docker row keeps its trap warning with an explicit Redis-only carve-out
+- [Phase ?]: [Phase 05]: Plan 01: GSD codes (D-101, FND-01, etc.) stripped from runtime code/config comments; rationale described in plain technical language so the codebase stays agnostic from the planning system
 
 ### Pending Todos
 
@@ -196,7 +200,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-16T00:21:20.167Z
-Stopped at: Phase 5 context gathered
+Last session: 2026-05-16T15:50:36.824Z
+Stopped at: Completed 05-01-PLAN.md code tasks; checkpoint Task 3 awaiting operator verification of Docker Redis + Horizon boot
 Resume file: 
-.planning/phases/05-chain-resolution-paypal-funding-ics-bulk-ideal-decomposition/05-CONTEXT.md
+.planning/phases/05-chain-resolution-paypal-funding-ics-bulk-ideal-decomposition/05-01-SUMMARY.md
