@@ -118,6 +118,8 @@
         {{-- Placeholder until the backfill-window-modal Livewire SFC lands. --}}
     @endif
 
-    {{-- Wizard modal is mounted by the OAuthClientWizardModal SFC; it
-         opens via the `modal-show` event dispatched from openWizard(). --}}
+    {{-- Wizard modal (Gmail variant — Microsoft variant lands in
+         the next plan). Mounted unconditionally so the openWizard()
+         action can dispatch modal-show to open it. --}}
+    <livewire:email-scan.oauth-client-wizard-modal />
 </div>

@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Providers;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
+use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Services\InboxesBadgeCount;
@@ -59,8 +60,10 @@ final class EmailScanServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'email-scan');
         }
 
-        // Plan 03 — /inboxes page Livewire SFC. The OAuth-client
-        // wizard modal SFC registers alongside it in a later step.
+        // Plan 03 — /inboxes page Livewire SFC + the OAuth-client
+        // wizard modal SFC (Google variant; Microsoft variant lands
+        // in a later plan and reuses this same component).
         $livewire->component('email-scan.inboxes-page', InboxesPage::class);
+        $livewire->component('email-scan.oauth-client-wizard-modal', OAuthClientWizardModal::class);
     }
 }
