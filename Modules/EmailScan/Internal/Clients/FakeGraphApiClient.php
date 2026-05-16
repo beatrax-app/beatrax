@@ -69,7 +69,8 @@ final class FakeGraphApiClient
 
         /** @var list<array<string, mixed>> $messages */
         $messages = is_array($payload['value'] ?? null) ? $payload['value'] : [];
-        $next = is_string($payload['@odata.nextLink'] ?? null) ? (string) $payload['@odata.nextLink'] : null;
+        $rawNext = $payload['@odata.nextLink'] ?? null;
+        $next = is_string($rawNext) ? $rawNext : null;
 
         return [
             'messages' => $messages,
@@ -116,8 +117,9 @@ final class FakeGraphApiClient
         if (array_key_exists($inboxId, $this->cursorExpiredInboxes)) {
             unset($this->cursorExpiredInboxes[$inboxId]);
             $payload = $this->readJson('delta-410.json');
-            $message = is_array($payload['error'] ?? null) && is_string($payload['error']['message'] ?? null)
-                ? (string) $payload['error']['message']
+            $error = $payload['error'] ?? null;
+            $message = is_array($error) && isset($error['message']) && is_string($error['message'])
+                ? $error['message']
                 : '';
             throw CursorExpiredException::graph($message);
         }
@@ -125,11 +127,13 @@ final class FakeGraphApiClient
         $payload = $this->readJson('delta-baseline.json');
         /** @var list<array<string, mixed>> $messages */
         $messages = is_array($payload['value'] ?? null) ? $payload['value'] : [];
+        $rawDelta = $payload['@odata.deltaLink'] ?? null;
+        $rawNext = $payload['@odata.nextLink'] ?? null;
 
         return [
             'messages' => $messages,
-            'deltaLink' => is_string($payload['@odata.deltaLink'] ?? null) ? (string) $payload['@odata.deltaLink'] : null,
-            'nextLink' => is_string($payload['@odata.nextLink'] ?? null) ? (string) $payload['@odata.nextLink'] : null,
+            'deltaLink' => is_string($rawDelta) ? $rawDelta : null,
+            'nextLink' => is_string($rawNext) ? $rawNext : null,
         ];
     }
 
@@ -189,8 +193,9 @@ final class FakeGraphApiClient
         $retryAfter = $this->rateLimitedInboxes[$inboxId];
         unset($this->rateLimitedInboxes[$inboxId]);
         $payload = $this->readJson('throttle-429.json');
-        $message = is_array($payload['error'] ?? null) && is_string($payload['error']['message'] ?? null)
-            ? (string) $payload['error']['message']
+        $error = $payload['error'] ?? null;
+        $message = is_array($error) && isset($error['message']) && is_string($error['message'])
+            ? $error['message']
             : 'Microsoft Graph rate limit exceeded.';
         throw new RateLimitedException($retryAfter, $message);
     }

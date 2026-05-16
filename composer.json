@@ -19,6 +19,11 @@
         "spatie/laravel-data": "^4.0",
         "spatie/pdf-to-text": "^1.0"
     },
+    "conflict": {
+        "webklex/laravel-imap": "*",
+        "webklex/php-imap": "*",
+        "ddeboer/imap": "*"
+    },
     "require-dev": {
         "calebdw/larastan-livewire": "^2.0",
         "canvural/larastan-strict-rules": "^3.0",
