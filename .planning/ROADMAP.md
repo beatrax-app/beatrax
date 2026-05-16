@@ -130,12 +130,16 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. After a kill / restart, the scanner resumes from the last successful UID per inbox+folder instead of re-scanning from scratch
   4. User sees a health view with "last scan: X hours ago" per inbox and persistent failures (rate limits, auth) surface there with exponential-backoff retry behavior
   5. OAuth client secrets and refresh tokens live in a chmod-600 config file outside the database, and background workers run via macOS `launchd`
-**Plans**: 5 plans
-  - [x] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
-  - [x] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
-  - [x] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
-  - [x] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
-  - [ ] 05-05-PLAN.md — Wave 4 UI surfaces: /chains/review (CHN-03) + chain drawer Flux flyout (UI-02 + CHN-04) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge + failed-job toast + wizard polling
+**Plans**: 9 plans
+  - [ ] 06-01-PLAN.md — Wave 0 enablement: Modules/EmailScan/ skeleton + synthesised .eml + Fake API client trio + BoundaryArchTest extensions (noTransactionWritesFromEmailScan + Internal containment + facade carve-outs) + composer.json conflict block + NoExtImapTest extension
+  - [ ] 06-02-PLAN.md — Wave 1 schema + secrets: five user-scoped migrations (inboxes / inbox_scan_state / inbox_messages / known_senders / discovered_senders) + Eloquent models + Public DTO set (ScanCursor value object, InboxHealthDto, InboxCredentials, EmailScanHealthTile, etc.) + OAuthSecretsRepository atomic chmod-600 JSON (PLT-03)
+  - [ ] 06-03-PLAN.md — Wave 2 Gmail OAuth vertical slice: composer install google/apiclient + league/oauth2-google + zbateson + GoogleOAuthProvider + OAuthConnectController + OAuthCallbackController + InboxesPage Livewire SFC + OAuthClientWizardModal (Google variant) + InboxQuery + KnownSenderQuery + InboxesBadgeCount + PROJECT.md + README amendment for loopback redirect URI (EML-01)
+  - [ ] 06-04-PLAN.md — Wave 3 Microsoft OAuth parity: composer install microsoft/microsoft-graph + thenetworg/oauth2-azure + MicrosoftOAuthProvider + OAuthConnect/CallbackController $provider dispatch + OAuthClientWizardModal Microsoft variant (UUID-v4 validation; no publishedConfirmed) (EML-02)
+  - [ ] 06-05-PLAN.md — Wave 4 backfill (Gmail vertical slice): EmlBlobStore + MimeHeaderParser (zbateson) + real GmailApiClient + BackfillInboxJob (ShouldBeUniqueUntilProcessing keyed on inbox_id; atomic .eml-then-DB ordering) + BackfillWindowModal + /inboxes backfill progress strip (wire:poll.2s) + InboxScanStateMachine stub (EML-04)
+  - [ ] 06-06-PLAN.md — Wave 5 backfill (Microsoft Graph): real GraphApiClient + two-phase scan (non-delta /me/messages?$filter walk for backfill + single deltaPage(null) baseline at end) + BackfillInboxJob Microsoft branch (EML-04 Microsoft half)
+  - [ ] 06-07-PLAN.md — Wave 6 incremental scan: InboxScanStateMachine upgrade (transition validation + retry_attempts + lockForUpdate) + IncrementalScanJob (cursor-walk + Gmail historyId 404 / Graph 410 fallbacks + rate-limit backoff + invalid_grant → needs_reauth) + Schedule::call hourly + JobFailed listener (EML-06 + EML-08)
+  - [ ] 06-08-PLAN.md — Wave 7 UI surfaces: ThisPeriodAtAGlanceQuery::emailScanHealth() + dashboard tile (D-125) + top-nav Inboxes badge via View Factory composer (D-126) + status badge matrix (6 variants) + Scan-now / Reconnect inline row actions + reauth-detected toast on dashboard (D-115)
+  - [ ] 06-09-PLAN.md — Wave 8 discovery loop + launchd: DiscoveryScanJob (daily; no .eml blobs) + DiscoveredSenderQuery + PromoteDiscoveredSender + DismissDiscoveredSender + /inboxes discovered senders panel + three launchd plists under deploy/launchd/ + diederik:install --launchd + README Background workers section (PLT-04)
 **UI hint**: yes
 
 ### Phase 7: Email Template Matchers + Categorization Learning
@@ -239,7 +243,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. ICS Cards + Multi-Currency Display | 6/7 | In Progress|  |
 | 4. PayPal Ingestion + Transfer Detection | 5/5 | Ready for verification | - |
 | 5. Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition) | 7/7 | Complete   | 2026-05-16 |
-| 6. Email Receipt Ingestion Infrastructure | 0/TBD | Not started | - |
+| 6. Email Receipt Ingestion Infrastructure | 0/9 | Not started | - |
 | 7. Email Template Matchers + Categorization Learning | 0/TBD | Not started | - |
 | 8. Recurring Detection + Fixed Payments View | 0/TBD | Not started | - |
 | 9. Subscription Drift Detection + Alerts | 0/TBD | Not started | - |
