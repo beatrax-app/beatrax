@@ -15,7 +15,11 @@ use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
 use Modules\Chains\Internal\Services\BusChainResolutionDispatcher;
+use Modules\Chains\Public\Actions\ConfirmChainLink;
+use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
+use Modules\Chains\Public\Services\CardStatementQuery;
+use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
@@ -48,9 +52,10 @@ use Modules\Core\Public\Contracts\Clock;
  * which is the ONLY permitted facade call in module code
  * (BoundaryArchTest carve-out).
  *
- * Subsequent plans extend register() with the public read APIs
- * (`ChainLinkQuery`, `CardStatementQuery`) and the public action
- * classes (`ConfirmChainLink`, `RejectChainLink`).
+ * Wave 3 (plan 05-04) extends register() with the Public read APIs
+ * (`ChainLinkQuery`, `CardStatementQuery`) and the Public action
+ * classes (`ConfirmChainLink`, `RejectChainLink`) the review-queue +
+ * chain-drawer UI consumes.
  */
 final class ChainsServiceProvider extends ServiceProvider
 {
@@ -62,6 +67,14 @@ final class ChainsServiceProvider extends ServiceProvider
         $this->app->singleton(PaypalFundingResolver::class);
         $this->app->singleton(ResolveChainLinksJob::class);
         $this->app->singleton(DispatchesChainResolution::class, BusChainResolutionDispatcher::class);
+
+        // Wave 3 Public surface — review-queue + chain-drawer reads
+        // (ChainLinkQuery + CardStatementQuery) and the per-pair
+        // mutators (ConfirmChainLink + RejectChainLink).
+        $this->app->singleton(ChainLinkQuery::class);
+        $this->app->singleton(CardStatementQuery::class);
+        $this->app->singleton(ConfirmChainLink::class);
+        $this->app->singleton(RejectChainLink::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
