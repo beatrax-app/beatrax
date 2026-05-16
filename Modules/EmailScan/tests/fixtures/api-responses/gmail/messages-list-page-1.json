@@ -1,0 +1,9 @@
+{
+    "messages": [
+        { "id": "paypal-sample-receipt",         "threadId": "thread-paypal-sample-receipt" },
+        { "id": "ics-sample-statement-notice",   "threadId": "thread-ics-sample-statement-notice" },
+        { "id": "googleplay-sample-purchase",    "threadId": "thread-googleplay-sample-purchase" }
+    ],
+    "resultSizeEstimate": 3,
+    "nextPageToken": "page-2-token"
+}
