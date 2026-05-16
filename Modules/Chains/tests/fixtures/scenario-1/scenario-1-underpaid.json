@@ -1,0 +1,9 @@
+{
+    "variant": "underpaid",
+    "bulk_settle_amount_minor": 84514,
+    "delta_minor": -218,
+    "expected_card_statement_state": "partially_settled",
+    "expected_credit_carry_minor": 0,
+    "expected_chain_state": "confirmed",
+    "tolerance_used": "amount_5eur"
+}

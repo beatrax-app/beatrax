@@ -1,0 +1,9 @@
+{
+    "variant": "overpaid",
+    "bulk_settle_amount_minor": 84885,
+    "delta_minor": 153,
+    "expected_card_statement_state": "overpaid",
+    "expected_credit_carry_minor": 153,
+    "expected_chain_state": "confirmed",
+    "tolerance_used": "amount_5eur"
+}
