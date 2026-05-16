@@ -6,6 +6,7 @@ namespace Modules\EmailScan\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\EmailScan\Public\Services\InboxMessageQuery;
 
 /**
  * Wires the EmailScan module.
@@ -27,9 +28,16 @@ final class EmailScanServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Singleton bindings land in later waves once the OAuth
-        // secrets repository, the two API clients, the state machine,
-        // and the three queued jobs ship.
+        // Public read-side query over inbox_messages. Streams via the
+        // query builder's cursor() so the parser stage can iterate
+        // status='fetched' rows without loading the full set into
+        // memory. Singleton because the class is stateless and holds
+        // only an injected DatabaseManager.
+        $this->app->singleton(InboxMessageQuery::class);
+
+        // Additional singleton bindings (OAuth secrets repository,
+        // API clients, state machine, queued jobs, ...) land in
+        // later plans.
     }
 
     public function boot(LivewireManager $livewire): void
