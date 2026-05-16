@@ -49,6 +49,7 @@
             "Modules\\Ingestion\\Tests\\": "Modules/Ingestion/tests/",
             "Modules\\Import\\Tests\\": "Modules/Import/tests/",
             "Modules\\Categorization\\Tests\\": "Modules/Categorization/tests/",
+            "Modules\\Chains\\Tests\\": "Modules/Chains/tests/",
             "Modules\\Transfers\\Tests\\": "Modules/Transfers/tests/"
         }
     },
