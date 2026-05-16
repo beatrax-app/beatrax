@@ -1,0 +1,16 @@
+{
+    "name": "diederik/chains",
+    "description": "Chains module — cross-source funding-chain resolver + ICS bulk-iDEAL decomposer + card_statements model.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Chains\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Chains\\Tests\\": "tests/"
+        }
+    }
+}
