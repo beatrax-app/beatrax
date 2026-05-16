@@ -63,12 +63,15 @@ return [
     | Redis Databases
     |--------------------------------------------------------------------------
     |
-    | Project does not use Redis (queue driver is `database`). The block is
-    | retained because some Laravel internals reference it during boot.
+    | Redis backs the queue and cache stores. The project pins the pure-PHP
+    | `predis/predis` client — no PECL `phpredis` build dependency. The
+    | container runs locally and is bound to `127.0.0.1` only; the
+    | password stays null because the listener is not reachable beyond
+    | loopback.
     */
 
     'redis' => [
-        'client' => env('REDIS_CLIENT', 'phpredis'),
+        'client' => env('REDIS_CLIENT', 'predis'),
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
             'prefix' => env('REDIS_PREFIX', 'diederik_database_'),
