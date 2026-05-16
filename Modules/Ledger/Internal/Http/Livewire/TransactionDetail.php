@@ -160,8 +160,20 @@ final class TransactionDetail extends Component
             ->where('user_id', $currentUser->user()->id)
             ->firstOrFail();
 
+        // UI-SPEC § Chain drill-down drawer: the "View chain" button
+        // renders when the resolver has run at least once for the user
+        // (i.e. ChainLinkQuery::forTransaction would return a non-null
+        // ChainTree even if it contains only the root). Since the
+        // detail page is itself user-scoped via `firstOrFail()` and
+        // the chain-tree query is now wired (Wave 3), the button is
+        // available on every detail page the user can see; the drawer
+        // itself renders the empty / pre-mount states when no chain
+        // exists yet.
+        $chainAvailable = true;
+
         $view = $views->make('ledger::livewire.transaction-detail', [
             'transaction' => $transaction,
+            'chainAvailable' => $chainAvailable,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
