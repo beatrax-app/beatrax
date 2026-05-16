@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
+status: verifying
 stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-05-16T18:22:39.268Z"
+last_updated: "2026-05-16T18:42:52.236Z"
 last_activity: 2026-05-16
 progress:
   total_phases: 11
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 31
-  completed_plans: 30
-  percent: 97
+  completed_plans: 31
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 
 Phase: 05 (chain-resolution-paypal-funding-ics-bulk-ideal-decomposition) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-16
 
-Progress: [██████████] 97%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -80,6 +80,7 @@ Progress: [██████████] 97%
 | Phase 05 P03 | ~26min | 2 tasks | 10 files |
 | Phase 05 P04 | ~35min | - tasks | - files |
 | Phase 05 P05 | ~3min | 1 tasks | 6 files |
+| Phase 5 P05b | 13min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -195,6 +196,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Chain drawer trigger button dispatches both chain-drawer:open (Livewire) AND modal-show (Flux) in the same user gesture — keeps the data layer and presentation layer independently testable
 - [Phase ?]: Single-link ICS bulk-settle is NOT a fan-out — a node renders the fan-out container only when it has ≥2 outgoing ics_bulk_settle chain_links
 - [Phase ?]: Blade partials with required context use explicit @props([...]) declarations + explicit @include arrays at every call site — issue #13 fix
+- [Phase ?]: Top-nav badge fed by View Factory composer on core::livewire.top-nav via $this->app->make(ViewFactoryContract::class)->composer(...) — never the view() global helper (issue #12 fix)
+- [Phase ?]: Wizard polling + dashboard failed-job toast read chain_resolution_runs WHERE user_id=? (exact match) — never failed_jobs.payload LIKE substring (issue #1 + #8 fix)
+- [Phase ?]: ChainReviewQueue uses view-extends('layouts.app') — same Livewire SupportPageComponents pattern as TransactionDetail; allows Route::get class-as-handler wiring without a separate Blade wrapper
 
 ### Pending Todos
 
@@ -226,7 +230,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-16T18:22:19.506Z
+Last session: 2026-05-16T18:42:52.231Z
 Stopped at: Completed 05-03-PLAN.md
 Resume file: 
 None

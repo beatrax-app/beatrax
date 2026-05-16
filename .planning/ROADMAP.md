@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: ASN Statement Coverage (CAMT.053 + MT940)** - Richer ASN ingestion via SEPA-native CAMT.053 (primary) and MT940 fallback with stable EndToEndId source references
 - [ ] **Phase 3: ICS Cards + Multi-Currency Display** - Import ICS card statements with dual-amount FX preservation, plus multi-currency views and original-currency display
 - [ ] **Phase 4: PayPal Ingestion + Transfer Detection** - PayPal CSV with Transaction ID rollup and optional Reporting API, transfer-pair linking, income-vs-transfer detection
-- [ ] **Phase 5: Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition)** - The killer differentiator: deterministic + fuzzy PayPal→funder links, ASN→ICS bulk-settlement decomposition, full chain drill-down
+- [x] **Phase 5: Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition)** - The killer differentiator: deterministic + fuzzy PayPal→funder links, ASN→ICS bulk-settlement decomposition, full chain drill-down (completed 2026-05-16)
 - [ ] **Phase 6: Email Receipt Ingestion Infrastructure** - Gmail API + Microsoft Graph OAuth, multi-inbox UID-resume scanning, queued background workers, rate-limit-safe backfill
 - [ ] **Phase 7: Email Template Matchers + Categorization Learning** - Per-sender matchers (PayPal, ICS, Google Play), `.eml`/`.mbox` import, per-merchant memory + user-defined categorization rules
 - [ ] **Phase 8: Recurring Detection + Fixed Payments View** - Detect recurring expenses and income at any cadence, normalize to monthly equivalent, surface fixed-payments dashboard with funding-chain icons
@@ -116,7 +116,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ChainLinkInsertHelper + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + chain_resolution_runs lifecycle
   - [x] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery (nullable to_transaction_id handling) + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
   - [x] 05-05-PLAN.md — Wave 4 drawer half: chain drawer Flux flyout (UI-02 + CHN-04) + chain-node partial with explicit @props + TransactionDetail "View chain" button
-  - [ ] 05-05b-PLAN.md — Wave 4 review queue half: /chains/review (CHN-03) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge via View Factory contract + failed-job toast backed by chain_resolution_runs + wizard polling
+  - [x] 05-05b-PLAN.md — Wave 4 review queue half: /chains/review (CHN-03) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge via View Factory contract + failed-job toast backed by chain_resolution_runs + wizard polling
 **UI hint**: yes
 
 ### Phase 6: Email Receipt Ingestion Infrastructure
@@ -152,7 +152,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
   - [x] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
   - [x] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
-  - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
+  - [x] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
   - [ ] 05-05-PLAN.md — Wave 4 UI surfaces: /chains/review (CHN-03) + chain drawer Flux flyout (UI-02 + CHN-04) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge + failed-job toast + wizard polling
 **UI hint**: yes
 
@@ -170,7 +170,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 5 plans
   - [x] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
   - [x] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
-  - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
+  - [x] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
   - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
   - [ ] 05-05-PLAN.md — Wave 4 UI surfaces: /chains/review (CHN-03) + chain drawer Flux flyout (UI-02 + CHN-04) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge + failed-job toast + wizard polling
 **UI hint**: yes
@@ -186,7 +186,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can acknowledge the new price, snooze for a configurable interval, or jump into a what-if scenario that models cancellation of the series, and each decision is recorded with timestamp for auditability
 **Plans**: 5 plans
   - [x] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
-  - [ ] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
+  - [x] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
   - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
   - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
   - [ ] 05-05-PLAN.md — Wave 4 UI surfaces: /chains/review (CHN-03) + chain drawer Flux flyout (UI-02 + CHN-04) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge + failed-job toast + wizard polling
@@ -204,7 +204,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User can apply what-if mutations (cancel a series, add a planned transaction, change an amount) and see the impact without anything being written to the database
   5. User can view a what-if scenario side-by-side with the baseline forecast
 **Plans**: 5 plans
-  - [ ] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
+  - [x] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
   - [ ] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
   - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
   - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
@@ -238,7 +238,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. ASN Statement Coverage (CAMT.053 + MT940) | 5/5 | Ready for verification | - |
 | 3. ICS Cards + Multi-Currency Display | 6/7 | In Progress|  |
 | 4. PayPal Ingestion + Transfer Detection | 5/5 | Ready for verification | - |
-| 5. Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition) | 0/7 | Not started | - |
+| 5. Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition) | 7/7 | Complete   | 2026-05-16 |
 | 6. Email Receipt Ingestion Infrastructure | 0/TBD | Not started | - |
 | 7. Email Template Matchers + Categorization Learning | 0/TBD | Not started | - |
 | 8. Recurring Detection + Fixed Payments View | 0/TBD | Not started | - |
