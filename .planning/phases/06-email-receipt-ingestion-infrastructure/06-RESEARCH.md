@@ -973,31 +973,36 @@ final class InstallLaunchdCommand extends Command
 
 **If this table is non-empty, the planner should confirm each assumption with the user during discuss-phase or the plan-check pass.**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Which redirect URI scheme does the planner pick (Pitfall 2)?**
    - What we know: `https://diederik.test/...` is invalid. `http://127.0.0.1:PORT/...` works. `http://localhost:PORT/...` works with firewall caveat.
    - What's unclear: Does the user want Herd's `https://diederik.test` to remain the only entry point (forcing option 3 — ephemeral loopback server), or accept a second loopback URL bound to a fixed port (option 1)?
    - Recommendation: Option 1 with a fixed port (e.g. 8765) bound at app boot, used ONLY for OAuth callbacks. PROJECT.md amendment in Wave 0.
+   - RESOLVED: `http://127.0.0.1:PORT/oauth/callback/{provider}` (RFC 8252 loopback IP scheme). Port is read from `parse_url(config('app.url'), PHP_URL_PORT)` with fallback 8000. PROJECT.md amendment lives in Plan 03 Task 1 per CONTEXT.md D-114 (amended). Loopback URI computed server-side in both OAuthConnectController and OAuthCallbackController to ensure exact match.
 
 2. **Does the planner want to add a `Crypt::encrypt` layer on top of chmod-600 JSON (D-138)?**
    - What we know: chmod-600 + atomic rotation satisfies PLT-03 baseline.
    - What's unclear: Defense-in-depth vs simpler operator mental model.
    - Recommendation: Skip in Phase 6; revisit in Phase 11 ("Operational Hardening") when macOS Keychain integration is on the table anyway.
+   - RESOLVED: DEFERRED to a future Keychain / Phase 11 task. chmod-600 alone satisfies PLT-03 on a single-user macOS install; defense-in-depth with `Crypt::encrypt` is not added in Phase 6.
 
 3. **Where exactly does `IncrementalScanJob` get dispatched from (`Schedule::job(...)` or `Schedule::call(fn() => ...)`)?**
    - What we know: Phase 5 `ResolveChainLinksJob` is dispatched from `ConfirmImport` (event-driven), NOT from `Schedule`.
    - What's unclear: The "hourly" cadence (D-137) is a `Schedule` registration in `app/Console/Kernel.php` — but the job class is in `Modules/EmailScan/Internal/Jobs/`. The pattern hasn't been used in the codebase yet.
    - Recommendation: `Schedule::call(function (Container $app) { foreach ($app->make(InboxQuery::class)->forAllUsers() as $inbox) { $app->make(IncrementalScanJob::class, ['inboxId' => $inbox->id])->dispatch(); } })->hourly()->withoutOverlapping(30);`. The `withoutOverlapping(30)` is belt-and-braces atop `ShouldBeUniqueUntilProcessing`.
+   - RESOLVED: `Schedule::job(new IncrementalScanJob(...))->hourly()->withoutOverlapping()` per Plan 07 Task 3 (routes/console.php). Plan 07 uses `Schedule::call(...)` because the scheduler closure must enumerate ALL inboxes at tick time and dispatch one job per inbox — `Schedule::job` only registers a single static job. The `Schedule::call` closure resolves DatabaseManager + Dispatcher via DI and dispatches `IncrementalScanJob($inboxId)` per row. `.withoutOverlapping(30)` is the belt-and-braces atop `ShouldBeUniqueUntilProcessing`.
 
 4. **How should the OAuth-client wizard handle the GCP "OAuth consent screen" → "Publish app" step copy (Pitfall 1)?**
    - What we know: Without publishing, refresh tokens expire in 7 days.
    - What's unclear: How explicit should the wizard be? Most users don't know the consequence.
    - Recommendation: Mandatory checkbox in the wizard: "I have set the OAuth consent screen status to 'In production' (refresh tokens won't expire after 7 days)." Submit is disabled until checked.
+   - RESOLVED: Locked verbatim in UI-SPEC.md — OAuth-client wizard, Google variant, Step 4. Mandatory checkbox bound to Livewire property `$publishedConfirmed`; Plan 03's OAuthClientWizardModal::submit() rejects submission when `publishedConfirmed === false`. Microsoft variant has no equivalent step (Azure has no "Publish app" gate).
 
 5. **Does the wizard verify the redirect_uri before saving?**
    - What we know: User can paste a different redirect_uri into Google Console than what diederik will actually use.
    - Recommendation: After wizard submit, immediately trigger the OAuth dance. If `redirect_uri_mismatch` returns, the user is back at the wizard with a clear error. Don't try to verify proactively — Google's APIs don't expose that.
+   - RESOLVED: Trust user paste. No proactive verification step. The OAuth flow itself surfaces a mismatch as a `redirect_uri_mismatch` error, which OAuthCallbackController catches and renders via its flash-message handler — the user lands back on /inboxes with a clear error string, can re-open the wizard, fix the redirect URI in Google/Azure Console, and retry.
 
 ## Environment Availability
 
@@ -1188,7 +1193,7 @@ final class InstallLaunchdCommand extends Command
 | Validation Architecture | MEDIUM | Exhaustive automated-test map; SC#3 + SC#4 require one manual smoke against real Gmail/Graph at phase-close |
 | OAuth flow mechanics | HIGH | Both providers' redirect-URI + token-refresh + cursor-expiry behaviour cross-checked against official docs |
 
-### Open Questions
+### Open Questions (RESOLVED)
 
 Five open questions captured in §"Open Questions" — the load-bearing pair is (1) which redirect URI scheme the planner picks (Pitfall 2 / Open Q1) and (2) wizard copy for the "push to production" step (Pitfall 1 / Open Q4). Both should be resolved before any wizard task lands.
 

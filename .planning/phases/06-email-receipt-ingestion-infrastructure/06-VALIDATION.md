@@ -40,7 +40,7 @@ created: 2026-05-16
 | Plan | Wave | Requirement | Secure Behavior | Test Type | Automated Command | File Exists |
 |------|------|-------------|-----------------|-----------|-------------------|-------------|
 | 01 (Wave 0) | 0 | — | Module manifest + autoload registered | contracts | `pest tests/Contracts/ModuleManifestTest.php` | ❌ W0 |
-| 01 (Wave 0) | 0 | PLT-05 | Composer audit asserts no `ext-imap` / `webklex/*` | contracts | `pest tests/Contracts/PltExtImapAuditTest.php` | ✅ extend |
+| 01 (Wave 0) | 0 | PLT-05 | Composer audit asserts no `ext-imap` / `webklex/*` | contracts | `pest tests/Contracts/NoExtImapTest.php` | ✅ extend |
 | 01 (Wave 0) | 0 | — | `BoundaryArchTest::noTransactionWritesFromEmailScan` invariant | contracts | `pest tests/Contracts/BoundaryArchTest.php` | ✅ extend |
 | 01 (Wave 0) | 0 | — | `Modules\EmailScan\Internal` only used inside `Modules\EmailScan` | contracts | `pest tests/Contracts/BoundaryArchTest.php` | ✅ extend |
 | 01 (Wave 0) | 0 | — | No facade calls in `Modules/EmailScan/` (Cache::driver('redis') carve-out only) | contracts | `pest tests/Contracts/BoundaryArchTest.php` | ✅ extend |
@@ -89,7 +89,7 @@ created: 2026-05-16
 - [ ] `Modules/EmailScan/tests/fixtures/eml/{paypal,ics,googleplay}/*.eml` — synthesised anonymised fixtures (matches Phase 5 D-107 + Phase 4 D-58 anonymisation discipline)
 - [ ] `Modules/EmailScan/Internal/Clients/FakeGmailApiClient.php` + `FakeGraphApiClient.php` — fixture-driven fakes (D-140)
 - [ ] `tests/Contracts/BoundaryArchTest.php` extension — `noTransactionWritesFromEmailScan` rule, plus `Modules\EmailScan\Internal` containment, plus `Cache::driver` carve-out for the three new jobs
-- [ ] `tests/Contracts/PltExtImapAuditTest.php` extension — adds the `composer.lock` `webklex` check on top of the existing `ext-imap` lint
+- [ ] `tests/Contracts/NoExtImapTest.php` extension — adds the `composer.lock` `webklex` check on top of the existing `ext-imap` lint
 - [ ] Failing scaffolds for every test file listed in the per-task verification map (RED baseline matches Phase 1-05 / Phase 5-01b precedent)
 
 ---
