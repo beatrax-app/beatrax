@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
-use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Dto\ChainLinkRow;
 use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
