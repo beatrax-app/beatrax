@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 05-01-PLAN.md code tasks; checkpoint Task 3 awaiting operator verification of Docker Redis + Horizon boot
-last_updated: "2026-05-16T15:50:36.829Z"
+last_updated: "2026-05-16T16:32:57.673Z"
 last_activity: 2026-05-16
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 31
-  completed_plans: 25
-  percent: 81
+  completed_plans: 26
+  percent: 84
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 05 (chain-resolution-paypal-funding-ics-bulk-ideal-decomposition) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-05-16
 
-Progress: [████████░░] 81%
+Progress: [████████░░] 84%
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress: [████████░░] 81%
 | Phase 04 P04 | ~7min | 2 tasks | 5 files |
 | Phase 04 P05 | ~2min | 1 tasks | 3 files |
 | Phase 05 P01 | 18min | 2 tasks | 13 files |
+| Phase 05 P01b | 14min | 3 tasks tasks | 33 files files |
 
 ## Accumulated Context
 
@@ -169,6 +170,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 05]: Plan 01: laravel/horizon ^5.46 + predis/predis ^3.4 installed; container-resolved Gate contract inside HorizonServiceProvider::gate() avoids the larastan-strict noFacadeRule trip
 - [Phase ?]: [Phase 05]: Plan 01: Stack-policy flip lives in .planning/research/STACK.md (canonical) + a pointer in .planning/PROJECT.md; Horizon removed from 'What NOT to Use' and reworded as 'Yes — recommended'; Sail/Docker row keeps its trap warning with an explicit Redis-only carve-out
 - [Phase ?]: [Phase 05]: Plan 01: GSD codes (D-101, FND-01, etc.) stripped from runtime code/config comments; rationale described in plain technical language so the codebase stays agnostic from the planning system
+- [Phase ?]: PDF font encoding: Type1 Helvetica with explicit /Encoding /WinAnsiEncoding directive so pdftotext renders € (required by IcsPdfAdapter's parseFourColumnSummary regex)
+- [Phase ?]: Issue #9 fix lock: explicit skip predicate pattern for tests with external-service preconditions; CI grep gate prevents regression to swallow-on-throw alternative
+- [Phase ?]: Public-surface promotion convention: Modules/<Name>/Public/Services/<Name>Lookup singleton-bound in <Name>ServiceProvider::register() — first applied to PairLookup
 
 ### Pending Todos
 
@@ -200,7 +204,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-16T15:50:36.824Z
+Last session: 2026-05-16T16:32:32.961Z
 Stopped at: Completed 05-01-PLAN.md code tasks; checkpoint Task 3 awaiting operator verification of Docker Redis + Horizon boot
 Resume file: 
-.planning/phases/05-chain-resolution-paypal-funding-ics-bulk-ideal-decomposition/05-01-SUMMARY.md
+None

@@ -111,7 +111,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User sees the next forecasted ICS settlement amount before paying it, computed from cleared ICS lines since the last settlement
 **Plans**: 7 plans
   - [x] 05-01-PLAN.md — Wave 0 infrastructure half: composer (Horizon + Predis) + Horizon install + failed_jobs migration + Redis Docker setup + PROJECT.md/README amendment + Operator recovery section
-  - [ ] 05-01b-PLAN.md — Wave 0 module + fixture half: Chains module skeleton + synthesised fixture trio + Transfers PairLookup promotion + BoundaryArchTest extensions + HorizonBootsTest with explicit skip predicate
+  - [x] 05-01b-PLAN.md — Wave 0 module + fixture half: Chains module skeleton + synthesised fixture trio + Transfers PairLookup promotion + BoundaryArchTest extensions + HorizonBootsTest with explicit skip predicate
   - [ ] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits + chain_resolution_runs migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
   - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ChainLinkInsertHelper + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + chain_resolution_runs lifecycle
   - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery (nullable to_transaction_id handling) + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
