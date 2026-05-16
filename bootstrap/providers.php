@@ -6,6 +6,7 @@ use App\Providers\HorizonServiceProvider;
 use Modules\Categorization\Providers\CategorizationServiceProvider;
 use Modules\Chains\Providers\ChainsServiceProvider;
 use Modules\Core\Providers\CoreServiceProvider;
+use Modules\EmailScan\Providers\EmailScanServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
@@ -19,5 +20,6 @@ return [
     ImportServiceProvider::class,
     CategorizationServiceProvider::class,
     ChainsServiceProvider::class,
+    EmailScanServiceProvider::class,
     TransfersServiceProvider::class,
 ];
