@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Providers\HorizonServiceProvider;
 use Modules\Categorization\Providers\CategorizationServiceProvider;
+use Modules\Chains\Providers\ChainsServiceProvider;
 use Modules\Core\Providers\CoreServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
@@ -17,5 +18,6 @@ return [
     IngestionServiceProvider::class,
     ImportServiceProvider::class,
     CategorizationServiceProvider::class,
+    ChainsServiceProvider::class,
     TransfersServiceProvider::class,
 ];

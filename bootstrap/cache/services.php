@@ -43,7 +43,8 @@
     39 => 'Modules\\Ingestion\\Providers\\IngestionServiceProvider',
     40 => 'Modules\\Import\\Providers\\ImportServiceProvider',
     41 => 'Modules\\Categorization\\Providers\\CategorizationServiceProvider',
-    42 => 'Modules\\Transfers\\Providers\\TransfersServiceProvider',
+    42 => 'Modules\\Chains\\Providers\\ChainsServiceProvider',
+    43 => 'Modules\\Transfers\\Providers\\TransfersServiceProvider',
   ),
   'eager' => 
   array (
@@ -76,7 +77,8 @@
     26 => 'Modules\\Ingestion\\Providers\\IngestionServiceProvider',
     27 => 'Modules\\Import\\Providers\\ImportServiceProvider',
     28 => 'Modules\\Categorization\\Providers\\CategorizationServiceProvider',
-    29 => 'Modules\\Transfers\\Providers\\TransfersServiceProvider',
+    29 => 'Modules\\Chains\\Providers\\ChainsServiceProvider',
+    30 => 'Modules\\Transfers\\Providers\\TransfersServiceProvider',
   ),
   'deferred' => 
   array (
