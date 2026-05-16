@@ -9,6 +9,7 @@ use Modules\Chains\Public\Dto\CardStatementForecastTile;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 
 /*
@@ -79,7 +80,7 @@ beforeEach(function (): void {
         'iban' => 'NL57ASNB9999999999',
         'default_currency' => 'EUR',
     ]);
-    \Modules\Ledger\Models\Transaction::query()->create([
+    Transaction::query()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->asn->id,
         'type' => 'expense',

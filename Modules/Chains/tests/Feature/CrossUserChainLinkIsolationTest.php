@@ -6,6 +6,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Chains\Internal\Http\Livewire\ChainReviewQueue;
+use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Actions\ConfirmChainLink;
+use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -145,17 +148,42 @@ beforeEach(function (): void {
 });
 
 it('cross-user 404 on /chains/review confirm — userA cannot confirm userB\'s chain_link', function (): void {
-    expect(fn () => Livewire::actingAs($this->userA)
-        ->test(ChainReviewQueue::class)
-        ->call('confirm', $this->userBCandidateId))
+    // Livewire wraps action exceptions in its own boundary; we exercise
+    // the underlying Public action directly (same code path the SFC
+    // delegates to) to assert the cross-user 404 contract. Mirrors
+    // ConfirmChainLinkTest's cross-user assertion shape.
+    /** @var ConfirmChainLink $confirm */
+    $confirm = $this->app->make(ConfirmChainLink::class);
+    expect(fn () => ($confirm)($this->userBCandidateId, $this->userA))
         ->toThrow(NotFoundHttpException::class);
+
+    // Also verify the chain_link wasn't mutated.
+    $link = ChainLink::query()->find($this->userBCandidateId);
+    expect($link)->not->toBeNull();
+    expect($link->state)->toBe('candidate');
 });
 
 it('cross-user 404 on /chains/review reject — userA cannot reject userB\'s chain_link', function (): void {
-    expect(fn () => Livewire::actingAs($this->userA)
-        ->test(ChainReviewQueue::class)
-        ->call('reject', $this->userBCandidateId))
+    /** @var RejectChainLink $reject */
+    $reject = $this->app->make(RejectChainLink::class);
+    expect(fn () => ($reject)($this->userBCandidateId, $this->userA))
         ->toThrow(NotFoundHttpException::class);
+
+    $link = ChainLink::query()->find($this->userBCandidateId);
+    expect($link)->not->toBeNull();
+    expect($link->state)->toBe('candidate');
+});
+
+it('cross-user 404 via Livewire harness — confirm raises Livewire 404 response status', function (): void {
+    // Livewire's testing harness catches the NotFoundHttpException at
+    // the framework boundary and surfaces it as a 404 status on the
+    // wire response. We assert the response status path explicitly so
+    // the contract is testable through the SFC's action dispatcher
+    // too, not only through the Public action class.
+    Livewire::actingAs($this->userA)
+        ->test(ChainReviewQueue::class)
+        ->call('confirm', $this->userBCandidateId)
+        ->assertStatus(404);
 });
 
 it('GET /chains/review for userA renders only userA candidates — never any of userB\'s', function (): void {
@@ -175,7 +203,7 @@ it('top-nav "Review chains" badge for userA shows userA\'s open-candidate count 
 });
 
 it('top-nav "Review chains" badge hides entirely when openCandidateCount === 0', function (): void {
-    \Modules\Chains\Models\ChainLink::query()->where('user_id', $this->userA->id)->delete();
+    ChainLink::query()->where('user_id', $this->userA->id)->delete();
 
     $this->actingAs($this->userA)
         ->get('/')

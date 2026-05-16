@@ -39,6 +39,24 @@
             @endif
         </a>
 
+        {{-- "Review chains" — open candidate count from ChainLinkQuery
+             injected via the ChainsServiceProvider View Factory
+             composer (issue #12 fix: View Factory contract resolved
+             via $this->app->make(), never the view() global helper).
+             Badge hides when count = 0; caps at "99+" when > 99. --}}
+        <a
+            href="{{ route('chains.review') }}"
+            class="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm {{ $isActive('/chains/review') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+        >
+            Review chains
+            @if (($chainOpenCandidateCount ?? 0) > 0)
+                <span
+                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white"
+                    style="font-variant-numeric: tabular-nums;"
+                >{{ $chainOpenCandidateCount > 99 ? '99+' : $chainOpenCandidateCount }}</span>
+            @endif
+        </a>
+
         <a
             href="{{ route('settings') }}"
             class="inline-flex items-center rounded-md px-3 py-1.5 text-sm {{ $isActive('/settings') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
