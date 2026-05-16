@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Internal\Pipeline\PreviewCache;
@@ -31,9 +32,19 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
  * land enrichments and an enrichment failure cannot land inserts —
  * confirm is atomic across both halves.
  *
+ * AFTER the transaction commits (D-103 / RESEARCH Pitfall 3) the action
+ * inserts a `pending` chain_resolution_runs row and dispatches
+ * `ResolveChainLinksJob` so the Phase 5 resolver pass runs against the
+ * freshly-committed state. The dispatch is gated on
+ * `$result->inserted > 0 || $result->enriched > 0` — re-confirms and
+ * zero-row previews short-circuit. Dispatching INSIDE the closure
+ * would let the queue worker pick up the job before SQLite commits,
+ * letting it read stale state.
+ *
  * Re-confirming an already-confirmed run returns a zero-action result
  * built from the persisted counts, so a refresh/back-button in the
- * wizard cannot double-import or double-enrich.
+ * wizard cannot double-import or double-enrich. The early-return
+ * path skips the chain-resolver dispatch entirely.
  */
 final class ConfirmImport implements ConfirmsImports
 {
@@ -43,6 +54,7 @@ final class ConfirmImport implements ConfirmsImports
         private readonly PreviewCache $cache,
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
+        private readonly DispatchesChainResolution $chainDispatcher,
     ) {}
 
     public function __invoke(int $importRunId, User $user): ImportConfirmResult
@@ -135,6 +147,37 @@ final class ConfirmImport implements ConfirmsImports
         });
 
         $this->cache->forget($importRunId);
+
+        // D-103 — dispatch the chain resolver post-commit. NEVER
+        // inside the transaction closure (RESEARCH Pitfall 3): the
+        // Redis queue driver does NOT share the SQLite transaction
+        // frame, so an in-transaction dispatch would let the worker
+        // see stale state.
+        //
+        // Short-circuit when nothing changed — re-confirming an
+        // idempotent file or a zero-row preview produces no work for
+        // the resolver. The `inserted` and `enriched` counts come
+        // from the recorder + enrichment writers above, so a true
+        // no-op confirm (every row already in the ledger) sidesteps
+        // the queue dispatch entirely.
+        //
+        // The pending row is INSERTED before the bus dispatch so the
+        // wizard's wire:poll has a row to display on its first tick.
+        // The job's handle() then transitions a separate row to
+        // `running` and the failed-listener consumes the running row
+        // on exhaust — the pending row stays as the user-visible
+        // "Resolving chains…" marker until the wizard's next tick
+        // observes the running row.
+        if ($result->inserted > 0 || $result->enriched > 0) {
+            $now = $this->clock->now()->toDateTimeString();
+            $this->db->connection()->table('chain_resolution_runs')->insert([
+                'user_id' => $user->id,
+                'status' => 'pending',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $this->chainDispatcher->dispatchForUser($user->id);
+        }
 
         return $result;
     }
