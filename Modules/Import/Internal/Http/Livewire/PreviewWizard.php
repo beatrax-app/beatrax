@@ -74,9 +74,84 @@ final class PreviewWizard extends Component
 
     public bool $previewExpired = false;
 
+    /**
+     * Chain-resolution polling state (D-103 / D-105). The wizard's
+     * `wire:poll.2s="refreshChainResolutionStatus"` populates these
+     * properties from the `chain_resolution_runs` audit table —
+     * filtered by EXACT `user_id` match.
+     *
+     * Issue #1 + #8 lock: NEVER read `failed_jobs.payload` with a
+     * substring `LIKE '%userId:N%'` pattern — user_id=1 would
+     * falsely match user_id=11, leaking cross-user state. The
+     * audit-table read uses the column directly, eliminating the
+     * substring-attack surface entirely.
+     *
+     * State machine: null (pre-mount) → 'pending' (job queued) →
+     * 'running' (worker handle() entered) → 'complete' (success;
+     * auto-navigates to imports.results) / 'failed' (final retry
+     * exhausted; user dismisses or opens Horizon).
+     */
+    public ?string $chainResolutionStatus = null;
+
+    public int $chainResolutionLinkedCount = 0;
+
+    public ?string $chainResolutionError = null;
+
     public function mount(int $id): void
     {
         $this->importRunId = $id;
+    }
+
+    /**
+     * `wire:poll.2s` target. Reads the latest `chain_resolution_runs`
+     * row for the current user (ORDER BY id DESC LIMIT 1) and surfaces
+     * its status / linked_count / last_error to the wizard view.
+     *
+     * Issue #1 + #8 fix: this method is the canonical safe path.
+     * The forbidden substring shape (`failed_jobs.payload LIKE
+     * '%userId:N%'`) is documented in this method's docblock so a
+     * future refactor that re-introduces it trips the grep gate in
+     * WizardChainResolutionStatusTest.
+     *
+     * On status === 'complete', the method redirects the user to
+     * `imports.results` so the wizard auto-advances when the resolver
+     * is done. The Livewire `redirect()` call halts further property
+     * updates in the same tick.
+     */
+    public function refreshChainResolutionStatus(
+        DatabaseManager $db,
+        CurrentUser $currentUser,
+        UrlGenerator $urls,
+    ): void {
+        $user = $currentUser->user();
+
+        // Exact user_id match — never LIKE substring (issue #1 + #8).
+        $row = $db->connection()->table('chain_resolution_runs')
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->limit(1)
+            ->first(['status', 'linked_count', 'last_error']);
+
+        if ($row === null) {
+            $this->chainResolutionStatus = null;
+            $this->chainResolutionLinkedCount = 0;
+            $this->chainResolutionError = null;
+
+            return;
+        }
+
+        $status = is_scalar($row->status) ? (string) $row->status : '';
+        $this->chainResolutionStatus = $status === '' ? null : $status;
+        $this->chainResolutionLinkedCount = is_numeric($row->linked_count) ? (int) $row->linked_count : 0;
+        $lastError = is_string($row->last_error) ? $row->last_error : null;
+        $this->chainResolutionError = $lastError === null ? null : substr($lastError, 0, 200);
+
+        if ($this->chainResolutionStatus === 'complete' && $this->importRunId > 0) {
+            $this->redirect(
+                $urls->route('imports.results', ['id' => $this->importRunId]),
+                navigate: false,
+            );
+        }
     }
 
     public function nameAccount(

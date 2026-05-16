@@ -177,4 +177,40 @@
             </div>
         @endif
     @endif
+
+    {{-- Chain-resolution polling surface (D-103 / D-105).
+
+         Polls the `chain_resolution_runs` audit table via
+         `wire:poll.2s="refreshChainResolutionStatus"`. The auto-navigate
+         on status='complete' fires inside `refreshChainResolutionStatus`
+         itself; the rendered Blade body covers pending / running /
+         failed states only.
+
+         Issue #1 + #8 lock: the polling target queries
+         `chain_resolution_runs` by exact user_id — NEVER
+         `failed_jobs.payload LIKE '%userId:N%'` (which leaks
+         cross-user state via id-prefix substring matches). --}}
+    @if ($chainResolutionStatus !== null && $chainResolutionStatus !== 'complete')
+        <section
+            wire:poll.2s="refreshChainResolutionStatus"
+            class="rounded-md border border-slate-200 bg-white p-6"
+            aria-live="polite"
+        >
+            <h3 class="text-base font-semibold text-slate-900">Resolving chains…</h3>
+            <p class="mt-2 text-sm text-slate-500">
+                @if ($chainResolutionStatus === 'pending')
+                    Queued. The chain resolver will start shortly.
+                @elseif ($chainResolutionStatus === 'running')
+                    Linking funding chains and decomposing statement settlements.
+                @elseif ($chainResolutionStatus === 'failed')
+                    Chain resolution failed: {{ $chainResolutionError ?? 'an unknown error occurred' }}.
+                    <a href="/horizon/failed" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700">Open Horizon</a>
+                    to retry or inspect.
+                @endif
+            </p>
+            @if ($chainResolutionStatus !== 'failed')
+                <span aria-hidden="true" class="mt-3 inline-block h-2 w-2 animate-pulse rounded-full bg-slate-400"></span>
+            @endif
+        </section>
+    @endif
 </div>
