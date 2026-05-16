@@ -1,0 +1,29 @@
+Return-Path: <service@paypal.com>
+Received: from mx.paypal.com (mx.paypal.com [203.0.113.10])
+	by inbound.example.test (Postfix) with ESMTPS id 4PaY9Z3hHkz3wXyR
+	for <local-user@example.test>; Mon, 11 May 2026 09:14:22 +0000 (UTC)
+From: "PayPal" <service@paypal.com>
+To: "Synthetic User" <local-user@example.test>
+Subject: =?UTF-8?Q?Bedankt_voor_je_betaling_aan_Synthetic_Merchant_BV?=
+Date: Mon, 11 May 2026 09:14:21 +0000
+Message-ID: <synthetic-paypal-20260511091421@paypal.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hallo Synthetic User,
+
+Bedankt voor je betaling. Hier zijn de details van je transactie.
+
+Betalingsgegevens
+- Transactiebedrag: EUR 12,34
+- Verkoper: Synthetic Merchant BV
+- Transactienummer: 0SYNTHETIC1234567A
+- Betaaldatum: 11 mei 2026
+- Financieringsbron: synthetic ASN bank account (last4 0000)
+
+Deze ontvangstbevestiging is gegenereerd door een geautomatiseerd systeem; neem
+contact op met de verkoper voor vragen over de bestelling.
+
+PayPal (Europe) S.a r.l. et Cie, S.C.A.
+Synthetic anonymised footer omitted.

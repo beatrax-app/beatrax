@@ -1,0 +1,14 @@
+{
+    "error": {
+        "code": 404,
+        "message": "Requested entity was not found.",
+        "errors": [
+            {
+                "domain": "global",
+                "reason": "notFound",
+                "message": "Requested entity was not found."
+            }
+        ],
+        "status": "NOT_FOUND"
+    }
+}
