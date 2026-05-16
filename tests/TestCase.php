@@ -30,6 +30,33 @@ abstract class TestCase extends BaseTestCase
     protected ?User $fixtureUser = null;
 
     /**
+     * Redirect the `redis` cache store to the array driver during
+     * tests so any `Cache::driver('redis')` call (e.g. inside
+     * `ResolveChainLinksJob::uniqueVia()`) returns an in-memory
+     * Repository instead of trying to open a TCP socket to a Redis
+     * server that the test harness does not provision. Without this
+     * override, every `ConfirmImport` feature test would fail with
+     * `Connection refused [tcp://127.0.0.1:6379]` because Laravel's
+     * UniqueLock machinery calls `$job->uniqueVia()` unconditionally
+     * during dispatch — including for the `sync` queue driver.
+     *
+     * Tests that explicitly need a real Redis (e.g.
+     * `HorizonBootsTest`) check the connection up front and skip
+     * when Redis is not reachable; this override does not interfere
+     * with those because they ignore the cache store and talk to
+     * Redis directly via the predis client.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app['config']->set('cache.stores.redis', [
+            'driver' => 'array',
+            'serialize' => false,
+        ]);
+    }
+
+    /**
      * Seeds the canonical fixture User + ASN Account + ICS Account +
      * PayPal Account so the contract tests and the per-module
      * *ImportTest files can resolve their respective own-IBANs without
