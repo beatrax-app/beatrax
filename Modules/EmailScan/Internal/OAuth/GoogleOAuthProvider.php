@@ -35,8 +35,14 @@ use Throwable;
  * because the redirect URI is computed by the caller and may differ
  * across reconnect flows. The chmod-600 read is cheap enough (single
  * file, ~1KB) that the per-call cost is not worth memoising.
+ *
+ * The class is non-final so the feature tests can substitute a stub
+ * subclass via $this->app->instance(...). The contract is enforced
+ * by the singleton binding + the constructor signature, not by the
+ * final modifier — same pattern OAuthSecretsRepository uses for its
+ * performRename() failure-injection hook.
  */
-final class GoogleOAuthProvider
+class GoogleOAuthProvider
 {
     private const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 
