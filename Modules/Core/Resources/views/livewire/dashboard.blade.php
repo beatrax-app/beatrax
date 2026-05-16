@@ -20,6 +20,7 @@
     x-on:keydown.window.left="if (!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) $wire.previousPeriod()"
     x-on:keydown.window.right="if (!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) $wire.nextPeriod()"
     x-on:keydown.window.t="if (!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) $wire.today()"
+    wire:poll.5s="refreshFailedChainResolution"
 >
     <header class="flex items-start justify-between gap-6">
         <div class="space-y-1">
@@ -46,6 +47,27 @@
             >&rsaquo;</button>
         </div>
     </header>
+
+    {{-- "Next ICS settlement" tile (D-99 / D-100, CHN-06).
+
+         Renders ABOVE the existing in/out/net KPI tile row. Hides
+         entirely when `$nextSettlement` is null — no "—" placeholder
+         (D-99). Border / radius / padding match the existing tile
+         chrome verbatim. Tile amount uses Display 32px semibold
+         tabular-nums in slate-900 (never emerald — emerald is
+         reserved for net-positive KPIs and an outstanding settlement
+         balance is never positive-good per Phase 3 D-46). --}}
+    @if (isset($nextSettlement) && $nextSettlement !== null)
+        <section aria-label="Next ICS settlement">
+            <div class="rounded-lg border border-slate-200 bg-white p-6">
+                <p class="text-base font-semibold text-slate-900">Next ICS settlement</p>
+                <p class="mt-2 text-3xl font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
+                    {{ $nextSettlement->amount->format('nl_NL') }}
+                </p>
+                <p class="mt-1 text-xs text-slate-500">due ~{{ $nextSettlement->dueDate->format('d M') }}</p>
+            </div>
+        </section>
+    @endif
 
     {{-- KPI tiles: the primary focal point of the dashboard.
 
@@ -184,4 +206,33 @@
             </div>
         @endif
     </section>
+
+    {{-- Failed-job toast (D-103 / issue #1 + #8).
+
+         Persistent toast (no auto-dismiss) backed by the
+         `chain_resolution_runs` audit table filtered by exact
+         `user_id` match. Replaces an earlier draft's substring
+         `payload LIKE '%userId:N%'` query against `failed_jobs`,
+         which leaked across users with id prefixes like 1 vs 11.
+
+         Surface order: above the dashboard content, fixed bottom-right
+         (`z-50`), with a 2px rose-600 left stripe. The toast hides
+         when the audit row is cleared (e.g. user retried in
+         `/horizon/failed`). --}}
+    @if ($failedChainResolutionExists)
+        <div
+            role="status"
+            aria-live="polite"
+            class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md"
+        >
+            <p class="text-sm font-semibold text-slate-900">Chain resolution failed.</p>
+            <p class="mt-1 text-xs text-slate-500">
+                One or more chain-resolution jobs hit an error. Open Horizon to retry or inspect.
+            </p>
+            <a
+                href="/horizon/failed"
+                class="mt-2 inline-block text-xs font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700"
+            >Open Horizon</a>
+        </div>
+    @endif
 </div>

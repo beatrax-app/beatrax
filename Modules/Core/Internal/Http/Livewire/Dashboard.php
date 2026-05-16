@@ -7,6 +7,7 @@ namespace Modules\Core\Internal\Http\Livewire;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Dto\Period;
@@ -50,6 +51,19 @@ final class Dashboard extends Component
      */
     public ?string $periodStartStr = null;
 
+    /**
+     * Whether the dashboard surfaces the persistent failed-job toast.
+     *
+     * Set by `refreshFailedChainResolution()` — populated on initial
+     * mount via `render()` and then refreshed via `wire:poll.5s`. The
+     * source of truth is the `chain_resolution_runs` audit table
+     * filtered by exact `user_id` match (issue #1 + #8 fix — replaces
+     * an earlier draft's substring `payload LIKE '%userId:N%'` query
+     * against `failed_jobs`, which leaks across users with id
+     * prefixes like 1 vs 11).
+     */
+    public bool $failedChainResolutionExists = false;
+
     public function previousPeriod(PeriodQuery $periods): void
     {
         $current = $this->resolvePeriod($periods);
@@ -67,10 +81,33 @@ final class Dashboard extends Component
         $this->periodStartStr = null;
     }
 
+    /**
+     * `wire:poll.5s` target on the dashboard Blade. Reads the
+     * `chain_resolution_runs` audit table filtered by exact
+     * `user_id` match. Never reads `failed_jobs.payload` with a
+     * substring `LIKE` (issue #1 + #8 lock — prevents the user_id=1
+     * vs user_id=11 cross-user false-positive). Latest "failed" row
+     * for this user surfaces the persistent toast (D-103); when the
+     * row is cleared from the audit table (e.g. user retried via
+     * `/horizon/failed`) the toast hides on the next poll.
+     */
+    public function refreshFailedChainResolution(
+        DatabaseManager $db,
+        CurrentUser $currentUser,
+    ): void {
+        $user = $currentUser->user();
+        $this->failedChainResolutionExists = $db->connection()
+            ->table('chain_resolution_runs')
+            ->where('user_id', $user->id)
+            ->where('status', 'failed')
+            ->exists();
+    }
+
     public function render(
         CurrentUser $currentUser,
         PeriodQuery $periods,
         ThisPeriodAtAGlanceQuery $glance,
+        DatabaseManager $db,
         ViewFactory $views,
     ): View {
         $user = $currentUser->user();
@@ -87,9 +124,23 @@ final class Dashboard extends Component
             $tiles = $glance->forByCurrency($user, $period);
         }
 
+        // D-99 / D-100 — render the "Next ICS settlement" tile when an
+        // open card_statement exists; the Blade hides the tile entirely
+        // when this is null (no "—" placeholder).
+        $nextSettlement = $glance->nextIcsSettlement($user);
+
+        // Populate on initial mount so the toast surfaces immediately
+        // without waiting for the first wire:poll tick.
+        $this->failedChainResolutionExists = $db->connection()
+            ->table('chain_resolution_runs')
+            ->where('user_id', $user->id)
+            ->where('status', 'failed')
+            ->exists();
+
         return $views->make('core::livewire.dashboard', [
             'summary' => $summary,
             'tiles' => $tiles,
+            'nextSettlement' => $nextSettlement,
         ]);
     }
 

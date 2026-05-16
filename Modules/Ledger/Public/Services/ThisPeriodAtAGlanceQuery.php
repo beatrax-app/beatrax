@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Services;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Public\Dto\CardStatementForecastTile;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\PerCurrencyTile;
@@ -177,6 +179,60 @@ final class ThisPeriodAtAGlanceQuery
                 net: Money::ofMinor(self::toInt($row->net_minor), $currency),
             );
         })->all());
+    }
+
+    /**
+     * Dashboard "Next ICS settlement" tile (D-99 / D-100, CHN-06).
+     *
+     * Returns the most-recent `open` or `partially_settled`
+     * `card_statements` row joined to an `ics_card` account, mapped
+     * to a `CardStatementForecastTile` DTO:
+     *
+     *   - amount   = open_balance_minor (D-100; the open balance IS
+     *                the forecast — no clever cadence inference in
+     *                Phase 5)
+     *   - dueDate  = period_end + 5 calendar days (D-100; constant
+     *                forecast lag; user-configurable lag deferred)
+     *
+     * Returns null when no open / partially_settled statement exists,
+     * which the dashboard Blade reads as "hide the tile entirely"
+     * (D-99 — no "—" placeholder).
+     *
+     * Cross-user safety: the WHERE filters on
+     * `card_statements.user_id = $user->id` BEFORE any account join,
+     * so a forged user_id cannot leak another user's statement.
+     */
+    public function nextIcsSettlement(User $user): ?CardStatementForecastTile
+    {
+        $row = $this->db->connection()
+            ->table('card_statements')
+            ->join('accounts', 'accounts.id', '=', 'card_statements.account_id')
+            ->where('card_statements.user_id', $user->id)
+            ->where('accounts.kind', 'ics_card')
+            ->whereIn('card_statements.state', ['open', 'partially_settled'])
+            ->orderByDesc('card_statements.period_end')
+            ->orderByDesc('card_statements.id')
+            ->select(
+                'card_statements.id as id',
+                'card_statements.open_balance_minor as open_balance_minor',
+                'card_statements.period_end as period_end',
+                'card_statements.state as state',
+            )
+            ->first();
+
+        if ($row === null) {
+            return null;
+        }
+
+        $periodEnd = CarbonImmutable::parse(self::toString($row->period_end));
+        $openBalanceMinor = self::toInt($row->open_balance_minor);
+
+        return new CardStatementForecastTile(
+            amount: Money::ofMinor($openBalanceMinor, 'EUR'),
+            dueDate: $periodEnd->addDays(5)->startOfDay(),
+            statementId: self::toInt($row->id),
+            state: self::toString($row->state),
+        );
     }
 
     /**

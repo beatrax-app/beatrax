@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Chains\Providers;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\View\Factory as ViewFactoryContract;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\ServiceProvider;
@@ -12,6 +14,7 @@ use Livewire\LivewireManager;
 use Modules\Chains\Internal\CardStatementStateMachine;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Internal\Http\Livewire\ChainDrawer;
+use Modules\Chains\Internal\Http\Livewire\ChainReviewQueue;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
@@ -22,6 +25,7 @@ use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
  * Wires the Chains module.
@@ -90,10 +94,46 @@ final class ChainsServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'chains');
         }
         // Wave 4 (plan 05-05) — chain drawer Livewire SFC (UI-02 /
-        // CHN-04). The `/chains/review` queue SFC ships in plan 05-05b.
+        // CHN-04). Plan 05-05b adds the `/chains/review` page SFC.
         $livewire->component('chains.chain-drawer', ChainDrawer::class);
+        $livewire->component('chains.chain-review-queue', ChainReviewQueue::class);
 
         $this->registerJobFailedListener($events);
+        $this->registerTopNavBadgeComposer();
+    }
+
+    /**
+     * Inject the top-nav "Review chains" badge integer into the
+     * `core::livewire.top-nav` view via the View Factory contract.
+     *
+     * Issue #12 fix: the prior draft used `view()->composer(...)` —
+     * the `view()` global helper is forbidden by CLAUDE.md
+     * `feedback_laravel_di_only.md` (constructor DI only — no
+     * facades, no helpers). Resolving the View Factory contract
+     * through `$this->app->make()` keeps the DI-only invariant
+     * visible at the call site.
+     *
+     * The composer fires only when the view is actually rendered —
+     * meaning at most once per HTTP request that surfaces the
+     * top-nav. The cost is one `ChainLinkQuery::openCandidateCount`
+     * query (a single COUNT against the `(user_id, state)` composite
+     * index from chain_links migration).
+     */
+    private function registerTopNavBadgeComposer(): void
+    {
+        $app = $this->app;
+        $factory = $app->make(ViewFactoryContract::class);
+
+        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app): void {
+            $currentUser = $app->make(CurrentUser::class);
+            if (! $currentUser->isAuthenticated()) {
+                $compose->with('chainOpenCandidateCount', 0);
+
+                return;
+            }
+            $query = $app->make(ChainLinkQuery::class);
+            $compose->with('chainOpenCandidateCount', $query->openCandidateCount($currentUser->user()));
+        });
     }
 
     /**
