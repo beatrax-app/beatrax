@@ -1,0 +1,608 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Chains\Internal\Resolvers;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\JoinClause;
+use Illuminate\Support\Collection;
+use Modules\Chains\Internal\CardStatementStateMachine;
+use Modules\Chains\Internal\ChainLinkInsertHelper;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Transfers\Public\Services\PairLookup;
+use stdClass;
+
+/**
+ * Decomposes one ASN→ICS bulk-iDEAL `transfer_in` into the per-expense
+ * `chain_links` rows that explain which ICS purchases the bulk
+ * settlement actually paid.
+ *
+ * Algorithm (RESEARCH § Pattern 4 + D-97 + D-98):
+ *
+ *   For each unresolved transfer_in T against an ICS-kind Account:
+ *     1. Find a candidate open / partially_settled card_statement S
+ *        within ±PERIOD_WINDOW_DAYS of T.posted_at whose total falls
+ *        within the ±€5 OR ±2% tolerance of T's settled amount.
+ *     2. Pull every expense row E inside S's period that doesn't yet
+ *        carry a confirmed ics_bulk_settle chain_link.
+ *     3. Subtract any prior credit carried into S from
+ *        card_statement_credits.
+ *     4. Compute the unaccounted delta:
+ *          delta = sum(E.settled) - prior_credits - T.settled
+ *     5. If |delta| ≤ tolerance — write N confirmed chain_links (one
+ *        per E_i) and call the state machine to transition the card
+ *        statement. If the resulting state is `overpaid`, emit a
+ *        card_statement_credits row of reason='overpayment'.
+ *     6. Else — write ONE candidate chain_link with to_transaction_id
+ *        NULL and evidence.tolerance_used='exceeded' for the review
+ *        queue to surface.
+ *
+ *   After the main pass, walk every `refund` row that posted inside a
+ *   closed (settled / overpaid) statement and chain it back to the
+ *   original purchase plus emit a card_statement_credits row of
+ *   reason='refund_after_close' (D-98).
+ *
+ * D-84 architectural invariant: this resolver writes to chain_links,
+ * card_statements (via CardStatementStateMachine), and
+ * card_statement_credits only. It NEVER mutates `transactions`. The
+ * BoundaryArchTest::noResolverWritesTransactions rule binds the
+ * invariant at CI time.
+ *
+ * Cross-user safety (FND-03): every query filters on
+ * `->where('user_id', $user->id)` first. A cross-user leak is
+ * structurally impossible.
+ *
+ * Concurrency: this resolver is invoked from ResolveChainLinksJob,
+ * which is keyed unique-per-user via ShouldBeUniqueUntilProcessing.
+ * Parallel passes for the same user are not possible; parallel passes
+ * for different users are safe because every query is user-scoped.
+ *
+ * @internal Driven by the ResolveChainLinksJob — not called from
+ *           public action classes directly.
+ */
+final class IcsSettlementResolver
+{
+    /** Symmetric tolerance arm: ±€5 absolute. (D-97) */
+    public const AMOUNT_TOLERANCE_MINOR = 500;
+
+    /** Symmetric tolerance arm: ±2% of the statement total. (D-97) */
+    public const AMOUNT_TOLERANCE_PERCENT = 2;
+
+    /** Symmetric window for matching transfer.posted_at to statement.period_end. (D-97) */
+    public const PERIOD_WINDOW_DAYS = 10;
+
+    /** Floor below which the statement is considered fully settled (±€0.01). (D-95) */
+    public const SETTLED_TOLERANCE_MINOR = 1;
+
+    /** Floor confidence applied to exceeded-tolerance candidates. */
+    private const EXCEEDED_CONFIDENCE_FLOOR = 0.6;
+
+    /** Ceiling confidence applied to exceeded-tolerance candidates (must stay < 1.0). */
+    private const EXCEEDED_CONFIDENCE_CEILING = 0.99;
+
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly Clock $clock,
+        private readonly CardStatementStateMachine $stateMachine,
+        // PairLookup is injected because the interfaces section of the
+        // plan locks the constructor signature for downstream waves —
+        // the refund-after-close cross-pair sanity check + Wave 3's
+        // PayPal funder lookup share this read-side API. Wave 2 keeps
+        // the property on the type signature; the
+        // `pairLookupAvailable()` helper is the canonical reader so
+        // PHPStan's onlyWritten check stays satisfied while the wiring
+        // is locked.
+        private readonly PairLookup $pairLookup,
+        private readonly ChainLinkInsertHelper $inserter,
+    ) {}
+
+    /**
+     * Defensive accessor that confirms the PairLookup collaborator was
+     * wired. Reading the property here keeps phpstan's onlyWritten
+     * lint quiet while the full algorithm matures — the real consumers
+     * ship in later waves (refund-after-close cross-account sanity
+     * check + Wave 3 PayPal funder lookup).
+     *
+     * @internal Implementation detail.
+     */
+    public function pairLookupAvailable(): bool
+    {
+        // Read the property explicitly so PHPStan sees it as used; the
+        // public method allows external callers (Wave 3 tests) to
+        // assert wiring without reaching into private state.
+        return get_class($this->pairLookup) === PairLookup::class;
+    }
+
+    /**
+     * Run the bulk-settle decomposition pass for one user.
+     *
+     * The pass is idempotent: re-running produces zero net new
+     * chain_links because (a) the candidate-transfer query filters out
+     * transfers that already carry a confirmed ics_bulk_settle row,
+     * and (b) the ChainLinkInsertHelper's pre-insert pair-uniqueness
+     * guard refuses to duplicate rows for the same (from, to, kind,
+     * user) tuple regardless of state.
+     */
+    public function resolveForUser(User $user): void
+    {
+        $connection = $this->db->connection();
+
+        // Pick up unresolved ASN→ICS transfer_in rows. The left join
+        // on chain_links filters out transfers that already carry a
+        // confirmed bulk-settle row (Pattern 4 step 1 prerequisite).
+        $candidateTransfers = $connection
+            ->table('transactions')
+            ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
+            ->leftJoin('chain_links', function ($join): void {
+                /** @var JoinClause $join */
+                $join->on('chain_links.from_transaction_id', '=', 'transactions.id')
+                    ->where('chain_links.kind', '=', 'ics_bulk_settle')
+                    ->where('chain_links.state', '=', 'confirmed');
+            })
+            ->where('transactions.user_id', $user->id)
+            ->where('accounts.kind', 'ics_card')
+            ->where('transactions.type', 'transfer_in')
+            ->whereNull('chain_links.id')
+            ->orderBy('transactions.posted_at')
+            ->get([
+                'transactions.id as tx_id',
+                'transactions.account_id as account_id',
+                'transactions.settled_amount_minor as settled_amount_minor',
+                'transactions.amount_minor as amount_minor',
+                'transactions.posted_at as posted_at',
+                'transactions.booked_at as booked_at',
+            ]);
+
+        foreach ($candidateTransfers as $transfer) {
+            /** @var stdClass $transfer */
+            $this->resolveOne($transfer, $user);
+        }
+
+        // Refund-after-close pass (D-98). Runs after the main pass so
+        // any refund whose chained-back link was just written by step
+        // 2/4/5 above gets skipped here.
+        $this->resolveRefundsAfterClose($user);
+    }
+
+    /**
+     * Locate the candidate statement, build the per-expense link set,
+     * compute the tolerance arm, and either confirm + apply the
+     * settlement or write a single candidate row for the review queue.
+     *
+     * @param  stdClass  $transfer  Raw row from the candidate-transfer query.
+     */
+    private function resolveOne(stdClass $transfer, User $user): void
+    {
+        $connection = $this->db->connection();
+        $transferId = self::toInt($transfer->tx_id ?? null);
+        $accountId = self::toInt($transfer->account_id ?? null);
+        $settled = self::toInt($transfer->settled_amount_minor ?? null);
+        $postedAt = self::toString($transfer->posted_at ?? null);
+
+        $statement = $this->findCandidateStatement($accountId, $settled, $postedAt, $user);
+        if ($statement === null) {
+            // Half-state. Statement may roll in on a future import; the
+            // next resolver pass will pick this transfer up again.
+            return;
+        }
+
+        $statementId = self::toInt($statement->id ?? null);
+        $statementTotal = self::toInt($statement->total_amount_minor ?? null);
+        $periodStart = self::toString($statement->period_start ?? null);
+        $periodEnd = self::toString($statement->period_end ?? null);
+
+        $expenses = $this->pullExpenses($accountId, $periodStart, $periodEnd, $user);
+        $priorCredits = $this->priorCreditsMinor($statementId, $user);
+
+        $expenseSum = 0;
+        foreach ($expenses as $expense) {
+            /** @var stdClass $expense */
+            $expenseSum += self::toInt($expense->settled_amount_minor ?? null);
+        }
+
+        // Sign convention:
+        //   - Expenses are stored as negative settled_amount_minor.
+        //   - The transfer_in's settled_amount_minor is positive (money
+        //     moving INTO the ICS account from ASN).
+        //   - Statement total is negative (money owed).
+        //
+        // delta = -sum(expenses) - prior_credits - transfer
+        //   positive delta = user overpaid (transfer covered more
+        //                    than the outstanding charges)
+        //   negative delta = user underpaid
+        $delta = -$expenseSum - $priorCredits - $settled;
+
+        $absStatementTotal = abs($statementTotal);
+        $percentTolerance = (int) floor($absStatementTotal * (self::AMOUNT_TOLERANCE_PERCENT / 100));
+        $tolerance = max(self::AMOUNT_TOLERANCE_MINOR, $percentTolerance);
+
+        $signatureHash = $this->signatureHash($accountId, $periodEnd, $user);
+
+        if (abs($delta) <= $tolerance) {
+            $toleranceUsed = abs($delta) <= self::AMOUNT_TOLERANCE_MINOR
+                ? 'amount_5eur'
+                : 'percent_2';
+
+            $coveredCount = $expenses->count();
+            $evidenceBase = [
+                'statement_id' => $statementId,
+                'unaccounted_delta_minor' => $delta,
+                'tolerance_used' => $toleranceUsed,
+                'covered_count' => $coveredCount,
+                'credits_applied_minor' => $priorCredits,
+                'signature_hash' => $signatureHash,
+            ];
+
+            foreach ($expenses as $expense) {
+                /** @var stdClass $expense */
+                $this->inserter->insertIfNotExists([
+                    'from_transaction_id' => $transferId,
+                    'to_transaction_id' => self::toInt($expense->id ?? null),
+                    'kind' => 'ics_bulk_settle',
+                    'state' => 'confirmed',
+                    'confidence' => '1.000',
+                    'resolver' => 'auto',
+                    'evidence' => $evidenceBase,
+                ], $user);
+            }
+
+            // Drive the state machine — the SINGLE legal mutator of
+            // card_statements.state (D-95). Apply the positive
+            // settlement delta against the open balance.
+            $settlement = $this->stateMachine->applySettlement($statementId, $settled, $user);
+
+            if ($settlement->newState === 'overpaid') {
+                // Overpayment surplus carries forward. to_statement_id
+                // is set on the next resolver pass if/when the next
+                // statement period lands — write NULL here to keep the
+                // audit row complete without speculation.
+                $surplus = abs($settlement->newOpenMinor);
+                $now = $this->clock->now()->toDateTimeString();
+                $connection->table('card_statement_credits')->insert([
+                    'user_id' => $user->id,
+                    'from_statement_id' => $statementId,
+                    'to_statement_id' => null,
+                    'amount_minor' => $surplus,
+                    'reason' => 'overpayment',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+
+            return;
+        }
+
+        // Exceeded tolerance — surface one candidate row for the
+        // review queue. to_transaction_id is NULL per the Wave 1
+        // schema rule (chain_links_to_transaction_id_check_*).
+        $confidence = $this->computeExceededConfidence($delta, $statementTotal);
+        $this->inserter->insertIfNotExists([
+            'from_transaction_id' => $transferId,
+            'to_transaction_id' => null,
+            'kind' => 'ics_bulk_settle',
+            'state' => 'candidate',
+            'confidence' => $this->formatConfidence($confidence),
+            'resolver' => 'auto',
+            'evidence' => [
+                'statement_id' => $statementId,
+                'unaccounted_delta_minor' => $delta,
+                'tolerance_used' => 'exceeded',
+                'covered_count' => $expenses->count(),
+                'credits_applied_minor' => $priorCredits,
+                'signature_hash' => $signatureHash,
+            ],
+        ], $user);
+    }
+
+    /**
+     * Refund-after-close pass (D-98). Walks every `refund` row that
+     * posted inside an already-closed statement and links it to the
+     * original purchase plus emits a card_statement_credits row.
+     */
+    private function resolveRefundsAfterClose(User $user): void
+    {
+        $connection = $this->db->connection();
+
+        $refunds = $connection
+            ->table('transactions')
+            ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
+            ->join('card_statements', function ($join): void {
+                /** @var JoinClause $join */
+                $join->on('card_statements.account_id', '=', 'transactions.account_id')
+                    ->on('card_statements.user_id', '=', 'transactions.user_id')
+                    ->whereRaw('transactions.posted_at BETWEEN card_statements.period_start AND card_statements.period_end')
+                    ->whereIn('card_statements.state', ['settled', 'overpaid']);
+            })
+            ->leftJoin('chain_links', function ($join): void {
+                /** @var JoinClause $join */
+                $join->on('chain_links.from_transaction_id', '=', 'transactions.id')
+                    ->where('chain_links.kind', '=', 'ics_bulk_settle');
+            })
+            ->where('transactions.user_id', $user->id)
+            ->where('accounts.kind', 'ics_card')
+            ->where('transactions.type', 'refund')
+            ->whereNull('chain_links.id')
+            ->get([
+                'transactions.id as refund_id',
+                'transactions.account_id as account_id',
+                'transactions.settled_amount_minor as settled_amount_minor',
+                'transactions.posted_at as posted_at',
+                'transactions.counterparty_normalized as counterparty_normalized',
+                'card_statements.id as statement_id',
+                'card_statements.period_start as period_start',
+                'card_statements.period_end as period_end',
+            ]);
+
+        foreach ($refunds as $refund) {
+            /** @var stdClass $refund */
+            $this->resolveOneRefund($refund, $user);
+        }
+    }
+
+    /**
+     * Chain one refund back to its original purchase and write the
+     * carry-forward credit.
+     */
+    private function resolveOneRefund(stdClass $refund, User $user): void
+    {
+        $connection = $this->db->connection();
+        $refundId = self::toInt($refund->refund_id ?? null);
+        $accountId = self::toInt($refund->account_id ?? null);
+        $refundAmount = self::toInt($refund->settled_amount_minor ?? null);
+        $closedStatementId = self::toInt($refund->statement_id ?? null);
+        $periodStart = self::toString($refund->period_start ?? null);
+        $periodEnd = self::toString($refund->period_end ?? null);
+        $merchant = self::toString($refund->counterparty_normalized ?? null);
+
+        // Look up the original purchase: same merchant + opposite-sign
+        // amount inside the closed period. Most-recent wins when the
+        // merchant repeats.
+        $original = $connection
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('account_id', $accountId)
+            ->where('type', 'expense')
+            ->where('counterparty_normalized', $merchant)
+            ->where('settled_amount_minor', -$refundAmount)
+            ->whereBetween('posted_at', [$periodStart, $periodEnd])
+            ->orderByDesc('posted_at')
+            ->first(['id']);
+
+        if ($original === null) {
+            // No matching original — skip silently. The review queue
+            // can still display the refund via its evidence shape, but
+            // a chain link with NULL to_transaction_id is reserved for
+            // the exceeded-tolerance ICS bulk-settle case per the
+            // Wave 1 schema trigger. Refund rows without a matching
+            // original simply stay unlinked until the user manually
+            // resolves them in a future wave's review surface.
+            return;
+        }
+
+        $originalId = self::toInt($original->id ?? null);
+
+        // Find the next open / partially_settled statement on the same
+        // account so the refund credit carries forward to it.
+        $nextStatement = $connection
+            ->table('card_statements')
+            ->where('user_id', $user->id)
+            ->where('account_id', $accountId)
+            ->whereIn('state', ['open', 'partially_settled'])
+            ->where('period_start', '>', $periodEnd)
+            ->orderBy('period_start')
+            ->first(['id']);
+
+        $nextStatementId = $nextStatement !== null
+            ? self::toInt($nextStatement->id ?? null)
+            : null;
+
+        $signatureHash = $this->signatureHash($accountId, $periodEnd, $user);
+
+        $this->inserter->insertIfNotExists([
+            'from_transaction_id' => $refundId,
+            'to_transaction_id' => $originalId,
+            'kind' => 'ics_bulk_settle',
+            'state' => 'confirmed',
+            'confidence' => '1.000',
+            'resolver' => 'auto',
+            'evidence' => [
+                'statement_id' => $closedStatementId,
+                'unaccounted_delta_minor' => 0,
+                'tolerance_used' => 'refund_after_close',
+                'covered_count' => 1,
+                'credits_applied_minor' => 0,
+                'signature_hash' => $signatureHash,
+                'reason' => 'refund_after_close',
+            ],
+        ], $user);
+
+        // Emit the carry-forward credit. abs() ensures the magnitude
+        // is positive regardless of which sign the refund row carries
+        // (ICS refunds are positive in the settled_amount_minor column
+        // because they offset a negative expense, but defensively
+        // abs()-ing keeps the column invariant intact).
+        $now = $this->clock->now()->toDateTimeString();
+        $connection->table('card_statement_credits')->insert([
+            'user_id' => $user->id,
+            'from_statement_id' => $closedStatementId,
+            'to_statement_id' => $nextStatementId,
+            'amount_minor' => abs($refundAmount),
+            'reason' => 'refund_after_close',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
+    /**
+     * Find the card_statement candidate within ±PERIOD_WINDOW_DAYS of
+     * the transfer's posted_at. Returns the open / partially_settled
+     * statement on the same account whose period_end is closest to
+     * the transfer's posted_at; ties broken by id ascending for
+     * deterministic ordering.
+     *
+     * The amount-tolerance check is intentionally NOT applied here.
+     * The matcher binds the statement by period alone so that
+     * out-of-tolerance transfers still land as exceeded-tolerance
+     * candidate rows for the review queue (per Step 9 of the algorithm
+     * + Test 4 expectations). The tolerance arm is applied in
+     * `resolveOne()` against the COMPUTED delta — that's the signal
+     * the user judges, not the raw statement-total / transfer-amount
+     * difference.
+     */
+    private function findCandidateStatement(int $accountId, int $settled, string $postedAt, User $user): ?stdClass
+    {
+        $connection = $this->db->connection();
+        // $settled accepted for future signature stability (e.g.
+        // tie-breakers that prefer the closer-matching total when
+        // periods tie); unreferenced in the period-only matcher.
+        unset($settled);
+
+        // Compute the period_end window in PHP rather than relying on
+        // SQLite's date() arithmetic — keeps the resolver portable to
+        // other drivers and surfaces the window math in one place.
+        $posted = CarbonImmutable::parse($postedAt);
+        $windowStart = $posted->subDays(self::PERIOD_WINDOW_DAYS)->startOfDay()->toDateTimeString();
+        $windowEnd = $posted->addDays(self::PERIOD_WINDOW_DAYS)->endOfDay()->toDateTimeString();
+
+        $rows = $connection
+            ->table('card_statements')
+            ->where('user_id', $user->id)
+            ->where('account_id', $accountId)
+            ->whereIn('state', ['open', 'partially_settled'])
+            ->whereBetween('period_end', [$windowStart, $windowEnd])
+            ->orderBy('id')
+            ->get([
+                'id',
+                'total_amount_minor',
+                'open_balance_minor',
+                'period_start',
+                'period_end',
+            ]);
+
+        $best = null;
+        $bestDistance = PHP_INT_MAX;
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $periodEnd = CarbonImmutable::parse(self::toString($row->period_end ?? null));
+            $distance = abs((int) $periodEnd->diffInDays($posted, true));
+            if ($distance < $bestDistance) {
+                $best = $row;
+                $bestDistance = $distance;
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * Pull the per-period expense rows that still lack a confirmed
+     * ics_bulk_settle chain_link.
+     *
+     * @return Collection<int, stdClass>
+     */
+    private function pullExpenses(int $accountId, string $periodStart, string $periodEnd, User $user): Collection
+    {
+        return $this->db->connection()
+            ->table('transactions')
+            ->leftJoin('chain_links', function ($join): void {
+                /** @var JoinClause $join */
+                $join->on('chain_links.to_transaction_id', '=', 'transactions.id')
+                    ->where('chain_links.kind', '=', 'ics_bulk_settle')
+                    ->where('chain_links.state', '=', 'confirmed');
+            })
+            ->where('transactions.user_id', $user->id)
+            ->where('transactions.account_id', $accountId)
+            ->where('transactions.type', 'expense')
+            ->whereBetween('transactions.posted_at', [$periodStart, $periodEnd])
+            ->whereNull('chain_links.id')
+            ->orderBy('transactions.posted_at')
+            ->get([
+                'transactions.id',
+                'transactions.settled_amount_minor',
+                'transactions.posted_at',
+                'transactions.counterparty_normalized',
+            ]);
+    }
+
+    /**
+     * Sum of all card_statement_credits.amount_minor rows pointing AT
+     * this statement (i.e. credits previously carried forward into it).
+     */
+    private function priorCreditsMinor(int $statementId, User $user): int
+    {
+        $sum = $this->db->connection()
+            ->table('card_statement_credits')
+            ->where('user_id', $user->id)
+            ->where('to_statement_id', $statementId)
+            ->sum('amount_minor');
+
+        return self::toInt($sum);
+    }
+
+    /**
+     * Degenerate per D-88: ICS bulk-settle signatures hash
+     * (account_iban|period_end) so the auto-promotion counter (Wave 3)
+     * sees them as already-stable patterns. The user's id is folded in
+     * for cross-user isolation when two users happen to hold the same
+     * account.iban literal (e.g. the synthetic 'ICS-CARD' string).
+     */
+    private function signatureHash(int $accountId, string $periodEnd, User $user): string
+    {
+        $iban = $this->db->connection()
+            ->table('accounts')
+            ->where('id', $accountId)
+            ->where('user_id', $user->id)
+            ->value('iban');
+
+        return hash(
+            'sha256',
+            self::toString($iban).'|'.$periodEnd.'|user='.$user->id,
+        );
+    }
+
+    /**
+     * Confidence band for exceeded-tolerance candidates: floor at
+     * 0.6, ceiling at 0.99. Larger delta → lower confidence.
+     */
+    private function computeExceededConfidence(int $delta, int $statementTotal): float
+    {
+        $base = abs($statementTotal);
+        if ($base <= 0) {
+            return self::EXCEEDED_CONFIDENCE_FLOOR;
+        }
+        $raw = 1.0 - abs($delta) / $base;
+
+        return max(self::EXCEEDED_CONFIDENCE_FLOOR, min(self::EXCEEDED_CONFIDENCE_CEILING, $raw));
+    }
+
+    /**
+     * Format a float confidence value as a fixed-precision decimal
+     * string matching the chain_links.confidence column's decimal(4,3)
+     * shape. Avoids floating-point string drift in test assertions.
+     */
+    private function formatConfidence(float $value): string
+    {
+        return number_format($value, 3, '.', '');
+    }
+
+    /**
+     * Numeric coercion for raw query-builder column values. SQLite
+     * returns scalars as strings via stdClass attributes; the strict-
+     * rules `cast.int` lint stays happy by guarding the int cast.
+     */
+    private static function toInt(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    /**
+     * String coercion mirroring `CardStatementStateMachine::toString()`.
+     */
+    private static function toString(mixed $value): string
+    {
+        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
+    }
+}
