@@ -109,12 +109,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User sees the monthly ASN → ICS iDEAL debit decomposed into the underlying ICS card transactions it settles, with partial-payment / overpayment / carry-forward credit handled within ±€5 / ±2% / ±10-day tolerances
   3. User can review fuzzy match candidates (no shared reference ID) in a queue, confirm or reject each, and confirmed patterns auto-promote similar future candidates
   4. User sees the next forecasted ICS settlement amount before paying it, computed from cleared ICS lines since the last settlement
-**Plans**: 5 plans
-  - [ ] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
-  - [ ] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
-  - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
-  - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
-  - [ ] 05-05-PLAN.md — Wave 4 UI surfaces: /chains/review (CHN-03) + chain drawer Flux flyout (UI-02 + CHN-04) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge + failed-job toast + wizard polling
+**Plans**: 7 plans
+  - [ ] 05-01-PLAN.md — Wave 0 infrastructure half: composer (Horizon + Predis) + Horizon install + failed_jobs migration + Redis Docker setup + PROJECT.md/README amendment + Operator recovery section
+  - [ ] 05-01b-PLAN.md — Wave 0 module + fixture half: Chains module skeleton + synthesised fixture trio + Transfers PairLookup promotion + BoundaryArchTest extensions + HorizonBootsTest with explicit skip predicate
+  - [ ] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits + chain_resolution_runs migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
+  - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ChainLinkInsertHelper + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + chain_resolution_runs lifecycle
+  - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery (nullable to_transaction_id handling) + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
+  - [ ] 05-05-PLAN.md — Wave 4 drawer half: chain drawer Flux flyout (UI-02 + CHN-04) + chain-node partial with explicit @props + TransactionDetail "View chain" button
+  - [ ] 05-05b-PLAN.md — Wave 4 review queue half: /chains/review (CHN-03) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge via View Factory contract + failed-job toast backed by chain_resolution_runs + wizard polling
 **UI hint**: yes
 
 ### Phase 6: Email Receipt Ingestion Infrastructure
@@ -236,7 +238,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. ASN Statement Coverage (CAMT.053 + MT940) | 5/5 | Ready for verification | - |
 | 3. ICS Cards + Multi-Currency Display | 6/7 | In Progress|  |
 | 4. PayPal Ingestion + Transfer Detection | 5/5 | Ready for verification | - |
-| 5. Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition) | 0/TBD | Not started | - |
+| 5. Chain Resolution (PayPal Funding + ICS Bulk-iDEAL Decomposition) | 0/7 | Not started | - |
 | 6. Email Receipt Ingestion Infrastructure | 0/TBD | Not started | - |
 | 7. Email Template Matchers + Categorization Learning | 0/TBD | Not started | - |
 | 8. Recurring Detection + Fixed Payments View | 0/TBD | Not started | - |
