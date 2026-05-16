@@ -40,6 +40,17 @@ foreach (
     // smokes the real `pdftotext` binary). Tagged ->group('integration')
     // so CI hosts without the binary can --exclude-group=integration.
     pest()->extend($testCase)->in(__DIR__.'/../'.$module.'/tests/Integration');
+
+    // Contracts directory: per-module contract suites under
+    // Modules/<Name>/tests/Contracts/. Wave 2 (Modules/Chains) is the
+    // first per-module Contracts subtree and it needs a booted Laravel
+    // app + RefreshDatabase to drive Eloquent models. The phpunit.xml
+    // already exposes the directory via the named ChainsContracts
+    // testsuite; this binds the framework bootstrap to the discovered
+    // files so the module-local Pest.php remains the inert convention.
+    pest()->extend($testCase)
+        ->use(RefreshDatabase::class)
+        ->in(__DIR__.'/../'.$module.'/tests/Contracts');
 }
 
 /**
