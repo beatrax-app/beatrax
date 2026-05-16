@@ -6,24 +6,24 @@ namespace Modules\Chains\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Chains\Internal\CardStatementStateMachine;
 
 /**
  * Wires the Chains module.
  *
  * The module ships the cross-source funding-chain resolver, the
- * ICS bulk-iDEAL decomposer, and the card_statements lifecycle. This
- * provider is intentionally minimal at module-skeleton time:
+ * ICS bulk-iDEAL decomposer, and the card_statements lifecycle. The
+ * provider currently registers:
  *
- *  - register() will gain singleton bindings for the public read APIs
- *    (`ChainLinkQuery`, `CardStatementQuery`) and the public action
- *    classes (`ConfirmChainLink`, `RejectChainLink`) in a subsequent
- *    plan.
- *  - boot() conditionally loads migrations / routes / views once those
- *    artefacts exist. The is_dir / is_file guards keep the empty
- *    skeleton bootable.
- *  - Livewire component registration moves into boot() once the
- *    `chains.chain-review-queue` and `chains.chain-drawer` components
- *    are ready.
+ *  - `CardStatementStateMachine` as a singleton — the only legal
+ *    mutator of `card_statements.state`. A BoundaryArchTest invariant
+ *    blocks any other write path under `Modules/Chains/`.
+ *
+ * Subsequent plans extend register() with the public read APIs
+ * (`ChainLinkQuery`, `CardStatementQuery`) and the public action
+ * classes (`ConfirmChainLink`, `RejectChainLink`). boot()
+ * conditionally loads migrations / routes / views; is_dir / is_file
+ * guards keep the partially-populated skeleton bootable.
  *
  * Public surface is exposed from day one so downstream modules
  * (fixed-payments view, forecasting) can depend on it directly.
@@ -32,8 +32,7 @@ final class ChainsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Concrete singleton bindings land alongside the resolver,
-        // state-machine, and Livewire components in subsequent plans.
+        $this->app->singleton(CardStatementStateMachine::class);
     }
 
     public function boot(LivewireManager $livewire): void
