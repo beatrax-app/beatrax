@@ -116,6 +116,29 @@
                     ></span>
                 </div>
             </section>
+
+            @if (($chainAvailable ?? false) === true)
+                {{-- UI-02 / CHN-04: "View chain" trigger opens the chain
+                     drill-down drawer (D-90, first Flux flyout in the
+                     project). Text-link styling per UI-SPEC § Chain
+                     drill-down drawer — visually subordinate to the
+                     Reclassify save button so the page focal hierarchy
+                     stays calm. The wire:click dispatch carries the
+                     transactionId payload; the drawer Livewire SFC
+                     listens via #[On('chain-drawer:open')]. --}}
+                <section class="border-t border-slate-200 pt-6">
+                    <button
+                        type="button"
+                        x-on:click="$dispatch('chain-drawer:open', { transactionId: {{ $transaction->id }} }); $dispatch('modal-show', { name: 'chain-drawer-{{ $transaction->id }}' })"
+                        wire:click="$dispatch('chain-drawer:open', { transactionId: {{ $transaction->id }} })"
+                        class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                    >
+                        View chain
+                    </button>
+                </section>
+
+                @livewire('chains.chain-drawer')
+            @endif
         </div>
     </main>
 </div>
