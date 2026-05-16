@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-05-16T17:50:06.038Z"
+last_updated: "2026-05-16T18:22:39.268Z"
 last_activity: 2026-05-16
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 31
-  completed_plans: 29
-  percent: 94
+  completed_plans: 30
+  percent: 97
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 05 (chain-resolution-paypal-funding-ics-bulk-ideal-decomposition) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-05-16
 
-Progress: [█████████░] 94%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [█████████░] 94%
 | Phase 05 P02 | 30min | 2 tasks tasks | 20 files files |
 | Phase 05 P03 | ~26min | 2 tasks | 10 files |
 | Phase 05 P04 | ~35min | - tasks | - files |
+| Phase 05 P05 | ~3min | 1 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -191,6 +192,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 5 Wave 3: ConfirmChainLink learning loop (D-87/D-88) wraps target row promotion + same-signature auto-promotion sweep in a single db transaction so a partial promotion never renders; resolver value preserved as 'auto' for user-confirmed rows, set to 'rule' only on auto-promoted siblings, distinguishing UI chip tiers per D-91
 - [Phase ?]: Phase 5 Wave 3: ChainLinkQuery uses explicit BFS frontier + visited-set + depth counter (MAX_DEPTH=5) — to_transaction_id=NULL legs are skipped (issue #10 — exceeded-tolerance ICS bulk-settle candidates surface via candidatesForReview not the walker); D-91 confidence-tier mapping locked in confidenceTier() (Deterministic / Confirmed / Candidate); whereJsonContains works on the dev SQLite build, JSON1 fallback unused
 - [Phase ?]: Phase 5 Wave 3: Action-layer 404 surface — explicit throw new NotFoundHttpException after where()->first() returns null, instead of firstOrFail(). Same HTTP 404 behavior + testable from action-level Pest tests (the ModelNotFoundException→NotFoundHttpException conversion happens at the HTTP kernel, invisible to unit tests). Applied in both ConfirmChainLink + RejectChainLink + ChainLinkQuery::forTransaction
+- [Phase ?]: Chain drawer trigger button dispatches both chain-drawer:open (Livewire) AND modal-show (Flux) in the same user gesture — keeps the data layer and presentation layer independently testable
+- [Phase ?]: Single-link ICS bulk-settle is NOT a fan-out — a node renders the fan-out container only when it has ≥2 outgoing ics_bulk_settle chain_links
+- [Phase ?]: Blade partials with required context use explicit @props([...]) declarations + explicit @include arrays at every call site — issue #13 fix
 
 ### Pending Todos
 
@@ -222,7 +226,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-16T17:50:06.031Z
+Last session: 2026-05-16T18:22:19.506Z
 Stopped at: Completed 05-03-PLAN.md
 Resume file: 
 None

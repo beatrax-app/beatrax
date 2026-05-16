@@ -91,7 +91,7 @@
 ### Dashboard & UI
 
 - [ ] **UI-01**: The home screen is a "this month at a glance" view: top-line in/out/remaining, fixed-payments list with chain icons, cash-flow chart
-- [ ] **UI-02**: From any transaction, user can drill into its full funding chain
+- [x] **UI-02**: From any transaction, user can drill into its full funding chain
 - [ ] **UI-03**: From any fixed payment, user can drill into its history and amount-drift trend
 - [ ] **UI-04**: UI defaults to the recent window (last 3–6 months); a "show full history" toggle opens the rest
 - [ ] **UI-05**: Aesthetic is calm and content-first (Linear / Notion style), monochrome with one accent color
@@ -214,7 +214,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | FCT-04 | Phase 10 | Pending |
 | FCT-05 | Phase 10 | Pending |
 | UI-01 | Phase 1 | Pending |
-| UI-02 | Phase 5 | Pending |
+| UI-02 | Phase 5 | Complete |
 | UI-03 | Phase 8 | Pending |
 | UI-04 | Phase 1 | Pending |
 | UI-05 | Phase 1 | Pending |
