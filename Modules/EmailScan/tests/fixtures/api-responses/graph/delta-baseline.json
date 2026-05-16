@@ -1,0 +1,5 @@
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('local-user%40example.test')/messages/$delta",
+    "@odata.deltaLink": "https://graph.microsoft.com/v1.0/me/messages/$delta?$deltatoken=baseline-xyz",
+    "value": []
+}

@@ -1,0 +1,14 @@
+{
+    "error": {
+        "code": 403,
+        "message": "User-rate limit exceeded.",
+        "errors": [
+            {
+                "domain": "usageLimits",
+                "reason": "rateLimitExceeded",
+                "message": "User-rate limit exceeded."
+            }
+        ],
+        "status": "RESOURCE_EXHAUSTED"
+    }
+}

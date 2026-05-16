@@ -1,0 +1,11 @@
+{
+    "error": {
+        "code": "syncStateNotFound",
+        "message": "The sync state was not found.",
+        "innerError": {
+            "date": "2026-05-13T18:00:00",
+            "request-id": "synthetic-410-request-id",
+            "client-request-id": "synthetic-410-client-request-id"
+        }
+    }
+}

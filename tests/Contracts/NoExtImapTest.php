@@ -20,3 +20,40 @@ it('no PHP source under Modules/ or app/ extension-checks for ext-imap', functio
     exec($cmd, $out, $code);
     expect($out)->toBeEmpty();
 });
+
+it('composer.lock contains no webklex/php-imap, webklex/laravel-imap, or ddeboer/imap packages', function (): void {
+    // Belt-and-braces alongside the top-level composer.json "conflict"
+    // block. The conflict block hard-fails composer install if any of
+    // these packages enters the dependency graph; this lockfile grep
+    // adds a CI-side fingerprint check that would catch a manual
+    // composer.lock edit or a forced override that slipped past the
+    // resolver.
+    $lockPath = base_path('composer.lock');
+    if (! is_file($lockPath)) {
+        // Fresh checkouts without a locked install file pass
+        // trivially — same skip predicate posture as other contract
+        // tests that depend on installed dependencies.
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $contents = (string) file_get_contents($lockPath);
+    $banned = [
+        'webklex/laravel-imap',
+        'webklex/php-imap',
+        'ddeboer/imap',
+    ];
+
+    $hits = [];
+    foreach ($banned as $package) {
+        if (str_contains($contents, "\"{$package}\"")) {
+            $hits[] = $package;
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "composer.lock must not reference deprecated IMAP packages. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
