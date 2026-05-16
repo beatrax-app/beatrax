@@ -35,6 +35,18 @@
         <testsuite name="ChainsContracts">
             <directory suffix="Test.php">./Modules/Chains/tests/Contracts</directory>
         </testsuite>
+        <testsuite name="EmailScanUnit">
+            <directory suffix="Test.php">./Modules/EmailScan/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="EmailScanFeature">
+            <directory suffix="Test.php">./Modules/EmailScan/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="EmailScanContracts">
+            <directory suffix="Test.php">./Modules/EmailScan/tests/Contracts</directory>
+        </testsuite>
+        <testsuite name="EmailScanIntegration">
+            <directory suffix="Test.php">./Modules/EmailScan/tests/Integration</directory>
+        </testsuite>
     </testsuites>
     <php>
         <ini name="memory_limit" value="1G"/>
