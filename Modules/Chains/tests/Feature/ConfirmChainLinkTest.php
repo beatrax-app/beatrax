@@ -1,0 +1,255 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Actions\ConfirmChainLink;
+use Modules\Core\Models\User;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Models\Transaction;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+/*
+ * ConfirmChainLink Public action — promotes a candidate to confirmed
+ * and runs the D-87/D-88 auto-promotion learning loop: when the user
+ * confirms three rows of the same signature_hash, every remaining
+ * same-signature candidate auto-promotes to state='confirmed',
+ * resolver='rule' on the same call (so the next refresh of the review
+ * queue sees the drop in candidates).
+ *
+ * Cross-user invocation raises NotFoundHttpException (404) via
+ * firstOrFail() — the same pattern UpdateTransactionCategory uses.
+ */
+
+function cclUser(string $email): User
+{
+    return User::query()->create([
+        'email' => $email,
+        'password' => 'fixture',
+        'period_start_day' => 1,
+    ]);
+}
+
+function cclAccount(User $user, string $slug, string $kind, string $iban): Account
+{
+    return Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'ccl '.$slug,
+        'slug' => $slug,
+        'kind' => $kind,
+        'iban' => $iban,
+        'default_currency' => 'EUR',
+    ]);
+}
+
+function cclImportRun(User $user, string $sha): ImportRun
+{
+    return ImportRun::query()->create([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/ccl.csv',
+        'sha256' => $sha,
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
+    ]);
+}
+
+function cclTx(
+    User $user,
+    Account $account,
+    ImportRun $run,
+    int $amountMinor,
+    string $type,
+    string $fingerprintSeed,
+    int $rowIndex,
+): Transaction {
+    return Transaction::query()->create([
+        'user_id' => $user->id,
+        'account_id' => $account->id,
+        'type' => $type,
+        'posted_at' => '2026-05-'.str_pad((string) min(28, max(1, $rowIndex)), 2, '0', STR_PAD_LEFT),
+        'booked_at' => '2026-05-'.str_pad((string) min(28, max(1, $rowIndex)), 2, '0', STR_PAD_LEFT).' 12:00:00',
+        'value_date' => '2026-05-'.str_pad((string) min(28, max(1, $rowIndex)), 2, '0', STR_PAD_LEFT),
+        'amount_minor' => $amountMinor,
+        'currency' => 'EUR',
+        'settled_amount_minor' => $amountMinor,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'CP '.$rowIndex,
+        'counterparty_normalized' => 'cp-'.$rowIndex,
+        'normalization_version' => 3,
+        'source_format' => 'asn-csv',
+        'import_run_id' => $run->id,
+        'source_row_index' => $rowIndex,
+        'fingerprint' => str_pad($fingerprintSeed, 64, 'c', STR_PAD_LEFT),
+        'fingerprint_version' => 3,
+    ]);
+}
+
+/**
+ * @param  array<string, mixed>  $evidence
+ */
+function cclLink(DatabaseManager $db, User $user, int $from, int $to, string $state, string $signatureHash): int
+{
+    $db->connection()->table('chain_links')->insert([
+        'user_id' => $user->id,
+        'from_transaction_id' => $from,
+        'to_transaction_id' => $to,
+        'kind' => 'paypal_funding',
+        'state' => $state,
+        'confidence' => $state === 'confirmed' ? '1.000' : '0.800',
+        'resolver' => 'auto',
+        'evidence' => json_encode(['signature_hash' => $signatureHash]),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    return (int) $db->connection()->table('chain_links')->max('id');
+}
+
+beforeEach(function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $this->db = $db;
+
+    $this->user = cclUser('confirm-chain-link@diederik.test');
+    $this->paypal = cclAccount($this->user, 'ccl-paypal', 'paypal', 'PAYPAL');
+    $this->asn = cclAccount($this->user, 'ccl-asn', 'asn', 'NL57ASNB0123456789');
+    $this->run = cclImportRun($this->user, str_repeat('1', 64));
+
+    /** @var ConfirmChainLink $confirm */
+    $confirm = $this->app->make(ConfirmChainLink::class);
+    $this->confirm = $confirm;
+});
+
+it('promotes a single candidate to confirmed (no auto-promotion below threshold)', function (): void {
+    $from = cclTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'a1', 1);
+    $to = cclTx($this->user, $this->asn, $this->run, 1000, 'transfer_in', 'a2', 2);
+    $linkId = cclLink($this->db, $this->user, (int) $from->id, (int) $to->id, 'candidate', 'sig-once');
+
+    ($this->confirm)($linkId, $this->user);
+
+    /** @var ChainLink $link */
+    $link = ChainLink::query()->findOrFail($linkId);
+    expect($link->state)->toBe('confirmed');
+    // Resolver preserved (not flipped to 'user' or 'rule' for a single confirm).
+    expect($link->resolver)->toBe('auto');
+});
+
+it('auto-promotes other same-signature candidates at the 3rd confirmation (D-87/D-88)', function (): void {
+    $signature = 'sig-auto-promote';
+
+    // Seed two already-confirmed rows with the same signature.
+    for ($i = 1; $i <= 2; $i++) {
+        $f = cclTx($this->user, $this->paypal, $this->run, -100 * $i, 'expense', 'p'.$i, $i);
+        $t = cclTx($this->user, $this->asn, $this->run, 100 * $i, 'transfer_in', 't'.$i, $i + 10);
+        cclLink($this->db, $this->user, (int) $f->id, (int) $t->id, 'confirmed', $signature);
+    }
+
+    // Seed the 3rd candidate (the one we'll confirm).
+    $f3 = cclTx($this->user, $this->paypal, $this->run, -300, 'expense', 'p3', 3);
+    $t3 = cclTx($this->user, $this->asn, $this->run, 300, 'transfer_in', 't3', 13);
+    $thirdId = cclLink($this->db, $this->user, (int) $f3->id, (int) $t3->id, 'candidate', $signature);
+
+    // Seed two OTHER same-signature candidates that should auto-promote.
+    $otherCandidateIds = [];
+    for ($i = 4; $i <= 5; $i++) {
+        $f = cclTx($this->user, $this->paypal, $this->run, -100 * $i, 'expense', 'p'.$i, $i);
+        $t = cclTx($this->user, $this->asn, $this->run, 100 * $i, 'transfer_in', 't'.$i, $i + 10);
+        $otherCandidateIds[] = cclLink($this->db, $this->user, (int) $f->id, (int) $t->id, 'candidate', $signature);
+    }
+
+    // Seed a DIFFERENT-signature candidate — must NOT be auto-promoted.
+    $fOther = cclTx($this->user, $this->paypal, $this->run, -600, 'expense', 'po', 6);
+    $tOther = cclTx($this->user, $this->asn, $this->run, 600, 'transfer_in', 'to', 16);
+    $differentSignatureId = cclLink($this->db, $this->user, (int) $fOther->id, (int) $tOther->id, 'candidate', 'sig-different');
+
+    ($this->confirm)($thirdId, $this->user);
+
+    // The third row itself is confirmed (resolver stays 'auto' — only OTHER auto-promoted rows are 'rule').
+    /** @var ChainLink $third */
+    $third = ChainLink::query()->findOrFail($thirdId);
+    expect($third->state)->toBe('confirmed');
+    expect($third->resolver)->toBe('auto');
+
+    // The two same-signature candidates are auto-promoted to state='confirmed', resolver='rule'.
+    foreach ($otherCandidateIds as $id) {
+        /** @var ChainLink $row */
+        $row = ChainLink::query()->findOrFail($id);
+        expect($row->state)->toBe('confirmed');
+        expect($row->resolver)->toBe('rule');
+    }
+
+    // The DIFFERENT-signature candidate stays unchanged.
+    /** @var ChainLink $differentRow */
+    $differentRow = ChainLink::query()->findOrFail($differentSignatureId);
+    expect($differentRow->state)->toBe('candidate');
+});
+
+it('does NOT auto-promote when same-signature confirmed count is below 3', function (): void {
+    $signature = 'sig-below-threshold';
+
+    // 1 confirmed already + the one we confirm = 2 < 3 → no auto-promotion.
+    $f1 = cclTx($this->user, $this->paypal, $this->run, -100, 'expense', 'q1', 1);
+    $t1 = cclTx($this->user, $this->asn, $this->run, 100, 'transfer_in', 'q2', 11);
+    cclLink($this->db, $this->user, (int) $f1->id, (int) $t1->id, 'confirmed', $signature);
+
+    $f2 = cclTx($this->user, $this->paypal, $this->run, -200, 'expense', 'q3', 2);
+    $t2 = cclTx($this->user, $this->asn, $this->run, 200, 'transfer_in', 'q4', 12);
+    $candidateId = cclLink($this->db, $this->user, (int) $f2->id, (int) $t2->id, 'candidate', $signature);
+
+    $f3 = cclTx($this->user, $this->paypal, $this->run, -300, 'expense', 'q5', 3);
+    $t3 = cclTx($this->user, $this->asn, $this->run, 300, 'transfer_in', 'q6', 13);
+    $otherCandidateId = cclLink($this->db, $this->user, (int) $f3->id, (int) $t3->id, 'candidate', $signature);
+
+    ($this->confirm)($candidateId, $this->user);
+
+    /** @var ChainLink $other */
+    $other = ChainLink::query()->findOrFail($otherCandidateId);
+    expect($other->state)->toBe('candidate'); // unchanged — only 2 same-signature confirmed
+});
+
+it('raises NotFoundHttpException on cross-user invocation (404)', function (): void {
+    $other = cclUser('ccl-other@diederik.test');
+    $otherAcc = cclAccount($other, 'ccl-other-acc', 'paypal', 'OTHER');
+    $otherRun = cclImportRun($other, str_repeat('2', 64));
+    $f = cclTx($other, $otherAcc, $otherRun, -100, 'expense', 'oz1', 1);
+    $t = cclTx($other, $otherAcc, $otherRun, 100, 'transfer_in', 'oz2', 2);
+    $linkId = cclLink($this->db, $other, (int) $f->id, (int) $t->id, 'candidate', 'sig-other');
+
+    expect(fn () => ($this->confirm)($linkId, $this->user))
+        ->toThrow(NotFoundHttpException::class);
+});
+
+it('whereJsonContains finds the signature on this SQLite build', function (): void {
+    // Defence-in-depth: the auto-promotion path uses whereJsonContains
+    // on evidence->signature_hash. The smoke test in
+    // ChainLinksJsonContainsSmokeTest already proves the JSON1 path
+    // works, but this test runs the SAME code path the action uses so
+    // a fallback (whereRaw json_extract) can be activated quickly if a
+    // future SQLite build regresses.
+    $signature = 'sig-json-contains';
+
+    for ($i = 1; $i <= 3; $i++) {
+        $f = cclTx($this->user, $this->paypal, $this->run, -100 * $i, 'expense', 'j'.$i, $i);
+        $t = cclTx($this->user, $this->asn, $this->run, 100 * $i, 'transfer_in', 'j'.$i.'b', $i + 10);
+        if ($i === 3) {
+            $thirdId = cclLink($this->db, $this->user, (int) $f->id, (int) $t->id, 'candidate', $signature);
+        } else {
+            cclLink($this->db, $this->user, (int) $f->id, (int) $t->id, 'confirmed', $signature);
+        }
+    }
+
+    $fNext = cclTx($this->user, $this->paypal, $this->run, -400, 'expense', 'jx', 4);
+    $tNext = cclTx($this->user, $this->asn, $this->run, 400, 'transfer_in', 'jxb', 14);
+    $autoId = cclLink($this->db, $this->user, (int) $fNext->id, (int) $tNext->id, 'candidate', $signature);
+
+    ($this->confirm)($thirdId, $this->user);
+
+    /** @var ChainLink $auto */
+    $auto = ChainLink::query()->findOrFail($autoId);
+    expect($auto->state)->toBe('confirmed');
+    expect($auto->resolver)->toBe('rule');
+});
