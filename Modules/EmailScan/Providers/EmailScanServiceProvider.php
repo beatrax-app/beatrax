@@ -6,44 +6,45 @@ namespace Modules\EmailScan\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
+use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
+use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
+use Modules\EmailScan\Public\Services\InboxesBadgeCount;
 use Modules\EmailScan\Public\Services\InboxMessageQuery;
+use Modules\EmailScan\Public\Services\InboxQuery;
+use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 /**
  * Wires the EmailScan module.
  *
- * Wave 0 ships the empty service-provider shell. Singleton bindings for
- * the OAuth secrets repository, Gmail / Microsoft Graph API clients,
- * incremental + backfill + discovery jobs, and the inbox-scan state
- * machine land in later plans. The provider follows the established
- * Chains module shape: register() declares container bindings, boot()
- * conditionally loads migrations / routes / views / Livewire
- * components when each directory exists, so the early waves can stand
- * up scaffolding without each plan needing to amend this file.
+ * register() declares singleton bindings for the Public read services
+ * (InboxQuery, KnownSenderQuery, InboxMessageQuery, InboxesBadgeCount,
+ * OAuthSecretsRepository) and the Internal OAuth surface
+ * (GoogleOAuthProvider, OAuthStateRepository). All collaborators are
+ * stateless and singleton-safe.
  *
- * boot() also intentionally omits the JobFailed listener and the
- * top-nav View Factory composer — both will be wired in the plans that
- * introduce the jobs and the inboxes-badge counter respectively.
+ * boot() conditionally loads migrations / routes / views and
+ * registers the /inboxes Livewire component. The wizard modal SFC
+ * is registered alongside it in a later plan.
+ *
+ * The Microsoft OAuth provider + the JobFailed listener + the top-nav
+ * View Factory composer (for the inboxes badge) are wired in later
+ * plans.
  */
 final class EmailScanServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Public read-side query over inbox_messages. Streams via the
-        // query builder's cursor() so the parser stage can iterate
-        // status='fetched' rows without loading the full set into
-        // memory. Singleton because the class is stateless and holds
-        // only an injected DatabaseManager.
         $this->app->singleton(InboxMessageQuery::class);
-
-        // The single dependency-injected touchpoint to the chmod-600
-        // JSON file that carries per-provider OAuth client credentials
-        // and per-inbox rotation tokens. Singleton because the class
-        // is stateless and holds only an injected Filesystem.
         $this->app->singleton(OAuthSecretsRepository::class);
 
-        // Additional singleton bindings (API clients, state machine,
-        // queued jobs, ...) land in later plans.
+        // Wave 2 — OAuth surface + Public read services.
+        $this->app->singleton(GoogleOAuthProvider::class);
+        $this->app->singleton(OAuthStateRepository::class);
+        $this->app->singleton(InboxQuery::class);
+        $this->app->singleton(InboxesBadgeCount::class);
+        $this->app->singleton(KnownSenderQuery::class);
     }
 
     public function boot(LivewireManager $livewire): void
@@ -58,11 +59,8 @@ final class EmailScanServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'email-scan');
         }
 
-        // Livewire components register here once the inboxes page +
-        // OAuth-client wizard + backfill-window modal ship. The
-        // LivewireManager parameter is kept on the boot() signature to
-        // match the project-wide module convention so later plans
-        // amend the body, not the method signature.
-        unset($livewire);
+        // Plan 03 — /inboxes page Livewire SFC. The OAuth-client
+        // wizard modal SFC registers alongside it in a later step.
+        $livewire->component('email-scan.inboxes-page', InboxesPage::class);
     }
 }
