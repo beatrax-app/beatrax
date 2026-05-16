@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-05-16T17:26:23.974Z"
+last_updated: "2026-05-16T17:50:06.038Z"
 last_activity: 2026-05-16
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 31
-  completed_plans: 28
-  percent: 90
+  completed_plans: 29
+  percent: 94
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 05 (chain-resolution-paypal-funding-ics-bulk-ideal-decomposition) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-05-16
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Progress: [█████████░] 90%
 | Phase 05 P01b | 14min | 3 tasks tasks | 33 files files |
 | Phase 05 P02 | 30min | 2 tasks tasks | 20 files files |
 | Phase 05 P03 | ~26min | 2 tasks | 10 files |
+| Phase 05 P04 | ~35min | - tasks | - files |
 
 ## Accumulated Context
 
@@ -186,6 +187,10 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 5 Wave 2: Dispatcher::listen(JobFailed::class) replaces Queue::failing facade in ChainsServiceProvider
 - [Phase ?]: Phase 5 Wave 2: IcsSettlementResolver matcher drops amount-tolerance filter; tolerance arm decides confirmed-vs-candidate inside resolveOne()
 - [Phase ?]: Phase 5 Wave 2: tests/TestCase setUp routes cache.stores.redis to array driver for ShouldBeUnique uniqueVia() in no-Redis tests
+- [Phase ?]: Phase 5 Wave 3 (Plan 05-04): PaypalFundingResolver real algorithm — deterministic D-106 arm reads raw_payload via raw DatabaseManager query-builder (avoids BoundaryArchTest exemption); fuzzy CHN-02 weights 0.5/0.3/0.2 with FUZZY_MAX_CONFIDENCE=0.99 so 1.0 stays exclusive to deterministic; signature_hash = sha256(normalized_merchant + '|' + funding_iban) at both arms
+- [Phase ?]: Phase 5 Wave 3: ConfirmChainLink learning loop (D-87/D-88) wraps target row promotion + same-signature auto-promotion sweep in a single db transaction so a partial promotion never renders; resolver value preserved as 'auto' for user-confirmed rows, set to 'rule' only on auto-promoted siblings, distinguishing UI chip tiers per D-91
+- [Phase ?]: Phase 5 Wave 3: ChainLinkQuery uses explicit BFS frontier + visited-set + depth counter (MAX_DEPTH=5) — to_transaction_id=NULL legs are skipped (issue #10 — exceeded-tolerance ICS bulk-settle candidates surface via candidatesForReview not the walker); D-91 confidence-tier mapping locked in confidenceTier() (Deterministic / Confirmed / Candidate); whereJsonContains works on the dev SQLite build, JSON1 fallback unused
+- [Phase ?]: Phase 5 Wave 3: Action-layer 404 surface — explicit throw new NotFoundHttpException after where()->first() returns null, instead of firstOrFail(). Same HTTP 404 behavior + testable from action-level Pest tests (the ModelNotFoundException→NotFoundHttpException conversion happens at the HTTP kernel, invisible to unit tests). Applied in both ConfirmChainLink + RejectChainLink + ChainLinkQuery::forTransaction
 
 ### Pending Todos
 
@@ -217,7 +222,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-16T17:26:23.968Z
+Last session: 2026-05-16T17:50:06.031Z
 Stopped at: Completed 05-03-PLAN.md
 Resume file: 
 None

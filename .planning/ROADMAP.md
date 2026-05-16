@@ -114,7 +114,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 05-01b-PLAN.md — Wave 0 module + fixture half: Chains module skeleton + synthesised fixture trio + Transfers PairLookup promotion + BoundaryArchTest extensions + HorizonBootsTest with explicit skip predicate
   - [x] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits + chain_resolution_runs migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
   - [x] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ChainLinkInsertHelper + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + chain_resolution_runs lifecycle
-  - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery (nullable to_transaction_id handling) + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
+  - [x] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery (nullable to_transaction_id handling) + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
   - [ ] 05-05-PLAN.md — Wave 4 drawer half: chain drawer Flux flyout (UI-02 + CHN-04) + chain-node partial with explicit @props + TransactionDetail "View chain" button
   - [ ] 05-05b-PLAN.md — Wave 4 review queue half: /chains/review (CHN-03) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge via View Factory contract + failed-job toast backed by chain_resolution_runs + wizard polling
 **UI hint**: yes
@@ -133,7 +133,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 5 plans
   - [x] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
   - [x] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
-  - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
+  - [x] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
   - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
   - [ ] 05-05-PLAN.md — Wave 4 UI surfaces: /chains/review (CHN-03) + chain drawer Flux flyout (UI-02 + CHN-04) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge + failed-job toast + wizard polling
 **UI hint**: yes
@@ -150,7 +150,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User can define explicit rules ("contains 'SPOTIFY' → Subscriptions / Streaming") that pre-categorize on import, with rule updates offered when corrections diverge from suggestions
 **Plans**: 5 plans
   - [x] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
-  - [ ] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
+  - [x] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
   - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
   - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
   - [ ] 05-05-PLAN.md — Wave 4 UI surfaces: /chains/review (CHN-03) + chain drawer Flux flyout (UI-02 + CHN-04) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge + failed-job toast + wizard polling
@@ -168,7 +168,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User can click into any fixed payment and see every historical occurrence plus an amount trend over time
   5. Recurring income (monthly salary, regular transfers in) appears alongside recurring expenses so cash-flow logic can balance both sides
 **Plans**: 5 plans
-  - [ ] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
+  - [x] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
   - [ ] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
   - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
   - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
