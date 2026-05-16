@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Internal\Clients;
 
-use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
 use RuntimeException;
 
@@ -131,8 +130,12 @@ final class FakeGmailApiClient
 
         $payload = $this->readJson('history-list-404.json');
         $error = $payload['error'] ?? null;
-        if (is_array($error) && (int) ($error['code'] ?? 0) === 404) {
-            throw CursorExpiredException::gmail((string) ($error['message'] ?? ''));
+        if (is_array($error)) {
+            $code = $error['code'] ?? null;
+            if (is_int($code) && $code === 404) {
+                $message = $error['message'] ?? '';
+                throw CursorExpiredException::gmail(is_string($message) ? $message : '');
+            }
         }
 
         // The Wave 0 fixture only ships the 404 shape; this branch
@@ -198,8 +201,9 @@ final class FakeGmailApiClient
         $retryAfter = $this->rateLimitedInboxes[$inboxId];
         unset($this->rateLimitedInboxes[$inboxId]);
         $payload = $this->readJson('rate-limit-403.json');
-        $message = is_array($payload['error'] ?? null) && is_string($payload['error']['message'] ?? null)
-            ? (string) $payload['error']['message']
+        $error = $payload['error'] ?? null;
+        $message = is_array($error) && isset($error['message']) && is_string($error['message'])
+            ? $error['message']
             : 'Gmail rate limit exceeded.';
         throw new RateLimitedException($retryAfter, $message);
     }
@@ -243,16 +247,5 @@ final class FakeGmailApiClient
         }
 
         return $decoded;
-    }
-
-    /**
-     * Touch the DateTimeImmutable import so static analysis sees the
-     * value-object signature stays available for the matching real
-     * client surface that takes a window-start parameter on its
-     * discovery query.
-     */
-    public function unusedTypeReference(): ?DateTimeImmutable
-    {
-        return null;
     }
 }
