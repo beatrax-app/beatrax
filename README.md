@@ -49,6 +49,18 @@ pdftotext -v          # confirms poppler is on PATH (required for ICS PDF import
 php artisan migrate
 ```
 
+### OAuth redirect URI (email ingestion)
+
+When connecting Gmail or Microsoft 365 inboxes, the OAuth dance uses the RFC 8252 loopback IP scheme `http://127.0.0.1:PORT/oauth/callback/{provider}` — never `https://diederik.test`, because Google and Microsoft both reject `*.test` subdomains as redirect URIs. The port is read from `config('app.url')` with a fallback to `8000`. Paste the URI verbatim into the Google Cloud Console / Azure Portal redirect-URI field; the in-app OAuth-client wizard surfaces a copy-to-clipboard button with the exact string.
+
+The email ingestion path depends on these Composer packages, already pinned in `composer.json`:
+
+| Package | Purpose |
+|---------|---------|
+| `google/apiclient` | Gmail API calls |
+| `league/oauth2-client` + `league/oauth2-google` | OAuth dance + token exchange |
+| `zbateson/mail-mime-parser` | RFC 822 header parsing on fetched `.eml` blobs |
+
 ## Running the app
 
 The app needs two terminals during development:
