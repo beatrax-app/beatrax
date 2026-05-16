@@ -471,5 +471,5 @@ it('handles PayPal rows with null raw_payload (no events) gracefully', function 
     seedPaypalExpense($this->user, $this->paypal, $this->run, 1000, 'aaaaaaaaaa');
     seedAsnTransferIn($this->user, $this->asn, $this->run, 1000, 'zzzzzzzzzz');
 
-    expect(fn () => $this->resolver->resolveForUser($this->user))->not->toThrow(\Throwable::class);
+    expect(fn () => $this->resolver->resolveForUser($this->user))->not->toThrow(Throwable::class);
 });
