@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Transfers\Internal\Listeners\PairTransferCandidates;
+use Modules\Transfers\Public\Services\PairLookup;
 
 /**
  * Wires the Transfers module:
@@ -30,8 +31,14 @@ final class TransfersServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // No bindings — the listener is auto-resolved via constructor
-        // DI when the dispatcher invokes it.
+        // Public read API over `transactions.pair_transaction_id`,
+        // consumed by the Chains module's resolvers. Stateless query
+        // class — singleton-bound so downstream modules can resolve it
+        // without holding their own DatabaseManager reference.
+        $this->app->singleton(PairLookup::class);
+
+        // The internal listener stays auto-resolved via constructor DI
+        // when the dispatcher invokes it.
     }
 
     public function boot(Dispatcher $events): void
