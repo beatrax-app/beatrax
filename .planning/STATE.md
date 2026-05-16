@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 05-01-PLAN.md code tasks; checkpoint Task 3 awaiting operator verification of Docker Redis + Horizon boot
-last_updated: "2026-05-16T16:32:57.673Z"
+last_updated: "2026-05-16T16:49:49.121Z"
 last_activity: 2026-05-16
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 31
-  completed_plans: 26
-  percent: 84
+  completed_plans: 27
+  percent: 87
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 05 (chain-resolution-paypal-funding-ics-bulk-ideal-decomposition) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-05-16
 
-Progress: [████████░░] 84%
+Progress: [█████████░] 87%
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [████████░░] 84%
 | Phase 04 P05 | ~2min | 1 tasks | 3 files |
 | Phase 05 P01 | 18min | 2 tasks | 13 files |
 | Phase 05 P01b | 14min | 3 tasks tasks | 33 files files |
+| Phase 05 P02 | 30min | 2 tasks tasks | 20 files files |
 
 ## Accumulated Context
 
@@ -173,6 +174,12 @@ Recent decisions affecting current work:
 - [Phase ?]: PDF font encoding: Type1 Helvetica with explicit /Encoding /WinAnsiEncoding directive so pdftotext renders € (required by IcsPdfAdapter's parseFourColumnSummary regex)
 - [Phase ?]: Issue #9 fix lock: explicit skip predicate pattern for tests with external-service preconditions; CI grep gate prevents regression to swallow-on-throw alternative
 - [Phase ?]: Public-surface promotion convention: Modules/<Name>/Public/Services/<Name>Lookup singleton-bound in <Name>ServiceProvider::register() — first applied to PairLookup
+- [Phase ?]: Phase 05 Plan 02: chain_links.to_transaction_id conditional-NULL invariant enforced at schema layer via BEFORE INSERT/UPDATE trigger pair using SQLite JSON1 json_extract — replaces the resolver-side arbitrary first-expense workaround the original RESEARCH proposed
+- [Phase ?]: Phase 05 Plan 02: card_statements back-population sign convention locked at write site — total_amount_minor preserves negative closing_balance_minor from statement_summaries verbatim; open_balance_minor is the absolute value. Test asserts both columns against fixture (-84732 / 84732)
+- [Phase ?]: Phase 05 Plan 02: CardStatementStateMachine wraps read-then-write in transaction() with PRAGMA busy_timeout=5000; lockForUpdate is a SQLite no-op so the pragma is the load-bearing concurrency fence. Cross-user statement miss raises RuntimeException so partial writes never leak through
+- [Phase ?]: Phase 05 Plan 02: chain_resolution_runs.user_id non-nullable (mirrors import_runs) — BelongsToUser still applies but the safer non-nullable shape eliminates NULL-distinct-in-UNIQUE bugs at the schema layer
+- [Phase ?]: Phase 05 Plan 02: ChainLink.confidence intentionally left without explicit cast — SQLite decimal columns return numeric strings; resolver code converts via (float) at boundary so strict-rules cast.string stays satisfied (mirrors Phase 3 TransactionRowDto)
+- [Phase ?]: Phase 05 Plan 02: Test invocation pattern for forward-only data migrations — require() the anonymous-class file and call up() directly. Artisan::call('migrate') is a no-op once the migration is recorded in the migrations table
 
 ### Pending Todos
 
@@ -204,7 +211,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-16T16:32:32.961Z
+Last session: 2026-05-16T16:49:09.865Z
 Stopped at: Completed 05-01-PLAN.md code tasks; checkpoint Task 3 awaiting operator verification of Docker Redis + Horizon boot
 Resume file: 
 None

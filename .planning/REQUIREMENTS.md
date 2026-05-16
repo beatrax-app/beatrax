@@ -59,7 +59,7 @@
 - [ ] **CHN-04**: User can open any transaction and see the full chain tree (e.g. Netflix charge → PayPal → ICS line → ASN bulk-iDEAL settlement → ASN balance impact)
 - [ ] **CHN-05**: The ASN → ICS bulk iDEAL settlement is decomposed: one ASN debit links to N underlying ICS transactions; matcher tolerates partial settlement, overpayment, carry-forward credit (±€5 / ±2% / ±10-day window)
 - [ ] **CHN-06**: User can see the next forecasted ICS settlement amount before paying it
-- [ ] **CHN-07**: Chain links are stored in their own table with `state` (candidate / confirmed / rejected), `confidence` (0–1), and `evidence` (which fields matched)
+- [x] **CHN-07**: Chain links are stored in their own table with `state` (candidate / confirmed / rejected), `confidence` (0–1), and `evidence` (which fields matched)
 
 ### Categorization
 
@@ -194,7 +194,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | CHN-04 | Phase 5 | Pending |
 | CHN-05 | Phase 5 | Pending |
 | CHN-06 | Phase 5 | Pending |
-| CHN-07 | Phase 5 | Pending |
+| CHN-07 | Phase 5 | Complete |
 | CAT-01 | Phase 1 | Pending |
 | CAT-02 | Phase 7 | Pending |
 | CAT-03 | Phase 1 | Pending |
