@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>SYNTHESISED-PHASE5-SCENARIO-1</MsgId>
+      <CreDtTm>2026-05-19T08:00:00</CreDtTm>
+    </GrpHdr>
+    <Stmt>
+      <Id>STMT-SYNTH-2026-05</Id>
+      <CreDtTm>2026-05-19T08:00:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>NL57ASNB0123456789</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+        <Ownr>
+          <Nm>KAARTHOUDER SYNTHETIC</Nm>
+        </Ownr>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">2500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-05-19</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">2500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-05-19</Dt>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <Amt Ccy="EUR">847.32</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt>
+          <Dt>2026-05-19</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-05-19</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Prtry>
+            <Cd>NIDA</Cd>
+            <Issr>ASN</Issr>
+          </Prtry>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <RltdPties>
+              <Cdtr>
+                <Nm>ICS Cards Nederland</Nm>
+              </Cdtr>
+              <CdtrAcct>
+                <Id>
+                  <Othr>
+                    <Id>ICS-CARD</Id>
+                  </Othr>
+                </Id>
+              </CdtrAcct>
+            </RltdPties>
+            <RmtInf>
+              <Ustrd>iDEAL betaling ICS afschrift 2026-04</Ustrd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>
