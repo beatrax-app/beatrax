@@ -1,0 +1,120 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
+use Modules\Core\Models\User;
+use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+/*
+ * Cross-user 404 invariant for /oauth/connect/{provider}?inbox_id={id}.
+ *
+ * User A connects an inbox. User B authenticates and tries to reconnect
+ * user A's inbox by passing the foreign id as a query parameter. The
+ * controller must respond 404 — never expose the existence of an
+ * inbox row belonging to a different user.
+ */
+
+beforeEach(function (): void {
+    $this->path = storage_path('app/secrets/email-oauth.json');
+    if (is_file($this->path)) {
+        @unlink($this->path);
+    }
+});
+
+afterEach(function (): void {
+    if (is_file($this->path)) {
+        @unlink($this->path);
+    }
+});
+
+function cuiUser(string $email): User
+{
+    return User::query()->create([
+        'email' => $email,
+        'password' => 'fixture',
+        'period_start_day' => 1,
+    ]);
+}
+
+it('cross-user reconnect attempt returns 404 — never leaks the foreign inbox', function (): void {
+    $userA = cuiUser('user-a@example.com');
+    $userB = cuiUser('user-b@example.com');
+
+    /** @var OAuthSecretsRepository $secrets */
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    $secrets->saveProviderClient(
+        'gmail',
+        'fake-client-id.apps.googleusercontent.com',
+        'GOCSPX-fake-secret',
+        'http://127.0.0.1:8000/oauth/callback/gmail',
+    );
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $now = CarbonImmutable::now()->toDateTimeString();
+
+    $inboxAId = (int) $db->connection()->table('inboxes')->insertGetId([
+        'user_id' => $userA->id,
+        'provider' => 'gmail',
+        'email' => 'user-a@example.com',
+        'backfill_window_months' => 3,
+        'backfill_progress' => null,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+    $db->connection()->table('inbox_scan_state')->insert([
+        'user_id' => $userA->id,
+        'inbox_id' => $inboxAId,
+        'folder' => 'INBOX',
+        'status' => 'idle',
+        'retry_attempts' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    // User B authenticates and tries to reconnect user A's inbox.
+    $this->actingAs($userB);
+    $this->withoutExceptionHandling();
+
+    expect(function () use ($inboxAId): void {
+        $this->get('/oauth/connect/gmail?inbox_id='.$inboxAId);
+    })->toThrow(NotFoundHttpException::class);
+
+    // User A's inbox row is unchanged.
+    $check = $db->connection()->table('inboxes')->where('id', $inboxAId)->first(['user_id', 'email']);
+    expect($check)->not->toBeNull();
+    expect((int) $check->user_id)->toBe($userA->id);
+    expect($check->email)->toBe('user-a@example.com');
+});
+
+it('GET /oauth/connect/gmail without a configured client redirects to /inboxes with a flash', function (): void {
+    $user = cuiUser('no-client@example.com');
+    $this->actingAs($user);
+
+    $response = $this->get('/oauth/connect/gmail');
+
+    $response->assertRedirect(route('inboxes.index'));
+    $response->assertSessionHas('oauth_failed');
+});
+
+it('GET /oauth/connect/unknown-provider returns 404', function (): void {
+    $user = cuiUser('unknown@example.com');
+    $this->actingAs($user);
+
+    /** @var OAuthSecretsRepository $secrets */
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    $secrets->saveProviderClient(
+        'gmail',
+        'x.apps.googleusercontent.com',
+        'GOCSPX-y',
+        'http://127.0.0.1:8000/oauth/callback/gmail',
+    );
+
+    $this->withoutExceptionHandling();
+    expect(function (): void {
+        $this->get('/oauth/connect/yahoo');
+    })->toThrow(NotFoundHttpException::class);
+});
