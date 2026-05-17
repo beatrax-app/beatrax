@@ -96,7 +96,13 @@ class GoogleOAuthProvider
             accessToken: $accessTokenString,
             refreshToken: is_string($refreshToken) && $refreshToken !== '' ? $refreshToken : null,
             expiresAt: $expiresAt,
-            scope: self::GMAIL_READONLY_SCOPE,
+            // Persist the FULL scope set we asked Google for so the
+            // stored credential matches what was granted. Previously
+            // we recorded only gmail.readonly and dropped
+            // userinfo.email; a later out-of-band revoke of userinfo
+            // surfaced as a generic OAuthExchangeFailed rather than
+            // the more actionable needs_reauth signal.
+            scope: self::GMAIL_READONLY_SCOPE.' '.self::USERINFO_EMAIL_SCOPE,
             email: $email,
         );
     }
@@ -140,7 +146,11 @@ class GoogleOAuthProvider
             accessToken: $token->getToken(),
             refreshToken: is_string($newRefresh) && $newRefresh !== '' ? $newRefresh : null,
             expiresAt: $expiresAt,
-            scope: self::GMAIL_READONLY_SCOPE,
+            // Mirror exchangeAuthorizationCode: persist the full
+            // gmail.readonly + userinfo.email scope so the recorded
+            // value stays consistent across the initial exchange and
+            // every subsequent refresh.
+            scope: self::GMAIL_READONLY_SCOPE.' '.self::USERINFO_EMAIL_SCOPE,
             email: '',
         );
     }
