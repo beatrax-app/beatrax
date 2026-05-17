@@ -5,21 +5,30 @@ declare(strict_types=1);
 namespace Modules\Recurring\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Livewire\LivewireManager;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
+use Modules\Recurring\Internal\Http\Livewire\RecurringReviewPage;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
+use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
+use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
+use Modules\Recurring\Public\Actions\RejectRecurringSeries;
+use Modules\Recurring\Public\Actions\SnoozeRecurringSeries;
+use Modules\Recurring\Public\Actions\UnRejectRecurringSeries;
+use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
  * Wires the Recurring module.
  *
- * Boot conditionally loads the module's migrations, routes, and views
- * when each directory is present so the empty skeleton boots cleanly
- * without forcing any of those subtrees to exist yet. register() binds
- * the in-tree services as singletons and tags every concrete detector
- * under the `recurring.detector` container tag so the sweep job can
- * iterate the set via iterable injection on `handle()`.
+ * register() binds every in-tree service as a singleton (state
+ * machine, detectors, queries, Public Actions, sweep job) and tags
+ * the concrete detectors under `recurring.detector` so the sweep
+ * job receives them via iterable injection on `handle()`.
+ *
+ * boot() conditionally loads the module's migrations, routes, and
+ * views and registers the `/recurring/review` Livewire SFC.
  */
 final class RecurringServiceProvider extends ServiceProvider
 {
@@ -32,9 +41,16 @@ final class RecurringServiceProvider extends ServiceProvider
         $this->app->singleton(DetectRecurringSeriesJob::class);
 
         $this->app->tag([ExpenseSeriesDetector::class], 'recurring.detector');
+
+        $this->app->singleton(RecurringSeriesQuery::class);
+        $this->app->singleton(ApproveRecurringSeries::class);
+        $this->app->singleton(RejectRecurringSeries::class);
+        $this->app->singleton(SnoozeRecurringSeries::class);
+        $this->app->singleton(EditRecurringSeriesName::class);
+        $this->app->singleton(UnRejectRecurringSeries::class);
     }
 
-    public function boot(): void
+    public function boot(LivewireManager $livewire): void
     {
         if (is_dir(__DIR__.'/../Database/Migrations')) {
             $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
@@ -45,5 +61,7 @@ final class RecurringServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'recurring');
         }
+
+        $livewire->component('recurring.recurring-review-page', RecurringReviewPage::class);
     }
 }

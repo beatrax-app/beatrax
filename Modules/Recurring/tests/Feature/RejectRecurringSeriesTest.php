@@ -47,13 +47,18 @@ function rjrsSeries(User $user, string $cluster): RecurringSeries
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
     $this->user = rjrsUser('rjrs@diederik.test');
-    /** @var RejectRecurringSeries $action */
-    $action = $this->app->make(RejectRecurringSeries::class);
-    $this->action = $action;
     /** @var RecurringSeriesStateMachine $sm */
     $sm = $this->app->make(RecurringSeriesStateMachine::class);
     $this->sm = $sm;
 });
+
+function rjrsAction(): RejectRecurringSeries
+{
+    /** @var RejectRecurringSeries $action */
+    $action = app(RejectRecurringSeries::class);
+
+    return $action;
+}
 
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
@@ -64,7 +69,7 @@ it('rejects a pending series and dispatches RecurringSeriesRejected', function (
 
     $series = rjrsSeries($this->user, 'rjrs::pending');
 
-    ($this->action)($series->id, $this->user);
+    (rjrsAction())($series->id, $this->user);
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -77,7 +82,7 @@ it('rejects an approved series', function (): void {
     $series = rjrsSeries($this->user, 'rjrs::approved');
     $this->sm->transition($series, 'approved', 'user_action', 'user');
 
-    ($this->action)($series->id, $this->user);
+    (rjrsAction())($series->id, $this->user);
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -88,7 +93,7 @@ it('rejects a snoozed series', function (): void {
     $series = rjrsSeries($this->user, 'rjrs::snoozed');
     $this->sm->transition($series, 'snoozed', 'user_action', 'user');
 
-    ($this->action)($series->id, $this->user);
+    (rjrsAction())($series->id, $this->user);
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -101,7 +106,7 @@ it('rejects a cadence_changed series', function (): void {
     $series->refresh();
     $this->sm->transition($series, 'cadence_changed', 'detector_cadence_flip', 'detector');
 
-    ($this->action)($series->id, $this->user);
+    (rjrsAction())($series->id, $this->user);
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -110,9 +115,9 @@ it('rejects a cadence_changed series', function (): void {
 
 it('is idempotent when the series is already rejected (no second transitions row)', function (): void {
     $series = rjrsSeries($this->user, 'rjrs::idem');
-    ($this->action)($series->id, $this->user);
+    (rjrsAction())($series->id, $this->user);
 
-    ($this->action)($series->id, $this->user);
+    (rjrsAction())($series->id, $this->user);
 
     $count = RecurringSeriesTransition::query()
         ->where('recurring_series_id', $series->id)
@@ -124,6 +129,6 @@ it('throws NotFoundHttpException for a cross-user series id', function (): void 
     $intruder = rjrsUser('rjrs-intruder@diederik.test');
     $series = rjrsSeries($this->user, 'rjrs::xuser');
 
-    expect(fn () => ($this->action)($series->id, $intruder))
+    expect(fn () => (rjrsAction())($series->id, $intruder))
         ->toThrow(NotFoundHttpException::class);
 });
