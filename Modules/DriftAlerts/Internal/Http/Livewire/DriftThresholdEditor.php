@@ -71,7 +71,7 @@ final class DriftThresholdEditor extends Component
         // popover's allowed set instead.
         if ($newValue === 'global') {
             $effective = null;
-        } elseif (is_int($newValue) || (is_string($newValue) && ctype_digit($newValue))) {
+        } elseif (is_int($newValue) || ctype_digit($newValue)) {
             $candidate = (int) $newValue;
             if (! in_array($candidate, self::OPTIONS, true)) {
                 return;
