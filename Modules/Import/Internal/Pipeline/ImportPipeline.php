@@ -67,7 +67,7 @@ final class ImportPipeline
         $lastResolvedAccountId = null;
 
         try {
-            foreach ($this->parse->run($localPath, $sourceFormat, $accounts) as $source) {
+            foreach ($this->parse->run($localPath, $sourceFormat, $accounts, $user) as $source) {
                 $resolution = $accounts->resolve($source->ownIban);
 
                 if ($resolution instanceof UnknownAccount) {
@@ -188,6 +188,13 @@ final class ImportPipeline
     private function persistStatementMetadata(string $sourceFormat, int $importRunId, ?int $accountId, User $user): void
     {
         if ($accountId === null) {
+            return;
+        }
+
+        if (! in_array($sourceFormat, $this->adapters->supportedFormats(), strict: true)) {
+            // Receipt-path formats (eml, mbox) carry no statement-level
+            // metadata — every receipt is its own logical record without
+            // opening/closing balance or period dates. Skip silently.
             return;
         }
 

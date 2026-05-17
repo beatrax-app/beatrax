@@ -1,0 +1,127 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Receipts\Public\Services;
+
+use DateTimeImmutable;
+use Generator;
+use Illuminate\Database\DatabaseManager;
+use InvalidArgumentException;
+use Modules\Core\Models\User;
+use Modules\Receipts\Public\Dto\FileImportDto;
+use stdClass;
+
+/**
+ * Public read-side query over `file_imports`.
+ *
+ * Streams rows per-user via the query builder's `cursor()` so
+ * downstream consumers (the matcher backlog walker, the wizard
+ * preview drawer) can iterate large drop histories without
+ * materialising the full set in memory. Each row is mapped to a
+ * `FileImportDto` lazily inside the generator.
+ *
+ * `forUser(User)` returns a list of FileImportDto for the wizard
+ * preview row; `latestForStatus(User, string)` is the generator
+ * shape mirroring `InboxMessageQuery::forStatus()` so the matcher
+ * consumer can unify both surfaces behind a single iteration loop.
+ */
+final readonly class FileImportQuery
+{
+    private const ALLOWED_STATUSES = ['fetched', 'parsed', 'skipped', 'unmatched'];
+
+    public function __construct(private DatabaseManager $db) {}
+
+    /**
+     * @return list<FileImportDto>
+     */
+    public function forUser(User $user): array
+    {
+        $rows = $this->db->connection()
+            ->table('file_imports')
+            ->where('user_id', $user->id)
+            ->orderBy('id')
+            ->get();
+
+        $out = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $out[] = $this->mapRow($row);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return Generator<int, FileImportDto>
+     */
+    public function latestForStatus(User $user, string $status): Generator
+    {
+        if (! in_array($status, self::ALLOWED_STATUSES, strict: true)) {
+            throw new InvalidArgumentException(
+                "FileImportQuery::latestForStatus expected one of ['fetched','parsed','skipped','unmatched'], got '{$status}'."
+            );
+        }
+
+        $rows = $this->db->connection()
+            ->table('file_imports')
+            ->where('user_id', $user->id)
+            ->where('status', $status)
+            ->orderBy('id')
+            ->cursor();
+
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            yield $this->mapRow($row);
+        }
+    }
+
+    private function mapRow(stdClass $row): FileImportDto
+    {
+        return new FileImportDto(
+            id: self::toInt($row->id),
+            userId: self::toInt($row->user_id),
+            sourceKind: self::toString($row->source_kind),
+            sourceFilename: self::toString($row->source_filename),
+            providerMessageId: self::toString($row->provider_message_id),
+            internalDate: self::toDateTime($row->internal_date),
+            senderEmail: self::toString($row->sender_email),
+            senderName: self::toNullableString($row->sender_name),
+            subject: self::toNullableString($row->subject),
+            emlPath: self::toString($row->eml_path),
+            status: self::toString($row->status),
+            matcherKey: self::toNullableString($row->matcher_key ?? null),
+            fetchedAt: self::toDateTime($row->fetched_at),
+        );
+    }
+
+    private static function toInt(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    private static function toString(mixed $value): string
+    {
+        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
+    }
+
+    private static function toNullableString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
+    }
+
+    private static function toDateTime(mixed $value): DateTimeImmutable
+    {
+        $raw = is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
+        $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $raw);
+        if ($dt === false) {
+            return new DateTimeImmutable($raw);
+        }
+
+        return $dt;
+    }
+}

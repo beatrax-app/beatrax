@@ -10,8 +10,8 @@ use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
-use Modules\Receipts\Internal\Pipeline\EmlMimeReader;
-use Modules\Receipts\Internal\Pipeline\ReceiptSourceAdapter;
+use Modules\Receipts\Public\Pipeline\EmlMimeReader;
+use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 
 /**
  * LOAD-BEARING contract: receipts and CSVs MUST produce
