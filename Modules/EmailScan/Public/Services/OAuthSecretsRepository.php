@@ -288,8 +288,20 @@ class OAuthSecretsRepository
         }
 
         $tmp = $absolute.'.tmp';
+
+        // Narrow umask BEFORE opening the temp file so the file is
+        // born with mode 0600 (0666 & ~0077 = 0600). Without this,
+        // fopen's default 0666 & ~0022 = 0644 leaves the temp file
+        // world-readable for the brief window between fwrite and the
+        // explicit chmod below — a cohabiting OS user racing a `cat`
+        // could observe the cleartext refresh tokens. The explicit
+        // chmod is kept as belt-and-braces against umask churn from
+        // other libs running in the same request.
+        $prevUmask = umask(0077);
+
         $fp = @fopen($tmp, 'wb');
         if ($fp === false) {
+            umask($prevUmask);
             throw new SecretsWriteFailed(
                 "OAuthSecretsRepository: could not open temp file at {$tmp}."
             );
@@ -334,6 +346,11 @@ class OAuthSecretsRepository
             throw new SecretsWriteFailed(
                 "OAuthSecretsRepository: unexpected failure writing {$absolute}."
             );
+        } finally {
+            // Always restore the prior umask so the narrowed value
+            // does not leak into subsequent writes elsewhere in the
+            // request lifecycle.
+            umask($prevUmask);
         }
     }
 
