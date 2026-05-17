@@ -18,7 +18,13 @@
       - $snoozeTargets : array<'1w'|'1m'|'3m', string ISO8601>
       - $primaryAcknowledge : bool — emerald primary chip if true, slate otherwise
       - $seriesStates : array<int, string> — series id → state
+      - $cancellationImpact : ?CancellationImpactDto — projected savings if cancelled (null = unavailable)
+      - $showThresholdEditor : bool (default false) — when true, mount the inline threshold-editor popover next to action chips
 --}}
+
+@php
+    $showThresholdEditor = $showThresholdEditor ?? false;
+@endphp
 
 @php
     $tint = $tintFor($alert);
@@ -57,6 +63,10 @@
                     <span class="mx-1">·</span>
                     <span class="text-slate-400" style="font-variant-numeric: tabular-nums;">(≈ {{ $fmt($alert->eurEquivalent) }}/yr)</span>
                 @endif
+                @if ($cancellationImpact !== null)
+                    <span class="mx-1">·</span>
+                    <span style="font-variant-numeric: tabular-nums;">Cancel this → save {{ $fmt($cancellationImpact->annualSavings) }}/yr</span>
+                @endif
             </p>
             @if ($seriesState === 'cadence_changed')
                 <p class="mt-1 text-xs text-slate-500">
@@ -70,6 +80,9 @@
         </div>
         @if ($tab === 'open')
             <div class="flex shrink-0 items-center gap-2">
+                @if ($showThresholdEditor)
+                    @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $alert->recurringSeriesId], key('threshold-row-'.$alert->driftAlertId))
+                @endif
                 <button
                     type="button"
                     wire:click="acknowledge({{ $alert->driftAlertId }})"
