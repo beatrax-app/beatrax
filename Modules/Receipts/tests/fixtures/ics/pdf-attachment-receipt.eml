@@ -1,0 +1,25 @@
+From: noreply@ics.nl
+To: kaarthouder@example.test
+Subject: Uw maandafschrift
+Date: Mon, 02 Feb 2026 06:00:00 +0100
+Message-ID: <ics-pdf-attach-1@ics.nl>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="boundary-ics-pdf"
+
+--boundary-ics-pdf
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Beste kaarthouder,
+
+Uw maandafschrift is beschikbaar. Zie bijlage.
+
+--boundary-ics-pdf
+Content-Type: application/pdf; name="statement.pdf"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="statement.pdf"
+
+JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDIgMCBSPj4K
+ZW5kb2JqCnRyYWlsZXIKPDwvUm9vdCAxIDAgUj4+CiUlRU9G
+
+--boundary-ics-pdf--

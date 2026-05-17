@@ -1,0 +1,16 @@
+From: transacties@icscards.nl
+To: kaarthouder@example.test
+Subject: Bevestiging aankoop
+Date: Sat, 14 Mar 2026 18:42:00 +0100
+Message-ID: <ics-prior-1@icscards.nl>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<html><body class="legacy">
+<p>Beste kaarthouder,</p>
+<p>Een transactie is verwerkt op uw kaart **** 1234.</p>
+<p>Merchant: GELDMAAT ROELANTDREEF 239</p>
+<p>Amount: &euro; 50,00</p>
+<p>Autorisatiecode: A9B8C7</p>
+</body></html>
