@@ -24,13 +24,16 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Invokable controller routed at GET /oauth/callback/{provider} —
  * handles the IdP redirect for both the gmail and microsoft providers.
  *
- * Verifies the CSRF state, exchanges the authorization code for an
- * access + refresh token via the provider wrapper selected by
- * match($provider), persists the refresh token to the chmod-600 JSON
- * repository, inserts (or reconnect-rotates) the inboxes +
- * inbox_scan_state row pair inside a single DB transaction, and
- * redirects to /inboxes with a flash that auto-opens the backfill
- * window modal.
+ * Verifies the CSRF state AND the originating-user binding (the state
+ * carries the user_id that initiated the consent dance; the consume
+ * step rejects the callback unless the current authenticated user
+ * matches), exchanges the authorization code for an access + refresh
+ * token via the provider wrapper selected by match($provider),
+ * persists the inbox row pair + chmod-600 credentials atomically (DB
+ * insert first, secret write second, with a compensating delete that
+ * rolls back the inbox rows if the credential write fails or the
+ * provider returned no refresh token), and redirects to /inboxes with
+ * a flash that auto-opens the backfill window modal.
  *
  * The redirect URI is recomputed server-side from the same config
  * value the connect controller used so the value matches the IdP's
@@ -75,9 +78,18 @@ final class OAuthCallbackController
                 ->with('oauth_canceled', $message);
         }
 
+        // Resolve the current user BEFORE consuming the state so the
+        // consume call can verify the state's stored user_id matches.
+        // A mismatch (or an unauthenticated callback that somehow lands
+        // here) tears down the flow with InvalidStateException — the
+        // inbox must only ever attach to the user who initiated the
+        // consent dance.
+        $user = $this->currentUser->user();
+        $userId = $user->id;
+
         $stateParamRaw = $request->query('state');
         $stateParam = is_string($stateParamRaw) ? $stateParamRaw : '';
-        $existingInboxId = $this->oauthState->consumeState($provider, $stateParam);
+        $existingInboxId = $this->oauthState->consumeState($provider, $stateParam, $userId);
         if ($existingInboxId === null) {
             throw new InvalidStateException('OAuth state mismatch.');
         }
@@ -104,8 +116,6 @@ final class OAuthCallbackController
                 ->with('oauth_failed', $e->getMessage());
         }
 
-        $user = $this->currentUser->user();
-        $userId = $user->id;
         $now = $this->clock->now()->toDateTimeString();
         $email = $tokenWithEmail->email;
         $refreshToken = $tokenWithEmail->refreshToken;

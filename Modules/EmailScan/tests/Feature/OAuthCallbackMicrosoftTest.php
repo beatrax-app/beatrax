@@ -109,7 +109,7 @@ it('OAuth callback (microsoft) happy path inserts inbox + scan_state + saves ref
     // controller consumes it via the same singleton-bound instance.
     /** @var OAuthStateRepository $stateRepo */
     $stateRepo = $this->app->make(OAuthStateRepository::class);
-    $state = $stateRepo->issueState('microsoft');
+    $state = $stateRepo->issueState('microsoft', userId: $user->id);
 
     $response = $this->get('/oauth/callback/microsoft?state='.$state.'&code=fake-ms-code-abcdef');
 
