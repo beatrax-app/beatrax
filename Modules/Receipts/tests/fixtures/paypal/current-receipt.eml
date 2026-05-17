@@ -1,0 +1,29 @@
+From: service@paypal.com
+To: kaarthouder@example.test
+Subject: Je ontvangstbewijs van Netflix BV
+Date: Sun, 17 May 2026 09:42:13 +0200
+Message-ID: <deterministic-current-1@paypal.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="boundary-paypal-current"
+
+--boundary-paypal-current
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hallo Kaarthouder,
+
+Je hebt een betaling verzonden via PayPal.
+
+Aan: Netflix BV
+Bedrag: EUR 12,99
+Transaction ID: PAYPALTXN17052026
+
+Bedankt voor het gebruiken van PayPal.
+
+--boundary-paypal-current
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<html><body><p>Aan: Netflix BV</p><p>Bedrag: EUR 12,99</p><p>Transaction ID: PAYPALTXN17052026</p></body></html>
+
+--boundary-paypal-current--
