@@ -44,6 +44,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property CarbonImmutable|null $next_expected_at
  * @property bool $next_expected_confidence_low
  * @property string $cluster_key
+ * @property string|null $cluster_counterparty_key
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  * @property-read ChainLink|null $latestFundingChainLink
@@ -70,6 +71,7 @@ final class RecurringSeries extends Model
         'next_expected_at',
         'next_expected_confidence_low',
         'cluster_key',
+        'cluster_counterparty_key',
     ];
 
     /** @return array<string, string> */

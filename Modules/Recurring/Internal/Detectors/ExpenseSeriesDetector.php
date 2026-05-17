@@ -157,12 +157,15 @@ final class ExpenseSeriesDetector implements SeriesDetector
         // Also look for an existing row for this counterparty+currency
         // that was created at a different cadence (so cadence-flip can
         // be detected on the existing row instead of inserting a new
-        // one).
+        // one). Matches on the persisted `cluster_counterparty_key`
+        // (the normalized counterparty for the expense detector) so
+        // the seam is symmetric with the income detector and is not
+        // affected if `detected_name` is ever decorated separately.
         /** @var RecurringSeries|null $existingByCounterparty */
         $existingByCounterparty = RecurringSeries::query()
             ->where('user_id', $user->id)
             ->where('direction', 'expense')
-            ->where('detected_name', $counterparty)
+            ->where('cluster_counterparty_key', $counterparty)
             ->where('latest_currency', $currency)
             ->first();
 
@@ -199,6 +202,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $this->refreshExistingSeries(
             $existing,
             $clusterKey,
+            $counterparty,
             $cadenceResult['cadence'],
             $latestAmount,
             $currency,
@@ -222,7 +226,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $row = $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
             ->where('direction', 'expense')
-            ->where('detected_name', $counterparty)
+            ->where('cluster_counterparty_key', $counterparty)
             ->where('latest_currency', $currency)
             ->whereIn('state', ['pending', 'approved', 'cadence_changed', 'snoozed'])
             ->first(['variance_tolerance_percent']);
@@ -304,6 +308,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
             'next_expected_at' => $nextExpectedAt?->toDateString(),
             'next_expected_confidence_low' => $confidenceLow,
             'cluster_key' => $clusterKey,
+            'cluster_counterparty_key' => $counterparty,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -325,6 +330,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
     private function refreshExistingSeries(
         RecurringSeries $series,
         string $clusterKey,
+        string $counterparty,
         string $cadence,
         int $latestAmountMinor,
         string $currency,
@@ -345,6 +351,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
             ->update([
                 'cadence' => $cadence,
                 'cluster_key' => $clusterKey,
+                'cluster_counterparty_key' => $counterparty,
                 'latest_amount_minor' => $latestAmountMinor,
                 'latest_currency' => $currency,
                 'monthly_equivalent_minor' => $monthlyEquivalentMinor,
