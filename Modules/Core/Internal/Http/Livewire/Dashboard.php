@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Http\Livewire;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
@@ -64,6 +66,19 @@ final class Dashboard extends Component
      */
     public bool $failedChainResolutionExists = false;
 
+    /**
+     * Mirror flag for the persistent reauth toast dismissal.
+     *
+     * The source of truth is the session key
+     * `reauth_toast_dismissed_at` (written by dismissReauthToast() via
+     * the injected Session contract). The Livewire property exists so
+     * the Blade can branch on a single property reference rather than
+     * re-reading the session on every render; the property is
+     * synchronised from the session at render time, so the dismissal
+     * survives across page loads in the same session.
+     */
+    public bool $reauthToastDismissed = false;
+
     public function previousPeriod(PeriodQuery $periods): void
     {
         $current = $this->resolvePeriod($periods);
@@ -103,12 +118,37 @@ final class Dashboard extends Component
             ->exists();
     }
 
+    /**
+     * Mark the persistent reauth toast as dismissed for the rest of
+     * this session.
+     *
+     * Writes a session-scoped timestamp (`reauth_toast_dismissed_at`)
+     * so a refresh in the same browser tab keeps the toast hidden.
+     * The toast auto-disappears once every inbox returns to a non-
+     * needs_reauth state ($reauthInboxCount == 0 inside the Blade
+     * guard), so this dismiss is "for the rest of this session" — a
+     * fresh login resets the session and the toast re-surfaces if
+     * any inbox is still needs_reauth.
+     *
+     * DI-only: takes Session + Clock as method parameters (Livewire
+     * banishes constructor DI on Component subclasses; the strict-
+     * rules ruleset).
+     */
+    public function dismissReauthToast(
+        Session $session,
+        Clock $clock,
+    ): void {
+        $session->put('reauth_toast_dismissed_at', $clock->now()->toDateTimeString());
+        $this->reauthToastDismissed = true;
+    }
+
     public function render(
         CurrentUser $currentUser,
         PeriodQuery $periods,
         ThisPeriodAtAGlanceQuery $glance,
         DatabaseManager $db,
         ViewFactory $views,
+        Session $session,
     ): View {
         $user = $currentUser->user();
         $period = $this->resolvePeriod($periods);
@@ -145,6 +185,12 @@ final class Dashboard extends Component
             ->where('status', 'needs_reauth')
             ->count();
 
+        // Mirror the session dismiss flag into the property so the
+        // Blade can branch on a single property reference. The session
+        // is the source of truth — a fresh login resets it and the
+        // toast resurfaces if any inbox is still needs_reauth.
+        $this->reauthToastDismissed = $session->has('reauth_toast_dismissed_at');
+
         // Populate on initial mount so the toast surfaces immediately
         // without waiting for the first wire:poll tick.
         $this->failedChainResolutionExists = $db->connection()
@@ -159,6 +205,7 @@ final class Dashboard extends Component
             'nextSettlement' => $nextSettlement,
             'emailScanHealth' => $emailScanHealth,
             'reauthInboxCount' => $reauthInboxCount,
+            'reauthToastDismissed' => $this->reauthToastDismissed,
         ]);
     }
 
