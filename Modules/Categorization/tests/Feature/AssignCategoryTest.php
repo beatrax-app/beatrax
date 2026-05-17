@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
@@ -160,4 +162,31 @@ it('binds the AssignsCategory contract to AssignCategory', function (): void {
     $resolved = $this->app->make(AssignsCategory::class);
 
     expect($resolved)->toBeInstanceOf(AssignCategory::class);
+});
+
+it('readPriorProvenance returns null on a corrupt auto_category_provenance JSON column without crashing', function (): void {
+    // Poison the column with non-JSON bytes that would crash a vanilla
+    // json_decode-without-flags caller (silent null) and a strict
+    // JSON_THROW_ON_ERROR caller without a catch (uncaught
+    // JsonException). The new wrapper must swallow both and return
+    // null so a downstream reclassify still works.
+    DB::table('transactions')
+        ->where('id', $this->tx->id)
+        ->update(['auto_category_provenance' => '{not even close to json}']);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $result = AssignCategory::readPriorProvenance($db, $this->tx->id, $this->user->id);
+
+    expect($result)->toBeNull();
+
+    // And a full reclassify still succeeds — the corrupt provenance
+    // must NOT propagate up as an exception.
+    /** @var AssignCategory $assign */
+    $assign = $this->app->make(AssignCategory::class);
+    $affected = ($assign)($this->tx->id, $this->groceries->id, $this->user);
+
+    expect($affected)->toBe(1);
+    expect(Transaction::find($this->tx->id)->category_id)->toBe($this->groceries->id);
 });
