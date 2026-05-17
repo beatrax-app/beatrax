@@ -58,9 +58,27 @@ final class DriftPage extends Component
         $this->dispatch('toast', message: 'Acknowledged');
     }
 
-    public function snooze(int $alertId, string $untilIso, CurrentUser $currentUser, SnoozeDriftAlert $action): void
+    public function snooze(int $alertId, string $untilIso, CurrentUser $currentUser, SnoozeDriftAlert $action, Clock $clock): void
     {
-        $until = CarbonImmutable::parse($untilIso);
+        // The snooze popover only ever emits the three server-computed
+        // targets (1 week, 1 month, 3 months) from $snoozeTargets. A
+        // tampered Livewire payload could deliver an arbitrary ISO8601
+        // string — bound the accepted range so a past timestamp or an
+        // unbounded future timestamp can never reach the action.
+        try {
+            $until = CarbonImmutable::parse($untilIso);
+        } catch (\Throwable) {
+            return;
+        }
+
+        $now = $clock->now();
+        if ($until->lessThanOrEqualTo($now)) {
+            return;
+        }
+        if ($until->greaterThan($now->addMonths(6))) {
+            return;
+        }
+
         ($action)($alertId, $currentUser->user(), $until);
         $this->dispatch('toast', message: 'Snoozed');
     }
