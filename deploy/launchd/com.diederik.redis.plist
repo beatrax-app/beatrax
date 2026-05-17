@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    LaunchAgent: optional diederik Redis container starter.
+
+    Only installed when the user passes `diederik:install --launchd`
+    WITHOUT `--without-redis`. Users running Docker Desktop with
+    autostart enabled should pass `--without-redis` — Docker Desktop
+    will start the container on login and this plist would compete
+    for the port.
+
+    Mirrors the Phase 5 README's docker-run line verbatim:
+
+        docker run --name diederik-redis \
+          -p 127.0.0.1:6379:6379 \
+          -v diederik-redis-data:/data \
+          -d redis:7-alpine \
+          redis-server --save 60 1
+
+    The plist drops `-d` (the launchd version runs the container in
+    the foreground so launchd can supervise it). The volume bind +
+    127.0.0.1 loopback bind stay verbatim — the loopback bind is
+    mandatory; the project never exposes Redis to the LAN.
+
+    Placeholders {{ABS_PHP_BINARY}} + {{ABS_PROJECT_ROOT}} are NOT
+    used here (Redis has no PHP dependency); the InstallCommand
+    substitution simply passes through.
+
+    KeepAlive.Crashed=true restarts the container if it dies; the
+    larger ThrottleInterval (30s) reflects that a container takes
+    longer to crash-loop usefully than a PHP process — and Docker's
+    own restart machinery handles the inside-the-container side.
+
+    Path note: the plist hard-codes `/usr/local/bin/docker` for
+    Homebrew + Intel Mac Docker Desktop. On Apple Silicon (M1/M2/M3)
+    Docker Desktop installs to `/usr/local/bin/docker` via a symlink
+    AND to `/Applications/Docker.app/Contents/Resources/bin/docker`.
+    PATH env-var below covers both Homebrew prefixes; if your docker
+    binary lives elsewhere, edit the ProgramArguments path before
+    bootstrap or skip this plist via `--without-redis` and let
+    Docker Desktop autostart the container instead.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.diederik.redis</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/docker</string>
+        <string>run</string>
+        <string>--rm</string>
+        <string>--name</string>
+        <string>diederik-redis</string>
+        <string>-p</string>
+        <string>127.0.0.1:6379:6379</string>
+        <string>-v</string>
+        <string>diederik-redis-data:/data</string>
+        <string>redis:7-alpine</string>
+        <string>redis-server</string>
+        <string>--save</string>
+        <string>60</string>
+        <string>1</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>Crashed</key>
+        <true/>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{ABS_PROJECT_ROOT}}/storage/logs/launchd-redis.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ABS_PROJECT_ROOT}}/storage/logs/launchd-redis.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>

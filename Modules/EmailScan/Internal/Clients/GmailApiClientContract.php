@@ -57,14 +57,22 @@ interface GmailApiClientContract
     public function listHistory(int $inboxId, string $startHistoryId): array;
 
     /**
-     * Reserved for the discovery scan plan. The production body
-     * arrives there; current implementations return an empty page so
-     * any caller wiring against the contract compiles without
-     * exercising live keyword search.
+     * Daily-discovery query: `users.messages.list` with a broad
+     * `subject:(...)` keyword filter minus the `-from:(...)` allow-list
+     * of senders the caller already knows about. Returns one entry per
+     * matching message with the minimal sender metadata the discovery
+     * loop needs to populate `discovered_senders` rows — no body bytes
+     * are fetched here, so this surface NEVER persists a `.eml` blob.
+     *
+     * The production implementation pairs the list call with a per-
+     * message `users.messages.get?format=metadata&metadataHeaders=['From','Date']`
+     * fetch so the response carries the parsed sender address + name +
+     * internalDate without dragging the full RFC 822 body across the
+     * wire. The Fake collapses all that into a single fixture replay.
      *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
-     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string}
+     * @return array{messages: list<array{id: string, fromAddress: string, fromName: ?string, internalDate: string}>, nextPageToken: ?string}
      */
     public function listDiscoveryCandidates(int $inboxId, array $keywords, array $excludeSenders): array;
 }

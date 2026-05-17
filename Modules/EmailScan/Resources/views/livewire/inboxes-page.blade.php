@@ -215,6 +215,62 @@
         </section>
     @endif
 
+    {{-- Discovered senders panel per UI-SPEC § Discovered-senders panel.
+         Renders only when there is at least one candidate row above the
+         2-occurrences-in-90-days threshold (DiscoveredSenderQuery applies
+         the threshold; the Blade simply branches on count). When zero
+         candidates exist the panel does NOT render (UI-SPEC § Empty
+         state: discovery is a background feature; advertising emptiness
+         adds noise). --}}
+    @if (count($discoveredCandidates) > 0)
+        <section class="mt-12 rounded-lg border border-slate-200 bg-slate-50 p-6 space-y-4">
+            <header>
+                <h2 class="text-xl font-semibold tracking-tight text-slate-900">Discovered senders</h2>
+                <p class="mt-2 text-sm text-slate-500">
+                    Senders that look like they send receipts but aren't on your known-receipts list yet. Add the ones you want diederik to scan; dismiss the rest.
+                </p>
+            </header>
+            <ul class="space-y-3">
+                @foreach ($discoveredCandidates as $cand)
+                    @php
+                        $fallbackName = strstr($cand->senderEmail, '@', true);
+                        $displayName = $cand->senderName ?? ($fallbackName === false ? $cand->senderEmail : $fallbackName);
+                        $lastSeenHuman = \Carbon\CarbonImmutable::instance($cand->lastSeenAt)->diffForHumans();
+                    @endphp
+                    <li
+                        wire:key="discovered-{{ $cand->id }}"
+                        class="flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-white p-4"
+                    >
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm text-slate-900">{{ $cand->senderEmail }}</p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                {{ $displayName }} · last seen {{ $lastSeenHuman }}
+                            </p>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <span
+                                class="text-xs text-slate-500"
+                                style="font-variant-numeric: tabular-nums;"
+                            >Seen {{ $cand->occurrenceCount }} times</span>
+                            <button
+                                type="button"
+                                wire:click="promoteSender({{ $cand->id }})"
+                                aria-label="Add {{ $cand->senderEmail }}"
+                                class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                            >Add</button>
+                            <button
+                                type="button"
+                                wire:click="dismissSender({{ $cand->id }})"
+                                aria-label="Dismiss {{ $cand->senderEmail }}"
+                                class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                            >Dismiss</button>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     {{-- Backfill window modal Livewire SFC. Mounted unconditionally so the
          editWindow() action + the post-OAuth-callback mount() hook can
          dispatch the backfill-window:open event to open it scoped to the
