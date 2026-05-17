@@ -19,7 +19,12 @@
       - $primaryAcknowledge : bool — emerald primary chip if true, slate otherwise
       - $seriesStates : array<int, string> — series id → state
       - $cancellationImpact : ?CancellationImpactDto — projected savings if cancelled (null = unavailable)
+      - $showThresholdEditor : bool (default false) — when true, mount the inline threshold-editor popover next to action chips
 --}}
+
+@php
+    $showThresholdEditor = $showThresholdEditor ?? false;
+@endphp
 
 @php
     $tint = $tintFor($alert);
@@ -75,6 +80,9 @@
         </div>
         @if ($tab === 'open')
             <div class="flex shrink-0 items-center gap-2">
+                @if ($showThresholdEditor)
+                    @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $alert->recurringSeriesId], key('threshold-row-'.$alert->driftAlertId))
+                @endif
                 <button
                     type="button"
                     wire:click="acknowledge({{ $alert->driftAlertId }})"

@@ -137,6 +137,9 @@
                                     <span class="truncate">{{ $firstAlert->displayName }}</span>
                                     <flux:badge color="slate" size="sm" class="ml-2" style="font-variant-numeric: tabular-nums;">{{ $alertCount }} drifts open</flux:badge>
                                 </button>
+                                <div class="shrink-0">
+                                    @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $seriesId], key('threshold-group-'.$seriesId))
+                                </div>
                             </div>
                             <div
                                 x-show="open"
@@ -172,6 +175,7 @@
                             'primaryAcknowledge' => true,
                             'seriesStates' => $seriesStates,
                             'cancellationImpact' => $impactBySeriesId[$firstAlert->recurringSeriesId] ?? null,
+                            'showThresholdEditor' => true,
                         ])
                     @endif
                 @endforeach
