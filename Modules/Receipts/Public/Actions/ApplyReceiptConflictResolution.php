@@ -15,8 +15,9 @@ use stdClass;
  * resolves every held `pending_enrichment_conflicts` row for the
  * user according to the chosen policy.
  *
- * Two valid choices (T-07-11 enum tampering mitigation enforced via
- * an explicit whitelist on every __invoke):
+ * Two valid choices (enforced via the `ALLOWED_CHOICES` whitelist on
+ * every __invoke; an out-of-list value raises InvalidArgumentException
+ * before any DB read):
  *
  *  - `prefer_receipt` — UPDATE transactions.{field_name} with the
  *    receipt's incoming value for each held conflict; then DELETE
@@ -30,7 +31,16 @@ use stdClass;
  *
  * Returns the number of pending conflicts resolved.
  *
- * Cross-user safety (T-07-09): every read + write is scoped by
+ * Defence-in-depth on `field_name`: the per-row `field_name` (read
+ * from `pending_enrichment_conflicts.field_name`) is whitelisted via
+ * `ALLOWED_FIELDS` before being used as a literal SQL column name in
+ * the `transactions` UPDATE. The upstream producer in
+ * `FingerprintStage::detectConflicts` is hardcoded to the same four
+ * field names — any row carrying a different value is treated as
+ * corruption (or evidence of a future producer drift) and is deleted
+ * without touching the transactions table.
+ *
+ * Cross-user safety: every read + write is scoped by
  * `where('user_id', $user->id)` so a foreign user's pending row is
  * never touched even if the action is invoked with a borrowed
  * conflict id. The action takes a `User`, not a raw conflict id, so
@@ -40,6 +50,15 @@ final class ApplyReceiptConflictResolution
 {
     /** Allowed policy values — mirrors the DB enum trigger allow-list. */
     private const ALLOWED_CHOICES = ['prefer_receipt', 'prefer_first_write'];
+
+    /**
+     * Allowed `field_name` values. Mirrors the four field names emitted
+     * by `FingerprintStage::detectConflicts` and the `transactions`
+     * columns those names map to. Any other value received from a
+     * stored `pending_enrichment_conflicts` row is rejected before it
+     * can reach the SQL builder as a literal column name.
+     */
+    private const ALLOWED_FIELDS = ['counterparty_name', 'description', 'currency', 'amount_minor'];
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -89,7 +108,9 @@ final class ApplyReceiptConflictResolution
         $fieldName = is_string($row->field_name) ? $row->field_name : '';
         $conflictId = self::toInt($row->id);
 
-        if ($choice === 'prefer_receipt' && $fieldName !== '') {
+        $fieldIsAllowed = in_array($fieldName, self::ALLOWED_FIELDS, true);
+
+        if ($choice === 'prefer_receipt' && $fieldIsAllowed) {
             $incomingRaw = is_string($row->incoming_value) ? $row->incoming_value : 'null';
             /** @var mixed $incoming */
             $incoming = json_decode($incomingRaw, associative: true, flags: JSON_THROW_ON_ERROR);
@@ -104,6 +125,10 @@ final class ApplyReceiptConflictResolution
                 ]);
         }
 
+        // Always delete the pending row, even when field_name fell
+        // outside the whitelist — a corrupted row should not block
+        // future conflicts on the same user. The transactions table
+        // is never mutated in that case.
         $this->db->connection()
             ->table('pending_enrichment_conflicts')
             ->where('id', $conflictId)
