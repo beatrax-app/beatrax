@@ -123,18 +123,17 @@ final class DriftPage extends Component
         // CancellationImpactQuery hand-off: one DTO per distinct series
         // id rendered on the page. The map keys on recurringSeriesId so
         // the partial pulls the projection inline without a per-row
-        // query. Cross-user / missing series rows fall back to null
-        // gracefully — the partial guards every interpolation behind
-        // `@if ($cancellationImpact !== null)`.
-        /** @var array<int, CancellationImpactDto> $impactBySeriesId */
-        $impactBySeriesId = [];
+        // query. Cross-user / missing series rows are silently absent
+        // from the result — the partial guards every interpolation
+        // behind `@if ($cancellationImpact !== null)`. The batched
+        // `forSeriesIds` call collapses what would otherwise be N
+        // separate queries (one per distinct series id) into a single
+        // SELECT.
         $uniqueSeriesIds = array_values(array_unique($seriesIds));
-        foreach ($uniqueSeriesIds as $sid) {
-            $dto = $impact->forSeries($sid, $user);
-            if ($dto !== null) {
-                $impactBySeriesId[$sid] = $dto;
-            }
-        }
+        /** @var array<int, CancellationImpactDto> $impactBySeriesId */
+        $impactBySeriesId = $uniqueSeriesIds === []
+            ? []
+            : $impact->forSeriesIds($uniqueSeriesIds, $user);
 
         // Snooze targets are domain timestamps computed server-side off
         // the injected clock so `CarbonImmutable::setTestNow()` stays
