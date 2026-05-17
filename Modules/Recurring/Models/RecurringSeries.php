@@ -89,6 +89,22 @@ final class RecurringSeries extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Default `cluster_counterparty_key` to `detected_name` when a
+        // caller (typically a test fixture) doesn't supply it. The
+        // detector code paths always set the column explicitly, so this
+        // hook is exercised only by direct Eloquent inserts that
+        // pre-date the column. Keeping the fallback here means existing
+        // fixtures continue to round-trip through the detector's
+        // existing-tolerance and cadence-flip fallback lookups.
+        self::saving(static function (self $series): void {
+            if ($series->cluster_counterparty_key === null) {
+                $series->cluster_counterparty_key = $series->detected_name;
+            }
+        });
+    }
+
     /** @return BelongsTo<ChainLink, $this> */
     public function latestFundingChainLink(): BelongsTo
     {
