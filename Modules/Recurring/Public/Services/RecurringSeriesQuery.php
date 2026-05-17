@@ -104,6 +104,48 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
+     * Batched variant of `forSeries` — fetch every series row in
+     * `$seriesIds` belonging to `$user` in a single SELECT and return
+     * a `series_id => RecurringSeriesDto` map. Missing or cross-user
+     * ids are silently absent from the result.
+     *
+     * Callers that need a per-series projection (cancellation impact,
+     * display-name hydration, threshold lookup) for a list of ids on
+     * a single page render reach for this method instead of looping
+     * over `forSeries`, which would issue N queries.
+     *
+     * @param  array<int|string, mixed>  $seriesIds
+     * @return array<int, RecurringSeriesDto>
+     */
+    public function forSeriesIds(array $seriesIds, User $user): array
+    {
+        $clean = [];
+        foreach ($seriesIds as $id) {
+            $i = is_numeric($id) ? (int) $id : 0;
+            if ($i > 0) {
+                $clean[] = $i;
+            }
+        }
+        $unique = array_values(array_unique($clean));
+        if ($unique === []) {
+            return [];
+        }
+
+        $rows = $this->db->connection()->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->whereIn('id', $unique)
+            ->get();
+
+        $map = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $map[self::toInt($row->id)] = $this->toDto($row);
+        }
+
+        return $map;
+    }
+
+    /**
      * Every observation row that contributed to the cluster, ordered by
      * `observed_at DESC`. Cross-user lookups return an empty list.
      *

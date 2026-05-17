@@ -7,6 +7,7 @@ namespace Modules\DriftAlerts\Public\Services;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Public\Dto\CancellationImpactDto;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
@@ -47,6 +48,39 @@ final readonly class CancellationImpactQuery
             return null;
         }
 
+        return $this->toDto($seriesId, $series);
+    }
+
+    /**
+     * Batched lookup keyed on `recurring_series_id`. Returns one
+     * `CancellationImpactDto` per id that resolves to an owned series;
+     * unknown / cross-user ids are silently absent from the result.
+     *
+     * Pages that render multiple series (the `/drift` open tab groups
+     * alerts by series and renders a cancellation hint per group) call
+     * this once with the full id list instead of looping over
+     * `forSeries`, which would issue N queries.
+     *
+     * @param  array<int|string, mixed>  $seriesIds
+     * @return array<int, CancellationImpactDto>
+     */
+    public function forSeriesIds(array $seriesIds, User $user): array
+    {
+        $seriesMap = $this->recurringQuery->forSeriesIds($seriesIds, $user);
+        if ($seriesMap === []) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($seriesMap as $seriesId => $series) {
+            $result[$seriesId] = $this->toDto($seriesId, $series);
+        }
+
+        return $result;
+    }
+
+    private function toDto(int $seriesId, RecurringSeriesDto $series): CancellationImpactDto
+    {
         $currency = $series->monthlyEquivalent->currency();
         $monthlyMinor = abs($series->monthlyEquivalent->toMinor());
         $annualMinor = $monthlyMinor * 12;
