@@ -21,11 +21,13 @@ use Spatie\LaravelData\Data;
  *    consumer transitions the source row to `status='skipped'` with
  *    the reason archived for later audit.
  *
- *  - `unmatched()` — no matcher claimed responsibility for the message.
- *    This is the registry's terminal default, never returned by an
- *    individual matcher. The consumer transitions the row to
- *    `status='unmatched'` so a future matcher addition can re-process
- *    it.
+ *  - `unmatched(?string $reason = null)` — either no matcher claimed
+ *    responsibility for the message (registry default; reason null) or
+ *    an individual matcher recognised the sender but encountered a
+ *    row-level extraction failure that should NOT throw upward (e.g.
+ *    an unparseable Date header — `reason='invalid_date_header'`). The
+ *    consumer transitions the row to `status='unmatched'` so a future
+ *    matcher addition or a manual triage step can re-process it.
  */
 final class MatchOutcomeDto extends Data
 {
@@ -33,6 +35,7 @@ final class MatchOutcomeDto extends Data
         public readonly string $kind,
         public readonly ?ParsedReceiptDto $parsed,
         public readonly ?string $skipReason,
+        public readonly ?string $unmatchedReason = null,
     ) {}
 
     public static function parsed(ParsedReceiptDto $receipt): self
@@ -45,8 +48,8 @@ final class MatchOutcomeDto extends Data
         return new self(kind: 'skipped', parsed: null, skipReason: $reason);
     }
 
-    public static function unmatched(): self
+    public static function unmatched(?string $reason = null): self
     {
-        return new self(kind: 'unmatched', parsed: null, skipReason: null);
+        return new self(kind: 'unmatched', parsed: null, skipReason: null, unmatchedReason: $reason);
     }
 }

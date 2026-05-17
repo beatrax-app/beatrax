@@ -13,11 +13,13 @@ it('boots the Receipts module skeleton and resolves the MatcherRegistry', functi
 
     expect($registry)->toBeInstanceOf(MatcherRegistry::class);
 
-    // Wave 0: no matchers are bound under the `receipts.matcher` tag
-    // because the per-sender classes land in Wave 1 + Wave 2. The
-    // registry boots with an empty list and dispatch returns the
-    // sentinel `unmatched()` outcome.
-    expect($registry->supportedKeys())->toBe([]);
+    // The `receipts.matcher` container tag populates from whichever
+    // per-sender matcher classes are present on disk: PaypalReceiptMatcher
+    // lands in Wave 1, and IcsReceiptMatcher + GooglePlayReceiptMatcher
+    // land in Wave 2. Assert containment of the known active keys rather
+    // than equality so the test stays stable as later waves extend the
+    // list without an edit here.
+    expect($registry->supportedKeys())->toContain('paypal-receipt');
 });
 
 it('exposes the SenderMatcher contract under Modules\\Receipts\\Public\\Contracts', function (): void {
