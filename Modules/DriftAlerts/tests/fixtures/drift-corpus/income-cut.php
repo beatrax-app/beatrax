@@ -2,17 +2,16 @@
 
 declare(strict_types=1);
 
-// Scenario 6: Salary €3500 → €3325 (−5.0% month-over-month). The
-// drop is exactly at the threshold — the detector treats "above the
-// threshold" as strictly greater than, so a clean ±5.0% move does
-// fire (use 5.001% in the comparison to keep boundary clear; this
-// fixture uses a slightly bigger drop for unambiguous expectation).
-// Math:
-//   delta_minor = 332500 - 350000 = -17500 (signed income, negative)
-//   annualized_impact_minor = -17500 × 12 = -210000 (-€2100/yr)
+// Scenario 6: Salary €3500 → €3290 (−6.0% month-over-month, strictly
+// greater than the default ±5% threshold). The detector applies
+// strict-greater-than against the threshold, so an exactly-5.0% move
+// would NOT fire — the fixture picks a value past the boundary for
+// unambiguous expectation. Math:
+//   delta_minor = 329000 - 350000 = -21000 (signed income, negative)
+//   annualized_impact_minor = -21000 × 12 = -252000 (-€2520/yr)
 
 $transactions = [];
-$amounts = [350000, 350000, 350000, 332500, 332500, 332500];
+$amounts = [350000, 350000, 350000, 329000, 329000, 329000];
 for ($i = 0; $i < 6; $i++) {
     $year = 2025 + intdiv($i, 12);
     $month = ($i % 12) + 1;
@@ -39,9 +38,9 @@ return [
                 'state' => 'open',
                 'direction' => 'income',
                 'baseline_amount_minor' => 350000,
-                'latest_amount_minor' => 332500,
-                'delta_minor' => -17500,
-                'annualized_impact_minor' => -210000,
+                'latest_amount_minor' => 329000,
+                'delta_minor' => -21000,
+                'annualized_impact_minor' => -252000,
                 'threshold_percent_used' => 5,
                 'threshold_source' => 'global',
                 'currency' => 'EUR',
