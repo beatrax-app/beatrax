@@ -1044,27 +1044,27 @@ Modules/Receipts/tests/Unit/Matchers/PaypalReceiptMatcherTest.php
 | A10 | Top-nav can absorb a 6th item ("Rules") without UI-SPEC redesign | Pattern 6 / D-721 | If UI-SPEC pass decides 6 is too many, planner introduces a "Triage" or "Categorize" submenu — minor refactor |
 | A11 | Per-sender template anchors documented in "Per-Sender Matcher Patterns" are approximately correct for current PayPal/ICS/Google Play templates | Per-Sender Matcher Patterns | Templates drift; Wave 0 MUST mine fresh fixtures from a real inbox. The patterns sketch is a starting point, not a contract |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact PayPal/ICS/Google Play receipt anchors for current templates**
    - What we know: sender domains are stable; reference-ID formats (PayPal `[A-Z0-9]{17}`, Google Play `GPA.X-X-X-X`) are documented.
    - What's unclear: exact body markup, table cell selectors, label text for "Merchant"/"Amount"/"Transaction ID" lines, Dutch vs English variants per sender.
-   - Recommendation: Wave 0 anonymisation script (mirroring Phase 3 `scripts/anonymize_ics_text.php` and Phase 4 `scripts/anonymize_paypal_csv.php`) that the user runs on their own real inbox, committing the redacted `.eml` files to `Modules/Receipts/tests/fixtures/`. Same precedent as every prior phase's Wave 0.
+   - RESOLVED:  Wave 0 anonymisation script (mirroring Phase 3 `scripts/anonymize_ics_text.php` and Phase 4 `scripts/anonymize_paypal_csv.php`) that the user runs on their own real inbox, committing the redacted `.eml` files to `Modules/Receipts/tests/fixtures/`. Same precedent as every prior phase's Wave 0.
 
 2. **Conflict-resolution UX wording**
    - What we know: D-707 mandates a binary "prefer_receipt | prefer_first_write" toggle stored on `users`.
    - What's unclear: exact toast copy + whether the user can later revisit the choice from `/settings`.
-   - Recommendation: UI-SPEC pass during plan-phase locks the copy + `/settings` row.
+   - RESOLVED:  UI-SPEC pass during plan-phase locks the copy + `/settings` row.
 
 3. **Chain hint event payload sub-DTO design**
    - What we know: D-708 names two initial `hint_type` values: `'funded_by_card'` and `'refund_of'`.
    - What's unclear: whether sub-DTO payloads should be Spatie DTOs (typed) or arrays (flexible). Likely Spatie DTOs per project style, with one class per `hint_type`.
-   - Recommendation: Spatie DTOs (e.g., `Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload`). Modules/Chains listener type-narrows via `match($hintType)` and the event payload's `match` returns the correctly-typed sub-DTO.
+   - RESOLVED:  Spatie DTOs (e.g., `Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload`). Modules/Chains listener type-narrows via `match($hintType)` and the event payload's `match` returns the correctly-typed sub-DTO.
 
 4. **Should `ApplyAutoCategoryStage` apply to ALL sources retroactively?**
    - What we know: Per D-710, the stage runs uniformly — so future CSV imports also benefit from rules.
    - What's unclear: Should a one-shot artisan command `diederik:auto-categorize-existing` re-run rules over ALREADY-imported transactions? This is the "re-parse on rule change" feature CONTEXT.md defers to v2.
-   - Recommendation: NOT in Phase 7. Add to deferred items.
+   - RESOLVED:  NOT in Phase 7. Add to deferred items.
 
 ## Environment Availability
 
