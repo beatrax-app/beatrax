@@ -58,6 +58,16 @@ use Psr\Log\LoggerInterface;
  */
 final class ApplyEnrichments implements AppliesEnrichments
 {
+    /**
+     * Whitelist of `conflictingFields` keys that may flow through as
+     * literal SQL column names on the `transactions` UPDATE. Mirrors
+     * the four field names emitted by `FingerprintStage::detectConflicts`.
+     * Any other key is dropped silently before reaching the SQL
+     * builder so a poisoned preview cache or a future producer drift
+     * cannot turn an array key into an arbitrary column name.
+     */
+    private const ALLOWED_CONFLICT_FIELDS = ['counterparty_name', 'description', 'currency', 'amount_minor'];
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -226,6 +236,14 @@ final class ApplyEnrichments implements AppliesEnrichments
         $now = $this->clock->now()->toDateTimeString();
 
         foreach ($enrichment->conflictingFields as $fieldName => $values) {
+            // Defence-in-depth: skip unknown field names so a poisoned
+            // preview cache cannot persist arbitrary `field_name` values
+            // that would later flow into an UPDATE column list via
+            // ApplyReceiptConflictResolution.
+            if (! in_array($fieldName, self::ALLOWED_CONFLICT_FIELDS, true)) {
+                continue;
+            }
+
             $stored = $values['stored'] ?? null;
             $incoming = $values['incoming'] ?? null;
 
@@ -255,6 +273,9 @@ final class ApplyEnrichments implements AppliesEnrichments
     /**
      * Build the per-field update map for the prefer_receipt policy:
      * the incoming value lands as-is on each conflicting column.
+     * Field names outside `ALLOWED_CONFLICT_FIELDS` are dropped so a
+     * corrupted cache row cannot inject an unintended column name into
+     * the UPDATE.
      *
      * @return array<string, mixed>
      */
@@ -262,6 +283,9 @@ final class ApplyEnrichments implements AppliesEnrichments
     {
         $updates = [];
         foreach ($enrichment->conflictingFields as $fieldName => $values) {
+            if (! in_array($fieldName, self::ALLOWED_CONFLICT_FIELDS, true)) {
+                continue;
+            }
             $updates[$fieldName] = $values['incoming'] ?? null;
         }
 
