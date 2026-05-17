@@ -1,0 +1,159 @@
+<?php
+
+declare(strict_types=1);
+
+use Livewire\Livewire;
+use Modules\Core\Models\User;
+use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+
+/*
+ * OAuth-client-registration wizard modal (Microsoft 365 variant).
+ *
+ * Exercises:
+ *  - open('microsoft') sets the provider.
+ *  - The Blade view renders the six Azure-specific numbered steps when
+ *    $provider === 'microsoft'.
+ *  - submit() validates the client_id is a UUID v4 and the
+ *    client_secret is non-empty. Each failure surfaces the locked
+ *    error copy from the UI-SPEC and the secrets file is not written.
+ *  - The happy path writes via OAuthSecretsRepository, dispatches
+ *    modal-hide, and redirects to /oauth/connect/microsoft.
+ *  - The publishedConfirmed checkbox does NOT gate Microsoft submit —
+ *    that gate is Google-only because Azure has no equivalent "push
+ *    to production" step.
+ */
+
+beforeEach(function (): void {
+    $this->path = storage_path('app/secrets/email-oauth.json');
+    if (is_file($this->path)) {
+        @unlink($this->path);
+    }
+});
+
+afterEach(function (): void {
+    if (is_file($this->path)) {
+        @unlink($this->path);
+    }
+});
+
+function ocwmUser(string $email): User
+{
+    return User::query()->create([
+        'email' => $email,
+        'password' => 'fixture',
+        'period_start_day' => 1,
+    ]);
+}
+
+it('open(microsoft) sets the provider to microsoft', function (): void {
+    $user = ocwmUser('open-ms@example.com');
+
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'microsoft')
+        ->assertSet('provider', 'microsoft');
+});
+
+it('renders the six Azure-specific numbered steps when provider is microsoft', function (): void {
+    $user = ocwmUser('render-ms@example.com');
+
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'microsoft')
+        ->assertSee('Open Azure Portal')
+        ->assertSee('Register a new application')
+        ->assertSee('Add the redirect URI')
+        ->assertSee('Grant Mail.Read permission')
+        ->assertSee('Create a client secret')
+        ->assertSee('Paste your application (client) ID and secret')
+        ->assertSee('Set up your Microsoft 365 OAuth client');
+});
+
+it('rejects a non-UUID client_id with the locked error copy', function (): void {
+    $user = ocwmUser('bad-id-ms@example.com');
+
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'microsoft')
+        ->set('clientId', 'not-a-uuid')
+        ->set('clientSecret', 'whatever-secret')
+        ->call('submit')
+        ->assertSet('errorMessage', 'Enter the application (client) ID — a UUID like 12345678-1234-1234-1234-123456789abc.');
+
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    expect($secrets->hasProviderClient('microsoft'))->toBeFalse();
+});
+
+it('rejects a UUID-shaped but non-v4 client_id with the locked error copy', function (): void {
+    $user = ocwmUser('bad-uuid-ms@example.com');
+
+    // Third group must start with 1-5 (RFC 4122 version nibble); a leading 7
+    // means the value is well-formed UUID hex but the wrong version.
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'microsoft')
+        ->set('clientId', '11111111-2222-7333-89ab-444444444444')
+        ->set('clientSecret', 'whatever-secret')
+        ->call('submit')
+        ->assertSet('errorMessage', 'Enter the application (client) ID — a UUID like 12345678-1234-1234-1234-123456789abc.');
+
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    expect($secrets->hasProviderClient('microsoft'))->toBeFalse();
+});
+
+it('rejects an empty client_secret with the locked error copy', function (): void {
+    $user = ocwmUser('empty-secret-ms@example.com');
+
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'microsoft')
+        ->set('clientId', '12345678-1234-4abc-89ab-123456789abc')
+        ->set('clientSecret', '')
+        ->call('submit')
+        ->assertSet('errorMessage', 'Enter the client secret value Azure showed you when you created the secret.');
+
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    expect($secrets->hasProviderClient('microsoft'))->toBeFalse();
+});
+
+it('happy path: writes the provider client via OAuthSecretsRepository + dispatches modal-hide + redirects to /oauth/connect/microsoft', function (): void {
+    $user = ocwmUser('happy-ms@example.com');
+
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'microsoft')
+        ->set('clientId', '12345678-1234-4abc-89ab-123456789abc')
+        ->set('clientSecret', 'real-secret-value')
+        ->call('submit')
+        ->assertDispatched('modal-hide')
+        ->assertRedirect(route('oauth.connect', ['provider' => 'microsoft']));
+
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    expect($secrets->hasProviderClient('microsoft'))->toBeTrue();
+
+    $loaded = $secrets->loadProviderClient('microsoft');
+    expect($loaded)->not->toBeNull();
+    expect($loaded['client_id'])->toBe('12345678-1234-4abc-89ab-123456789abc');
+    expect($loaded['client_secret'])->toBe('real-secret-value');
+});
+
+it('Microsoft submit succeeds with publishedConfirmed=false — the checkbox does not gate the Microsoft variant', function (): void {
+    $user = ocwmUser('no-published-ms@example.com');
+
+    // Defensive test: if the Microsoft branch ever inherited the
+    // Google publishedConfirmed check, this would fail on submit even
+    // though the user never sees that checkbox in the Microsoft UI.
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'microsoft')
+        ->set('clientId', 'abcdef01-2345-4678-89ab-cdef01234567')
+        ->set('clientSecret', 'another-secret')
+        ->set('publishedConfirmed', false)
+        ->call('submit')
+        ->assertSet('errorMessage', '')
+        ->assertRedirect(route('oauth.connect', ['provider' => 'microsoft']));
+
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    expect($secrets->hasProviderClient('microsoft'))->toBeTrue();
+});

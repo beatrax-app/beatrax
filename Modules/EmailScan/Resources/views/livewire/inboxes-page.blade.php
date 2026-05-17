@@ -118,8 +118,9 @@
         {{-- Placeholder until the backfill-window-modal Livewire SFC lands. --}}
     @endif
 
-    {{-- Wizard modal (Gmail variant — Microsoft variant lands in
-         the next plan). Mounted unconditionally so the openWizard()
-         action can dispatch modal-show to open it. --}}
+    {{-- Wizard modal (single SFC; branches on the $provider property
+         to render the Gmail or Microsoft 365 variant). Mounted
+         unconditionally so the openWizard() action can dispatch
+         modal-show to open it. --}}
     <livewire:email-scan.oauth-client-wizard-modal />
 </div>
