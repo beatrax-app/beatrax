@@ -8,6 +8,8 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
+use Modules\EmailScan\Internal\Clients\GraphApiClient;
+use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\EmlBlobStore;
 use Modules\EmailScan\Internal\Http\Livewire\BackfillWindowModal;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
@@ -63,6 +65,11 @@ final class EmailScanServiceProvider extends ServiceProvider
         // Tests rebind the contract to FakeGmailApiClient via
         // $this->app->instance(GmailApiClientContract::class, ...).
         $this->app->singleton(GmailApiClientContract::class, GmailApiClient::class);
+        $this->app->singleton(GraphApiClient::class);
+        // Same Fake/real swap pattern for the Graph contract — tests
+        // rebind GraphApiClientContract to FakeGraphApiClient via
+        // $this->app->instance(...).
+        $this->app->singleton(GraphApiClientContract::class, GraphApiClient::class);
         $this->app->singleton(InboxScanStateMachine::class);
     }
 
