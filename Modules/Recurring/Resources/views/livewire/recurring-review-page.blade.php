@@ -141,19 +141,19 @@
                                     >
                                         <button
                                             type="button"
-                                            wire:click="snooze({{ $row->seriesId }}, '{{ now()->addWeek()->toIso8601String() }}')"
+                                            wire:click="snooze({{ $row->seriesId }}, '{{ $snoozeTargets['1w'] }}')"
                                             x-on:click="open = false"
                                             class="block w-full px-2 py-1 text-left hover:bg-slate-50"
                                         >1 week</button>
                                         <button
                                             type="button"
-                                            wire:click="snooze({{ $row->seriesId }}, '{{ now()->addMonth()->toIso8601String() }}')"
+                                            wire:click="snooze({{ $row->seriesId }}, '{{ $snoozeTargets['1m'] }}')"
                                             x-on:click="open = false"
                                             class="block w-full px-2 py-1 text-left hover:bg-slate-50"
                                         >1 month</button>
                                         <button
                                             type="button"
-                                            wire:click="snooze({{ $row->seriesId }}, '{{ now()->addMonths(3)->toIso8601String() }}')"
+                                            wire:click="snooze({{ $row->seriesId }}, '{{ $snoozeTargets['3m'] }}')"
                                             x-on:click="open = false"
                                             class="block w-full px-2 py-1 text-left hover:bg-slate-50"
                                         >3 months</button>

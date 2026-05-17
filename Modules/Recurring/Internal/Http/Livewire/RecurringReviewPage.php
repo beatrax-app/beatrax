@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
@@ -146,6 +147,7 @@ final class RecurringReviewPage extends Component
         CurrentUser $currentUser,
         RecurringSeriesQuery $query,
         ViewFactory $views,
+        Clock $clock,
     ): View {
         $user = $currentUser->user();
 
@@ -155,9 +157,21 @@ final class RecurringReviewPage extends Component
             default => $query->pendingForUser($user, $this->cursorId),
         };
 
+        // Snooze targets are domain timestamps computed server-side
+        // off the injected clock, not Blade-time `now()` calls. This
+        // keeps `CarbonImmutable::setTestNow()` deterministic for the
+        // test suite and routes timing through the DI-only seam.
+        $now = $clock->now();
+        $snoozeTargets = [
+            '1w' => $now->addWeek()->toIso8601String(),
+            '1m' => $now->addMonth()->toIso8601String(),
+            '3m' => $now->addMonths(3)->toIso8601String(),
+        ];
+
         $view = $views->make('recurring::livewire.recurring-review-page', [
             'rows' => $rows,
             'tab' => $this->tab,
+            'snoozeTargets' => $snoozeTargets,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
