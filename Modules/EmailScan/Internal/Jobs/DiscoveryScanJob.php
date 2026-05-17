@@ -120,6 +120,18 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         'bevestiging',
     ];
 
+    /**
+     * Defensive cap on how many pages of discovery candidates this job
+     * walks per inbox per day. 10 pages * 100 candidates/page = 1000
+     * candidate observations per inbox per daily tick — large enough
+     * that a busy inbox's receipt senders are surfaced even when they
+     * sit past the first 100 newest broad-keyword matches, but bounded
+     * enough that a misbehaving provider cannot exhaust the worker's
+     * heap or burn quota for the rest of the day. Mirrors the
+     * FALLBACK_WALK_HARD_CAP semantics in IncrementalScanJob.
+     */
+    private const DISCOVERY_MAX_PAGES = 10;
+
     public function __construct(public readonly int $userId) {}
 
     public function uniqueId(): string
@@ -255,54 +267,101 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         $messages = [];
 
         if ($provider === 'gmail') {
-            $page = $gmail->listDiscoveryCandidates($inboxId, self::DISCOVERY_KEYWORDS, $allExcludes);
-            foreach ($page['messages'] as $msg) {
-                // Always parse to DateTimeImmutable at the boundary
-                // so the downstream foreach can rely on one type.
-                $rawDate = $msg['internalDate'];
-                $messages[] = [
-                    'sender_email' => strtolower($msg['fromAddress']),
-                    'sender_name' => $msg['fromName'],
-                    'internalDate' => $rawDate !== ''
+            // Walk pages of discovery candidates up to the defensive
+            // hard cap. Previously the job called listDiscoveryCandidates
+            // exactly once and ignored nextPageToken — for any inbox
+            // whose receipt senders sat past the first 100 newest
+            // broad-keyword matches, discovery silently failed.
+            $pageToken = null;
+            $pagesWalked = 0;
+            do {
+                $page = $gmail->listDiscoveryCandidates(
+                    $inboxId,
+                    self::DISCOVERY_KEYWORDS,
+                    $allExcludes,
+                    $pageToken,
+                );
+                foreach ($page['messages'] as $msg) {
+                    // Always parse to DateTimeImmutable at the boundary
+                    // so the downstream foreach can rely on one type.
+                    // Defensive narrowing on every field — the contract
+                    // exposes the message entries as
+                    // array<string, mixed> precisely so a future Fake
+                    // variant or a production-side response shape drift
+                    // cannot crash the daily scan (IN-03 iter-2).
+                    $rawAddr = $msg['fromAddress'] ?? null;
+                    if (! is_string($rawAddr) || $rawAddr === '') {
+                        continue;
+                    }
+                    $rawName = $msg['fromName'] ?? null;
+                    $senderName = is_string($rawName) && $rawName !== '' ? $rawName : null;
+
+                    $rawDate = $msg['internalDate'] ?? null;
+                    $internalDate = is_string($rawDate) && $rawDate !== ''
                         ? $this->safeParseDate($rawDate, $clock)
-                        : $clock->now()->toDateTimeImmutable(),
-                ];
-            }
+                        : $clock->now()->toDateTimeImmutable();
+
+                    $messages[] = [
+                        'sender_email' => strtolower($rawAddr),
+                        'sender_name' => $senderName,
+                        'internalDate' => $internalDate,
+                    ];
+                }
+                $pageToken = $page['nextPageToken'] ?? null;
+                $pagesWalked++;
+            } while (
+                is_string($pageToken) && $pageToken !== ''
+                && $pagesWalked < self::DISCOVERY_MAX_PAGES
+            );
         } elseif ($provider === 'microsoft') {
-            $page = $graph->listDiscoveryCandidatesPaged($inboxId, self::DISCOVERY_KEYWORDS, $allExcludes, null);
-            foreach ($page['messages'] as $rawMsg) {
-                $sender = '';
-                $senderName = null;
-                if (isset($rawMsg['from']) && is_array($rawMsg['from'])) {
-                    $emailAddress = $rawMsg['from']['emailAddress'] ?? null;
-                    if (is_array($emailAddress)) {
-                        $rawAddr = $emailAddress['address'] ?? null;
-                        if (is_string($rawAddr)) {
-                            $sender = strtolower($rawAddr);
-                        }
-                        $rawName = $emailAddress['name'] ?? null;
-                        if (is_string($rawName) && $rawName !== '') {
-                            $senderName = $rawName;
+            $nextLink = null;
+            $pagesWalked = 0;
+            do {
+                $page = $graph->listDiscoveryCandidatesPaged(
+                    $inboxId,
+                    self::DISCOVERY_KEYWORDS,
+                    $allExcludes,
+                    $nextLink,
+                );
+                foreach ($page['messages'] as $rawMsg) {
+                    $sender = '';
+                    $senderName = null;
+                    if (isset($rawMsg['from']) && is_array($rawMsg['from'])) {
+                        $emailAddress = $rawMsg['from']['emailAddress'] ?? null;
+                        if (is_array($emailAddress)) {
+                            $rawAddr = $emailAddress['address'] ?? null;
+                            if (is_string($rawAddr)) {
+                                $sender = strtolower($rawAddr);
+                            }
+                            $rawName = $emailAddress['name'] ?? null;
+                            if (is_string($rawName) && $rawName !== '') {
+                                $senderName = $rawName;
+                            }
                         }
                     }
-                }
-                $received = $rawMsg['receivedDateTime'] ?? null;
-                // When the Graph response omits receivedDateTime
-                // (rare, but possible on malformed entries), fall
-                // back to the injected clock rather than the magic
-                // 'now' string literal — keeps the missing-data
-                // path explicit and avoids piggy-backing on
-                // DateTimeImmutable's natural-language parser.
-                $internalDate = is_string($received) && $received !== ''
-                    ? $this->safeParseDate($received, $clock)
-                    : $clock->now()->toDateTimeImmutable();
+                    $received = $rawMsg['receivedDateTime'] ?? null;
+                    // When the Graph response omits receivedDateTime
+                    // (rare, but possible on malformed entries), fall
+                    // back to the injected clock rather than the magic
+                    // 'now' string literal — keeps the missing-data
+                    // path explicit and avoids piggy-backing on
+                    // DateTimeImmutable's natural-language parser.
+                    $internalDate = is_string($received) && $received !== ''
+                        ? $this->safeParseDate($received, $clock)
+                        : $clock->now()->toDateTimeImmutable();
 
-                $messages[] = [
-                    'sender_email' => $sender,
-                    'sender_name' => $senderName,
-                    'internalDate' => $internalDate,
-                ];
-            }
+                    $messages[] = [
+                        'sender_email' => $sender,
+                        'sender_name' => $senderName,
+                        'internalDate' => $internalDate,
+                    ];
+                }
+                $nextLink = $page['nextLink'] ?? null;
+                $pagesWalked++;
+            } while (
+                is_string($nextLink) && $nextLink !== ''
+                && $pagesWalked < self::DISCOVERY_MAX_PAGES
+            );
         } else {
             // Unknown provider — nothing to discover.
             return;
