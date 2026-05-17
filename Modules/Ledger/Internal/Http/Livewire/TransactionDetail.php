@@ -9,7 +9,9 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
+use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
+use Modules\Categorization\Public\Events\CategorizationDiverged;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -174,8 +176,8 @@ final class TransactionDetail extends Component
      * UPDATE by user_id; a foreign-user transaction returns 0 rows
      * affected and no event fires. The Livewire-local
      * `correction-divergence:fire` event carries the explicit
-     * `$userId` field so the toast SFC can perform its T-07-09
-     * cross-user guard defensively.
+     * `$userId` field so the toast SFC can perform its cross-user
+     * guard defensively.
      */
     public function reclassifyCategory(
         int $newCategoryId,
@@ -185,74 +187,37 @@ final class TransactionDetail extends Component
     ): void {
         $user = $currentUser->user();
 
-        $priorProvenance = self::readPriorProvenance($db, $this->transactionId, $user->id);
+        // Single canonical divergence detector lives on
+        // CategorizationDiverged::fromProvenance; both this Livewire
+        // dispatch and AssignCategory's framework-event dispatch route
+        // their validation through the same factory so the two
+        // channels stay in lockstep on any future provenance shape
+        // change.
+        $priorProvenance = AssignCategory::readPriorProvenance($db, $this->transactionId, $user->id);
 
         $affected = ($assign)($this->transactionId, $newCategoryId, $user);
         if ($affected === 0) {
             return;
         }
 
-        if ($priorProvenance === null) {
-            return;
-        }
-
-        $source = $priorProvenance['source'] ?? null;
-        if ($source !== 'rule') {
-            return;
-        }
-
-        $ruleIdRaw = $priorProvenance['rule_id'] ?? null;
-        if (! is_int($ruleIdRaw) && ! is_numeric($ruleIdRaw)) {
-            return;
-        }
-        $ruleId = (int) $ruleIdRaw;
-        if ($ruleId === 0) {
-            return;
-        }
-
-        $oldCategoryRaw = $priorProvenance['category_id'] ?? null;
-        if (! is_int($oldCategoryRaw) && ! is_numeric($oldCategoryRaw)) {
-            return;
-        }
-        $oldCategoryId = (int) $oldCategoryRaw;
-
-        if ($newCategoryId === $oldCategoryId) {
+        $divergence = CategorizationDiverged::fromProvenance(
+            priorProvenance: $priorProvenance,
+            transactionId: $this->transactionId,
+            newCategoryId: $newCategoryId,
+            userId: $user->id,
+        );
+        if ($divergence === null) {
             return;
         }
 
         $this->dispatch(
             'correction-divergence:fire',
-            transactionId: $this->transactionId,
-            ruleId: $ruleId,
-            oldCategoryId: $oldCategoryId,
-            newCategoryId: $newCategoryId,
-            userId: $user->id,
+            transactionId: $divergence->transactionId,
+            ruleId: $divergence->ruleId,
+            oldCategoryId: $divergence->oldCategoryId,
+            newCategoryId: $divergence->newCategoryId,
+            userId: $divergence->userId,
         );
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private static function readPriorProvenance(DatabaseManager $db, int $transactionId, int $userId): ?array
-    {
-        $raw = $db->connection()
-            ->table('transactions')
-            ->where('id', $transactionId)
-            ->where('user_id', $userId)
-            ->value('auto_category_provenance');
-
-        if (! is_string($raw) || $raw === '') {
-            return null;
-        }
-
-        /** @var mixed $decoded */
-        $decoded = json_decode($raw, true);
-        if (! is_array($decoded)) {
-            return null;
-        }
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
     }
 
     public function render(CurrentUser $currentUser, ViewFactory $views): View
@@ -262,15 +227,14 @@ final class TransactionDetail extends Component
             ->where('user_id', $currentUser->user()->id)
             ->firstOrFail();
 
-        // UI-SPEC § Chain drill-down drawer: the "View chain" button
-        // renders when the resolver has run at least once for the user
-        // (i.e. ChainLinkQuery::forTransaction would return a non-null
-        // ChainTree even if it contains only the root). Since the
-        // detail page is itself user-scoped via `firstOrFail()` and
-        // the chain-tree query is now wired (Wave 3), the button is
-        // available on every detail page the user can see; the drawer
-        // itself renders the empty / pre-mount states when no chain
-        // exists yet.
+        // Chain drill-down drawer: the "View chain" button renders
+        // whenever the resolver has run at least once for the user
+        // (ChainLinkQuery::forTransaction returns a non-null ChainTree
+        // even when it contains only the root). The detail page is
+        // user-scoped via `firstOrFail()` and the chain-tree query is
+        // wired, so the button is available on every detail page the
+        // user can see; the drawer renders empty / pre-mount states
+        // when no chain exists yet.
         $chainAvailable = true;
 
         $view = $views->make('ledger::livewire.transaction-detail', [

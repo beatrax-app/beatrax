@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Categorization\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\QueryException;
 use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Pipeline\NormalizeStage;
@@ -12,8 +13,7 @@ use Modules\Import\Public\Pipeline\NormalizeStage;
 /**
  * Listens for TransactionCategorized and grows the merchant_memories
  * table so future imports for the same normalised merchant auto-
- * suggest the chosen category — the CAT-02 storage half of
- * categorization learning.
+ * suggest the chosen category.
  *
  * The listener:
  *  1. Skips when categoryId is null (the user un-categorized — not a
@@ -32,20 +32,24 @@ use Modules\Import\Public\Pipeline\NormalizeStage;
  *       not by this listener; absence is a Ledger concern, not a
  *       categorization concern.
  *  4. Upserts merchant_memories on the (user_id, merchant_id,
- *     category_id) UNIQUE constraint via updateOrInsert: the existing
- *     row's occurrence_count is atomically incremented through a raw
- *     `occurrence_count + 1` expression and last_seen_at + updated_at
- *     are stamped from the injected Clock.
+ *     category_id) UNIQUE constraint. The implementation attempts an
+ *     `insert` first; when the UNIQUE constraint triggers a
+ *     QueryException the listener catches it and falls back to an
+ *     atomic `occurrence_count + 1` UPDATE. The insert-then-catch
+ *     pattern is race-safe: the DB serialises competing inserts and
+ *     exactly one of N concurrent events lands the row; the rest take
+ *     the UPDATE branch and increment the counter.
  *
  * Synchronous: the listener fires inside AssignCategory's request
  * cycle. There is no queued posture — memory growth is a tiny indexed
  * write and benefits from staying in the same DB transaction frame as
  * the category assignment.
  *
- * Idempotency: a second TransactionCategorized for the same (user,
- * merchant, category) triple triggers an atomic increment via
- * updateOrInsert's UPDATE branch; the row's UNIQUE constraint guarantees
- * the increment hits the right row regardless of race.
+ * Counter semantics: the first event for a (user, merchant, category)
+ * triple lands occurrence_count = 1; every subsequent event adds 1
+ * via the atomic UPDATE branch. The counter advances monotonically by
+ * exactly the number of distinct events dispatched, regardless of
+ * dispatch order under concurrency.
  */
 final class MerchantMemoryWriter
 {
@@ -93,30 +97,21 @@ final class MerchantMemoryWriter
         }
 
         $now = $this->clock->now()->toDateTimeString();
+        $userId = $event->userId;
+        $categoryId = $event->categoryId;
 
-        // updateOrInsert hits the (user_id, merchant_id, category_id)
-        // UNIQUE constraint when present. The connection->raw arm
-        // atomically increments occurrence_count instead of reading +
-        // writing; the very-first insert leaves occurrence_count at 1
-        // (Laravel's updateOrInsert applies the values map verbatim on
-        // insert, so the raw expression evaluates against NULL on
-        // insert and would yield NULL — to insert with the correct
-        // starting value of 1, the insert path must use a literal 1,
-        // separated from the update path). We perform an existence
-        // check first to choose between insert (literal 1) and update
-        // (raw expression).
-        $existingMemory = $connection
-            ->table('merchant_memories')
-            ->where('user_id', $event->userId)
-            ->where('merchant_id', $merchantId)
-            ->where('category_id', $event->categoryId)
-            ->first(['id', 'occurrence_count']);
-
-        if ($existingMemory === null) {
+        // Try-insert-then-update: the (user_id, merchant_id, category_id)
+        // UNIQUE constraint on merchant_memories makes a naked INSERT
+        // race-safe. The first event for a new triple wins the INSERT
+        // and lands occurrence_count = 1; the second and subsequent
+        // events catch the UNIQUE violation and fall through to the
+        // atomic `occurrence_count + 1` UPDATE. This avoids the
+        // check-then-insert TOCTOU window a SELECT-first approach has.
+        try {
             $connection->table('merchant_memories')->insert([
-                'user_id' => $event->userId,
+                'user_id' => $userId,
                 'merchant_id' => $merchantId,
-                'category_id' => $event->categoryId,
+                'category_id' => $categoryId,
                 'occurrence_count' => 1,
                 'last_seen_at' => $now,
                 'created_at' => $now,
@@ -124,16 +119,35 @@ final class MerchantMemoryWriter
             ]);
 
             return;
+        } catch (QueryException $e) {
+            if (! self::isUniqueViolation($e)) {
+                throw $e;
+            }
         }
 
         $connection
             ->table('merchant_memories')
-            ->where('id', self::toInt($existingMemory->id))
+            ->where('user_id', $userId)
+            ->where('merchant_id', $merchantId)
+            ->where('category_id', $categoryId)
             ->update([
                 'occurrence_count' => $connection->raw('occurrence_count + 1'),
                 'last_seen_at' => $now,
                 'updated_at' => $now,
             ]);
+    }
+
+    private static function isUniqueViolation(QueryException $e): bool
+    {
+        $sqlState = (string) $e->getCode();
+        if ($sqlState === '23000') {
+            return true;
+        }
+        $message = $e->getMessage();
+
+        return str_contains($message, 'UNIQUE constraint failed')
+            || str_contains($message, 'Duplicate entry')
+            || str_contains($message, 'duplicate key value');
     }
 
     private static function toInt(mixed $value): int

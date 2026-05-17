@@ -16,7 +16,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
  * Inline provenance panel embedded in the transaction detail page,
  * rendered between the Reclassify section and the View chain section.
  *
- * Three variants per UI-SPEC § Transaction detail provenance panels:
+ * Three variants keyed on the prior auto-category provenance:
  *  - `rule`   — always-visible "Rule that fired" card with the
  *               rule summary + Update rule / Remove rule actions.
  *  - `memory` — lighter "Auto-categorized from merchant history" card

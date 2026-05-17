@@ -11,14 +11,13 @@ use Livewire\Component;
 /**
  * Step component for the /imports wizard "Email file" arm.
  *
- * For Wave 1 the wizard works through the existing UploadWizard
- * component — the SUPPORTED_FORMATS, validation, and submit flow
- * accept the new `email-file` issuer + `eml`/`mbox` leaf formats
- * without a separate page. This SFC is registered with Livewire
- * as a thin shell so that future deeper wizard customisation
- * (e.g. a per-file matcher-preview before upload) has a stable
- * component to live on without requiring a wizard architecture
- * rewrite.
+ * The wizard's main flow lives on the shared UploadWizard component;
+ * SUPPORTED_FORMATS, validation, and submit accept the `email-file`
+ * issuer plus the `eml`/`mbox` leaf formats without a separate page.
+ * This SFC is registered with Livewire as a thin shell so deeper
+ * wizard customisation (e.g. a per-file matcher-preview before
+ * upload) has a stable component to live on without requiring a
+ * wizard architecture rewrite.
  */
 final class WizardEmailFileStep extends Component
 {

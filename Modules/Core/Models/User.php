@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int $period_start_day
  * @property string $default_currency_view
  * @property bool|null $auto_import_drop_folder
+ * @property string $receipt_conflict_resolution
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -37,6 +38,7 @@ final class User extends Authenticatable
         'period_start_day',
         'default_currency_view',
         'auto_import_drop_folder',
+        'receipt_conflict_resolution',
     ];
 
     /** @var list<string> */

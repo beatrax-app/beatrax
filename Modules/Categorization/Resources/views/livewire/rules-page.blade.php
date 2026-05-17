@@ -1,15 +1,11 @@
-{{-- /rules page (D-713, D-721).
+{{-- /rules page.
 
      Renders the user's categorization-rule list as a calm table with
      field / match / value / category / hits / created columns. The
      `New rule` button + per-row Edit chip dispatch the global
      `rule-form:open` Livewire event so the globally-mounted
      RuleFormModal SFC handles the form. The per-row Delete chip
-     collapses into a two-step inline confirmation per UI-SPEC.
-
-     Copy locked verbatim against 07-UI-SPEC.md § Copywriting
-     Contract → "/rules page" and "Empty state" and "Rules table"
-     and "Rule row inline actions". --}}
+     collapses into a two-step inline confirmation. --}}
 
 <div class="space-y-6">
     <header class="mb-12 space-y-1">

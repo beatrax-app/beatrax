@@ -14,7 +14,7 @@ use stdClass;
 /**
  * Evaluates the user's CategorizationRule rows + merchant_memories
  * against an incoming CanonicalTransaction and returns the highest-
- * scoring candidate per the D-711 specificity scoring algorithm:
+ * scoring candidate per the specificity scoring algorithm:
  *
  *   equals       = 100
  *   memory       =  90
@@ -28,13 +28,13 @@ use stdClass;
  *
  * Reads are scoped by `where('user_id', $user->id)` on every query
  * so a foreign user's rule or memory never fires for the current
- * user — the T-07-09 cross-user mitigation.
+ * user.
  *
  * Case-insensitive string comparisons use the `mb_*` family so
  * Unicode characters (German umlauts, Spanish accents) compare
  * correctly. The match operators are evaluated in PHP rather than
  * via SQL LIKE so the rule.value never reaches the SQL string —
- * the T-07-05 SQL-injection mitigation.
+ * the SQL-injection mitigation for user-authored rule values.
  *
  * Merchant memory lookup derives `merchant_id` by JOINing the
  * merchants table on (user_id, normalized_name = counterpartyNormalized).
@@ -46,11 +46,12 @@ use stdClass;
  * the empty-counterparty sentinel (see NormalizeStage::NO_COUNTERPARTY)
  * the memory lookup is skipped.
  *
- * The rule pull rides the (user_id, active) composite index added by
- * the plan 01 migration. v1 acceptable cost is <50 active rules per
- * user; a v2 "bulk import/export" capability that yields hundreds of
- * rules per user would warrant a per-field index or pre-filtering by
- * field value at the SQL boundary. Out of scope for v1.
+ * The rule pull rides the (user_id, active) composite index on
+ * categorization_rules. The pull selects every active rule for the
+ * user with no pre-filter on `field` or `value` — acceptable at
+ * single-user scale (<50 active rules typical), but a per-field
+ * lookup index would help once a future bulk-import capability lets
+ * users author hundreds of rules.
  */
 final class RuleEvaluator
 {
@@ -143,7 +144,7 @@ final class RuleEvaluator
     }
 
     /**
-     * Returns the D-711 specificity score for the given match operator
+     * Returns the specificity score for the given match operator
      * against the target field value, or 0 when the operator does not
      * match. All comparisons use mb_strtolower for Unicode-safe
      * case-insensitivity.

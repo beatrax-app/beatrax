@@ -44,7 +44,7 @@ final class MatcherRegistry
     /**
      * Return the stable matcher keys in priority order. Used by the
      * consumer job's audit log and by tests that need to assert the
-     * Wave 0 / Wave 1 / Wave 2 matcher inventory matches expectation.
+     * registered matcher inventory matches expectation.
      *
      * @return list<string>
      */
