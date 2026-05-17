@@ -288,6 +288,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 $clock,
                 $blobStore,
                 $mime,
+                $sm,
                 $userId,
                 fetchNextPage: function (?string $cursor) use ($gmail, $senderPatterns, $accum): array {
                     $page = $gmail->listSenderMessages($this->inboxId, $senderPatterns, $cursor);
@@ -384,6 +385,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 $clock,
                 $blobStore,
                 $mime,
+                $sm,
                 $userId,
                 fetchNextPage: function (?string $cursor) use ($graph, $senderPatterns, $windowStart, $accum): array {
                     $page = $graph->listSenderMessagesPaged(
@@ -499,6 +501,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         Clock $clock,
         EmlBlobStore $blobStore,
         MimeHeaderParser $mime,
+        InboxScanStateMachine $sm,
         int $userId,
         Closure $fetchNextPage,
         Closure $extractMessageId,
@@ -590,17 +593,15 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             }
 
             // Update the live progress payload so the /inboxes
-            // wire:poll has fresh counters.
-            $connection->table('inboxes')
-                ->where('id', $this->inboxId)
-                ->update([
-                    'backfill_progress' => json_encode([
-                        'fetched_count' => $fetched,
-                        'total_estimated' => $page['totalEstimated'],
-                        'last_message_date' => $page['lastMessageDate'],
-                    ], JSON_THROW_ON_ERROR),
-                    'updated_at' => $clock->now()->toDateTimeString(),
-                ]);
+            // wire:poll has fresh counters. Routed through the state
+            // machine so the per-inbox lifecycle write boundary
+            // (BoundaryArchTest noOtherInboxScanStateMutator) covers
+            // backfill_progress alongside status / cursor columns.
+            $sm->recordBackfillProgress($this->inboxId, [
+                'fetched_count' => $fetched,
+                'total_estimated' => $page['totalEstimated'],
+                'last_message_date' => $page['lastMessageDate'],
+            ]);
 
             $cursor = $page['nextCursor'];
             if ($cursor === null || $cursor === '') {
@@ -651,13 +652,11 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
     ): void {
         // Clear the progress payload so the /inboxes strip
         // hides itself, and flip the per-inbox status back to
-        // idle.
-        $connection->table('inboxes')
-            ->where('id', $this->inboxId)
-            ->update([
-                'backfill_progress' => null,
-                'updated_at' => $clock->now()->toDateTimeString(),
-            ]);
+        // idle. Both writes go through the state machine — the
+        // per-inbox lifecycle write boundary covers backfill_progress
+        // alongside status / cursor columns.
+        unset($connection, $clock);
+        $sm->recordBackfillProgress($this->inboxId, null);
         $sm->applyStatus($this->inboxId, 'idle');
     }
 }

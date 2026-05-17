@@ -327,6 +327,65 @@ it('does not allow any file other than InboxScanStateMachine to mutate inbox_sca
     );
 });
 
+it('does not allow any file other than InboxScanStateMachine to write inboxes.backfill_progress (noOtherBackfillProgressMutator)', function (): void {
+    // backfill_progress is technically owned by the inboxes table,
+    // not inbox_scan_state, but it is functionally a per-inbox
+    // lifecycle signal — the /inboxes Blade reads it the same way it
+    // reads inbox_scan_state.status. Routing the column through
+    // InboxScanStateMachine::recordBackfillProgress keeps the
+    // sole-mutator invariant intact across the whole per-inbox
+    // lifecycle surface. OAuthCallbackController inserts the inbox
+    // row pair on first connect (which is a CREATE, not a lifecycle
+    // mutation) so the grep targets the UPDATE shape specifically.
+    $hits = [];
+    $emailScanDir = base_path('Modules/EmailScan');
+    if (! is_dir($emailScanDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $allowedFile = base_path('Modules/EmailScan/Internal/InboxScanStateMachine.php');
+    $migrationsDir = base_path('Modules/EmailScan/Database/Migrations');
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            $emailScanDir,
+            RecursiveDirectoryIterator::SKIP_DOTS,
+        ),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if ($path === $allowedFile) {
+            continue;
+        }
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        if (str_starts_with($path, $migrationsDir.DIRECTORY_SEPARATOR)) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        // The grep looks for the literal column name appearing
+        // inside an update() argument list on the inboxes table.
+        // Matches both raw query-builder and Eloquent shapes.
+        if (preg_match("/->table\(['\"]inboxes['\"]\)[^;]*->update\\s*\\([^)]*backfill_progress/", $stripped) === 1
+            || preg_match("/Inbox::query\(\)[^;]*->update\\s*\\([^)]*backfill_progress/", $stripped) === 1) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "Only InboxScanStateMachine may write inboxes.backfill_progress. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
 it('does not allow any Modules/EmailScan migration to declare an OAuth-secret column (noOAuthTokensInEmailScanSchema)', function (): void {
     // Baseline invariant: OAuth client secrets and refresh tokens
     // live exclusively in the chmod-600 JSON repository on disk; no
