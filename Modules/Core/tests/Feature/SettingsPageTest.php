@@ -116,10 +116,25 @@ it('renders the Auto-import section with the locked UI-SPEC copy', function (): 
 })->group('phase-7');
 
 it('persists the toggle to users.auto_import_drop_folder via toggleAutoImport (instant-apply)', function (): void {
+    // The handler flips the property explicitly so the Blade
+    // checkbox only needs `wire:change`, not `wire:model.live`. One
+    // call -> property flips false -> true and the new value is
+    // persisted to the users row.
     Livewire::test(SettingsPage::class)
         ->assertSet('autoImportFromDropFolder', false)
-        ->set('autoImportFromDropFolder', true)
-        ->call('toggleAutoImport');
+        ->call('toggleAutoImport')
+        ->assertSet('autoImportFromDropFolder', true)
+        ->call('toggleAutoImport')
+        ->assertSet('autoImportFromDropFolder', false);
+
+    expect((bool) $this->user->fresh()->auto_import_drop_folder)->toBeFalse();
+})->group('phase-7');
+
+it('persists the on-state to users.auto_import_drop_folder after one toggleAutoImport (instant-apply)', function (): void {
+    Livewire::test(SettingsPage::class)
+        ->assertSet('autoImportFromDropFolder', false)
+        ->call('toggleAutoImport')
+        ->assertSet('autoImportFromDropFolder', true);
 
     expect((bool) $this->user->fresh()->auto_import_drop_folder)->toBeTrue();
 })->group('phase-7');
