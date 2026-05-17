@@ -344,7 +344,16 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             }
 
             $rawEml = $gmail->getRawMessage($this->inboxId, $messageId);
-            $headers = $mime->parseHeaders($rawEml);
+            // Gmail's users.history.list does not stamp a per-message
+            // internalDate, so pass the project Clock through as the
+            // fallback when the .eml carries no parseable Date: header.
+            // Routing through Clock keeps test-frozen time honoured
+            // (WR-07 iter-2: parseHeaders() used to call
+            // new DateTimeImmutable('now') directly).
+            $headers = $mime->parseHeadersWithFallbackDate(
+                $rawEml,
+                $clock->now()->toDateTimeImmutable(),
+            );
             $emlPath = $blobStore->pathFor(
                 $userId,
                 $this->inboxId,

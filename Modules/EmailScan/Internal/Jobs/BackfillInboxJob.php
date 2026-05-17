@@ -569,11 +569,17 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 
                 // Provider-supplied internal date (Microsoft) vs. in-
                 // body Date: header (Gmail). Either way the parser
-                // returns the four index fields together.
+                // returns the four index fields together. When the
+                // provider does not stamp a per-message internalDate
+                // (Gmail's users.messages.list response), the fallback
+                // is the project Clock — passing 'now' through the
+                // contract surface keeps test-frozen time honoured
+                // (WR-07 iter-2: parseHeaders() used to call
+                // new DateTimeImmutable('now') directly, bypassing
+                // the Clock).
                 $internalDate = $extractInternalDate($msgMeta);
-                $headers = $internalDate === null
-                    ? $mime->parseHeaders($rawEml)
-                    : $mime->parseHeadersWithFallbackDate($rawEml, $internalDate);
+                $fallbackDate = $internalDate ?? $clock->now()->toDateTimeImmutable();
+                $headers = $mime->parseHeadersWithFallbackDate($rawEml, $fallbackDate);
 
                 $emlPath = $blobStore->pathFor(
                     $userId,
