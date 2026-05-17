@@ -522,6 +522,20 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                     continue;
                 }
 
+                // Skip messages we already have on disk + indexed.
+                // The "extend window" flow re-runs a backfill that
+                // overlaps the prior window; the cursor-expiry
+                // fallback walk can also re-walk recent messages. In
+                // both cases, refetching the raw bytes burns provider
+                // quota without changing state.
+                $alreadyFetched = $connection->table('inbox_messages')
+                    ->where('inbox_id', $this->inboxId)
+                    ->where('provider_message_id', $messageId)
+                    ->exists();
+                if ($alreadyFetched) {
+                    continue;
+                }
+
                 $rawEml = $fetchRawEml($messageId);
 
                 // Provider-supplied internal date (Microsoft) vs. in-
