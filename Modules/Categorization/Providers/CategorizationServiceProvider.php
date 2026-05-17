@@ -9,10 +9,15 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Categorization\Internal\Http\Livewire\InlineCategoryPicker;
 use Modules\Categorization\Internal\Http\Livewire\TriageInbox;
+use Modules\Categorization\Internal\Listeners\MerchantMemoryWriter;
 use Modules\Categorization\Internal\Listeners\SeedDefaultCategoryTree;
+use Modules\Categorization\Internal\Services\RuleEvaluator;
 use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
+use Modules\Categorization\Public\Events\TransactionCategorized;
+use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
+use Modules\Categorization\Public\Services\MerchantMemoryQuery;
 use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Public\Events\UserInstalled;
 
@@ -36,6 +41,9 @@ final class CategorizationServiceProvider extends ServiceProvider
         $this->app->bind(AssignsCategory::class, AssignCategory::class);
         $this->app->singleton(UncategorizedTriageQuery::class);
         $this->app->singleton(CategoryOptionsQuery::class);
+        $this->app->singleton(RuleEvaluator::class);
+        $this->app->singleton(CategorizationRuleQuery::class);
+        $this->app->singleton(MerchantMemoryQuery::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
@@ -46,6 +54,7 @@ final class CategorizationServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'categorization');
 
         $events->listen(UserInstalled::class, SeedDefaultCategoryTree::class);
+        $events->listen(TransactionCategorized::class, [MerchantMemoryWriter::class, 'handle']);
 
         $livewire->component('categorization.triage-inbox', TriageInbox::class);
         $livewire->component('categorization.inline-category-picker', InlineCategoryPicker::class);
