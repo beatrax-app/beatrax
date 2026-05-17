@@ -12,15 +12,26 @@ use Livewire\Component;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 /**
- * Flux modal SFC for the bring-your-own OAuth client registration
- * (Google variant in Plan 03; Microsoft variant lands in Plan 04).
+ * Flux modal SFC for the bring-your-own OAuth client registration.
  *
- * The user pastes their per-install OAuth client_id + client_secret
- * obtained from Google Cloud Console (or Azure Portal). The wizard
- * validates the format, persists the credentials atomically via
- * OAuthSecretsRepository (chmod-600 + tmp+rename), then auto-redirects
- * into the per-inbox consent flow so the user reaches the provider
- * authorization page without an extra click.
+ * A single component renders both the Gmail and Microsoft 365
+ * variants; the open() event sets the $provider property to either
+ * 'gmail' or 'microsoft' and submit() branches on that value to apply
+ * the provider-specific validation rules.
+ *
+ * Google variant: client_id ends in `.apps.googleusercontent.com`,
+ * client_secret starts with `GOCSPX-`, and the publishedConfirmed
+ * checkbox is required (Google Testing-mode refresh tokens expire
+ * after 7 days for the gmail.readonly scope).
+ *
+ * Microsoft variant: client_id is a UUID v4, client_secret is
+ * non-empty. There is no publishedConfirmed equivalent — Azure does
+ * not require a separate publication step for personal accounts.
+ *
+ * On valid submission the credentials are persisted atomically via
+ * OAuthSecretsRepository (chmod-600 + tmp+rename) and the wizard
+ * auto-redirects into the per-inbox consent flow so the user reaches
+ * the provider authorization page without an extra click.
  *
  * Service collaborators arrive as parameters on action methods + the
  * render() method — constructor injection is banned on Livewire
@@ -28,6 +39,16 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
  */
 final class OAuthClientWizardModal extends Component
 {
+    /**
+     * Azure assigns the application (client) ID as a UUID v4. The
+     * format is documented at
+     * https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app
+     * and matches the canonical RFC 4122 v4 shape (8-4-4-4-12 hex
+     * digits with a fixed `4` in the third group and one of 8/9/a/b
+     * in the high nibble of the fourth group).
+     */
+    private const MICROSOFT_CLIENT_ID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
+
     public ?string $provider = null;
 
     public string $clientId = '';
@@ -62,28 +83,36 @@ final class OAuthClientWizardModal extends Component
         }
 
         if ($provider === 'microsoft') {
-            $this->errorMessage = 'Microsoft setup is available in the next plan.';
+            if ($this->clientId === '' || preg_match(self::MICROSOFT_CLIENT_ID_PATTERN, $this->clientId) !== 1) {
+                $this->errorMessage = 'Enter the application (client) ID — a UUID like 12345678-1234-1234-1234-123456789abc.';
 
-            return null;
-        }
+                return null;
+            }
 
-        // Google variant validation.
-        if ($this->clientId === '' || ! str_ends_with($this->clientId, '.apps.googleusercontent.com')) {
-            $this->errorMessage = 'Enter a Google OAuth client ID ending in .apps.googleusercontent.com.';
+            if ($this->clientSecret === '') {
+                $this->errorMessage = 'Enter the client secret value Azure showed you when you created the secret.';
 
-            return null;
-        }
+                return null;
+            }
+        } else {
+            // Google variant validation.
+            if ($this->clientId === '' || ! str_ends_with($this->clientId, '.apps.googleusercontent.com')) {
+                $this->errorMessage = 'Enter a Google OAuth client ID ending in .apps.googleusercontent.com.';
 
-        if ($this->clientSecret === '' || ! str_starts_with($this->clientSecret, 'GOCSPX-')) {
-            $this->errorMessage = 'Enter a Google OAuth client secret starting with GOCSPX-.';
+                return null;
+            }
 
-            return null;
-        }
+            if ($this->clientSecret === '' || ! str_starts_with($this->clientSecret, 'GOCSPX-')) {
+                $this->errorMessage = 'Enter a Google OAuth client secret starting with GOCSPX-.';
 
-        if (! $this->publishedConfirmed) {
-            $this->errorMessage = "Confirm that you've pushed your OAuth consent screen to 'In production'.";
+                return null;
+            }
 
-            return null;
+            if (! $this->publishedConfirmed) {
+                $this->errorMessage = "Confirm that you've pushed your OAuth consent screen to 'In production'.";
+
+                return null;
+            }
         }
 
         $redirectUri = $this->computeLoopbackRedirectUri($provider, $config);

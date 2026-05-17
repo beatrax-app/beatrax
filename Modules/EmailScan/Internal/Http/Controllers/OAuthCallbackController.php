@@ -14,23 +14,26 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\InvalidStateException;
+use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthExchangeFailed;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Invokable controller routed at GET /oauth/callback/{provider}.
+ * Invokable controller routed at GET /oauth/callback/{provider} —
+ * handles the IdP redirect for both the gmail and microsoft providers.
  *
  * Verifies the CSRF state, exchanges the authorization code for an
- * access + refresh token, persists the refresh token to the chmod-600
- * JSON repository, inserts (or reconnect-rotates) the inboxes +
+ * access + refresh token via the provider wrapper selected by
+ * match($provider), persists the refresh token to the chmod-600 JSON
+ * repository, inserts (or reconnect-rotates) the inboxes +
  * inbox_scan_state row pair inside a single DB transaction, and
  * redirects to /inboxes with a flash that auto-opens the backfill
  * window modal.
  *
  * The redirect URI is recomputed server-side from the same config
- * value the connect controller used so the value matches Google's
+ * value the connect controller used so the value matches the IdP's
  * stored redirect URI exactly. A mismatch here would surface as a
  * provider rejection at token-exchange time, not a state failure.
  *
@@ -42,6 +45,7 @@ final class OAuthCallbackController
 {
     public function __construct(
         private readonly GoogleOAuthProvider $googleOAuth,
+        private readonly MicrosoftOAuthProvider $microsoftOAuth,
         private readonly OAuthSecretsRepository $secrets,
         private readonly OAuthStateRepository $oauthState,
         private readonly CurrentUser $currentUser,
@@ -53,9 +57,11 @@ final class OAuthCallbackController
 
     public function __invoke(Request $request, string $provider): RedirectResponse
     {
-        if ($provider !== 'gmail') {
-            throw new NotFoundHttpException('Unknown provider.');
-        }
+        $oauth = match ($provider) {
+            'gmail' => $this->googleOAuth,
+            'microsoft' => $this->microsoftOAuth,
+            default => throw new NotFoundHttpException('Unknown provider.'),
+        };
 
         $errorParam = $request->query('error');
         if (is_string($errorParam) && $errorParam !== '') {
@@ -87,7 +93,7 @@ final class OAuthCallbackController
         $redirectUri = $this->computeLoopbackRedirectUri($provider);
 
         try {
-            $tokenWithEmail = $this->googleOAuth->exchangeAuthorizationCode($code, $redirectUri);
+            $tokenWithEmail = $oauth->exchangeAuthorizationCode($code, $redirectUri);
         } catch (InvalidGrantException $e) {
             return $this->redirector
                 ->route('inboxes.index')

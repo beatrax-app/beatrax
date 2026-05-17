@@ -16,16 +16,18 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
  * The `/inboxes` page Livewire SFC.
  *
  * Renders the empty-state hero when the user has no connected inboxes
- * and the table-driven layout once at least one inbox exists. Action
- * methods take their collaborators as parameters — constructor
+ * and the table-driven layout once at least one inbox exists. The
+ * Connect-Gmail and Connect-Microsoft-365 buttons share a single
+ * openWizard() action method that branches on the supplied $provider.
+ * Action methods take their collaborators as parameters — constructor
  * injection is banned on Livewire components by the strict-rules
  * plugin.
  *
- * Plan 03 ships the page shell, the Connect-Gmail trigger, and the
- * post-callback backfill-modal auto-open hook. Plan 05 lands the
- * actual backfill modal; Plan 07 wires the inline row actions
- * (Scan-Now, Reconnect, Edit window) and the discovered-senders
- * panel.
+ * The backfill window modal SFC + the inline row actions
+ * (Scan-Now, Reconnect, Edit window) + the discovered-senders panel
+ * are wired in later plans; this SFC ships the page shell, the
+ * Connect triggers, and the post-callback backfill-modal auto-open
+ * hook.
  */
 final class InboxesPage extends Component
 {
@@ -66,14 +68,6 @@ final class InboxesPage extends Component
         OAuthSecretsRepository $secrets,
     ): mixed {
         if (! in_array($provider, ['gmail', 'microsoft'], strict: true)) {
-            return null;
-        }
-
-        if ($provider === 'microsoft') {
-            // Microsoft branch is wired in a later plan; surface a
-            // gentle toast rather than crashing.
-            $this->dispatch('toast', message: 'Microsoft 365 setup ships in the next plan.');
-
             return null;
         }
 
