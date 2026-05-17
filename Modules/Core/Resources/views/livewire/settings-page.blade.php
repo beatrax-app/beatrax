@@ -45,6 +45,42 @@
             </div>
         </section>
 
+        <section class="space-y-4">
+            <h2 class="text-xs uppercase tracking-wide text-slate-500">Recurring detection</h2>
+            <div class="space-y-1">
+                <label for="recurringDetectionWindowMonths" class="block text-sm text-slate-900">Detection window (months)</label>
+                <input
+                    type="number"
+                    min="3"
+                    max="60"
+                    id="recurringDetectionWindowMonths"
+                    name="recurringDetectionWindowMonths"
+                    wire:model="recurringDetectionWindowMonths"
+                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                />
+                <p class="text-xs text-slate-500">How many months of history to scan when clustering transactions into recurring patterns.</p>
+                @error('recurringDetectionWindowMonths')
+                    <p class="text-sm text-rose-600">{{ $message }}</p>
+                @enderror
+            </div>
+            <div class="space-y-1">
+                <label for="recurringIncomeMinAmountMinor" class="block text-sm text-slate-900">Income minimum (cents)</label>
+                <input
+                    type="number"
+                    min="0"
+                    max="100000000"
+                    id="recurringIncomeMinAmountMinor"
+                    name="recurringIncomeMinAmountMinor"
+                    wire:model="recurringIncomeMinAmountMinor"
+                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                />
+                <p class="text-xs text-slate-500">Incomes below this threshold are not auto-clustered. Stored in cents — 200000 means €2,000.00. Set to 0 to disable the threshold.</p>
+                @error('recurringIncomeMinAmountMinor')
+                    <p class="text-sm text-rose-600">{{ $message }}</p>
+                @enderror
+            </div>
+        </section>
+
         <div class="space-y-1">
             <button
                 type="submit"
