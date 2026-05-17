@@ -9,6 +9,7 @@ use Livewire\LivewireManager;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
+use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Services\InboxesBadgeCount;
 use Modules\EmailScan\Public\Services\InboxMessageQuery;
@@ -22,16 +23,16 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
  * register() declares singleton bindings for the Public read services
  * (InboxQuery, KnownSenderQuery, InboxMessageQuery, InboxesBadgeCount,
  * OAuthSecretsRepository) and the Internal OAuth surface
- * (GoogleOAuthProvider, OAuthStateRepository). All collaborators are
- * stateless and singleton-safe.
+ * (GoogleOAuthProvider, MicrosoftOAuthProvider, OAuthStateRepository).
+ * All collaborators are stateless and singleton-safe.
  *
- * boot() conditionally loads migrations / routes / views and
- * registers the /inboxes Livewire component. The wizard modal SFC
- * is registered alongside it in a later plan.
+ * boot() conditionally loads migrations / routes / views and registers
+ * the /inboxes Livewire SFC + the OAuth-client wizard modal SFC. The
+ * wizard component handles both the Gmail and Microsoft 365 variants
+ * by branching on the $provider property the trigger sets.
  *
- * The Microsoft OAuth provider + the JobFailed listener + the top-nav
- * View Factory composer (for the inboxes badge) are wired in later
- * plans.
+ * The JobFailed listener + the top-nav View Factory composer (for the
+ * inboxes badge) are wired in later plans.
  */
 final class EmailScanServiceProvider extends ServiceProvider
 {
@@ -40,8 +41,9 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(InboxMessageQuery::class);
         $this->app->singleton(OAuthSecretsRepository::class);
 
-        // Wave 2 — OAuth surface + Public read services.
+        // OAuth surface + Public read services.
         $this->app->singleton(GoogleOAuthProvider::class);
+        $this->app->singleton(MicrosoftOAuthProvider::class);
         $this->app->singleton(OAuthStateRepository::class);
         $this->app->singleton(InboxQuery::class);
         $this->app->singleton(InboxesBadgeCount::class);
@@ -60,9 +62,9 @@ final class EmailScanServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'email-scan');
         }
 
-        // Plan 03 — /inboxes page Livewire SFC + the OAuth-client
-        // wizard modal SFC (Google variant; Microsoft variant lands
-        // in a later plan and reuses this same component).
+        // /inboxes page Livewire SFC + the OAuth-client wizard modal
+        // SFC (single component, branches on the $provider property
+        // to render the Gmail or Microsoft 365 variant).
         $livewire->component('email-scan.inboxes-page', InboxesPage::class);
         $livewire->component('email-scan.oauth-client-wizard-modal', OAuthClientWizardModal::class);
     }
