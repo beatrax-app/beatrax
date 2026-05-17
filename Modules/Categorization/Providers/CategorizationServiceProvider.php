@@ -7,6 +7,8 @@ namespace Modules\Categorization\Providers;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Categorization\Internal\Http\Livewire\CategorizationProvenancePanel;
+use Modules\Categorization\Internal\Http\Livewire\CorrectionDivergenceToast;
 use Modules\Categorization\Internal\Http\Livewire\InlineCategoryPicker;
 use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
 use Modules\Categorization\Internal\Http\Livewire\RulesPage;
@@ -72,5 +74,7 @@ final class CategorizationServiceProvider extends ServiceProvider
         $livewire->component('categorization.inline-category-picker', InlineCategoryPicker::class);
         $livewire->component('categorization.rules-page', RulesPage::class);
         $livewire->component('categorization.rule-form-modal', RuleFormModal::class);
+        $livewire->component('categorization.categorization-provenance-panel', CategorizationProvenancePanel::class);
+        $livewire->component('categorization.correction-divergence-toast', CorrectionDivergenceToast::class);
     }
 }

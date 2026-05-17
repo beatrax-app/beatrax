@@ -1,0 +1,310 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Container\Container;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Livewire\Livewire;
+use Modules\Categorization\Internal\Http\Livewire\CorrectionDivergenceToast;
+use Modules\Categorization\Public\Contracts\AssignsCategory;
+use Modules\Categorization\Public\Events\CategorizationDiverged;
+use Modules\Core\Models\User;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\Category;
+use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Models\Transaction;
+
+beforeEach(function (): void {
+    $this->user = User::create([
+        'email' => 'divergence@example.com',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($this->user);
+
+    $this->account = Account::create([
+        'user_id' => $this->user->id,
+        'name' => 'ASN',
+        'slug' => 'asn-div',
+        'kind' => 'asn',
+        'iban' => 'NL57ASNB0123456789',
+        'default_currency' => 'EUR',
+    ]);
+
+    $this->importRun = ImportRun::create([
+        'user_id' => $this->user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/x.csv',
+        'sha256' => str_repeat('b', 64),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
+    ]);
+
+    $this->streaming = Category::create([
+        'user_id' => null,
+        'name' => 'Streaming',
+        'slug' => 'streaming-div',
+        'kind' => 'expense',
+        'display_order' => 100,
+    ]);
+
+    $this->music = Category::create([
+        'user_id' => null,
+        'name' => 'Music',
+        'slug' => 'music-div',
+        'kind' => 'expense',
+        'display_order' => 110,
+    ]);
+});
+
+function seedDivergenceRule(int $userId, int $categoryId, string $value = 'SPOTIFY'): int
+{
+    $id = DB::table('categorization_rules')->insertGetId([
+        'user_id' => $userId,
+        'field' => 'merchant',
+        'match' => 'contains',
+        'value' => $value,
+        'category_id' => $categoryId,
+        'hits_count' => 0,
+        'active' => true,
+        'notes' => null,
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    return (int) $id;
+}
+
+function seedTransactionWithProvenance(int $userId, int $accountId, int $importRunId, int $categoryId, array $provenance): int
+{
+    $tx = Transaction::create([
+        'user_id' => $userId,
+        'account_id' => $accountId,
+        'type' => 'expense',
+        'posted_at' => '2026-05-03',
+        'booked_at' => '2026-05-03 12:00:00',
+        'value_date' => '2026-05-03',
+        'amount_minor' => -1299,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -1299,
+        'settled_currency' => 'EUR',
+        'counterparty_normalized' => 'spotify',
+        'counterparty_name' => 'SPOTIFY',
+        'normalization_version' => 1,
+        'source_format' => 'asn-csv',
+        'import_run_id' => $importRunId,
+        'source_row_index' => 0,
+        'fingerprint' => str_repeat('c', 64),
+        'fingerprint_version' => 1,
+        'category_id' => $categoryId,
+        'auto_category_provenance' => $provenance,
+    ]);
+
+    return (int) $tx->id;
+}
+
+function resolveAssign(): AssignsCategory
+{
+    /** @var AssignsCategory $action */
+    $action = Container::getInstance()->make(AssignsCategory::class);
+
+    return $action;
+}
+
+it('dispatches CategorizationDiverged when reclassifying a rule-provenance transaction to a different category', function (): void {
+    Event::fake([CategorizationDiverged::class]);
+
+    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+    $txId = seedTransactionWithProvenance(
+        $this->user->id,
+        $this->account->id,
+        $this->importRun->id,
+        $this->streaming->id,
+        ['source' => 'rule', 'rule_id' => $ruleId, 'memory_id' => null, 'category_id' => $this->streaming->id],
+    );
+
+    $assign = resolveAssign();
+    $assign($txId, $this->music->id, $this->user);
+
+    Event::assertDispatched(
+        CategorizationDiverged::class,
+        fn (CategorizationDiverged $e): bool => $e->transactionId === $txId
+            && $e->ruleId === $ruleId
+            && $e->oldCategoryId === $this->streaming->id
+            && $e->newCategoryId === $this->music->id
+            && $e->userId === $this->user->id,
+    );
+});
+
+it('does NOT dispatch CategorizationDiverged when the prior provenance was memory', function (): void {
+    Event::fake([CategorizationDiverged::class]);
+
+    $txId = seedTransactionWithProvenance(
+        $this->user->id,
+        $this->account->id,
+        $this->importRun->id,
+        $this->streaming->id,
+        ['source' => 'memory', 'rule_id' => null, 'memory_id' => 99, 'category_id' => $this->streaming->id],
+    );
+
+    $assign = resolveAssign();
+    $assign($txId, $this->music->id, $this->user);
+
+    Event::assertNotDispatched(CategorizationDiverged::class);
+});
+
+it('does NOT dispatch CategorizationDiverged when there is no prior provenance (manual)', function (): void {
+    Event::fake([CategorizationDiverged::class]);
+
+    $tx = Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'expense',
+        'posted_at' => '2026-05-03',
+        'booked_at' => '2026-05-03 12:00:00',
+        'value_date' => '2026-05-03',
+        'amount_minor' => -1299,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -1299,
+        'settled_currency' => 'EUR',
+        'counterparty_normalized' => 'spotify',
+        'counterparty_name' => 'SPOTIFY',
+        'normalization_version' => 1,
+        'source_format' => 'asn-csv',
+        'import_run_id' => $this->importRun->id,
+        'source_row_index' => 0,
+        'fingerprint' => str_repeat('d', 64),
+        'fingerprint_version' => 1,
+    ]);
+
+    $assign = resolveAssign();
+    $assign($tx->id, $this->music->id, $this->user);
+
+    Event::assertNotDispatched(CategorizationDiverged::class);
+});
+
+it('does NOT dispatch CategorizationDiverged when the new category equals the rule category', function (): void {
+    Event::fake([CategorizationDiverged::class]);
+
+    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+    $txId = seedTransactionWithProvenance(
+        $this->user->id,
+        $this->account->id,
+        $this->importRun->id,
+        $this->streaming->id,
+        ['source' => 'rule', 'rule_id' => $ruleId, 'memory_id' => null, 'category_id' => $this->streaming->id],
+    );
+
+    $assign = resolveAssign();
+    $assign($txId, $this->streaming->id, $this->user);
+
+    Event::assertNotDispatched(CategorizationDiverged::class);
+});
+
+it('CorrectionDivergenceToast renders Update the rule? when handleDiverged fires for the current user', function (): void {
+    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+
+    Livewire::test(CorrectionDivergenceToast::class)
+        ->call(
+            'handleDiverged',
+            transactionId: 42,
+            ruleId: $ruleId,
+            oldCategoryId: $this->streaming->id,
+            newCategoryId: $this->music->id,
+            userId: $this->user->id,
+        )
+        ->assertSet('visible', true)
+        ->assertSet('ruleId', $ruleId)
+        ->assertSet('newCategoryId', $this->music->id)
+        ->assertSee('Update the rule?');
+});
+
+it('CorrectionDivergenceToast guards against cross-user events (T-07-09)', function (): void {
+    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+    $foreignUserId = 9999;
+
+    Livewire::test(CorrectionDivergenceToast::class)
+        ->call(
+            'handleDiverged',
+            transactionId: 42,
+            ruleId: $ruleId,
+            oldCategoryId: $this->streaming->id,
+            newCategoryId: $this->music->id,
+            userId: $foreignUserId,
+        )
+        ->assertSet('visible', false)
+        ->assertDontSee('Update the rule?');
+});
+
+it('CorrectionDivergenceToast.update() calls UpdateCategorizationRule with the new category', function (): void {
+    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+
+    Livewire::test(CorrectionDivergenceToast::class)
+        ->call(
+            'handleDiverged',
+            transactionId: 42,
+            ruleId: $ruleId,
+            oldCategoryId: $this->streaming->id,
+            newCategoryId: $this->music->id,
+            userId: $this->user->id,
+        )
+        ->call('update')
+        ->assertSet('visible', false)
+        ->assertSet('flashMessage', 'Rule updated.');
+
+    $row = DB::table('categorization_rules')->where('id', $ruleId)->first();
+    expect($row->category_id)->toBe($this->music->id);
+});
+
+it('CorrectionDivergenceToast.dismiss() hides the toast without changing the rule', function (): void {
+    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+
+    Livewire::test(CorrectionDivergenceToast::class)
+        ->call(
+            'handleDiverged',
+            transactionId: 42,
+            ruleId: $ruleId,
+            oldCategoryId: $this->streaming->id,
+            newCategoryId: $this->music->id,
+            userId: $this->user->id,
+        )
+        ->call('dismiss')
+        ->assertSet('visible', false);
+
+    $row = DB::table('categorization_rules')->where('id', $ruleId)->first();
+    expect($row->category_id)->toBe($this->streaming->id);
+});
+
+it('the toast Blade carries an 8-second auto-dismiss timer per UI-SPEC', function (): void {
+    $bladePath = base_path('Modules/Categorization/Resources/views/livewire/correction-divergence-toast.blade.php');
+    $contents = (string) file_get_contents($bladePath);
+
+    expect($contents)->toContain('8000');
+    expect($contents)->toContain('setTimeout');
+});
+
+it('registers the correction-divergence-toast Livewire alias', function (): void {
+    // Verify that the alias maps to the class by mounting via the
+    // alias name — Livewire resolves the component through the same
+    // registry the @livewire('alias') Blade helper uses.
+    Livewire::test('categorization.correction-divergence-toast')
+        ->assertSet('visible', false);
+});
+
+it('CorrectionDivergenceToast has zero facade usage in the class body', function (): void {
+    $path = base_path('Modules/Categorization/Internal/Http/Livewire/CorrectionDivergenceToast.php');
+    $contents = (string) file_get_contents($path);
+    // Strip comments before grepping for forbidden tokens — PHPDoc references stay legal.
+    $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+
+    expect($stripped)->not->toMatch('/Auth::/');
+    expect($stripped)->not->toMatch('/Cache::/');
+    expect($stripped)->not->toMatch('/DB::/');
+    expect($stripped)->not->toMatch('/View::/');
+    expect($stripped)->not->toMatch('/\bauth\(\)/');
+    expect($stripped)->not->toMatch('/\bconfig\(\)/');
+    expect($stripped)->not->toMatch('/\brequest\(\)/');
+    expect($stripped)->not->toMatch('/\bview\(\)/');
+});

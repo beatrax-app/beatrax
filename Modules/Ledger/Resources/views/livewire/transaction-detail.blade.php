@@ -117,6 +117,19 @@
                 </div>
             </section>
 
+            {{-- Categorization provenance panel (D-712).
+
+                 Renders inline between the Reclassify section and the
+                 View chain section. Three variants per UI-SPEC:
+                 rule / memory / none (nothing). Embeds as a Livewire
+                 sub-component so the per-transaction state stays
+                 scoped to the row currently on screen. --}}
+            @livewire(
+                'categorization.categorization-provenance-panel',
+                ['transactionId' => $transaction->id],
+                key('provenance-' . $transaction->id),
+            )
+
             @if (($chainAvailable ?? false) === true)
                 {{-- UI-02 / CHN-04: "View chain" trigger opens the chain
                      drill-down drawer (D-90, first Flux flyout in the
