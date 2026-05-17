@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Providers;
 
+use Illuminate\Contracts\View\Factory as ViewFactoryContract;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
 use Modules\Recurring\Internal\Detectors\IncomeSeriesDetector;
+use Modules\Recurring\Internal\Http\Livewire\FixedPaymentsCard;
 use Modules\Recurring\Internal\Http\Livewire\RecurringPage;
 use Modules\Recurring\Internal\Http\Livewire\RecurringReviewPage;
 use Modules\Recurring\Internal\Http\Livewire\RecurringSeriesDetailPage;
@@ -32,7 +36,18 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
  * job receives them via iterable injection on `handle()`.
  *
  * boot() conditionally loads the module's migrations, routes, and
- * views and registers the `/recurring/review` Livewire SFC.
+ * views, registers the four Livewire SFCs (RecurringPage,
+ * RecurringReviewPage, RecurringSeriesDetailPage, FixedPaymentsCard),
+ * and installs two View Factory composers:
+ *
+ *  - `registerTopNavBadgeComposer()` injects `recurringPendingCount`
+ *    into `core::livewire.top-nav` via the ViewFactoryContract
+ *    (NEVER the `view()` global helper — issue #12 carry-forward).
+ *  - `registerDashboardCardComposer()` is a no-op placeholder; the
+ *    dashboard view injects the card directly via
+ *    `@livewire('recurring.fixed-payments-card')`. Method kept so a
+ *    later plan can attach cross-card data if needed without
+ *    revisiting the provider's public surface.
  */
 final class RecurringServiceProvider extends ServiceProvider
 {
@@ -57,6 +72,7 @@ final class RecurringServiceProvider extends ServiceProvider
         $this->app->singleton(SnoozeRecurringSeries::class);
         $this->app->singleton(EditRecurringSeriesName::class);
         $this->app->singleton(UnRejectRecurringSeries::class);
+        $this->app->singleton(FixedPaymentsCard::class);
     }
 
     public function boot(LivewireManager $livewire): void
@@ -74,5 +90,48 @@ final class RecurringServiceProvider extends ServiceProvider
         $livewire->component('recurring.recurring-page', RecurringPage::class);
         $livewire->component('recurring.recurring-review-page', RecurringReviewPage::class);
         $livewire->component('recurring.recurring-series-detail-page', RecurringSeriesDetailPage::class);
+        $livewire->component('recurring.fixed-payments-card', FixedPaymentsCard::class);
+
+        $this->registerTopNavBadgeComposer();
+        $this->registerDashboardCardComposer();
+    }
+
+    /**
+     * Inject the top-nav `Recurring` pending-suggestion count into
+     * `core::livewire.top-nav` via the View Factory contract.
+     *
+     * Issue #12 fix carry-forward: resolving the View Factory contract
+     * through `$this->app->make()` keeps the DI-only invariant visible
+     * at the call site; the global view helper is forbidden in module
+     * code.
+     *
+     * The composer only fires when the top-nav view actually renders,
+     * meaning at most once per HTTP request that surfaces the nav.
+     */
+    private function registerTopNavBadgeComposer(): void
+    {
+        $app = $this->app;
+        $factory = $app->make(ViewFactoryContract::class);
+
+        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app): void {
+            $currentUser = $app->make(CurrentUser::class);
+            if (! $currentUser->isAuthenticated()) {
+                $compose->with('recurringPendingCount', 0);
+
+                return;
+            }
+            $query = $app->make(RecurringSeriesQuery::class);
+            $compose->with('recurringPendingCount', $query->pendingCountForUser($currentUser->user()));
+        });
+    }
+
+    /**
+     * Placeholder for Phase 9 / Phase 10 — the dashboard renders the
+     * card via the `@livewire('recurring.fixed-payments-card')`
+     * directive directly, so no composer wiring is required today.
+     */
+    private function registerDashboardCardComposer(): void
+    {
+        // Intentionally empty.
     }
 }
