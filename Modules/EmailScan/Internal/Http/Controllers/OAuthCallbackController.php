@@ -18,6 +18,7 @@ use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthExchangeFailed;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -121,6 +122,23 @@ final class OAuthCallbackController
         $refreshToken = $tokenWithEmail->refreshToken;
         $expiresAt = $tokenWithEmail->expiresAt;
 
+        // Refuse to persist a brand-new inbox without a refresh token —
+        // the next IncrementalScanJob would mark it needs_reauth on
+        // first run, leaving the user with a permanently-broken row.
+        // For Google this typically means the consent screen is still
+        // in "Testing" status (refresh tokens expire after 7 days);
+        // surface a flash so the user can fix it before retrying.
+        if ($existingInboxId === 0 && ($refreshToken === null || $refreshToken === '')) {
+            return $this->redirector
+                ->route('inboxes.index')
+                ->with(
+                    'oauth_failed',
+                    $provider === 'gmail'
+                        ? 'Google did not return a refresh token. Publish your OAuth consent screen to "In production" and try again.'
+                        : 'The provider did not return a refresh token. Reconnect and grant offline access when prompted.',
+                );
+        }
+
         $inboxId = $this->db->connection()->transaction(function () use (
             $existingInboxId, $userId, $provider, $email, $now,
         ): int {
@@ -166,27 +184,60 @@ final class OAuthCallbackController
             return $newId;
         });
 
-        // The chmod-600 JSON write happens AFTER the DB commit so a
-        // failure to write secrets cannot leave behind an orphaned
-        // inboxes row pointing at a credential we never persisted.
-        if ($existingInboxId > 0) {
-            if ($refreshToken !== null) {
-                $this->secrets->rotateRefreshToken(
+        // The chmod-600 JSON write happens AFTER the DB commit because
+        // the inbox id is only assigned by insertGetId(). A failure of
+        // the secret write therefore needs an explicit compensating
+        // rollback of the rows we just inserted, otherwise the user
+        // ends up with an inbox row that points at no credentials and
+        // every subsequent IncrementalScanJob marks it needs_reauth on
+        // sight. The new-inbox branch deletes both rows on failure;
+        // the reconnect branch surfaces a flash but cannot rewind a
+        // prior refresh token Google has already invalidated.
+        try {
+            if ($existingInboxId > 0) {
+                if ($refreshToken !== null) {
+                    $this->secrets->rotateRefreshToken(
+                        inboxId: $inboxId,
+                        newRefreshToken: $refreshToken,
+                        newAccessToken: $tokenWithEmail->accessToken,
+                        expiresAt: $expiresAt,
+                    );
+                }
+            } else {
+                // Already guarded above: $refreshToken is non-null and
+                // non-empty by this branch (the early-return rejects
+                // null / '' on the new-inbox path).
+                $this->secrets->saveInboxRefreshToken(
                     inboxId: $inboxId,
-                    newRefreshToken: $refreshToken,
-                    newAccessToken: $tokenWithEmail->accessToken,
+                    provider: $provider,
+                    email: $email,
+                    refreshToken: (string) $refreshToken,
+                    scope: $tokenWithEmail->scope,
                     expiresAt: $expiresAt,
                 );
             }
-        } else {
-            $this->secrets->saveInboxRefreshToken(
-                inboxId: $inboxId,
-                provider: $provider,
-                email: $email,
-                refreshToken: $refreshToken ?? '',
-                scope: $tokenWithEmail->scope,
-                expiresAt: $expiresAt,
-            );
+        } catch (SecretsWriteFailed $e) {
+            if ($existingInboxId === 0) {
+                // Compensating rollback for the just-inserted rows so
+                // a failed secret write does not leave a ghost inbox
+                // visible on /inboxes with no credentials.
+                $this->db->connection()->transaction(function () use ($inboxId, $userId): void {
+                    $connection = $this->db->connection();
+                    $connection->statement('PRAGMA busy_timeout = 5000');
+                    $connection->table('inbox_scan_state')
+                        ->where('inbox_id', $inboxId)
+                        ->where('user_id', $userId)
+                        ->delete();
+                    $connection->table('inboxes')
+                        ->where('id', $inboxId)
+                        ->where('user_id', $userId)
+                        ->delete();
+                });
+            }
+
+            return $this->redirector
+                ->route('inboxes.index')
+                ->with('oauth_failed', $e->getMessage());
         }
 
         return $this->redirector
