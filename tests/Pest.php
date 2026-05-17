@@ -27,6 +27,7 @@ foreach (
         'Modules/Import' => Modules\Import\Tests\TestCase::class,
         'Modules/Ingestion' => Modules\Ingestion\Tests\TestCase::class,
         'Modules/Ledger' => Modules\Ledger\Tests\TestCase::class,
+        'Modules/Receipts' => Modules\Receipts\Tests\TestCase::class,
         'Modules/Transfers' => Modules\Transfers\Tests\TestCase::class,
     ] as $module => $testCase
 ) {
