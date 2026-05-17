@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -155,8 +156,8 @@ it('renders the low-confidence indicator on a row whose next_expected_confidence
 })->group('confidence-low-renders-dim-text');
 
 it('renders a chain badge when a series carries a confirmed chain link (D-828)', function (): void {
-    /** @var \Illuminate\Database\DatabaseManager $db */
-    $db = $this->app->make(\Illuminate\Database\DatabaseManager::class);
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
     $connection = $db->connection();
     $account = rpAccount($this->user, 'rp-chain');
     $run = rpImportRun($this->user, str_repeat('p', 64));
@@ -235,8 +236,8 @@ it('renders an empty-state message when no approved series exist', function (): 
 })->group('empty-state');
 
 it('renders the prior-occurrence chain link when the latest is missing (D-829 fallback walk)', function (): void {
-    /** @var \Illuminate\Database\DatabaseManager $db */
-    $db = $this->app->make(\Illuminate\Database\DatabaseManager::class);
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
     $connection = $db->connection();
     $account = rpAccount($this->user, 'rp-fallback');
     $run = rpImportRun($this->user, str_repeat('w', 64));
