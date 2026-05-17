@@ -21,6 +21,7 @@ use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
+use Modules\Recurring\Public\Actions\EditRecurringSeriesVarianceTolerance;
 use Modules\Recurring\Public\Actions\RejectRecurringSeries;
 use Modules\Recurring\Public\Actions\SnoozeRecurringSeries;
 use Modules\Recurring\Public\Actions\UnRejectRecurringSeries;
@@ -71,6 +72,7 @@ final class RecurringServiceProvider extends ServiceProvider
         $this->app->singleton(RejectRecurringSeries::class);
         $this->app->singleton(SnoozeRecurringSeries::class);
         $this->app->singleton(EditRecurringSeriesName::class);
+        $this->app->singleton(EditRecurringSeriesVarianceTolerance::class);
         $this->app->singleton(UnRejectRecurringSeries::class);
         $this->app->singleton(FixedPaymentsCard::class);
     }

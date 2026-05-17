@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Recurring\Public\Actions\EditRecurringSeriesVarianceTolerance;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -52,6 +53,22 @@ final class RecurringSeriesDetailPage extends Component
     public function toggleAllPoints(): void
     {
         $this->showAllPoints = ! $this->showAllPoints;
+    }
+
+    /**
+     * Delegate to the EditRecurringSeriesVarianceTolerance Public
+     * Action. The action enforces the cross-user 404 + whitelist; the
+     * SFC dispatches a small toast on success. Tolerance changes are
+     * not destructive (the user can simply pick another value), so no
+     * Undo affordance is wired.
+     */
+    public function editVarianceTolerance(
+        int $newTolerancePercent,
+        CurrentUser $currentUser,
+        EditRecurringSeriesVarianceTolerance $action,
+    ): void {
+        ($action)($this->seriesId, $currentUser->user(), $newTolerancePercent);
+        $this->dispatch('toast', message: 'Tolerance: '.$newTolerancePercent.'%', undoAction: '', undoPayload: null);
     }
 
     public function render(
