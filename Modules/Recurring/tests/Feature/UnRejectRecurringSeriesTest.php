@@ -44,13 +44,18 @@ function urrSeries(User $user, string $cluster): RecurringSeries
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
     $this->user = urrUser('urr@diederik.test');
-    /** @var UnRejectRecurringSeries $action */
-    $action = $this->app->make(UnRejectRecurringSeries::class);
-    $this->action = $action;
     /** @var RejectRecurringSeries $reject */
     $reject = $this->app->make(RejectRecurringSeries::class);
     $this->reject = $reject;
 });
+
+function urrAction(): UnRejectRecurringSeries
+{
+    /** @var UnRejectRecurringSeries $action */
+    $action = app(UnRejectRecurringSeries::class);
+
+    return $action;
+}
 
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
@@ -60,7 +65,7 @@ it('promotes a rejected series back to pending', function (): void {
     $series = urrSeries($this->user, 'urr::happy');
     ($this->reject)($series->id, $this->user);
 
-    ($this->action)($series->id, $this->user);
+    (urrAction())($series->id, $this->user);
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -78,7 +83,7 @@ it('promotes a rejected series back to pending', function (): void {
 it('is a silent no-op when the series is not currently rejected', function (): void {
     $series = urrSeries($this->user, 'urr::noop');
 
-    ($this->action)($series->id, $this->user);
+    (urrAction())($series->id, $this->user);
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -95,6 +100,6 @@ it('throws NotFoundHttpException for a cross-user series id', function (): void 
     $series = urrSeries($this->user, 'urr::xuser');
     ($this->reject)($series->id, $this->user);
 
-    expect(fn () => ($this->action)($series->id, $intruder))
+    expect(fn () => (urrAction())($series->id, $intruder))
         ->toThrow(NotFoundHttpException::class);
 });

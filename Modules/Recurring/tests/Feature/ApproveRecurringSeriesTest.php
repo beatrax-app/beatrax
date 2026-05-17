@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
+use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
@@ -45,9 +46,6 @@ function arsSeries(User $user, string $state, string $cluster): RecurringSeries
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
     $this->user = arsUser('ars@diederik.test');
-    /** @var ApproveRecurringSeries $action */
-    $action = $this->app->make(ApproveRecurringSeries::class);
-    $this->action = $action;
 });
 
 afterEach(function (): void {
@@ -59,7 +57,9 @@ it('promotes pending → approved, inserts one transitions row, dispatches event
 
     $series = arsSeries($this->user, 'pending', 'ars::pending');
 
-    ($this->action)($series->id, $this->user);
+    /** @var ApproveRecurringSeries $action */
+    $action = $this->app->make(ApproveRecurringSeries::class);
+    ($action)($series->id, $this->user);
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -82,13 +82,15 @@ it('promotes cadence_changed → approved', function (): void {
     $series = arsSeries($this->user, 'pending', 'ars::cc');
     // Move pending → approved → cadence_changed via state machine to
     // get into the legal starting state.
-    /** @var \Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine $sm */
-    $sm = $this->app->make(\Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine::class);
+    /** @var RecurringSeriesStateMachine $sm */
+    $sm = $this->app->make(RecurringSeriesStateMachine::class);
     $sm->transition($series, 'approved', 'user_action', 'user');
     $series->refresh();
     $sm->transition($series, 'cadence_changed', 'detector_cadence_flip', 'detector');
 
-    ($this->action)($series->id, $this->user);
+    /** @var ApproveRecurringSeries $action */
+    $action = $this->app->make(ApproveRecurringSeries::class);
+    ($action)($series->id, $this->user);
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -99,9 +101,13 @@ it('is idempotent when the series is already approved (no second transitions row
     Event::fake([RecurringSeriesApproved::class]);
 
     $series = arsSeries($this->user, 'pending', 'ars::idem');
-    ($this->action)($series->id, $this->user);
+    /** @var ApproveRecurringSeries $action */
+    $action = $this->app->make(ApproveRecurringSeries::class);
+    ($action)($series->id, $this->user);
 
-    ($this->action)($series->id, $this->user);
+    /** @var ApproveRecurringSeries $action */
+    $action = $this->app->make(ApproveRecurringSeries::class);
+    ($action)($series->id, $this->user);
 
     $count = RecurringSeriesTransition::query()
         ->where('recurring_series_id', $series->id)
@@ -113,7 +119,9 @@ it('throws NotFoundHttpException for a cross-user series id', function (): void 
     $intruder = arsUser('ars-intruder@diederik.test');
     $series = arsSeries($this->user, 'pending', 'ars::xuser');
 
-    expect(fn () => ($this->action)($series->id, $intruder))
+    /** @var ApproveRecurringSeries $action */
+    $action = $this->app->make(ApproveRecurringSeries::class);
+    expect(fn () => ($action)($series->id, $intruder))
         ->toThrow(NotFoundHttpException::class);
 
     /** @var RecurringSeries $fresh */
@@ -122,6 +130,8 @@ it('throws NotFoundHttpException for a cross-user series id', function (): void 
 });
 
 it('throws NotFoundHttpException for an unknown series id', function (): void {
-    expect(fn () => ($this->action)(999_999, $this->user))
+    /** @var ApproveRecurringSeries $action */
+    $action = $this->app->make(ApproveRecurringSeries::class);
+    expect(fn () => ($action)(999_999, $this->user))
         ->toThrow(NotFoundHttpException::class);
 });

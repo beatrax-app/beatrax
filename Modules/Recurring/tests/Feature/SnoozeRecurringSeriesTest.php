@@ -44,10 +44,15 @@ function snrsSeries(User $user, string $cluster): RecurringSeries
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
     $this->user = snrsUser('snrs@diederik.test');
-    /** @var SnoozeRecurringSeries $action */
-    $action = $this->app->make(SnoozeRecurringSeries::class);
-    $this->action = $action;
 });
+
+function snrsAction(): SnoozeRecurringSeries
+{
+    /** @var SnoozeRecurringSeries $action */
+    $action = app(SnoozeRecurringSeries::class);
+
+    return $action;
+}
 
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
@@ -57,7 +62,7 @@ it('writes snoozed_until and flips state to snoozed atomically', function (): vo
     $series = snrsSeries($this->user, 'snrs::pending');
     $until = CarbonImmutable::parse('2026-06-17 12:00:00');
 
-    ($this->action)($series->id, $this->user, $until);
+    (snrsAction())($series->id, $this->user, $until);
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -76,8 +81,8 @@ it('is idempotent when re-snoozed to the same date (no second transitions row)',
     $series = snrsSeries($this->user, 'snrs::idem');
     $until = CarbonImmutable::parse('2026-06-17 12:00:00');
 
-    ($this->action)($series->id, $this->user, $until);
-    ($this->action)($series->id, $this->user, $until);
+    (snrsAction())($series->id, $this->user, $until);
+    (snrsAction())($series->id, $this->user, $until);
 
     $count = RecurringSeriesTransition::query()
         ->where('recurring_series_id', $series->id)
@@ -90,6 +95,6 @@ it('throws NotFoundHttpException for a cross-user series id', function (): void 
     $series = snrsSeries($this->user, 'snrs::xuser');
 
     $until = CarbonImmutable::parse('2026-06-17 12:00:00');
-    expect(fn () => ($this->action)($series->id, $intruder, $until))
+    expect(fn () => (snrsAction())($series->id, $intruder, $until))
         ->toThrow(NotFoundHttpException::class);
 });
