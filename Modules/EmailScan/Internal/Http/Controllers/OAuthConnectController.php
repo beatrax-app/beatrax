@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
+use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
@@ -17,14 +18,16 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Invokable controller routed at GET /oauth/connect/{provider} —
- * kicks off the per-inbox OAuth consent dance.
+ * kicks off the per-inbox OAuth consent dance for the gmail or
+ * microsoft provider.
  *
  * Computes the loopback redirect URI server-side from the injected
  * Config repository so a query-string-supplied redirect_uri cannot
- * smuggle a different value into the consent URL. Issues a per-flow
- * random state via OAuthStateRepository, stashes the optional
- * existing-inbox id (for the reconnect path), and redirects to the
- * provider's authorization URL.
+ * smuggle a different value into the consent URL. Selects the right
+ * provider wrapper via match($provider), issues a per-flow random
+ * state via OAuthStateRepository, stashes the optional existing-inbox
+ * id (for the reconnect path), and redirects to the provider's
+ * authorization URL.
  *
  * The reconnect path resolves the existing inbox via the Public
  * InboxQuery service — which scopes to the current user — rather
@@ -35,6 +38,7 @@ final class OAuthConnectController
 {
     public function __construct(
         private readonly GoogleOAuthProvider $googleOAuth,
+        private readonly MicrosoftOAuthProvider $microsoftOAuth,
         private readonly OAuthSecretsRepository $secrets,
         private readonly OAuthStateRepository $oauthState,
         private readonly CurrentUser $currentUser,
@@ -45,10 +49,11 @@ final class OAuthConnectController
 
     public function __invoke(Request $request, string $provider): RedirectResponse
     {
-        if ($provider !== 'gmail') {
-            // Microsoft branch lands in a later plan.
-            throw new NotFoundHttpException('Unknown provider.');
-        }
+        $oauth = match ($provider) {
+            'gmail' => $this->googleOAuth,
+            'microsoft' => $this->microsoftOAuth,
+            default => throw new NotFoundHttpException('Unknown provider.'),
+        };
 
         if (! $this->secrets->hasProviderClient($provider)) {
             return $this->redirector
@@ -72,7 +77,7 @@ final class OAuthConnectController
         $redirectUri = $this->computeLoopbackRedirectUri($provider);
 
         $state = $this->oauthState->issueState($provider, $existingInboxId);
-        $authorizationUrl = $this->googleOAuth->getAuthorizationUrl($state, $redirectUri);
+        $authorizationUrl = $oauth->getAuthorizationUrl($state, $redirectUri);
 
         return $this->redirector->away($authorizationUrl);
     }
