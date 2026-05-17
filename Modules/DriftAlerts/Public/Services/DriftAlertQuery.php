@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Internal\Mapping\DriftAlertDtoMapper;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
+use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 
 /**
@@ -40,12 +41,17 @@ use stdClass;
  * `groupedBySeriesForUser` returns a map from `recurring_series_id` to
  * the list of open alerts in that series — used by the /drift Open
  * tab's grouped-by-series collapsible header.
+ *
+ * Cross-module reads of `recurring_series` (display name, state)
+ * are delegated to `RecurringSeriesQuery` so the DriftAlerts module
+ * never issues a raw SELECT against another module's table.
  */
 final readonly class DriftAlertQuery
 {
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
+        private RecurringSeriesQuery $recurringQuery,
     ) {}
 
     /**
@@ -121,38 +127,16 @@ final readonly class DriftAlertQuery
      * to surface the "Cadence flipped — also showing in /recurring/review"
      * meta line on rows whose underlying series is in cadence_changed.
      *
-     * READ-only against recurring_series; the
-     * `noRecurringSeriesWritesFromDriftAlerts` invariant covers only
-     * update/insert/delete verbs.
+     * Delegates to RecurringSeriesQuery so the read flows through the
+     * Recurring module's Public service surface instead of a raw
+     * cross-module SELECT.
      *
      * @param  list<int>  $seriesIds
      * @return array<int, string>
      */
     public function seriesStatesForUser(User $user, array $seriesIds): array
     {
-        $clean = [];
-        foreach ($seriesIds as $id) {
-            if ($id > 0) {
-                $clean[] = $id;
-            }
-        }
-        $unique = array_values(array_unique($clean));
-        if ($unique === []) {
-            return [];
-        }
-
-        $rows = $this->db->connection()->table('recurring_series')
-            ->where('user_id', $user->id)
-            ->whereIn('id', $unique)
-            ->get(['id', 'state']);
-
-        $map = [];
-        foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $map[self::toInt($row->id)] = self::toString($row->state);
-        }
-
-        return $map;
+        return $this->recurringQuery->statesForSeriesIds($seriesIds, $user);
     }
 
     /**
@@ -278,69 +262,20 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * Batch-resolve display names for the supplied series ids in one
-     * SELECT against recurring_series, scoped to the same user. This
-     * is a READ from another module's table — permitted by the
-     * `noRecurringSeriesWritesFromDriftAlerts` invariant (the rule
-     * fires only on update / insert / delete verbs).
+     * Delegates to RecurringSeriesQuery so every cross-module read of
+     * the recurring_series table flows through Recurring's Public
+     * service surface.
      *
      * @param  array<int|string, mixed>  $seriesIds
      * @return array<int, string>
      */
     private function loadSeriesDisplayNames(User $user, array $seriesIds): array
     {
-        $clean = [];
-        foreach ($seriesIds as $id) {
-            $i = is_numeric($id) ? (int) $id : 0;
-            if ($i > 0) {
-                $clean[] = $i;
-            }
-        }
-        $unique = array_values(array_unique($clean));
-        if ($unique === []) {
-            return [];
-        }
-
-        $rows = $this->db->connection()->table('recurring_series')
-            ->where('user_id', $user->id)
-            ->whereIn('id', $unique)
-            ->get(['id', 'display_name_override', 'detected_name']);
-
-        $map = [];
-        foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $id = self::toInt($row->id);
-            $override = self::nullableString($row->display_name_override ?? null);
-            $detected = self::toString($row->detected_name);
-            $map[$id] = $override !== null && $override !== '' ? $override : $detected;
-        }
-
-        return $map;
+        return $this->recurringQuery->displayNamesForSeriesIds($seriesIds, $user);
     }
 
     private static function toInt(mixed $value): int
     {
         return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
-    }
-
-    private static function nullableString(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : null;
     }
 }

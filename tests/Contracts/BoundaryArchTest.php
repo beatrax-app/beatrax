@@ -650,14 +650,14 @@ arch('DriftEvaluator is never imported by Modules\\DriftAlerts\\Internal\\Http (
     ]);
 
 it('does not allow any file under Modules/DriftAlerts/ to mutate the recurring_series table (noRecurringSeriesWritesFromDriftAlerts)', function (): void {
-    // Phase 9 architectural boundary: the DriftAlerts module is
-    // analytical-only. recurring_series mutations stay with the
-    // Recurring module's state machine and Public Actions. The
-    // single permitted READ of recurring_series.drift_threshold_percent
-    // from DriftEvaluator is intentionally allowed by this rule —
-    // the grep targets WRITE verbs (update / insert / delete) only.
-    // Mirrors the Recurring noTransactionWritesFromRecurring shape:
-    // strips block + line comments first so legitimate PHPDoc
+    // Architectural boundary: the DriftAlerts module is analytical-
+    // only. recurring_series mutations stay with the Recurring
+    // module's state machine and Public Actions. The grep targets
+    // WRITE verbs (update / insert / delete) only — cross-module
+    // SELECTs are funnelled through Recurring's Public service
+    // surface elsewhere; the rule here just guarantees DriftAlerts
+    // never writes. Mirrors the Recurring noTransactionWritesFromRecurring
+    // shape: strips block + line comments first so legitimate PHPDoc
     // references stay legal, and `tests/` is excluded so test
     // factories can populate recurring_series rows directly.
     $hits = [];

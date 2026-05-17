@@ -28,12 +28,10 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
  * against the same (series, occurrence) pair is silently caught at the
  * QueryException boundary and treated as a no-op.
  *
- * Cross-module reads of Recurring go exclusively through the Public
- * Query surface — the evaluator never imports Modules\Recurring\Internal
- * or Modules\Recurring\Models. The one direct table read against
- * recurring_series.drift_threshold_percent is intentional and explicitly
- * allowed by the noRecurringSeriesWritesFromDriftAlerts arch test (the
- * invariant fires only on UPDATE/INSERT/DELETE verbs, not SELECT).
+ * Every cross-module read of recurring_series goes through the
+ * RecurringSeriesQuery Public service surface — the evaluator never
+ * imports Modules\Recurring\Internal, Modules\Recurring\Models, or
+ * runs a raw SELECT against the recurring_series table.
  */
 final readonly class DriftEvaluator
 {
@@ -133,24 +131,16 @@ final readonly class DriftEvaluator
      *   - `default`         — neither override nor user value applied;
      *                         the hard 5% floor took effect.
      *
-     * Reads recurring_series.drift_threshold_percent directly via the
-     * injected DatabaseManager. The noRecurringSeriesWritesFromDriftAlerts
-     * arch test fires only on write verbs (update/insert/delete) on the
-     * recurring_series table; this SELECT of a non-state, non-amount
-     * column is explicitly permitted.
+     * The per-series override is read through
+     * `RecurringSeriesQuery::driftThresholdForSeries` so every
+     * cross-module read of `recurring_series` flows through Recurring's
+     * Public service surface.
      *
      * @return array{percent: int, source: string}
      */
     private function effectiveThresholdPercent(int $recurringSeriesId, User $user): array
     {
-        $seriesRow = $this->db->connection()->table('recurring_series')
-            ->where('id', $recurringSeriesId)
-            ->where('user_id', $user->id)
-            ->first(['drift_threshold_percent']);
-
-        $seriesOverride = $seriesRow !== null && is_numeric($seriesRow->drift_threshold_percent)
-            ? (int) $seriesRow->drift_threshold_percent
-            : null;
+        $seriesOverride = $this->recurringQuery->driftThresholdForSeries($recurringSeriesId, $user);
         if ($seriesOverride !== null) {
             return ['percent' => $seriesOverride, 'source' => 'series_override'];
         }
