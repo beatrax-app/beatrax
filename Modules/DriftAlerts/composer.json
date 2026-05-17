@@ -1,0 +1,16 @@
+{
+    "name": "diederik/drift-alerts",
+    "description": "Drift Alerts module — subscription drift detection, /drift page, cancellation-impact query.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\DriftAlerts\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\DriftAlerts\\Tests\\": "tests/"
+        }
+    }
+}
