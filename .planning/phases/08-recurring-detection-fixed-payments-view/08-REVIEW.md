@@ -76,7 +76,11 @@ findings:
   warning: 10
   info: 8
   total: 22
-status: issues_found
+status: resolved
+resolved_at: 2026-05-17T18:55:00Z
+resolved_summary:
+  fixed: 21
+  wontfix: 1
 ---
 
 # Phase 8: Code Review Report
@@ -142,6 +146,8 @@ are all narrative.
 
 ### CR-01: Income detector cadence-flip lookup uses `detected_name` and silently mixes IBAN-distinct payroll series
 
+**status:** resolved (commit `2e3fab0` + follow-up `189f423`)
+
 **File:** `Modules/Recurring/Internal/Detectors/IncomeSeriesDetector.php:184-191`
 
 **Issue:**
@@ -195,6 +201,8 @@ and B's row is the one that transitions to `cadence_changed`.
 ---
 
 ### CR-02: `RecurringSeriesQuery::scoped` cursor pagination ignores `monthly_equivalent_minor` sort order
+
+**status:** resolved (commit `cccbc5b`)
 
 **File:** `Modules/Recurring/Public/Services/RecurringSeriesQuery.php:215-232`
 
@@ -254,6 +262,8 @@ until a real caller arrives, and document that the projection is "top-N only".
 ---
 
 ### CR-03: `SnoozeRecurringSeries` is not atomic — `snoozed_until` and `state` cross transaction boundaries
+
+**status:** resolved (commit `864fccd`)
 
 **File:** `Modules/Recurring/Public/Actions/SnoozeRecurringSeries.php:57-75`
 
@@ -333,6 +343,8 @@ two columns move together or not at all.
 
 ### CR-04: User-controlled `displayName()` interpolated into JS string in `recurring-review-page.blade.php`
 
+**status:** resolved (commit `5e03ff4`)
+
 **File:** `Modules/Recurring/Resources/views/livewire/recurring-review-page.blade.php:162`
 
 **Issue:**
@@ -372,6 +384,8 @@ embedded in `x-data` / `wire:click` JS contexts.
 ## Warnings
 
 ### WR-01: Project-rule violation — `now()` global helper used in `recurring-review-page.blade.php` snooze buttons
+
+**status:** resolved (commit `c509b44`)
 
 **File:** `Modules/Recurring/Resources/views/livewire/recurring-review-page.blade.php:144,150,156`
 
@@ -418,6 +432,8 @@ wire:click="snooze({{ $row->seriesId }}, '{{ $snoozeTargets['1w'] }}')"
 
 ### WR-02: Project-rule violation — GSD planning references leak into production PHPDoc and Blade
 
+**status:** resolved (commit `ab10337`)
+
 **File:** Multiple — sample below
 
 - `Modules/Recurring/Providers/RecurringServiceProvider.php:46`: `(NEVER the view() global helper — issue #12 carry-forward).`
@@ -449,6 +465,8 @@ project convention)`. `false by default per D-852` becomes
 
 ### WR-03: `RecurringPage::reDetect` dispatches without a guard against an unauthenticated request
 
+**status:** resolved (commit `64d2f76`)
+
 **File:** `Modules/Recurring/Internal/Http/Livewire/RecurringPage.php:59-63`
 
 **Issue:**
@@ -464,6 +482,8 @@ Add an `if (! $currentUser->isAuthenticated()) { return; }` early-return at
 the head of `reDetect()` mirroring the composer's check.
 
 ### WR-04: `RecurringPage::render()` re-runs every query on every Livewire round-trip even when only `$transfersExpanded` flipped
+
+**status:** resolved (commit `942c3f0`) — documented in the class docblock as a DI-invariant trade-off: Livewire's `#[Computed]` memoisation seam invokes the method with no arguments, incompatible with the project's DI-only rule that forces collaborators through method-parameter injection. The two queries are read-mostly, user-scoped, and indexed; the round-trip cost is documented in place so future readers see the constraint.
 
 **File:** `Modules/Recurring/Internal/Http/Livewire/RecurringPage.php:65-84`
 
@@ -487,6 +507,8 @@ them inside a single render cycle, and consider mounting `$totals` once at
 component boot rather than per render.
 
 ### WR-05: `$series->state === 'rejected'` check in `IncomeSeriesDetector::processCluster` happens AFTER the cadence-fallback resolution but BEFORE the metrics refresh
+
+**status:** resolved (commit `978333d`) — intent documented: rejection covers the entire (counterparty, currency) pair across every cadence variant. Regression test added.
 
 **File:** `Modules/Recurring/Internal/Detectors/IncomeSeriesDetector.php:198-217`
 
@@ -523,6 +545,8 @@ Confirm intent and add either:
 
 ### WR-06: `RecurringSeriesQuery::amountTrendForSeries` falls back to `currency = 'EUR'` silently when the series row has an empty `latest_currency`
 
+**status:** resolved (commit `9aaaf9b`)
+
 **File:** `Modules/Recurring/Public/Services/RecurringSeriesQuery.php:159-163`
 
 **Issue:**
@@ -548,6 +572,8 @@ and surface a "no chart available" message at the Blade layer.
 
 ### WR-07: `FixedPaymentsCard` filters AFTER `topByMonthlyEquivalent`'s limit, so "This month only" can show fewer than 6 even when more are due
 
+**status:** resolved (commit `77e121a`)
+
 **File:** `Modules/Recurring/Internal/Http/Livewire/FixedPaymentsCard.php:50-66`
 
 **Issue:**
@@ -569,6 +595,8 @@ And refine the empty-state message to distinguish "no series at all" from
 "none due this month".
 
 ### WR-08: `pendingForUser` queries `state IN ('pending', 'cadence_changed')` but the docblock + the public method name only mention "pending"
+
+**status:** resolved (commit `2cef8b1`)
 
 **File:** `Modules/Recurring/Public/Services/RecurringSeriesQuery.php:39-50`
 
@@ -592,6 +620,8 @@ needed.
 
 ### WR-09: Income detector refreshes metrics on `snoozed` series — wakes the row's amounts up while the user explicitly told it to wait
 
+**status:** resolved (commit `416d835`)
+
 **File:** `Modules/Recurring/Internal/Detectors/IncomeSeriesDetector.php:215-230` (and the expense mirror at `ExpenseSeriesDetector.php:193-210`)
 
 **Issue:**
@@ -610,6 +640,8 @@ the underlying detector still maintains current numbers so the un-snoozed
 row reflects today's reality").
 
 ### WR-10: `EditRecurringSeriesName` does not enforce a length cap on the override
+
+**status:** resolved (commit `6a7febf`)
 
 **File:** `Modules/Recurring/Public/Actions/EditRecurringSeriesName.php:33-53`
 
@@ -647,6 +679,8 @@ public function __invoke(int $seriesId, User $user, ?string $displayNameOverride
 
 ### IN-01: `RecurringServiceProvider::registerDashboardCardComposer()` is an empty placeholder
 
+**status:** resolved (commit `08bfc72`)
+
 **File:** `Modules/Recurring/Providers/RecurringServiceProvider.php:135-138`
 
 **Issue:**
@@ -660,6 +694,8 @@ Delete the method and remove the call site (line 98). Add the wiring when
 a real composer is needed.
 
 ### IN-02: Trailing closing `<?php`-less PHP files mix tabs/spacing in test fixtures
+
+**status:** wontfix — cosmetic. The per-file 4-5-letter prefix convention (`fpv`, `rsd`, `rrb`, `drsj`, `idt`, `arc`, `rrp`, etc.) is consistent across the entire module test suite and matches the pattern used in `Modules/Chains/tests`, `Modules/EmailScan/tests`, `Modules/Receipts/tests`. No actual cross-file collision has been observed; the cosmetic improvement would require a multi-module refactor for purely-stylistic uniformity. Deferred until either (a) a collision actually occurs or (b) a project-wide test-helper convention sweep lands as its own change.
 
 **File:** `Modules/Recurring/tests/Feature/IncomeDetectorTest.php` and peers
 
@@ -677,6 +713,8 @@ imported via `use` / `require_once`, or into the per-module `Pest.php`.
 Cosmetic, not blocking.
 
 ### IN-03: `monthlyEquivalent` rounding loses sub-cent precision on weekly cadences
+
+**status:** resolved (commit `4652dca`)
 
 **File:** `Modules/Recurring/Internal/Detectors/ExpenseSeriesDetector.php:411-420` (and income mirror)
 
@@ -703,6 +741,8 @@ Use `52/12` explicitly:
 
 ### IN-04: `CadenceInferrer::infer` uses `$previous->diffInDays($timestamp)` with `abs()` defensively, but the input contract is "sorted ascending"
 
+**status:** resolved (commit `e6dc9fd`)
+
 **File:** `Modules/Recurring/Internal/CadenceInferrer.php:74-81`
 
 **Issue:**
@@ -717,6 +757,8 @@ Remove `abs()` and trust the contract, OR add a precondition assertion at
 the start of `infer()`.
 
 ### IN-05: `RecurringSeriesQuery::amountTrendForSeries` collection-`reverse` is correct but obscure
+
+**status:** resolved (commit `06851e9`)
 
 **File:** `Modules/Recurring/Public/Services/RecurringSeriesQuery.php:181`
 
@@ -736,6 +778,8 @@ slightly slower). Cosmetic.
 Add a one-line comment: `// reverse to ASC for left-to-right chart axis after DESC-limit fetch.`
 
 ### IN-06: `RecurringSeriesStateMachine::toIntOrNull` returns `null` for a stringly-numeric `'0'` user_id
+
+**status:** resolved (commit `4c01e38`)
 
 **File:** `Modules/Recurring/Internal/StateMachines/RecurringSeriesStateMachine.php:140-147`
 
@@ -760,6 +804,8 @@ theoretical edge. Worth ruling out by tightening: `return is_numeric($value) && 
 Tighten the predicate to `> 0`.
 
 ### IN-07: `DetectRecurringSeriesJob` does not log when `expireSnoozes` skips an `id === 0` row
+
+**status:** resolved (commit `98a6921`)
 
 **File:** `Modules/Recurring/Internal/Jobs/DetectRecurringSeriesJob.php:114-122`
 
@@ -794,6 +840,8 @@ if ($id === 0) {
 existing carve-out pattern.)
 
 ### IN-08: `RecurringSeriesQuery::toDto` re-implements logic that is also in `FixedPaymentsViewQuery::toDto`
+
+**status:** resolved (commit `a8536a2`)
 
 **File:** `Modules/Recurring/Public/Services/RecurringSeriesQuery.php:242-291` mirrors `Modules/Recurring/Public/Services/FixedPaymentsViewQuery.php:254-317`
 
