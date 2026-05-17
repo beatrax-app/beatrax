@@ -8,7 +8,7 @@ use Closure;
 use DateTimeImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
-use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
@@ -35,13 +35,18 @@ use Throwable;
  * The queued chunked fetcher for one connected inbox's backfill.
  *
  * Concurrency contract:
- *  - `ShouldBeUniqueUntilProcessing` keyed on `inboxId` blocks a
- *    second dispatch for the same inbox while the worker has not
- *    yet started; the lock releases as soon as `handle()` begins so
- *    a re-dispatch can sit in the queue while the prior pass
- *    finishes. The unique-lock store is Redis (the project's only
- *    permitted facade exception — Laravel calls `uniqueVia()` at
- *    push-time before constructor DI resolves).
+ *  - `ShouldBeUnique` keyed on `inboxId` blocks every second dispatch
+ *    for the same inbox until the worker FINISHES (not just starts).
+ *    A multi-page backfill takes minutes; a queue-level lock that
+ *    released at handle-entry would let two workers walk the same
+ *    inbox's first page in parallel, racing on the backfill_progress
+ *    payload and the per-page cursor, and would also trigger the
+ *    state machine's reject for the duplicate 'idle → backfilling'
+ *    re-entry. ShouldBeUnique keeps the lock until handle() returns
+ *    (success or throw) so concurrent dispatches collapse cleanly to
+ *    one. The unique-lock store is Redis (the project's only permitted
+ *    facade exception — Laravel calls `uniqueVia()` at push-time
+ *    before constructor DI resolves).
  *  - `tries = 3` + `backoff = [60, 300, 900]` matches the
  *    project-wide retry envelope so the per-inbox state machine's
  *    rate-limited / error transitions ride the same back-off curve.
@@ -98,7 +103,7 @@ use Throwable;
  * The `tests/Contracts/BoundaryArchTest.php` allow-list grants
  * this file FQN the "no Laravel facades in module code" exemption.
  */
-final class BackfillInboxJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
+final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;

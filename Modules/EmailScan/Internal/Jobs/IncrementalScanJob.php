@@ -7,7 +7,7 @@ namespace Modules\EmailScan\Internal\Jobs;
 use DateTimeImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
-use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
@@ -43,12 +43,16 @@ use Throwable;
  * the backfill job uses (D-122).
  *
  * Concurrency contract (mirrors BackfillInboxJob):
- *  - `ShouldBeUniqueUntilProcessing` keyed on `inboxId` blocks a
- *    second dispatch for the same inbox while the worker has not
- *    yet started. The unique-lock store is Redis (the single
- *    permitted module-code facade — Laravel calls `uniqueVia()` at
- *    push-time before constructor DI completes; the BoundaryArchTest
- *    grants this class the carve-out alongside BackfillInboxJob).
+ *  - `ShouldBeUnique` keyed on `inboxId` blocks every second dispatch
+ *    for the same inbox until the worker FINISHES (not just starts).
+ *    A queue-level lock that released at handle-entry would let two
+ *    workers walk the same inbox's history concurrently, race on the
+ *    cursor write, and trigger the state machine's duplicate
+ *    'scanning' transition reject. The unique-lock store is Redis
+ *    (the single permitted module-code facade — Laravel calls
+ *    `uniqueVia()` at push-time before constructor DI completes; the
+ *    BoundaryArchTest grants this class the carve-out alongside
+ *    BackfillInboxJob).
  *  - `uniqueFor=600` (10 minutes) is shorter than the 30-minute
  *    backfill ceiling — incremental scans complete in seconds, so
  *    the lock should not linger.
@@ -92,7 +96,7 @@ use Throwable;
  * FQN the "no Laravel facades in module code" exemption alongside
  * BackfillInboxJob + DiscoveryScanJob.
  */
-final class IncrementalScanJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
+final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
