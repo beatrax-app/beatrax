@@ -98,9 +98,24 @@ interface GraphApiClientContract
     public function deltaPage(int $inboxId, ?string $deltaLink): array;
 
     /**
-     * Reserved for the discovery scan plan. Current implementations
-     * return an empty page so the discovery loop is inert until the
-     * matcher phase wires the real keyword query.
+     * Daily-discovery query: walks `/me/messages?$search="subject:(receipt OR ...)"&$top=100&$select=id,from,subject,receivedDateTime`
+     * on the first page and follows `@odata.nextLink` verbatim on
+     * subsequent pages.
+     *
+     * Graph's OData `$filter` does NOT support `contains` against the
+     * subject field, so the implementation uses `$search` instead.
+     * `$search` is mutually exclusive with `$orderby` (Graph rejects
+     * the combination); the implementation deliberately omits
+     * `$orderby` to stay within the documented compatibility envelope
+     * (see https://learn.microsoft.com/en-us/graph/search-query-parameter).
+     *
+     * Graph's `$search` also has no server-side from-address exclusion
+     * filter; the implementation applies the exclude list client-side
+     * before returning the page.
+     *
+     * The Wave 0 Fake replays a synthesised fixture; sender metadata
+     * lives inline on each entry so the caller does NOT need to fetch
+     * the raw `.eml` body to populate `discovered_senders`.
      *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders

@@ -52,6 +52,15 @@ final class FakeGraphApiClient implements GraphApiClientContract
      */
     private array $queuedDeltaResponses = [];
 
+    /**
+     * Plan 09: queued listDiscoveryCandidatesPaged responses. Each
+     * call shifts the front entry; once empty, the default fixture
+     * is replayed.
+     *
+     * @var list<array{messages: list<array<string, mixed>>, nextLink: ?string}>
+     */
+    private array $queuedDiscoveryResponses = [];
+
     public function __construct(
         private readonly Filesystem $files,
         private readonly string $fixtureRoot = __DIR__.'/../../tests/fixtures/api-responses/graph',
@@ -171,7 +180,18 @@ final class FakeGraphApiClient implements GraphApiClientContract
     }
 
     /**
-     * Replays the discovery query. Wave 0 reuses the page-1 fixture.
+     * Replays the discovery query. Default fixture is the three Wave 0
+     * sender entries from messages-page-1.json; each entry carries the
+     * sender `from.emailAddress.{address,name}` + `receivedDateTime`
+     * inline so the discovery loop can populate `discovered_senders`
+     * without a body fetch.
+     *
+     * Test-controllable shape:
+     *  - `queueDiscoveryResponse([...])` queues a specific message list
+     *    for the next call. Subsequent calls fall back to the default
+     *    fixture.
+     *  - `simulateRateLimit($inboxId, $retryAfter)` arms the existing
+     *    rate-limit pool which also fires on listDiscoveryCandidatesPaged.
      *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
@@ -190,6 +210,12 @@ final class FakeGraphApiClient implements GraphApiClientContract
             'nextLink' => $nextLink,
         ]];
 
+        $this->maybeThrowRateLimit($inboxId);
+
+        if ($this->queuedDiscoveryResponses !== []) {
+            return array_shift($this->queuedDiscoveryResponses);
+        }
+
         $payload = $this->readJson('messages-page-1.json');
         /** @var list<array<string, mixed>> $messages */
         $messages = is_array($payload['value'] ?? null) ? $payload['value'] : [];
@@ -197,6 +223,21 @@ final class FakeGraphApiClient implements GraphApiClientContract
         return [
             'messages' => $messages,
             'nextLink' => null,
+        ];
+    }
+
+    /**
+     * Plan 09: queue the next listDiscoveryCandidatesPaged response.
+     * Each call consumes the queue's front entry; once empty, the
+     * default messages-page-1.json fixture is replayed.
+     *
+     * @param  list<array<string, mixed>>  $messages
+     */
+    public function queueDiscoveryResponse(array $messages, ?string $nextLink = null): void
+    {
+        $this->queuedDiscoveryResponses[] = [
+            'messages' => $messages,
+            'nextLink' => $nextLink,
         ];
     }
 
