@@ -525,6 +525,36 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
     }
 
     /**
+     * Laravel calls this method on the resolved job instance after the
+     * worker exhausts its retry budget. Container DI resolves the
+     * InboxScanStateMachine argument so the same sole-mutator surface
+     * the in-flight pipeline uses also handles the terminal error
+     * transition.
+     *
+     * Replaces the previous JobFailed listener + regex extraction over
+     * the serialised job payload (which was fragile against
+     * serialiser-format changes and a future job class whose
+     * property name shared a prefix with 'inboxId').
+     *
+     * Invalid transitions (e.g. an already-needs_reauth inbox failing
+     * again) are swallowed so the failed-hook surface never escalates
+     * a recovery scenario into a hard queue-worker error.
+     */
+    public function failed(Throwable $exception, InboxScanStateMachine $sm): void
+    {
+        try {
+            $sm->applyStatus(
+                $this->inboxId,
+                'error',
+                substr($exception->getMessage(), 0, 500),
+            );
+        } catch (Throwable) {
+            // Swallow — invalid transitions are acceptable on the
+            // failed-hook surface.
+        }
+    }
+
+    /**
      * Pull provider message ids out of a Gmail history.list response.
      * Each history entry may carry a `messagesAdded` array of
      * `{message: {id, threadId}}` objects; the messagesDeleted /

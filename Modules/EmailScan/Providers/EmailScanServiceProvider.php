@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Providers;
 
-use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
 use Illuminate\Contracts\View\View;
-use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -45,24 +43,23 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
  * (GoogleOAuthProvider, MicrosoftOAuthProvider, OAuthStateRepository).
  * All collaborators are stateless and singleton-safe.
  *
- * boot() conditionally loads migrations / routes / views, registers
+ * boot() conditionally loads migrations / routes / views and registers
  * the /inboxes Livewire SFC + the OAuth-client wizard modal SFC + the
- * backfill-window modal SFC, and subscribes a JobFailed listener that
- * flips inbox_scan_state.status to 'error' when a BackfillInboxJob or
- * IncrementalScanJob exhausts the queue worker's retry budget. The
- * listener resolves the inbox_id from the failed job's serialised
- * payload and dispatches through InboxScanStateMachine — the sole
- * legal mutator of the status column (BoundaryArchTest invariant).
+ * backfill-window modal SFC, plus the top-nav badge View Factory
+ * composer.
  *
- * Subscribing through the injected Dispatcher rather than the
- * `Queue::failing` facade keeps the CLAUDE.md "DI-only" posture
- * intact — the Queue / Cache facade pair is reserved for
- * `Cache::driver('redis')` inside the queued jobs' uniqueVia(),
- * which is the only permitted facade call in module code
+ * Failed-job lifecycle: each of BackfillInboxJob + IncrementalScanJob
+ * defines its own `failed(Throwable, InboxScanStateMachine)` method;
+ * Laravel resolves the InboxScanStateMachine via container DI and
+ * the job flips its own inbox_scan_state.status to 'error' with the
+ * truncated exception message. The state machine remains the sole
+ * mutator of the status column (BoundaryArchTest invariant). Per-job
+ * failed() hooks supersede an earlier serialised-payload regex
+ * approach that was fragile against serialiser format changes.
+ *
+ * The only permitted facade call in module code is
+ * `Cache::driver('redis')` inside the queued jobs' uniqueVia()
  * (BoundaryArchTest carve-out).
- *
- * The top-nav View Factory composer (for the inboxes badge) lands in
- * Plan 08 when the dashboard tile + reauth toast UI ships.
  */
 final class EmailScanServiceProvider extends ServiceProvider
 {
@@ -108,7 +105,7 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(DiscoveryScanJob::class);
     }
 
-    public function boot(LivewireManager $livewire, Dispatcher $events): void
+    public function boot(LivewireManager $livewire): void
     {
         if (is_dir(__DIR__.'/../Database/Migrations')) {
             $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
@@ -127,7 +124,6 @@ final class EmailScanServiceProvider extends ServiceProvider
         $livewire->component('email-scan.oauth-client-wizard-modal', OAuthClientWizardModal::class);
         $livewire->component('email-scan.backfill-window-modal', BackfillWindowModal::class);
 
-        $this->registerJobFailedListener($events);
         $this->registerTopNavBadgeComposer();
     }
 
@@ -163,80 +159,5 @@ final class EmailScanServiceProvider extends ServiceProvider
             $query = $app->make(InboxesBadgeCount::class);
             $compose->with('inboxesBadgeCount', $query->forCurrentUser($currentUser->user()));
         });
-    }
-
-    /**
-     * Flip inbox_scan_state.status to 'error' when a BackfillInboxJob
-     * or IncrementalScanJob exhausts the queue worker's retry budget.
-     *
-     * The job's serialised payload carries the inbox_id as a readonly
-     * public property; a defensive regex extracts the integer value
-     * across both the compact `i:` and the named-arg serialiser
-     * shapes (mirrors ChainsServiceProvider::extractUserIdFromFailedJob).
-     *
-     * The transition is funnelled through InboxScanStateMachine so the
-     * sole-mutator invariant (BoundaryArchTest
-     * noOtherInboxScanStateMutator) holds. Invalid transitions —
-     * e.g. an already-needs_reauth inbox that fails again — are
-     * swallowed so the listener never escalates a recovery scenario
-     * into a hard error.
-     */
-    private function registerJobFailedListener(Dispatcher $events): void
-    {
-        $app = $this->app;
-
-        $events->listen(JobFailed::class, static function (JobFailed $event) use ($app): void {
-            $jobName = $event->job->resolveName();
-            $isEmailScanJob = str_contains($jobName, 'BackfillInboxJob')
-                || str_contains($jobName, 'IncrementalScanJob');
-            if (! $isEmailScanJob) {
-                return;
-            }
-
-            $inboxId = self::extractInboxIdFromFailedJob($event);
-            if ($inboxId === null) {
-                return;
-            }
-
-            try {
-                $sm = $app->make(InboxScanStateMachine::class);
-                $sm->applyStatus(
-                    $inboxId,
-                    'error',
-                    substr($event->exception->getMessage(), 0, 500),
-                );
-            } catch (\Throwable) {
-                // Swallow — an invalid transition (e.g. the inbox is
-                // already in needs_reauth which only permits → idle)
-                // must not escalate a job failure into a server error
-                // in the queue worker's failed-job hook.
-            }
-        });
-    }
-
-    /**
-     * Pull the inboxId out of the failed job's serialised payload. The
-     * job classes (BackfillInboxJob + IncrementalScanJob) both declare
-     * `public readonly int $inboxId` so the serialised representation
-     * includes an `inboxId` property; the regex isolates the integer
-     * value across both the compact `i:` and the named-arg serialiser
-     * shapes.
-     */
-    private static function extractInboxIdFromFailedJob(JobFailed $event): ?int
-    {
-        $payload = $event->job->payload();
-        $data = $payload['data'] ?? null;
-        if (! is_array($data)) {
-            return null;
-        }
-        $command = $data['command'] ?? null;
-        if (! is_string($command)) {
-            return null;
-        }
-        if (preg_match('/inboxId[^0-9-]+(-?\d+)/', $command, $matches) !== 1) {
-            return null;
-        }
-
-        return (int) $matches[1];
     }
 }
