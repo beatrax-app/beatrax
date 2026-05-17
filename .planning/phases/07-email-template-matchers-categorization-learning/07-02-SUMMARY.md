@@ -326,9 +326,42 @@ None. All commits made on the per-agent branch (`worktree-agent-ab94612d10d4626f
 
 None. The plan's `<threat_model>` covers T-07-04 (PaypalReceiptMatcher.canHandle suffix-match defeats spoof — verified by spoofed-sender.eml fixture + matcher test), T-07-02 (file_imports path traversal — mitigated by FileDropEmlBlobStore.pathFor allow-list + UploadWizard.sanitiseFilename extension), and T-07-09 (cross-user leak in ProcessFetchedInboxMessagesJob — mitigated by both the user-scoped User::query()->where('id', $this->userId)->firstOrFail() load AND the per-row userId mismatch skip + verified by the cross-user defence test). No new threat surface introduced.
 
-## Self-Check
+## Self-Check: PASSED
 
-(filled in after Write)
+**Created files (spot check):**
+- `Modules/Receipts/Internal/Matchers/PaypalReceiptMatcher.php` — FOUND
+- `Modules/Receipts/Public/Actions/RecordReceipt.php` — FOUND
+- `Modules/Receipts/Public/Pipeline/{EmlHeaderProfile,MboxHeaderProfile,ReceiptSourceAdapter,MboxIterator,EmlMimeReader,FileDropEmlBlobStore,ParsedMimeMessage}.php` — ALL FOUND
+- `Modules/Receipts/Public/Services/FileImportQuery.php` — FOUND
+- `Modules/Receipts/Public/Dto/FileImportDto.php` — FOUND
+- `Modules/Receipts/Internal/Jobs/ProcessFetchedInboxMessagesJob.php` — FOUND
+- `Modules/Receipts/Internal/Http/Livewire/WizardEmailFileStep.php` — FOUND
+- `Modules/Receipts/Database/Migrations/2026_05_17_010008_add_matcher_key_to_file_imports.php` — FOUND
+- `Modules/Import/Public/Pipeline/NormalizeStage.php` — FOUND (promoted from Internal)
+- `Modules/EmailScan/Public/Services/EmlBlobStore.php` — FOUND (promoted from Internal)
+- `Modules/Receipts/tests/fixtures/paypal/{current-receipt,paired-csv-row,prior-generation-receipt,login-notification,spoofed-sender,foreign-currency-receipt,malformed-date-receipt}.{eml,csv}` — ALL FOUND
+- `Modules/Receipts/tests/fixtures/mbox/paypal-mixed.mbox` — FOUND
+- This SUMMARY.md — FOUND
+
+**Internal copies of promoted files MUST be absent:**
+- `Modules/EmailScan/Internal/EmlBlobStore.php` — ABSENT (good)
+- `Modules/Receipts/Internal/Pipeline/{EmlMimeReader,MboxIterator,FileDropEmlBlobStore,ParsedMimeMessage,ReceiptSourceAdapter}.php` — ALL ABSENT (good)
+- `Modules/Import/Internal/Pipeline/Stages/NormalizeStage.php` — ABSENT (good)
+
+**Commits (verified via `git log --oneline --all | grep`):**
+- `1767ffa` (Task 0 — EmlBlobStore promotion) — FOUND
+- `7b83dbd` (Task 1 — PaypalReceiptMatcher + FingerprintParity GREEN) — FOUND
+- `52bcdc9` (Task 2a — HeaderSniffer + UploadWizard frontend) — FOUND
+- `61ef1cf` (Task 2b — ParseStage routing + RecordReceipt + wizard backend) — FOUND
+- `7098920` (Task 3 — ProcessFetchedInboxMessagesJob) — FOUND
+- `26db9c3` (this SUMMARY.md) — FOUND
+
+**Verification:**
+- 70 Wave 1 tests green (PaypalReceiptMatcher 14, FingerprintParity 1 paypal arm + 2 wave-2 skipped, SourceRefRanker 4, UploadWizardEmailFile 6, HeaderSnifferEmailFile 6, EmlFileDrop 2, MboxFileDrop 1, IdempotencyContract 12, ProcessFetchedInboxMessagesJob 3, BoundaryArch 20, RecordReceipt 1)
+- 1016/1017 full suite passing (1 pre-existing TransactionTypeTest failure deferred from Wave 0)
+- PHPStan max + Pint green on all touched files
+- BoundaryArchTest green incl. new Cache facade carve-out for ProcessFetchedInboxMessagesJob and the noEmailFetchFromReceipts invariant
+- FingerprintParityTest paypal arm passes — load-bearing cross-format-dedup invariant proven
 
 ## User Setup Required
 
