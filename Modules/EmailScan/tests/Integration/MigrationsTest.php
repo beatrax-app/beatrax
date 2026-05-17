@@ -103,3 +103,74 @@ it('enforces UNIQUE on discovered_senders (user_id, inbox_id, sender_email)', fu
     expect(stripos($combined, 'unique') !== false)->toBeTrue();
     expect(str_contains($combined, 'user_id') && str_contains($combined, 'inbox_id') && str_contains($combined, 'sender_email'))->toBeTrue();
 });
+
+it('enforces UNIQUE on known_senders (user_id, email_pattern)', function (): void {
+    $indexes = $this->db
+        ->table('sqlite_master')
+        ->where('type', 'index')
+        ->where('tbl_name', 'known_senders')
+        ->pluck('sql')
+        ->filter()
+        ->toArray();
+    $combined = implode("\n", array_map('strval', $indexes));
+    expect(stripos($combined, 'unique') !== false)->toBeTrue();
+    expect(str_contains($combined, 'user_id') && str_contains($combined, 'email_pattern'))->toBeTrue();
+});
+
+it('UNIQUE on known_senders permits (NULL, "paypal.com") to coexist with (1, "paypal.com")', function (): void {
+    // SQL UNIQUE semantics treat NULL != NULL, so system-seeded rows
+    // (user_id = NULL) can coexist with per-user rows
+    // (user_id = N, same email_pattern). This is the intended shape:
+    // the discovery loop promotes a sender into a user-scoped row
+    // alongside the system seed without colliding.
+    $now = '2026-05-17 00:00:00';
+
+    // The 'paypal.com' system seed is already present from the migration.
+    $userId = (int) $this->db->table('users')->insertGetId([
+        'email' => 'known-unique@example.com',
+        'password' => 'hash',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    // Insert a per-user row with the same email_pattern — must NOT raise.
+    $this->db->table('known_senders')->insert([
+        'user_id' => $userId,
+        'email_pattern' => 'paypal.com',
+        'label' => 'PayPal (custom)',
+        'source' => 'user',
+        'added_at' => $now,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    $count = $this->db
+        ->table('known_senders')
+        ->where('email_pattern', 'paypal.com')
+        ->count();
+    expect($count)->toBe(2);
+});
+
+it('UNIQUE on known_senders rejects a duplicate (user_id, email_pattern) within the same user', function (): void {
+    $now = '2026-05-17 00:00:00';
+    $userId = (int) $this->db->table('users')->insertGetId([
+        'email' => 'known-dup@example.com',
+        'password' => 'hash',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    $row = [
+        'user_id' => $userId,
+        'email_pattern' => 'custom.example.com',
+        'label' => 'Custom',
+        'source' => 'user',
+        'added_at' => $now,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ];
+
+    $this->db->table('known_senders')->insert($row);
+    expect(fn () => $this->db->table('known_senders')->insert($row))
+        ->toThrow(Exception::class);
+});

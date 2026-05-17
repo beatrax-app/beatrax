@@ -46,6 +46,15 @@ return new class extends Migration
 
             $table->index(['user_id']);
             $table->index(['source']);
+            // UNIQUE on (user_id, email_pattern) prevents a user from
+            // promoting an already-known sender twice — the discovered-
+            // sender promotion path is idempotent at the action layer,
+            // but a future seeder or import path could trip the
+            // invariant otherwise. Note: NULL != NULL in SQL UNIQUE
+            // semantics, so the system seeds (user_id = NULL) coexist
+            // with a per-user (user_id = N, email_pattern = same) row
+            // without conflict — exactly the desired behaviour.
+            $table->unique(['user_id', 'email_pattern']);
         });
 
         $connection = $this->db()->connection($this->getConnection());
