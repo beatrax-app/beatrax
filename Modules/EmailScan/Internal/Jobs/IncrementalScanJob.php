@@ -429,15 +429,20 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             // Fallback walk: date-bounded /me/messages walk from
             // last_scan_at minus 7 days. Capped at the hard cap
             // defensively. After the walk, re-baseline via a fresh
-            // deltaPage(null) so the cursor is valid for the next
-            // hourly tick.
+            // deltaPage(null, $walkStartedAt) so the cursor lower-bound
+            // is anchored to the pre-walk timestamp; this closes the
+            // gap-window race where messages arriving during the
+            // fallback walk could fall outside both the walk's filter
+            // and the new baseline's lower bound (mirrors the WR-02
+            // fix posture for BackfillInboxJob).
+            $walkStartedAt = $clock->now()->toDateTimeImmutable();
             $messages = $this->graphFallbackWalk(
                 $graph,
                 $stateRow,
                 $senderPatterns,
                 $clock,
             );
-            $baseline = $graph->deltaPage($this->inboxId, null);
+            $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
             $newDeltaLink = $baseline['deltaLink'];
         }
 
