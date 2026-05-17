@@ -13,7 +13,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
- * Settings page. Surfaces two user preferences:
+ * Settings page. Surfaces the user preferences that govern global
+ * dashboard behaviour:
  *
  *  - `defaultCurrencyView` — chooses the default `/transactions` and
  *    dashboard presentation between EUR-only (settled-EUR pair only) and
@@ -24,6 +25,11 @@ use Modules\Core\Public\Contracts\CurrentUser;
  *  - `periodStartDay` — the day of the month at which the "this period"
  *    window rolls over. Numbered 1..28 so every calendar month including
  *    February has a valid value. Salary-aligned users typically pick 25.
+ *  - `recurringDetectionWindowMonths` — how many months of history the
+ *    recurring-series detector scans on each sweep. Bounded 3..60.
+ *  - `recurringIncomeMinAmountMinor` — incomes whose absolute amount is
+ *    below this threshold are not auto-clustered into income series.
+ *    Stored as signed BIGINT minor units; 0 disables the threshold.
  *
  * Service collaborators arrive as parameters on each action method; the
  * Livewire strict-rules ruleset forbids constructor-DI on Component
@@ -51,6 +57,26 @@ final class SettingsPage extends Component
     public bool $autoImportFromDropFolder = false;
 
     /**
+     * History window (in months) the recurring-series detector scans
+     * on each sweep. The lower bound of 3 months keeps monthly
+     * detection statistically meaningful (at least three observations
+     * for a stable cadence); the upper bound of 60 months caps the
+     * sweep cost so very long histories still finish in reasonable
+     * time.
+     */
+    #[Validate('required|integer|min:3|max:60')]
+    public int $recurringDetectionWindowMonths = 18;
+
+    /**
+     * Lower-bound income amount, in signed BIGINT minor units, below
+     * which incoming transactions are not auto-clustered into income
+     * series. Setting the value to 0 disables the threshold. The
+     * upper bound caps unrealistic inputs at €1,000,000.00.
+     */
+    #[Validate('required|integer|min:0|max:100000000')]
+    public int $recurringIncomeMinAmountMinor = 200000;
+
+    /**
      * Inline "Saved." confirmation flag flipped by save() and consumed by
      * the Blade view via `@if ($saved)` + `wire:transition.duration.4000ms`
      * so the confirmation auto-dismisses after four seconds.
@@ -63,6 +89,8 @@ final class SettingsPage extends Component
         $this->defaultCurrencyView = $user->default_currency_view;
         $this->periodStartDay = $user->period_start_day;
         $this->autoImportFromDropFolder = (bool) $user->auto_import_drop_folder;
+        $this->recurringDetectionWindowMonths = $user->recurring_detection_window_months;
+        $this->recurringIncomeMinAmountMinor = $user->recurring_income_min_amount_minor;
     }
 
     /**
@@ -96,6 +124,8 @@ final class SettingsPage extends Component
         $user = $currentUser->user();
         $user->default_currency_view = $this->defaultCurrencyView;
         $user->period_start_day = $this->periodStartDay;
+        $user->recurring_detection_window_months = $this->recurringDetectionWindowMonths;
+        $user->recurring_income_min_amount_minor = $this->recurringIncomeMinAmountMinor;
         $user->save();
 
         $this->saved = true;
@@ -130,6 +160,14 @@ final class SettingsPage extends Component
             'periodStartDay.max' => 'Choose a day from 1 to 28.',
             'defaultCurrencyView.required' => 'Pick one of the available options.',
             'defaultCurrencyView.in' => 'Pick one of the available options.',
+            'recurringDetectionWindowMonths.required' => 'Choose between 3 and 60 months.',
+            'recurringDetectionWindowMonths.integer' => 'Choose between 3 and 60 months.',
+            'recurringDetectionWindowMonths.min' => 'Choose between 3 and 60 months.',
+            'recurringDetectionWindowMonths.max' => 'Choose between 3 and 60 months.',
+            'recurringIncomeMinAmountMinor.required' => 'Enter an amount from €0 upward.',
+            'recurringIncomeMinAmountMinor.integer' => 'Enter an amount from €0 upward.',
+            'recurringIncomeMinAmountMinor.min' => 'Enter an amount from €0 upward.',
+            'recurringIncomeMinAmountMinor.max' => 'Enter an amount from €0 upward.',
         ];
     }
 }
