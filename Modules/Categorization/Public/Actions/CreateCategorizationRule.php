@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Categorization\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -141,7 +142,7 @@ final class CreateCategorizationRule
         $exists = $db->connection()
             ->table('categories')
             ->where('id', $categoryId)
-            ->where(static function ($query) use ($userId): void {
+            ->where(static function (QueryBuilder $query) use ($userId): void {
                 $query->whereNull('user_id')->orWhere('user_id', $userId);
             })
             ->exists();
