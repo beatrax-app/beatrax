@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
@@ -16,6 +15,7 @@ use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 use Modules\Recurring\Models\RecurringSeriesTransition;
+use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 
 /*
@@ -159,6 +159,12 @@ afterEach(function (): void {
 });
 
 it('runs the job for the user and detects one stable monthly expense series', function (): void {
+    // Widen the user's detection window so every fixture row sits
+    // inside the look-back window regardless of the frozen test
+    // clock — the 18-month default would clip the earliest occurrence.
+    $this->user->recurring_detection_window_months = 36;
+    $this->user->save();
+
     $seeded = drsjSeedFixture($this->db, $this->user, $this->account, $this->run, 'stable-monthly-spotify');
     expect($seeded)->toBeGreaterThan(0);
 
@@ -502,7 +508,7 @@ it('respects the per-user recurring_detection_window_months when filtering trans
 })->group('window-filter');
 
 it('uses container-tag dispatch — DetectRecurringSeriesJob receives the recurring.detector tag set', function (): void {
-    /** @var iterable<\Modules\Recurring\Public\Contracts\SeriesDetector> $detectors */
+    /** @var iterable<SeriesDetector> $detectors */
     $detectors = $this->app->tagged('recurring.detector');
     $collected = [];
     foreach ($detectors as $detector) {

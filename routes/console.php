@@ -11,6 +11,7 @@ use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
 use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
+use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 
 // App-wide artisan command bindings live here. Module-local artisan
 // commands are registered from each module's ServiceProvider.
@@ -110,3 +111,22 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
         $bus->dispatch(new ScanInboxDropFolderJob((int) $id));
     }
 })->name('receipts.scan-drop-folder')->everyFiveMinutes()->withoutOverlapping(10);
+
+// Daily recurring-series detection sweep: dispatches
+// DetectRecurringSeriesJob once per user per day. The job runs a
+// snooze-expiry pass first (flipping snoozed → pending where
+// snoozed_until has elapsed), then iterates every container-tagged
+// 'recurring.detector' implementation against the user's detection
+// window (default 18 months). The job's ShouldBeUniqueUntilProcessing
+// lock keyed on userId collapses a same-day re-dispatch (scheduled
+// tick or the on-demand button) into a single queued pass.
+// Method order .name() BEFORE .daily()->withoutOverlapping(30) —
+// CallbackEvent::withoutOverlapping throws LogicException when the
+// description is not set yet (same shape as the email-scan + receipts
+// entries above).
+Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
+    $userIds = $db->connection()->table('users')->pluck('id');
+    foreach ($userIds as $id) {
+        $bus->dispatch(new DetectRecurringSeriesJob((int) $id));
+    }
+})->name('recurring.detect')->daily()->withoutOverlapping(30);
