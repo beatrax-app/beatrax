@@ -65,6 +65,24 @@ final class GraphApiClient implements GraphApiClientContract
 {
     private const GRAPH_BASE_URI = 'https://graph.microsoft.com/v1.0/';
 
+    /**
+     * SSRF host allow-list. Every URL the client sends a bearer token
+     * against must parse to one of these hosts AND must use HTTPS. The
+     * OData nextLink / deltaLink contract embeds the cursor token
+     * inside a graph.microsoft.com URL; any deviation indicates a
+     * malformed response (or a hostile MITM) and the request is
+     * refused before the Authorization header is attached.
+     *
+     * Future regional clouds (graph.microsoft.de, graph.microsoft.us)
+     * are deliberately NOT in the v1 allow-list — adding them is a
+     * config-flip decision that should be reviewed alongside the
+     * tenant-detection logic in the OAuth providers, not silently
+     * permitted here.
+     *
+     * @var list<string>
+     */
+    private const ALLOWED_HOSTS = ['graph.microsoft.com'];
+
     /** Allow-list for the providerMessageId path segment in /messages/{id}/$value. */
     private const MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._%=+\-]{1,512}$/';
 
@@ -139,11 +157,18 @@ final class GraphApiClient implements GraphApiClientContract
             );
         }
 
+        $url = self::GRAPH_BASE_URI.'me/messages/'.$providerMessageId.'/$value';
+
+        // Defence-in-depth: assert the URL matches the SSRF allow-list
+        // before any bearer token is attached, even though this URL is
+        // constructed from a constant base + a regex-validated id.
+        $this->assertAllowedUrl($url);
+
         $accessToken = $this->ensureFreshAccessToken($inboxId);
         $client = $this->makeHttpClient();
 
         try {
-            $response = $client->request('GET', self::GRAPH_BASE_URI.'me/messages/'.$providerMessageId.'/$value', [
+            $response = $client->request('GET', $url, [
                 'headers' => [
                     'Authorization' => 'Bearer '.$accessToken,
                     'Accept' => 'message/rfc822, */*',
@@ -365,6 +390,14 @@ final class GraphApiClient implements GraphApiClientContract
         array $query = [],
         bool $expectsDelta = false,
     ): array {
+        // SSRF guard: refuse to forward the bearer token to any host
+        // outside the Graph allow-list. The check sits at the HTTP
+        // boundary (not at the cursor-persist layer) because the attack
+        // surface is EVERY request — a malformed @odata.nextLink /
+        // @odata.deltaLink in any single response could otherwise
+        // exfiltrate the bearer token to an attacker-controlled host.
+        $this->assertAllowedUrl($url);
+
         try {
             $response = $client->request('GET', $url, [
                 'query' => $query,
@@ -526,6 +559,42 @@ final class GraphApiClient implements GraphApiClientContract
     private function safeMessage(string $raw): string
     {
         return SafeMessage::cap($raw);
+    }
+
+    /**
+     * SSRF defence: refuse to attach a bearer token to any URL whose
+     * scheme is not https OR whose host is not on the allow-list.
+     *
+     * The check fires for BOTH the first-page URL (constructed from
+     * the constant base URI + an OData query) AND the
+     *
+     * @odata.nextLink / @odata.deltaLink pagination URLs (returned
+     * verbatim by Graph and followed by the caller without
+     * reconstruction). The pagination case is the load-bearing one:
+     * a malformed response substituting an attacker-controlled host
+     * would otherwise see a valid Mail.Read bearer attached.
+     *
+     * Failure mode is a typed RuntimeException so the caller's
+     * existing catch-Throwable transition to inbox_scan_state.status
+     * = 'error' fires and the user sees a surfaced failure — strictly
+     * preferable to a silent token exfiltration.
+     */
+    private function assertAllowedUrl(string $url): void
+    {
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        if (! is_string($scheme) || strtolower($scheme) !== 'https') {
+            throw new RuntimeException(
+                'GraphApiClient: refusing to send bearer token over non-HTTPS scheme.',
+            );
+        }
+
+        $host = parse_url($url, PHP_URL_HOST);
+        if (! is_string($host) || ! in_array(strtolower($host), self::ALLOWED_HOSTS, strict: true)) {
+            throw new RuntimeException(
+                'GraphApiClient: refusing to send bearer token to non-Graph host: '
+                .(is_string($host) && $host !== '' ? $host : '(unparseable)'),
+            );
+        }
     }
 
     /**
