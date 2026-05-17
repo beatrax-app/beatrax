@@ -1,0 +1,70 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Config\Repository;
+use Modules\EmailScan\Internal\LoopbackRedirectUri;
+
+it('uses the explicit OAUTH_LOOPBACK_PORT override when set', function (): void {
+    $config = new Repository([
+        'email-scan' => ['oauth_loopback_port' => 9123],
+        'app' => ['url' => 'https://diederik.test'],
+    ]);
+
+    $loopback = new LoopbackRedirectUri($config);
+
+    expect($loopback->forProvider('gmail'))->toBe('http://127.0.0.1:9123/oauth/callback/gmail');
+});
+
+it('accepts a numeric string OAUTH_LOOPBACK_PORT override (env-vars are strings)', function (): void {
+    $config = new Repository([
+        'email-scan' => ['oauth_loopback_port' => '9123'],
+        'app' => ['url' => 'https://diederik.test'],
+    ]);
+
+    expect((new LoopbackRedirectUri($config))->forProvider('microsoft'))
+        ->toBe('http://127.0.0.1:9123/oauth/callback/microsoft');
+});
+
+it('falls back to app.url port when host is 127.0.0.1 and port is present', function (): void {
+    $config = new Repository([
+        'email-scan' => ['oauth_loopback_port' => null],
+        'app' => ['url' => 'http://127.0.0.1:8000'],
+    ]);
+
+    expect((new LoopbackRedirectUri($config))->forProvider('gmail'))
+        ->toBe('http://127.0.0.1:8000/oauth/callback/gmail');
+});
+
+it('falls back to app.url port when host is localhost and port is present', function (): void {
+    $config = new Repository([
+        'email-scan' => ['oauth_loopback_port' => null],
+        'app' => ['url' => 'http://localhost:9999'],
+    ]);
+
+    expect((new LoopbackRedirectUri($config))->forProvider('microsoft'))
+        ->toBe('http://127.0.0.1:9999/oauth/callback/microsoft');
+});
+
+it('ignores app.url host/scheme and uses port 8000 when app.url is a Herd .test domain', function (): void {
+    // The Herd case from WR-01: app.url is https://diederik.test, but the
+    // OAuth callback MUST land on the loopback IP (both providers reject
+    // .test redirects). Default to 8000 unless OAUTH_LOOPBACK_PORT is set.
+    $config = new Repository([
+        'email-scan' => ['oauth_loopback_port' => null],
+        'app' => ['url' => 'https://diederik.test'],
+    ]);
+
+    expect((new LoopbackRedirectUri($config))->forProvider('gmail'))
+        ->toBe('http://127.0.0.1:8000/oauth/callback/gmail');
+});
+
+it('defaults to port 8000 when app.url is unset entirely', function (): void {
+    $config = new Repository([
+        'email-scan' => ['oauth_loopback_port' => null],
+        'app' => [],
+    ]);
+
+    expect((new LoopbackRedirectUri($config))->forProvider('gmail'))
+        ->toBe('http://127.0.0.1:8000/oauth/callback/gmail');
+});

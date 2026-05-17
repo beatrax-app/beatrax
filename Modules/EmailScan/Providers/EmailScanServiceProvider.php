@@ -22,6 +22,7 @@ use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
+use Modules\EmailScan\Internal\LoopbackRedirectUri;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
@@ -67,8 +68,16 @@ final class EmailScanServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // The `email-scan` config (with the OAUTH_LOOPBACK_PORT
+        // env-var override) lives at config/email-scan.php at the
+        // project root so it is picked up by Laravel's automatic
+        // config-directory loader. Keeping the env() call inside
+        // config/ ensures `config:cache` resolves the value at cache
+        // time instead of returning null at runtime.
+
         $this->app->singleton(InboxMessageQuery::class);
         $this->app->singleton(OAuthSecretsRepository::class);
+        $this->app->singleton(LoopbackRedirectUri::class);
 
         // OAuth surface + Public read services.
         $this->app->singleton(GoogleOAuthProvider::class);
