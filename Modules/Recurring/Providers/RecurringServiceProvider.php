@@ -95,7 +95,6 @@ final class RecurringServiceProvider extends ServiceProvider
         $livewire->component('recurring.fixed-payments-card', FixedPaymentsCard::class);
 
         $this->registerTopNavBadgeComposer();
-        $this->registerDashboardCardComposer();
     }
 
     /**
@@ -124,17 +123,5 @@ final class RecurringServiceProvider extends ServiceProvider
             $query = $app->make(RecurringSeriesQuery::class);
             $compose->with('recurringPendingCount', $query->pendingCountForUser($currentUser->user()));
         });
-    }
-
-    /**
-     * The dashboard injects the fixed-payments card with the
-     * `@livewire('recurring.fixed-payments-card')` directive, so no
-     * View Factory composer wiring is needed. Kept as an explicit
-     * extension seam: a future cross-card data attach point can land
-     * here without re-shaping the provider's call graph.
-     */
-    private function registerDashboardCardComposer(): void
-    {
-        // Intentionally empty.
     }
 }
