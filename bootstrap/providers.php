@@ -11,6 +11,7 @@ use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
 use Modules\Receipts\Providers\ReceiptsServiceProvider;
+use Modules\Recurring\Providers\RecurringServiceProvider;
 use Modules\Transfers\Providers\TransfersServiceProvider;
 
 return [
@@ -24,4 +25,5 @@ return [
     EmailScanServiceProvider::class,
     TransfersServiceProvider::class,
     ReceiptsServiceProvider::class,
+    RecurringServiceProvider::class,
 ];

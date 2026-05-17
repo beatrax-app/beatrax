@@ -1,0 +1,16 @@
+{
+    "name": "diederik/recurring",
+    "description": "Recurring module — series detection, fixed-payments view, drill-in chart.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Recurring\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Recurring\\Tests\\": "tests/"
+        }
+    }
+}
