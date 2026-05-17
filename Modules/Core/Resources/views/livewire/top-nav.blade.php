@@ -26,6 +26,29 @@
             class="inline-flex items-center rounded-md px-3 py-1.5 text-sm {{ $isActive('/imports/new') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
         >Imports</a>
 
+        {{-- "Inboxes" — discovered-sender candidates + needs_reauth
+             inbox count from InboxesBadgeCount, injected via the
+             EmailScanServiceProvider View Factory composer (same
+             pattern Phase 5 issue #12 established for the chain-
+             review badge — uses $this->app->make(ViewFactoryContract::class)
+             ->composer(...), never the view() global helper). Badge
+             hides when count = 0; caps at "99+" when > 99. --}}
+        <a
+            href="{{ route('inboxes.index') }}"
+            class="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm {{ $isActive('/inboxes') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+            @if (($inboxesBadgeCount ?? 0) > 0)
+                aria-label="Inboxes; {{ $inboxesBadgeCount }} items need attention"
+            @endif
+        >
+            Inboxes
+            @if (($inboxesBadgeCount ?? 0) > 0)
+                <span
+                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white"
+                    style="font-variant-numeric: tabular-nums;"
+                >{{ $inboxesBadgeCount > 99 ? '99+' : $inboxesBadgeCount }}</span>
+            @endif
+        </a>
+
         <a
             href="{{ route('uncategorized') }}"
             class="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm {{ $isActive('/uncategorized') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
