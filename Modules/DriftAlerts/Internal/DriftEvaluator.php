@@ -126,6 +126,13 @@ final readonly class DriftEvaluator
      * pair: a per-series override wins; otherwise the user-global
      * setting wins; otherwise the hard 5% default applies.
      *
+     * The three sources map onto three distinct `threshold_source`
+     * labels so the audit row + renderer can distinguish them:
+     *   - `series_override` — the user set a per-series override.
+     *   - `global`          — the user set a non-zero user-level value.
+     *   - `default`         — neither override nor user value applied;
+     *                         the hard 5% floor took effect.
+     *
      * Reads recurring_series.drift_threshold_percent directly via the
      * injected DatabaseManager. The noRecurringSeriesWritesFromDriftAlerts
      * arch test fires only on write verbs (update/insert/delete) on the
@@ -153,7 +160,7 @@ final readonly class DriftEvaluator
             return ['percent' => $userValue, 'source' => 'global'];
         }
 
-        return ['percent' => 5, 'source' => 'global'];
+        return ['percent' => 5, 'source' => 'default'];
     }
 
     /**

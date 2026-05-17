@@ -71,7 +71,10 @@ it('falls back to the hard 5 default when neither series override nor user globa
     $user->drift_alert_threshold_percent = 0;
     $user->save();
 
-    // 6% drift > 5% default → alert fires with threshold_percent_used=5.
+    // 6% drift > 5% default → alert fires with threshold_percent_used=5
+    // and threshold_source='default'. The 'default' label distinguishes
+    // the hard floor from a user-set global value so the audit trail
+    // and renderer can tell them apart.
     $seriesId = devetSeries($this->db, $user->id, driftThreshold: null);
     devetOccurrence($this->db, $user->id, $seriesId, '2026-04-15', -10000, 'EUR');
     devetOccurrence($this->db, $user->id, $seriesId, '2026-05-15', -10600, 'EUR');
@@ -81,7 +84,7 @@ it('falls back to the hard 5 default when neither series override nor user globa
     /** @var DriftAlert $row */
     $row = DriftAlert::query()->where('user_id', $user->id)->firstOrFail();
     expect($row->threshold_percent_used)->toBe(5);
-    expect($row->threshold_source)->toBe('global');
+    expect($row->threshold_source)->toBe('default');
 });
 
 function devetUser(string $email): User
