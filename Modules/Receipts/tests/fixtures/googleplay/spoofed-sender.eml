@@ -1,0 +1,12 @@
+From: googleplay-noreply@google.com.attacker.example
+To: user@example.test
+Subject: Your Google Play Order Receipt
+Date: Sun, 17 May 2026 09:30:00 +0000
+Message-ID: <gp-spoofed-1@attacker.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Order Number: GPA.1234-5678-9012-34567
+Item: Spotify Premium (1 month)
+Total: $12.99 USD

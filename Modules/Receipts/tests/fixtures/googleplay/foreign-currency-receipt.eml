@@ -1,0 +1,20 @@
+From: googleplay-noreply@google.com
+To: user@example.test
+Subject: Your Google Play Order Receipt
+Date: Mon, 18 May 2026 11:45:00 +0000
+Message-ID: <gp-deterministic-fx-1@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hello,
+
+Thanks for your order!
+
+Order Number: GPA.7777-8888-9999-12345
+Date: May 18, 2026
+Item: Augment Code (1 month)
+Price: $12.99 USD (€12,07 EUR)
+Total: $12.99 USD (€12,07 EUR)
+
+Visit Google Play to view your order history.
