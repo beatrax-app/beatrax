@@ -10,15 +10,10 @@ use Modules\DriftAlerts\Models\DriftAlertTransition;
 /**
  * Eloquent factory for the drift_alert_transitions audit table.
  *
- * Default state mirrors the canonical "user acknowledged an open
- * alert" transition; later waves wire factory states for the
- * snooze / dismiss / revive lifecycle when their state-machine
- * methods land.
- *
- * The `protected $model` reference is a string FQN; the
- * `DriftAlertTransition` Eloquent model lands in a later wave (the
- * table migration ships then) so production wiring resolves the
- * class at factory-invoke time, not at factory-class-load time.
+ * The default state encodes a "user acknowledged an open alert"
+ * transition. Callers can override `from_state` / `to_state` /
+ * `transition_reason` / `actor` for the snooze / dismiss / revive
+ * shapes.
  *
  * @extends Factory<DriftAlertTransition>
  */

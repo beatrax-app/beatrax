@@ -162,9 +162,9 @@ final readonly class DriftEvaluator
      *
      * Returns 0 for any other cadence (including 'irregular') so callers
      * can short-circuit before computing a meaningless annualized
-     * impact. The weekly=>52 choice keeps the Phase 9 annualizer
-     * consistent with the Phase 8 monthly-equivalent ladder (52/12
-     * weekly conversion) at the integer level.
+     * impact. The weekly=>52 multiplier stays consistent with the
+     * monthly-equivalent ladder used elsewhere (52/12 weekly conversion)
+     * at the integer level.
      */
     private function cadenceMultiplierForYear(string $cadence): int
     {

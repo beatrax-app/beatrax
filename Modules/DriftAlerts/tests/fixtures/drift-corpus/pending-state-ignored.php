@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-// Scenario 20: Series whose state is 'pending' (Phase 8 lifecycle:
-// awaiting user approval) and where the underlying transactions
-// would otherwise produce a +20% drift. Drift detection only runs
-// against state IN ('approved', 'cadence_changed'), so a pending
-// series produces zero alerts regardless of amount movement.
+// Series whose state is 'pending' (awaiting user approval) and where
+// the underlying transactions would otherwise produce a +20% drift.
+// Drift detection only runs against state IN ('approved',
+// 'cadence_changed'), so a pending series produces zero alerts
+// regardless of amount movement.
 
 $transactions = [];
 $amounts = [-999, -999, -999, -1199, -1199, -1199];

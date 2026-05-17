@@ -13,12 +13,9 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    // The headline rolls up the annualized impact in EUR. UI-SPEC § 5
-    // documents the EUR-rollup decision when alerts span multiple
-    // currencies. In Wave 3 the SUM is in original-currency minor
-    // units; an EUR FX join lands in the follow-up plan. For the
-    // dashboard tile we present the absolute magnitude prefixed with
-    // an upward arrow so it reads as "potential annualized cost".
+    // The headline rolls up the annualized impact in EUR. The SUM is
+    // in original-currency minor units; the tile presents the absolute
+    // magnitude in EUR so it reads as "potential annualized cost".
     $eurMagnitude = abs((int) $totalAnnualizedImpact);
     $eurFormatted = Money::ofMinor($eurMagnitude, 'EUR')->format('nl_NL');
 @endphp

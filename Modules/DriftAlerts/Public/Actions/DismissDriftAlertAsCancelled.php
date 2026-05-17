@@ -20,7 +20,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * Idempotent when already dismissed. Cross-user invocation raises
  * NotFoundHttpException. Dispatches `DriftAlertDismissedCancelled` so
- * Phase 10 forecasting can exclude the series from projections.
+ * downstream listeners can exclude the series from their own
+ * projections without re-reading the drift_alerts row.
  *
  * Transition reason is `user_dismissed_cancelled` (distinct from the
  * acknowledge action's `user_action`) so the audit trail can separate

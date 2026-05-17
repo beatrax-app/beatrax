@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-// Scenario 8: Subscription on a series whose state is
-// 'cadence_changed' (Phase 8 lifecycle flip) with a +10% drift on
-// top. Drift detection still fires on cadence_changed series — the
-// user can act on cadence and drift independently. Math:
+// Subscription on a series whose state is 'cadence_changed' with a
+// +10% drift on top. Drift detection still fires on cadence_changed
+// series — the user can act on cadence and drift independently.
+// Math:
 //   delta_minor = -1099 - (-999) = -100
 //   annualized_impact_minor = -100 × 12 = -1200 (-€12/yr)
 // The series_state on the recurring_series row is 'cadence_changed';

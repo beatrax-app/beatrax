@@ -21,8 +21,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Idempotent when re-snoozing to the exact same target timestamp
  * (silent no-op). Cross-user invocation raises NotFoundHttpException.
  *
- * Dispatches `DriftAlertSnoozed` so Phase 10 forecasting can defer
- * the alert from short-term projections during the snooze window.
+ * Dispatches `DriftAlertSnoozed` so downstream listeners can react to
+ * the snooze without re-reading the drift_alerts row.
  */
 final class SnoozeDriftAlert
 {

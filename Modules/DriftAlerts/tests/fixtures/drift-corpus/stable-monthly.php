@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 1: Stable monthly Netflix at €9.99 across 6 occurrences.
+// Stable monthly Netflix at €9.99 across 6 occurrences.
 // Every consecutive pair has delta=0, so the detector never fires.
 // Expected: zero drift alerts.
 

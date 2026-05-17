@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 9: Spotify €9.99 → €10.99 → €11.99 over three escalations.
+// Spotify €9.99 → €10.99 → €11.99 over three escalations.
 // Each transition exceeds the ±5% threshold so the detector queues
 // TWO open alerts (one per drift event). Queue-all-as-open keeps an
 // honest per-event audit trail; the grouped-by-series UI later

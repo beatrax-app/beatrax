@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 7: Netflix USD $11.99 stable across 6 months; the EUR
+// Netflix USD $11.99 stable across 6 months; the EUR
 // settlement amount drifts from €11.20 down to €10.80 purely because
 // of FX rate fluctuation. The drift detector compares ORIGINAL
 // currency only (per the FX-exclusion invariant) so USD stability

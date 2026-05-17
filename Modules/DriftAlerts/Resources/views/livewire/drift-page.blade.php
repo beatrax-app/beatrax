@@ -1,16 +1,16 @@
 {{--
-    /drift page — Open / History / Dismissed tabs over drift_alerts
-    rows. The Open tab groups multiple alerts that share a
-    recurring_series_id under a `<flux:card>` header with an Alpine
+    Drift alerts list. Three tabs (Open / History / Dismissed) over
+    drift_alerts rows. The Open tab groups multiple alerts that share
+    a recurring_series_id under a `<flux:card>` header with an Alpine
     `x-data="{ open: false }"` collapse toggle. Per-alert actions:
     Acknowledge (emerald primary on single-alert groups, slate
-    secondary inside multi-alert groups), Snooze (slate, opens the
-    Phase 8 D-810 popover), I cancelled this (slate; dispatches the
+    secondary inside multi-alert groups), Snooze (slate, opens a
+    1w / 1m / 3m popover), "I cancelled this" (slate; dispatches the
     DismissDriftAlertAsCancelled action and emits the corresponding
     Public event).
 
     Direction-aware sign-color rules are applied to the delta + icon
-    only — chrome stays slate per UI-SPEC § Color.
+    only — chrome stays slate.
 
     Blade default `{{ }}` escaping for every interpolation.
 --}}
@@ -31,7 +31,7 @@
     /**
      * Direction-aware tint for a single drift alert. Expense up and
      * income down read as rose; expense down and income up read as
-     * emerald. UI-SPEC § Direction-aware sign-color rules.
+     * emerald.
      */
     $tintFor = static function (object $row): string {
         $isNegative = $row->delta->isNegative();
@@ -59,10 +59,9 @@
     };
 
     $cadenceShort = static function (int $thresholdPercent): string {
-        // Display the threshold inline; the cadence display happens
-        // through meta-text where the underlying series cadence is
-        // sourced (the planner reserved a per-row cadence join for the
-        // follow-on plan — the meta line here echoes detected_at).
+        // Display the threshold inline; the per-row meta line echoes
+        // detected_at because the source series's cadence is not joined
+        // into this query.
         return (string) $thresholdPercent;
     };
 @endphp
