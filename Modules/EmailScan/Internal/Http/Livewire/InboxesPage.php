@@ -12,6 +12,9 @@ use Illuminate\Http\Request;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
+use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
+use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
+use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -189,6 +192,41 @@ final class InboxesPage extends Component
         return $this->redirect($target);
     }
 
+    /**
+     * Promote a discovered_senders candidate into the user's
+     * known_senders allow-list and transition the discovered row to
+     * state='added'.
+     *
+     * Wired to each "Add" chip on the discovered-senders panel. The
+     * PromoteDiscoveredSender action is fully idempotent: a row already
+     * promoted or dismissed is a silent no-op. Cross-user 404 lives
+     * inside the action (the panel's render-time DiscoveredSenderQuery
+     * call already scopes to the current user, but the explicit
+     * cross-user guard in the action defends against wire-payload
+     * forgery).
+     */
+    public function promoteSender(
+        int $discoveredSenderId,
+        CurrentUser $currentUser,
+        PromoteDiscoveredSender $promote,
+    ): void {
+        ($promote)($discoveredSenderId, $currentUser->user());
+        $this->dispatch('toast', message: 'Sender added.');
+    }
+
+    /**
+     * Dismiss a discovered_senders candidate. Mirror of promoteSender —
+     * idempotent + cross-user 404 inside the action surface.
+     */
+    public function dismissSender(
+        int $discoveredSenderId,
+        CurrentUser $currentUser,
+        DismissDiscoveredSender $dismiss,
+    ): void {
+        ($dismiss)($discoveredSenderId, $currentUser->user());
+        $this->dispatch('toast', message: 'Sender dismissed.');
+    }
+
     public function openWizard(
         string $provider,
         OAuthSecretsRepository $secrets,
@@ -209,13 +247,16 @@ final class InboxesPage extends Component
     public function render(
         CurrentUser $currentUser,
         InboxQuery $inboxQuery,
+        DiscoveredSenderQuery $discoveredQuery,
         ViewFactory $views,
     ): View {
         $user = $currentUser->user();
         $inboxes = $inboxQuery->forCurrentUser($user);
+        $discoveredCandidates = $discoveredQuery->candidatesForUser($user);
 
         $view = $views->make('email-scan::livewire.inboxes-page', [
             'inboxes' => $inboxes,
+            'discoveredCandidates' => $discoveredCandidates,
             'openBackfillForInboxId' => $this->openBackfillForInboxId,
         ]);
 
