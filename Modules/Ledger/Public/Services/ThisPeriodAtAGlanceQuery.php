@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Carbon\CarbonImmutable;
+use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\JoinClause;
 use Modules\Chains\Public\Dto\CardStatementForecastTile;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Public\Dto\EmailScanHealthTile;
+use Modules\EmailScan\Public\Dto\InboxHealthLine;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Dto\Period;
@@ -46,10 +51,33 @@ final class ThisPeriodAtAGlanceQuery
 {
     public const DEFAULT_DISPLAY_CURRENCY = 'EUR';
 
+    /**
+     * Threshold (in seconds) beyond which an inbox is considered "stale"
+     * on the dashboard tile — a successfully-scanned inbox that hasn't
+     * been touched in over 24 hours surfaces an amber dot. Mirrors the
+     * UI-SPEC threshold so tile colouring is consistent across renders.
+     */
+    private const STALE_THRESHOLD_SECONDS = 86400;
+
+    /**
+     * Maximum number of inbox lines surfaced inside the dashboard's
+     * Email-scan-health tile. Extra inboxes collapse into the
+     * "+{overflow} more" footer line.
+     */
+    private const TILE_LINE_LIMIT = 3;
+
+    /**
+     * Email local-part truncation length used when multiple inboxes
+     * share a provider — keeps the per-line copy compact for the
+     * three-line tile layout.
+     */
+    private const EMAIL_LOCAL_PART_MAX = 12;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly TopCategoriesByPeriodQuery $topCategoriesQuery,
         private readonly TransactionListQuery $listQuery,
+        private readonly Clock $clock,
     ) {}
 
     public function for(User $user, Period $period, string $displayCurrency = self::DEFAULT_DISPLAY_CURRENCY): DashboardSummary
@@ -232,6 +260,121 @@ final class ThisPeriodAtAGlanceQuery
             dueDate: $periodEnd->addDays(5)->startOfDay(),
             statementId: self::toInt($row->id),
             state: self::toString($row->state),
+        );
+    }
+
+    /**
+     * Dashboard "Email scan health" tile.
+     *
+     * Returns up to three connected-inbox lines (in created_at order)
+     * plus a tile-level overall status:
+     *
+     *   - 'reauth'  when ANY inbox has status='needs_reauth'
+     *   - 'stale'   when no inbox needs reauth but at least one inbox
+     *               has not been successfully scanned within the last
+     *               24 hours (or has never been scanned)
+     *   - 'healthy' otherwise
+     *
+     * Returns null when zero inboxes are connected — the dashboard
+     * Blade reads this as "hide the tile entirely" so the surface
+     * stays empty until the user connects an email account on
+     * `/inboxes`. The DTO has no "no inboxes" sentinel; absence
+     * becomes "no tile" upstream.
+     *
+     * Cross-user safety: the WHERE filter on `inboxes.user_id` is the
+     * single user-scoping guard. The LEFT JOIN on `inbox_scan_state`
+     * preserves rows whose scan-state has not been inserted yet (a
+     * transient window after the OAuth callback lands but before the
+     * background fetcher stamps the row); such rows render with
+     * `lastScanAt = null` and the dashboard partial copies the
+     * "not scanned yet" variant.
+     */
+    public function emailScanHealth(User $user): ?EmailScanHealthTile
+    {
+        $rows = $this->db->connection()
+            ->table('inboxes')
+            ->leftJoin('inbox_scan_state', static function ($join): void {
+                /** @var JoinClause $join */
+                $join->on('inbox_scan_state.inbox_id', '=', 'inboxes.id')
+                    ->where('inbox_scan_state.folder', '=', 'INBOX');
+            })
+            ->where('inboxes.user_id', $user->id)
+            ->orderBy('inboxes.created_at', 'asc')
+            ->orderBy('inboxes.id', 'asc')
+            ->select([
+                'inboxes.id as id',
+                'inboxes.provider as provider',
+                'inboxes.email as email',
+                'inbox_scan_state.status as status',
+                'inbox_scan_state.last_scan_at as last_scan_at',
+            ])
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        $nowEpoch = $this->clock->now()->getTimestamp();
+        $overall = 'healthy';
+        $lines = [];
+        $emitted = 0;
+
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $rawStatus = self::toString($row->status ?? null);
+            // LEFT JOIN miss means the scan-state row has not been
+            // inserted yet — treat as idle so the UI reasoning matches
+            // InboxQuery::makeDto() (Plan 03).
+            $status = $rawStatus === '' ? 'idle' : $rawStatus;
+
+            $lastScanRaw = self::toString($row->last_scan_at ?? null);
+            $lastScanAt = null;
+            if ($lastScanRaw !== '') {
+                try {
+                    $lastScanAt = new DateTimeImmutable($lastScanRaw);
+                } catch (\Throwable) {
+                    $lastScanAt = null;
+                }
+            }
+
+            $lineStatus = 'healthy';
+            if ($status === 'needs_reauth') {
+                $lineStatus = 'reauth';
+                $overall = 'reauth';
+            } elseif ($lastScanAt === null) {
+                $lineStatus = 'stale';
+                if ($overall !== 'reauth') {
+                    $overall = 'stale';
+                }
+            } elseif ($lastScanAt->getTimestamp() < ($nowEpoch - self::STALE_THRESHOLD_SECONDS)) {
+                $lineStatus = 'stale';
+                if ($overall !== 'reauth') {
+                    $overall = 'stale';
+                }
+            }
+
+            if ($emitted < self::TILE_LINE_LIMIT) {
+                $email = self::toString($row->email);
+                $atPos = strpos($email, '@');
+                $localPart = $atPos === false ? $email : substr($email, 0, $atPos);
+                $localPart = substr($localPart, 0, self::EMAIL_LOCAL_PART_MAX);
+
+                $lines[] = new InboxHealthLine(
+                    provider: self::toString($row->provider),
+                    emailLocalPart: $localPart,
+                    lastScanAt: $lastScanAt,
+                    status: $lineStatus,
+                );
+                $emitted++;
+            }
+        }
+
+        $overflowCount = max(0, $rows->count() - self::TILE_LINE_LIMIT);
+
+        return new EmailScanHealthTile(
+            lines: $lines,
+            overallStatus: $overall,
+            overflowCount: $overflowCount,
         );
     }
 

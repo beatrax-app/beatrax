@@ -81,22 +81,66 @@
             </p>
         </section>
     @else
-        {{-- Connected-inboxes table (Plan 03: minimal — status badge stub; full row actions arrive in Plan 07). --}}
+        {{-- Connected-inboxes table — full row chrome with status badge
+             matrix + Scan-Now / Reconnect / Window-edit actions
+             (UI-SPEC § Connected Inboxes Table + § Status Badge Matrix). --}}
         <ul class="space-y-4">
             @foreach ($inboxes as $inbox)
-                <li class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 gap-4 min-h-16">
+                @php
+                    $providerLabel = $inbox->provider === 'gmail' ? 'Gmail' : 'Microsoft 365';
+                    $windowText = $inbox->backfillWindowMonths === 1
+                        ? '1 month'
+                        : ($inbox->backfillWindowMonths.' months');
+                    $lastScanText = $inbox->lastScanAt === null
+                        ? 'not scanned yet'
+                        : 'last scanned '.\Carbon\CarbonImmutable::instance($inbox->lastScanAt)->diffForHumans(syntax: \Carbon\CarbonInterface::DIFF_RELATIVE_TO_NOW, short: true);
+
+                    // Status Badge Matrix — UI-SPEC § Status Badge Matrix.
+                    // Six variants matching inbox_scan_state.status enum.
+                    $badgeColor = [
+                        'idle' => 'slate',
+                        'backfilling' => 'sky',
+                        'scanning' => 'sky',
+                        'rate_limited' => 'amber',
+                        'needs_reauth' => 'rose',
+                        'error' => 'slate',
+                    ][$inbox->status] ?? 'slate';
+
+                    $badgeLabel = [
+                        'idle' => 'Idle',
+                        'backfilling' => 'Backfilling',
+                        'scanning' => 'Scanning',
+                        'rate_limited' => 'Rate limited',
+                        'needs_reauth' => 'Needs reauth',
+                        'error' => 'Error',
+                    ][$inbox->status] ?? 'Idle';
+
+                    $scanDisabled = in_array($inbox->status, ['backfilling', 'scanning'], strict: true);
+
+                    // Inline retry-after detail for rate_limited rows.
+                    $retryDetail = null;
+                    if ($inbox->status === 'rate_limited' && $inbox->retryAttempts > 0) {
+                        // Mirror InboxScanStateMachine::BACKOFF_SCHEDULE [60,300,900,3600].
+                        $schedule = [60, 300, 900, 3600];
+                        $idx = max(0, min(count($schedule) - 1, $inbox->retryAttempts - 1));
+                        $seconds = $schedule[$idx];
+                        if ($seconds < 60) {
+                            $retryDetail = "retrying in {$seconds}s";
+                        } elseif ($seconds < 3600) {
+                            $retryDetail = 'retrying in '.intdiv($seconds, 60).'m';
+                        } else {
+                            $retryDetail = 'retrying in '.intdiv($seconds, 3600).'h';
+                        }
+                    }
+
+                    $errorTooltipId = $inbox->status === 'error' && $inbox->errorMessage !== null
+                        ? 'inbox-error-'.$inbox->inboxId
+                        : null;
+                @endphp
+                <li class="flex min-h-16 items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4">
                     <div class="min-w-0 flex-1">
-                        <p class="text-sm text-slate-900 truncate">{{ $inbox->email }}</p>
+                        <p class="truncate text-sm text-slate-900">{{ $inbox->email }}</p>
                         <p class="mt-1 text-xs text-slate-500">
-                            @php
-                                $providerLabel = $inbox->provider === 'gmail' ? 'Gmail' : 'Microsoft 365';
-                                $windowText = $inbox->backfillWindowMonths === 1
-                                    ? '1 month'
-                                    : ($inbox->backfillWindowMonths . ' months');
-                                $lastScanText = $inbox->lastScanAt === null
-                                    ? 'not scanned yet'
-                                    : 'last scanned ' . \Carbon\CarbonImmutable::instance($inbox->lastScanAt)->diffForHumans(syntax: \Carbon\CarbonInterface::DIFF_RELATIVE_TO_NOW, short: true);
-                            @endphp
                             {{ $providerLabel }} · {{ $lastScanText }} · Window: {{ $windowText }}
                             <button
                                 type="button"
@@ -104,9 +148,42 @@
                                 class="ml-1 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-slate-900"
                             >Edit</button>
                         </p>
+                        @if ($errorTooltipId !== null)
+                            <p
+                                id="{{ $errorTooltipId }}"
+                                class="mt-1 truncate text-xs text-slate-500"
+                                role="note"
+                            >{{ \Illuminate\Support\Str::limit((string) $inbox->errorMessage, 200) }}</p>
+                        @endif
                     </div>
-                    <div class="flex shrink-0 items-center">
-                        <flux:badge color="slate">Idle</flux:badge>
+                    <div class="flex shrink-0 items-center gap-2">
+                        @if ($errorTooltipId !== null)
+                            <flux:badge color="{{ $badgeColor }}" aria-describedby="{{ $errorTooltipId }}">{{ $badgeLabel }}</flux:badge>
+                        @else
+                            <flux:badge color="{{ $badgeColor }}">{{ $badgeLabel }}</flux:badge>
+                        @endif
+
+                        @if ($retryDetail !== null)
+                            <span class="text-xs text-amber-700">{{ $retryDetail }}</span>
+                        @endif
+
+                        @if ($inbox->status === 'needs_reauth')
+                            <a
+                                href="{{ route('oauth.connect', ['provider' => $inbox->provider]) }}?inbox_id={{ $inbox->inboxId }}"
+                                class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-sm font-medium text-rose-600 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
+                            >Reconnect</a>
+                        @endif
+
+                        <button
+                            type="button"
+                            @if ($scanDisabled)
+                                disabled
+                                aria-disabled="true"
+                                title="Scan already in progress"
+                            @endif
+                            wire:click="scanNow({{ $inbox->inboxId }})"
+                            class="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 {{ $scanDisabled ? 'cursor-not-allowed opacity-60' : '' }}"
+                        >Scan now</button>
                     </div>
                 </li>
             @endforeach
