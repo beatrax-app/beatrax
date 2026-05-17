@@ -574,13 +574,12 @@ final class GraphApiClient implements GraphApiClientContract
      * scheme is not https OR whose host is not on the allow-list.
      *
      * The check fires for BOTH the first-page URL (constructed from
-     * the constant base URI + an OData query) AND the
-     *
-     * @odata.nextLink / @odata.deltaLink pagination URLs (returned
-     * verbatim by Graph and followed by the caller without
-     * reconstruction). The pagination case is the load-bearing one:
-     * a malformed response substituting an attacker-controlled host
-     * would otherwise see a valid Mail.Read bearer attached.
+     * the constant base URI + an OData query) AND the OData nextLink /
+     * deltaLink pagination URLs (returned verbatim by Graph and
+     * followed by the caller without reconstruction). The pagination
+     * case is the load-bearing one: a malformed response substituting
+     * an attacker-controlled host would otherwise see a valid
+     * Mail.Read bearer attached.
      *
      * Failure mode is a typed RuntimeException so the caller's
      * existing catch-Throwable transition to inbox_scan_state.status
