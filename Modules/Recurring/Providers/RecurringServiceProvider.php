@@ -10,6 +10,7 @@ use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
 use Modules\Recurring\Internal\Detectors\IncomeSeriesDetector;
+use Modules\Recurring\Internal\Http\Livewire\RecurringPage;
 use Modules\Recurring\Internal\Http\Livewire\RecurringReviewPage;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
@@ -18,6 +19,7 @@ use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
 use Modules\Recurring\Public\Actions\RejectRecurringSeries;
 use Modules\Recurring\Public\Actions\SnoozeRecurringSeries;
 use Modules\Recurring\Public\Actions\UnRejectRecurringSeries;
+use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
@@ -48,6 +50,7 @@ final class RecurringServiceProvider extends ServiceProvider
         ], 'recurring.detector');
 
         $this->app->singleton(RecurringSeriesQuery::class);
+        $this->app->singleton(FixedPaymentsViewQuery::class);
         $this->app->singleton(ApproveRecurringSeries::class);
         $this->app->singleton(RejectRecurringSeries::class);
         $this->app->singleton(SnoozeRecurringSeries::class);
@@ -67,6 +70,7 @@ final class RecurringServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'recurring');
         }
 
+        $livewire->component('recurring.recurring-page', RecurringPage::class);
         $livewire->component('recurring.recurring-review-page', RecurringReviewPage::class);
     }
 }
