@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Providers;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\View\Factory as ViewFactoryContract;
+use Illuminate\Contracts\View\View;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
@@ -108,6 +111,41 @@ final class EmailScanServiceProvider extends ServiceProvider
         $livewire->component('email-scan.backfill-window-modal', BackfillWindowModal::class);
 
         $this->registerJobFailedListener($events);
+        $this->registerTopNavBadgeComposer();
+    }
+
+    /**
+     * Inject the top-nav "Inboxes" badge integer into the
+     * `core::livewire.top-nav` view via the View Factory contract.
+     *
+     * Mirrors ChainsServiceProvider::registerTopNavBadgeComposer
+     * (issue #12 fix in Phase 5): resolves the View Factory contract
+     * through `$this->app->make()` so the CLAUDE.md DI-only invariant
+     * stays visible at the call site — the `view()` global helper is
+     * never used.
+     *
+     * The composer fires only when the view is actually rendered —
+     * meaning at most once per HTTP request that surfaces the top-nav.
+     * Each composer invocation reads `CurrentUser` per-request (never
+     * caches across requests) and runs a single InboxesBadgeCount query
+     * (one COUNT on discovered_senders + one COUNT on inbox_scan_state,
+     * both filtered by user_id).
+     */
+    private function registerTopNavBadgeComposer(): void
+    {
+        $app = $this->app;
+        $factory = $app->make(ViewFactoryContract::class);
+
+        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app): void {
+            $currentUser = $app->make(CurrentUser::class);
+            if (! $currentUser->isAuthenticated()) {
+                $compose->with('inboxesBadgeCount', 0);
+
+                return;
+            }
+            $query = $app->make(InboxesBadgeCount::class);
+            $compose->with('inboxesBadgeCount', $query->forCurrentUser($currentUser->user()));
+        });
     }
 
     /**

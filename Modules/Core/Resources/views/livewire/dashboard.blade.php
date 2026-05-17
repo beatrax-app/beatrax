@@ -48,24 +48,43 @@
         </div>
     </header>
 
-    {{-- "Next ICS settlement" tile (D-99 / D-100, CHN-06).
+    {{-- Status tile row — "Next ICS settlement" + "Email scan health"
+         tiles. Either tile may be hidden when its source query returns
+         null; the row collapses to a single tile or vanishes entirely
+         depending on which surfaces have data. Side-by-side on desktop
+         (md:grid-cols-2), stacked on mobile. --}}
+    @if ((isset($nextSettlement) && $nextSettlement !== null) || (isset($emailScanHealth) && $emailScanHealth !== null))
+        <section class="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Status tiles">
+            {{-- "Next ICS settlement" tile (D-99 / D-100, CHN-06).
+                 Hides entirely when `$nextSettlement` is null. Border /
+                 radius / padding match the existing tile chrome verbatim.
+                 Tile amount uses Display 32px semibold tabular-nums in
+                 slate-900 (never emerald — emerald is reserved for net-
+                 positive KPIs and an outstanding settlement balance is
+                 never positive-good per Phase 3 D-46). --}}
+            @if (isset($nextSettlement) && $nextSettlement !== null)
+                <div class="rounded-lg border border-slate-200 bg-white p-6">
+                    <p class="text-base font-semibold text-slate-900">Next ICS settlement</p>
+                    <p class="mt-2 text-3xl font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
+                        {{ $nextSettlement->amount->format('nl_NL') }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500">due ~{{ $nextSettlement->dueDate->format('d M') }}</p>
+                </div>
+            @endif
 
-         Renders ABOVE the existing in/out/net KPI tile row. Hides
-         entirely when `$nextSettlement` is null — no "—" placeholder
-         (D-99). Border / radius / padding match the existing tile
-         chrome verbatim. Tile amount uses Display 32px semibold
-         tabular-nums in slate-900 (never emerald — emerald is
-         reserved for net-positive KPIs and an outstanding settlement
-         balance is never positive-good per Phase 3 D-46). --}}
-    @if (isset($nextSettlement) && $nextSettlement !== null)
-        <section aria-label="Next ICS settlement">
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
-                <p class="text-base font-semibold text-slate-900">Next ICS settlement</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
-                    {{ $nextSettlement->amount->format('nl_NL') }}
-                </p>
-                <p class="mt-1 text-xs text-slate-500">due ~{{ $nextSettlement->dueDate->format('d M') }}</p>
-            </div>
+            {{-- "Email scan health" tile.
+                 Wrapped in an <a> so the whole card is clickable; the inner
+                 hover:ring-2 provides the affordance. Hidden entirely when
+                 `$emailScanHealth` is null (zero connected inboxes). --}}
+            @if (isset($emailScanHealth) && $emailScanHealth !== null)
+                <a
+                    href="{{ route('inboxes.index') }}"
+                    class="block rounded-lg transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                    aria-label="Email scan health — {{ count($emailScanHealth->lines) + $emailScanHealth->overflowCount }} connected {{ ($emailScanHealth->overflowCount + count($emailScanHealth->lines)) === 1 ? 'inbox' : 'inboxes' }}"
+                >
+                    @include('email-scan::livewire.email-scan-health-tile', ['tile' => $emailScanHealth])
+                </a>
+            @endif
         </section>
     @endif
 
@@ -206,6 +225,48 @@
             </div>
         @endif
     </section>
+
+    {{-- Reauth-detected toast.
+
+         Persistent (no auto-dismiss) backed by inbox_scan_state.status =
+         'needs_reauth' filtered by user_id. Suppressed for the rest of
+         the session once the user clicks ×; reappears on next login if
+         any inbox is still needs_reauth. Same chrome as the failed-job
+         toast below but with its own copy + a distinct surface order
+         (this toast renders above the failed-job toast when both are
+         visible — see UI-SPEC § Reauth-detected toast). --}}
+    @if ($reauthInboxCount > 0 && ! $reauthToastDismissed)
+        <div
+            role="status"
+            aria-live="polite"
+            class="fixed bottom-24 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md"
+        >
+            <div class="flex items-start justify-between gap-3">
+                <div class="space-y-1">
+                    <p class="text-sm font-medium text-slate-900">An inbox needs reconnecting.</p>
+                    <p class="text-xs text-slate-500">One or more inboxes were signed out — diederik can't scan them until you reconnect.</p>
+                    <a
+                        href="{{ route('inboxes.index') }}"
+                        class="text-xs text-slate-900 underline-offset-2 hover:underline"
+                    >Go to Inboxes</a>
+                </div>
+                <button
+                    type="button"
+                    aria-label="Dismiss"
+                    wire:click="dismissReauthToast"
+                    class="rounded text-slate-500 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                >
+                    {{-- Inline Heroicons-outline x-mark 16×16 (no
+                         blade-heroicons package is installed in the
+                         project; UI-SPEC § Icon usage approves this
+                         inline render). --}}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    @endif
 
     {{-- Failed-job toast (D-103 / issue #1 + #8).
 

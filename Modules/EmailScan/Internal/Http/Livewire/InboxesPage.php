@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -110,6 +113,81 @@ final class InboxesPage extends Component
      * for the live backfill_progress payload.
      */
     public function refreshBackfillProgress(): void {}
+
+    /**
+     * Manually trigger an incremental scan for one inbox.
+     *
+     * Wired to the "Scan now" button on every connected-inbox row.
+     * Dispatches IncrementalScanJob via the injected Bus contract;
+     * the job's ShouldBeUniqueUntilProcessing constraint deduplicates
+     * a rapid double-click into a single queued job.
+     *
+     * Cross-user 404 invariant: the inbox lookup scopes through
+     * InboxQuery::findForUser which returns null for a foreign id;
+     * the action raises Symfony NotFoundHttpException so a forged
+     * inboxId in the wire payload cannot dispatch a job for another
+     * user's inbox.
+     *
+     * No-op guard: when the inbox is already in 'backfilling' or
+     * 'scanning' state, the action emits a toast ("Scan already in
+     * progress.") and returns without dispatching — the Blade also
+     * renders the button as disabled in those states so the no-op
+     * path is only ever reached via wire payload forgery.
+     */
+    public function scanNow(
+        int $inboxId,
+        CurrentUser $currentUser,
+        InboxQuery $inboxQuery,
+        Dispatcher $bus,
+    ): void {
+        $user = $currentUser->user();
+        $health = $inboxQuery->findForUser($inboxId, $user);
+        if ($health === null) {
+            throw new NotFoundHttpException('Inbox not found.');
+        }
+        if (in_array($health->status, ['backfilling', 'scanning'], strict: true)) {
+            $this->dispatch('toast', message: 'Scan already in progress.');
+
+            return;
+        }
+        $bus->dispatch(new IncrementalScanJob($inboxId));
+        $this->dispatch('toast', message: 'Scan started.');
+    }
+
+    /**
+     * Kick off the per-inbox OAuth consent re-grant flow for a row
+     * stuck in needs_reauth state.
+     *
+     * Cross-user 404 invariant: same shape as scanNow — InboxQuery::
+     * findForUser returns null for a foreign id which raises Symfony
+     * NotFoundHttpException.
+     *
+     * The redirect target is `/oauth/connect/{provider}?inbox_id={id}` —
+     * the existing OAuthConnectController reads the inbox_id query
+     * parameter (Plan 06) to scope the consent flow to the existing
+     * inbox row (preserves inbox_messages + .eml blobs + cursor; D-115).
+     */
+    public function reconnect(
+        int $inboxId,
+        CurrentUser $currentUser,
+        InboxQuery $inboxQuery,
+        UrlGenerator $urls,
+    ): mixed {
+        $user = $currentUser->user();
+        $health = $inboxQuery->findForUser($inboxId, $user);
+        if ($health === null) {
+            throw new NotFoundHttpException('Inbox not found.');
+        }
+
+        $target = $urls->route('oauth.connect', ['provider' => $health->provider])
+            .'?inbox_id='.$inboxId;
+
+        // Livewire 3+ honours $this->redirect($url) for client-side
+        // navigation (matches the openWizard() pattern above which uses
+        // $this->redirectRoute(...)). Plain RedirectResponse return is
+        // not picked up by the Livewire wire:click protocol.
+        return $this->redirect($target);
+    }
 
     public function openWizard(
         string $provider,
