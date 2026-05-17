@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Internal\Clients;
 
+use DateTimeImmutable;
+
 /**
  * Contract for the Gmail API client.
  *
@@ -33,10 +35,22 @@ interface GmailApiClientContract
      * over the given sender patterns, paged at 100 messages per
      * call. The caller walks pages until `nextPageToken` is null.
      *
+     * When `$windowStart` is non-null, the query also carries
+     * Gmail's `after:` operator (unix-timestamp form for sub-day
+     * precision) so the IncrementalScanJob's cursor-expiry fallback
+     * walk can be date-bounded to `last_scan_at - 7 days` rather
+     * than walking the entire allow-list history capped only by the
+     * 500-message defensive cap.
+     *
      * @param  list<string>  $senderPatterns
      * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, historyId: ?string, resultSizeEstimate: int}
      */
-    public function listSenderMessages(int $inboxId, array $senderPatterns, ?string $pageToken): array;
+    public function listSenderMessages(
+        int $inboxId,
+        array $senderPatterns,
+        ?string $pageToken,
+        ?DateTimeImmutable $windowStart = null,
+    ): array;
 
     /**
      * `users.messages.get?format=raw`. Returns the RFC 822 byte
