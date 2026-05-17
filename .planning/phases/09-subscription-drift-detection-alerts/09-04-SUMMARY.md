@@ -232,7 +232,11 @@ Each task was committed atomically:
 
 None — no external service configuration touched in this plan.
 
-## Pending Checkpoint (Task 4)
+## Human-Verify Checkpoint (Task 4) — APPROVED 2026-05-17
+
+User confirmed the manual `/drift` walkthrough on the merged main; all eleven visual + interaction items passed. Plan 09-04 closed.
+
+## Original Checkpoint Specification
 
 Task 9-04-04 is a `checkpoint:human-verify` gate. The automated work is complete and the SUMMARY is committed; the manual visual walk-through is the only remaining gate before the phase is signed off. The checkpoint asks the human to:
 
