@@ -51,9 +51,8 @@ final class InboxesPage extends Component
      * One-shot oauth_canceled flash carried from the OAuth callback
      * controller through mount(). Pulled out of the session here
      * rather than read via the session() global helper inside the
-     * Blade view (IN-01 iter-2: DI-only invariant — Blade follows
-     * the same constructor-DI-or-prop convention as the rest of the
-     * module).
+     * Blade view — the DI-only invariant applies to Blade too, so the
+     * value flows in as a render prop instead of a facade lookup.
      */
     public ?string $oauthCanceledMessage = null;
 

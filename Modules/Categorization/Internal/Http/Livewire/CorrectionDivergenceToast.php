@@ -157,10 +157,10 @@ final class CorrectionDivergenceToast extends Component
         } catch (InvalidArgumentException) {
             // UpdateCategorizationRule raises InvalidArgumentException
             // when the supplied newCategoryId is not visible to the
-            // caller (WR-01 cross-user guard). Unreachable from the
-            // normal flow — the divergence event always carries the
-            // user's own newCategoryId — but a tampered payload could
-            // land here. Surface a calm message and keep the toast.
+            // caller. Unreachable from the normal flow — the divergence
+            // event always carries the user's own newCategoryId — but
+            // a tampered payload could land here. Surface a calm
+            // message and keep the toast.
             $this->flashMessage = 'Invalid category — please refresh the page.';
 
             return;
