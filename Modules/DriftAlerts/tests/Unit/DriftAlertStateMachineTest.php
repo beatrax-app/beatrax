@@ -209,6 +209,30 @@ it('binds DriftAlertStateMachine as a singleton via DriftAlertsServiceProvider',
     expect($first)->toBe($second);
 });
 
+it('writes user_id=NULL on the audit row when the source drift_alerts.user_id is NULL', function (): void {
+    // SQLite users.id is an autoincrementing surrogate starting at 1;
+    // a NULL value never points at a real user. The state machine
+    // silently degrades the audit-row FK to null so a corrupted
+    // source row cannot fail the entire transition. This test locks
+    // the swallow-to-null semantic so a future refactor cannot
+    // quietly convert it into a throw without updating the assertion.
+    // (The FK on drift_alerts.user_id is nullable; the schema
+    // forbids a numeric 0 by virtue of the FK constraint, but the
+    // mapper still defends against 0 / non-numeric values defensively
+    // because the read happens on a raw stdClass row.)
+    $this->db->connection()->table('drift_alerts')
+        ->where('id', $this->alert->id)
+        ->update(['user_id' => null]);
+
+    $row = DriftAlert::query()->findOrFail($this->alert->id);
+    $this->machine->transition($row, 'acknowledged', 'user_action', 'user');
+
+    $transition = DriftAlertTransition::query()
+        ->where('drift_alert_id', $this->alert->id)
+        ->firstOrFail();
+    expect($transition->user_id)->toBeNull();
+});
+
 /**
  * Seeds a transactions row sufficient to satisfy the FK constraint on
  * recurring_series_occurrences.transaction_id without pulling in the

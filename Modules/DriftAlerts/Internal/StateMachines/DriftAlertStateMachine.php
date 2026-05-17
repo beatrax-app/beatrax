@@ -152,6 +152,23 @@ final class DriftAlertStateMachine
         return is_numeric($value) ? (int) $value : 0;
     }
 
+    /**
+     * Coerces a raw drift_alerts.user_id value into either a positive
+     * int or null.
+     *
+     * SQLite users.id is an autoincrementing surrogate starting at 1;
+     * an id of 0 (or negative, or non-numeric) is never a real user.
+     * The state machine silently degrades any of those shapes to null
+     * on the audit-row FK so the transition contract — "write exactly
+     * one drift_alert_transitions row per legal state flip" — stays
+     * resilient against a corrupted source row. Callers that need to
+     * detect the corruption can inspect the resulting
+     * drift_alert_transitions.user_id IS NULL row.
+     *
+     * Locked by `DriftAlertStateMachineTest` so a future refactor
+     * cannot quietly change the swallow-to-null semantics into a
+     * throw without updating the test.
+     */
     private static function toIntOrNull(mixed $value): ?int
     {
         if ($value === null) {
@@ -162,10 +179,6 @@ final class DriftAlertStateMachine
         }
         $int = (int) $value;
 
-        // SQLite users.id is an autoincrementing surrogate starting
-        // at 1; an id of 0 (or negative) is never a real user. Treat
-        // stringly-numeric '0' as null so the transitions audit row's
-        // FK never points at a phantom user_id=0.
         return $int > 0 ? $int : null;
     }
 
