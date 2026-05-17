@@ -176,8 +176,8 @@ final class TransactionDetail extends Component
      * UPDATE by user_id; a foreign-user transaction returns 0 rows
      * affected and no event fires. The Livewire-local
      * `correction-divergence:fire` event carries the explicit
-     * `$userId` field so the toast SFC can perform its T-07-09
-     * cross-user guard defensively.
+     * `$userId` field so the toast SFC can perform its cross-user
+     * guard defensively.
      */
     public function reclassifyCategory(
         int $newCategoryId,
@@ -227,15 +227,14 @@ final class TransactionDetail extends Component
             ->where('user_id', $currentUser->user()->id)
             ->firstOrFail();
 
-        // UI-SPEC § Chain drill-down drawer: the "View chain" button
-        // renders when the resolver has run at least once for the user
-        // (i.e. ChainLinkQuery::forTransaction would return a non-null
-        // ChainTree even if it contains only the root). Since the
-        // detail page is itself user-scoped via `firstOrFail()` and
-        // the chain-tree query is now wired (Wave 3), the button is
-        // available on every detail page the user can see; the drawer
-        // itself renders the empty / pre-mount states when no chain
-        // exists yet.
+        // Chain drill-down drawer: the "View chain" button renders
+        // whenever the resolver has run at least once for the user
+        // (ChainLinkQuery::forTransaction returns a non-null ChainTree
+        // even when it contains only the root). The detail page is
+        // user-scoped via `firstOrFail()` and the chain-tree query is
+        // wired, so the button is available on every detail page the
+        // user can see; the drawer renders empty / pre-mount states
+        // when no chain exists yet.
         $chainAvailable = true;
 
         $view = $views->make('ledger::livewire.transaction-detail', [

@@ -27,9 +27,9 @@ use ZBateson\MailMimeParser\Message;
  * map (sender-email lowercasing is the only normalisation; everything
  * else is verbatim).
  *
- * Attachment surface: only filenames, since Wave 0 matchers do not
- * yet parse attachment bodies. A future PDF-receipt arm can re-read
- * the .eml to extract bytes.
+ * Attachment surface: only filenames; matchers do not yet parse
+ * attachment bodies. A future PDF-receipt arm can re-read the .eml
+ * to extract bytes.
  *
  * Stateless / singleton-safe.
  */
