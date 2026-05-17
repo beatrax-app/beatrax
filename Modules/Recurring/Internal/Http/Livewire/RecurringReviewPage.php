@@ -15,6 +15,7 @@ use Modules\Recurring\Public\Actions\RejectRecurringSeries;
 use Modules\Recurring\Public\Actions\SnoozeRecurringSeries;
 use Modules\Recurring\Public\Actions\UnRejectRecurringSeries;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * `/recurring/review` page — the dedicated review queue for pending
@@ -90,6 +91,55 @@ final class RecurringReviewPage extends Component
     {
         ($action)($seriesId, $currentUser->user());
         $this->dispatch('toast', message: 'Un-rejected', undoAction: 'reject', undoPayload: $seriesId);
+    }
+
+    /**
+     * Bulk-approve every series in `$selectedIds`. Foreign-user ids
+     * are skipped silently — the underlying Public Action raises
+     * `NotFoundHttpException` for cross-user lookups and the loop
+     * swallows it so a partially-poisoned select does not break the
+     * batch. The toast records only the successfully-applied count.
+     */
+    public function bulkApprove(CurrentUser $currentUser, ApproveRecurringSeries $action): void
+    {
+        $user = $currentUser->user();
+        $applied = 0;
+        foreach ($this->selectedIds as $id) {
+            if ($id <= 0) {
+                continue;
+            }
+            try {
+                ($action)($id, $user);
+                $applied++;
+            } catch (NotFoundHttpException) {
+                // Foreign-user or stale id — skip.
+            }
+        }
+        $this->selectedIds = [];
+        $this->dispatch('toast', message: $applied.' approved', undoAction: 'bulkUndo', undoPayload: null);
+    }
+
+    /**
+     * Bulk-reject — same shape as bulkApprove but calls
+     * `RejectRecurringSeries`. Foreign-user ids are skipped silently.
+     */
+    public function bulkReject(CurrentUser $currentUser, RejectRecurringSeries $action): void
+    {
+        $user = $currentUser->user();
+        $applied = 0;
+        foreach ($this->selectedIds as $id) {
+            if ($id <= 0) {
+                continue;
+            }
+            try {
+                ($action)($id, $user);
+                $applied++;
+            } catch (NotFoundHttpException) {
+                // Foreign-user or stale id — skip.
+            }
+        }
+        $this->selectedIds = [];
+        $this->dispatch('toast', message: $applied.' rejected', undoAction: 'bulkUndo', undoPayload: null);
     }
 
     public function render(
