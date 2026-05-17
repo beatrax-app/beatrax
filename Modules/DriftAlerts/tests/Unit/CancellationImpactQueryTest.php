@@ -10,10 +10,10 @@ use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 uses(RefreshDatabase::class);
 
 /*
- * CancellationImpactQuery unit-style tests. The Public service is the
- * Phase 10 hand-off contract — exactly one `forSeries` entry point that
- * reads through RecurringSeriesQuery, preserves the series's original
- * currency, and returns null on cross-user / missing series invocations.
+ * CancellationImpactQuery unit-style tests. The Public service exposes
+ * exactly one `forSeries` entry point that reads through
+ * RecurringSeriesQuery, preserves the series's original currency, and
+ * returns null on cross-user / missing series invocations.
  */
 
 function ciqUser(string $email): User

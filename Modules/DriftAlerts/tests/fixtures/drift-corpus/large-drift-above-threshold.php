@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 3: Spotify €9.99 → €11.49 (+15.0% month-over-month, well
+// Spotify €9.99 → €11.49 (+15.0% month-over-month, well
 // above the default ±5% threshold). The detector fires exactly one
 // alert. Math:
 //   delta_minor = -1149 - (-999) = -150 (signed expense)

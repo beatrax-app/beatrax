@@ -3,21 +3,21 @@
 declare(strict_types=1);
 
 /*
- * FixtureCorpusTest — Wave 0 contract guard for the 24-scenario
- * synthesised drift fixture corpus.
+ * FixtureCorpusTest — contract guard for the synthesised drift fixture
+ * corpus.
  *
  * Each fixture under `Modules/DriftAlerts/tests/fixtures/drift-corpus/`
  * must return an associative array with two top-level keys:
  *
- *   - `transactions` (list of synthetic transaction rows the upstream
- *     Phase 8 detector would cluster into a recurring series)
+ *   - `transactions` (list of synthetic transaction rows the recurring
+ *     detector would cluster into a single recurring series)
  *   - `expected`     (associative array with at least an `alerts` key
  *     whose value is a list of expected drift_alerts column tuples)
  *
- * The corpus is the shared input for the Wave 2 DriftEvaluatorTest
- * (Pest dataset) and Wave 3 DriftDetectionContractTest (end-to-end).
- * If a fixture violates the shape contract the downstream tests
- * become noisy and unreliable, so this guard fires first.
+ * The corpus is the shared input for `DriftEvaluatorTest` (Pest
+ * dataset) and `DriftDetectionContractTest` (end-to-end). If a fixture
+ * violates the shape contract the downstream tests become noisy and
+ * unreliable, so this guard fires first.
  */
 
 use function PHPUnit\Framework\assertArrayHasKey;

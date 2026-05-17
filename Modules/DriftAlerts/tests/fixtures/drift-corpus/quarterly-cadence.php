@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 16: Quarterly insurance €240/qtr → €270/qtr (+12.5%).
+// Quarterly insurance €240/qtr → €270/qtr (+12.5%).
 // The quarterly cadence multiplier is ×4. Math:
 //   delta_minor = -27000 - (-24000) = -3000
 //   annualized_impact_minor = -3000 × 4 = -12000 (-€120/yr)

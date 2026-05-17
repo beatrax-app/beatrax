@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-// Scenario 21: Series in state='rejected' (Phase 8 lifecycle: user
-// explicitly dismissed the suggestion) with a +20% underlying drift.
-// Drift detection skips rejected series entirely. Zero alerts.
+// Series in state='rejected' (the user explicitly dismissed the
+// suggestion) with a +20% underlying drift. Drift detection skips
+// rejected series entirely. Zero alerts.
 
 $transactions = [];
 $amounts = [-999, -999, -999, -1199, -1199, -1199];

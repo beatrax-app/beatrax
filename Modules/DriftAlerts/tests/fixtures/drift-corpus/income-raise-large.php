@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 5: Salary €3500 → €3850 (+10.0% month-over-month, above
+// Salary €3500 → €3850 (+10.0% month-over-month, above
 // the default ±5% threshold). The detector fires exactly one
 // income-direction alert. Math:
 //   delta_minor = 385000 - 350000 = +35000 (signed income, positive)

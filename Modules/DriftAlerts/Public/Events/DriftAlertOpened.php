@@ -11,9 +11,6 @@ namespace Modules\DriftAlerts\Public\Events;
  * delta + annualized impact, and the original-currency code so any
  * downstream listener can render direction-aware copy or feed
  * forecasting models without re-reading the row.
- *
- * Phase 10 forecasting may subscribe to this event to fold open
- * drifts into its projections.
  */
 final readonly class DriftAlertOpened
 {

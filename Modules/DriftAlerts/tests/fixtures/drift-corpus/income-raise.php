@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 4: Salary €3500 → €3650 (+4.3% month-over-month). The
+// Salary €3500 → €3650 (+4.3% month-over-month). The
 // raise sits below the default ±5% threshold so the detector skips
 // the alert. Expected: zero drift alerts.
 

@@ -11,8 +11,9 @@ namespace Modules\DriftAlerts\Public\Events;
  * `dismissed_cancelled`; the recurring_series row is NEVER modified
  * by this action (`noRecurringSeriesWritesFromDriftAlerts` invariant).
  *
- * Carries `recurringSeriesId` so downstream forecasting (Phase 10) can
- * exclude the series from projections without re-reading the row.
+ * Carries `recurringSeriesId` so downstream listeners can exclude the
+ * series from their projections without re-reading the drift_alerts
+ * row.
  */
 final readonly class DriftAlertDismissedCancelled
 {

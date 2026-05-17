@@ -1,12 +1,11 @@
 {{--
     A single drift alert row. Renders the direction-aware icon + delta
-    + annualized impact + (Open-tab only) Acknowledge / Snooze / I
-    cancelled this action chips. The Snooze chip opens the Phase 8
-    D-810 popover (Alpine `x-data="{ open: false }"`, click-outside
-    closes). The "I cancelled this" chip is wired to the
-    DismissDriftAlertAsCancelled action — no inline confirm step in
-    Wave 3 (the confirm UX lands in a follow-up plan; the action
-    itself is reversible during the 10-second toast window).
+    + annualized impact + (Open-tab only) Acknowledge / Snooze / "I
+    cancelled this" action chips. The Snooze chip opens a popover
+    (Alpine `x-data="{ open: false }"`, click-outside closes) offering
+    1 week / 1 month / 3 months. The "I cancelled this" chip is wired
+    to the DismissDriftAlertAsCancelled action — the action is
+    reversible during the 10-second toast window.
 
     Variables in scope:
       - $alert : DriftAlertDto

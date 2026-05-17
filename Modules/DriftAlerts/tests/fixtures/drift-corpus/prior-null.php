@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 11: First-ever detected occurrence — there is no prior
+// First-ever detected occurrence — there is no prior
 // amount to compute a delta against. The detector skips evaluation
 // when the prior is NULL (divide-by-zero guard). Expected: zero
 // alerts. A single transaction is supplied so the recurring_series

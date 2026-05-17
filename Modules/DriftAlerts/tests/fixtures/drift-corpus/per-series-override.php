@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 10: Electricity €120 → €150 (+25.0% month-over-month).
+// Electricity €120 → €150 (+25.0% month-over-month).
 // The series has a per-series threshold override of 50% so the
 // drift sits below the EFFECTIVE threshold and no alert fires.
 // Consumers of this fixture seed recurring_series.drift_threshold_percent

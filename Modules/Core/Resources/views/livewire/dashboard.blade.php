@@ -55,13 +55,13 @@
          (md:grid-cols-2), stacked on mobile. --}}
     @if ((isset($nextSettlement) && $nextSettlement !== null) || (isset($emailScanHealth) && $emailScanHealth !== null))
         <section class="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Status tiles">
-            {{-- "Next ICS settlement" tile (D-99 / D-100, CHN-06).
-                 Hides entirely when `$nextSettlement` is null. Border /
-                 radius / padding match the existing tile chrome verbatim.
-                 Tile amount uses Display 32px semibold tabular-nums in
-                 slate-900 (never emerald — emerald is reserved for net-
-                 positive KPIs and an outstanding settlement balance is
-                 never positive-good per Phase 3 D-46). --}}
+            {{-- "Next ICS settlement" tile. Hides entirely when
+                 `$nextSettlement` is null. Border / radius / padding
+                 match the surrounding tile chrome verbatim. Tile
+                 amount uses Display 32px semibold tabular-nums in
+                 slate-900 (never emerald — emerald is reserved for
+                 net-positive KPIs and an outstanding settlement
+                 balance is never positive-good). --}}
             @if (isset($nextSettlement) && $nextSettlement !== null)
                 <div class="rounded-lg border border-slate-200 bg-white p-6">
                     <p class="text-base font-semibold text-slate-900">Next ICS settlement</p>
@@ -247,7 +247,7 @@
          any inbox is still needs_reauth. Same chrome as the failed-job
          toast below but with its own copy + a distinct surface order
          (this toast renders above the failed-job toast when both are
-         visible — see UI-SPEC § Reauth-detected toast). --}}
+         visible). --}}
     @if ($reauthInboxCount > 0 && ! $reauthToastDismissed)
         <div
             role="status"
@@ -269,10 +269,9 @@
                     wire:click="dismissReauthToast"
                     class="rounded text-slate-500 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                 >
-                    {{-- Inline Heroicons-outline x-mark 16×16 (no
+                    {{-- Inline Heroicons-outline x-mark 16×16. No
                          blade-heroicons package is installed in the
-                         project; UI-SPEC § Icon usage approves this
-                         inline render). --}}
+                         project; the icon is rendered inline. --}}
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
@@ -281,18 +280,12 @@
         </div>
     @endif
 
-    {{-- Failed-job toast (D-103 / issue #1 + #8).
-
-         Persistent toast (no auto-dismiss) backed by the
+    {{-- Failed-job toast. Persistent (no auto-dismiss) backed by the
          `chain_resolution_runs` audit table filtered by exact
-         `user_id` match. Replaces an earlier draft's substring
-         `payload LIKE '%userId:N%'` query against `failed_jobs`,
-         which leaked across users with id prefixes like 1 vs 11.
-
-         Surface order: above the dashboard content, fixed bottom-right
-         (`z-50`), with a 2px rose-600 left stripe. The toast hides
-         when the audit row is cleared (e.g. user retried in
-         `/horizon/failed`). --}}
+         `user_id` match. Surface order: above the dashboard content,
+         fixed bottom-right (`z-50`), with a 2px rose-600 left stripe.
+         The toast hides when the audit row is cleared (e.g. the user
+         retried in `/horizon/failed`). --}}
     @if ($failedChainResolutionExists)
         <div
             role="status"

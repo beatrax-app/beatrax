@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 2: Spotify €9.99 → €10.20 (+2.1% month-over-month). The
+// Spotify €9.99 → €10.20 (+2.1% month-over-month). The
 // drift sits below the default ±5% threshold so the detector skips
 // the alert. Expected: zero drift alerts.
 

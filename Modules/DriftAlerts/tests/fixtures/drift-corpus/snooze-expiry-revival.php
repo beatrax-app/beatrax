@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-// Scenario 24: An acknowledged-then-snoozed alert whose snoozed_until
-// is now in the past. The Wave 4 revival sweep flips the alert back
-// to 'open' and writes an audit row with
-// transition_reason='detector_revived_snooze'. Wave 4 exercises the
-// revival job; Wave 0 ships the fixture so the contract test in
-// Wave 4 has a deterministic baseline. The fixture describes the
-// post-revival state.
+// An acknowledged-then-snoozed alert whose snoozed_until is now in
+// the past. The hourly revival sweep flips the alert back to 'open'
+// and writes an audit row with
+// transition_reason='detector_revived_snooze'. The fixture describes
+// the post-revival state.
 
 $transactions = [];
 $amounts = [-999, -999, -999, -1149, -1149, -1149];
