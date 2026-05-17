@@ -20,6 +20,9 @@ If everything else fails, the system must surface the complete picture of monthl
 - [x] Idempotent imports across formats — re-uploading the same statement, or uploading two formats covering the same period, never double-counts a transaction. Validated in phase 2 via the v3 fingerprint composer (no source_ref in the tuple) + `enriched_from` JSON column that records cross-format upgrades
 - [x] Import ICS Cards PDF statements (Mijn ICS consumer portal export) with foreign-currency charges preserved as both original and settled-EUR. Validated in phase 3 against a real Feb 2026 Mijn ICS statement with 3 real FX rows (USD + GBP); column-aware statement-summary parser locked to the empirical revolving-credit token set; tier-1 SHA + tier-2 v3 fingerprint dedup both Green for `'ics-pdf'`
 - [x] Multi-currency views — per-page currency toggle on `/transactions` (URL-bound via Livewire `#[Url]` with user-default fallback), per-currency tile rows on the dashboard in `original` mode (alphabetical, zero-activity filtered), conditional Effective-rate row on transaction detail. Validated in phase 3 with locale-aware `Money::format()` (EUR → nl_NL, others → en_US) and BigDecimal-only money arithmetic end-to-end
+- [x] Detect recurring expenses and income at any cadence (monthly, quarterly, yearly, weekly) and normalize each series to a monthly-equivalent amount with user-tunable variance tolerance (10/25/50%). Validated in phase 8 against the 11-fixture synthesised corpus + one anonymised real ASN+ICS export; `ExpenseSeriesDetector` + `IncomeSeriesDetector` both implement the `SeriesDetector` contract behind the `recurring.detector` container tag
+- [x] Suggest-never-auto-apply recurring detection — new series land as `pending` and only appear on `/recurring` after explicit Approve. State machine (`RecurringSeriesStateMachine`) is the sole writer of the `state` column, enforced by SQLite triggers + `noOtherRecurringSeriesStateMutator` arch test. Validated in phase 8 across Approve / Reject / Snooze / EditName / UnReject Public Actions
+- [x] Curated fixed-payments view at `/recurring` with grouped expense + income sections, funding-source + chain icons, multi-currency rendering, and a net-flow summary; dashboard inline `FixedPaymentsCard` top-6 view; drill-in `/recurring/series/{id}` with ApexCharts amount-over-time chart + occurrences table. Validated in phase 8 with `FixedPaymentsViewQuery` (N+1-safe, 3-query budget) sourcing real DB rows and 198 Recurring-side tests green
 
 ### Active
 
@@ -36,9 +39,8 @@ If everything else fails, the system must surface the complete picture of monthl
 
 #### Categorization & Recurrence
 
+<!-- Recurring detection + fixed-payments view validated in phase 8 — moved to Validated. -->
 - [ ] Auto-categorize transactions by merchant with a learning loop (user corrections improve future suggestions)
-- [ ] Detect anything recurring at any cadence (monthly, quarterly, yearly) and normalize to a monthly-equivalent amount
-- [ ] Surface a curated list of monthly fixed payments with their funding source and chain
 
 #### Chain Resolution
 
@@ -50,8 +52,8 @@ If everything else fails, the system must surface the complete picture of monthl
 
 #### Income
 
+<!-- Recurring income detection validated in phase 8 (IncomeSeriesDetector + /recurring grouped view) — moved to Validated. -->
 - [ ] Capture income (salary, refunds, transfers in, PayPal credits) as a first-class concept alongside outflows
-- [ ] Detect recurring income (monthly salary, regular transfers) so cash-flow forecasting balances both sides
 - [ ] Distinguish true income from internal transfers (ASN → ICS settlement is not income; salary is)
 
 #### Forecasting
@@ -177,4 +179,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-16 — phase 5 wave 0 (Horizon + Redis queue infrastructure flip; Docker carve-out for loopback Redis container) in progress*
+*Last updated: 2026-05-17 — phase 8 complete (recurring detection + fixed-payments view; 5 plans / 4 waves; bounded Modules/Recurring/ live with state-machine + SQLite triggers + 4 boundary arch invariants)*
