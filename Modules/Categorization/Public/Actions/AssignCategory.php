@@ -43,7 +43,7 @@ final class AssignCategory implements AssignsCategory
 
     public function __invoke(int $transactionId, ?int $categoryId, User $user): int
     {
-        $priorProvenance = $this->readPriorProvenance($transactionId, $user->id);
+        $priorProvenance = self::readPriorProvenance($this->db, $transactionId, $user->id);
 
         $affected = ($this->updater)($transactionId, $categoryId, $user);
 
@@ -54,8 +54,16 @@ final class AssignCategory implements AssignsCategory
                 userId: $user->id,
             ));
 
-            if ($categoryId !== null && $priorProvenance !== null) {
-                $this->maybeDispatchDivergence($priorProvenance, $transactionId, $categoryId, $user->id);
+            if ($categoryId !== null) {
+                $divergence = CategorizationDiverged::fromProvenance(
+                    priorProvenance: $priorProvenance,
+                    transactionId: $transactionId,
+                    newCategoryId: $categoryId,
+                    userId: $user->id,
+                );
+                if ($divergence !== null) {
+                    $this->events->dispatch($divergence);
+                }
             }
         }
 
@@ -64,16 +72,18 @@ final class AssignCategory implements AssignsCategory
 
     /**
      * Reads transactions.auto_category_provenance (already cast as an
-     * array by the Eloquent model) via the raw query builder so the
-     * action stays decoupled from the model's casting layer. The user
-     * scope is enforced here defensively; the updater's own
-     * cross-user guard provides the canonical authorisation.
+     * array by the Eloquent model) via the raw query builder so callers
+     * stay decoupled from the model's casting layer.
+     *
+     * Static + DatabaseManager argument so the same helper is
+     * available to TransactionDetail (Ledger) without crossing the
+     * Ledger-Categorization boundary or duplicating the read shape.
      *
      * @return array<string, mixed>|null
      */
-    private function readPriorProvenance(int $transactionId, int $userId): ?array
+    public static function readPriorProvenance(DatabaseManager $db, int $transactionId, int $userId): ?array
     {
-        $raw = $this->db->connection()
+        $raw = $db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $userId)
@@ -91,47 +101,5 @@ final class AssignCategory implements AssignsCategory
 
         /** @var array<string, mixed> $decoded */
         return $decoded;
-    }
-
-    /**
-     * @param  array<string, mixed>  $priorProvenance
-     */
-    private function maybeDispatchDivergence(
-        array $priorProvenance,
-        int $transactionId,
-        int $newCategoryId,
-        int $userId,
-    ): void {
-        $source = $priorProvenance['source'] ?? null;
-        if ($source !== 'rule') {
-            return;
-        }
-
-        $ruleIdRaw = $priorProvenance['rule_id'] ?? null;
-        if (! is_int($ruleIdRaw) && ! is_numeric($ruleIdRaw)) {
-            return;
-        }
-        $ruleId = (int) $ruleIdRaw;
-        if ($ruleId === 0) {
-            return;
-        }
-
-        $oldCategoryRaw = $priorProvenance['category_id'] ?? null;
-        if (! is_int($oldCategoryRaw) && ! is_numeric($oldCategoryRaw)) {
-            return;
-        }
-        $oldCategoryId = (int) $oldCategoryRaw;
-
-        if ($newCategoryId === $oldCategoryId) {
-            return;
-        }
-
-        $this->events->dispatch(new CategorizationDiverged(
-            transactionId: $transactionId,
-            ruleId: $ruleId,
-            oldCategoryId: $oldCategoryId,
-            newCategoryId: $newCategoryId,
-            userId: $userId,
-        ));
     }
 }
