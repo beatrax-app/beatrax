@@ -6,8 +6,12 @@ namespace Modules\EmailScan\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\EmailScan\Internal\Clients\GmailApiClient;
+use Modules\EmailScan\Internal\EmlBlobStore;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\EmailScan\Internal\InboxScanStateMachine;
+use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
@@ -48,6 +52,13 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(InboxQuery::class);
         $this->app->singleton(InboxesBadgeCount::class);
         $this->app->singleton(KnownSenderQuery::class);
+
+        // Internal fetch + persistence collaborators consumed by the
+        // backfill / incremental-scan job pipeline.
+        $this->app->singleton(EmlBlobStore::class);
+        $this->app->singleton(MimeHeaderParser::class);
+        $this->app->singleton(GmailApiClient::class);
+        $this->app->singleton(InboxScanStateMachine::class);
     }
 
     public function boot(LivewireManager $livewire): void
