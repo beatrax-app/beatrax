@@ -18,10 +18,10 @@
         </p>
     </header>
 
-    {{-- IN-01 iter-2: read OAuth flash values from props the
-         Livewire component pulled out of the session in mount(),
-         not via the session() global helper. The DI-only invariant
-         applies to Blade views too. --}}
+    {{-- Read OAuth flash values from props the Livewire component
+         pulled out of the session in mount(), not via the session()
+         global helper. The DI-only invariant applies to Blade views
+         too. --}}
     @if ($oauthCanceledMessage !== null)
         <aside role="status" class="mb-6 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-600">
             Connection canceled. {{ $oauthCanceledMessage }}

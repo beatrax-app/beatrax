@@ -144,13 +144,12 @@ final class RuleFormModal extends Component
 
             return;
         } catch (InvalidArgumentException) {
-            // CreateCategorizationRule / UpdateCategorizationRule
-            // throw InvalidArgumentException for an out-of-whitelist
-            // field/match value OR for a category id not visible to
-            // the caller (WR-01 cross-user authorisation guard). All
-            // three causes are tampered-payload-only — the form's
-            // Flux <select>s can only emit valid options. Surface a
-            // calm copy and let the user retry.
+            // CreateCategorizationRule / UpdateCategorizationRule throw
+            // InvalidArgumentException for an out-of-whitelist field /
+            // match value OR for a category id not visible to the
+            // caller. All three causes are tampered-payload-only — the
+            // form's Flux <select>s can only emit valid options.
+            // Surface a calm copy and let the user retry.
             $this->errorValue = 'Invalid field, match, or category — pick from the dropdowns and try again.';
 
             return;

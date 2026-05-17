@@ -147,11 +147,11 @@ final class EmlBlobStore
 
         // Narrow umask BEFORE opening the temp file so the file is
         // born at mode 0600 rather than the umask-0022 default of
-        // 0644 — closes the same race the OAuthSecretsRepository
-        // closed (WR-04). The .eml blobs carry the user's raw inbox
-        // bytes; a cohabiting OS user racing a `cat` between fwrite
-        // and the explicit chmod could otherwise read the message
-        // body in cleartext.
+        // 0644. The .eml blobs carry the user's raw inbox bytes; a
+        // cohabiting OS user racing a `cat` between fwrite and the
+        // explicit chmod could otherwise read the message body in
+        // cleartext. OAuthSecretsRepository uses the same born-narrow
+        // posture for the same reason.
         $prevUmask = umask(0077);
 
         $fp = @fopen($tmp, 'wb');

@@ -301,7 +301,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                     // exposes the message entries as
                     // array<string, mixed> precisely so a future Fake
                     // variant or a production-side response shape drift
-                    // cannot crash the daily scan (IN-03 iter-2).
+                    // cannot crash the daily scan.
                     $rawAddr = $msg['fromAddress'] ?? null;
                     if (! is_string($rawAddr) || $rawAddr === '') {
                         continue;

@@ -132,13 +132,12 @@ final class OAuthClientWizardModal extends Component
         try {
             $secrets->saveProviderClient($provider, $clientId, $clientSecret, $redirectUri);
         } catch (SecretsWriteFailed) {
-            // WR-08 iter-2: surface the disk-write failure as an
-            // inline error so the user understands what to fix
-            // instead of seeing Livewire's generic "Server error"
-            // toast. Re-rendering preserves the partial wizard
-            // state — the user still has to re-paste the secret
-            // (the wipe above is the intentional security posture)
-            // but at least they know why and can act on it.
+            // Surface the disk-write failure as an inline error so the
+            // user understands what to fix instead of seeing Livewire's
+            // generic "Server error" toast. Re-rendering preserves the
+            // partial wizard state — the user still has to re-paste
+            // the secret (the wipe above is the intentional security
+            // posture) but at least they know why and can act on it.
             $this->errorMessage = 'Could not save your OAuth client to disk — check storage/app/secrets/ permissions and try again.';
 
             return null;

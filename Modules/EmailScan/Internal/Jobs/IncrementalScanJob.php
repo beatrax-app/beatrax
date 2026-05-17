@@ -347,9 +347,9 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             // Gmail's users.history.list does not stamp a per-message
             // internalDate, so pass the project Clock through as the
             // fallback when the .eml carries no parseable Date: header.
-            // Routing through Clock keeps test-frozen time honoured
-            // (WR-07 iter-2: parseHeaders() used to call
-            // new DateTimeImmutable('now') directly).
+            // Routing through Clock keeps test-frozen time honoured —
+            // the parser itself never reaches for `new
+            // DateTimeImmutable('now')`.
             $headers = $mime->parseHeadersWithFallbackDate(
                 $rawEml,
                 $clock->now()->toDateTimeImmutable(),
@@ -433,8 +433,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             // is anchored to the pre-walk timestamp; this closes the
             // gap-window race where messages arriving during the
             // fallback walk could fall outside both the walk's filter
-            // and the new baseline's lower bound (mirrors the WR-02
-            // fix posture for BackfillInboxJob).
+            // and the new baseline's lower bound. BackfillInboxJob
+            // uses the same pre-walk-timestamp baseline pattern.
             $walkStartedAt = $clock->now()->toDateTimeImmutable();
             $messages = $this->graphFallbackWalk(
                 $graph,
