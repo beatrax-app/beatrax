@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Models\User;
-use Modules\Import\Internal\Pipeline\Stages\NormalizeStage;
+use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvAdapter;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\KnownAccount;

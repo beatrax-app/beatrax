@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
-use Modules\Import\Internal\Pipeline\Stages\NormalizeStage;
+use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
