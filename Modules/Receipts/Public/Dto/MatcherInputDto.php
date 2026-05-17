@@ -11,13 +11,14 @@ use Spatie\LaravelData\Data;
 /**
  * Unified input shape for the matcher dispatch loop.
  *
- * The consumer job iterates both Phase 6 `inbox_messages` rows
- * (`source='inbox'`, `providerMessageId` from Gmail/Graph) and the
- * Phase 7 `file_imports` rows (`source='file-drop'`,
- * `providerMessageId` from the RFC 822 Message-ID header or its
- * sha256 fallback). The matcher contract speaks `InboxMessageDto`
- * so file-drop rows are bridged here via `toInboxMessageDto()`
- * (synthesising `inboxId=0` to mark the absence of a remote inbox).
+ * The consumer job iterates both `inbox_messages` rows
+ * (`source='inbox'`, `providerMessageId` from Gmail/Graph) and
+ * `file_imports` rows (`source='file-drop'`, `providerMessageId`
+ * from the RFC 822 Message-ID header or its sha256 fallback). The
+ * matcher contract speaks `InboxMessageDto` so rows are bridged
+ * here via `toInboxMessageDto()` — `inboxId` is synthesised as `0`
+ * because matchers never branch on it and the file-drop path has no
+ * remote inbox to reference.
  *
  * Matchers receive this DTO; they read `senderEmail` + `subject` for
  * the cheap `canHandle()` filter and the on-disk `emlPath` only
@@ -40,16 +41,17 @@ final class MatcherInputDto extends Data
 
     /**
      * Adapt to the `InboxMessageDto` shape the SenderMatcher contract
-     * expects. `inboxId` is synthesised as `0` for file-drop rows
-     * because they never originated from a remote inbox; matchers
-     * never branch on `inboxId` (it is purely an audit-trail field).
+     * expects. `inboxId` is always synthesised as `0` because matchers
+     * never branch on it; the field exists on InboxMessageDto purely
+     * for audit-trail use by the inbox-handoff caller, and file-drop
+     * rows have no remote inbox to point at.
      */
     public function toInboxMessageDto(): InboxMessageDto
     {
         return new InboxMessageDto(
             id: $this->id,
             userId: $this->userId,
-            inboxId: $this->source === 'inbox' ? 0 : 0,
+            inboxId: 0,
             providerMessageId: $this->providerMessageId,
             internalDate: $this->internalDate,
             senderEmail: $this->senderEmail,

@@ -22,37 +22,38 @@ use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 /**
  * Wires the Receipts module.
  *
- * Wave 0 registers the pipeline-support singletons (`EmlMimeReader`,
- * `MboxIterator`, `FileDropEmlBlobStore`) and the `MatcherRegistry`
- * resolver, which collects every binding tagged `receipts.matcher`
- * and hands them to the registry sorted by `priority()` descending.
+ * `register()` binds the pipeline-support singletons (EmlMimeReader,
+ * MboxIterator, FileDropEmlBlobStore, ReceiptSourceAdapter), the
+ * per-sender matcher classes (PaypalReceiptMatcher, IcsReceiptMatcher,
+ * GooglePlayReceiptMatcher) tagged under `receipts.matcher`, and the
+ * MatcherRegistry resolver that collects every tagged matcher and
+ * hands them to the registry sorted by `priority()` descending. The
+ * Public action + query singletons (RecordReceipt, FileImportQuery,
+ * ApplyReceiptConflictResolution, ReceiptConflictQuery) and the
+ * receipt-chain hint dispatcher (DispatchChainHintsFromReceipt) are
+ * also bound here.
  *
- * The per-sender matcher classes (`PaypalReceiptMatcher`,
- * `IcsReceiptMatcher`, `GooglePlayReceiptMatcher`) land in Wave 1 +
- * Wave 2; each is registered + tagged via a guarded `class_exists()`
- * branch so the empty Wave 0 skeleton boots cleanly before any
- * matcher class ships.
+ * Every binding is gated on `class_exists()` so a missing class does
+ * not abort container resolution — adding a new matcher requires
+ * appending the FQN to `MATCHER_FQNS` and shipping the class; no
+ * provider edit is required at that point.
  *
- * `boot()` conditionally loads migrations, routes, and views — the
- * module owns its own migrations from Wave 0 (file_imports +
- * matcher_key on inbox_messages) but routes / views land alongside
- * the wizard step in Wave 1.
- *
- * No `JobFailed` listener registration here. The matcher consumer
- * (`ProcessFetchedInboxMessagesJob`, Wave 1) runs synchronously in
- * the simpler default; if a later wave promotes it to a queued job
- * the listener-shape used in Chains / EmailScan service providers
- * is the precedent to copy.
+ * `boot()` loads migrations from `Database/Migrations`, web routes
+ * from `Routes/web.php`, console routes from `Routes/console.php`,
+ * and views under the `receipts` namespace. It also registers the
+ * two Livewire components (`receipts.wizard-email-file-step`,
+ * `receipts.receipt-conflict-toast`) and subscribes
+ * `DispatchChainHintsFromReceipt` to `TransactionImported` so receipts
+ * with extracted chain hints surface as `ChainHintDetected` events
+ * for the Chains module to consume.
  */
 final class ReceiptsServiceProvider extends ServiceProvider
 {
     /**
      * Per-sender matcher FQNs registered under the `receipts.matcher`
      * container tag. Each entry is bound + tagged only when the
-     * implementing class exists on disk — the Wave 0 skeleton boots
-     * with an empty tagged collection; Wave 1 + Wave 2 land the
-     * matcher classes and the registry's tagged() lookup picks them
-     * up automatically without a provider edit.
+     * implementing class exists on disk so a missing class does not
+     * abort container resolution.
      */
     private const MATCHER_FQNS = [
         'Modules\\Receipts\\Internal\\Matchers\\PaypalReceiptMatcher',
@@ -62,11 +63,8 @@ final class ReceiptsServiceProvider extends ServiceProvider
 
     /**
      * Pipeline-support FQNs registered as stateless singletons. Each
-     * binding is gated on `class_exists()` so the Wave 0 skeleton
-     * (before the Internal/Pipeline/* classes land in the next plan)
-     * boots without a class-not-found resolution error. Once the
-     * classes ship the singleton binding activates automatically; no
-     * provider edit is required at that point.
+     * binding is gated on `class_exists()` so a missing class does
+     * not abort container resolution.
      */
     private const PIPELINE_FQNS = [
         'Modules\\Receipts\\Public\\Pipeline\\EmlMimeReader',
@@ -83,10 +81,6 @@ final class ReceiptsServiceProvider extends ServiceProvider
             }
         }
 
-        // Defer the matcher FQNs so the Wave 0 skeleton boots before
-        // the matcher classes ship. Once Wave 1 + Wave 2 land each
-        // matcher class, the binding becomes resolvable and the tagged
-        // collection populates automatically.
         foreach (self::MATCHER_FQNS as $fqn) {
             if (class_exists($fqn)) {
                 $this->app->singleton($fqn);
@@ -94,19 +88,11 @@ final class ReceiptsServiceProvider extends ServiceProvider
             }
         }
 
-        // Resolve the tagged matcher collection and hand the
-        // priority-sorted list to the registry. The tagged() lookup
-        // returns an iterable; the closure materialises it once at
-        // resolve-time and sorts by priority() descending so the
-        // dispatch loop walks the most-specific matcher first.
         $this->app->singleton(RecordReceipt::class);
         $this->app->singleton(FileImportQuery::class);
-        // Wave 2 — bridges canonical-row INSERT into ChainHintDetected
-        // so the Chains module's listener can write candidate
-        // chain_links rows scoped by the just-inserted transaction id.
         $this->app->singleton(DispatchChainHintsFromReceipt::class);
-        // Wave 3 — first-conflict toast support: action + read query.
-        // The action is singleton-bound; its __invoke is stateless and
+        // First-conflict toast support: action + read query. The
+        // action is singleton-bound; its __invoke is stateless and
         // reads the user policy inline per call (no cross-user state).
         $this->app->singleton(ApplyReceiptConflictResolution::class);
         $this->app->singleton(ReceiptConflictQuery::class);
@@ -148,11 +134,11 @@ final class ReceiptsServiceProvider extends ServiceProvider
         $livewire->component('receipts.wizard-email-file-step', WizardEmailFileStep::class);
         $livewire->component('receipts.receipt-conflict-toast', ReceiptConflictToast::class);
 
-        // Wave 2 — subscribe the chain-hint dispatcher to the
-        // canonical-row INSERT event so receipts with extracted chain
-        // hints surface as `ChainHintDetected` events for the Chains
-        // module to consume. The subscription lives in boot() because
-        // it depends on the injected Dispatcher; the class itself is
+        // Subscribe the chain-hint dispatcher to the canonical-row
+        // INSERT event so receipts with extracted chain hints surface
+        // as ChainHintDetected events for the Chains module to
+        // consume. The subscription lives in boot() because it
+        // depends on the injected Dispatcher; the class itself is
         // registered as a singleton in register() so the listener
         // shares one Dispatcher instance per request.
         $events->listen(TransactionImported::class, [DispatchChainHintsFromReceipt::class, 'handle']);
