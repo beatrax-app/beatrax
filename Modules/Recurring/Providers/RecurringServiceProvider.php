@@ -23,6 +23,7 @@ use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesVarianceTolerance;
 use Modules\Recurring\Public\Actions\RejectRecurringSeries;
+use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
 use Modules\Recurring\Public\Actions\SnoozeRecurringSeries;
 use Modules\Recurring\Public\Actions\UnRejectRecurringSeries;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
@@ -73,6 +74,7 @@ final class RecurringServiceProvider extends ServiceProvider
         $this->app->singleton(SnoozeRecurringSeries::class);
         $this->app->singleton(EditRecurringSeriesName::class);
         $this->app->singleton(EditRecurringSeriesVarianceTolerance::class);
+        $this->app->singleton(SetDriftThresholdForSeries::class);
         $this->app->singleton(UnRejectRecurringSeries::class);
         $this->app->singleton(FixedPaymentsCard::class);
     }
