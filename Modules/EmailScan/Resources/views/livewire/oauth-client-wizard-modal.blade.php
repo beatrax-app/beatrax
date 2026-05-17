@@ -107,7 +107,7 @@
                                     <label class="block text-xs font-medium text-slate-500 mb-1">Client secret</label>
                                     <input
                                         type="password"
-                                        wire:model.live="clientSecret"
+                                        wire:model.blur="clientSecret"
                                         placeholder="GOCSPX-..."
                                         class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900"
                                     >
@@ -189,7 +189,7 @@
                                     <label class="block text-xs font-medium text-slate-500 mb-1">Client secret value</label>
                                     <input
                                         type="password"
-                                        wire:model.live="clientSecret"
+                                        wire:model.blur="clientSecret"
                                         placeholder="..."
                                         class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900"
                                     >
