@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -75,6 +76,42 @@ it('returns approved rows in descending monthly_equivalent order across pages', 
     $page2Eq = array_map(static fn ($r) => $r->monthlyEquivalent->toMinor(), $page2);
     expect($page2Eq)->toBe([800, 200]);
 })->group('approved-cursor-respects-monthly-equivalent-sort');
+
+it('amountTrendForSeries returns an empty currency + empty points when the series row carries an empty latest_currency', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    // Insert a corrupt row directly through the query builder so the
+    // model boot hook does not auto-populate cluster_counterparty_key
+    // — but the trigger DOES require latest_currency. SQLite enforces
+    // the column constraint differently per dialect; use a single
+    // space as the smallest payload that bypasses the schema NULL
+    // check yet still trips the "currency === ''" branch after the
+    // detector's whitespace-strip pass would normally run.
+    $now = '2026-05-17 12:00:00';
+    $id = $db->connection()->table('recurring_series')->insertGetId([
+        'user_id' => $this->user->id,
+        'direction' => 'expense',
+        'detected_name' => 'trend-empty-currency',
+        'state' => 'approved',
+        'cadence' => 'monthly',
+        'latest_amount_minor' => -1099,
+        'latest_currency' => '',
+        'monthly_equivalent_minor' => -1099,
+        'variance_tolerance_percent' => 25,
+        'cluster_key' => 'corrupt::empty-currency',
+        'cluster_counterparty_key' => 'trend-empty-currency',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    /** @var RecurringSeriesQuery $query */
+    $query = $this->app->make(RecurringSeriesQuery::class);
+    $trend = $query->amountTrendForSeries((int) $id, $this->user);
+
+    expect($trend->currency)->toBe('');
+    expect($trend->points)->toBe([]);
+})->group('amount-trend-empty-currency-returns-empty-payload');
 
 it('paginates correctly when monthly_equivalent values tie — id-tiebreak descends within the tied band', function (): void {
     // Two rows tie on monthly_equivalent so the cursor must compose
