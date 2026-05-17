@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use InvalidArgumentException;
 use Modules\EmailScan\Public\Dto\ScanCursor;
 
 it('gmail() returns a gmail-provider cursor with historyId set', function (): void {
