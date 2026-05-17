@@ -221,23 +221,27 @@ final class EmlBlobStore
      */
     private function chmodInboxChain(string $leafDir): void
     {
-        $root = storage_path('app/inbox');
-        $current = $leafDir;
+        // Append DIRECTORY_SEPARATOR to both sides of the prefix check so a
+        // hypothetical sibling like storage/app/inbox-staging/ cannot satisfy
+        // the prefix match — only true descendants of storage/app/inbox/ are
+        // walked.
+        $root = storage_path('app/inbox').DIRECTORY_SEPARATOR;
+        $current = rtrim($leafDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
         $iters = 0;
-        // Walk upward while we are inside (or AT) the inbox root and
-        // the current path still exists. Cap iterations defensively
-        // in case dirname() loops on a malformed input.
+        // Walk upward while we remain strictly within the inbox root and
+        // the current path still exists. Cap iterations defensively in
+        // case dirname() loops on a malformed input.
         while (
             $iters++ < 32
             && str_starts_with($current, $root)
-            && is_dir($current)
+            && is_dir(rtrim($current, DIRECTORY_SEPARATOR))
         ) {
-            @chmod($current, self::DIR_MODE);
-            $parent = dirname($current);
-            if ($parent === $current) {
+            @chmod(rtrim($current, DIRECTORY_SEPARATOR), self::DIR_MODE);
+            $parent = dirname(rtrim($current, DIRECTORY_SEPARATOR));
+            if ($parent === rtrim($current, DIRECTORY_SEPARATOR)) {
                 break;
             }
-            $current = $parent;
+            $current = $parent.DIRECTORY_SEPARATOR;
         }
     }
 
