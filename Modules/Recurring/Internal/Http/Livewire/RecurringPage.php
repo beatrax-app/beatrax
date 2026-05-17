@@ -21,7 +21,14 @@ use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
  * Method-parameter DI on every action and on render — constructor
  * injection is banned on Livewire `Component` subclasses by
  * phpstan-strict-rules; the pattern mirrors the chain-review-queue
- * and recurring-review-page shapes.
+ * and recurring-review-page shapes. This DI-only constraint also
+ * rules out `#[Computed]` getters as a memoisation seam: the
+ * attribute invokes the method with no arguments, so collaborators
+ * cannot enter the page that way. `render()` therefore takes the
+ * round-trip cost (a 3-query batch + a totals SUM) on every
+ * action — `toggleTransfers()` included. The two queries are
+ * read-mostly, user-scoped, and indexed; the cost is documented
+ * here rather than papered over.
  *
  * Public state:
  *  - `transfersExpanded` — false by default. The `toggleTransfers()`
