@@ -6,6 +6,7 @@ namespace Modules\Recurring\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
@@ -226,7 +227,29 @@ final readonly class RecurringSeriesQuery
         }
 
         if ($cursorId !== null) {
-            $query->where('id', '<', $cursorId);
+            if ($primarySort === 'monthly_equivalent_minor') {
+                // Composite cursor: the next page is every row whose
+                // monthly_equivalent_minor is strictly smaller than the
+                // cursor row's, plus the rows whose equivalent ties the
+                // cursor but whose id sorts lower. Anything else would
+                // skip rows or repeat them when the cursor row's
+                // equivalent has neighbours that share its value.
+                $cursorRow = $this->db->connection()->table('recurring_series')
+                    ->where('id', $cursorId)
+                    ->first(['monthly_equivalent_minor']);
+                if ($cursorRow !== null) {
+                    $cursorEq = self::toInt($cursorRow->monthly_equivalent_minor);
+                    $query->where(function (Builder $q) use ($cursorEq, $cursorId): void {
+                        $q->where('monthly_equivalent_minor', '<', $cursorEq)
+                            ->orWhere(function (Builder $q2) use ($cursorEq, $cursorId): void {
+                                $q2->where('monthly_equivalent_minor', $cursorEq)
+                                    ->where('id', '<', $cursorId);
+                            });
+                    });
+                }
+            } else {
+                $query->where('id', '<', $cursorId);
+            }
         }
 
         $rows = $query->get();
