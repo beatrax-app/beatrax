@@ -179,4 +179,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-17 — phase 8 complete (recurring detection + fixed-payments view; 5 plans / 4 waves; bounded Modules/Recurring/ live with state-machine + SQLite triggers + 4 boundary arch invariants)*
+*Last updated: 2026-05-18 — phase 9 complete (subscription drift detection + alerts; 5 plans / 4 waves; bounded Modules/DriftAlerts/ live with DriftEvaluator + queued ShouldBeUniqueUntilProcessing job, /drift Livewire surface with three actions, dashboard + top-nav compound badges, configurable per-series/global thresholds, hybrid snooze revival; 165 phase tests + 1607 project tests green; 20/20 code-review findings fixed across 18 commits)*
