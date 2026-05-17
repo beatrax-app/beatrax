@@ -202,6 +202,9 @@ final readonly class RecurringSeriesQuery
                 't.settled_currency as settled_currency',
             ]);
 
+        // The DB query orders DESC + limits to N to fetch the "newest N"
+        // observations efficiently. Reverse to ASC here so the chart
+        // renders the time axis left-to-right.
         $ordered = $rows->reverse()->values();
 
         $points = [];
