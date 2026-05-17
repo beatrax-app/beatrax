@@ -231,6 +231,52 @@ it('applyStatus(scanning → scanning) is re-entrant safe (recovery dispatch res
     expect(($this->readState)($inboxId)->status)->toBe('scanning');
 });
 
+it('recordBackfillProgress writes the encoded payload to the inboxes column', function (): void {
+    $inboxId = ($this->seedInbox)(status: 'backfilling');
+    $sm = ($this->makeMachine)();
+
+    $sm->recordBackfillProgress($inboxId, [
+        'fetched_count' => 12,
+        'total_estimated' => 30,
+        'last_message_date' => '2026-05-15 12:00:00',
+    ]);
+
+    $row = app(DatabaseManager::class)
+        ->connection()
+        ->table('inboxes')
+        ->where('id', $inboxId)
+        ->first(['backfill_progress']);
+
+    expect($row)->not->toBeNull();
+    $payload = json_decode((string) $row->backfill_progress, true);
+    expect($payload)->toBe([
+        'fetched_count' => 12,
+        'total_estimated' => 30,
+        'last_message_date' => '2026-05-15 12:00:00',
+    ]);
+});
+
+it('recordBackfillProgress(null) clears the inboxes column so the strip hides', function (): void {
+    $inboxId = ($this->seedInbox)(status: 'backfilling');
+    $sm = ($this->makeMachine)();
+    $sm->recordBackfillProgress($inboxId, [
+        'fetched_count' => 1,
+        'total_estimated' => 2,
+        'last_message_date' => null,
+    ]);
+
+    $sm->recordBackfillProgress($inboxId, null);
+
+    $row = app(DatabaseManager::class)
+        ->connection()
+        ->table('inboxes')
+        ->where('id', $inboxId)
+        ->first(['backfill_progress']);
+
+    expect($row)->not->toBeNull();
+    expect($row->backfill_progress)->toBeNull();
+});
+
 it('applyStatus does NOT advance last_scan_at for rate_limited / needs_reauth / error transitions', function (): void {
     $inboxId = ($this->seedInbox)(status: 'idle');
     $sm = ($this->makeMachine)();
