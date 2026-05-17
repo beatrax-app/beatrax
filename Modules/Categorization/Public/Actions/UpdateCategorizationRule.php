@@ -27,8 +27,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * Duplicate-rule mitigation mirrors CreateCategorizationRule: a
  * UNIQUE-violation QueryException is translated to a Laravel
- * ValidationException with the locked UI-SPEC copy under the value
- * field so the form modal renders the error in-line.
+ * ValidationException with a calm copy under the `value` field so
+ * the form modal renders the error inline.
  */
 final class UpdateCategorizationRule
 {

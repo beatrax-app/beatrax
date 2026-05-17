@@ -39,25 +39,35 @@ use Psr\Log\LoggerInterface;
  * forged PendingEnrichment whose existingTransactionId belongs to
  * another user resolves zero rows and is silently dropped.
  *
- * Receipt-conflict branch (D-707 — Wave 3 onwards): when
- * PendingEnrichment.conflictingFields is non-empty AND the source
- * format is a receipt format AND the user's
- * receipt_conflict_resolution is still `unset`, the action INSERTs
- * a row into pending_enrichment_conflicts for each conflicting field
- * and dispatches ReceiptConflictDetected (the toast surfaces the
- * choice). When the policy is `prefer_receipt` the incoming values
- * land silently in the same UPDATE; when `prefer_first_write` the
- * stored values are kept and only the source_ref enrichment proceeds.
+ * Receipt-conflict branch: when PendingEnrichment.conflictingFields
+ * is non-empty AND the source format is a receipt format AND the
+ * user's receipt_conflict_resolution is still `unset`, the action
+ * INSERTs a row into pending_enrichment_conflicts for each
+ * conflicting field and dispatches ReceiptConflictDetected (the
+ * toast surfaces the choice). When the policy is `prefer_receipt`
+ * the incoming values land silently in the same UPDATE; when
+ * `prefer_first_write` the stored values are kept and only the
+ * source_ref enrichment proceeds.
  *
- * Cross-user / cross-instance safety (T-07-09): the user policy is
- * read into a method-local variable per __invoke() call — never
- * cached on the action instance. The action is bound as a singleton
- * in CategorizationServiceProvider; an instance-level cache would
- * leak across users on the same queue-worker process, violating the
- * cross-user isolation invariant.
+ * Cross-user / cross-instance safety: the user policy is read into
+ * a method-local variable per __invoke() call — never cached on the
+ * action instance. The action is bound as a singleton in the
+ * service provider; an instance-level cache would leak across users
+ * on the same queue-worker process, violating the cross-user
+ * isolation invariant.
  */
 final class ApplyEnrichments implements AppliesEnrichments
 {
+    /**
+     * Whitelist of `conflictingFields` keys that may flow through as
+     * literal SQL column names on the `transactions` UPDATE. Mirrors
+     * the four field names emitted by `FingerprintStage::detectConflicts`.
+     * Any other key is dropped silently before reaching the SQL
+     * builder so a poisoned preview cache or a future producer drift
+     * cannot turn an array key into an arbitrary column name.
+     */
+    private const ALLOWED_CONFLICT_FIELDS = ['counterparty_name', 'description', 'currency', 'amount_minor'];
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -226,6 +236,14 @@ final class ApplyEnrichments implements AppliesEnrichments
         $now = $this->clock->now()->toDateTimeString();
 
         foreach ($enrichment->conflictingFields as $fieldName => $values) {
+            // Defence-in-depth: skip unknown field names so a poisoned
+            // preview cache cannot persist arbitrary `field_name` values
+            // that would later flow into an UPDATE column list via
+            // ApplyReceiptConflictResolution.
+            if (! in_array($fieldName, self::ALLOWED_CONFLICT_FIELDS, true)) {
+                continue;
+            }
+
             $stored = $values['stored'] ?? null;
             $incoming = $values['incoming'] ?? null;
 
@@ -255,6 +273,9 @@ final class ApplyEnrichments implements AppliesEnrichments
     /**
      * Build the per-field update map for the prefer_receipt policy:
      * the incoming value lands as-is on each conflicting column.
+     * Field names outside `ALLOWED_CONFLICT_FIELDS` are dropped so a
+     * corrupted cache row cannot inject an unintended column name into
+     * the UPDATE.
      *
      * @return array<string, mixed>
      */
@@ -262,6 +283,9 @@ final class ApplyEnrichments implements AppliesEnrichments
     {
         $updates = [];
         foreach ($enrichment->conflictingFields as $fieldName => $values) {
+            if (! in_array($fieldName, self::ALLOWED_CONFLICT_FIELDS, true)) {
+                continue;
+            }
             $updates[$fieldName] = $values['incoming'] ?? null;
         }
 

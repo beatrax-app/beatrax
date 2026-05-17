@@ -8,7 +8,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Spatie\LaravelData\Data;
 
 /**
- * Output shape of `ApplyAutoCategoryStage` (Wave 3 onwards).
+ * Output shape of `ApplyAutoCategoryStage`.
  *
  * Three branches:
  *

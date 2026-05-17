@@ -21,8 +21,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
  * (the `/rules` page rows + the transaction detail provenance panel
  * both dispatch the same event).
  *
- * The form lays out as a natural-language sentence per UI-SPEC §
- * Form field flow:
+ * The form lays out as a natural-language sentence:
  *
  *     When the [merchant ▼] [contains ▼] the value [_______________]
  *     Assign category [Subscriptions / Streaming ▼]

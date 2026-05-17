@@ -28,9 +28,8 @@
 
         {{-- "Inboxes" — discovered-sender candidates + needs_reauth
              inbox count from InboxesBadgeCount, injected via the
-             EmailScanServiceProvider View Factory composer (same
-             pattern Phase 5 issue #12 established for the chain-
-             review badge — uses $this->app->make(ViewFactoryContract::class)
+             EmailScanServiceProvider View Factory composer
+             (resolved through $this->app->make(ViewFactoryContract::class)
              ->composer(...), never the view() global helper). Badge
              hides when count = 0; caps at "99+" when > 99. --}}
         <a
@@ -64,8 +63,7 @@
 
         {{-- "Rules" — categorization rule CRUD landing. No badge in
              v1 (rules don't have a "needs attention" count). Placed
-             between Uncategorized and Review chains per UI-SPEC §
-             Navigation Decision. --}}
+             between Uncategorized and Review chains. --}}
         <a
             href="{{ route('rules') }}"
             class="inline-flex items-center rounded-md px-3 py-1.5 text-sm {{ $isActive('/rules') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
@@ -73,8 +71,8 @@
 
         {{-- "Review chains" — open candidate count from ChainLinkQuery
              injected via the ChainsServiceProvider View Factory
-             composer (issue #12 fix: View Factory contract resolved
-             via $this->app->make(), never the view() global helper).
+             composer (View Factory contract resolved via
+             $this->app->make(), never the view() global helper).
              Badge hides when count = 0; caps at "99+" when > 99. --}}
         <a
             href="{{ route('chains.review') }}"

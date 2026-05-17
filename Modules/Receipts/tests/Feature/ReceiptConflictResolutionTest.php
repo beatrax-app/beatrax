@@ -69,13 +69,46 @@ function seedTxAndPendingConflict(User $user, Account $account, string $field, m
     return ['tx' => $tx, 'conflict_id' => $conflictId];
 }
 
-it('throws InvalidArgumentException for any choice not in the whitelist (T-07-11)', function (): void {
+it('throws InvalidArgumentException for any choice not in the whitelist', function (): void {
     /** @var ApplyReceiptConflictResolution $resolve */
     $resolve = $this->app->make(ApplyReceiptConflictResolution::class);
 
     expect(fn () => $resolve($this->fixtureUser, 'random_choice'))->toThrow(InvalidArgumentException::class);
     expect(fn () => $resolve($this->fixtureUser, ''))->toThrow(InvalidArgumentException::class);
     expect(fn () => $resolve($this->fixtureUser, 'unset'))->toThrow(InvalidArgumentException::class); // unset is the DB default, not a resolution choice
+});
+
+it('rejects an out-of-whitelist field_name without mutating the transactions row (column-injection defence)', function (): void {
+    // Hand-seed a pending conflict row whose `field_name` will be
+    // mutated into an injection-shaped string. The transactions row
+    // should remain untouched and the pending row should be deleted.
+    $seeded = seedTxAndPendingConflict(
+        $this->fixtureUser,
+        $this->fixtureAccount,
+        field: 'counterparty_name',
+        stored: 'OWN STORED',
+        incoming: 'OWN INCOMING',
+    );
+
+    // Replace the just-inserted pending row's `field_name` with an
+    // unsafe string (any value not in the four-name whitelist).
+    DB::table('pending_enrichment_conflicts')
+        ->where('id', $seeded['conflict_id'])
+        ->update(['field_name' => 'id = id; DROP TABLE transactions; --']);
+
+    /** @var ApplyReceiptConflictResolution $resolve */
+    $resolve = $this->app->make(ApplyReceiptConflictResolution::class);
+    $count = $resolve($this->fixtureUser, 'prefer_receipt');
+
+    // The action still reports 1 conflict resolved (delete-only path).
+    expect($count)->toBe(1);
+
+    // Transactions row was NOT mutated.
+    $row = DB::table('transactions')->where('id', $seeded['tx']->id)->first();
+    expect($row->counterparty_name)->toBe('OWN STORED');
+
+    // Pending row was still deleted (corrupted rows do not block future conflicts).
+    expect(DB::table('pending_enrichment_conflicts')->where('id', $seeded['conflict_id'])->count())->toBe(0);
 });
 
 it('prefer_receipt: UPDATEs transactions.{field} with incoming value + DELETEs pending row + persists user setting + returns count', function (): void {
