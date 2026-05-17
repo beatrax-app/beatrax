@@ -8,7 +8,9 @@ use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidStateException;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
+use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /*
@@ -196,4 +198,178 @@ it('OAuth callback for unknown provider returns 404', function (): void {
     expect(function (): void {
         $this->get('/oauth/callback/yahoo?state=x&code=y');
     })->toThrow(HttpException::class);
+});
+
+it('new-inbox callback without a refresh token rejects with flash and inserts no rows', function (): void {
+    $user = ocgUser('noreftoken@example.com');
+    $this->actingAs($user);
+
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    ocgSeedProviderClient($secrets);
+
+    // Provider returns NO refresh token (Google "Testing" mode case).
+    $fakeToken = new AccessTokenWithEmail(
+        accessToken: 'fake-access-token',
+        refreshToken: null,
+        expiresAt: new DateTimeImmutable('2026-12-31T23:59:59Z'),
+        scope: 'https://www.googleapis.com/auth/gmail.readonly',
+        email: 'noreftoken@example.com',
+    );
+
+    $mock = new class($fakeToken) extends GoogleOAuthProvider
+    {
+        public function __construct(private readonly AccessTokenWithEmail $token)
+        {
+            // Skip parent constructor.
+        }
+
+        public function getAuthorizationUrl(string $state, string $redirectUri): string
+        {
+            return 'https://accounts.google.com/?state='.$state;
+        }
+
+        public function exchangeAuthorizationCode(string $code, string $redirectUri): AccessTokenWithEmail
+        {
+            return $this->token;
+        }
+
+        public function refreshAccessToken(string $refreshToken): AccessTokenWithEmail
+        {
+            return $this->token;
+        }
+
+        public function readEmail(string $accessToken): string
+        {
+            return $this->token->email;
+        }
+    };
+
+    $this->app->instance(GoogleOAuthProvider::class, $mock);
+
+    /** @var OAuthStateRepository $stateRepo */
+    $stateRepo = $this->app->make(OAuthStateRepository::class);
+    $state = $stateRepo->issueState('gmail', userId: $user->id);
+
+    $response = $this->get('/oauth/callback/gmail?state='.$state.'&code=fake');
+
+    $response->assertRedirect(route('inboxes.index'));
+    $response->assertSessionHas('oauth_failed');
+    $flashed = session('oauth_failed');
+    expect($flashed)->toContain('refresh token');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $count = $db->connection()->table('inboxes')->where('user_id', $user->id)->count();
+    expect($count)->toBe(0);
+    $stateCount = $db->connection()->table('inbox_scan_state')->where('user_id', $user->id)->count();
+    expect($stateCount)->toBe(0);
+});
+
+it('compensating rollback: secret-write failure deletes the just-inserted inbox + scan_state rows', function (): void {
+    $user = ocgUser('rollback@example.com');
+    $this->actingAs($user);
+
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    ocgSeedProviderClient($secrets);
+
+    $fakeToken = new AccessTokenWithEmail(
+        accessToken: 'fake-access',
+        refreshToken: 'fake-refresh',
+        expiresAt: new DateTimeImmutable('2026-12-31T23:59:59Z'),
+        scope: 'https://www.googleapis.com/auth/gmail.readonly',
+        email: 'rollback@example.com',
+    );
+    $mock = new class($fakeToken) extends GoogleOAuthProvider
+    {
+        public function __construct(private readonly AccessTokenWithEmail $token)
+        {
+            // Skip parent.
+        }
+
+        public function getAuthorizationUrl(string $state, string $redirectUri): string
+        {
+            return 'https://accounts.google.com/?state='.$state;
+        }
+
+        public function exchangeAuthorizationCode(string $code, string $redirectUri): AccessTokenWithEmail
+        {
+            return $this->token;
+        }
+
+        public function refreshAccessToken(string $refreshToken): AccessTokenWithEmail
+        {
+            return $this->token;
+        }
+
+        public function readEmail(string $accessToken): string
+        {
+            return $this->token->email;
+        }
+    };
+    $this->app->instance(GoogleOAuthProvider::class, $mock);
+
+    // Substitute a secrets repository that throws on saveInboxRefreshToken
+    // to exercise the compensating-rollback branch.
+    $throwingSecrets = new class($secrets) extends OAuthSecretsRepository
+    {
+        public function __construct(private readonly OAuthSecretsRepository $real)
+        {
+            // Skip parent constructor — we delegate to the real one for
+            // every method except the throw point.
+        }
+
+        public function hasProviderClient(string $provider): bool
+        {
+            return $this->real->hasProviderClient($provider);
+        }
+
+        public function saveProviderClient(string $provider, string $clientId, string $clientSecret, string $redirectUri): void
+        {
+            $this->real->saveProviderClient($provider, $clientId, $clientSecret, $redirectUri);
+        }
+
+        public function loadProviderClient(string $provider): ?array
+        {
+            return $this->real->loadProviderClient($provider);
+        }
+
+        public function loadInbox(int $inboxId): ?InboxCredentials
+        {
+            return $this->real->loadInbox($inboxId);
+        }
+
+        public function saveInboxRefreshToken(int $inboxId, string $provider, string $email, string $refreshToken, string $scope, ?DateTimeImmutable $expiresAt): void
+        {
+            throw new SecretsWriteFailed('simulated write failure');
+        }
+
+        public function rotateRefreshToken(int $inboxId, string $newRefreshToken, ?string $newAccessToken, ?DateTimeImmutable $expiresAt): void
+        {
+            $this->real->rotateRefreshToken($inboxId, $newRefreshToken, $newAccessToken, $expiresAt);
+        }
+
+        public function removeInbox(int $inboxId): void
+        {
+            $this->real->removeInbox($inboxId);
+        }
+    };
+    $this->app->instance(OAuthSecretsRepository::class, $throwingSecrets);
+
+    /** @var OAuthStateRepository $stateRepo */
+    $stateRepo = $this->app->make(OAuthStateRepository::class);
+    $state = $stateRepo->issueState('gmail', userId: $user->id);
+
+    $response = $this->get('/oauth/callback/gmail?state='.$state.'&code=fake');
+
+    $response->assertRedirect(route('inboxes.index'));
+    $response->assertSessionHas('oauth_failed');
+    $flashed = session('oauth_failed');
+    expect($flashed)->toContain('simulated write failure');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $count = $db->connection()->table('inboxes')->where('user_id', $user->id)->count();
+    expect($count)->toBe(0);
+    $stateCount = $db->connection()->table('inbox_scan_state')->where('user_id', $user->id)->count();
+    expect($stateCount)->toBe(0);
 });
