@@ -5,8 +5,12 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Internal\DriftEvaluator;
+use Modules\DriftAlerts\Internal\Jobs\RevivedExpiredDriftSnoozesJob;
+use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
 use Modules\DriftAlerts\Models\DriftAlert;
+use Modules\DriftAlerts\Models\DriftAlertTransition;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
@@ -20,11 +24,15 @@ use Modules\Ledger\Models\ImportRun;
  * resulting drift_alerts row count + key column values against the
  * fixture's `expected.alerts` array.
  *
- * The "snooze-expiry-revival" fixture is skipped here because the
- * revival sweep is a Wave 4 deliverable (Plan 09-05). The "volatile-
- * series" fixture asserts a >=3 lower bound on alert count rather
- * than an exact figure (the fixture's `expected.alerts` declares
- * "multiple" semantics).
+ * The "snooze-expiry-revival" fixture exercises the Wave 4 hourly
+ * revival job: the contract test seeds the detected drift, transitions
+ * it through snoozed (snoozed_until in the past), then dispatches
+ * `RevivedExpiredDriftSnoozesJob` and asserts the post-revival shape
+ * declared by the fixture's `expected.transitions` block.
+ *
+ * The "volatile-series" fixture asserts a >=3 lower bound on alert
+ * count rather than an exact figure (the fixture's `expected.alerts`
+ * declares "multiple" semantics).
  */
 
 /**
@@ -56,8 +64,10 @@ function ddctFixtureExpectations(): array
         'rejected-state-ignored' => ['rejected-state-ignored', 0],
         'snoozed-at-series-level-ignored' => ['snoozed-at-series-level-ignored', 0],
         'irregular-cadence-ignored' => ['irregular-cadence-ignored', 0],
-        // Wave 4 revival flow — covered by Plan 09-05, not Wave 2.
-        'snooze-expiry-revival' => ['snooze-expiry-revival', 'skip'],
+        // Wave 4 revival flow — Plan 09-05 (the test detects the drift,
+        // transitions through snoozed-with-past-timestamp, then dispatches
+        // RevivedExpiredDriftSnoozesJob and asserts the revival).
+        'snooze-expiry-revival' => ['snooze-expiry-revival', 'revival'],
     ];
 }
 
@@ -271,13 +281,6 @@ function ddctEvaluateAllOccurrencePairs(DatabaseManager $db, DriftEvaluator $eva
 }
 
 it('runs the drift evaluator against every fixture in the 24-scenario corpus and produces the documented alert counts', function (string $fixtureName, int|string $expectedAlertCount): void {
-    if ($expectedAlertCount === 'skip') {
-        // The fixture describes Wave 4 revival flow; not exercised here.
-        expect(true)->toBeTrue();
-
-        return;
-    }
-
     CarbonImmutable::setTestNow('2026-05-19 12:00:00');
 
     /** @var DatabaseManager $db */
@@ -303,6 +306,51 @@ it('runs the drift evaluator against every fixture in the 24-scenario corpus and
 
     if ($expectedAlertCount === 'multiple') {
         expect($actualCount)->toBeGreaterThanOrEqual(3);
+    } elseif ($expectedAlertCount === 'revival') {
+        // Wave 4 revival flow: the detected alert is snoozed with a
+        // past snoozed_until, then the hourly RevivedExpiredDriftSnoozesJob
+        // flips it back to 'open' with the audit transition the fixture
+        // declares. The fixture's transactions produce exactly one drift
+        // alert (3× -999 → 3× -1149, a ~15% drift > 5% global threshold).
+        expect($actualCount)->toBe(1);
+
+        /** @var DriftAlert $detected */
+        $detected = DriftAlert::query()
+            ->where('user_id', $user->id)
+            ->where('recurring_series_id', $seriesId)
+            ->firstOrFail();
+
+        /** @var DriftAlertStateMachine $stateMachine */
+        $stateMachine = app(DriftAlertStateMachine::class);
+        $stateMachine->transition(
+            $detected,
+            'snoozed',
+            'user_action',
+            'user',
+            'snoozed_until=2026-05-19 06:00:00',
+            ['snoozed_until' => '2026-05-19 06:00:00'],
+        );
+
+        /** @var RevivedExpiredDriftSnoozesJob $job */
+        $job = app(RevivedExpiredDriftSnoozesJob::class);
+        $job->handle($db, $stateMachine, app(Clock::class));
+
+        $revived = DriftAlert::query()->findOrFail($detected->id);
+        expect($revived->state)->toBe('open');
+        expect($revived->snoozed_until)->toBeNull();
+
+        $revivalTransition = DriftAlertTransition::query()
+            ->where('drift_alert_id', $detected->id)
+            ->where('transition_reason', 'detector_revived_snooze')
+            ->first();
+        expect($revivalTransition)->not->toBeNull();
+        expect($revivalTransition?->from_state)->toBe('snoozed');
+        expect($revivalTransition?->to_state)->toBe('open');
+        expect($revivalTransition?->actor)->toBe('detector');
+
+        CarbonImmutable::setTestNow();
+
+        return;
     } else {
         expect($actualCount)->toBe($expectedAlertCount);
     }

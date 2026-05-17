@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\Schedule;
+use Modules\DriftAlerts\Internal\Jobs\RevivedExpiredDriftSnoozesJob;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
@@ -130,3 +131,21 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
         $bus->dispatch(new DetectRecurringSeriesJob((int) $id));
     }
 })->name('recurring.detect')->daily()->withoutOverlapping(30);
+
+// Hourly drift-alert snooze revival sweep: dispatches a single
+// RevivedExpiredDriftSnoozesJob that flips `drift_alerts.state` from
+// 'snoozed' to 'open' on rows whose `snoozed_until` has elapsed, and
+// writes a transition row with reason='detector_revived_snooze'. The
+// sweep is global (no per-user fan-out) because alerts may belong to
+// any user and the state-machine call resolves the user_id from the
+// row itself.
+// Method order .name() BEFORE .hourly()->withoutOverlapping() matches
+// the email-scan + receipts + recurring entries above so the
+// CallbackEvent's description-required guard is satisfied before
+// withoutOverlapping reads it.
+// The companion DriftAlertQuery::openForUser query-time conditional
+// surfaces snoozed-but-expired rows immediately between sweeps so the
+// dashboard count + sum stay honest without waiting for the hour tick.
+Schedule::call(function (Dispatcher $bus): void {
+    $bus->dispatch(new RevivedExpiredDriftSnoozesJob);
+})->name('drift-alerts.revive-snoozes')->hourly()->withoutOverlapping(30);
