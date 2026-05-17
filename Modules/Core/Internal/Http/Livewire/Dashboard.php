@@ -129,6 +129,22 @@ final class Dashboard extends Component
         // when this is null (no "—" placeholder).
         $nextSettlement = $glance->nextIcsSettlement($user);
 
+        // Email-scan-health tile. Null = hide the tile entirely (no
+        // connected inboxes). The dashboard Blade reads the same null-
+        // first contract as the Next-ICS-settlement tile above.
+        $emailScanHealth = $glance->emailScanHealth($user);
+
+        // Persistent reauth toast trigger: lit when at least one inbox
+        // is in needs_reauth state. The Blade also reads the session
+        // dismiss-flag to suppress the toast once the user clicks the
+        // × icon; the toast re-surfaces if a fresh needs_reauth state
+        // appears after dismissal in a later session.
+        $reauthInboxCount = $db->connection()
+            ->table('inbox_scan_state')
+            ->where('user_id', $user->id)
+            ->where('status', 'needs_reauth')
+            ->count();
+
         // Populate on initial mount so the toast surfaces immediately
         // without waiting for the first wire:poll tick.
         $this->failedChainResolutionExists = $db->connection()
@@ -141,6 +157,8 @@ final class Dashboard extends Component
             'summary' => $summary,
             'tiles' => $tiles,
             'nextSettlement' => $nextSettlement,
+            'emailScanHealth' => $emailScanHealth,
+            'reauthInboxCount' => $reauthInboxCount,
         ]);
     }
 
