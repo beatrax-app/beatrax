@@ -12,6 +12,7 @@ use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
 use Modules\Recurring\Internal\Detectors\IncomeSeriesDetector;
 use Modules\Recurring\Internal\Http\Livewire\RecurringPage;
 use Modules\Recurring\Internal\Http\Livewire\RecurringReviewPage;
+use Modules\Recurring\Internal\Http\Livewire\RecurringSeriesDetailPage;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
@@ -72,5 +73,6 @@ final class RecurringServiceProvider extends ServiceProvider
 
         $livewire->component('recurring.recurring-page', RecurringPage::class);
         $livewire->component('recurring.recurring-review-page', RecurringReviewPage::class);
+        $livewire->component('recurring.recurring-series-detail-page', RecurringSeriesDetailPage::class);
     }
 }
