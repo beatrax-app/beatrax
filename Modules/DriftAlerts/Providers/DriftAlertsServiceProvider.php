@@ -14,8 +14,6 @@ use Modules\DriftAlerts\Internal\DriftEvaluator;
 use Modules\DriftAlerts\Internal\Http\Livewire\DashboardDriftBadge;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftThresholdEditor;
-use Modules\DriftAlerts\Internal\Jobs\DetectDriftAlertsJob;
-use Modules\DriftAlerts\Internal\Jobs\RevivedExpiredDriftSnoozesJob;
 use Modules\DriftAlerts\Internal\Listeners\EvaluateDriftOnMetricsRefreshed;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
@@ -28,13 +26,17 @@ use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 /**
  * Wires the Drift Alerts module.
  *
- * register() binds every in-tree service as a singleton (state machine,
- * detector, queries, Public Actions, queued job, dashboard badge SFC).
+ * register() binds the stateless in-tree services as singletons (state
+ * machine, detector, queries, Public Actions). Queued jobs and Livewire
+ * components are intentionally NOT bound as singletons — jobs are
+ * serialised/unserialised by the queue worker and Livewire components
+ * are instantiated per-request by `LivewireManager`, so both bypass the
+ * container's singleton cache by design.
  *
  * boot() conditionally loads the module's migrations, routes, and views,
- * registers the two Livewire SFCs (DriftPage, DashboardDriftBadge),
- * wires the detector listener to the Recurring metrics-refreshed event,
- * and installs the top-nav badge composer via
+ * registers the three Livewire SFCs (DriftPage, DashboardDriftBadge,
+ * DriftThresholdEditor), wires the detector listener to the Recurring
+ * metrics-refreshed event, and installs the top-nav badge composer via
  * `registerTopNavBadgeComposer()`. The badge composer injects
  * `driftOpenCount` into `core::livewire.top-nav` through the
  * ViewFactoryContract — the global `view()` helper is forbidden by
@@ -50,15 +52,11 @@ final class DriftAlertsServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DriftAlertStateMachine::class);
         $this->app->singleton(DriftEvaluator::class);
-        $this->app->singleton(DetectDriftAlertsJob::class);
-        $this->app->singleton(RevivedExpiredDriftSnoozesJob::class);
         $this->app->singleton(DriftAlertQuery::class);
         $this->app->singleton(CancellationImpactQuery::class);
         $this->app->singleton(AcknowledgeDriftAlert::class);
         $this->app->singleton(SnoozeDriftAlert::class);
         $this->app->singleton(DismissDriftAlertAsCancelled::class);
-        $this->app->singleton(DashboardDriftBadge::class);
-        $this->app->singleton(DriftThresholdEditor::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
