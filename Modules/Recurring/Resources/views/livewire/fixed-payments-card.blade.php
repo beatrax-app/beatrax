@@ -53,7 +53,11 @@
     </header>
 
     @if (count($rows) === 0)
-        <p class="text-sm text-slate-500">No approved recurring series yet.</p>
+        @if ($filter === 'this-month')
+            <p class="text-sm text-slate-500">No recurring series are due this month.</p>
+        @else
+            <p class="text-sm text-slate-500">No approved recurring series yet.</p>
+        @endif
     @else
         <ul class="divide-y divide-slate-100">
             @foreach ($rows as $row)

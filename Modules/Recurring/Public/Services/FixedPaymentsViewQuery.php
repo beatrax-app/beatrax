@@ -116,12 +116,39 @@ final readonly class FixedPaymentsViewQuery
     }
 
     /**
+     * Top approved series by absolute monthly equivalent, optionally
+     * filtered to those whose next-expected-charge falls inside
+     * `[$monthStart, $monthEnd]` (inclusive). Pushing the date filter
+     * into the read layer means the dashboard's "This month only"
+     * toggle returns up to `$limit` matching rows instead of "the
+     * subset of the top N that happen to fall in this month" — the
+     * latter could legitimately produce zero rows even when many
+     * series are due.
+     *
      * @return list<RecurringSeriesDto>
      */
-    public function topByMonthlyEquivalent(User $user, int $limit = 6): array
-    {
+    public function topByMonthlyEquivalent(
+        User $user,
+        int $limit = 6,
+        ?CarbonImmutable $monthStart = null,
+        ?CarbonImmutable $monthEnd = null,
+    ): array {
         $sections = $this->viewForUser($user);
         $combined = array_merge($sections['expenses'], $sections['income']);
+
+        if ($monthStart !== null && $monthEnd !== null) {
+            $combined = array_values(array_filter(
+                $combined,
+                static function (RecurringSeriesDto $row) use ($monthStart, $monthEnd): bool {
+                    if ($row->nextExpectedAt === null) {
+                        return false;
+                    }
+
+                    return $row->nextExpectedAt->between($monthStart, $monthEnd);
+                },
+            ));
+        }
+
         self::sortByAbsoluteMonthlyEquivalentDesc($combined);
 
         return array_slice($combined, 0, $limit);
