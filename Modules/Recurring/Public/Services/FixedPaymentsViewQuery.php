@@ -8,7 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Public\Services\MerchantMemoryQuery;
 use Modules\Core\Models\User;
-use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use stdClass;
 
@@ -277,33 +277,11 @@ final readonly class FixedPaymentsViewQuery
      */
     private function toDto(stdClass $row, array $fallbackMap): RecurringSeriesDto
     {
-        $latestCurrency = self::toString($row->latest_currency);
-        $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor), $latestCurrency);
-
-        $eurEquivalent = null;
-        if ($latestCurrency !== 'EUR' && isset($row->monthly_equivalent_minor)) {
-            $eurEquivalent = Money::ofMinor(self::toInt($row->monthly_equivalent_minor), 'EUR');
-        }
-
-        $monthlyEquivalent = Money::ofMinor(
-            isset($row->monthly_equivalent_minor) ? self::toInt($row->monthly_equivalent_minor) : 0,
-            $latestCurrency !== '' ? $latestCurrency : 'EUR',
-        );
-
-        $nextExpectedAt = null;
-        $rawNext = $row->next_expected_at ?? null;
-        if (is_string($rawNext) && $rawNext !== '') {
-            $nextExpectedAt = CarbonImmutable::parse($rawNext);
-        }
-
-        $snoozedUntil = null;
-        $rawSnooze = $row->snoozed_until ?? null;
-        if (is_string($rawSnooze) && $rawSnooze !== '') {
-            $snoozedUntil = CarbonImmutable::parse($rawSnooze);
-        }
-
-        $displayNameOverride = $row->display_name_override ?? null;
-
+        // FixedPaymentsViewQuery prefers the latest chain link when
+        // it is confirmed/candidate; otherwise it walks back through
+        // the series' occurrences to find the first usable chain.
+        // RecurringSeriesQuery skips the walk — its consumers do not
+        // need the fallback.
         $chainLinkId = null;
         $primaryChainLinkId = $row->latest_funding_chain_link_id ?? null;
         $primaryChainState = $row->chain_link_state ?? null;
@@ -320,24 +298,7 @@ final readonly class FixedPaymentsViewQuery
             }
         }
 
-        return new RecurringSeriesDto(
-            seriesId: self::toInt($row->id),
-            direction: self::toString($row->direction),
-            detectedName: self::toString($row->detected_name),
-            displayNameOverride: is_string($displayNameOverride) && $displayNameOverride !== ''
-                ? $displayNameOverride
-                : null,
-            state: self::toString($row->state),
-            cadence: self::toString($row->cadence),
-            latestAmount: $latestAmount,
-            eurEquivalent: $eurEquivalent,
-            monthlyEquivalent: $monthlyEquivalent,
-            latestFundingChainLinkId: $chainLinkId,
-            nextExpectedAt: $nextExpectedAt,
-            nextExpectedConfidenceLow: (bool) ($row->next_expected_confidence_low ?? false),
-            varianceTolerancePercent: self::toInt($row->variance_tolerance_percent ?? 25),
-            snoozedUntil: $snoozedUntil,
-        );
+        return RecurringSeriesDtoMapper::hydrate($row, $chainLinkId);
     }
 
     /**
