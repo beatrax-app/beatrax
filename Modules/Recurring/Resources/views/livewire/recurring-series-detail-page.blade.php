@@ -41,8 +41,39 @@
                 <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($series->monthlyEquivalent->toMinor()) }}/mo</span>
             </p>
         </div>
-        <div class="flex shrink-0 items-center gap-3">
-            {{-- variance-tolerance-editor: see Task 4 --}}
+        <div class="flex shrink-0 items-center gap-4">
+            <div x-data="{ open: false }" class="relative">
+                <button
+                    type="button"
+                    x-on:click="open = ! open"
+                    aria-haspopup="listbox"
+                    aria-label="Variance tolerance"
+                    class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                >
+                    <span class="text-slate-500">Tolerance</span>
+                    <span style="font-variant-numeric: tabular-nums;">{{ $series->varianceTolerancePercent }}%</span>
+                </button>
+                <div
+                    x-show="open"
+                    x-cloak
+                    x-on:click.outside="open = false"
+                    role="listbox"
+                    class="absolute right-0 z-10 mt-1 w-32 rounded-md border border-slate-200 bg-white p-1 text-xs shadow-lg"
+                >
+                    @foreach ([10, 25, 50] as $percent)
+                        <button
+                            type="button"
+                            wire:click="editVarianceTolerance({{ $percent }})"
+                            x-on:click="open = false"
+                            @class([
+                                'block w-full rounded-md px-2 py-1 text-left hover:bg-slate-50',
+                                'font-medium text-slate-900' => $series->varianceTolerancePercent === $percent,
+                                'text-slate-500' => $series->varianceTolerancePercent !== $percent,
+                            ])
+                        >{{ $percent }}%</button>
+                    @endforeach
+                </div>
+            </div>
             <a
                 href="{{ route('recurring.index') }}"
                 class="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
