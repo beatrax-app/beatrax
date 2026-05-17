@@ -226,6 +226,48 @@
         @endif
     </section>
 
+    {{-- Reauth-detected toast.
+
+         Persistent (no auto-dismiss) backed by inbox_scan_state.status =
+         'needs_reauth' filtered by user_id. Suppressed for the rest of
+         the session once the user clicks ×; reappears on next login if
+         any inbox is still needs_reauth. Same chrome as the failed-job
+         toast below but with its own copy + a distinct surface order
+         (this toast renders above the failed-job toast when both are
+         visible — see UI-SPEC § Reauth-detected toast). --}}
+    @if ($reauthInboxCount > 0 && ! $reauthToastDismissed)
+        <div
+            role="status"
+            aria-live="polite"
+            class="fixed bottom-24 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md"
+        >
+            <div class="flex items-start justify-between gap-3">
+                <div class="space-y-1">
+                    <p class="text-sm font-medium text-slate-900">An inbox needs reconnecting.</p>
+                    <p class="text-xs text-slate-500">One or more inboxes were signed out — diederik can't scan them until you reconnect.</p>
+                    <a
+                        href="{{ route('inboxes.index') }}"
+                        class="text-xs text-slate-900 underline-offset-2 hover:underline"
+                    >Go to Inboxes</a>
+                </div>
+                <button
+                    type="button"
+                    aria-label="Dismiss"
+                    wire:click="dismissReauthToast"
+                    class="rounded text-slate-500 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                >
+                    {{-- Inline Heroicons-outline x-mark 16×16 (no
+                         blade-heroicons package is installed in the
+                         project; UI-SPEC § Icon usage approves this
+                         inline render). --}}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    @endif
+
     {{-- Failed-job toast (D-103 / issue #1 + #8).
 
          Persistent toast (no auto-dismiss) backed by the
