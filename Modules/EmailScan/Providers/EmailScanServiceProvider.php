@@ -26,6 +26,9 @@ use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
+use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
+use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
+use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxesBadgeCount;
 use Modules\EmailScan\Public\Services\InboxMessageQuery;
 use Modules\EmailScan\Public\Services\InboxQuery;
@@ -74,6 +77,9 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(InboxQuery::class);
         $this->app->singleton(InboxesBadgeCount::class);
         $this->app->singleton(KnownSenderQuery::class);
+        $this->app->singleton(DiscoveredSenderQuery::class);
+        $this->app->singleton(PromoteDiscoveredSender::class);
+        $this->app->singleton(DismissDiscoveredSender::class);
 
         // Internal fetch + persistence collaborators consumed by the
         // backfill / incremental-scan job pipeline.

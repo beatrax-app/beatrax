@@ -71,7 +71,12 @@ function tnbcSeedDiscoveredCandidates(User $owner, int $inboxId, int $count): vo
             'inbox_id' => $inboxId,
             'sender_email' => "candidate{$i}@example.com",
             'sender_name' => null,
-            'occurrence_count' => 1,
+            // Plan 09 tightened InboxesBadgeCount to apply the same
+            // 2-occurrences-in-90-days threshold the panel uses; seed
+            // at occurrence_count=2 so the badge counts these rows
+            // (the seed was occurrence_count=1 pre-Plan-09 which now
+            // falls below threshold).
+            'occurrence_count' => 2,
             'last_seen_at' => $now,
             'sample_message_id' => null,
             'state' => 'candidate',
