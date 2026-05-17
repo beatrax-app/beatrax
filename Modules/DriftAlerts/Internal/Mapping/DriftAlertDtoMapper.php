@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DriftAlerts\Internal\Mapping;
 
 use Carbon\CarbonImmutable;
+use InvalidArgumentException;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
@@ -44,7 +45,18 @@ final class DriftAlertDtoMapper
             $eurEquivalent = Money::ofMinor($eurEquivalentMinor, 'EUR');
         }
 
-        $detectedAt = CarbonImmutable::parse(self::toString($row->detected_at));
+        // The schema marks `detected_at` non-null, but a corrupted row
+        // could surface here as null or non-string. Fail loud with an
+        // identifying message rather than letting Carbon raise a
+        // bare InvalidFormatException out of an unscoped parse('').
+        $rawDetected = $row->detected_at ?? null;
+        if (! is_string($rawDetected) || $rawDetected === '') {
+            $rowId = isset($row->id) && is_numeric($row->id) ? (string) $row->id : '?';
+            throw new InvalidArgumentException(
+                "DriftAlertDtoMapper: drift_alerts row {$rowId} has missing or non-string detected_at.",
+            );
+        }
+        $detectedAt = CarbonImmutable::parse($rawDetected);
 
         $snoozedUntil = null;
         $rawSnooze = $row->snoozed_until ?? null;
