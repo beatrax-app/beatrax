@@ -1,0 +1,51 @@
+From sender1@example.test Thu Jan  1 00:00:00 2026
+From: sender1@example.test
+To: kaarthouder@example.test
+Subject: Synthetic mbox message 1
+Date: Thu, 01 Jan 2026 00:00:00 +0000
+Message-ID: <synth-mbox-1@example.test>
+
+This is the body of synthetic mbox message 1.
+Plain text content with no special escaping.
+
+From sender2@example.test Thu Jan  2 00:00:00 2026
+From: sender2@example.test
+To: kaarthouder@example.test
+Subject: Synthetic mbox message 2 (literal From line in body)
+Date: Fri, 02 Jan 2026 00:00:00 +0000
+Message-ID: <synth-mbox-2@example.test>
+
+This message exercises the mboxrd unescape path.
+>From the perspective of the iterator, the leading '>' must be stripped.
+The next line is a continuation.
+
+From sender3@example.test Thu Jan  3 00:00:00 2026
+From: sender3@example.test
+To: kaarthouder@example.test
+Subject: Synthetic mbox message 3 (double-escaped From)
+Date: Sat, 03 Jan 2026 00:00:00 +0000
+Message-ID: <synth-mbox-3@example.test>
+
+This message exercises the double-escape edge case.
+>>From here the iterator strips one '>' leaving '>From ' verbatim.
+End of message body.
+
+From sender4@example.test Thu Jan  4 00:00:00 2026
+From: sender4@example.test
+To: kaarthouder@example.test
+Subject: Synthetic mbox message 4
+Date: Sun, 04 Jan 2026 00:00:00 +0000
+Message-ID: <synth-mbox-4@example.test>
+
+Plain body for message 4. No escaping required.
+Another body line for length.
+
+From sender5@example.test Thu Jan  5 00:00:00 2026
+From: sender5@example.test
+To: kaarthouder@example.test
+Subject: Synthetic mbox message 5
+Date: Mon, 05 Jan 2026 00:00:00 +0000
+Message-ID: <synth-mbox-5@example.test>
+
+Plain body for message 5. No escaping required.
+Final message in the archive.
