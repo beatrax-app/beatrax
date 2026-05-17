@@ -112,16 +112,30 @@ final class EmlBlobStore
 
     /**
      * Write the raw .eml bytes to disk atomically. Ensures the
-     * parent directory exists with mode 0700, writes to a sibling
-     * `.tmp` file, fsyncs, chmods to 0600, and renames over the
-     * canonical path. Any failure during the write tears down the
-     * temp file and rethrows as a RuntimeException.
+     * parent directory exists with mode 0700 (chmod is applied only
+     * on first creation so subsequent writes do not narrow back
+     * permissions an admin may have widened intentionally for
+     * backup tooling), writes to a sibling `.tmp` file, fsyncs,
+     * chmods to 0600, and renames over the canonical path. Any
+     * failure during the write tears down the temp file and rethrows
+     * as a RuntimeException.
      */
     public function put(string $absolutePath, string $rawMime): void
     {
         $dir = dirname($absolutePath);
+        $dirExisted = $this->files->isDirectory($dir);
         $this->files->ensureDirectoryExists($dir, self::DIR_MODE, recursive: true);
-        @chmod($dir, self::DIR_MODE);
+        if (! $dirExisted) {
+            // Apply chmod ONCE on first create. A failure here is
+            // a hard error — the directory must be 0700 before any
+            // .eml lands inside it so cohabiting OS users cannot
+            // enumerate or read another user's blobs.
+            if (! @chmod($dir, self::DIR_MODE)) {
+                throw new RuntimeException(
+                    "EmlBlobStore: failed to chmod 0700 on newly-created directory {$dir}.",
+                );
+            }
+        }
 
         $tmp = $absolutePath.'.tmp';
         $fp = @fopen($tmp, 'wb');
