@@ -8,12 +8,17 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Categorization\Internal\Http\Livewire\InlineCategoryPicker;
+use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
+use Modules\Categorization\Internal\Http\Livewire\RulesPage;
 use Modules\Categorization\Internal\Http\Livewire\TriageInbox;
 use Modules\Categorization\Internal\Listeners\MerchantMemoryWriter;
 use Modules\Categorization\Internal\Listeners\SeedDefaultCategoryTree;
 use Modules\Categorization\Internal\Pipeline\ApplyAutoCategoryStage;
 use Modules\Categorization\Internal\Services\RuleEvaluator;
 use Modules\Categorization\Public\Actions\AssignCategory;
+use Modules\Categorization\Public\Actions\CreateCategorizationRule;
+use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
+use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Events\TransactionCategorized;
@@ -48,6 +53,9 @@ final class CategorizationServiceProvider extends ServiceProvider
         $this->app->singleton(ApplyAutoCategoryStage::class);
         $this->app->singleton(CategorizationRuleQuery::class);
         $this->app->singleton(MerchantMemoryQuery::class);
+        $this->app->singleton(CreateCategorizationRule::class);
+        $this->app->singleton(UpdateCategorizationRule::class);
+        $this->app->singleton(DeleteCategorizationRule::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
@@ -62,5 +70,7 @@ final class CategorizationServiceProvider extends ServiceProvider
 
         $livewire->component('categorization.triage-inbox', TriageInbox::class);
         $livewire->component('categorization.inline-category-picker', InlineCategoryPicker::class);
+        $livewire->component('categorization.rules-page', RulesPage::class);
+        $livewire->component('categorization.rule-form-modal', RuleFormModal::class);
     }
 }
