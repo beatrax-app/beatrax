@@ -122,8 +122,8 @@ final class InboxesPage extends Component
      *
      * Wired to the "Scan now" button on every connected-inbox row.
      * Dispatches IncrementalScanJob via the injected Bus contract;
-     * the job's ShouldBeUniqueUntilProcessing constraint deduplicates
-     * a rapid double-click into a single queued job.
+     * the job's ShouldBeUnique constraint deduplicates a rapid double-
+     * click into a single queued job (lock held until handle() returns).
      *
      * Cross-user 404 invariant: the inbox lookup scopes through
      * InboxQuery::findForUser which returns null for a foreign id;

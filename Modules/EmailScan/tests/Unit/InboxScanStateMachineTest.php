@@ -208,6 +208,29 @@ it('applyStatus(idle → idle) is permitted (no-senders early-exit path)', funct
     expect((string) $row->error_message)->toBe('No known senders are configured for this user.');
 });
 
+it('applyStatus(backfilling → backfilling) is re-entrant safe (recovery dispatch resume)', function (): void {
+    // A backfill worker that died without flipping the row back to
+    // idle can have a recovery dispatch pick the same inbox up; the
+    // transition must NOT throw or the recovery flow stalls.
+    $inboxId = ($this->seedInbox)(status: 'idle');
+    $sm = ($this->makeMachine)();
+    $sm->applyStatus($inboxId, 'backfilling');
+
+    $sm->applyStatus($inboxId, 'backfilling');
+
+    expect(($this->readState)($inboxId)->status)->toBe('backfilling');
+});
+
+it('applyStatus(scanning → scanning) is re-entrant safe (recovery dispatch resume)', function (): void {
+    $inboxId = ($this->seedInbox)(status: 'idle');
+    $sm = ($this->makeMachine)();
+    $sm->applyStatus($inboxId, 'scanning');
+
+    $sm->applyStatus($inboxId, 'scanning');
+
+    expect(($this->readState)($inboxId)->status)->toBe('scanning');
+});
+
 it('applyStatus does NOT advance last_scan_at for rate_limited / needs_reauth / error transitions', function (): void {
     $inboxId = ($this->seedInbox)(status: 'idle');
     $sm = ($this->makeMachine)();

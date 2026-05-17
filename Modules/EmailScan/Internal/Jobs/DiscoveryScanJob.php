@@ -7,7 +7,7 @@ namespace Modules\EmailScan\Internal\Jobs;
 use DateTimeImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
-use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
@@ -55,12 +55,16 @@ use Throwable;
  *    constraint `(user_id, inbox_id, sender_email)` from Plan 02.
  *
  * Concurrency contract (mirrors BackfillInboxJob / IncrementalScanJob):
- *  - `ShouldBeUniqueUntilProcessing` keyed on `userId` blocks a second
- *    dispatch for the same user while the worker has not yet started.
- *    The unique-lock store is Redis (the single permitted module-code
- *    facade carve-out — Laravel calls `uniqueVia()` at push-time
- *    before constructor DI completes; the BoundaryArchTest carve-out
- *    grants this class the same exemption as the other two jobs).
+ *  - `ShouldBeUnique` keyed on `userId` blocks every second dispatch
+ *    for the same user until the worker FINISHES (not just starts).
+ *    A queue-level lock that released at handle-entry would let two
+ *    workers walk the user's inboxes in parallel and race on the
+ *    discovered_senders upsert (occurrence_count would silently
+ *    double-count). The unique-lock store is Redis (the single
+ *    permitted module-code facade carve-out — Laravel calls
+ *    `uniqueVia()` at push-time before constructor DI completes; the
+ *    BoundaryArchTest carve-out grants this class the same exemption
+ *    as the other two jobs).
  *  - `uniqueFor=600` (10 minutes) matches IncrementalScanJob —
  *    discovery completes in seconds-to-minutes per inbox and the
  *    lock should not linger if a worker crashes.
@@ -87,7 +91,7 @@ use Throwable;
  * FQN the "no Laravel facades in module code" exemption alongside
  * BackfillInboxJob + IncrementalScanJob.
  */
-final class DiscoveryScanJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
+final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;

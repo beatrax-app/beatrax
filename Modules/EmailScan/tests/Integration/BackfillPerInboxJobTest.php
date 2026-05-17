@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 
@@ -10,15 +10,18 @@ use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
  * BackfillInboxJob single-flight contract.
  *
  * The plan-level invariant is "two concurrent dispatches for the
- * same inbox must collapse into one in-flight job"; Laravel's
+ * same inbox must collapse into one in-flight job AND the lock holds
+ * for the entire walk so two workers never race the cursor"; Laravel's
  * unique-lock middleware does the actual collapsing via the cache
- * store returned from uniqueVia(). This test asserts the
- * structural pieces the middleware reads:
+ * store returned from uniqueVia(). This test asserts the structural
+ * pieces the middleware reads:
  *
- *  - the job implements ShouldBeUniqueUntilProcessing + ShouldQueue
+ *  - the job implements ShouldBeUnique (lock held until handle()
+ *    returns, NOT released on pickup) + ShouldQueue
  *  - uniqueId() returns the inboxId so two different inboxes get
  *    two different unique keys
- *  - uniqueFor() returns 1800 — the 30-minute ceiling
+ *  - uniqueFor() returns 1800 — the 30-minute ceiling that bounds the
+ *    lock if a worker crashes mid-walk
  *  - tries = 3 + backoff = [60, 300, 900] — the retry envelope
  *
  * The end-to-end "two simultaneous dispatches" behaviour is
@@ -30,7 +33,7 @@ use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 it('implements the per-inbox single-flight queue contract', function (): void {
     $reflection = new ReflectionClass(BackfillInboxJob::class);
 
-    expect($reflection->implementsInterface(ShouldBeUniqueUntilProcessing::class))->toBeTrue();
+    expect($reflection->implementsInterface(ShouldBeUnique::class))->toBeTrue();
     expect($reflection->implementsInterface(ShouldQueue::class))->toBeTrue();
 });
 
