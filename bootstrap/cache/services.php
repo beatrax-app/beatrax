@@ -46,6 +46,9 @@
     42 => 'Modules\\Chains\\Providers\\ChainsServiceProvider',
     43 => 'Modules\\EmailScan\\Providers\\EmailScanServiceProvider',
     44 => 'Modules\\Transfers\\Providers\\TransfersServiceProvider',
+    45 => 'Modules\\Receipts\\Providers\\ReceiptsServiceProvider',
+    46 => 'Modules\\Recurring\\Providers\\RecurringServiceProvider',
+    47 => 'Modules\\DriftAlerts\\Providers\\DriftAlertsServiceProvider',
   ),
   'eager' => 
   array (
@@ -81,6 +84,9 @@
     29 => 'Modules\\Chains\\Providers\\ChainsServiceProvider',
     30 => 'Modules\\EmailScan\\Providers\\EmailScanServiceProvider',
     31 => 'Modules\\Transfers\\Providers\\TransfersServiceProvider',
+    32 => 'Modules\\Receipts\\Providers\\ReceiptsServiceProvider',
+    33 => 'Modules\\Recurring\\Providers\\RecurringServiceProvider',
+    34 => 'Modules\\DriftAlerts\\Providers\\DriftAlertsServiceProvider',
   ),
   'deferred' => 
   array (
