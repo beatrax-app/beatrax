@@ -116,7 +116,19 @@ final class OAuthClientWizardModal extends Component
         }
 
         $redirectUri = $this->computeLoopbackRedirectUri($provider, $config);
-        $secrets->saveProviderClient($provider, $this->clientId, $this->clientSecret, $redirectUri);
+
+        // Capture the secret into a local so the property can be
+        // wiped BEFORE the external call. A thrown exception during
+        // saveProviderClient therefore cannot leave the secret on the
+        // component instance (which would round-trip back to the
+        // browser inside the wire:snapshot payload on the next
+        // render).
+        $clientId = $this->clientId;
+        $clientSecret = $this->clientSecret;
+        $this->clientId = '';
+        $this->clientSecret = '';
+
+        $secrets->saveProviderClient($provider, $clientId, $clientSecret, $redirectUri);
 
         $this->dispatch('modal-hide', name: 'oauth-client-wizard-'.$provider);
 
