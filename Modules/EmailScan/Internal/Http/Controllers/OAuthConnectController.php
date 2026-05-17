@@ -70,6 +70,20 @@ final class OAuthConnectController
                 if ($inbox === null) {
                     throw new NotFoundHttpException('Inbox not found.');
                 }
+                // Reconnect must target the SAME provider as the
+                // existing inbox row. Allowing a Gmail consent dance
+                // on a Microsoft inbox (or vice-versa) would write a
+                // Gmail refresh token under an inbox id whose schema
+                // row still claims provider='microsoft' — the next
+                // IncrementalScanJob would dispatch to the Microsoft
+                // branch and pass a Gmail refresh token to Azure,
+                // permanently breaking the inbox. We respond with the
+                // same NotFoundHttpException shape the cross-user 404
+                // path uses so a leaked provider mismatch is not
+                // enumerable from the response.
+                if ($inbox->provider !== $provider) {
+                    throw new NotFoundHttpException('Inbox not found.');
+                }
                 $existingInboxId = $candidate;
             }
         }
