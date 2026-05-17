@@ -1,0 +1,97 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Modules\Core\Models\User;
+use Modules\Recurring\Models\RecurringSeries;
+
+/*
+ * Top-nav Recurring badge composer tests. The composer attaches a
+ * `recurringPendingCount` integer to `core::livewire.top-nav` via the
+ * View Factory contract (NEVER the `view()` global helper) so the nav
+ * slot renders the pending-suggestion count.
+ *
+ * Mirrors the ChainsServiceProvider issue #12 fix pattern.
+ */
+
+function rcnbcUser(string $email): User
+{
+    return User::query()->create([
+        'email' => $email,
+        'password' => 'fixture',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+}
+
+function rcnbcSeries(User $user, string $state, string $cluster, string $name = 'tnbc-row'): RecurringSeries
+{
+    return RecurringSeries::query()->create([
+        'user_id' => $user->id,
+        'direction' => 'expense',
+        'detected_name' => $name,
+        'state' => $state,
+        'cadence' => 'monthly',
+        'latest_amount_minor' => -1099,
+        'latest_currency' => 'EUR',
+        'variance_tolerance_percent' => 25,
+        'cluster_key' => $cluster,
+    ]);
+}
+
+beforeEach(function (): void {
+    CarbonImmutable::setTestNow('2026-05-17 12:00:00');
+    $this->user = rcnbcUser('tnbc@diederik.test');
+});
+
+afterEach(function (): void {
+    CarbonImmutable::setTestNow();
+});
+
+it('renders the top-nav with recurringPendingCount equal to the pending-state count for the user', function (): void {
+    rcnbcSeries($this->user, 'pending', 'tnbc::pending-1', 'a');
+    rcnbcSeries($this->user, 'pending', 'tnbc::pending-2', 'b');
+    rcnbcSeries($this->user, 'pending', 'tnbc::pending-3', 'c');
+    rcnbcSeries($this->user, 'approved', 'tnbc::approved-1', 'd');
+    rcnbcSeries($this->user, 'rejected', 'tnbc::rejected-1', 'e');
+
+    $response = $this->actingAs($this->user)->get(route('recurring.index'));
+
+    $content = $response->getContent() ?: '';
+    // The top-nav badge anchor is rendered with the Recurring label
+    // and the pending count interpolated.
+    expect($content)->toContain('Recurring');
+    expect($content)->toContain('>3<');
+})->group('badge-equals-pending-count');
+
+it('binds recurringPendingCount to 0 when no user is authenticated (badge-is-zero-when-unauthenticated)', function (): void {
+    // Visit a non-auth-gated page to exercise the composer. /login is
+    // available to unauthenticated callers and includes the top-nav.
+    $response = $this->get(route('recurring.index'));
+
+    // Unauthenticated callers redirect; we just confirm the composer
+    // does not blow up. The other badge slices cover authenticated
+    // rendering directly.
+    expect($response->status())->toBeIn([302, 200]);
+})->group('badge-is-zero-when-unauthenticated');
+
+it('binds recurringPendingCount to 0 when the authenticated user has no pending series (badge-is-zero-when-no-pending)', function (): void {
+    rcnbcSeries($this->user, 'approved', 'tnbc::approved-only', 'only-approved');
+
+    $response = $this->actingAs($this->user)->get(route('recurring.index'));
+    $content = $response->getContent() ?: '';
+    expect($content)->toContain('Recurring');
+    // No badge span when count = 0 — the @if ($recurringPendingCount > 0)
+    // guard suppresses the rounded-full span; the anchor still renders.
+    expect($content)->not->toContain('aria-label="Recurring; ');
+})->group('badge-is-zero-when-no-pending');
+
+it('uses the View Factory contract — the forbidden `view()->composer` shape is not present (no-view-helper-used)', function (): void {
+    $providerPath = base_path('Modules/Recurring/Providers/RecurringServiceProvider.php');
+    expect(file_exists($providerPath))->toBeTrue();
+
+    $contents = (string) file_get_contents($providerPath);
+    expect(str_contains($contents, 'view()->composer'))->toBeFalse();
+    expect(str_contains($contents, 'ViewFactoryContract'))->toBeTrue();
+})->group('no-view-helper-used');

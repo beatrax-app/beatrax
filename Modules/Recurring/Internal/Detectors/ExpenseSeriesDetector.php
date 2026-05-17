@@ -117,7 +117,8 @@ final class ExpenseSeriesDetector implements SeriesDetector
             return;
         }
 
-        $tolerance = self::DEFAULT_VARIANCE_TOLERANCE_PERCENT;
+        $tolerance = $this->existingToleranceFor($user, $counterparty, $currency)
+            ?? self::DEFAULT_VARIANCE_TOLERANCE_PERCENT;
         $filtered = self::applyVarianceFilter($rows, $tolerance);
         if (count($filtered) < self::MIN_OCCURRENCES) {
             return;
@@ -207,6 +208,35 @@ final class ExpenseSeriesDetector implements SeriesDetector
             $filtered,
             $user,
         );
+    }
+
+    /**
+     * Returns the variance tolerance percent stored on an existing
+     * approved/pending/cadence_changed series for this user +
+     * counterparty + currency, or null when no such series exists yet.
+     * Used to honour user-edited tolerance values during the next
+     * sweep so a widened tolerance does not fragment the cluster.
+     */
+    private function existingToleranceFor(User $user, string $counterparty, string $currency): ?int
+    {
+        $row = $this->db->connection()->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->where('direction', 'expense')
+            ->where('detected_name', $counterparty)
+            ->where('latest_currency', $currency)
+            ->whereIn('state', ['pending', 'approved', 'cadence_changed', 'snoozed'])
+            ->first(['variance_tolerance_percent']);
+
+        if ($row === null) {
+            return null;
+        }
+
+        $value = $row->variance_tolerance_percent ?? null;
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        return (int) $value;
     }
 
     /**
