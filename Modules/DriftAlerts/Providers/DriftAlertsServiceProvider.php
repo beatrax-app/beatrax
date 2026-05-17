@@ -15,6 +15,7 @@ use Modules\DriftAlerts\Internal\Http\Livewire\DashboardDriftBadge;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftThresholdEditor;
 use Modules\DriftAlerts\Internal\Jobs\DetectDriftAlertsJob;
+use Modules\DriftAlerts\Internal\Jobs\RevivedExpiredDriftSnoozesJob;
 use Modules\DriftAlerts\Internal\Listeners\EvaluateDriftOnMetricsRefreshed;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
@@ -50,6 +51,7 @@ final class DriftAlertsServiceProvider extends ServiceProvider
         $this->app->singleton(DriftAlertStateMachine::class);
         $this->app->singleton(DriftEvaluator::class);
         $this->app->singleton(DetectDriftAlertsJob::class);
+        $this->app->singleton(RevivedExpiredDriftSnoozesJob::class);
         $this->app->singleton(DriftAlertQuery::class);
         $this->app->singleton(CancellationImpactQuery::class);
         $this->app->singleton(AcknowledgeDriftAlert::class);
