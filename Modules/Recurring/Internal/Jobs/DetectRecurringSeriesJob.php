@@ -18,6 +18,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
+use Psr\Log\LoggerInterface;
 
 /**
  * Per-user recurring-detection sweep. Runs the snooze-expiry pass
@@ -80,17 +81,23 @@ final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, S
 
     /**
      * @param  iterable<SeriesDetector>  $detectors  container-tagged `recurring.detector`
+     * @param  LoggerInterface|null  $logger  optional PSR-3 logger for defensive
+     *                                        warnings on schema-impossible row shapes. The Laravel queue
+     *                                        worker auto-injects from the container; bare-handle test
+     *                                        callers can omit it and the warnings degrade to a silent
+     *                                        continue (same behaviour the legacy guard had).
      */
     public function handle(
         DatabaseManager $db,
         Clock $clock,
         iterable $detectors,
         RecurringSeriesStateMachine $stateMachine,
+        ?LoggerInterface $logger = null,
     ): void {
         /** @var User $user */
         $user = User::query()->where('id', $this->userId)->firstOrFail();
 
-        $this->expireSnoozes($db, $clock, $stateMachine, $user);
+        $this->expireSnoozes($db, $clock, $stateMachine, $logger, $user);
 
         foreach ($detectors as $detector) {
             $detector->detectForUser($user);
@@ -101,6 +108,7 @@ final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, S
         DatabaseManager $db,
         Clock $clock,
         RecurringSeriesStateMachine $stateMachine,
+        ?LoggerInterface $logger,
         User $user,
     ): void {
         $now = $clock->now()->toDateTimeString();
@@ -114,6 +122,17 @@ final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, S
         foreach ($rows as $row) {
             $id = is_numeric($row->id) ? (int) $row->id : 0;
             if ($id === 0) {
+                // The schema's autoincrement PK makes a numeric 0 id
+                // structurally impossible — logging this rather than
+                // silently continuing turns a schema corruption into a
+                // visible warning instead of a no-op.
+                if ($logger !== null) {
+                    $logger->warning(
+                        'DetectRecurringSeriesJob: encountered non-numeric recurring_series.id during snooze expiry; skipping.',
+                        ['user_id' => $user->id, 'row' => (array) $row],
+                    );
+                }
+
                 continue;
             }
             /** @var RecurringSeries $series */
