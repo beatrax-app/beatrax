@@ -16,6 +16,7 @@ use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Internal\Http\Livewire\ChainDrawer;
 use Modules\Chains\Internal\Http\Livewire\ChainReviewQueue;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
+use Modules\Chains\Internal\Listeners\CreateChainLinkFromHint;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
 use Modules\Chains\Internal\Services\BusChainResolutionDispatcher;
@@ -26,6 +27,7 @@ use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Receipts\Public\Events\ChainHintDetected;
 
 /**
  * Wires the Chains module.
@@ -73,6 +75,13 @@ final class ChainsServiceProvider extends ServiceProvider
         $this->app->singleton(ResolveChainLinksJob::class);
         $this->app->singleton(DispatchesChainResolution::class, BusChainResolutionDispatcher::class);
 
+        // Phase 7 Wave 2 — listener that consumes the Receipts module's
+        // ChainHintDetected event and INSERTs a candidate chain_links
+        // row for each card-funding or refund hint extracted by a
+        // receipt matcher. Registered as a singleton so the listener
+        // shares a single DatabaseManager + Clock pair across events.
+        $this->app->singleton(CreateChainLinkFromHint::class);
+
         // Wave 3 Public surface — review-queue + chain-drawer reads
         // (ChainLinkQuery + CardStatementQuery) and the per-pair
         // mutators (ConfirmChainLink + RejectChainLink).
@@ -100,6 +109,14 @@ final class ChainsServiceProvider extends ServiceProvider
 
         $this->registerJobFailedListener($events);
         $this->registerTopNavBadgeComposer();
+
+        // Subscribe the chain-hint listener to the cross-module
+        // Receipts event. `ChainHintDetected` is dispatched from
+        // `RecordReceipt` AFTER the canonical transaction is
+        // persisted, so the listener can always look up
+        // `from_transaction_id` if needed and the FK constraint on
+        // chain_links.from_transaction_id binds cleanly.
+        $events->listen(ChainHintDetected::class, [CreateChainLinkFromHint::class, 'handle']);
     }
 
     /**

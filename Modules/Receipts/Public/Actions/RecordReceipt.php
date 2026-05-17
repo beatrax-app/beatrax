@@ -48,6 +48,21 @@ use Throwable;
  * transactions table — that responsibility stays on the existing
  * NormalizeStage → FingerprintComposer → RecordTransactions pipeline,
  * which the caller (ParseStage) plugs into via ReceiptSourceAdapter.
+ *
+ * Chain-hint event dispatch — the `ChainHintDetected` event is NOT
+ * dispatched from this action. RecordReceipt cannot know the
+ * just-inserted `transactions.id` because the canonical row is
+ * persisted downstream by `RecordTransactions`. Instead the
+ * matcher's `ParsedReceiptDto::chainHints` rides through the
+ * canonical pipeline on `transactions.raw_payload['chain_hints']`
+ * (serialised by `ReceiptSourceAdapter::toSourceDto()`), and a
+ * Receipts-internal listener
+ * (`Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt`)
+ * subscribes to `TransactionImported` and re-emits
+ * `ChainHintDetected` with the canonical sourceTransactionId. The
+ * Chains module's `CreateChainLinkFromHint` then writes the
+ * candidate chain_links row. ParseStage is unchanged — it does not
+ * dispatch `ChainHintDetected` directly.
  */
 final class RecordReceipt
 {
