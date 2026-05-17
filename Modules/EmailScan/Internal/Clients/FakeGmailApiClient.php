@@ -20,7 +20,7 @@ use RuntimeException;
  * real client and the formal interface; both must adopt the same
  * shape so the test seam stays drop-in compatible.
  */
-final class FakeGmailApiClient
+final class FakeGmailApiClient implements GmailApiClientContract
 {
     /**
      * Chronological list of calls the Fake has received.
@@ -58,7 +58,7 @@ final class FakeGmailApiClient
      * returning the empty sentinel.
      *
      * @param  list<string>  $senderPatterns
-     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, historyId: ?string}
+     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, historyId: ?string, resultSizeEstimate: int}
      */
     public function listSenderMessages(int $inboxId, array $senderPatterns, ?string $pageToken): array
     {
@@ -80,11 +80,15 @@ final class FakeGmailApiClient
         /** @var list<array{id: string, threadId: string}> $messages */
         $messages = is_array($payload['messages'] ?? null) ? $payload['messages'] : [];
         $nextPageToken = is_string($payload['nextPageToken'] ?? null) ? $payload['nextPageToken'] : null;
+        $estimate = isset($payload['resultSizeEstimate']) && is_int($payload['resultSizeEstimate'])
+            ? $payload['resultSizeEstimate']
+            : 0;
 
         return [
             'messages' => $messages,
             'nextPageToken' => $nextPageToken,
             'historyId' => '12345',
+            'resultSizeEstimate' => $estimate,
         ];
     }
 
