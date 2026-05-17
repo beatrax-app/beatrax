@@ -37,6 +37,10 @@ arch('Modules\\EmailScan\\Internal is only used inside Modules\\EmailScan')
     ->expect('Modules\\EmailScan\\Internal')
     ->toOnlyBeUsedIn('Modules\\EmailScan');
 
+arch('Modules\\Receipts\\Internal is only used inside Modules\\Receipts')
+    ->expect('Modules\\Receipts\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Receipts');
+
 arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules')
@@ -383,6 +387,63 @@ it('does not allow any file other than InboxScanStateMachine to write inboxes.ba
     expect($hits)->toBe(
         [],
         "Only InboxScanStateMachine may write inboxes.backfill_progress. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+it('does not allow any file under Modules/Receipts/ to import EmailScan OAuth/client symbols (noEmailFetchFromReceipts)', function (): void {
+    // Phase 7 architectural boundary: the Receipts module owns the
+    // matcher pipeline + .eml/.mbox ingestion + ParsedReceiptDto →
+    // SourceTransactionDto bridge only. Email fetch / OAuth /
+    // provider-client work belongs to the EmailScan module
+    // (Phase 6). The receipts module reads `InboxMessageQuery` +
+    // the on-disk .eml — it must never import Gmail/Graph clients
+    // or OAuth providers. This rule mirrors the Phase 6
+    // `noTransactionWritesFromEmailScan` invariant by flipping the
+    // direction. The grep strips block + line comments first so
+    // legitimate PHPDoc references stay legal, and `tests/` is
+    // excluded so test doubles + fake fixtures can name the
+    // forbidden symbols.
+    $hits = [];
+    $receiptsDir = base_path('Modules/Receipts');
+    if (! is_dir($receiptsDir)) {
+        // Module folder lands in a later wave; until it does the
+        // rule is trivially satisfied.
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            $receiptsDir,
+            RecursiveDirectoryIterator::SKIP_DOTS,
+        ),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (
+            preg_match(
+                '/GmailApiClient|GraphApiClientContract|GoogleOAuthProvider|MicrosoftOAuthProvider|OAuthStateRepository|OAuthSecretsRepository/',
+                $stripped,
+            ) === 1
+        ) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "Modules/Receipts/ must never import EmailScan OAuth/client symbols. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
 

@@ -62,6 +62,7 @@
             "Modules\\Categorization\\Tests\\": "Modules/Categorization/tests/",
             "Modules\\Chains\\Tests\\": "Modules/Chains/tests/",
             "Modules\\EmailScan\\Tests\\": "Modules/EmailScan/tests/",
+            "Modules\\Receipts\\Tests\\": "Modules/Receipts/tests/",
             "Modules\\Transfers\\Tests\\": "Modules/Transfers/tests/"
         }
     },

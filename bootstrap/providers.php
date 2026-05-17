@@ -10,6 +10,7 @@ use Modules\EmailScan\Providers\EmailScanServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
+use Modules\Receipts\Providers\ReceiptsServiceProvider;
 use Modules\Transfers\Providers\TransfersServiceProvider;
 
 return [
@@ -22,4 +23,5 @@ return [
     ChainsServiceProvider::class,
     EmailScanServiceProvider::class,
     TransfersServiceProvider::class,
+    ReceiptsServiceProvider::class,
 ];
