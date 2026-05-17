@@ -41,6 +41,16 @@ dataset('idempotent_adapters', [
         'overlapBase' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv',
         'overlapNext' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv',
     ],
+    // Receipt-path row: same .eml dropped twice must produce zero
+    // additional canonical transactions on the second drop. Backed
+    // by the file_imports UNIQUE on (user_id, provider_message_id)
+    // and the FingerprintComposer v3 dedup tuple.
+    'paypal-receipt-eml' => [
+        'adapterFormat' => 'eml',
+        'fixture' => __DIR__.'/../../Modules/Receipts/tests/fixtures/paypal/current-receipt.eml',
+        'overlapBase' => __DIR__.'/../../Modules/Receipts/tests/fixtures/paypal/current-receipt.eml',
+        'overlapNext' => __DIR__.'/../../Modules/Receipts/tests/fixtures/paypal/current-receipt.eml',
+    ],
 ]);
 
 it('produces zero new rows when the same file is imported twice', function (

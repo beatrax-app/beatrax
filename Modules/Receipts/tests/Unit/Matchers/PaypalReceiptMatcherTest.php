@@ -7,10 +7,10 @@ use DateTimeImmutable;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
-use Modules\Receipts\Internal\Pipeline\EmlMimeReader;
-use Modules\Receipts\Internal\Pipeline\ReceiptSourceAdapter;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
+use Modules\Receipts\Public\Pipeline\EmlMimeReader;
+use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 
 function paypalMatcher(): PaypalReceiptMatcher
 {

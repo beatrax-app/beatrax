@@ -11,10 +11,10 @@ use Brick\Money\Exception\UnknownCurrencyException;
 use Brick\Money\Money;
 use Carbon\CarbonImmutable;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
-use Modules\Receipts\Internal\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
+use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Throwable;
 
 /**

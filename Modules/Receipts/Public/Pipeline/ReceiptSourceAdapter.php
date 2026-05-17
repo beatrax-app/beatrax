@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Receipts\Internal\Pipeline;
+namespace Modules\Receipts\Public\Pipeline;
 
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
