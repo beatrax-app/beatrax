@@ -84,9 +84,23 @@ interface GmailApiClientContract
      * internalDate without dragging the full RFC 822 body across the
      * wire. The Fake collapses all that into a single fixture replay.
      *
+     * `$pageToken` is the prior page's `nextPageToken` for walking past
+     * the 100-message-per-page Gmail cap; the caller paginates until
+     * `nextPageToken` returns null OR a per-job hard cap is reached.
+     *
+     * The discovered-message entries are typed as `array<string, mixed>`
+     * rather than a fixed-shape array — the caller defensively narrows
+     * each field at the foreach boundary so a future Fake variant or a
+     * production-side response shape drift cannot crash the daily scan.
+     *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
-     * @return array{messages: list<array{id: string, fromAddress: string, fromName: ?string, internalDate: string}>, nextPageToken: ?string}
+     * @return array{messages: list<array<string, mixed>>, nextPageToken: ?string}
      */
-    public function listDiscoveryCandidates(int $inboxId, array $keywords, array $excludeSenders): array;
+    public function listDiscoveryCandidates(
+        int $inboxId,
+        array $keywords,
+        array $excludeSenders,
+        ?string $pageToken = null,
+    ): array;
 }

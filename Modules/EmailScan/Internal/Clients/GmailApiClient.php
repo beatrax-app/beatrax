@@ -181,10 +181,14 @@ final class GmailApiClient implements GmailApiClientContract
      *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
-     * @return array{messages: list<array{id: string, fromAddress: string, fromName: ?string, internalDate: string}>, nextPageToken: ?string}
+     * @return array{messages: list<array<string, mixed>>, nextPageToken: ?string}
      */
-    public function listDiscoveryCandidates(int $inboxId, array $keywords, array $excludeSenders): array
-    {
+    public function listDiscoveryCandidates(
+        int $inboxId,
+        array $keywords,
+        array $excludeSenders,
+        ?string $pageToken = null,
+    ): array {
         $resource = $this->messagesResource($inboxId);
 
         // Build the broad keyword subject filter. Each keyword is
@@ -212,6 +216,9 @@ final class GmailApiClient implements GmailApiClientContract
         }
 
         $params = ['q' => $q, 'maxResults' => 100];
+        if ($pageToken !== null && $pageToken !== '') {
+            $params['pageToken'] = $pageToken;
+        }
 
         try {
             $response = $resource->listUsersMessages('me', $params);
