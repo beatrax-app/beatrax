@@ -1,14 +1,14 @@
-{{-- Correction-divergence toast (D-712).
+{{-- Correction-divergence toast.
 
-     Globally mounted Filament-notifications-style toast surfaced after
-     the user reclassifies a transaction whose initial suggestion came
-     from a rule. Two actions inline (Update rule / Keep current rule);
-     8s auto-dismiss via Alpine x-init setTimeout; manually dismissable.
+     Globally mounted Filament-notifications-style toast surfaced
+     after the user reclassifies a transaction whose initial
+     suggestion came from a rule. Two actions inline (Update rule /
+     Keep current rule); 8s auto-dismiss via Alpine x-init
+     setTimeout; manually dismissable.
 
-     Copy locked verbatim against 07-UI-SPEC.md § Correction-divergence
-     toast Copywriting Contract. Toast chrome inherits Phase 5's failed-
-     job toast (fixed bottom-right max-w-sm rounded-lg border bg-white
-     shadow-lg p-md). --}}
+     Toast chrome matches the shared failed-job toast pattern: fixed
+     bottom-right, max-w-sm rounded-lg border bg-white shadow-lg
+     p-md. --}}
 
 <div>
     @if ($visible)
