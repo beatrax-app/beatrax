@@ -36,4 +36,68 @@ final class CategorizationDiverged
         public readonly int $newCategoryId,
         public readonly int $userId,
     ) {}
+
+    /**
+     * Build a `CategorizationDiverged` event from a decoded prior
+     * `auto_category_provenance` array, or return null when the
+     * provenance does not represent a rule-driven suggestion whose
+     * category the user just overrode.
+     *
+     * This is the single canonical detector. Both `AssignCategory`
+     * (the framework-event dispatcher) and `TransactionDetail`'s
+     * Livewire-local re-dispatch route their detection through here so
+     * the validation logic stays in lockstep — any future provenance
+     * shape change is applied once.
+     *
+     * Returns null when:
+     *  - `$priorProvenance` is null (no prior auto-categorization), OR
+     *  - `source` !== 'rule' (memory-driven or manual provenance), OR
+     *  - `rule_id` is missing or non-numeric or zero, OR
+     *  - `category_id` is missing or non-numeric, OR
+     *  - `$newCategoryId` equals the prior `category_id` (no divergence).
+     *
+     * @param  array<string, mixed>|null  $priorProvenance
+     */
+    public static function fromProvenance(
+        ?array $priorProvenance,
+        int $transactionId,
+        int $newCategoryId,
+        int $userId,
+    ): ?self {
+        if ($priorProvenance === null) {
+            return null;
+        }
+
+        $source = $priorProvenance['source'] ?? null;
+        if ($source !== 'rule') {
+            return null;
+        }
+
+        $ruleIdRaw = $priorProvenance['rule_id'] ?? null;
+        if (! is_int($ruleIdRaw) && ! is_numeric($ruleIdRaw)) {
+            return null;
+        }
+        $ruleId = (int) $ruleIdRaw;
+        if ($ruleId === 0) {
+            return null;
+        }
+
+        $oldCategoryRaw = $priorProvenance['category_id'] ?? null;
+        if (! is_int($oldCategoryRaw) && ! is_numeric($oldCategoryRaw)) {
+            return null;
+        }
+        $oldCategoryId = (int) $oldCategoryRaw;
+
+        if ($newCategoryId === $oldCategoryId) {
+            return null;
+        }
+
+        return new self(
+            transactionId: $transactionId,
+            ruleId: $ruleId,
+            oldCategoryId: $oldCategoryId,
+            newCategoryId: $newCategoryId,
+            userId: $userId,
+        );
+    }
 }

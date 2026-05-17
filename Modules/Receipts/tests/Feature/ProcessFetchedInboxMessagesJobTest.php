@@ -14,7 +14,7 @@ use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
-use Modules\Receipts\Internal\Testing\FakeInboxMessageQuery;
+use Modules\Receipts\Tests\Doubles\FakeInboxMessageQuery;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 

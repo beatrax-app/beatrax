@@ -104,7 +104,7 @@ final class UploadWizard extends Component
         };
 
         return [
-            'file' => ['required', 'file', $sizeRule, 'extensions:csv,txt,xml,sta,mt940,940,pdf,eml,mbox,zip'],
+            'file' => ['required', 'file', $sizeRule, 'extensions:csv,txt,xml,sta,mt940,940,pdf,eml,mbox'],
             'issuer' => ['required', 'in:asn,ics,paypal,email-file'],
             'sourceFormat' => ['required', 'in:asn-csv,asn-camt053,asn-mt940,ics-pdf,paypal-csv,eml,mbox', $this->issuerFormatRule()],
         ];
