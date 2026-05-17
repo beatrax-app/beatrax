@@ -37,18 +37,29 @@ final readonly class RecurringSeriesQuery
     public function __construct(private DatabaseManager $db) {}
 
     /**
+     * Series whose state is exactly `pending` — never `cadence_changed`.
+     * The review page surfaces cadence-flipped rows on a dedicated tab
+     * via `cadenceChangedForUser`, so widening this projection would
+     * double-count those rows in both the Pending tab and the Cadence-
+     * changed tab.
+     *
      * @return list<RecurringSeriesDto>
      */
     public function pendingForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
-        return $this->scoped($user, ['pending', 'cadence_changed'], $cursorId, $limit, 'id');
+        return $this->scoped($user, ['pending'], $cursorId, $limit, 'id');
     }
 
+    /**
+     * Count of strictly-pending rows, mirroring `pendingForUser`. The
+     * top-nav badge composer reads this; the cadence-changed tab has
+     * its own queue and is intentionally NOT folded in.
+     */
     public function pendingCountForUser(User $user): int
     {
         return $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
-            ->whereIn('state', ['pending', 'cadence_changed'])
+            ->where('state', 'pending')
             ->count();
     }
 

@@ -49,6 +49,9 @@ function rsqcSeries(User $user, int $monthlyEquivalentMinor, string $name): Recu
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $this->db = $db;
     $this->user = rsqcUser('rsqc@diederik.test');
 });
 
@@ -76,6 +79,38 @@ it('returns approved rows in descending monthly_equivalent order across pages', 
     $page2Eq = array_map(static fn ($r) => $r->monthlyEquivalent->toMinor(), $page2);
     expect($page2Eq)->toBe([800, 200]);
 })->group('approved-cursor-respects-monthly-equivalent-sort');
+
+it('pendingForUser excludes cadence_changed rows so the Pending tab and the Cadence-changed tab do not double-count', function (): void {
+    rsqcSeries($this->user, 1000, 'pending-row');
+    /** @var RecurringSeries $pendingRow */
+    $pendingRow = RecurringSeries::query()
+        ->where('user_id', $this->user->id)
+        ->firstOrFail();
+    $this->db->connection()->table('recurring_series')
+        ->where('id', $pendingRow->id)
+        ->update(['state' => 'pending']);
+
+    rsqcSeries($this->user, 2000, 'cadence-changed-row');
+    /** @var RecurringSeries $cadenceRow */
+    $cadenceRow = RecurringSeries::query()
+        ->where('user_id', $this->user->id)
+        ->where('detected_name', 'cadence-changed-row')
+        ->firstOrFail();
+    $this->db->connection()->table('recurring_series')
+        ->where('id', $cadenceRow->id)
+        ->update(['state' => 'cadence_changed']);
+
+    /** @var RecurringSeriesQuery $query */
+    $query = $this->app->make(RecurringSeriesQuery::class);
+    $pending = $query->pendingForUser($this->user);
+    expect($pending)->toHaveCount(1);
+    expect($pending[0]->seriesId)->toBe($pendingRow->id);
+    expect($query->pendingCountForUser($this->user))->toBe(1);
+
+    $cadenceChanged = $query->cadenceChangedForUser($this->user);
+    expect($cadenceChanged)->toHaveCount(1);
+    expect($cadenceChanged[0]->seriesId)->toBe($cadenceRow->id);
+})->group('pending-excludes-cadence-changed');
 
 it('amountTrendForSeries returns an empty currency + empty points when the series row carries an empty latest_currency', function (): void {
     /** @var DatabaseManager $db */
