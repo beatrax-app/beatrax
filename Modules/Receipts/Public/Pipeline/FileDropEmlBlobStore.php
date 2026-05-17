@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Receipts\Public\Pipeline;
 
 use DateTimeImmutable;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
 use InvalidArgumentException;
 use RuntimeException;
@@ -13,7 +14,12 @@ use Throwable;
 /**
  * Filesystem repository for raw .eml blobs that arrived via file
  * drop (wizard upload + watched-folder secondary path), separate
- * from the Phase 6 EmailScan inbox blobs.
+ * from the EmailScan inbox blob store.
+ *
+ * Per-user blob duplication: the path is partitioned by `user_id` so
+ * two users dropping byte-identical email files land in two distinct
+ * physical files. This preserves per-user `chmod 0700` directory
+ * isolation; cross-user deduplication would defeat that boundary.
  *
  * Each blob lives at
  * `storage/app/inbox/{user_id}/file-drop/{YYYY}/{MM}/{messageIdHash}.eml`
@@ -30,13 +36,12 @@ use Throwable;
  * directory stays small enough for fast listings on APFS / ext4.
  *
  * Writes are atomic via the tmp + flock + fsync + chmod + rename
- * sequence borrowed verbatim from EmailScan's EmlBlobStore. A POSIX
- * rename is atomic, so a crash mid-write either leaves the previous
- * file in place or has not yet exposed the new one — there is no
- * in-between state where a partial .eml could be observed by a
- * reader. The parent directory is created on first write with mode
- * 0700 so cohabiting OS-level users cannot enumerate another user's
- * blobs.
+ * sequence. A POSIX rename is atomic, so a crash mid-write either
+ * leaves the previous file in place or has not yet exposed the new
+ * one — there is no in-between state where a partial .eml could be
+ * observed by a reader. The parent directory is created on first
+ * write with mode 0700 so cohabiting OS-level users cannot enumerate
+ * another user's blobs.
  *
  * `pathFor` rejects message ids whose characters fall outside the
  * `[A-Za-z0-9._-]{1,200}` allow-list — the sha256 hex synthetic id
@@ -55,7 +60,10 @@ final class FileDropEmlBlobStore
     /** Blob file mode — owner-only read/write. */
     private const FILE_MODE = 0600;
 
-    public function __construct(private readonly Filesystem $files) {}
+    public function __construct(
+        private readonly Filesystem $files,
+        private readonly Application $app,
+    ) {}
 
     /**
      * Compute the absolute on-disk path for a raw .eml blob without
@@ -74,7 +82,7 @@ final class FileDropEmlBlobStore
             );
         }
 
-        return storage_path(sprintf(
+        return $this->app->storagePath(sprintf(
             'app/inbox/%d/file-drop/%04d/%02d/%s.eml',
             $userId,
             (int) $internalDate->format('Y'),

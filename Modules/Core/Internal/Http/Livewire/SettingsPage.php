@@ -41,7 +41,7 @@ final class SettingsPage extends Component
     public int $periodStartDay = 1;
 
     /**
-     * Watched-folder secondary path toggle (D-704 / D-718). When on,
+     * Watched-folder secondary path toggle. When on,
      * ScanInboxDropFolderJob runs every 5 minutes for this user and
      * imports any .eml / .mbox files in
      * storage/app/inbox-drop/{userId}/ through the same matcher
@@ -68,13 +68,17 @@ final class SettingsPage extends Component
     /**
      * Instant-apply toggle for the watched-folder secondary path —
      * mirrors the currency-display section's "no Save button"
-     * posture (the toggle is its own commit). Writes
-     * users.auto_import_drop_folder directly via the raw query
-     * builder so the change is durable without re-triggering the
-     * defaultCurrencyView / periodStartDay validation envelope.
+     * posture (the toggle is its own commit). The Blade view binds
+     * the checkbox via `wire:change="toggleAutoImport"` only (no
+     * `wire:model.live`); the handler flips the property explicitly
+     * so a single round-trip covers both the property update and the
+     * DB write. Avoids the double round-trip the combined
+     * model.live + change binding would emit.
      */
     public function toggleAutoImport(CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
     {
+        $this->autoImportFromDropFolder = ! $this->autoImportFromDropFolder;
+
         $user = $currentUser->user();
         $db->connection()
             ->table('users')
@@ -98,16 +102,22 @@ final class SettingsPage extends Component
         $this->dispatch('settings-saved');
     }
 
-    public function render(ViewFactory $views): View
+    public function render(ViewFactory $views, CurrentUser $currentUser): View
     {
-        return $views->make('core::livewire.settings-page');
+        return $views->make('core::livewire.settings-page', [
+            // Expose the per-user inbox-drop path so the help text
+            // renders the directory the user must actually create
+            // (storage/app/inbox-drop/{userId}/) rather than the
+            // root inbox-drop folder.
+            'userId' => $currentUser->user()->id,
+        ]);
     }
 
     /**
-     * Custom validation messages locked to the phase-3 UI design contract.
-     * The boundary check for `periodStartDay` returns the same message for
-     * any failure of integer / min / max so the user sees one calm
-     * sentence regardless of which sub-rule flagged the value.
+     * Custom validation messages. The boundary check for
+     * `periodStartDay` returns the same message for any failure of
+     * integer / min / max so the user sees one calm sentence
+     * regardless of which sub-rule flagged the value.
      *
      * @return array<string, string>
      */

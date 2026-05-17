@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Import\Internal\Pipeline\Stages;
 
 use Generator;
+use Illuminate\Contracts\Filesystem\FileNotFoundException;
+use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\User;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
@@ -43,6 +45,7 @@ final class ParseStage
         private readonly RecordReceipt $recordReceipt,
         private readonly MboxIterator $mbox,
         private readonly ReceiptSourceAdapter $receiptAdapter,
+        private readonly Filesystem $files,
     ) {}
 
     /**
@@ -78,9 +81,13 @@ final class ParseStage
         $sourceFilename = basename($localPath);
 
         if ($sourceFormat === 'eml') {
-            $bytes = @file_get_contents($localPath);
-            if ($bytes === false) {
-                throw new RuntimeException("ParseStage: cannot read .eml at {$localPath}.");
+            try {
+                $bytes = $this->files->get($localPath);
+            } catch (FileNotFoundException $e) {
+                throw new RuntimeException(
+                    "ParseStage: cannot read .eml at {$localPath}.",
+                    previous: $e,
+                );
             }
 
             $outcome = ($this->recordReceipt)($bytes, $user, $sourceFilename);

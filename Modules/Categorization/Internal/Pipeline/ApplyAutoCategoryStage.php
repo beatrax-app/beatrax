@@ -22,11 +22,10 @@ use Throwable;
  *
  * Placement: ImportPipeline.preview() inserts this stage AFTER
  * ClassifyTransactionType and BEFORE FingerprintStage::classify.
- * Sync placement (no queued posture) — see RESEARCH Pattern 4 lines
- * 505-525. The rationale: every source format (CSV / CAMT / MT940 /
- * PayPal / ICS PDF / email receipts) flows through the same pipeline,
- * so a single sync stage covers them all without per-adapter
- * post-persistence wiring.
+ * Sync placement (no queued posture): every source format
+ * (CSV / CAMT / MT940 / PayPal / ICS PDF / email receipts) flows
+ * through the same pipeline, so one sync stage covers them all
+ * without per-adapter post-persistence wiring.
  *
  * Side-effect-free on stage failure: if RuleEvaluator throws (rare —
  * the evaluator catches its own DB exceptions), the stage logs a

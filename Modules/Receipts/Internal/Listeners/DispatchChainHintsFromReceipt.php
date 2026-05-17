@@ -50,16 +50,16 @@ use Modules\Receipts\Public\Events\ChainHintDetected;
  * by construction, but the early return keeps the cost at one
  * `in_array()` check per non-receipt import.
  *
- * Cross-user safety (T-07-09): the listener trusts the User on the
- * event payload as authoritative for the `userId` field of the
- * downstream `ChainHintDetected`. `RecordTransactions` populates that
- * field from the `User` argument it received, so any cross-user
- * leak would have to originate upstream of this listener.
+ * Cross-user safety: the listener trusts the User on the event
+ * payload as authoritative for the `userId` field of the downstream
+ * `ChainHintDetected`. `RecordTransactions` populates that field
+ * from the `User` argument it received, so any cross-user leak would
+ * have to originate upstream of this listener.
  *
- * @internal Wave 2 listener — subscribed in
- *           `ReceiptsServiceProvider::boot()`. The listener does NOT
- *           live in `Receipts/Public/` because it has no caller
- *           outside this module; only the framework dispatches it.
+ * @internal Subscribed in `ReceiptsServiceProvider::boot()`. The
+ *           listener does NOT live in `Receipts/Public/` because it
+ *           has no caller outside this module; only the framework
+ *           dispatches it.
  */
 final class DispatchChainHintsFromReceipt
 {

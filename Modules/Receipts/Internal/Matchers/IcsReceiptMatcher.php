@@ -57,12 +57,13 @@ use Throwable;
  * the corresponding ICS PDF row aligns because the PDF adapter
  * already normalises booked dates to startOfDay.
  *
- * PDF-attachment v2 escape: when zbateson reports a PDF attachment
- * AND the inline body lacks any extractable amount anchor, the
- * matcher returns `MatchOutcomeDto::skipped('pdf_attachment_v2_only')`
- * so the row surfaces in the /inboxes skipped view rather than being
- * silently dropped or mis-parsed. Parsing the PDF body is a deferred
- * Phase 7 v2 capability.
+ * PDF-attachment escape: when zbateson reports a PDF attachment AND
+ * the inline body lacks any extractable amount anchor, the matcher
+ * returns `MatchOutcomeDto::skipped('pdf_attachment_v2_only')` so the
+ * row surfaces in the /inboxes skipped view rather than being
+ * silently dropped or mis-parsed. The skip reason is a stable marker
+ * for downstream telemetry; parsing the PDF body itself is not the
+ * matcher's responsibility.
  *
  * Pure / stateless / singleton-safe — depends only on the injected
  * `EmlMimeReader`.
@@ -128,10 +129,11 @@ final class IcsReceiptMatcher implements SenderMatcher
             return MatchOutcomeDto::unmatched();
         }
 
-        // PDF-attachment v2 escape: when zbateson reports a PDF attachment
+        // PDF-attachment escape: when zbateson reports a PDF attachment
         // AND the inline body fails amount extraction, the row is the
-        // monthly-statement attachment shape (not a transactional receipt).
-        // Parsing the PDF bytes is a Phase 7 v2 capability.
+        // monthly-statement attachment shape (not a transactional
+        // receipt); skip with a stable reason for downstream
+        // telemetry.
         $hasPdfAttachment = false;
         foreach ($parsed->attachmentFilenames as $filename) {
             if (str_ends_with(strtolower($filename), '.pdf')) {
@@ -176,8 +178,13 @@ final class IcsReceiptMatcher implements SenderMatcher
         }
 
         $cardLast4 = null;
-        if (preg_match(self::CARD_LAST4_REGEX, $body, $cardMatches) === 1) {
-            $cardLast4 = $cardMatches[1];
+        $cardMatchFull = null;
+        $cardMatchOffset = null;
+        if (preg_match(self::CARD_LAST4_REGEX, $body, $cardMatches, PREG_OFFSET_CAPTURE) === 1) {
+            // PREG_OFFSET_CAPTURE returns each match as [string, int].
+            $cardLast4 = $cardMatches[1][0];
+            $cardMatchFull = $cardMatches[0][0];
+            $cardMatchOffset = $cardMatches[0][1];
         }
 
         $dateRaw = $parsed->headers['date'] ?? '';
@@ -193,13 +200,12 @@ final class IcsReceiptMatcher implements SenderMatcher
             $chainHints[] = new FundedByCardPayload(cardLast4: $cardLast4);
             // Snip a short evidence excerpt around the anchor so the
             // downstream ChainHintDetected event payload carries an
-            // auditable provenance string.
-            if (preg_match(self::CARD_LAST4_REGEX, $body, $evidenceMatches, PREG_OFFSET_CAPTURE) === 1) {
-                $offset = $evidenceMatches[0][1];
-                $chainEvidence = trim(substr($body, max(0, $offset - 5), strlen($evidenceMatches[0][0]) + 10));
-            } else {
-                $chainEvidence = 'eindigend op '.$cardLast4;
-            }
+            // auditable provenance string. We already captured the
+            // match offset above, so no second regex pass is needed.
+            // $cardMatchFull and $cardMatchOffset are populated together
+            // with $cardLast4 inside the preg_match branch above, so once
+            // $cardLast4 !== null both are guaranteed to be set.
+            $chainEvidence = trim(substr($body, max(0, $cardMatchOffset - 5), strlen($cardMatchFull) + 10));
         }
 
         $subject = $parsed->headers['subject'] ?? '';
