@@ -206,9 +206,23 @@ final class GraphApiClient implements GraphApiClientContract
     }
 
     /**
-     * Reserved for the discovery scan plan. Returns an empty page so
-     * the discovery loop is inert until the matcher phase wires the
-     * real keyword query.
+     * Daily-discovery query: walks `/me/messages?$search="subject:(receipt OR ...)"&$top=100&$select=id,from,subject,receivedDateTime`
+     * on the first call and follows the prior page's `@odata.nextLink`
+     * verbatim on subsequent calls. Graph's `$search` clause is the
+     * only supported way to keyword-match the subject field —
+     * `$filter contains(subject, ...)` is rejected by Graph for the
+     * messages collection (per https://learn.microsoft.com/en-us/graph/search-query-parameter).
+     *
+     * The exclude-senders filter is applied client-side AFTER the
+     * server-side `$search` call because Graph does NOT honour a
+     * `not from/emailAddress/address eq '...'` clause in combination
+     * with `$search` (the predicates are mutually exclusive at the
+     * Graph API layer). The cost of post-filtering is bounded by the
+     * server-side `$top=100` page size + the daily cadence.
+     *
+     * `$search` is mutually exclusive with `$orderby` — Graph rejects
+     * the combination — so the implementation deliberately omits
+     * `$orderby` and accepts the server's default ordering.
      *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
@@ -220,11 +234,93 @@ final class GraphApiClient implements GraphApiClientContract
         array $excludeSenders,
         ?string $nextLink,
     ): array {
-        unset($inboxId, $keywords, $excludeSenders, $nextLink);
+        if ($keywords === []) {
+            return ['messages' => [], 'nextLink' => null];
+        }
+
+        $accessToken = $this->ensureFreshAccessToken($inboxId);
+        $client = $this->makeHttpClient();
+
+        if ($nextLink !== null && $nextLink !== '') {
+            // Follow the prior page's @odata.nextLink verbatim — the
+            // search token and original $search payload are embedded
+            // in the URL by Graph.
+            $body = $this->getJson($client, $accessToken, $nextLink);
+        } else {
+            $quotedKeywords = array_map(
+                static fn (string $k): string => '"'.str_replace('"', '\\"', $k).'"',
+                $keywords,
+            );
+            // The `$search` payload uses Graph's KQL-style syntax:
+            // `subject:(<quoted OR-list>)` matches any of the keywords
+            // against the subject field. The whole expression is
+            // wrapped in outer double quotes per the Graph $search
+            // contract — Guzzle URL-encodes the query value.
+            $searchClause = '"subject:('.implode(' OR ', $quotedKeywords).')"';
+
+            $body = $this->getJson(
+                $client,
+                $accessToken,
+                self::GRAPH_BASE_URI.'me/messages',
+                [
+                    '$search' => $searchClause,
+                    '$top' => '100',
+                    '$select' => 'id,from,subject,receivedDateTime',
+                ],
+            );
+        }
+
+        $messages = $this->collectMessages($body);
+
+        // Client-side exclude-sender filter — Graph does not support a
+        // `not from/...` predicate in combination with $search, so the
+        // exclude list is applied AFTER the server response. Patterns
+        // starting with '@' match by domain suffix; otherwise a
+        // substring containment match. Both sides are lowercased.
+        if ($excludeSenders !== []) {
+            $lowerExcludes = array_map('strtolower', $excludeSenders);
+            $filtered = [];
+            foreach ($messages as $msg) {
+                $addr = '';
+                if (isset($msg['from']) && is_array($msg['from'])) {
+                    $emailAddress = $msg['from']['emailAddress'] ?? null;
+                    if (is_array($emailAddress)) {
+                        $rawAddr = $emailAddress['address'] ?? null;
+                        if (is_string($rawAddr)) {
+                            $addr = strtolower($rawAddr);
+                        }
+                    }
+                }
+                if ($addr === '') {
+                    continue;
+                }
+                $excluded = false;
+                foreach ($lowerExcludes as $pattern) {
+                    if (str_starts_with($pattern, '@')) {
+                        if (str_ends_with($addr, $pattern)) {
+                            $excluded = true;
+                            break;
+                        }
+                    } else {
+                        if (str_contains($addr, $pattern)) {
+                            $excluded = true;
+                            break;
+                        }
+                    }
+                }
+                if (! $excluded) {
+                    $filtered[] = $msg;
+                }
+            }
+            $messages = $filtered;
+        }
+
+        $rawNext = $body['@odata.nextLink'] ?? null;
+        $next = is_string($rawNext) && $rawNext !== '' ? $rawNext : null;
 
         return [
-            'messages' => [],
-            'nextLink' => null,
+            'messages' => $messages,
+            'nextLink' => $next,
         ];
     }
 

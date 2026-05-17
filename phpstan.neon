@@ -44,7 +44,9 @@ parameters:
         -
             message: '#Illuminate\\Support\\Facades\\Cache facade should not be used\.#'
             path: Modules/EmailScan/Internal/Jobs/IncrementalScanJob.php
-        # DiscoveryScanJob carve-out lands in Plan 09 when the class ships.
+        -
+            message: '#Illuminate\\Support\\Facades\\Cache facade should not be used\.#'
+            path: Modules/EmailScan/Internal/Jobs/DiscoveryScanJob.php
     allowedGlobalFunctions:
         - 'app_path'
         - 'base_path'

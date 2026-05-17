@@ -20,6 +20,7 @@ use Modules\EmailScan\Internal\Http\Livewire\BackfillWindowModal;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
+use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
@@ -89,6 +90,7 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(GraphApiClientContract::class, GraphApiClient::class);
         $this->app->singleton(InboxScanStateMachine::class);
         $this->app->singleton(IncrementalScanJob::class);
+        $this->app->singleton(DiscoveryScanJob::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
