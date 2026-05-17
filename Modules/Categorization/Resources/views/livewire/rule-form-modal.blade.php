@@ -1,17 +1,13 @@
-{{-- Rule form modal (D-709, D-720).
+{{-- Rule form modal.
 
      Renders inside a Flux <flux:modal name="rule-form" dismissible>
      wrapper. Three dropdowns + one text input + one category picker
-     + Save/Cancel laid out as a natural-language sentence per
-     UI-SPEC § Form field flow.
+     + Save/Cancel laid out as a natural-language sentence.
 
      Mounted globally in app.blade.php; dispatched via the
      `rule-form:open` Livewire event (optional ruleId param hydrates
      edit mode). Save fires `rule-form:saved` then dispatches
-     `modal-hide` so any page can listen for the resulting refresh.
-
-     Copy locked verbatim against 07-UI-SPEC.md § Copywriting
-     Contract → "Rule form modal". --}}
+     `modal-hide` so any page can listen for the resulting refresh. --}}
 
 <div>
     <flux:modal name="rule-form" dismissible>

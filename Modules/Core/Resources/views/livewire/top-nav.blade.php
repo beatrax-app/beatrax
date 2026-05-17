@@ -28,9 +28,8 @@
 
         {{-- "Inboxes" — discovered-sender candidates + needs_reauth
              inbox count from InboxesBadgeCount, injected via the
-             EmailScanServiceProvider View Factory composer (same
-             pattern Phase 5 issue #12 established for the chain-
-             review badge — uses $this->app->make(ViewFactoryContract::class)
+             EmailScanServiceProvider View Factory composer
+             (resolved through $this->app->make(ViewFactoryContract::class)
              ->composer(...), never the view() global helper). Badge
              hides when count = 0; caps at "99+" when > 99. --}}
         <a
@@ -73,8 +72,8 @@
 
         {{-- "Review chains" — open candidate count from ChainLinkQuery
              injected via the ChainsServiceProvider View Factory
-             composer (issue #12 fix: View Factory contract resolved
-             via $this->app->make(), never the view() global helper).
+             composer (View Factory contract resolved via
+             $this->app->make(), never the view() global helper).
              Badge hides when count = 0; caps at "99+" when > 99. --}}
         <a
             href="{{ route('chains.review') }}"

@@ -32,12 +32,12 @@ use Modules\Receipts\Public\Events\ChainHintDetected;
  *
  *  - `refund_of` -> `chain_links.kind = 'refund_of_hint'`. Emitted
  *    when a refund-shaped receipt surfaces the original-order
- *    reference id. (No matcher in plan 03 emits this hint type yet —
- *    refund handling is a deferred v2 capability — but the listener
- *    branch is in place so the Public event contract is total.)
+ *    reference id. No matcher emits this hint type yet — refund
+ *    pairing is a deferred capability — but the listener branch is
+ *    in place so the Public event contract is total.
  *
- * Cross-user safety (T-07-09 mitigation): the listener trusts the
- * `userId` field on the event payload as the authoritative source.
+ * Cross-user safety: the listener trusts the `userId` field on the
+ * event payload as the authoritative source.
  * The dispatcher (`RecordReceipt`) populates that field from the
  * `User` argument it received, so any cross-user leak would have to
  * originate upstream of this listener. The chain_links row's

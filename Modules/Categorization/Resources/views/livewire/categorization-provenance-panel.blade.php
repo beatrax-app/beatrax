@@ -1,13 +1,11 @@
-{{-- Transaction detail provenance panel (D-712).
+{{-- Transaction detail provenance panel.
 
      Three render branches keyed on $variant:
        - rule: "Rule that fired" card + Update rule / Remove rule
        - memory: "Auto-categorized from merchant history" card + Override
        - none: render nothing (manual or absent provenance — calm default)
 
-     Copy locked verbatim against 07-UI-SPEC.md § Transaction detail
-     provenance panels. The quoted rule value renders in mono per the
-     UI-SPEC § Typography provenance panel section so the user reads
+     The quoted rule value renders in monospace so the user reads
      "this is a literal string". --}}
 
 <div>
