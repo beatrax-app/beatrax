@@ -21,6 +21,26 @@ namespace Modules\Import\Public\Services;
  */
 final class SourceRefRanker
 {
+    /**
+     * Source-format slugs that represent an email-receipt-derived
+     * canonical row. The first-conflict toast flow (D-707) only
+     * triggers when an enrichment is sourced from a receipt format;
+     * a CSV-vs-MT940 enrichment is a Wave 1 silent ENRICHED path
+     * with no user-visible conflict prompt.
+     *
+     * Centralising the list here means plan 05's CAT-04 surfacing +
+     * future per-sender matchers share one source of truth for
+     * "is this row a receipt?".
+     *
+     * @var list<string>
+     */
+    private const RECEIPT_FORMATS = ['paypal-receipt', 'ics-receipt', 'google-play-receipt'];
+
+    public function isReceiptFormat(string $sourceFormat): bool
+    {
+        return in_array($sourceFormat, self::RECEIPT_FORMATS, true);
+    }
+
     public function rank(?string $ref, string $format): int
     {
         if ($ref === null || $ref === '') {

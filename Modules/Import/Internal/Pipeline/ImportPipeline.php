@@ -152,6 +152,7 @@ final class ImportPipeline
                         newSourceRef: $disposition->toSourceRef,
                         importRunId: $importRunId,
                         sourceFormat: $sourceFormat,
+                        conflictingFields: $disposition->conflictingFields,
                     );
                 }
             }
