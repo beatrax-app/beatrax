@@ -44,10 +44,15 @@ function ersSeries(User $user, string $cluster): RecurringSeries
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
     $this->user = ersUser('ers@diederik.test');
-    /** @var EditRecurringSeriesName $action */
-    $action = $this->app->make(EditRecurringSeriesName::class);
-    $this->action = $action;
 });
+
+function ersAction(): EditRecurringSeriesName
+{
+    /** @var EditRecurringSeriesName $action */
+    $action = app(EditRecurringSeriesName::class);
+
+    return $action;
+}
 
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
@@ -56,7 +61,7 @@ afterEach(function (): void {
 it('writes display_name_override without producing a transitions row', function (): void {
     $series = ersSeries($this->user, 'ers::set');
 
-    ($this->action)($series->id, $this->user, 'Spotify (family plan)');
+    (ersAction())($series->id, $this->user, 'Spotify (family plan)');
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -74,7 +79,7 @@ it('clears the display_name_override when passed null', function (): void {
     $series->display_name_override = 'previous override';
     $series->save();
 
-    ($this->action)($series->id, $this->user, null);
+    (ersAction())($series->id, $this->user, null);
 
     /** @var RecurringSeries $fresh */
     $fresh = RecurringSeries::query()->findOrFail($series->id);
@@ -85,7 +90,7 @@ it('throws NotFoundHttpException for a cross-user series id', function (): void 
     $intruder = ersUser('ers-intruder@diederik.test');
     $series = ersSeries($this->user, 'ers::xuser');
 
-    expect(fn () => ($this->action)($series->id, $intruder, 'evil'))
+    expect(fn () => (ersAction())($series->id, $intruder, 'evil'))
         ->toThrow(NotFoundHttpException::class);
 
     /** @var RecurringSeries $fresh */
