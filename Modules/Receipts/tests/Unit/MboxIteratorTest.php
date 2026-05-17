@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Receipts\Internal\Pipeline\MboxIterator;
+use Modules\Receipts\Public\Pipeline\MboxIterator;
 
 it('streams exactly 5 messages from the small.mbox fixture', function (): void {
     $iterator = new MboxIterator;

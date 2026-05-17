@@ -1,0 +1,2 @@
+Datum,Tijd,Tijdzone,Omschrijving,Valuta,"Bruto ","Kosten ",Netto,Saldo,Transactiereferentie,"Van e-mailadres",Naam,"Naam bank",Bankrekening,Verzendkosten,Btw,Factuurreferentie,"Reference Txn ID"
+5/17/2026,09:42:13,Europe/Berlin,"Vooraf goedgekeurde betaling – rekening betaald door gebruiker",EUR,"-12,99","0,00","-12,99","-12,99",PAYPALTXN17052026,kaarthouder@example.test,"Netflix BV",,,"0,00","0,00",,

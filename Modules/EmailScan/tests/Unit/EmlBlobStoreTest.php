@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Filesystem\Filesystem;
-use Modules\EmailScan\Internal\EmlBlobStore;
+use Modules\EmailScan\Public\Services\EmlBlobStore;
 
 function ebsStore(): EmlBlobStore
 {

@@ -1,0 +1,19 @@
+From: service@paypal.com
+To: kaarthouder@example.test
+Subject: Your receipt for your payment to Etsy LLC
+Date: Sun, 17 May 2026 14:08:22 +0200
+Message-ID: <deterministic-fx-1@paypal.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hello Cardholder,
+
+You sent a payment via PayPal.
+
+Merchant: Etsy LLC
+Amount: $ 12.99 USD
+Conversion to EUR: EUR 11,82
+Transaction ID: PAYPALTXNFXAUS017
+
+Thanks for using PayPal.

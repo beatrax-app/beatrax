@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Receipts\Internal\Pipeline;
+namespace Modules\Receipts\Public\Pipeline;
 
 /**
  * Read-only result of EmlMimeReader::read(). Exposes the decoded

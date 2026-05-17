@@ -30,6 +30,16 @@ final class SourceRefRanker
         return match ($format) {
             'asn-camt053' => 4,
             'asn-mt940' => 2,
+            // PayPal email receipts win on ENRICHED over their CSV
+            // counterpart: a receipt carries the canonical PayPal
+            // Transaction ID (17-char alphanumeric) while the CSV's
+            // Transactiereferentie is the same identifier rendered as
+            // an `O-...` slug. When both surface for the same logical
+            // payment the receipt-derived reference is the audit-
+            // friendly choice — ranking it ABOVE 'paypal-csv' makes
+            // the FingerprintStage prefer the receipt at the cross-
+            // format enrichment site.
+            'paypal-receipt' => 2,
             'asn-csv' => 1,
             // PayPal Activity Download CSV rides in the same band as
             // asn-csv. PayPal rows never collide with ASN rows under

@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Schedule;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
+use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
 
 // App-wide artisan command bindings live here. Module-local artisan
 // commands are registered from each module's ServiceProvider.
@@ -51,3 +52,19 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
         $bus->dispatch(new DiscoveryScanJob((int) $id));
     }
 })->name('email-scan.discovery')->daily()->withoutOverlapping(30);
+
+// Hourly matcher consumer: walks inbox_messages.status='fetched' for
+// each user, transitions each row to parsed / skipped / unmatched
+// via the shared RecordReceipt action. The job's
+// ShouldBeUniqueUntilProcessing lock keyed on userId collapses a
+// same-hour re-dispatch into a single queued job; the withoutOverlapping
+// guard prevents this scheduler closure from racing with itself.
+// Cadence matches Phase 6's incremental scan hourly tick so fetched
+// rows surface as canonical transactions within the same wall-clock
+// hour they arrive.
+Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
+    $userIds = $db->connection()->table('users')->pluck('id');
+    foreach ($userIds as $id) {
+        $bus->dispatch(new ProcessFetchedInboxMessagesJob((int) $id));
+    }
+})->name('receipts.process-fetched-inbox-messages')->hourly()->withoutOverlapping(30);

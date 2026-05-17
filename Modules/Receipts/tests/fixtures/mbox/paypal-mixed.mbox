@@ -1,0 +1,29 @@
+From service@paypal.com Sun May 17 09:42:13 2026
+From: service@paypal.com
+To: kaarthouder@example.test
+Subject: Je ontvangstbewijs van Netflix BV
+Date: Sun, 17 May 2026 09:42:13 +0200
+Message-ID: <mbox-paypal-1@paypal.com>
+
+Aan: Netflix BV
+Bedrag: EUR 12,99
+Transaction ID: PAYPALTXN17052026
+
+From notifications@netflix.com Sun May 17 10:00:00 2026
+From: notifications@netflix.com
+To: kaarthouder@example.test
+Subject: Your bill is ready
+Date: Sun, 17 May 2026 10:00:00 +0200
+Message-ID: <mbox-netflix-2@netflix.com>
+
+Your bill is ready. Please review.
+
+From service@paypal.com Sun May 17 11:00:00 2026
+From: service@paypal.com
+To: kaarthouder@example.test
+Subject: New device sign-in
+Date: Sun, 17 May 2026 11:00:00 +0200
+Message-ID: <mbox-paypal-login-3@paypal.com>
+
+We noticed a new sign-in to your PayPal account. No further action needed.
+

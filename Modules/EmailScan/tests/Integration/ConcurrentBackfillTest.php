@@ -14,10 +14,10 @@ use Modules\EmailScan\Internal\Clients\FakeGmailApiClient;
 use Modules\EmailScan\Internal\Clients\FakeGraphApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
-use Modules\EmailScan\Internal\EmlBlobStore;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 use Modules\EmailScan\Internal\MimeHeaderParser;
+use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
