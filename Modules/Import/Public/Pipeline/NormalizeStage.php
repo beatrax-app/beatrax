@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Import\Internal\Pipeline\Stages;
+namespace Modules\Import\Public\Pipeline;
 
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;

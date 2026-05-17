@@ -29,7 +29,7 @@ use stdClass;
  * call site with a typo fails loud rather than silently returning
  * zero rows.
  */
-final readonly class InboxMessageQuery
+readonly class InboxMessageQuery
 {
     private const ALLOWED_STATUSES = ['fetched', 'parsed', 'skipped', 'unmatched'];
 
