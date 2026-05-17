@@ -134,11 +134,12 @@ final class FakeGraphApiClient implements GraphApiClientContract
      *
      * @return array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}
      */
-    public function deltaPage(int $inboxId, ?string $deltaLink): array
+    public function deltaPage(int $inboxId, ?string $deltaLink, ?DateTimeImmutable $sinceOverride = null): array
     {
         $this->calls[] = ['method' => __FUNCTION__, 'args' => [
             'inboxId' => $inboxId,
             'deltaLink' => $deltaLink,
+            'sinceOverride' => $sinceOverride?->format(\DateTimeInterface::ATOM),
         ]];
 
         if (array_key_exists($inboxId, $this->deltaRateLimitedInboxes)) {

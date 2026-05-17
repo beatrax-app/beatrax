@@ -12,18 +12,22 @@ use Modules\EmailScan\Internal\MimeHeaderParser;
  * verifies zbateson decodes underscore-to-space + UTF-8 byte
  * sequences correctly. The ICS + Google Play fixtures carry plain
  * Subject headers; they round-trip verbatim. A fourth case asserts
- * the parseHeadersWithFallbackDate() overload falls back to the
- * supplied date when the parsed Date header is unparseable.
+ * the fallback date is used when the parsed Date header is missing
+ * or unparseable.
  */
 
 beforeEach(function (): void {
     $this->parser = new MimeHeaderParser;
     $this->fixtureRoot = __DIR__.'/../fixtures/eml';
+    // Stable epoch-style fallback so any test that drops it onto an
+    // entry would surface as an obviously-distinct date in the
+    // assertion message.
+    $this->fallback = new DateTimeImmutable('2000-01-01 00:00:00+00:00');
 });
 
 it('extracts From + Subject + Date from the PayPal Q-encoded fixture', function (): void {
     $raw = (string) file_get_contents($this->fixtureRoot.'/paypal/sample-receipt.eml');
-    $headers = $this->parser->parseHeaders($raw);
+    $headers = $this->parser->parseHeadersWithFallbackDate($raw, $this->fallback);
 
     expect($headers->senderEmail)->toBe('service@paypal.com');
     expect($headers->senderName)->toBe('PayPal');
@@ -33,7 +37,7 @@ it('extracts From + Subject + Date from the PayPal Q-encoded fixture', function 
 
 it('extracts From + Subject + Date from the ICS plain-subject fixture', function (): void {
     $raw = (string) file_get_contents($this->fixtureRoot.'/ics/sample-statement-notice.eml');
-    $headers = $this->parser->parseHeaders($raw);
+    $headers = $this->parser->parseHeadersWithFallbackDate($raw, $this->fallback);
 
     expect($headers->senderEmail)->toBe('noreply@ics.nl');
     expect($headers->senderName)->toBe('ICS Cards');
@@ -43,7 +47,7 @@ it('extracts From + Subject + Date from the ICS plain-subject fixture', function
 
 it('extracts From + Subject + Date from the Google Play fixture', function (): void {
     $raw = (string) file_get_contents($this->fixtureRoot.'/googleplay/sample-purchase.eml');
-    $headers = $this->parser->parseHeaders($raw);
+    $headers = $this->parser->parseHeadersWithFallbackDate($raw, $this->fallback);
 
     expect($headers->senderEmail)->toBe('googleplay-noreply@google.com');
     expect($headers->senderName)->toBe('Google Play');
@@ -59,7 +63,7 @@ it('lowercases an upper-case sender address at parse time (normalisation rule)',
         ."\r\n"
         .'body';
 
-    $headers = $this->parser->parseHeaders($raw);
+    $headers = $this->parser->parseHeadersWithFallbackDate($raw, $this->fallback);
 
     expect($headers->senderEmail)->toBe('service@paypal.com');
 });
@@ -85,7 +89,7 @@ it('returns null senderName when the From header has no display name', function 
         ."\r\n"
         .'body';
 
-    $headers = $this->parser->parseHeaders($raw);
+    $headers = $this->parser->parseHeadersWithFallbackDate($raw, $this->fallback);
 
     expect($headers->senderName)->toBeNull();
 });
@@ -97,7 +101,7 @@ it('returns null subject when the Subject header is empty', function (): void {
         ."\r\n"
         .'body';
 
-    $headers = $this->parser->parseHeaders($raw);
+    $headers = $this->parser->parseHeadersWithFallbackDate($raw, $this->fallback);
 
     expect($headers->subject)->toBeNull();
 });
