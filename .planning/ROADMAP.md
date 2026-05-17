@@ -139,7 +139,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 06-06-PLAN.md — Wave 5 backfill (Microsoft Graph): real GraphApiClient + two-phase scan (non-delta /me/messages?$filter walk for backfill + single deltaPage(null) baseline at end) + BackfillInboxJob Microsoft branch (EML-04 Microsoft half)
   - [x] 06-07-PLAN.md — Wave 6 incremental scan: InboxScanStateMachine upgrade (transition validation + retry_attempts + lockForUpdate) + IncrementalScanJob (cursor-walk + Gmail historyId 404 / Graph 410 fallbacks + rate-limit backoff + invalid_grant → needs_reauth) + Schedule::call hourly + JobFailed listener (EML-06 + EML-08)
   - [x] 06-08-PLAN.md — Wave 7 UI surfaces: ThisPeriodAtAGlanceQuery::emailScanHealth() + dashboard tile (D-125) + top-nav Inboxes badge via View Factory composer (D-126) + status badge matrix (6 variants) + Scan-now / Reconnect inline row actions + reauth-detected toast on dashboard (D-115)
-  - [ ] 06-09-PLAN.md — Wave 8 discovery loop + launchd: DiscoveryScanJob (daily; no .eml blobs) + DiscoveredSenderQuery + PromoteDiscoveredSender + DismissDiscoveredSender + /inboxes discovered senders panel + three launchd plists under deploy/launchd/ + diederik:install --launchd + README Background workers section (PLT-04)
+  - [x] 06-09-PLAN.md — Wave 8 discovery loop + launchd: DiscoveryScanJob (daily; no .eml blobs) + DiscoveredSenderQuery + PromoteDiscoveredSender + DismissDiscoveredSender + /inboxes discovered senders panel + three launchd plists under deploy/launchd/ + diederik:install --launchd + README Background workers section (PLT-04)
 **UI hint**: yes
 
 ### Phase 7: Email Template Matchers + Categorization Learning
