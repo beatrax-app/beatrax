@@ -185,6 +185,68 @@ it('removes the rule when removeRule is invoked and flips the panel to none vari
     expect(DB::table('categorization_rules')->where('id', $ruleId)->exists())->toBeFalse();
 });
 
+it('removeRule catches NotFoundHttpException when the rule was deleted in another tab and surfaces a calm flash', function (): void {
+    // Cross-tab race: the panel hydrated with $ruleId=$ruleId from
+    // the prior render, then the rule was deleted out-of-band before
+    // the user clicked Remove rule. DeleteCategorizationRule sees no
+    // visible row and throws NotFoundHttpException. The component
+    // must catch it, surface a calm flash, and re-hydrate the panel
+    // — never a 500 / framework error page.
+    $ruleId = seedProvenanceRule($this->user->id, $this->streaming->id);
+    $txId = seedProvTransaction(
+        $this->user->id,
+        $this->account->id,
+        $this->importRun->id,
+        $this->streaming->id,
+        ['source' => 'rule', 'rule_id' => $ruleId, 'memory_id' => null, 'category_id' => $this->streaming->id],
+    );
+
+    $component = Livewire::test(CategorizationProvenancePanel::class, ['transactionId' => $txId])
+        ->assertSet('variant', 'rule')
+        ->assertSet('ruleId', $ruleId);
+
+    // Simulate the cross-tab race: the row vanishes between renders.
+    DB::table('categorization_rules')->where('id', $ruleId)->delete();
+
+    $component
+        ->call('confirmRemove')
+        ->call('removeRule')
+        ->assertSet('variant', 'none')
+        ->assertSet('confirmingRemove', false)
+        ->assertSet('flashMessage', 'Rule no longer exists (it may have been deleted in another tab).');
+});
+
+it('removeRule catches NotFoundHttpException when the panel carries a foreign-user ruleId', function (): void {
+    // Tampered Livewire payload posture: the panel state carries a
+    // ruleId that belongs to another user. DeleteCategorizationRule's
+    // user-scoped lookup rejects it with NotFoundHttpException. The
+    // component must catch it; the foreign row MUST remain untouched.
+    $other = User::create([
+        'email' => 'prov-tamper@example.com',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+    ]);
+    $foreignRuleId = seedProvenanceRule($other->id, $this->streaming->id, 'NETFLIX');
+
+    $txId = seedProvTransaction(
+        $this->user->id,
+        $this->account->id,
+        $this->importRun->id,
+        $this->streaming->id,
+        null,
+    );
+
+    Livewire::test(CategorizationProvenancePanel::class, ['transactionId' => $txId])
+        ->set('ruleId', $foreignRuleId)
+        ->set('variant', 'rule')
+        ->call('confirmRemove')
+        ->call('removeRule')
+        ->assertSet('flashMessage', 'Rule no longer exists (it may have been deleted in another tab).');
+
+    // The foreign rule MUST remain untouched.
+    expect(DB::table('categorization_rules')->where('id', $foreignRuleId)->exists())->toBeTrue();
+});
+
 it('dispatches rule-form:open with the ruleId when updateRule is clicked', function (): void {
     $ruleId = seedProvenanceRule($this->user->id, $this->streaming->id);
     $txId = seedProvTransaction(

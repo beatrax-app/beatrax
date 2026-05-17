@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Inline provenance panel embedded in the transaction detail page,
@@ -53,6 +54,8 @@ final class CategorizationProvenancePanel extends Component
 
     public bool $confirmingRemove = false;
 
+    public string $flashMessage = '';
+
     public function mount(
         int $transactionId,
         DatabaseManager $db,
@@ -90,7 +93,28 @@ final class CategorizationProvenancePanel extends Component
         if ($this->ruleId === null) {
             return;
         }
-        ($delete)($currentUser->user(), $this->ruleId);
+
+        // DeleteCategorizationRule throws NotFoundHttpException when the
+        // ruleId no longer resolves via the user-scoped lookup inside
+        // the action — e.g. the rule was deleted in another tab between
+        // the panel render and the user clicking Remove rule, or a
+        // tampered Livewire payload carries a foreign id. Without this
+        // catch the user lands on a 500 / framework error page; the
+        // catch lets the panel re-hydrate from the surviving provenance
+        // and surface a calm flash message instead. The action's own
+        // ownership guard already prevents the delete from succeeding
+        // cross-user — the catch only affects the UI surface, not the
+        // security boundary.
+        try {
+            ($delete)($currentUser->user(), $this->ruleId);
+        } catch (NotFoundHttpException) {
+            $this->flashMessage = 'Rule no longer exists (it may have been deleted in another tab).';
+            $this->confirmingRemove = false;
+            $this->hydrateFromProvenance($db, $currentUser, $rules);
+
+            return;
+        }
+
         $this->confirmingRemove = false;
 
         // After deleting the rule the panel falls back to memory /
@@ -117,6 +141,7 @@ final class CategorizationProvenancePanel extends Component
             'value' => $this->value,
             'categoryPath' => $this->categoryPath,
             'confirmingRemove' => $this->confirmingRemove,
+            'flashMessage' => $this->flashMessage,
         ]);
     }
 

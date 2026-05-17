@@ -9,6 +9,15 @@
      "this is a literal string". --}}
 
 <div>
+    @if ($flashMessage !== '')
+        <aside
+            role="status"
+            class="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600"
+        >
+            {{ $flashMessage }}
+        </aside>
+    @endif
+
     @if ($variant === 'rule')
         <section
             aria-labelledby="provenance-heading-{{ $transactionId }}"
