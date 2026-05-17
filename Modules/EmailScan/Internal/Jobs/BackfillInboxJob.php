@@ -224,6 +224,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 $sm,
                 $userId,
                 $senderPatterns,
+                $window,
             );
 
             return;
@@ -269,8 +270,19 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         InboxScanStateMachine $sm,
         int $userId,
         array $senderPatterns,
+        int $windowMonths,
     ): void {
         $sm->applyStatus($this->inboxId, 'backfilling');
+
+        // Honour the user-selected backfill window — the Gmail
+        // `after:` operator bounds the q= search to a date floor so
+        // the walk stops at the slider value rather than racing the
+        // dawn-of-inbox quota cap. The Microsoft branch already
+        // computes the equivalent receivedDateTime floor below; the
+        // two branches must apply the same window semantics or a
+        // user toggling "3 months" gets wildly different fetched
+        // corpora depending on provider.
+        $windowStart = $clock->now()->modify("-{$windowMonths} months")->toDateTimeImmutable();
 
         // Mutable accumulators captured by the page closure. The
         // running estimate is the max() of the per-page hints; the
@@ -290,8 +302,8 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 $mime,
                 $sm,
                 $userId,
-                fetchNextPage: function (?string $cursor) use ($gmail, $senderPatterns, $accum): array {
-                    $page = $gmail->listSenderMessages($this->inboxId, $senderPatterns, $cursor);
+                fetchNextPage: function (?string $cursor) use ($gmail, $senderPatterns, $windowStart, $accum): array {
+                    $page = $gmail->listSenderMessages($this->inboxId, $senderPatterns, $cursor, $windowStart);
                     $accum->estimated = max($accum->estimated, $page['resultSizeEstimate']);
                     if ($page['historyId'] !== null) {
                         $accum->highestHistoryId = $page['historyId'];
@@ -362,7 +374,17 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
     ): void {
         $sm->applyStatus($this->inboxId, 'backfilling');
 
-        $windowStart = $clock->now()->modify("-{$windowMonths} months");
+        // Capture the wall-clock anchor BEFORE any provider call so the
+        // post-walk deltaPage(null, anchor) baseline filter uses the
+        // pre-walk timestamp. This closes the multi-hour-backfill race
+        // window: a message arriving during the walk but after the
+        // walker's cursor has paged past its position would otherwise
+        // be missed AND fall outside a baseline whose lower bound was
+        // captured after the walk completed. With the anchor pinned at
+        // walkStartedAt, any in-window message either lands in the
+        // walk's filter OR is captured by the next incremental tick.
+        $walkStartedAt = $clock->now()->toDateTimeImmutable();
+        $windowStart = $walkStartedAt->modify("-{$windowMonths} months");
 
         // Mutable accumulators captured by the page closure. The
         // running estimate is the max count of messages seen across
@@ -436,7 +458,11 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             //    BEFORE the inbox is marked idle. The deltaLink write
             //    goes through the state machine's recordCursor surface
             //    so the noOtherInboxScanStateMutator boundary holds.
-            $baseline = $graph->deltaPage($this->inboxId, null);
+            //    The baseline's lower bound is pinned to the pre-walk
+            //    anchor so messages arriving DURING the walk are
+            //    captured by the next incremental tick rather than
+            //    falling into a gap between walk-end and baseline-now.
+            $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
             $deltaLink = $baseline['deltaLink'] ?? null;
             if ($deltaLink !== null && $deltaLink !== '') {
                 $sm->recordCursor(
@@ -543,11 +569,17 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 
                 // Provider-supplied internal date (Microsoft) vs. in-
                 // body Date: header (Gmail). Either way the parser
-                // returns the four index fields together.
+                // returns the four index fields together. When the
+                // provider does not stamp a per-message internalDate
+                // (Gmail's users.messages.list response), the fallback
+                // is the project Clock — passing 'now' through the
+                // contract surface keeps test-frozen time honoured
+                // (WR-07 iter-2: parseHeaders() used to call
+                // new DateTimeImmutable('now') directly, bypassing
+                // the Clock).
                 $internalDate = $extractInternalDate($msgMeta);
-                $headers = $internalDate === null
-                    ? $mime->parseHeaders($rawEml)
-                    : $mime->parseHeadersWithFallbackDate($rawEml, $internalDate);
+                $fallbackDate = $internalDate ?? $clock->now()->toDateTimeImmutable();
+                $headers = $mime->parseHeadersWithFallbackDate($rawEml, $fallbackDate);
 
                 $emlPath = $blobStore->pathFor(
                     $userId,

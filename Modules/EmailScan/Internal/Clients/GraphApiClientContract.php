@@ -86,16 +86,24 @@ interface GraphApiClientContract
      * When `$deltaLink === null` the call is the post-backfill baseline
      * — it returns an empty `value` plus the first `@odata.deltaLink`
      * which the caller persists into `inbox_scan_state.last_delta_link`
-     * for the incremental-scan plan to walk from.
+     * for the incremental-scan plan to walk from. The lower-bound
+     * `receivedDateTime` floor used in the baseline filter defaults to
+     * the wall-clock now from the implementation's injected Clock; the
+     * caller can pin a specific anchor via `$sinceOverride` to close
+     * the multi-hour-backfill race window — messages arriving between
+     * walk-start and baseline-establish would otherwise be skipped on
+     * both the walk and the incremental cursor.
      *
      * When `$deltaLink !== null` the implementation follows the URL
      * verbatim (the cursor token + filter are embedded in the URL by
-     * Graph). On 410 / `syncStateNotFound` the implementation throws
+     * Graph). The `$sinceOverride` parameter is ignored on the walk
+     * branch — the filter is already locked into the deltaLink URL.
+     * On 410 / `syncStateNotFound` the implementation throws
      * `CursorExpiredException::graph()`.
      *
      * @return array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}
      */
-    public function deltaPage(int $inboxId, ?string $deltaLink): array;
+    public function deltaPage(int $inboxId, ?string $deltaLink, ?DateTimeImmutable $sinceOverride = null): array;
 
     /**
      * Daily-discovery query: walks `/me/messages?$search="subject:(receipt OR ...)"&$top=100&$select=id,from,subject,receivedDateTime`
