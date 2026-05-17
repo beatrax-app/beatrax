@@ -1,6 +1,7 @@
 ---
 phase: 06-email-receipt-ingestion-infrastructure
 reviewed: 2026-05-17T00:00:00Z
+resolved: 2026-05-17T00:00:00Z
 depth: standard
 files_reviewed: 60
 files_reviewed_list:
@@ -88,15 +89,16 @@ findings:
   warning: 9
   info: 6
   total: 20
-status: issues_found
+status: resolved
 ---
 
 # Phase 6: Code Review Report
 
 **Reviewed:** 2026-05-17T00:00:00Z
+**Resolved:** 2026-05-17T00:00:00Z
 **Depth:** standard
 **Files Reviewed:** 60 production files (tests excluded per scope config)
-**Status:** issues_found
+**Status:** resolved — see [Resolution](#resolution) at the bottom of this file
 
 ## Summary
 
@@ -642,3 +644,45 @@ The View composer fires on every page render that surfaces the top-nav — at 5 
 _Reviewed: 2026-05-17T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+---
+
+## Resolution
+
+All 20 findings resolved against branch `gsd-reviewfix/06-2655` (merged into `main`). Each fix carries its own atomic commit; the SHAs below reference the per-finding commit.
+
+### Critical (5/5 fixed)
+
+- **CR-01** — `2133202` — bind OAuth state to initiating user_id + add 10-minute issued-at expiry.
+- **CR-02** — `a3ad83e` — reject empty refresh token + compensating-rollback the inserted rows on secret-write failure.
+- **CR-03** — `7917d9b` — widen EmlBlobStore pattern to match Graph ids; hash-derive on-disk slug for collision safety.
+- **CR-04** — `cbee16b` — stop round-tripping OAuth client secret on every keystroke (wire:model.blur + wipe-after-submit).
+- **CR-05** — `406cdf7` — switch the three EmailScan jobs from ShouldBeUniqueUntilProcessing to ShouldBeUnique so the lock holds for the entire walk; make `backfilling → backfilling` and `scanning → scanning` re-entrant safe.
+
+### Warning (9/9 fixed)
+
+- **WR-01** — `ee0af9e` — add OAUTH_LOOPBACK_PORT env var override + centralise loopback URI computation in new `LoopbackRedirectUri` service.
+- **WR-02** — `3dfe449` — persist the full gmail.readonly + userinfo.email scope on Google exchange + refresh.
+- **WR-03** — `c4631dc` — skip the discovered-senders query when the user has zero inboxes (sample-subject surfacing intentionally deferred; UI-SPEC does not lock it).
+- **WR-04** — `68b2ce2` — JOIN inboxes on `(id, user_id)` in `DiscoveredSenderQuery::candidatesForUser` for defence-in-depth cross-user isolation on the read side.
+- **WR-05** — `c47bd2f` — document Sleep::sleep cooperative-shutdown trade-off in BackfillInboxJob class docblock (no code change per review guidance).
+- **WR-06** — `4f22e6e` — pre-check inbox_messages before re-fetching provider raw bytes; saves Gmail/Graph quota on incremental walk + cursor-expiry fallback + backfill window-extend.
+- **WR-07** — `f977c8b` — thread date-bounded windowStart through GmailApiClient::listSenderMessages so the cursor-expiry fallback walk honours the docblock's "last_scan_at - 7 days" contract.
+- **WR-08** — `caf2153` — chmod parent directory only on first create in EmlBlobStore::put + OAuthSecretsRepository::writeAtomic; failed first-create chmod is now a hard error.
+- **WR-09** — `4bbbbfe` — replace JobFailed regex listener with per-job `failed(Throwable, InboxScanStateMachine)` methods.
+
+### Info (6/6 fixed)
+
+- **IN-01** — `c279e50` — document ScanCursor::microsoft regional-cloud limitation in class docblock + exception message.
+- **IN-02** — `189d09c` — extract shared `Modules\EmailScan\Internal\SafeMessage::cap()` utility; the three duplicate `safeMessage()` helpers now delegate.
+- **IN-03** — `d7331e2` — route `inboxes.backfill_progress` writes through `InboxScanStateMachine::recordBackfillProgress`; add `noOtherBackfillProgressMutator` BoundaryArchTest invariant.
+- **IN-04** — `a93b9a2` — drop `'now'` string literal; parse `internalDate` to DateTimeImmutable at the per-provider boundary in DiscoveryScanJob.
+- **IN-05** — `2b126a8` — add UNIQUE `(user_id, email_pattern)` on `known_senders`; SQL NULL semantics let system seeds coexist with per-user rows.
+- **IN-06** — `8ed4401` — collapse `InboxesBadgeCount::forCurrentUser` from two COUNT queries to one `selectOne` with two correlated subqueries.
+
+### Test impact
+
+The full Pest suite went from 919 → 956 passing tests (+37 tests added by these fixes). One unrelated pre-existing baseline failure (`Modules/Ledger/tests/Unit/TransactionTypeTest.php:74`) remains untouched per the fix scope. PHPStan level max + Larastan strict mode + Pint formatting all stay clean across the touched files.
+
+_Resolved: 2026-05-17T00:00:00Z_
+_Fixer: Claude (gsd-code-fixer)_
