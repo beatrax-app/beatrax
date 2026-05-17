@@ -12,11 +12,16 @@ use RuntimeException;
 
 /**
  * The single legal mutator of `inbox_scan_state.status`,
- * `inbox_scan_state.retry_attempts`, and the provider cursor columns
- * (`last_history_id`, `last_delta_link`). A BoundaryArchTest invariant
- * under `tests/Contracts/BoundaryArchTest.php`
- * (`noOtherInboxScanStateMutator`) blocks every other write path under
- * `Modules/EmailScan/`.
+ * `inbox_scan_state.retry_attempts`, the provider cursor columns
+ * (`last_history_id`, `last_delta_link`), AND the per-inbox
+ * `inboxes.backfill_progress` JSON column. The first three live on
+ * `inbox_scan_state`; backfill_progress is technically on the
+ * `inboxes` table but is functionally a per-inbox lifecycle signal,
+ * so all per-inbox lifecycle writes flow through one class. A
+ * BoundaryArchTest invariant under
+ * `tests/Contracts/BoundaryArchTest.php`
+ * (`noOtherInboxScanStateMutator`) blocks every other write path
+ * under `Modules/EmailScan/`.
  *
  * Public surface:
  *
@@ -283,6 +288,35 @@ final class InboxScanStateMachine
                 ->where('inbox_id', $inboxId)
                 ->where('folder', 'INBOX')
                 ->update($update);
+        });
+    }
+
+    /**
+     * Write (or clear) the per-inbox backfill progress payload. Passing
+     * null clears the column so the /inboxes Blade hides the live
+     * counter strip; passing a payload writes it under the same
+     * busy_timeout=5000 fence as the rest of the per-inbox lifecycle
+     * mutations so the column stays in lockstep with the status
+     * transitions.
+     *
+     * @param  array{fetched_count: int, total_estimated: int, last_message_date: ?string}|null  $progress
+     */
+    public function recordBackfillProgress(int $inboxId, ?array $progress): void
+    {
+        $this->db->connection()->transaction(function () use ($inboxId, $progress): void {
+            $connection = $this->db->connection();
+            $connection->statement('PRAGMA busy_timeout = 5000');
+
+            $encoded = $progress === null
+                ? null
+                : json_encode($progress, JSON_THROW_ON_ERROR);
+
+            $connection->table('inboxes')
+                ->where('id', $inboxId)
+                ->update([
+                    'backfill_progress' => $encoded,
+                    'updated_at' => $this->clock->now()->toDateTimeString(),
+                ]);
         });
     }
 
