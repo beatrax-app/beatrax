@@ -29,6 +29,16 @@ use Modules\Core\Public\Contracts\Clock;
  *     Same dual-layer enforcement.
  *   - `$value` MUST be non-empty (whitespace-trimmed). Empty values
  *     never produce a usable rule.
+ *   - `$categoryId` MUST refer to a category visible to the caller
+ *     (`categories.user_id IS NULL` for the seeded global tree OR
+ *     `categories.user_id = $user->id` for owned categories). The
+ *     `categories.id` FK alone is not enough — `categories` is multi-
+ *     tenant and a tampered request could otherwise insert a rule
+ *     pointing at a foreign user's category. Mirrors the visibility
+ *     rule already enforced by `CategoryOptionsQuery::for($user)`.
+ *     A miss throws `InvalidArgumentException` (the picker funnel
+ *     keeps this practically unreachable from the UI; the guard
+ *     hardens the direct-action / Livewire-DevTools path).
  *
  * Duplicate-rule mitigation: the (user_id, field, match, value)
  * UNIQUE constraint on the table rejects a second identical rule.
@@ -67,6 +77,7 @@ final class CreateCategorizationRule
                 'CreateCategorizationRule: value must not be empty.'
             );
         }
+        self::assertCategoryVisible($this->db, $categoryId, $user->id);
 
         $now = $this->clock->now()->toDateTimeString();
 
@@ -109,5 +120,35 @@ final class CreateCategorizationRule
         return str_contains($message, 'UNIQUE constraint failed')
             || str_contains($message, 'Duplicate entry')
             || str_contains($message, 'duplicate key value');
+    }
+
+    /**
+     * Verifies the supplied category is visible to the caller
+     * (global default or owned). Throws InvalidArgumentException on
+     * miss — mirrors the field/match validation shape.
+     *
+     * The duplicate guard lives in UpdateCategorizationRule as well;
+     * keeping the helper static + parameterised matches the existing
+     * `isUniqueViolation` shape (small private helper duplicated
+     * across both sister actions rather than a separate trait or
+     * service for two call sites).
+     */
+    private static function assertCategoryVisible(
+        DatabaseManager $db,
+        int $categoryId,
+        int $userId,
+    ): void {
+        $exists = $db->connection()
+            ->table('categories')
+            ->where('id', $categoryId)
+            ->where(static function ($query) use ($userId): void {
+                $query->whereNull('user_id')->orWhere('user_id', $userId);
+            })
+            ->exists();
+        if (! $exists) {
+            throw new InvalidArgumentException(
+                "CreateCategorizationRule: category {$categoryId} is not visible to user {$userId}."
+            );
+        }
     }
 }
