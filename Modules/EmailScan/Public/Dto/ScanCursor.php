@@ -25,11 +25,20 @@ use Spatie\LaravelData\Data;
  * action).
  *
  * Validation: gmail() rejects an empty historyId; microsoft() rejects
- * a delta-link URL that does not start with the Graph base. Both
- * factories reject an unknown provider value via the private
- * constructor's guard. These rejections keep malformed cursors from
- * ever reaching the DB layer where the only diagnosis would be a
- * silent broken resume.
+ * a delta-link URL that does not start with the global Graph endpoint
+ * (`https://graph.microsoft.com/`). Both factories reject an unknown
+ * provider value via the private constructor's guard. These rejections
+ * keep malformed cursors from ever reaching the DB layer where the
+ * only diagnosis would be a silent broken resume.
+ *
+ * Cloud-region scope: v1 supports ONLY the global Microsoft Graph
+ * endpoint. Customers on regional clouds — `graph.microsoft.de`
+ * (Germany), `graph.microsoft.us` (GCC High), `microsoftgraph.china
+ * cloudapi.cn` (China 21Vianet) — will hit the microsoft() validation
+ * guard. Adding support is a one-line relaxation of the prefix check
+ * once a regional-cloud user actually exists; the constraint is
+ * tightened here on purpose so a misrouted delta-link never silently
+ * lands in the cursor column.
  */
 final class ScanCursor extends Data
 {
@@ -59,8 +68,13 @@ final class ScanCursor extends Data
     public static function microsoft(string $deltaLink): self
     {
         if (! str_starts_with($deltaLink, 'https://graph.microsoft.com/')) {
+            // v1 supports only the global Graph endpoint. Regional
+            // clouds (graph.microsoft.de / .us / chinacloudapi.cn)
+            // would relax this prefix check on the future-feature
+            // boundary.
             throw new InvalidArgumentException(
-                'ScanCursor::microsoft deltaLink must start with https://graph.microsoft.com/.'
+                'ScanCursor::microsoft deltaLink must start with https://graph.microsoft.com/ '
+                .'(regional Graph endpoints are not supported in v1).'
             );
         }
 
