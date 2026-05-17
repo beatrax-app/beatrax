@@ -120,3 +120,17 @@ it('happy path: writes the provider client via OAuthSecretsRepository + dispatch
     expect($loaded['client_id'])->toBe('123-abc.apps.googleusercontent.com');
     expect($loaded['client_secret'])->toBe('GOCSPX-secret-value');
 });
+
+it('successful submit wipes clientId + clientSecret from the component instance so the snapshot never carries them', function (): void {
+    $user = ocwUser('wipe@example.com');
+
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'gmail')
+        ->set('clientId', '123-abc.apps.googleusercontent.com')
+        ->set('clientSecret', 'GOCSPX-secret-value')
+        ->set('publishedConfirmed', true)
+        ->call('submit')
+        ->assertSet('clientId', '')
+        ->assertSet('clientSecret', '');
+});
