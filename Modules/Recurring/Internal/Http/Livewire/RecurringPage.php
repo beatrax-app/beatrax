@@ -50,9 +50,17 @@ final class RecurringPage extends Component
      * runs synchronously, so the
      * `noSynchronousDetectionInRequestLifecycle` arch invariant stays
      * green.
+     *
+     * Short-circuits when the caller is unauthenticated (mirrors the
+     * top-nav badge composer's defensive guard). The route is auth-
+     * gated upstream so this is a defence-in-depth check rather than
+     * a runtime expectation.
      */
     public function reDetect(CurrentUser $currentUser, Dispatcher $bus): void
     {
+        if (! $currentUser->isAuthenticated()) {
+            return;
+        }
         $bus->dispatch(new DetectRecurringSeriesJob($currentUser->user()->id));
         $this->dispatch('toast', message: 'Detecting recurring series…', undoAction: '', undoPayload: null);
     }
