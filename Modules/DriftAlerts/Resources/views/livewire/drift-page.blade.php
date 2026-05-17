@@ -155,6 +155,7 @@
                                         'snoozeTargets' => $snoozeTargets,
                                         'primaryAcknowledge' => false,
                                         'seriesStates' => $seriesStates,
+                                        'cancellationImpact' => $impactBySeriesId[$alert->recurringSeriesId] ?? null,
                                     ])
                                 @endforeach
                             </div>
@@ -170,6 +171,7 @@
                             'snoozeTargets' => $snoozeTargets,
                             'primaryAcknowledge' => true,
                             'seriesStates' => $seriesStates,
+                            'cancellationImpact' => $impactBySeriesId[$firstAlert->recurringSeriesId] ?? null,
                         ])
                     @endif
                 @endforeach
@@ -204,6 +206,7 @@
                             'snoozeTargets' => $snoozeTargets,
                             'primaryAcknowledge' => false,
                             'seriesStates' => $seriesStates,
+                            'cancellationImpact' => $impactBySeriesId[$alert->recurringSeriesId] ?? null,
                         ])
                     </li>
                 @endforeach
