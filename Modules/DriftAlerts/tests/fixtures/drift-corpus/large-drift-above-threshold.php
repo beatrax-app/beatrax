@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+// Scenario 3: Spotify €9.99 → €11.49 (+15.0% month-over-month, well
+// above the default ±5% threshold). The detector fires exactly one
+// alert. Math:
+//   delta_minor = -1149 - (-999) = -150 (signed expense)
+//   annualized_impact_minor = -150 × 12 = -1800 (×12 monthly multiplier)
+// threshold_source='global' because no per-series override exists.
+
+$transactions = [];
+$amounts = [-999, -999, -999, -1149, -1149, -1149];
+for ($i = 0; $i < 6; $i++) {
+    $year = 2025 + intdiv($i, 12);
+    $month = ($i % 12) + 1;
+    $date = sprintf('%04d-%02d-15', $year, $month);
+    $transactions[] = [
+        'account_id' => null,
+        'type' => 'expense',
+        'posted_at' => $date,
+        'booked_at' => $date,
+        'amount_minor' => $amounts[$i],
+        'currency' => 'EUR',
+        'original_amount_minor' => $amounts[$i],
+        'original_currency' => 'EUR',
+        'counterparty_normalized' => 'spotify',
+        'counterparty_iban' => null,
+    ];
+}
+
+return [
+    'transactions' => $transactions,
+    'expected' => [
+        'alerts' => [
+            [
+                'state' => 'open',
+                'direction' => 'expense',
+                'baseline_amount_minor' => -999,
+                'latest_amount_minor' => -1149,
+                'delta_minor' => -150,
+                'annualized_impact_minor' => -1800,
+                'threshold_percent_used' => 5,
+                'threshold_source' => 'global',
+                'currency' => 'EUR',
+            ],
+        ],
+    ],
+];
