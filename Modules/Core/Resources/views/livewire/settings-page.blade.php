@@ -81,6 +81,30 @@
             </div>
         </section>
 
+        <section class="space-y-2">
+            <h2 class="text-xs uppercase tracking-wide text-slate-500">Drift alerts</h2>
+            <div class="space-y-1" id="drift-threshold">
+                <label for="driftAlertThresholdPercent" class="block text-sm text-slate-900">Default drift alert threshold</label>
+                <select
+                    id="driftAlertThresholdPercent"
+                    name="driftAlertThresholdPercent"
+                    wire:model="driftAlertThresholdPercent"
+                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                >
+                    <option value="1">±1%</option>
+                    <option value="2">±2%</option>
+                    <option value="5">±5% (default)</option>
+                    <option value="10">±10%</option>
+                    <option value="25">±25%</option>
+                    <option value="50">±50%</option>
+                </select>
+                <p class="text-xs text-slate-500">Alerts fire when a recurring charge's latest amount differs from the prior amount by more than this percentage. Per-series overrides take precedence.</p>
+                @error('driftAlertThresholdPercent')
+                    <p class="text-sm text-rose-600">{{ $message }}</p>
+                @enderror
+            </div>
+        </section>
+
         <div class="space-y-1">
             <button
                 type="submit"
