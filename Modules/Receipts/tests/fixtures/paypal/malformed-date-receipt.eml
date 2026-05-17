@@ -1,0 +1,12 @@
+From: service@paypal.com
+To: kaarthouder@example.test
+Subject: Je ontvangstbewijs van Netflix BV
+Date: totally-not-a-date
+Message-ID: <deterministic-malformed-date-1@paypal.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Aan: Netflix BV
+Bedrag: EUR 12,99
+Transaction ID: PAYPALTXN17052026

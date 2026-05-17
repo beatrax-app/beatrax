@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Modules\Receipts\Internal\Pipeline\EmlMimeReader;
-use Modules\Receipts\Internal\Pipeline\ParsedMimeMessage;
+use Modules\Receipts\Public\Pipeline\EmlMimeReader;
+use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
 
 it('prefers the text/plain part when both text/plain and text/html are present', function (): void {
     $boundary = 'BOUNDARY-MULTI-001';

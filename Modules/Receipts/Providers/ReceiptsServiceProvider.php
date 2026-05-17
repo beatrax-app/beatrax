@@ -6,8 +6,12 @@ namespace Modules\Receipts\Providers;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
+use Livewire\LivewireManager;
+use Modules\Receipts\Internal\Http\Livewire\WizardEmailFileStep;
 use Modules\Receipts\Internal\MatcherRegistry;
+use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
+use Modules\Receipts\Public\Services\FileImportQuery;
 
 /**
  * Wires the Receipts module.
@@ -59,9 +63,10 @@ final class ReceiptsServiceProvider extends ServiceProvider
      * provider edit is required at that point.
      */
     private const PIPELINE_FQNS = [
-        'Modules\\Receipts\\Internal\\Pipeline\\EmlMimeReader',
-        'Modules\\Receipts\\Internal\\Pipeline\\MboxIterator',
-        'Modules\\Receipts\\Internal\\Pipeline\\FileDropEmlBlobStore',
+        'Modules\\Receipts\\Public\\Pipeline\\EmlMimeReader',
+        'Modules\\Receipts\\Public\\Pipeline\\MboxIterator',
+        'Modules\\Receipts\\Public\\Pipeline\\FileDropEmlBlobStore',
+        'Modules\\Receipts\\Public\\Pipeline\\ReceiptSourceAdapter',
     ];
 
     public function register(): void
@@ -88,6 +93,9 @@ final class ReceiptsServiceProvider extends ServiceProvider
         // returns an iterable; the closure materialises it once at
         // resolve-time and sorts by priority() descending so the
         // dispatch loop walks the most-specific matcher first.
+        $this->app->singleton(RecordReceipt::class);
+        $this->app->singleton(FileImportQuery::class);
+
         $this->app->singleton(
             MatcherRegistry::class,
             static function (Container $app): MatcherRegistry {
@@ -107,7 +115,7 @@ final class ReceiptsServiceProvider extends ServiceProvider
         );
     }
 
-    public function boot(): void
+    public function boot(LivewireManager $livewire): void
     {
         if (is_dir(__DIR__.'/../Database/Migrations')) {
             $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
@@ -121,5 +129,7 @@ final class ReceiptsServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'receipts');
         }
+
+        $livewire->component('receipts.wizard-email-file-step', WizardEmailFileStep::class);
     }
 }

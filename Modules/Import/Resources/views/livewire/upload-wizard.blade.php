@@ -1,8 +1,8 @@
 <div class="space-y-6">
     <header class="space-y-1">
         <h1 class="text-2xl font-semibold text-slate-900 tracking-tight">Upload statement</h1>
-        <p class="text-sm text-slate-500">Drop in an ASN, ICS, or PayPal export.</p>
-        <p class="sr-only" id="upload-statement-mime-hint">That file doesn't look like a supported statement export. Drop in an ASN CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, or ICS PDF.</p>
+        <p class="text-sm text-slate-500">Drop in an ASN, ICS, PayPal export, or an email receipt file.</p>
+        <p class="sr-only" id="upload-statement-mime-hint">That file doesn't look like a supported statement export. Drop in an ASN CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, ICS PDF, an email message (.eml), or a mailbox archive (.mbox).</p>
     </header>
 
     <form wire:submit="submit" class="space-y-4">
@@ -17,6 +17,7 @@
                 <option value="asn">ASN</option>
                 <option value="ics">ICS</option>
                 <option value="paypal">PayPal</option>
+                <option value="email-file">Email file (.eml, .mbox)</option>
             </select>
             @error('issuer')
                 <p class="text-sm text-rose-600">{{ $message }}</p>
@@ -47,7 +48,7 @@
                 id="file"
                 name="file"
                 wire:model="file"
-                accept=".csv,.xml,.sta,.mt940,.940,.txt,.pdf"
+                accept=".csv,.xml,.sta,.mt940,.940,.txt,.pdf,.eml,.mbox,.zip"
                 class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
             />
             @error('file')

@@ -1,0 +1,16 @@
+From: service@paypal.com.attacker.example
+To: kaarthouder@example.test
+Subject: Je ontvangstbewijs van Netflix BV
+Date: Sun, 17 May 2026 09:42:13 +0200
+Message-ID: <deterministic-spoofed-1@paypal.com.attacker.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Aan: Netflix BV
+Bedrag: EUR 12,99
+Transaction ID: PAYPALTXN17052026
+
+This message body is identical to a real PayPal receipt, but the
+sender domain is service@paypal.com.attacker.example — a look-alike
+that suffix-matching MUST reject.
