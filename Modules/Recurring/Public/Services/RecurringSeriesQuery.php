@@ -8,6 +8,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
+use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use stdClass;
 
@@ -84,6 +86,126 @@ final readonly class RecurringSeriesQuery
 
         /** @var stdClass $row */
         return $this->toDto($row);
+    }
+
+    /**
+     * Every observation row that contributed to the cluster, ordered by
+     * `observed_at DESC`. Cross-user lookups return an empty list.
+     *
+     * @return list<RecurringOccurrenceDto>
+     */
+    public function occurrencesForSeries(int $seriesId, User $user): array
+    {
+        $owns = $this->db->connection()->table('recurring_series')
+            ->where('id', $seriesId)
+            ->where('user_id', $user->id)
+            ->exists();
+        if (! $owns) {
+            return [];
+        }
+
+        $rows = $this->db->connection()->table('recurring_series_occurrences')
+            ->where('recurring_series_id', $seriesId)
+            ->where('user_id', $user->id)
+            ->orderByDesc('observed_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $observedCurrency = self::toString($row->observed_currency);
+            $observedAmount = Money::ofMinor(self::toInt($row->observed_amount_minor), $observedCurrency);
+
+            $result[] = new RecurringOccurrenceDto(
+                occurrenceId: self::toInt($row->id),
+                recurringSeriesId: self::toInt($row->recurring_series_id),
+                transactionId: self::toInt($row->transaction_id),
+                observedAt: CarbonImmutable::parse(self::toString($row->observed_at)),
+                observedAmount: $observedAmount,
+                observedCurrency: $observedCurrency,
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * Build the amount-over-time payload for the drill-in chart.
+     *
+     * Returns up to `$maxPoints` data points sorted oldest-to-newest so
+     * the ApexCharts datetime axis renders left-to-right. Each point
+     * carries the native-currency amount plus the settled-EUR amount;
+     * `eur_amount_minor` is `null` when the observation is already in
+     * EUR (no shadow series needed).
+     *
+     * Cross-user lookups return an empty payload.
+     */
+    public function amountTrendForSeries(int $seriesId, User $user, int $maxPoints = 24): RecurringSeriesAmountTrendDto
+    {
+        $seriesRow = $this->db->connection()->table('recurring_series')
+            ->where('id', $seriesId)
+            ->where('user_id', $user->id)
+            ->first();
+        if ($seriesRow === null) {
+            return new RecurringSeriesAmountTrendDto(
+                seriesId: $seriesId,
+                currency: 'EUR',
+                points: [],
+                maxPoints: $maxPoints,
+            );
+        }
+
+        /** @var stdClass $seriesRow */
+        $currency = self::toString($seriesRow->latest_currency);
+        if ($currency === '') {
+            $currency = 'EUR';
+        }
+
+        $effectiveLimit = max(1, $maxPoints);
+        $rows = $this->db->connection()->table('recurring_series_occurrences as rso')
+            ->leftJoin('transactions as t', 't.id', '=', 'rso.transaction_id')
+            ->where('rso.recurring_series_id', $seriesId)
+            ->where('rso.user_id', $user->id)
+            ->orderByDesc('rso.observed_at')
+            ->orderByDesc('rso.id')
+            ->limit($effectiveLimit)
+            ->get([
+                'rso.observed_at',
+                'rso.observed_amount_minor',
+                'rso.observed_currency',
+                't.settled_amount_minor as settled_amount_minor',
+                't.settled_currency as settled_currency',
+            ]);
+
+        $ordered = $rows->reverse()->values();
+
+        $points = [];
+        foreach ($ordered as $row) {
+            /** @var stdClass $row */
+            $observedAt = CarbonImmutable::parse(self::toString($row->observed_at))->toDateString();
+            $amountMinor = self::toInt($row->observed_amount_minor);
+            $observedCurrency = self::toString($row->observed_currency);
+            $eurAmountMinor = null;
+            if ($observedCurrency !== 'EUR') {
+                $settledCurrency = self::toString($row->settled_currency ?? null);
+                if ($settledCurrency === 'EUR') {
+                    $eurAmountMinor = self::toInt($row->settled_amount_minor ?? null);
+                }
+            }
+            $points[] = [
+                'date' => $observedAt,
+                'amount_minor' => $amountMinor,
+                'eur_amount_minor' => $eurAmountMinor,
+            ];
+        }
+
+        return new RecurringSeriesAmountTrendDto(
+            seriesId: $seriesId,
+            currency: $currency,
+            points: $points,
+            maxPoints: $maxPoints,
+        );
     }
 
     /**
