@@ -11,6 +11,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Categorization\Public\Dto\CategorizationRuleDto;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use stdClass;
 
 /**
@@ -27,7 +28,10 @@ use stdClass;
  */
 final readonly class CategorizationRuleQuery
 {
-    public function __construct(private DatabaseManager $db) {}
+    public function __construct(
+        private DatabaseManager $db,
+        private Clock $clock,
+    ) {}
 
     /**
      * @return list<CategorizationRuleDto>
@@ -127,11 +131,19 @@ final readonly class CategorizationRuleQuery
             : null;
         $path = $parentName === null ? $categoryName : $parentName.' / '.$categoryName;
 
-        $createdAtRaw = is_string($row->created_at) ? $row->created_at : 'now';
-        try {
-            $createdAt = new DateTimeImmutable($createdAtRaw);
-        } catch (Exception) {
-            $createdAt = new DateTimeImmutable;
+        $createdAtRaw = is_string($row->created_at) ? $row->created_at : null;
+        if ($createdAtRaw === null || $createdAtRaw === '') {
+            // Defensive fallback: missing created_at falls back to the
+            // injected Clock so the read-side test can pin time
+            // deterministically. The DB column is NOT NULL on insert
+            // so this branch is unreachable in normal operation.
+            $createdAt = $this->clock->now()->toDateTimeImmutable();
+        } else {
+            try {
+                $createdAt = new DateTimeImmutable($createdAtRaw);
+            } catch (Exception) {
+                $createdAt = $this->clock->now()->toDateTimeImmutable();
+            }
         }
 
         return new CategorizationRuleDto(

@@ -6,6 +6,7 @@ namespace Modules\Categorization\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
@@ -13,7 +14,7 @@ use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
- * Global Livewire SFC for the correction-divergence toast (D-712).
+ * Global Livewire SFC for the correction-divergence toast.
  * Mounted once in app.blade.php so any page can fire the
  * `correction-divergence:fire` Livewire-local event and surface the
  * toast in the same request lifecycle.
@@ -35,7 +36,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
  * Reverb; session-flash would require a redirect, which Livewire's
  * reclassify() does not trigger.
  *
- * Cross-user defence (T-07-09): handleDiverged() compares the
+ * Cross-user defence: handleDiverged() compares the
  * payload's `$userId` (5th positional parameter) against
  * `$currentUser->user()->id` (the 6th, method-DI). A mismatch is a
  * silent no-op — local Livewire events should never carry a foreign
@@ -84,11 +85,11 @@ final class CorrectionDivergenceToast extends Component
         CurrentUser $currentUser,
         CategorizationRuleQuery $rules,
     ): void {
-        // T-07-09 cross-user defence: the 5th positional parameter
-        // $userId is the assertion subject (the event-carried owner
-        // of the rule + transaction). The 6th parameter $currentUser
-        // is the oracle (the active authenticated user). A mismatch
-        // is a silent no-op.
+        // Cross-user defence: the 5th positional parameter $userId is
+        // the assertion subject (the event-carried owner of the rule +
+        // transaction). The 6th parameter $currentUser is the oracle
+        // (the active authenticated user). A mismatch is a silent
+        // no-op.
         if (! $currentUser->isAuthenticated() || $currentUser->id() !== $userId) {
             return;
         }
@@ -126,9 +127,21 @@ final class CorrectionDivergenceToast extends Component
             return;
         }
 
-        ($updateRule)($currentUser->user(), $this->ruleId, [
-            'category_id' => $this->newCategoryId,
-        ]);
+        try {
+            ($updateRule)($currentUser->user(), $this->ruleId, [
+                'category_id' => $this->newCategoryId,
+            ]);
+        } catch (ValidationException) {
+            // UpdateCategorizationRule raises ValidationException on
+            // UNIQUE-violation. A category_id-only payload cannot trip
+            // that constraint today, but the catch is defence-in-depth
+            // against a future allowed-keys expansion. Surface a calm
+            // message and keep the toast visible so the user can
+            // dismiss manually.
+            $this->flashMessage = 'Could not update rule.';
+
+            return;
+        }
 
         $this->flashMessage = 'Rule updated.';
         $this->visible = false;
