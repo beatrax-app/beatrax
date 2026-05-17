@@ -7,6 +7,7 @@ namespace Modules\Categorization\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
@@ -14,6 +15,7 @@ use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Global rule-form modal SFC. Mounted once in `app.blade.php` so the
@@ -139,6 +141,26 @@ final class RuleFormModal extends Component
                 $first = $messages['value'][0];
                 $this->errorValue = is_string($first) ? $first : 'Validation failed.';
             }
+
+            return;
+        } catch (InvalidArgumentException) {
+            // CreateCategorizationRule / UpdateCategorizationRule
+            // throw InvalidArgumentException for an out-of-whitelist
+            // field/match value OR for a category id not visible to
+            // the caller (WR-01 cross-user authorisation guard). All
+            // three causes are tampered-payload-only — the form's
+            // Flux <select>s can only emit valid options. Surface a
+            // calm copy and let the user retry.
+            $this->errorValue = 'Invalid field, match, or category — pick from the dropdowns and try again.';
+
+            return;
+        } catch (NotFoundHttpException) {
+            // UpdateCategorizationRule throws this when $editingRuleId
+            // no longer maps to a row visible to the user (deleted in
+            // another tab, or a tampered ruleId). Close the modal so
+            // the page re-renders without it.
+            $this->errorValue = 'That rule is no longer available.';
+            $this->dispatch('modal-hide', name: 'rule-form');
 
             return;
         }

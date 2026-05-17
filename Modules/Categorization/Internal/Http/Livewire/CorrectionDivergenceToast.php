@@ -7,11 +7,13 @@ namespace Modules\Categorization\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Global Livewire SFC for the correction-divergence toast.
@@ -139,6 +141,27 @@ final class CorrectionDivergenceToast extends Component
             // message and keep the toast visible so the user can
             // dismiss manually.
             $this->flashMessage = 'Could not update rule.';
+
+            return;
+        } catch (NotFoundHttpException) {
+            // UpdateCategorizationRule raises NotFoundHttpException
+            // when the supplied ruleId no longer maps to a row visible
+            // to the user — deleted in another tab, or a tampered
+            // event payload. Hide the toast so the page doesn't keep
+            // offering an action that can't complete.
+            $this->flashMessage = 'Rule no longer exists.';
+            $this->visible = false;
+            $this->resetPayload();
+
+            return;
+        } catch (InvalidArgumentException) {
+            // UpdateCategorizationRule raises InvalidArgumentException
+            // when the supplied newCategoryId is not visible to the
+            // caller (WR-01 cross-user guard). Unreachable from the
+            // normal flow — the divergence event always carries the
+            // user's own newCategoryId — but a tampered payload could
+            // land here. Surface a calm message and keep the toast.
+            $this->flashMessage = 'Invalid category — please refresh the page.';
 
             return;
         }

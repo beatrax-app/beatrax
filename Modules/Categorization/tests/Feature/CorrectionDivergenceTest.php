@@ -308,3 +308,63 @@ it('CorrectionDivergenceToast has zero facade usage in the class body', function
     expect($stripped)->not->toMatch('/\brequest\(\)/');
     expect($stripped)->not->toMatch('/\bview\(\)/');
 });
+
+it('CorrectionDivergenceToast.update() catches NotFoundHttpException for a tampered foreign ruleId and surfaces a calm flash (not a 500)', function (): void {
+    // WR-02: handleDiverged hydrates ruleId from the Livewire-local
+    // event. A tampered payload could carry another user's ruleId —
+    // UpdateCategorizationRule rejects it with NotFoundHttpException;
+    // the SFC must catch it, surface a calm flash, hide the toast,
+    // and leave the foreign rule untouched.
+    $other = User::create([
+        'email' => 'tamper-toast-rule@example.com',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+    ]);
+    $foreignRuleId = seedDivergenceRule($other->id, $this->streaming->id, 'OTHER-VAL');
+
+    Livewire::test(CorrectionDivergenceToast::class)
+        ->set('ruleId', $foreignRuleId)
+        ->set('newCategoryId', $this->music->id)
+        ->set('visible', true)
+        ->call('update')
+        ->assertSet('visible', false)
+        ->assertSet('flashMessage', 'Rule no longer exists.');
+
+    // The foreign rule's category_id MUST remain unchanged.
+    $row = DB::table('categorization_rules')->where('id', $foreignRuleId)->first();
+    expect($row->category_id)->toBe($this->streaming->id);
+});
+
+it('CorrectionDivergenceToast.update() catches InvalidArgumentException for a foreign-category newCategoryId and surfaces a calm flash', function (): void {
+    // WR-02 + WR-01 interaction: a tampered event with the user's own
+    // ruleId but a foreign-user's newCategoryId would have RuleEvaluator
+    // re-categorise the user's transactions into a stranger's category
+    // — except UpdateCategorizationRule now rejects that with
+    // InvalidArgumentException. The SFC must catch it and surface a
+    // calm flash.
+    $other = User::create([
+        'email' => 'tamper-toast-cat@example.com',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+    ]);
+    $foreignCategoryId = Category::create([
+        'user_id' => $other->id,
+        'name' => 'Secret',
+        'slug' => 'secret-toast-cat',
+        'kind' => 'expense',
+        'display_order' => 999,
+    ])->id;
+
+    $ownRuleId = seedDivergenceRule($this->user->id, $this->streaming->id, 'OWN-VAL');
+
+    Livewire::test(CorrectionDivergenceToast::class)
+        ->set('ruleId', $ownRuleId)
+        ->set('newCategoryId', $foreignCategoryId)
+        ->set('visible', true)
+        ->call('update')
+        ->assertSet('flashMessage', 'Invalid category — please refresh the page.');
+
+    // The user's own rule must NOT have been retargeted at the foreign category.
+    $row = DB::table('categorization_rules')->where('id', $ownRuleId)->first();
+    expect($row->category_id)->toBe($this->streaming->id);
+});
