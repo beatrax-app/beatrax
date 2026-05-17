@@ -202,11 +202,10 @@ final class IcsReceiptMatcher implements SenderMatcher
             // downstream ChainHintDetected event payload carries an
             // auditable provenance string. We already captured the
             // match offset above, so no second regex pass is needed.
-            if ($cardMatchFull !== null && $cardMatchOffset !== null) {
-                $chainEvidence = trim(substr($body, max(0, $cardMatchOffset - 5), strlen($cardMatchFull) + 10));
-            } else {
-                $chainEvidence = 'eindigend op '.$cardLast4;
-            }
+            // $cardMatchFull and $cardMatchOffset are populated together
+            // with $cardLast4 inside the preg_match branch above, so once
+            // $cardLast4 !== null both are guaranteed to be set.
+            $chainEvidence = trim(substr($body, max(0, $cardMatchOffset - 5), strlen($cardMatchFull) + 10));
         }
 
         $subject = $parsed->headers['subject'] ?? '';
