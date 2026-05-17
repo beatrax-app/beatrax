@@ -71,11 +71,15 @@ final class CadenceInferrer
             ];
         }
 
+        // The contract on $sortedTimestamps is "ascending", so the
+        // signed diff between consecutive entries is non-negative.
+        // No defensive abs() — a caller that supplies an unsorted
+        // list breaks the cadence math anyway.
         $intervals = [];
         $previous = null;
         foreach ($sortedTimestamps as $timestamp) {
             if ($previous !== null) {
-                $intervals[] = abs($previous->diffInDays($timestamp));
+                $intervals[] = $previous->diffInDays($timestamp);
             }
             $previous = $timestamp;
         }
