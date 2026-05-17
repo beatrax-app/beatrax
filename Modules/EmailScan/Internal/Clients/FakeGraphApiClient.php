@@ -34,6 +34,24 @@ final class FakeGraphApiClient implements GraphApiClientContract
     /** @var array<int, true> */
     private array $cursorExpiredInboxes = [];
 
+    /**
+     * Plan 07: inbox-id-keyed retry-after seconds for a deltaPage
+     * rate-limit simulation. The next `deltaPage` call for that
+     * inbox pops the entry and throws RateLimitedException.
+     *
+     * @var array<int, int>
+     */
+    private array $deltaRateLimitedInboxes = [];
+
+    /**
+     * Plan 07: queued non-empty deltaPage responses. Each call to
+     * `deltaPage` shifts the front entry. Once empty, the default
+     * baseline fixture is returned.
+     *
+     * @var list<array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}>
+     */
+    private array $queuedDeltaResponses = [];
+
     public function __construct(
         private readonly Filesystem $files,
         private readonly string $fixtureRoot = __DIR__.'/../../tests/fixtures/api-responses/graph',
@@ -114,6 +132,17 @@ final class FakeGraphApiClient implements GraphApiClientContract
             'deltaLink' => $deltaLink,
         ]];
 
+        if (array_key_exists($inboxId, $this->deltaRateLimitedInboxes)) {
+            $retryAfter = $this->deltaRateLimitedInboxes[$inboxId];
+            unset($this->deltaRateLimitedInboxes[$inboxId]);
+            $payload = $this->readJson('throttle-429.json');
+            $error = $payload['error'] ?? null;
+            $message = is_array($error) && isset($error['message']) && is_string($error['message'])
+                ? $error['message']
+                : 'Microsoft Graph rate limit exceeded.';
+            throw new RateLimitedException($retryAfter, $message);
+        }
+
         if (array_key_exists($inboxId, $this->cursorExpiredInboxes)) {
             unset($this->cursorExpiredInboxes[$inboxId]);
             $payload = $this->readJson('delta-410.json');
@@ -122,6 +151,10 @@ final class FakeGraphApiClient implements GraphApiClientContract
                 ? $error['message']
                 : '';
             throw CursorExpiredException::graph($message);
+        }
+
+        if ($this->queuedDeltaResponses !== []) {
+            return array_shift($this->queuedDeltaResponses);
         }
 
         $payload = $this->readJson('delta-baseline.json');
@@ -175,6 +208,34 @@ final class FakeGraphApiClient implements GraphApiClientContract
     public function simulateCursorExpired(int $inboxId): void
     {
         $this->cursorExpiredInboxes[$inboxId] = true;
+    }
+
+    /**
+     * Plan 07: arm a rate-limit response for the next deltaPage call.
+     * IncrementalScanJob's Microsoft branch calls deltaPage(storedLink)
+     * before any listSenderMessagesPaged call, so a Graph
+     * incremental-scan rate-limit fires via this surface (not via
+     * simulateRateLimit, which targets listSenderMessagesPaged).
+     */
+    public function simulateDeltaRateLimit(int $inboxId, int $retryAfterSeconds = 60): void
+    {
+        $this->deltaRateLimitedInboxes[$inboxId] = $retryAfterSeconds;
+    }
+
+    /**
+     * Plan 07: queue the next deltaPage response so the caller sees
+     * a specific set of messages + new deltaLink. Calls past the
+     * queued entries fall back to the default baseline fixture.
+     *
+     * @param  list<array<string, mixed>>  $messages
+     */
+    public function queueDeltaResponse(array $messages, ?string $newDeltaLink, ?string $nextLink = null): void
+    {
+        $this->queuedDeltaResponses[] = [
+            'messages' => $messages,
+            'deltaLink' => $newDeltaLink,
+            'nextLink' => $nextLink,
+        ];
     }
 
     /**
