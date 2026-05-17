@@ -172,13 +172,14 @@ it('runs viewForUser in ≤ 3 queries for N=12 series (N+1 budget)', function ()
     expect(count($log))->toBeLessThanOrEqual(3);
 })->group('n-plus-one-budget');
 
-it('applies the per-cadence monthly multiplier in monthlyEquivalentTotals (weekly × 4.33, monthly × 1, quarterly ÷ 3, yearly ÷ 12)', function (): void {
+it('sums monthly_equivalent_minor by direction in monthlyEquivalentTotals', function (): void {
     // monthly_equivalent_minor is what the detector wrote — the query
     // sums that column. The detector encodes the cadence multiplier
-    // at write time.
+    // at write time (weekly × 52/12, monthly × 1, quarterly ÷ 3,
+    // yearly ÷ 12).
     fpvSeries($this->user, 'expense', 'weekly-thing', [
         'cadence' => 'weekly',
-        'monthly_equivalent_minor' => -4330,
+        'monthly_equivalent_minor' => -4333,
         'latest_amount_minor' => -1000,
         'cluster_key' => 'expense::weekly-thing::eur::weekly',
     ]);
@@ -200,9 +201,9 @@ it('applies the per-cadence monthly multiplier in monthlyEquivalentTotals (weekl
     $totals = $query->monthlyEquivalentTotals($this->user);
 
     expect($totals)->toHaveKeys(['expense_eur_minor', 'income_eur_minor', 'net_eur_minor']);
-    expect($totals['expense_eur_minor'])->toBe(-5429); // -4330 + -1099
+    expect($totals['expense_eur_minor'])->toBe(-5432); // -4333 + -1099
     expect($totals['income_eur_minor'])->toBe(350000);
-    expect($totals['net_eur_minor'])->toBe(344571); // 350000 + (-5429)
+    expect($totals['net_eur_minor'])->toBe(344568); // 350000 + (-5432)
 })->group('monthly-equivalent-multiplier');
 
 it('topByMonthlyEquivalent applies the month-window filter BEFORE the limit so this-month-only returns matching rows even when the unfiltered top-N falls outside the window', function (): void {

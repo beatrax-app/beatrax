@@ -5,7 +5,7 @@ declare(strict_types=1);
 // Weekly streaming credit — 12 occurrences at €2.49 spaced exactly 7
 // days apart. Median interval lands in the <10d weekly snap band.
 // Detector expectation: ONE expense series, weekly cadence; monthly
-// equivalent ≈ latest × 4.33.
+// equivalent ≈ latest × 52 / 12.
 
 $transactions = [];
 $start = new DateTimeImmutable('2025-09-01');
@@ -36,7 +36,7 @@ return [
                 'counterparty_normalized' => 'mubi',
                 'latest_amount_minor' => -249,
                 'currency' => 'EUR',
-                'monthly_equivalent_minor_approx' => -1078,
+                'monthly_equivalent_minor_approx' => -1079,
             ],
         ],
     ],
