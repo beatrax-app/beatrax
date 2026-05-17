@@ -15,7 +15,7 @@ use Modules\Recurring\Models\RecurringSeries;
  * Mirrors the ChainsServiceProvider issue #12 fix pattern.
  */
 
-function tnbcUser(string $email): User
+function rcnbcUser(string $email): User
 {
     return User::query()->create([
         'email' => $email,
@@ -25,7 +25,7 @@ function tnbcUser(string $email): User
     ]);
 }
 
-function tnbcSeries(User $user, string $state, string $cluster, string $name = 'tnbc-row'): RecurringSeries
+function rcnbcSeries(User $user, string $state, string $cluster, string $name = 'tnbc-row'): RecurringSeries
 {
     return RecurringSeries::query()->create([
         'user_id' => $user->id,
@@ -42,7 +42,7 @@ function tnbcSeries(User $user, string $state, string $cluster, string $name = '
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = tnbcUser('tnbc@diederik.test');
+    $this->user = rcnbcUser('tnbc@diederik.test');
 });
 
 afterEach(function (): void {
@@ -50,11 +50,11 @@ afterEach(function (): void {
 });
 
 it('renders the top-nav with recurringPendingCount equal to the pending-state count for the user', function (): void {
-    tnbcSeries($this->user, 'pending', 'tnbc::pending-1', 'a');
-    tnbcSeries($this->user, 'pending', 'tnbc::pending-2', 'b');
-    tnbcSeries($this->user, 'pending', 'tnbc::pending-3', 'c');
-    tnbcSeries($this->user, 'approved', 'tnbc::approved-1', 'd');
-    tnbcSeries($this->user, 'rejected', 'tnbc::rejected-1', 'e');
+    rcnbcSeries($this->user, 'pending', 'tnbc::pending-1', 'a');
+    rcnbcSeries($this->user, 'pending', 'tnbc::pending-2', 'b');
+    rcnbcSeries($this->user, 'pending', 'tnbc::pending-3', 'c');
+    rcnbcSeries($this->user, 'approved', 'tnbc::approved-1', 'd');
+    rcnbcSeries($this->user, 'rejected', 'tnbc::rejected-1', 'e');
 
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
 
@@ -77,7 +77,7 @@ it('binds recurringPendingCount to 0 when no user is authenticated (badge-is-zer
 })->group('badge-is-zero-when-unauthenticated');
 
 it('binds recurringPendingCount to 0 when the authenticated user has no pending series (badge-is-zero-when-no-pending)', function (): void {
-    tnbcSeries($this->user, 'approved', 'tnbc::approved-only', 'only-approved');
+    rcnbcSeries($this->user, 'approved', 'tnbc::approved-only', 'only-approved');
 
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
     $content = $response->getContent() ?: '';
