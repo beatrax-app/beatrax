@@ -47,6 +47,23 @@ final class InboxesPage extends Component
      */
     public ?int $openBackfillForInboxId = null;
 
+    /**
+     * One-shot oauth_canceled flash carried from the OAuth callback
+     * controller through mount(). Pulled out of the session here
+     * rather than read via the session() global helper inside the
+     * Blade view (IN-01 iter-2: DI-only invariant — Blade follows
+     * the same constructor-DI-or-prop convention as the rest of the
+     * module).
+     */
+    public ?string $oauthCanceledMessage = null;
+
+    /**
+     * One-shot oauth_failed flash carried from the OAuth callback
+     * controller through mount() — same DI-only rationale as
+     * $oauthCanceledMessage above.
+     */
+    public ?string $oauthFailedMessage = null;
+
     public function mount(Request $request, CurrentUser $currentUser): void
     {
         // The OAuth callback redirects with a session flash carrying
@@ -71,6 +88,19 @@ final class InboxesPage extends Component
                 if ($this->openBackfillForInboxId !== null) {
                     $this->dispatch('backfill-window:open', inboxId: $this->openBackfillForInboxId);
                 }
+            }
+
+            // pull() (single-use) rather than get() + has() — the
+            // canceled / failed flashes must clear after the first
+            // render so a subsequent wire:poll tick does not repaint
+            // the warning banner repeatedly.
+            $canceled = $session->pull('oauth_canceled');
+            if (is_string($canceled) && $canceled !== '') {
+                $this->oauthCanceledMessage = $canceled;
+            }
+            $failed = $session->pull('oauth_failed');
+            if (is_string($failed) && $failed !== '') {
+                $this->oauthFailedMessage = $failed;
             }
         }
 
@@ -267,6 +297,8 @@ final class InboxesPage extends Component
             'inboxes' => $inboxes,
             'discoveredCandidates' => $discoveredCandidates,
             'openBackfillForInboxId' => $this->openBackfillForInboxId,
+            'oauthCanceledMessage' => $this->oauthCanceledMessage,
+            'oauthFailedMessage' => $this->oauthFailedMessage,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

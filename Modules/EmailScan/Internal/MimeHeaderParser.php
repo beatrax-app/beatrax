@@ -16,17 +16,15 @@ use ZBateson\MailMimeParser\MailMimeParser;
  * time: lowercase-normalised sender email, optional display name,
  * optional decoded subject, and the RFC 822 Date stamp.
  *
- * Two surface methods:
- *
- *  - parseHeaders() — pure read; if the Date header is missing or
- *    unparseable the implementation falls back to the wall clock,
- *    which is only correct for tests against legacy fixtures.
- *
- *  - parseHeadersWithFallbackDate() — production callers pass the
- *    provider-stamped internal date (Gmail's `internalDate` or the
- *    Graph `receivedDateTime`) so a missing in-body Date header does
- *    not silently land on `now()` and skew the inbox_messages.
- *    internal_date column.
+ * Single surface method, parseHeadersWithFallbackDate(), so the
+ * caller MUST resolve the missing-Date-header fallback at the call
+ * site. Production callers pass either the provider-stamped internal
+ * date (Gmail `internalDate` / Graph `receivedDateTime`) OR an
+ * explicit `$clock->now()->toDateTimeImmutable()` for paths where no
+ * provider date is available. The previous no-fallback `parseHeaders()`
+ * overload was removed (WR-07 iter-2) because it instantiated
+ * `new DateTimeImmutable('now')` internally — bypassing the project's
+ * Clock contract and producing non-deterministic test behaviour.
  *
  * The sender_email is lowercased at parse time per the project's
  * normalisation rule (the Phase 6 receipts are stable on the
@@ -41,14 +39,6 @@ use ZBateson\MailMimeParser\MailMimeParser;
  */
 final class MimeHeaderParser
 {
-    public function parseHeaders(string $rawEml): ParsedMessageHeaders
-    {
-        return $this->parseHeadersWithFallbackDate(
-            $rawEml,
-            new DateTimeImmutable('now'),
-        );
-    }
-
     public function parseHeadersWithFallbackDate(
         string $rawEml,
         DateTimeImmutable $fallbackDate,
