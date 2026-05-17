@@ -15,11 +15,20 @@ use Spatie\LaravelData\Data;
  * `counterparty_normalized` is NEVER NULL: NormalizeStage substitutes a
  * sentinel when the counterparty name is empty so the composite UNIQUE on
  * transactions catches duplicates even when `source_ref` is absent.
+ *
+ * `autoCategoryProvenance` is nullable JSON shape `{source: 'rule'|'memory',
+ * rule_id?: int, memory_id?: int, category_id: int}` stamped by
+ * ApplyAutoCategoryStage and persisted by RecordTransactions onto the
+ * `transactions.auto_category_provenance` column. Read by the correction-
+ * divergence flow (plan 05) so the drawer panel knows whether the
+ * suggestion came from an explicit rule (which the user may want to
+ * update) or from learned merchant memory.
  */
 final class CanonicalTransaction extends Data
 {
     /**
      * @param  array<int|string, mixed>|null  $rawPayload
+     * @param  array<string, mixed>|null  $autoCategoryProvenance
      */
     public function __construct(
         public readonly ?int $userId,
@@ -44,6 +53,7 @@ final class CanonicalTransaction extends Data
         public readonly int $sourceRowIndex,
         public readonly ?string $sourceRef,
         public readonly ?array $rawPayload = null,
+        public readonly ?array $autoCategoryProvenance = null,
     ) {}
 
     /**
@@ -78,6 +88,78 @@ final class CanonicalTransaction extends Data
             sourceRowIndex: $this->sourceRowIndex,
             sourceRef: $this->sourceRef,
             rawPayload: $this->rawPayload,
+            autoCategoryProvenance: $this->autoCategoryProvenance,
+        );
+    }
+
+    /**
+     * Immutable clone-with-override for `categoryId`. The
+     * ApplyAutoCategoryStage uses this to stamp the chosen rule /
+     * memory category onto the canonical row before fingerprinting
+     * + persistence. Pass `null` to explicitly clear the categoryId.
+     */
+    public function withCategoryId(?int $categoryId): self
+    {
+        return new self(
+            userId: $this->userId,
+            accountId: $this->accountId,
+            type: $this->type,
+            postedAt: $this->postedAt,
+            bookedAt: $this->bookedAt,
+            valueDate: $this->valueDate,
+            amountMinor: $this->amountMinor,
+            currency: $this->currency,
+            settledAmountMinor: $this->settledAmountMinor,
+            settledCurrency: $this->settledCurrency,
+            fxRateUsed: $this->fxRateUsed,
+            counterpartyName: $this->counterpartyName,
+            counterpartyIban: $this->counterpartyIban,
+            counterpartyNormalized: $this->counterpartyNormalized,
+            normalizationVersion: $this->normalizationVersion,
+            description: $this->description,
+            categoryId: $categoryId,
+            sourceFormat: $this->sourceFormat,
+            importRunId: $this->importRunId,
+            sourceRowIndex: $this->sourceRowIndex,
+            sourceRef: $this->sourceRef,
+            rawPayload: $this->rawPayload,
+            autoCategoryProvenance: $this->autoCategoryProvenance,
+        );
+    }
+
+    /**
+     * Immutable clone-with-override for `autoCategoryProvenance`.
+     * ApplyAutoCategoryStage builds the provenance map alongside the
+     * categoryId so RecordTransactions can persist both atomically.
+     *
+     * @param  array<string, mixed>|null  $provenance
+     */
+    public function withAutoCategoryProvenance(?array $provenance): self
+    {
+        return new self(
+            userId: $this->userId,
+            accountId: $this->accountId,
+            type: $this->type,
+            postedAt: $this->postedAt,
+            bookedAt: $this->bookedAt,
+            valueDate: $this->valueDate,
+            amountMinor: $this->amountMinor,
+            currency: $this->currency,
+            settledAmountMinor: $this->settledAmountMinor,
+            settledCurrency: $this->settledCurrency,
+            fxRateUsed: $this->fxRateUsed,
+            counterpartyName: $this->counterpartyName,
+            counterpartyIban: $this->counterpartyIban,
+            counterpartyNormalized: $this->counterpartyNormalized,
+            normalizationVersion: $this->normalizationVersion,
+            description: $this->description,
+            categoryId: $this->categoryId,
+            sourceFormat: $this->sourceFormat,
+            importRunId: $this->importRunId,
+            sourceRowIndex: $this->sourceRowIndex,
+            sourceRef: $this->sourceRef,
+            rawPayload: $this->rawPayload,
+            autoCategoryProvenance: $provenance,
         );
     }
 
@@ -110,6 +192,9 @@ final class CanonicalTransaction extends Data
             'normalization_version' => $this->normalizationVersion,
             'description' => $this->description,
             'category_id' => $this->categoryId,
+            'auto_category_provenance' => $this->autoCategoryProvenance === null
+                ? null
+                : json_encode($this->autoCategoryProvenance, JSON_THROW_ON_ERROR),
             'source_format' => $this->sourceFormat,
             'import_run_id' => $this->importRunId,
             'source_row_index' => $this->sourceRowIndex,
