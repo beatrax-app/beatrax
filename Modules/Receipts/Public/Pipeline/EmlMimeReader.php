@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Receipts\Internal\Pipeline;
+namespace Modules\Receipts\Public\Pipeline;
 
 use ZBateson\MailMimeParser\Header\HeaderConsts;
 use ZBateson\MailMimeParser\MailMimeParser;

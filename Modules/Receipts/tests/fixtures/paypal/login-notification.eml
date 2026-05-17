@@ -1,0 +1,20 @@
+From: service@paypal.com
+To: kaarthouder@example.test
+Subject: New device sign-in to your PayPal account
+Date: Sun, 17 May 2026 10:15:33 +0200
+Message-ID: <deterministic-login-1@paypal.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hello Cardholder,
+
+We noticed a new sign-in to your PayPal account from a new device. If
+this was you, no further action is needed. If you do not recognise
+this sign-in, change your password immediately.
+
+Device: iPhone 16 Pro
+Location: Amsterdam, NL
+Time: Sun, 17 May 2026 10:15:33 +0200
+
+This message contains no transaction details.

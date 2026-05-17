@@ -52,6 +52,24 @@ final class UploadWizard extends Component
         'asn-mt940',
         'ics-pdf',
         'paypal-csv',
+        'eml',
+        'mbox',
+    ];
+
+    /**
+     * Issuer / sourceFormat pairings the wizard accepts. Used inside
+     * `rules()` to enforce that the cross-product is meaningful (e.g.
+     * `issuer='email-file'` paired with `sourceFormat='asn-csv'`
+     * fails the leaf-validator before ParseStage ever runs). New
+     * issuer + format pairs land here once.
+     *
+     * @var array<string, list<string>>
+     */
+    private const ISSUER_FORMAT_MAP = [
+        'asn' => ['asn-csv', 'asn-camt053', 'asn-mt940'],
+        'ics' => ['ics-pdf'],
+        'paypal' => ['paypal-csv'],
+        'email-file' => ['eml', 'mbox'],
     ];
 
     public ?TemporaryUploadedFile $file = null;
@@ -62,21 +80,55 @@ final class UploadWizard extends Component
      * and resets `$sourceFormat` to that issuer's first leaf via
      * `updatedIssuer()`.
      */
-    #[Validate('required|in:asn,ics,paypal')]
+    #[Validate('required|in:asn,ics,paypal,email-file')]
     public string $issuer = 'asn';
 
     public string $sourceFormat = 'asn-csv';
 
     /**
-     * @return array<string, array<int, string>>
+     * @return array<string, list<\Closure|string>>
      */
     public function rules(): array
     {
+        // The .eml/.mbox arms validate with the `extensions:` rule
+        // rather than `mimes:` because both extensions have no
+        // native MIME-type registration — Laravel's `mimes:` rule
+        // resolves to detected MIME types via the mimetypes config
+        // and would silently reject every email-file upload. The
+        // `extensions:` rule (Laravel 9+) accepts files by file
+        // extension regardless of detected MIME.
+        $sizeRule = match ($this->sourceFormat) {
+            'mbox' => 'max:1048576',
+            'eml' => 'max:20480',
+            default => 'max:10240',
+        };
+
         return [
-            'file' => ['required', 'file', 'max:10240', 'mimes:csv,txt,xml,sta,mt940,940,pdf'],
-            'issuer' => ['required', 'in:asn,ics,paypal'],
-            'sourceFormat' => ['required', 'in:asn-csv,asn-camt053,asn-mt940,ics-pdf,paypal-csv'],
+            'file' => ['required', 'file', $sizeRule, 'extensions:csv,txt,xml,sta,mt940,940,pdf,eml,mbox,zip'],
+            'issuer' => ['required', 'in:asn,ics,paypal,email-file'],
+            'sourceFormat' => ['required', 'in:asn-csv,asn-camt053,asn-mt940,ics-pdf,paypal-csv,eml,mbox', $this->issuerFormatRule()],
         ];
+    }
+
+    /**
+     * Returns the closure that enforces the cross-product validation:
+     * `sourceFormat` must be in the issuer's allow-list. Without this
+     * rule the validator would accept any leaf with any issuer, so an
+     * `issuer='email-file' + sourceFormat='asn-csv'` pair would pass
+     * the dumb `in:` rule and only fail downstream at ParseStage.
+     */
+    private function issuerFormatRule(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            $allowed = self::ISSUER_FORMAT_MAP[$this->issuer] ?? [];
+            if (! in_array($value, $allowed, strict: true)) {
+                $fail(sprintf(
+                    'The %s value is not valid for the %s source.',
+                    $attribute,
+                    $this->issuer,
+                ));
+            }
+        };
     }
 
     /**
@@ -85,8 +137,8 @@ final class UploadWizard extends Component
     public function messages(): array
     {
         return [
-            'file.max' => 'That file is too large. Drop in a statement export under 10 MB.',
-            'file.mimes' => "That file doesn't look like a supported statement export. Drop in an ASN CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, or ICS PDF.",
+            'file.max' => 'That file is too large. Drop in a statement export under the size limit for the chosen format.',
+            'file.extensions' => "That file doesn't look like a supported statement export. Drop in an ASN CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, ICS PDF, an email message (.eml), or a mailbox archive (.mbox).",
         ];
     }
 
@@ -111,6 +163,10 @@ final class UploadWizard extends Component
             ],
             'paypal' => [
                 ['value' => 'paypal-csv', 'label' => 'Activity Download (CSV)'],
+            ],
+            'email-file' => [
+                ['value' => 'eml', 'label' => 'Email message (.eml)'],
+                ['value' => 'mbox', 'label' => 'Mailbox archive (.mbox)'],
             ],
             default => [],
         };
@@ -186,6 +242,8 @@ final class UploadWizard extends Component
             'asn-mt940' => '.sta',
             'ics-pdf' => '.pdf',
             'paypal-csv' => '.csv',
+            'eml' => '.eml',
+            'mbox' => '.mbox',
             default => '.csv',
         };
 

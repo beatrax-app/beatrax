@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\EmailScan\Internal;
+namespace Modules\EmailScan\Public\Services;
 
 use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
@@ -41,6 +41,12 @@ use Throwable;
  * cannot collide on disk even on case-insensitive filesystems, while
  * the source of truth for the id itself stays the unique key on
  * (inbox_id, provider_message_id) in inbox_messages.
+ *
+ * Public surface so the matcher consumer in the Receipts module can
+ * resolve `.eml` paths for messages persisted by the EmailScan fetcher
+ * without crossing the Internal namespace boundary enforced by the
+ * `Modules\EmailScan\Internal is only used inside Modules\EmailScan`
+ * arch invariant.
  */
 final class EmlBlobStore
 {

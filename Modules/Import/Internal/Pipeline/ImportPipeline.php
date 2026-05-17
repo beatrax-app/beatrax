@@ -7,12 +7,12 @@ namespace Modules\Import\Internal\Pipeline;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
-use Modules\Import\Internal\Pipeline\Stages\NormalizeStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
 use Modules\Import\Public\Dto\EnrichedDisposition;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Dto\UnknownIban;
+use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
@@ -67,7 +67,7 @@ final class ImportPipeline
         $lastResolvedAccountId = null;
 
         try {
-            foreach ($this->parse->run($localPath, $sourceFormat, $accounts) as $source) {
+            foreach ($this->parse->run($localPath, $sourceFormat, $accounts, $user) as $source) {
                 $resolution = $accounts->resolve($source->ownIban);
 
                 if ($resolution instanceof UnknownAccount) {
@@ -188,6 +188,13 @@ final class ImportPipeline
     private function persistStatementMetadata(string $sourceFormat, int $importRunId, ?int $accountId, User $user): void
     {
         if ($accountId === null) {
+            return;
+        }
+
+        if (! in_array($sourceFormat, $this->adapters->supportedFormats(), strict: true)) {
+            // Receipt-path formats (eml, mbox) carry no statement-level
+            // metadata — every receipt is its own logical record without
+            // opening/closing balance or period dates. Skip silently.
             return;
         }
 

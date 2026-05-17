@@ -2,6 +2,17 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Models\User;
+use Modules\Import\Public\Pipeline\NormalizeStage;
+use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvAdapter;
+use Modules\Ingestion\Public\Contracts\AccountResolver;
+use Modules\Ingestion\Public\Dto\KnownAccount;
+use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
+use Modules\Receipts\Public\Pipeline\EmlMimeReader;
+use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
+
 /**
  * LOAD-BEARING contract: receipts and CSVs MUST produce
  * fingerprint-equivalent transactions.
@@ -13,21 +24,19 @@ declare(strict_types=1);
  * silently duplicates the matching CSV rows — the cross-format dedup
  * pay-off breaks.
  *
- * Wave 0 ships this test SCAFFOLD with the dataset registered but
- * the fixture pairs intentionally absent. Each dataset row calls
- * `->skip(...)` with a clear message telling the next-wave executor
- * which fixture file to land. Wave 1 (PayPal vertical slice) and
- * Wave 2 (ICS + Google Play) drop the fixtures into place and the
- * gate auto-activates — no edit to this file required.
+ * The 'paypal' dataset row carries the active assertion path: load
+ * the paired CSV row through PaypalCsvAdapter, load the paired .eml
+ * through PaypalReceiptMatcher + ReceiptSourceAdapter, push both
+ * through NormalizeStage, and assert FingerprintComposer.compose
+ * returns identical SHA-256 hashes.
  *
- * The skip predicate keeps CI green now; the test asserts something
- * non-trivial only once the fixtures land. This is intentional: a
- * red test in Wave 0 would block every other plan from merging.
+ * The 'ics' and 'google-play' rows still skip with a wave-pointer
+ * message until Wave 2 lands their matcher + fixtures.
  */
 dataset('fingerprintParityPairs', [
     'paypal' => [
-        'emlPath' => __DIR__.'/../fixtures/paypal/wave1-fingerprint-pair.eml',
-        'csvPath' => __DIR__.'/../fixtures/paypal/wave1-fingerprint-pair.csv',
+        'emlPath' => __DIR__.'/../fixtures/paypal/current-receipt.eml',
+        'csvPath' => __DIR__.'/../fixtures/paypal/paired-csv-row.csv',
         'matcherKey' => 'paypal-receipt',
         'wave' => 1,
     ],
@@ -45,6 +54,21 @@ dataset('fingerprintParityPairs', [
     ],
 ]);
 
+/**
+ * Minimal in-test AccountResolver: returns a fixed KnownAccount for
+ * any IBAN. The fingerprint tuple uses accountId so as long as both
+ * sides receive the same id the hash collapses.
+ */
+final class FixedPaypalAccountResolver implements AccountResolver
+{
+    public function __construct(private readonly int $accountId) {}
+
+    public function resolve(string $iban): KnownAccount
+    {
+        return new KnownAccount($this->accountId);
+    }
+}
+
 it('produces equivalent fingerprints from receipt and CSV for the same logical transaction', function (
     string $emlPath,
     string $csvPath,
@@ -56,13 +80,61 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
             "Fingerprint-parity fixture for matcher '{$matcherKey}' is missing. "
             ."Wave {$wave} must land: ".basename($emlPath).' + '.basename($csvPath)
             .'. Test scaffold ships in Wave 0; the gate activates the moment '
-            .'both fixtures exist.',
+            .'both fixtures exist.'
         );
     }
 
-    // The active assertion lands in Wave 1+ alongside the
-    // ReceiptSourceAdapter bridge and matcher implementations:
-    // expect(FingerprintComposer::compose($receiptCanonical))
-    //     ->toBe(FingerprintComposer::compose($csvCanonical));
-    expect(true)->toBeTrue();
+    if ($matcherKey !== 'paypal-receipt') {
+        // Wave 2 lands the ICS + Google Play active assertion path
+        // alongside the matcher class + fixture pair.
+        $this->markTestSkipped(
+            "Matcher '{$matcherKey}' arm lands in Wave {$wave}; only the paypal "
+            .'arm is active in Wave 1.'
+        );
+    }
+
+    $seeded = $this->seedFixtureUserAndAccount();
+    /** @var User $user */
+    $user = $seeded['user'];
+    $accountId = $seeded['paypalAccount']->id;
+
+    $importRunId = 1;
+    $accounts = new FixedPaypalAccountResolver($accountId);
+    $normalize = $this->app->make(NormalizeStage::class);
+
+    // Receipt-side: matcher → adapter → SourceTransactionDto → normalize.
+    $matcher = new PaypalReceiptMatcher(new EmlMimeReader);
+    $rawEml = (string) file_get_contents($emlPath);
+    $matchOutcome = $matcher->match($rawEml);
+    expect($matchOutcome->kind)->toBe('parsed');
+    expect($matchOutcome->parsed)->not->toBeNull();
+
+    $receiptSource = (new ReceiptSourceAdapter)->toSourceDto($matchOutcome->parsed, sourceRowIndex: 0);
+    $receiptCanonical = $normalize->run($receiptSource, $accountId, $user, $importRunId, 'eml');
+
+    // CSV-side: adapter parse → first SourceTransactionDto → normalize.
+    /** @var PaypalCsvAdapter $csvAdapter */
+    $csvAdapter = $this->app->make(PaypalCsvAdapter::class);
+    /** @var SourceTransactionDto|null $csvSource */
+    $csvSource = null;
+    foreach ($csvAdapter->parse($csvPath, $accounts) as $row) {
+        $csvSource = $row;
+        break;
+    }
+    expect($csvSource)->not->toBeNull();
+
+    /** @var SourceTransactionDto $csvSource */
+    $csvCanonical = $normalize->run($csvSource, $accountId, $user, $importRunId, 'paypal-csv');
+
+    // Sanity: the canonical comparators that feed FingerprintComposer
+    // must align before the hash check. Comparing them explicitly here
+    // gives a clearer failure message than a bare hash inequality.
+    expect($csvCanonical->bookedAt->toDateTimeString())->toBe($receiptCanonical->bookedAt->toDateTimeString());
+    expect($csvCanonical->postedAt->toDateString())->toBe($receiptCanonical->postedAt->toDateString());
+    expect($csvCanonical->amountMinor)->toBe($receiptCanonical->amountMinor);
+    expect($csvCanonical->currency)->toBe($receiptCanonical->currency);
+    expect($csvCanonical->counterpartyNormalized)->toBe($receiptCanonical->counterpartyNormalized);
+
+    $composer = $this->app->make(FingerprintComposer::class);
+    expect($composer->compose($receiptCanonical))->toBe($composer->compose($csvCanonical));
 })->with('fingerprintParityPairs');

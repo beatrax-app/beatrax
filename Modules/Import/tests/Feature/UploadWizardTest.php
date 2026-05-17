@@ -142,6 +142,6 @@ it('renders the two-step picker on the upload page', function (): void {
     $response->assertOk();
     $response->assertSee('Source', false);
     $response->assertSee('Format', false);
-    $response->assertSee('Drop in an ASN, ICS, or PayPal export.', false);
+    $response->assertSee('Drop in an ASN, ICS, PayPal export, or an email receipt file.', false);
     $response->assertSee('wire:model.live="issuer"', false);
 })->group('phase-3');

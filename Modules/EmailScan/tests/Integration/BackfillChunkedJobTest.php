@@ -10,8 +10,8 @@ use Illuminate\Support\Sleep;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Clients\FakeGmailApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
-use Modules\EmailScan\Internal\EmlBlobStore;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
+use Modules\EmailScan\Public\Services\EmlBlobStore;
 
 uses(RefreshDatabase::class);
 

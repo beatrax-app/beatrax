@@ -61,6 +61,13 @@ arch('no Laravel facade usage in module code')
         'Modules\\EmailScan\\Internal\\Jobs\\BackfillInboxJob',
         'Modules\\EmailScan\\Internal\\Jobs\\IncrementalScanJob',
         'Modules\\EmailScan\\Internal\\Jobs\\DiscoveryScanJob',
+        // Same carve-out applies to the Receipts matcher consumer:
+        // ProcessFetchedInboxMessagesJob.uniqueVia() returns
+        // Cache::driver('redis') so the per-user single-flight lock
+        // fires before constructor DI completes (the queue worker
+        // builds the lock store from the job's uniqueVia() return,
+        // not from container resolution).
+        'Modules\\Receipts\\Internal\\Jobs\\ProcessFetchedInboxMessagesJob',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')
