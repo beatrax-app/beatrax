@@ -374,7 +374,17 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
     ): void {
         $sm->applyStatus($this->inboxId, 'backfilling');
 
-        $windowStart = $clock->now()->modify("-{$windowMonths} months");
+        // Capture the wall-clock anchor BEFORE any provider call so the
+        // post-walk deltaPage(null, anchor) baseline filter uses the
+        // pre-walk timestamp. This closes the multi-hour-backfill race
+        // window: a message arriving during the walk but after the
+        // walker's cursor has paged past its position would otherwise
+        // be missed AND fall outside a baseline whose lower bound was
+        // captured after the walk completed. With the anchor pinned at
+        // walkStartedAt, any in-window message either lands in the
+        // walk's filter OR is captured by the next incremental tick.
+        $walkStartedAt = $clock->now()->toDateTimeImmutable();
+        $windowStart = $walkStartedAt->modify("-{$windowMonths} months");
 
         // Mutable accumulators captured by the page closure. The
         // running estimate is the max count of messages seen across
@@ -448,7 +458,11 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             //    BEFORE the inbox is marked idle. The deltaLink write
             //    goes through the state machine's recordCursor surface
             //    so the noOtherInboxScanStateMutator boundary holds.
-            $baseline = $graph->deltaPage($this->inboxId, null);
+            //    The baseline's lower bound is pinned to the pre-walk
+            //    anchor so messages arriving DURING the walk are
+            //    captured by the next incremental tick rather than
+            //    falling into a gap between walk-end and baseline-now.
+            $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
             $deltaLink = $baseline['deltaLink'] ?? null;
             if ($deltaLink !== null && $deltaLink !== '') {
                 $sm->recordCursor(
