@@ -6,6 +6,7 @@ namespace Modules\Categorization\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use JsonException;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Events\CategorizationDiverged;
 use Modules\Categorization\Public\Events\TransactionCategorized;
@@ -93,8 +94,18 @@ final class AssignCategory implements AssignsCategory
             return null;
         }
 
-        /** @var mixed $decoded */
-        $decoded = json_decode($raw, true);
+        // The auto_category_provenance column is best-effort audit
+        // metadata — a corrupt JSON payload must NOT crash a reclassify
+        // request. JSON_THROW_ON_ERROR matches the project-wide
+        // json_decode convention (ApplyEnrichments, ApplyReceiptConflictResolution);
+        // the JsonException catch returns null so the caller falls
+        // back to the no-prior-provenance code path.
+        try {
+            /** @var mixed $decoded */
+            $decoded = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
         if (! is_array($decoded)) {
             return null;
         }
