@@ -1,5 +1,22 @@
 <div>
     @if ($visible)
+        @php
+            // Per-field copy mapping. The receipt-conflict policy is
+            // field-agnostic at the data layer (any of the four
+            // FingerprintStage fields can disagree), but the user
+            // wants to read what actually disagreed — saying "cleaner
+            // merchant name (1299)" for an amount conflict is wrong.
+            $fieldLabel = match ($field) {
+                'amount_minor' => 'amount',
+                'currency' => 'currency',
+                'description' => 'description',
+                'counterparty_name' => 'merchant name',
+                default => 'value',
+            };
+            $heading = $field === 'counterparty_name'
+                ? 'An email receipt has a cleaner '.$fieldLabel
+                : 'An email receipt records a different '.$fieldLabel;
+        @endphp
         <div
             role="alert"
             aria-live="assertive"
@@ -9,7 +26,7 @@
                 Receipt and statement disagree.
             </div>
             <p class="mt-1 text-sm text-slate-700">
-                An email receipt has a cleaner merchant name (&ldquo;{{ $receiptValue ?? '' }}&rdquo;)
+                {{ $heading }} (&ldquo;{{ $receiptValue ?? '' }}&rdquo;)
                 than the statement (&ldquo;{{ $csvValue ?? '' }}&rdquo;).
                 Should diederik prefer receipts for future conflicts?
             </p>
