@@ -6,6 +6,7 @@ namespace Modules\EmailScan\Public\Services;
 
 use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Dto\DiscoveredSenderDto;
@@ -34,6 +35,13 @@ use Throwable;
  * The constants are exposed as method-default parameters so a future
  * UI toggle ("show all" mode) can pass relaxed values without changing
  * the query shape. The defaults match the panel's locked behaviour.
+ *
+ * candidatesForUser JOINs to `inboxes` on both `inbox_id` AND
+ * `user_id` so a discovered row whose denormalised `user_id` somehow
+ * disagrees with the parent inbox's `user_id` is dropped at the read
+ * boundary. The write-side `PromoteDiscoveredSender` /
+ * `DismissDiscoveredSender` actions already enforce the cross-user
+ * 404 invariant; this is the read-side mirror.
  */
 final class DiscoveredSenderQuery
 {
@@ -73,24 +81,35 @@ final class DiscoveredSenderQuery
     ): array {
         $threshold = $this->clock->now()->modify("-{$withinDays} days")->toDateTimeString();
 
+        // Defense-in-depth: JOIN to inboxes on BOTH inbox_id AND
+        // user_id so a candidate row whose denormalised user_id
+        // somehow disagrees with the parent inboxes.user_id (a future
+        // bug or a malicious foreign-key insert) is silently dropped
+        // by the SQL filter rather than leaked into the UI. The
+        // PromoteDiscoveredSender / DismissDiscoveredSender actions
+        // already guard the write side; this guards the read side.
         $rows = $this->db->connection()
             ->table('discovered_senders')
-            ->where('user_id', $user->id)
-            ->where('state', 'candidate')
-            ->where('occurrence_count', '>=', $minOccurrences)
-            ->where('last_seen_at', '>=', $threshold)
-            ->orderBy('occurrence_count', 'desc')
-            ->orderBy('last_seen_at', 'desc')
+            ->join('inboxes', function (JoinClause $join) use ($user): void {
+                $join->on('inboxes.id', '=', 'discovered_senders.inbox_id')
+                    ->where('inboxes.user_id', '=', $user->id);
+            })
+            ->where('discovered_senders.user_id', $user->id)
+            ->where('discovered_senders.state', 'candidate')
+            ->where('discovered_senders.occurrence_count', '>=', $minOccurrences)
+            ->where('discovered_senders.last_seen_at', '>=', $threshold)
+            ->orderBy('discovered_senders.occurrence_count', 'desc')
+            ->orderBy('discovered_senders.last_seen_at', 'desc')
             ->limit(self::PANEL_PAGE_SIZE)
             ->select([
-                'id',
-                'user_id',
-                'inbox_id',
-                'sender_email',
-                'sender_name',
-                'occurrence_count',
-                'last_seen_at',
-                'state',
+                'discovered_senders.id',
+                'discovered_senders.user_id',
+                'discovered_senders.inbox_id',
+                'discovered_senders.sender_email',
+                'discovered_senders.sender_name',
+                'discovered_senders.occurrence_count',
+                'discovered_senders.last_seen_at',
+                'discovered_senders.state',
             ])
             ->get();
 

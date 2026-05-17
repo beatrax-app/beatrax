@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
+use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxesBadgeCount;
 
 /*
@@ -301,6 +302,40 @@ it('re-dismissing an already-dismissed row is a silent no-op', function (): void
     $row = $db->connection()->table('discovered_senders')->where('id', $id)->first();
     expect($row)->not->toBeNull();
     expect($row->state)->toBe('dismissed');
+});
+
+it('candidatesForUser drops rows whose inbox belongs to a different user (defence-in-depth JOIN guard)', function (): void {
+    // Two users, two inboxes. Seed a discovered_senders row whose
+    // denormalised user_id is User A but whose inbox_id points at
+    // User B's inbox. The defensive JOIN to inboxes (on inbox_id AND
+    // user_id) must drop the row from User A's panel rather than
+    // surface it.
+    $alice = dspUser('alice-join@example.com');
+    $bob = dspUser('bob-join@example.com');
+    $bobInboxId = dspSeedInbox($bob);
+    $this->actingAs($alice);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $now = CarbonImmutable::now()->toDateTimeString();
+    $recent = CarbonImmutable::now()->subDays(2)->toDateTimeString();
+    $db->connection()->table('discovered_senders')->insert([
+        'user_id' => $alice->id,             // denormalised user_id = Alice
+        'inbox_id' => $bobInboxId,           // but inbox belongs to Bob
+        'sender_email' => 'mismatch@example.com',
+        'sender_name' => null,
+        'occurrence_count' => 5,
+        'last_seen_at' => $recent,
+        'state' => 'candidate',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    $query = app(DiscoveredSenderQuery::class);
+    $rows = $query->candidatesForUser($alice);
+
+    expect($rows)->toBeArray();
+    expect($rows)->toHaveCount(0);
 });
 
 it('top-nav badge counts only above-threshold candidates', function (): void {
