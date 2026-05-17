@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Modules\Chains\Models\ChainLink;
@@ -51,11 +52,12 @@ it('adds recurring_detection_window_months and recurring_income_min_amount_minor
     expect($schema->hasColumn('users', 'recurring_detection_window_months'))->toBeTrue();
     expect($schema->hasColumn('users', 'recurring_income_min_amount_minor'))->toBeTrue();
 
-    $fresh = User::query()->create([
+    $created = User::query()->create([
         'email' => 'rec-defaults@diederik.test',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
+    $fresh = User::query()->findOrFail($created->id);
 
     expect((int) $fresh->recurring_detection_window_months)->toBe(18);
     expect((int) $fresh->recurring_income_min_amount_minor)->toBe(200000);
@@ -172,21 +174,28 @@ it('hydrates RecurringSeries.latestFundingChainLink to the related ChainLink or 
         'account_id' => $account->id,
         'import_run_id' => $run->id,
         'fingerprint' => str_repeat('b', 64),
-        'posted_at' => '2026-05-15 00:00:00',
-        'booked_at' => '2026-05-15',
+        'posted_at' => '2026-05-15',
+        'booked_at' => '2026-05-15 00:00:00',
+        'value_date' => '2026-05-15',
         'amount_minor' => -1099,
         'currency' => 'EUR',
+        'settled_amount_minor' => -1099,
+        'settled_currency' => 'EUR',
         'counterparty_normalized' => 'netflix',
-        'counterparty_raw' => 'NETFLIX.COM',
+        'counterparty_name' => 'NETFLIX.COM',
+        'normalization_version' => 1,
         'description' => 'monthly subscription',
         'type' => 'expense',
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint_version' => 3,
     ]);
 
     $link = ChainLink::query()->create([
         'user_id' => $this->user->id,
         'from_transaction_id' => $tx->id,
         'to_transaction_id' => null,
-        'kind' => 'paypal_funding',
+        'kind' => 'ics_bulk_settle',
         'state' => 'candidate',
         'confidence' => '0.910',
         'resolver' => 'auto',
@@ -241,8 +250,8 @@ it('casts RecurringSeries date and boolean columns to immutable + boolean types'
 
     $fresh = RecurringSeries::query()->findOrFail($series->id);
 
-    expect($fresh->snoozed_until)->toBeInstanceOf(Carbon\CarbonImmutable::class);
-    expect($fresh->next_expected_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
+    expect($fresh->snoozed_until)->toBeInstanceOf(CarbonImmutable::class);
+    expect($fresh->next_expected_at)->toBeInstanceOf(CarbonImmutable::class);
     expect($fresh->next_expected_confidence_low)->toBeTrue();
 });
 
@@ -280,14 +289,21 @@ it('allows inserting recurring_series_occurrences and recurring_series_transitio
         'account_id' => $account->id,
         'import_run_id' => $run->id,
         'fingerprint' => str_repeat('e', 64),
-        'posted_at' => '2026-05-15 00:00:00',
-        'booked_at' => '2026-05-15',
+        'posted_at' => '2026-05-15',
+        'booked_at' => '2026-05-15 00:00:00',
+        'value_date' => '2026-05-15',
         'amount_minor' => -1099,
         'currency' => 'EUR',
+        'settled_amount_minor' => -1099,
+        'settled_currency' => 'EUR',
         'counterparty_normalized' => 'netflix',
-        'counterparty_raw' => 'NETFLIX.COM',
+        'counterparty_name' => 'NETFLIX.COM',
+        'normalization_version' => 1,
         'description' => 'monthly',
         'type' => 'expense',
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint_version' => 3,
     ]);
 
     $occurrence = RecurringSeriesOccurrence::query()->create([
@@ -299,7 +315,7 @@ it('allows inserting recurring_series_occurrences and recurring_series_transitio
         'observed_currency' => 'EUR',
     ]);
 
-    expect($occurrence->observed_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
+    expect($occurrence->observed_at)->toBeInstanceOf(CarbonImmutable::class);
 
     $transition = RecurringSeriesTransition::query()->create([
         'user_id' => $this->user->id,
@@ -311,5 +327,5 @@ it('allows inserting recurring_series_occurrences and recurring_series_transitio
         'transitioned_at' => '2026-05-18 00:00:00',
     ]);
 
-    expect($transition->transitioned_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
+    expect($transition->transitioned_at)->toBeInstanceOf(CarbonImmutable::class);
 });
