@@ -94,7 +94,7 @@ it('rejects an out-of-whitelist field_name without mutating the transactions row
     // unsafe string (any value not in the four-name whitelist).
     DB::table('pending_enrichment_conflicts')
         ->where('id', $seeded['conflict_id'])
-        ->update(['field_name' => "id = id; DROP TABLE transactions; --"]);
+        ->update(['field_name' => 'id = id; DROP TABLE transactions; --']);
 
     /** @var ApplyReceiptConflictResolution $resolve */
     $resolve = $this->app->make(ApplyReceiptConflictResolution::class);
