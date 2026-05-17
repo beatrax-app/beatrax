@@ -23,6 +23,7 @@ foreach (
         'Modules/Categorization' => Modules\Categorization\Tests\TestCase::class,
         'Modules/Chains' => Modules\Chains\Tests\TestCase::class,
         'Modules/Core' => Modules\Core\Tests\TestCase::class,
+        'Modules/DriftAlerts' => Modules\DriftAlerts\Tests\TestCase::class,
         'Modules/EmailScan' => Modules\EmailScan\Tests\TestCase::class,
         'Modules/Import' => Modules\Import\Tests\TestCase::class,
         'Modules/Ingestion' => Modules\Ingestion\Tests\TestCase::class,
