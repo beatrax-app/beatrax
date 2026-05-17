@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\Schedule;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
@@ -31,7 +33,24 @@ use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
 // rule does not apply here (the rule is scoped via
 // `->not->toBeUsedIn('Modules')`).
 Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
-    $inboxIds = $db->connection()->table('inboxes')->pluck('id');
+    // IN-02 iter-2: skip inboxes currently in needs_reauth so the
+    // hourly tick does not queue jobs that will only early-exit
+    // anyway. The job's own first-line guard still handles the
+    // case of a row transitioning into needs_reauth between dispatch
+    // and pickup; this filter is a multi-user-readiness optimisation
+    // — N inboxes per tick where N is the live count, not the total
+    // including ones that need user intervention.
+    $inboxIds = $db->connection()
+        ->table('inboxes')
+        ->leftJoin('inbox_scan_state', function (JoinClause $join): void {
+            $join->on('inbox_scan_state.inbox_id', '=', 'inboxes.id')
+                ->where('inbox_scan_state.folder', '=', 'INBOX');
+        })
+        ->where(function (Builder $q): void {
+            $q->whereNull('inbox_scan_state.status')
+                ->orWhere('inbox_scan_state.status', '!=', 'needs_reauth');
+        })
+        ->pluck('inboxes.id');
     foreach ($inboxIds as $id) {
         $bus->dispatch(new IncrementalScanJob((int) $id));
     }
