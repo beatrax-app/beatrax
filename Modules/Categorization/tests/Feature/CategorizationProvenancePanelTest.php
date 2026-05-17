@@ -293,6 +293,31 @@ it('falls back to none variant when the referenced rule has been deleted', funct
         ->assertSet('variant', 'none');
 });
 
+it('hydrateFromProvenance renders the none variant when auto_category_provenance is corrupt JSON', function (): void {
+    // Best-effort-audit contract: a corrupt provenance payload must
+    // NOT crash the transaction detail page. JSON_THROW_ON_ERROR +
+    // JsonException catch falls back to the 'none' variant so the
+    // panel renders empty.
+    $txId = seedProvTransaction(
+        $this->user->id,
+        $this->account->id,
+        $this->importRun->id,
+        $this->streaming->id,
+        null,
+    );
+
+    // Poison the column with a non-JSON string. The raw query builder
+    // bypasses the Eloquent cast so the corrupt bytes actually land on
+    // disk.
+    DB::table('transactions')->where('id', $txId)->update([
+        'auto_category_provenance' => '{not valid json',
+    ]);
+
+    Livewire::test(CategorizationProvenancePanel::class, ['transactionId' => $txId])
+        ->assertSet('variant', 'none')
+        ->assertSet('ruleId', null);
+});
+
 it('the app layout @auth block mounts the three global SFCs', function (): void {
     $layoutPath = base_path('resources/views/layouts/app.blade.php');
     $contents = (string) file_get_contents($layoutPath);
