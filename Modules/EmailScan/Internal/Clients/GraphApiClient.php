@@ -201,21 +201,29 @@ final class GraphApiClient implements GraphApiClientContract
      *
      * @return array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}
      */
-    public function deltaPage(int $inboxId, ?string $deltaLink): array
+    public function deltaPage(int $inboxId, ?string $deltaLink, ?DateTimeImmutable $sinceOverride = null): array
     {
         $accessToken = $this->ensureFreshAccessToken($inboxId);
         $client = $this->makeHttpClient();
 
         if ($deltaLink !== null && $deltaLink !== '') {
+            // The delta cursor URL has its filter baked in; the
+            // $sinceOverride is ignored on the walk branch.
             $url = $deltaLink;
             $body = $this->getJson($client, $accessToken, $url, [], expectsDelta: true);
         } else {
-            $nowIso = $this->clock->now()->format('Y-m-d\TH:i:s\Z');
+            // Baseline establish: prefer the caller's pinned anchor so
+            // a multi-hour backfill can capture the lower bound BEFORE
+            // the walk begins, eliminating the race window where
+            // messages arriving during the walk would slip past both
+            // the walk's filter and the baseline's lower bound.
+            $sinceIso = ($sinceOverride ?? $this->clock->now()->toDateTimeImmutable())
+                ->format('Y-m-d\TH:i:s\Z');
             $body = $this->getJson(
                 $client,
                 $accessToken,
                 self::GRAPH_BASE_URI.'me/mailFolders/inbox/messages/delta',
-                ['$filter' => 'receivedDateTime ge '.$nowIso],
+                ['$filter' => 'receivedDateTime ge '.$sinceIso],
                 expectsDelta: true,
             );
         }
