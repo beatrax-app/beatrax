@@ -70,6 +70,15 @@ parameters:
         -
             message: '#Illuminate\\Support\\Facades\\Cache facade should not be used\.#'
             path: Modules/Recurring/Internal/Jobs/DetectRecurringSeriesJob.php
+        # Same carve-out for the DriftAlerts per-(user, series) detector
+        # job. Laravel calls DetectDriftAlertsJob::uniqueVia() at
+        # queue-push time before constructor DI completes; a
+        # constructor-injected Repository is not an option. The
+        # BoundaryArchTest facade-ignore list at the top of the file
+        # mirrors this allow-list.
+        -
+            message: '#Illuminate\\Support\\Facades\\Cache facade should not be used\.#'
+            path: Modules/DriftAlerts/Internal/Jobs/DetectDriftAlertsJob.php
     allowedGlobalFunctions:
         - 'app_path'
         - 'base_path'
