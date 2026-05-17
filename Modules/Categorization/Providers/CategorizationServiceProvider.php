@@ -11,8 +11,10 @@ use Modules\Categorization\Internal\Http\Livewire\InlineCategoryPicker;
 use Modules\Categorization\Internal\Http\Livewire\TriageInbox;
 use Modules\Categorization\Internal\Listeners\MerchantMemoryWriter;
 use Modules\Categorization\Internal\Listeners\SeedDefaultCategoryTree;
+use Modules\Categorization\Internal\Pipeline\ApplyAutoCategoryStage;
 use Modules\Categorization\Internal\Services\RuleEvaluator;
 use Modules\Categorization\Public\Actions\AssignCategory;
+use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
@@ -39,9 +41,11 @@ final class CategorizationServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(AssignsCategory::class, AssignCategory::class);
+        $this->app->bind(AppliesAutoCategory::class, ApplyAutoCategoryStage::class);
         $this->app->singleton(UncategorizedTriageQuery::class);
         $this->app->singleton(CategoryOptionsQuery::class);
         $this->app->singleton(RuleEvaluator::class);
+        $this->app->singleton(ApplyAutoCategoryStage::class);
         $this->app->singleton(CategorizationRuleQuery::class);
         $this->app->singleton(MerchantMemoryQuery::class);
     }

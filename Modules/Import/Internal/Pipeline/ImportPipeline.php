@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Pipeline;
 
+use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
@@ -46,6 +47,7 @@ final class ImportPipeline
         private readonly ParseStage $parse,
         private readonly NormalizeStage $normalize,
         private readonly ClassifyTransactionType $classifier,
+        private readonly AppliesAutoCategory $autoCategory,
         private readonly FingerprintStage $fingerprint,
         private readonly SourceAdapterRegistry $adapters,
         private readonly RecordsStatementSummary $statementSummaries,
@@ -100,6 +102,8 @@ final class ImportPipeline
                 try {
                     $normalized = $this->normalize->run($source, $accountId, $user, $importRunId, $sourceFormat);
                     $normalized = $this->classifier->run($normalized, $user);
+                    $autoOutcome = $this->autoCategory->apply($normalized, $user);
+                    $normalized = $autoOutcome->canonical;
                 } catch (Throwable $e) {
                     $preview[] = new PreviewRowDto(
                         rowIndex: $source->sourceRowIndex,
