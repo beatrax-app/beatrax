@@ -89,15 +89,15 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
     }
 })->name('receipts.process-fetched-inbox-messages')->hourly()->withoutOverlapping(30);
 
-// Watched-folder secondary path (D-704 / D-718): per-user 5-minute
-// scanner over storage/app/inbox-drop/{userId}/ that imports .eml /
-// .mbox files through the same matcher pipeline as the wizard
-// upload. Only dispatches per-user when auto_import_drop_folder is
-// true so users who never enabled the watched folder pay no queue
-// cost. Method order .name() BEFORE .everyFiveMinutes()
-// ->withoutOverlapping(10) matches the email-scan + receipts entries
-// above so the CallbackEvent's description-required guard is
-// satisfied before withoutOverlapping reads it.
+// Watched-folder secondary path: per-user 5-minute scanner over
+// storage/app/inbox-drop/{userId}/ that imports .eml / .mbox files
+// through the same matcher pipeline as the wizard upload. Only
+// dispatches per-user when auto_import_drop_folder is true so users
+// who never enabled the watched folder pay no queue cost. Method
+// order .name() BEFORE .everyFiveMinutes()->withoutOverlapping(10)
+// matches the email-scan + receipts entries above so the
+// CallbackEvent's description-required guard is satisfied before
+// withoutOverlapping reads it.
 Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
     $userIds = $db->connection()
         ->table('users')
