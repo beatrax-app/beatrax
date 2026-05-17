@@ -116,8 +116,13 @@ dataset('drift_evaluator_cases', [
         'cadence' => 'monthly',
         'currency' => 'USD',
         'direction' => 'expense',
-        'priorMinor' => -1199,
-        'latestMinor' => -1499,
+        // Round prior+latest pair so the ratio is exactly 25.0% —
+        // avoids the per-mille rounding hazard a non-round pair like
+        // -1199 → -1499 would introduce when a future contributor
+        // copies the case shape with a 25% threshold (which compares
+        // strictly-greater-than the ratio).
+        'priorMinor' => -1200,
+        'latestMinor' => -1500,
         'expectedAlertCount' => 1,
         'expectedDeltaMinor' => -300,
         'expectedAnnualizedMinor' => -3600,
