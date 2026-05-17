@@ -110,7 +110,7 @@ it('OAuth callback (gmail) happy path inserts inbox + scan_state + saves refresh
     // controller consumes it via the same singleton-bound instance.
     /** @var OAuthStateRepository $stateRepo */
     $stateRepo = $this->app->make(OAuthStateRepository::class);
-    $state = $stateRepo->issueState('gmail');
+    $state = $stateRepo->issueState('gmail', userId: $user->id);
 
     $response = $this->get('/oauth/callback/gmail?state='.$state.'&code=fake-code-abcdef');
 
