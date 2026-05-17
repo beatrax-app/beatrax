@@ -1,0 +1,173 @@
+{{--
+    /recurring/review page — Pending / Rejected / Cadence-changed
+    tabs over recurring_series rows. Each pending or cadence-changed
+    row carries Approve / Reject / Snooze / Edit-name actions;
+    rejected rows carry an Un-reject action. Approve / Reject /
+    Snooze / Edit-name each dispatch a 10-second Undo toast via
+    `$this->dispatch('toast', ...)` (the layout binds `x-on:toast` on
+    the window).
+
+    Blade default `{{ }}` escaping for every interpolation. No raw
+    HTML output anywhere.
+--}}
+
+@php
+    use Modules\Ledger\Public\ValueObjects\Money;
+
+    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
+        ? $money->format('nl_NL')
+        : $money->format('en_US');
+
+    $tabs = [
+        'pending' => 'Pending',
+        'rejected' => 'Rejected',
+        'cadence_changed' => 'Cadence changed',
+    ];
+@endphp
+
+<div class="mx-auto max-w-5xl px-4 py-12">
+    <header class="mb-8">
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Review recurring</h1>
+        <p class="mt-2 text-sm text-slate-500">
+            Approve, snooze, or reject detected recurring suggestions.
+        </p>
+    </header>
+
+    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200">
+        @foreach ($tabs as $key => $label)
+            <button
+                type="button"
+                wire:click="setTab('{{ $key }}')"
+                @class([
+                    'px-3 py-2 text-sm',
+                    'border-b-2 border-slate-900 font-medium text-slate-900' => $tab === $key,
+                    'border-b-2 border-transparent text-slate-500 hover:text-slate-900' => $tab !== $key,
+                ])
+            >{{ $label }}</button>
+        @endforeach
+    </nav>
+
+    @if (count($rows) === 0)
+        <div class="rounded-lg border border-slate-200 bg-white p-6">
+            <h2 class="text-base font-semibold text-slate-900">Nothing to review</h2>
+            <p class="mt-2 text-sm text-slate-500">
+                @if ($tab === 'pending')
+                    Recurring suggestions land here as the detector spots stable monthly clusters.
+                @elseif ($tab === 'rejected')
+                    Rejected suggestions appear here so you can bring them back if your mind changes.
+                @else
+                    Approved series whose cadence has flipped show up here for re-review.
+                @endif
+            </p>
+        </div>
+    @else
+        <ul class="space-y-3">
+            @foreach ($rows as $row)
+                <li class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm text-slate-900">
+                                <input
+                                    type="checkbox"
+                                    wire:model="selectedIds"
+                                    value="{{ $row->seriesId }}"
+                                    aria-label="Select recurring series {{ $row->seriesId }}"
+                                    class="mr-2 align-middle"
+                                />
+                                <span class="font-medium">{{ $row->displayName() }}</span>
+                                <span class="ml-2 text-slate-500" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                {{ ucfirst($row->cadence) }}
+                                @if ($row->nextExpectedAt)
+                                    · Next {{ $row->nextExpectedAt->format('d M Y') }}
+                                @endif
+                                @if ($row->state === 'cadence_changed')
+                                    · cadence changed
+                                @endif
+                            </p>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-2">
+                            @if ($tab === 'rejected')
+                                <button
+                                    type="button"
+                                    wire:click="unReject({{ $row->seriesId }})"
+                                    class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                                >Un-reject</button>
+                            @else
+                                <button
+                                    type="button"
+                                    wire:click="approve({{ $row->seriesId }})"
+                                    aria-label="Approve recurring series {{ $row->seriesId }}"
+                                    class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+                                >Approve</button>
+                                <button
+                                    type="button"
+                                    wire:click="reject({{ $row->seriesId }})"
+                                    aria-label="Reject recurring series {{ $row->seriesId }}"
+                                    class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100"
+                                >Reject</button>
+                                <div x-data="{ open: false }" class="relative">
+                                    <button
+                                        type="button"
+                                        x-on:click="open = ! open"
+                                        class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                                    >Snooze</button>
+                                    <div
+                                        x-show="open"
+                                        x-cloak
+                                        x-on:click.outside="open = false"
+                                        class="absolute right-0 z-10 mt-1 w-48 rounded-md border border-slate-200 bg-white p-2 text-xs shadow-lg"
+                                    >
+                                        <button
+                                            type="button"
+                                            wire:click="snooze({{ $row->seriesId }}, '{{ now()->addWeek()->toIso8601String() }}')"
+                                            x-on:click="open = false"
+                                            class="block w-full px-2 py-1 text-left hover:bg-slate-50"
+                                        >1 week</button>
+                                        <button
+                                            type="button"
+                                            wire:click="snooze({{ $row->seriesId }}, '{{ now()->addMonth()->toIso8601String() }}')"
+                                            x-on:click="open = false"
+                                            class="block w-full px-2 py-1 text-left hover:bg-slate-50"
+                                        >1 month</button>
+                                        <button
+                                            type="button"
+                                            wire:click="snooze({{ $row->seriesId }}, '{{ now()->addMonths(3)->toIso8601String() }}')"
+                                            x-on:click="open = false"
+                                            class="block w-full px-2 py-1 text-left hover:bg-slate-50"
+                                        >3 months</button>
+                                    </div>
+                                </div>
+                                <div x-data="{ editing: false, newName: '{{ $row->displayName() }}' }" class="relative">
+                                    <button
+                                        type="button"
+                                        x-on:click="editing = ! editing"
+                                        class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                                    >Edit name</button>
+                                    <div
+                                        x-show="editing"
+                                        x-cloak
+                                        x-on:click.outside="editing = false"
+                                        class="absolute right-0 z-10 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg"
+                                    >
+                                        <input
+                                            type="text"
+                                            x-model="newName"
+                                            class="block w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
+                                        />
+                                        <button
+                                            type="button"
+                                            x-on:click="$wire.editName({{ $row->seriesId }}, newName); editing = false"
+                                            class="mt-2 inline-flex items-center gap-1 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700"
+                                        >Save</button>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </li>
+            @endforeach
+        </ul>
+    @endif
+</div>
