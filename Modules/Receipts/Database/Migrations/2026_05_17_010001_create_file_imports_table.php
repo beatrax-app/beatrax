@@ -10,8 +10,8 @@ use Illuminate\Database\Schema\Builder;
 
 /**
  * Creates the file_imports table — the lightweight DB index over the
- * raw .eml blobs that arrived via file drop rather than the Phase 6
- * API fetcher.
+ * raw .eml blobs that arrived via file drop rather than the
+ * EmailScan API fetcher.
  *
  * Mirrors the inbox_messages table shape so the matcher consumer can
  * unify both tables behind a single MatcherInputDto stream:

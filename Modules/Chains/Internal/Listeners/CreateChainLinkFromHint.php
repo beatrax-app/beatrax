@@ -55,7 +55,7 @@ use Modules\Receipts\Public\Events\ChainHintDetected;
  * RefundOfPayload), so an unknown type indicates a producer that has
  * not yet been integrated; dropping the event is the safest default.
  *
- * @internal Wave 2 listener — kept under Internal because the row it
+ * @internal Kept under Internal because the row it
  *           writes is consumed exclusively by the Chains module's own
  *           resolvers + review-queue UI. Subscription is wired in
  *           `ChainsServiceProvider::boot()`.
