@@ -108,15 +108,19 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * SUM of `annualized_impact_minor` across open alerts in
-     * original-currency-minor units. The dashboard tile renders the
-     * absolute magnitude in EUR as its headline; the rollup ignores
-     * sign because the tile presents "potential annualized cost".
+     * SUM of `annualized_impact_minor` across open EXPENSE-direction
+     * alerts in original-currency-minor units. The dashboard tile
+     * renders the absolute magnitude in EUR as its "potential
+     * annualized cost" headline, so the rollup must stay scoped to
+     * expenses — folding an income raise's positive delta into the
+     * same headline would conflate "subscriptions going up" with
+     * "salary going up" under the single up-arrow tile chrome.
      */
     public function totalOpenAnnualizedImpactForUser(User $user): int
     {
         return (int) $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
+            ->where('direction', 'expense')
             ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
             ->sum('annualized_impact_minor');
     }
