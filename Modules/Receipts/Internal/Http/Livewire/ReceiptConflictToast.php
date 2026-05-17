@@ -13,16 +13,15 @@ use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
 use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
 /**
- * Livewire SFC for the first-conflict receipt toast (D-707). Listens
- * for the `receipt-conflict-detected` local Livewire event AND falls
- * back to pulling the latest pending conflict on mount so a backfill
- * job that produced a held conflict in a prior request still surfaces
+ * Livewire SFC for the first-conflict receipt toast. Listens for the
+ * `receipt-conflict-detected` local Livewire event AND falls back to
+ * pulling the latest pending conflict on mount so a backfill job
+ * that produced a held conflict in a prior request still surfaces
  * the choice on the next page render.
  *
  * Services arrive as parameters on the relevant action / render
  * methods — constructor injection is banned on Livewire components by
- * the strict-rules plugin. Mirrors the InlineCategoryPicker +
- * BackfillWindowModal pattern.
+ * the strict-rules plugin.
  *
  * Cross-user safety: the SFC reads the current user via `CurrentUser`
  * and scopes every action through ApplyReceiptConflictResolution,
@@ -32,7 +31,7 @@ use Modules\Receipts\Public\Services\ReceiptConflictQuery;
  * current request's import — and the mount() fallback is itself
  * user-scoped via ReceiptConflictQuery.
  *
- * UI-SPEC contract:
+ * UI contract:
  *  - Heading: "Receipt and statement disagree."
  *  - Body templated with {field} / {receipt_value} / {csv_value}
  *  - Primary: "Use receipt" -> prefer_receipt
