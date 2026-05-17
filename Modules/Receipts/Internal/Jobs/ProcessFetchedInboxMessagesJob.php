@@ -44,12 +44,12 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
  *    backlog walk, short enough to unblock if a worker crashes
  *    mid-handle.
  *
- * Cross-user defence (T-07-09): the consumer also re-checks each
- * yielded DTO's `userId` against `$this->userId` and skips
- * mismatches, even though the InboxMessageQuery binding is
- * user-agnostic by design (the user filter happens in the consumer,
- * not the query). The defence-in-depth comparison prevents a future
- * query-side refactor from silently widening the per-user surface.
+ * Cross-user defence: the consumer also re-checks each yielded DTO's
+ * `userId` against `$this->userId` and skips mismatches, even though
+ * the InboxMessageQuery binding is user-agnostic by design (the user
+ * filter happens in the consumer, not the query). The
+ * defence-in-depth comparison prevents a future query-side refactor
+ * from silently widening the per-user surface.
  *
  * Single permitted facade exception: `Cache::driver('redis')` inside
  * `uniqueVia()`. The Laravel queue infrastructure invokes
@@ -59,9 +59,9 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
  * FQN the "no Laravel facades in module code" exemption.
  *
  * The matcher dispatch flow inside handle() is synchronous and pure
- * (Pattern 4 from research) — the queue layer is just a per-user
- * backlog walker on a known cadence (hourly, matched to Phase 6's
- * incremental scan rhythm).
+ * — the queue layer is just a per-user backlog walker on a known
+ * cadence (hourly, matched to the EmailScan incremental scan
+ * rhythm).
  */
 final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -185,11 +185,31 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
                     ->first();
                 if ($account !== null) {
                     if ($importRunId === null) {
+                        // Synthetic sentinel for the raw_file_path
+                        // column: inbox-handoff writes do not have a
+                        // file on disk, so the audit trail uses a
+                        // discoverable marker rather than an empty
+                        // string (which would conflate with corrupt
+                        // / never-attached values in future audit
+                        // queries).
+                        $rawPathSentinel = '__INBOX_HANDOFF__/user-'.$this->userId.'/'.$clock->now()->format('Y-m-d');
+                        // sha256 must remain deterministic per import
+                        // run (the column is otherwise the content
+                        // hash); we mix in a stable per-run anchor
+                        // (the wall-clock day plus userId) so two
+                        // hourly runs on the same day collapse to one
+                        // ImportRun rather than diverging on the
+                        // sub-second clock.
+                        $runAnchor = sprintf(
+                            'inbox-handoff:%d:%s',
+                            $this->userId,
+                            $clock->now()->format('Y-m-d-H'),
+                        );
                         $newRun = ImportRun::query()->create([
                             'user_id' => $user->id,
                             'source_format' => 'inbox-handoff',
-                            'raw_file_path' => '',
-                            'sha256' => hash('sha256', 'inbox-handoff-'.$this->userId.'-'.$clock->now()->toIso8601String()),
+                            'raw_file_path' => $rawPathSentinel,
+                            'sha256' => hash('sha256', $runAnchor),
                             'uploaded_at' => $clock->now()->toDateTimeString(),
                             'status' => 'confirmed',
                             'created_at' => $clock->now()->toDateTimeString(),

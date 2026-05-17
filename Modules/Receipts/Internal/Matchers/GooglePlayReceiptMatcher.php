@@ -24,8 +24,8 @@ use Throwable;
  * `googleplay-noreply@google.com`. Plain suffix-match on `google.com`
  * is not enough — Google sends many other notifications from
  * `google.com` (account security, calendar invites, marketing) that
- * are NOT receipts. Exact equality + per-fixture spoof negative case
- * (T-07-04) keep the matcher tight.
+ * are NOT receipts. Exact equality plus a per-fixture spoof negative
+ * case keep the matcher tight.
  *
  * Body-extraction policy: Google Play receipts are text/plain primary;
  * the HTML fallback path is never executed in practice (the matcher
@@ -56,11 +56,10 @@ use Throwable;
  * fingerprint parity holds with any future Google Play CSV twin.
  *
  * Refund handling: subject containing "refund" -> returns
- * `MatchOutcomeDto::skipped('googleplay-refund-v2')`. Refund parsing
- * is a deferred Phase 7 v2 capability (the original order id needs to
- * be paired against an already-imported transactions.source_ref row,
- * which the matcher cannot do without DB access — a downstream
- * Chains-module resolver is the right home for that work).
+ * `MatchOutcomeDto::skipped('googleplay-refund-v2')`. The matcher
+ * cannot resolve the original order id to a transactions row without
+ * DB access; pairing refunds with the original order id is a
+ * downstream Chains-module concern.
  *
  * Pure / stateless / singleton-safe.
  */
@@ -126,10 +125,10 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
             return MatchOutcomeDto::unmatched();
         }
 
-        // Refund subject -> skip with v2-deferred reason. The matcher
-        // cannot resolve the original order id to a transactions row
-        // without DB access; the Chains module resolver picks this up
-        // in a future plan.
+        // Refund subject -> skip with the deferred-resolver reason.
+        // The matcher cannot pair a refund against the original order
+        // id without DB access; the Chains module resolver owns that
+        // bridge.
         $subject = $parsed->headers['subject'] ?? '';
         if ($subject !== '' && preg_match(self::REFUND_SUBJECT_REGEX, $subject) === 1) {
             return MatchOutcomeDto::skipped('googleplay-refund-v2');
