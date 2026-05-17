@@ -259,13 +259,21 @@ class OAuthSecretsRepository
     {
         $absolute = $this->absolutePath();
         $dir = dirname($absolute);
+        // chmod 0700 is applied ONLY on first create. Subsequent
+        // writes do NOT re-chmod the directory because that would
+        // silently narrow back any permissions an admin widened on
+        // purpose (e.g. for a backup tool that needs read access).
         if (! is_dir($dir)) {
             if (! @mkdir($dir, self::DIR_MODE, recursive: true) && ! is_dir($dir)) {
                 throw new SecretsWriteFailed(
                     "OAuthSecretsRepository: could not create parent directory {$dir}."
                 );
             }
-            @chmod($dir, self::DIR_MODE);
+            if (! @chmod($dir, self::DIR_MODE)) {
+                throw new SecretsWriteFailed(
+                    "OAuthSecretsRepository: failed to chmod 0700 on newly-created secrets directory {$dir}."
+                );
+            }
         }
 
         try {
