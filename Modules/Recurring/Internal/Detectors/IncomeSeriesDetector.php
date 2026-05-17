@@ -391,7 +391,10 @@ final class IncomeSeriesDetector implements SeriesDetector
     private static function monthlyEquivalent(int $latestAmountMinor, string $cadence): ?int
     {
         return match ($cadence) {
-            'weekly' => (int) round($latestAmountMinor * 4.33),
+            // 52/12 is the exact weeks-per-month conversion; the
+            // rounded literal 4.33 drifted by ~0.07% (€10.00/wk
+            // projects to €43.33/mo, not €43.30) on every weekly row.
+            'weekly' => (int) round($latestAmountMinor * 52 / 12),
             'monthly' => $latestAmountMinor,
             'quarterly' => (int) round($latestAmountMinor / 3),
             'yearly' => (int) round($latestAmountMinor / 12),
