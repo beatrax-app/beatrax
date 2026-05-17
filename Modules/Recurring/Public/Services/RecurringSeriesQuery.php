@@ -104,6 +104,112 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
+     * Single-purpose lookup that returns the per-series drift threshold
+     * override (`recurring_series.drift_threshold_percent`) for one
+     * (series, user) pair. Owners outside the Recurring module call
+     * this instead of running a raw SELECT against the table directly,
+     * keeping every cross-module read of recurring_series funnelled
+     * through this Public service class.
+     *
+     * Returns `null` when the series is missing, cross-user, or has no
+     * override set.
+     */
+    public function driftThresholdForSeries(int $seriesId, User $user): ?int
+    {
+        $row = $this->db->connection()->table('recurring_series')
+            ->where('id', $seriesId)
+            ->where('user_id', $user->id)
+            ->first(['drift_threshold_percent']);
+        if ($row === null) {
+            return null;
+        }
+        $value = $row->drift_threshold_percent ?? null;
+
+        return is_numeric($value) ? (int) $value : null;
+    }
+
+    /**
+     * Resolve the underlying `recurring_series.state` for each id in
+     * `$seriesIds` belonging to `$user`. Used by readers that want to
+     * surface a cross-reference hint (for example "this series is in
+     * state='cadence_changed'") without depending on a raw SELECT
+     * against another module's table.
+     *
+     * Missing or cross-user ids are silently absent from the result.
+     *
+     * @param  array<int|string, mixed>  $seriesIds
+     * @return array<int, string>
+     */
+    public function statesForSeriesIds(array $seriesIds, User $user): array
+    {
+        $clean = [];
+        foreach ($seriesIds as $id) {
+            $i = is_numeric($id) ? (int) $id : 0;
+            if ($i > 0) {
+                $clean[] = $i;
+            }
+        }
+        $unique = array_values(array_unique($clean));
+        if ($unique === []) {
+            return [];
+        }
+
+        $rows = $this->db->connection()->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->whereIn('id', $unique)
+            ->get(['id', 'state']);
+
+        $map = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $map[self::toInt($row->id)] = self::toString($row->state);
+        }
+
+        return $map;
+    }
+
+    /**
+     * Resolve the display name for each id in `$seriesIds` belonging
+     * to `$user`. Prefers `display_name_override` when set, falls back
+     * to `detected_name` otherwise. Missing or cross-user ids are
+     * silently absent from the result.
+     *
+     * @param  array<int|string, mixed>  $seriesIds
+     * @return array<int, string>
+     */
+    public function displayNamesForSeriesIds(array $seriesIds, User $user): array
+    {
+        $clean = [];
+        foreach ($seriesIds as $id) {
+            $i = is_numeric($id) ? (int) $id : 0;
+            if ($i > 0) {
+                $clean[] = $i;
+            }
+        }
+        $unique = array_values(array_unique($clean));
+        if ($unique === []) {
+            return [];
+        }
+
+        $rows = $this->db->connection()->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->whereIn('id', $unique)
+            ->get(['id', 'display_name_override', 'detected_name']);
+
+        $map = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $id = self::toInt($row->id);
+            $override = $row->display_name_override ?? null;
+            $override = is_string($override) ? $override : null;
+            $detected = self::toString($row->detected_name);
+            $map[$id] = $override !== null && $override !== '' ? $override : $detected;
+        }
+
+        return $map;
+    }
+
+    /**
      * Batched variant of `forSeries` — fetch every series row in
      * `$seriesIds` belonging to `$user` in a single SELECT and return
      * a `series_id => RecurringSeriesDto` map. Missing or cross-user
