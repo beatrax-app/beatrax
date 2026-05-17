@@ -11,8 +11,8 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Clients\FakeGraphApiClient;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
-use Modules\EmailScan\Internal\EmlBlobStore;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
+use Modules\EmailScan\Public\Services\EmlBlobStore;
 
 uses(RefreshDatabase::class);
 
