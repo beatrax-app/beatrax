@@ -7,6 +7,7 @@ namespace Modules\Categorization\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use JsonException;
 use Livewire\Component;
 use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
@@ -165,8 +166,23 @@ final class CategorizationProvenancePanel extends Component
             return;
         }
 
-        /** @var mixed $decoded */
-        $decoded = json_decode($raw, true);
+        // The auto_category_provenance column is best-effort audit
+        // metadata — a corrupt JSON payload must NOT crash the
+        // transaction detail render. JSON_THROW_ON_ERROR matches the
+        // project-wide json_decode convention shared by
+        // AssignCategory::readPriorProvenance, ApplyReceiptConflictResolution,
+        // and ReceiptConflictQuery; the JsonException catch falls back
+        // to the 'none' variant so the panel renders empty instead of
+        // throwing.
+        try {
+            /** @var mixed $decoded */
+            $decoded = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            $this->variant = 'none';
+            $this->ruleId = null;
+
+            return;
+        }
         if (! is_array($decoded)) {
             $this->variant = 'none';
 
