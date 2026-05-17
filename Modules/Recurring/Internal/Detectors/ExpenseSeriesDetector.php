@@ -194,8 +194,14 @@ final class ExpenseSeriesDetector implements SeriesDetector
         }
 
         if ($existing->state === 'rejected') {
-            // Rejection is permanent until the user un-rejects; never
-            // re-prompt a rejected cluster.
+            // Rejection covers the entire (counterparty, currency)
+            // pair — every cadence variant. The lookup hits via
+            // cluster_counterparty_key + latest_currency, so a
+            // freshly-clustering quarterly pattern for a merchant
+            // the user previously rejected at a monthly cadence is
+            // intentionally suppressed. The user un-rejects from the
+            // review queue to bring the merchant back; partial
+            // cadence-only un-rejection is not supported.
             return;
         }
 

@@ -216,6 +216,15 @@ final class IncomeSeriesDetector implements SeriesDetector
         }
 
         if ($existing->state === 'rejected') {
+            // Rejection covers the entire (counterparty, currency)
+            // pair — every cadence variant. The lookup hits via
+            // cluster_counterparty_key + latest_currency, so a
+            // freshly-clustering quarterly pattern for an income
+            // source the user previously rejected at a monthly
+            // cadence is intentionally suppressed. The user
+            // un-rejects from the review queue to bring the
+            // counterparty back; partial cadence-only un-rejection
+            // is not supported.
             return;
         }
 
