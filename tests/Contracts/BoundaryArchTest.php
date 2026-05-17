@@ -41,6 +41,10 @@ arch('Modules\\Receipts\\Internal is only used inside Modules\\Receipts')
     ->expect('Modules\\Receipts\\Internal')
     ->toOnlyBeUsedIn('Modules\\Receipts');
 
+arch('Modules\\Recurring\\Internal is only used inside Modules\\Recurring')
+    ->expect('Modules\\Recurring\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Recurring');
+
 arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules')
@@ -72,6 +76,14 @@ arch('no Laravel facade usage in module code')
         // scanner (D-704 secondary / D-718). Same uniqueVia() →
         // Cache::driver('redis') shape as the other queued jobs above.
         'Modules\\Receipts\\Internal\\Jobs\\ScanInboxDropFolderJob',
+        // Same carve-out for the Recurring sweep job. Laravel calls
+        // DetectRecurringSeriesJob::uniqueVia() at queue-push time to
+        // resolve the per-user single-flight lock before constructor
+        // DI completes, so a constructor-injected Cache repository is
+        // not an option. The class lands in a later Recurring wave; the
+        // FQN is forward-declared here so the carve-out is in place
+        // the moment the file is created.
+        'Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')
@@ -92,6 +104,13 @@ arch('RederiveFingerprintsCommand is never imported by any HTTP or routing names
         'Modules\\Import\\Public\\Http',
         'Modules\\Categorization\\Internal\\Http',
         'Modules\\Categorization\\Public\\Http',
+    ]);
+
+arch('SeriesDetector implementors are never imported by Modules\\Recurring\\Internal\\Http (noSynchronousDetectionInRequestLifecycle)')
+    ->expect('Modules\\Recurring\\Public\\Contracts\\SeriesDetector')
+    ->not->toBeUsedIn([
+        'Modules\\Recurring\\Internal\\Http',
+        'Modules\\Recurring\\Resources',
     ]);
 
 it('does not allow any file under Modules/Chains/Internal/Resolvers/ to mutate the transactions table (noResolverWritesTransactions)', function (): void {
@@ -497,5 +516,112 @@ it('does not allow any Modules/EmailScan migration to declare an OAuth-secret co
     expect($hits)->toBe(
         [],
         "No EmailScan migration may declare an OAuth-secret column. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+it('does not allow any file under Modules/Recurring/ to mutate the transactions table (noTransactionWritesFromRecurring)', function (): void {
+    // Phase 8 architectural boundary: the Recurring module is analytical-
+    // only. Transaction-type ownership stays with the Phase 4 income
+    // detector. Mirrors the EmailScan noTransactionWritesFromEmailScan
+    // invariant: the grep strips block + line comments first so legitimate
+    // PHPDoc references stay legal, and `tests/` is excluded so test
+    // factories can populate transactions directly.
+    $hits = [];
+    $recurringDir = base_path('Modules/Recurring');
+    if (! is_dir($recurringDir)) {
+        // Module folder lands in a later wave; until it does the rule
+        // is trivially satisfied.
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            $recurringDir,
+            RecursiveDirectoryIterator::SKIP_DOTS,
+        ),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (
+            preg_match('/Transaction::query|Transaction::where|Transaction::create/', $stripped) === 1
+            || preg_match("/->table\(['\"]transactions['\"]\)[^;]*->(update|insert|delete)\\s*\\(/", $stripped) === 1
+        ) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "Modules/Recurring/ must not mutate the transactions table. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+it('does not allow any file other than RecurringSeriesStateMachine to mutate recurring_series.state (noOtherRecurringSeriesStateMutator)', function (): void {
+    // Only the RecurringSeriesStateMachine class may transition the
+    // per-series state column. Other module code reads the row, and
+    // may UPDATE non-state columns (metric refresh — latest amount,
+    // monthly equivalent, next-expected-charge, funding-chain link)
+    // without going through the state machine; the grep targets the
+    // `state` column specifically so metric-refresh updates plus
+    // INSERTs into recurring_series_occurrences stay legal.
+    // Migrations are exempt because they seed initial rows + the
+    // schema itself.
+    $hits = [];
+    $recurringDir = base_path('Modules/Recurring');
+    if (! is_dir($recurringDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $allowedFile = base_path('Modules/Recurring/Internal/StateMachines/RecurringSeriesStateMachine.php');
+    $migrationsDir = base_path('Modules/Recurring/Database/Migrations');
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            $recurringDir,
+            RecursiveDirectoryIterator::SKIP_DOTS,
+        ),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if ($path === $allowedFile) {
+            continue;
+        }
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        if (str_starts_with($path, $migrationsDir.DIRECTORY_SEPARATOR)) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (
+            preg_match("/->table\(['\"]recurring_series['\"]\)[^;]*->update\\s*\\(\\s*\\[\\s*['\"]state['\"]/", $stripped) === 1
+            || preg_match('/RecurringSeries::query\(\)[^;]*->update\(\s*\[\s*[\'"]state[\'"]/', $stripped) === 1
+        ) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "Only RecurringSeriesStateMachine may mutate recurring_series.state. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
