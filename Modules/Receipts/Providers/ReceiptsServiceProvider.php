@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Modules\Receipts\Providers;
 
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Import\Public\Events\TransactionImported;
 use Modules\Receipts\Internal\Http\Livewire\WizardEmailFileStep;
+use Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
@@ -95,6 +98,10 @@ final class ReceiptsServiceProvider extends ServiceProvider
         // dispatch loop walks the most-specific matcher first.
         $this->app->singleton(RecordReceipt::class);
         $this->app->singleton(FileImportQuery::class);
+        // Wave 2 — bridges canonical-row INSERT into ChainHintDetected
+        // so the Chains module's listener can write candidate
+        // chain_links rows scoped by the just-inserted transaction id.
+        $this->app->singleton(DispatchChainHintsFromReceipt::class);
 
         $this->app->singleton(
             MatcherRegistry::class,
@@ -115,7 +122,7 @@ final class ReceiptsServiceProvider extends ServiceProvider
         );
     }
 
-    public function boot(LivewireManager $livewire): void
+    public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
         if (is_dir(__DIR__.'/../Database/Migrations')) {
             $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
@@ -131,5 +138,14 @@ final class ReceiptsServiceProvider extends ServiceProvider
         }
 
         $livewire->component('receipts.wizard-email-file-step', WizardEmailFileStep::class);
+
+        // Wave 2 — subscribe the chain-hint dispatcher to the
+        // canonical-row INSERT event so receipts with extracted chain
+        // hints surface as `ChainHintDetected` events for the Chains
+        // module to consume. The subscription lives in boot() because
+        // it depends on the injected Dispatcher; the class itself is
+        // registered as a singleton in register() so the listener
+        // shares one Dispatcher instance per request.
+        $events->listen(TransactionImported::class, [DispatchChainHintsFromReceipt::class, 'handle']);
     }
 }
