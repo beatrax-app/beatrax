@@ -150,7 +150,7 @@ it('omits non-approved series — pending / rejected / snoozed / cadence_changed
     expect($sections['expenses'][0]->detectedName)->toBe('approved-thing');
 })->group('only-approved-series-surface');
 
-it('runs viewForUser in ≤ 3 queries for N=12 series (N+1 budget per RESEARCH Q6)', function (): void {
+it('runs viewForUser in ≤ 3 queries for N=12 series (N+1 budget)', function (): void {
     for ($i = 0; $i < 12; $i++) {
         fpvSeries($this->user, $i % 2 === 0 ? 'expense' : 'income', 'merchant-'.$i, [
             'monthly_equivalent_minor' => -1000 - $i,
@@ -204,6 +204,41 @@ it('applies the per-cadence monthly multiplier in monthlyEquivalentTotals (weekl
     expect($totals['income_eur_minor'])->toBe(350000);
     expect($totals['net_eur_minor'])->toBe(344571); // 350000 + (-5429)
 })->group('monthly-equivalent-multiplier');
+
+it('topByMonthlyEquivalent applies the month-window filter BEFORE the limit so this-month-only returns matching rows even when the unfiltered top-N falls outside the window', function (): void {
+    // Seed 10 series with increasing magnitudes. The top 6 by absolute
+    // equivalent all fall in June 2026 (outside May). One smaller May
+    // 2026 row survives the date filter. Without the in-query filter
+    // the card would clip to the top 6 first, all of which are outside
+    // May, and the user would see the "no recurring series" empty
+    // state — even though a May row exists.
+    for ($i = 0; $i < 6; $i++) {
+        fpvSeries($this->user, 'expense', 'jun-'.$i, [
+            'monthly_equivalent_minor' => -2000 - ($i * 100),
+            'latest_amount_minor' => -2000 - ($i * 100),
+            'cluster_key' => 'expense::jun-'.$i.'::eur::monthly',
+            'next_expected_at' => '2026-06-15',
+        ]);
+    }
+    fpvSeries($this->user, 'expense', 'may-row', [
+        'monthly_equivalent_minor' => -500,
+        'latest_amount_minor' => -500,
+        'cluster_key' => 'expense::may-row::eur::monthly',
+        'next_expected_at' => '2026-05-15',
+    ]);
+
+    /** @var FixedPaymentsViewQuery $query */
+    $query = $this->app->make(FixedPaymentsViewQuery::class);
+    $top = $query->topByMonthlyEquivalent(
+        $this->user,
+        6,
+        CarbonImmutable::parse('2026-05-01'),
+        CarbonImmutable::parse('2026-05-31 23:59:59'),
+    );
+
+    expect($top)->toHaveCount(1);
+    expect($top[0]->detectedName)->toBe('may-row');
+})->group('top-by-monthly-equivalent-month-window-filter-precedes-limit');
 
 it('topByMonthlyEquivalent limits to 6 by default and orders DESC by absolute monthly equivalent', function (): void {
     for ($i = 0; $i < 10; $i++) {

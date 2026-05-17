@@ -10,7 +10,6 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 
 /**
@@ -47,23 +46,21 @@ final class FixedPaymentsCard extends Component
         Clock $clock,
     ): View {
         $user = $currentUser->user();
-        $rows = $query->topByMonthlyEquivalent($user, 6);
-        $totals = $query->monthlyEquivalentTotals($user);
 
+        // Push the date filter into the query so the limit clips the
+        // matching set, not the unfiltered population. The unfiltered
+        // population could otherwise be entirely outside the current
+        // month, surfacing the "no series" empty state on a card that
+        // genuinely has rows to show.
+        $monthStart = null;
+        $monthEnd = null;
         if ($this->filter === 'this-month') {
-            $startOfMonth = $clock->now()->startOfMonth();
-            $endOfMonth = $clock->now()->endOfMonth();
-            $rows = array_values(array_filter(
-                $rows,
-                static function (RecurringSeriesDto $row) use ($startOfMonth, $endOfMonth): bool {
-                    if ($row->nextExpectedAt === null) {
-                        return false;
-                    }
-
-                    return $row->nextExpectedAt->between($startOfMonth, $endOfMonth);
-                },
-            ));
+            $monthStart = $clock->now()->startOfMonth();
+            $monthEnd = $clock->now()->endOfMonth();
         }
+
+        $rows = $query->topByMonthlyEquivalent($user, 6, $monthStart, $monthEnd);
+        $totals = $query->monthlyEquivalentTotals($user);
 
         return $views->make('recurring::livewire.fixed-payments-card', [
             'rows' => $rows,
