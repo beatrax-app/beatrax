@@ -125,4 +125,21 @@ it('catches CursorExpiredException on listHistory, falls back to listSenderMessa
     // Cursor preserved (we did not learn a fresh historyId from the
     // fallback walk; the next hour's run re-attempts listHistory).
     expect($scanState->last_history_id)->toBe('12345');
+
+    // WR-07: the fallback walk must pass a date-bounded
+    // $windowStart so the server-side `after:` filter trims the
+    // result set tightly against last_scan_at - 7 days. A null
+    // windowStart would walk the entire allow-list history capped
+    // only by the 500-message defensive cap, contradicting the
+    // class docblock's "capped at last_scan_at minus 7 days"
+    // contract.
+    $listSenderCall = null;
+    foreach ($fake->getRequestedCalls() as $call) {
+        if ($call['method'] === 'listSenderMessages') {
+            $listSenderCall = $call;
+            break;
+        }
+    }
+    expect($listSenderCall)->not->toBeNull();
+    expect($listSenderCall['args']['windowStart'])->not->toBeNull();
 });
