@@ -11,6 +11,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use JsonException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
+use Modules\EmailScan\Internal\SafeMessage;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
@@ -518,13 +519,13 @@ final class GraphApiClient implements GraphApiClientContract
     /**
      * Cap the surfaced message at 300 characters and strip newlines so
      * verbose provider errors cannot contaminate a flash session
-     * payload or a log line.
+     * payload or a log line. Delegates to the shared utility so the
+     * cap shape stays consistent across the module's three error-
+     * forwarding surfaces (Graph client + the two OAuth providers).
      */
     private function safeMessage(string $raw): string
     {
-        $oneLine = (string) preg_replace('/\s+/', ' ', $raw);
-
-        return substr($oneLine, 0, 300);
+        return SafeMessage::cap($raw);
     }
 
     /**

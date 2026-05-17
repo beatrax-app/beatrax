@@ -9,6 +9,7 @@ use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use League\OAuth2\Client\Provider\Google;
 use League\OAuth2\Client\Provider\GoogleUser;
 use League\OAuth2\Client\Token\AccessToken;
+use Modules\EmailScan\Internal\SafeMessage;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
 use Throwable;
@@ -233,11 +234,9 @@ class GoogleOAuthProvider
 
     private function safeMessage(Throwable $e): string
     {
-        $lines = preg_split('/\r?\n/', $e->getMessage());
-        $first = is_array($lines) && $lines !== [] ? $lines[0] : '';
-
-        // Cap the surfaced message so a verbose IdP error cannot
-        // contaminate a flash session payload.
-        return substr($first, 0, 300);
+        // Delegate to the shared utility so the cap shape stays
+        // consistent across every module-internal surface that
+        // forwards provider error text.
+        return SafeMessage::cap($e->getMessage());
     }
 }
