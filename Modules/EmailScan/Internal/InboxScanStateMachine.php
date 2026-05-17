@@ -85,6 +85,10 @@ final class InboxScanStateMachine
      *    backfill job's "no senders configured" early-exit path can
      *    safely re-touch the row to surface an error_message without
      *    a sentinel transition.
+     *  - 'backfilling' → 'backfilling' and 'scanning' → 'scanning' are
+     *    permitted as re-entrant no-ops so a recovery dispatch that
+     *    lands on a row whose previous worker died without flipping
+     *    back to idle can resume cleanly without throwing.
      *  - 'needs_reauth' is terminal except for 'idle' (the user has
      *    hit Reconnect and we are returning to normal scanning) and
      *    'needs_reauth' itself (re-entrant safe — a second
@@ -98,8 +102,8 @@ final class InboxScanStateMachine
      */
     private const ALLOWED_TRANSITIONS = [
         'idle' => ['idle', 'backfilling', 'scanning', 'needs_reauth', 'error'],
-        'backfilling' => ['idle', 'rate_limited', 'needs_reauth', 'error'],
-        'scanning' => ['idle', 'rate_limited', 'needs_reauth', 'error'],
+        'backfilling' => ['backfilling', 'idle', 'rate_limited', 'needs_reauth', 'error'],
+        'scanning' => ['scanning', 'idle', 'rate_limited', 'needs_reauth', 'error'],
         'rate_limited' => ['backfilling', 'scanning', 'idle', 'needs_reauth', 'error'],
         'needs_reauth' => ['idle', 'needs_reauth'],
         'error' => ['idle', 'backfilling', 'scanning', 'needs_reauth', 'error'],
