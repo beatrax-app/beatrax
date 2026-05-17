@@ -336,6 +336,72 @@ it('does not touch expense-type transactions', function (): void {
     expect($count)->toBe(0);
 })->group('income-detector-ignores-expenses');
 
+it('suppresses every cadence variant when the counterparty has a rejected series — partial cadence-only un-rejection is not supported', function (): void {
+    // Seed 12 monthly occurrences for an income source, run the
+    // detector once so a series exists, mark that series rejected,
+    // then seed a fresh quarterly cadence for the SAME IBAN +
+    // currency. The detector must NOT spawn a new pending series —
+    // the rejection covers the (counterparty, currency) pair across
+    // every cadence band.
+    $start = CarbonImmutable::parse('2024-04-25');
+    for ($i = 0; $i < 12; $i++) {
+        $date = $start->addMonths($i)->toDateString();
+        idtSeedTx(
+            $this->db, $this->user, $this->account, $this->run,
+            $date,
+            260000, 'EUR', 260000, 'EUR',
+            'rejected employer', 'NL00REJ00000000001',
+            'income',
+            5000 + $i,
+            'rej-m-'.$i,
+        );
+    }
+
+    idtRunJob($this->user);
+
+    /** @var RecurringSeries $monthly */
+    $monthly = RecurringSeries::query()
+        ->where('user_id', $this->user->id)
+        ->where('direction', 'income')
+        ->firstOrFail();
+    /** @var RecurringSeriesStateMachine $machine */
+    $machine = $this->app->make(RecurringSeriesStateMachine::class);
+    $machine->transition($monthly, 'rejected', 'user_action', 'user');
+
+    // Wipe the monthly transactions and seed a fresh quarterly pattern
+    // for the same IBAN + currency.
+    $this->db->connection()->table('transactions')
+        ->where('user_id', $this->user->id)
+        ->where('counterparty_iban', 'NL00REJ00000000001')
+        ->delete();
+    $quarterlyStart = CarbonImmutable::parse('2025-06-01');
+    for ($i = 0; $i < 4; $i++) {
+        $date = $quarterlyStart->addMonths($i * 3)->toDateString();
+        idtSeedTx(
+            $this->db, $this->user, $this->account, $this->run,
+            $date,
+            260000, 'EUR', 260000, 'EUR',
+            'rejected employer', 'NL00REJ00000000001',
+            'income',
+            6000 + $i,
+            'rej-q-'.$i,
+        );
+    }
+
+    idtRunJob($this->user);
+
+    $count = RecurringSeries::query()
+        ->where('user_id', $this->user->id)
+        ->where('direction', 'income')
+        ->count();
+    expect($count)->toBe(1);
+    /** @var RecurringSeries $only */
+    $only = RecurringSeries::query()
+        ->where('user_id', $this->user->id)
+        ->firstOrFail();
+    expect($only->state)->toBe('rejected');
+})->group('rejection-covers-every-cadence');
+
 it('keeps two IBAN-distinct payroll series isolated when both share a detected_name and one cadence flips', function (): void {
     // Two employers with the SAME normalized detected_name but
     // DISTINCT IBANs. Pass 1 seeds 13 monthly occurrences each. Pass 2
