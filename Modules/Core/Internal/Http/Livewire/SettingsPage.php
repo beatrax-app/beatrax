@@ -77,6 +77,16 @@ final class SettingsPage extends Component
     public int $recurringIncomeMinAmountMinor = 200000;
 
     /**
+     * Global default drift-alert threshold (percent). DriftEvaluator's
+     * effective-threshold rule resolves a per-series override first;
+     * when null, this user-level value applies; when it falls back to
+     * the hard 5% default. Allowed values mirror the six popover
+     * options elsewhere in the UI (1 / 2 / 5 / 10 / 25 / 50).
+     */
+    #[Validate('required|integer|in:1,2,5,10,25,50')]
+    public int $driftAlertThresholdPercent = 5;
+
+    /**
      * Inline "Saved." confirmation flag flipped by save() and consumed by
      * the Blade view via `@if ($saved)` + `wire:transition.duration.4000ms`
      * so the confirmation auto-dismisses after four seconds.
@@ -91,6 +101,7 @@ final class SettingsPage extends Component
         $this->autoImportFromDropFolder = (bool) $user->auto_import_drop_folder;
         $this->recurringDetectionWindowMonths = $user->recurring_detection_window_months;
         $this->recurringIncomeMinAmountMinor = $user->recurring_income_min_amount_minor;
+        $this->driftAlertThresholdPercent = $user->drift_alert_threshold_percent;
     }
 
     /**
@@ -126,6 +137,7 @@ final class SettingsPage extends Component
         $user->period_start_day = $this->periodStartDay;
         $user->recurring_detection_window_months = $this->recurringDetectionWindowMonths;
         $user->recurring_income_min_amount_minor = $this->recurringIncomeMinAmountMinor;
+        $user->drift_alert_threshold_percent = $this->driftAlertThresholdPercent;
         $user->save();
 
         $this->saved = true;
@@ -168,6 +180,9 @@ final class SettingsPage extends Component
             'recurringIncomeMinAmountMinor.integer' => 'Enter an amount from €0 upward.',
             'recurringIncomeMinAmountMinor.min' => 'Enter an amount from €0 upward.',
             'recurringIncomeMinAmountMinor.max' => 'Enter an amount from €0 upward.',
+            'driftAlertThresholdPercent.required' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',
+            'driftAlertThresholdPercent.integer' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',
+            'driftAlertThresholdPercent.in' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',
         ];
     }
 }

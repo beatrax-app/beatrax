@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Modules\DriftAlerts\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Internal\Mapping\DriftAlertDtoMapper;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
 use stdClass;
@@ -37,16 +40,28 @@ use stdClass;
  */
 final readonly class DriftAlertQuery
 {
-    public function __construct(private DatabaseManager $db) {}
+    public function __construct(
+        private DatabaseManager $db,
+        private Clock $clock,
+    ) {}
 
     /**
-     * Open alerts (state='open') sorted by `detected_at DESC, id DESC`.
+     * Open alerts. The state filter is widened to include rows in
+     * `state='snoozed'` whose `snoozed_until` has elapsed: the hourly
+     * `RevivedExpiredDriftSnoozesJob` flips those rows back to
+     * `state='open'` and writes an audit transition, but between
+     * sweeps the count + the listing must already reflect the user-
+     * visible "this is open again" reality. The two paths produce the
+     * same set; the sweep is the durable write, the query is the
+     * fresh read.
+     *
+     * Sort: `detected_at DESC, id DESC`.
      *
      * @return list<DriftAlertDto>
      */
     public function openForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
-        return $this->scoped($user, ['open'], $cursorId, $limit);
+        return $this->scopedOpen($user, $cursorId, $limit);
     }
 
     /**
@@ -77,7 +92,7 @@ final readonly class DriftAlertQuery
     {
         return $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
-            ->where('state', 'open')
+            ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
             ->count();
     }
 
@@ -90,7 +105,7 @@ final readonly class DriftAlertQuery
     {
         return (int) $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
-            ->where('state', 'open')
+            ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
             ->sum('annualized_impact_minor');
     }
 
@@ -145,7 +160,7 @@ final readonly class DriftAlertQuery
     {
         $rows = $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
-            ->where('state', 'open')
+            ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
             ->orderByDesc('detected_at')
             ->orderByDesc('id')
             ->get();
@@ -188,7 +203,39 @@ final readonly class DriftAlertQuery
             $query->where('id', '<', $cursorId);
         }
 
-        $rows = $query->get();
+        return $this->materialise($user, $query->get());
+    }
+
+    /**
+     * Open-tab projection. Applies the "state='open' OR (state='snoozed'
+     * AND snoozed_until <= now())" compound filter so snoozed-but-
+     * expired rows surface immediately, before the next hourly revival
+     * sweep writes the audit transition.
+     *
+     * @return list<DriftAlertDto>
+     */
+    private function scopedOpen(User $user, ?int $cursorId, int $limit): array
+    {
+        $query = $this->db->connection()->table('drift_alerts')
+            ->where('user_id', $user->id)
+            ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
+            ->orderByDesc('detected_at')
+            ->orderByDesc('id')
+            ->limit($limit);
+
+        if ($cursorId !== null) {
+            $query->where('id', '<', $cursorId);
+        }
+
+        return $this->materialise($user, $query->get());
+    }
+
+    /**
+     * @param  Collection<int, stdClass>  $rows
+     * @return list<DriftAlertDto>
+     */
+    private function materialise(User $user, Collection $rows): array
+    {
         if ($rows->isEmpty()) {
             return [];
         }
@@ -203,6 +250,25 @@ final readonly class DriftAlertQuery
         }
 
         return $result;
+    }
+
+    /**
+     * Apply the open-tab state filter onto a query builder: rows in
+     * `state='open'`, plus rows in `state='snoozed'` whose
+     * `snoozed_until` has elapsed. The conditional clause sits inside a
+     * single `where(function (...) { ... })` group so chaining with
+     * other predicates (user_id scope, cursor pagination) reads as
+     * intended.
+     */
+    private function applyOpenStateFilter(Builder $query): void
+    {
+        $now = $this->clock->now()->toDateTimeString();
+        $query->where('state', 'open')
+            ->orWhere(function (Builder $q) use ($now): void {
+                $q->where('state', 'snoozed')
+                    ->whereNotNull('snoozed_until')
+                    ->where('snoozed_until', '<=', $now);
+            });
     }
 
     /**
