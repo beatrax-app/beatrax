@@ -22,10 +22,13 @@ use stdClass;
  * Cross-user reads return an empty list (or zero on count aggregates);
  * cross-user 404s are surfaced at the Public Action layer.
  *
- * Cursor pagination is keyed on `id DESC` only — `detected_at` is
- * essentially monotonic for a given user so the composite-cursor
- * approach used in RecurringSeriesQuery's `approvedForUser` is not
- * needed here.
+ * Cursor pagination is keyed strictly on `id DESC`. The single-column
+ * cursor stays monotone: `drift_alerts.id` is a SQLite autoincrementing
+ * surrogate, so newer alerts always have larger ids. Ordering and
+ * filtering by id alone keeps the cursor consistent when multiple alerts
+ * share an exact `detected_at` second (the revival sweep and the
+ * detector listener can each batch several writes inside a single
+ * scheduler tick).
  *
  * `totalOpenAnnualizedImpactForUser` returns a SUM aggregate in
  * original-currency-minor units. When alerts span multiple currencies
@@ -55,7 +58,9 @@ final readonly class DriftAlertQuery
      * same set; the sweep is the durable write, the query is the
      * fresh read.
      *
-     * Sort: `detected_at DESC, id DESC`.
+     * Sort: `id DESC`. Cursor pagination filters strictly on `id`
+     * so paging stays consistent even when multiple alerts share an
+     * exact `detected_at` second.
      *
      * @return list<DriftAlertDto>
      */
@@ -152,7 +157,10 @@ final readonly class DriftAlertQuery
     /**
      * Open alerts grouped by `recurring_series_id`. Series order
      * follows the newest alert in each group (descending). Within a
-     * group, alerts sort by `detected_at DESC, id DESC`.
+     * group, alerts sort by `id DESC` — `drift_alerts.id` is a
+     * monotonically-increasing surrogate so newer alerts always have
+     * larger ids, even when several rows share an exact `detected_at`
+     * second.
      *
      * @return array<int, list<DriftAlertDto>>
      */
@@ -161,7 +169,6 @@ final readonly class DriftAlertQuery
         $rows = $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
             ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
-            ->orderByDesc('detected_at')
             ->orderByDesc('id')
             ->get();
 
@@ -195,7 +202,6 @@ final readonly class DriftAlertQuery
         $query = $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
             ->whereIn('state', $states)
-            ->orderByDesc('detected_at')
             ->orderByDesc('id')
             ->limit($limit);
 
@@ -219,7 +225,6 @@ final readonly class DriftAlertQuery
         $query = $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
             ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
-            ->orderByDesc('detected_at')
             ->orderByDesc('id')
             ->limit($limit);
 
