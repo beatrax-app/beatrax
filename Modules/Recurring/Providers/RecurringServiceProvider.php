@@ -9,6 +9,7 @@ use Livewire\LivewireManager;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
+use Modules\Recurring\Internal\Detectors\IncomeSeriesDetector;
 use Modules\Recurring\Internal\Http\Livewire\RecurringReviewPage;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
@@ -38,9 +39,13 @@ final class RecurringServiceProvider extends ServiceProvider
         $this->app->singleton(CadenceInferrer::class);
         $this->app->singleton(ClusterKeyComposer::class);
         $this->app->singleton(ExpenseSeriesDetector::class);
+        $this->app->singleton(IncomeSeriesDetector::class);
         $this->app->singleton(DetectRecurringSeriesJob::class);
 
-        $this->app->tag([ExpenseSeriesDetector::class], 'recurring.detector');
+        $this->app->tag([
+            ExpenseSeriesDetector::class,
+            IncomeSeriesDetector::class,
+        ], 'recurring.detector');
 
         $this->app->singleton(RecurringSeriesQuery::class);
         $this->app->singleton(ApproveRecurringSeries::class);
