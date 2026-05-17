@@ -44,10 +44,10 @@ use Modules\Recurring\Public\Contracts\SeriesDetector;
  *
  * Dispatched daily from `routes/console.php` via the
  * `recurring.detect` scheduler entry, and on demand from the
- * `/recurring` re-detect button (lands in Plan 05). The sweep runs
- * read-mostly against `transactions` and writes only to the
- * Recurring-owned tables — the `noTransactionWritesFromRecurring`
- * arch invariant blocks any cross-module write.
+ * `/recurring` re-detect button. The sweep runs read-mostly against
+ * `transactions` and writes only to the Recurring-owned tables —
+ * the `noTransactionWritesFromRecurring` arch invariant blocks any
+ * cross-module write.
  */
 final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {

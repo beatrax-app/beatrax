@@ -104,7 +104,7 @@ it('renders grouped expense + income sections with the net-flow header', functio
         ->assertSeeText('acme bv');
 })->group('renders-grouped-sections');
 
-it('renders the EUR shadow alongside the original-currency amount for a non-EUR series (D-840)', function (): void {
+it('renders the EUR shadow alongside the original-currency amount for a non-EUR series', function (): void {
     rpSeries($this->user, 'expense', 'netflix', [
         'latest_amount_minor' => -1199,
         'latest_currency' => 'USD',
@@ -120,7 +120,7 @@ it('renders the EUR shadow alongside the original-currency amount for a non-EUR 
     expect(strpos($content, '$') !== false || strpos($content, 'USD') !== false)->toBeTrue();
 })->group('multi-currency-row-shows-eur-shadow');
 
-it('renders the transfers section collapsed by default per D-852', function (): void {
+it('renders the transfers section collapsed by default', function (): void {
     rpSeries($this->user, 'expense', 'spotify');
 
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
@@ -141,7 +141,7 @@ it('renders no series rows for user A when authenticated as user B (cross-user e
         ->assertDontSeeText('other-spotify');
 })->group('cross-user-empty');
 
-it('renders the low-confidence indicator on a row whose next_expected_confidence_low is true (D-830)', function (): void {
+it('renders the low-confidence indicator on a row whose next_expected_confidence_low is true', function (): void {
     rpSeries($this->user, 'expense', 'jittery-thing', [
         'next_expected_confidence_low' => true,
     ]);
@@ -155,7 +155,7 @@ it('renders the low-confidence indicator on a row whose next_expected_confidence
     expect($content)->toContain('data-confidence-low="true"');
 })->group('confidence-low-renders-dim-text');
 
-it('renders a chain badge when a series carries a confirmed chain link (D-828)', function (): void {
+it('renders a chain badge when a series carries a confirmed chain link', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $connection = $db->connection();
@@ -235,7 +235,7 @@ it('renders an empty-state message when no approved series exist', function (): 
         ->assertSeeText('No recurring activity yet');
 })->group('empty-state');
 
-it('renders the prior-occurrence chain link when the latest is missing (D-829 fallback walk)', function (): void {
+it('renders the prior-occurrence chain link when the latest is missing (fallback walk)', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $connection = $db->connection();

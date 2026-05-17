@@ -40,7 +40,7 @@ use stdClass;
  * /recurring page renders the section as a collapsed `<details>` panel
  * so the layout slot is visible.
  *
- * D-829 chain-fallback semantics: when a series'
+ * Chain-fallback semantics: when a series'
  * `latest_funding_chain_link_id` is null or points at a `chain_links`
  * row whose `state` is anything other than `confirmed`/`candidate`,
  * walk back through the series' occurrences (ordered by `observed_at`
@@ -70,13 +70,10 @@ final readonly class FixedPaymentsViewQuery
 
         $fallbackMap = $this->resolveFallbackChainIds($user, $rows);
 
-        // Batch decorate counterparty names — even though the DTO does
-        // not surface category id today, the read site primes the
-        // merchant-memory query that the Phase 9 / 10 listeners and
-        // category-hint UI will read against the same shape. Touching
-        // the seam in this plan keeps the cross-module read on the
-        // happy path so the boundary arch invariant catches any future
-        // regression.
+        // Batch decorate counterparty names — the DTO does not surface
+        // a category id today, but priming the merchant-memory query
+        // here keeps the cross-module read on the happy path so the
+        // boundary arch invariant catches any future regression.
         $counterpartyNames = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */

@@ -39,16 +39,16 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
  * boot() conditionally loads the module's migrations, routes, and
  * views, registers the four Livewire SFCs (RecurringPage,
  * RecurringReviewPage, RecurringSeriesDetailPage, FixedPaymentsCard),
- * and installs two View Factory composers:
+ * and installs the top-nav badge composer via
+ * `registerTopNavBadgeComposer()`. The badge composer injects
+ * `recurringPendingCount` into `core::livewire.top-nav` through the
+ * ViewFactoryContract — the global `view()` helper is forbidden by
+ * project convention.
  *
- *  - `registerTopNavBadgeComposer()` injects `recurringPendingCount`
- *    into `core::livewire.top-nav` via the ViewFactoryContract
- *    (NEVER the `view()` global helper — issue #12 carry-forward).
- *  - `registerDashboardCardComposer()` is a no-op placeholder; the
- *    dashboard view injects the card directly via
- *    `@livewire('recurring.fixed-payments-card')`. Method kept so a
- *    later plan can attach cross-card data if needed without
- *    revisiting the provider's public surface.
+ * The dashboard fixed-payments card is rendered directly via the
+ * `@livewire('recurring.fixed-payments-card')` directive on the
+ * dashboard view, so the provider does not register a composer for
+ * it.
  */
 final class RecurringServiceProvider extends ServiceProvider
 {
@@ -102,10 +102,9 @@ final class RecurringServiceProvider extends ServiceProvider
      * Inject the top-nav `Recurring` pending-suggestion count into
      * `core::livewire.top-nav` via the View Factory contract.
      *
-     * Issue #12 fix carry-forward: resolving the View Factory contract
-     * through `$this->app->make()` keeps the DI-only invariant visible
-     * at the call site; the global view helper is forbidden in module
-     * code.
+     * The contract is resolved through `$this->app->make()` to keep
+     * the DI-only invariant visible at the call site; the global
+     * `view()` helper is forbidden in module code.
      *
      * The composer only fires when the top-nav view actually renders,
      * meaning at most once per HTTP request that surfaces the nav.
@@ -128,9 +127,11 @@ final class RecurringServiceProvider extends ServiceProvider
     }
 
     /**
-     * Placeholder for Phase 9 / Phase 10 — the dashboard renders the
-     * card via the `@livewire('recurring.fixed-payments-card')`
-     * directive directly, so no composer wiring is required today.
+     * The dashboard injects the fixed-payments card with the
+     * `@livewire('recurring.fixed-payments-card')` directive, so no
+     * View Factory composer wiring is needed. Kept as an explicit
+     * extension seam: a future cross-card data attach point can land
+     * here without re-shaping the provider's call graph.
      */
     private function registerDashboardCardComposer(): void
     {

@@ -11,8 +11,6 @@ use Modules\Recurring\Models\RecurringSeries;
  * `recurringPendingCount` integer to `core::livewire.top-nav` via the
  * View Factory contract (NEVER the `view()` global helper) so the nav
  * slot renders the pending-suggestion count.
- *
- * Mirrors the ChainsServiceProvider issue #12 fix pattern.
  */
 
 function rcnbcUser(string $email): User

@@ -97,10 +97,10 @@ final class CadenceInferrer
             $missedFlags[] = false;
         }
 
-        // Rolling-window guard (D-844 MAX_MISSED_PER_WINDOW):
-        // if any window of MISSED_WINDOW_SIZE consecutive intervals
-        // contains more than MAX_MISSED_PER_WINDOW missed periods the
-        // cluster is too unstable to snap into a cadence band.
+        // Rolling-window guard: if any window of MISSED_WINDOW_SIZE
+        // consecutive intervals contains more than MAX_MISSED_PER_WINDOW
+        // missed periods the cluster is too unstable to snap into a
+        // cadence band.
         if (self::exceedsMissedWindowCap($missedFlags)) {
             return [
                 'cadence' => 'irregular',
