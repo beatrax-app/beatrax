@@ -33,13 +33,13 @@ use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
 // rule does not apply here (the rule is scoped via
 // `->not->toBeUsedIn('Modules')`).
 Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
-    // IN-02 iter-2: skip inboxes currently in needs_reauth so the
-    // hourly tick does not queue jobs that will only early-exit
-    // anyway. The job's own first-line guard still handles the
-    // case of a row transitioning into needs_reauth between dispatch
-    // and pickup; this filter is a multi-user-readiness optimisation
-    // — N inboxes per tick where N is the live count, not the total
-    // including ones that need user intervention.
+    // Skip inboxes currently in needs_reauth so the hourly tick does
+    // not queue jobs that will only early-exit anyway. The job's own
+    // first-line guard still handles the case of a row transitioning
+    // into needs_reauth between dispatch and pickup; this filter is a
+    // multi-user-readiness optimisation — N inboxes per tick where N
+    // is the live count, not the total including ones that need user
+    // intervention.
     $inboxIds = $db->connection()
         ->table('inboxes')
         ->leftJoin('inbox_scan_state', function (JoinClause $join): void {
