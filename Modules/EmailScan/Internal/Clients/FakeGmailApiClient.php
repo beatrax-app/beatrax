@@ -46,6 +46,25 @@ final class FakeGmailApiClient implements GmailApiClientContract
      */
     private array $listPageCursor = [];
 
+    /**
+     * Plan 07: inbox-id-keyed retry-after seconds for a listHistory
+     * rate-limit simulation. The next `listHistory` call for that
+     * inbox pops the entry and throws RateLimitedException.
+     *
+     * @var array<int, int>
+     */
+    private array $historyRateLimitedInboxes = [];
+
+    /**
+     * Plan 07: queued success-shaped listHistory response. When set,
+     * the next `listHistory` call returns this payload verbatim
+     * instead of replaying the 404 fixture. Set via
+     * `queueHistoryResponse()`; consumed on the first call.
+     *
+     * @var array{history: list<array<string, mixed>>, historyId: ?string}|null
+     */
+    private ?array $queuedHistoryResponse = null;
+
     public function __construct(
         private readonly Filesystem $files,
         private readonly string $fixtureRoot = __DIR__.'/../../tests/fixtures/api-responses/gmail',
@@ -119,9 +138,20 @@ final class FakeGmailApiClient implements GmailApiClientContract
     }
 
     /**
-     * Replays `users.history.list`. The Wave 0 fixture set encodes a
-     * 404 response shape; the Fake recognises that and throws
-     * CursorExpiredException so callers exercise the fallback path.
+     * Replays `users.history.list`.
+     *
+     * Default behaviour: replays the Wave 0 404 fixture, throwing
+     * CursorExpiredException so the caller exercises the fallback
+     * path. This keeps Plan 05 / 06 tests that never call the
+     * queue / simulate helpers unchanged.
+     *
+     * Test-controllable shapes (Plan 07):
+     *  - `queueHistoryResponse($messageIds, $newHistoryId)` queues a
+     *    success response with those message-ids returned in the
+     *    history array (via the messagesAdded shape) plus the new
+     *    historyId.
+     *  - `simulateHistoryRateLimit($inboxId, $retryAfterSeconds)`
+     *    arms a 429 on the next listHistory call.
      *
      * @return array{history: list<array<string, mixed>>, historyId: ?string}
      */
@@ -131,6 +161,24 @@ final class FakeGmailApiClient implements GmailApiClientContract
             'inboxId' => $inboxId,
             'startHistoryId' => $startHistoryId,
         ]];
+
+        if (array_key_exists($inboxId, $this->historyRateLimitedInboxes)) {
+            $retryAfter = $this->historyRateLimitedInboxes[$inboxId];
+            unset($this->historyRateLimitedInboxes[$inboxId]);
+            $payload = $this->readJson('rate-limit-403.json');
+            $error = $payload['error'] ?? null;
+            $message = is_array($error) && isset($error['message']) && is_string($error['message'])
+                ? $error['message']
+                : 'Gmail rate limit exceeded.';
+            throw new RateLimitedException($retryAfter, $message);
+        }
+
+        if ($this->queuedHistoryResponse !== null) {
+            $queued = $this->queuedHistoryResponse;
+            $this->queuedHistoryResponse = null;
+
+            return $queued;
+        }
 
         $payload = $this->readJson('history-list-404.json');
         $error = $payload['error'] ?? null;
@@ -142,9 +190,6 @@ final class FakeGmailApiClient implements GmailApiClientContract
             }
         }
 
-        // The Wave 0 fixture only ships the 404 shape; this branch
-        // exists so the contract surfaces a sensible response shape
-        // for later plans that ship a success fixture.
         return [
             'history' => [],
             'historyId' => null,
@@ -187,6 +232,45 @@ final class FakeGmailApiClient implements GmailApiClientContract
     public function simulateRateLimit(int $inboxId, int $retryAfterSeconds = 2): void
     {
         $this->rateLimitedInboxes[$inboxId] = $retryAfterSeconds;
+    }
+
+    /**
+     * Plan 07: arm a rate-limit response for the next listHistory
+     * call. IncrementalScanJob calls listHistory before any
+     * listSenderMessages call, so a Gmail incremental-scan rate-limit
+     * fires via this surface (not via simulateRateLimit, which
+     * targets listSenderMessages).
+     */
+    public function simulateHistoryRateLimit(int $inboxId, int $retryAfterSeconds = 60): void
+    {
+        $this->historyRateLimitedInboxes[$inboxId] = $retryAfterSeconds;
+    }
+
+    /**
+     * Plan 07: queue the next listHistory response so the caller
+     * sees a success shape instead of the default 404 fixture. The
+     * messages-added list is materialised from `$messageIds` so the
+     * caller's downstream getRawMessage walk has fixture-mapped
+     * blobs to fetch.
+     *
+     * @param  list<string>  $messageIds
+     */
+    public function queueHistoryResponse(array $messageIds, ?string $newHistoryId): void
+    {
+        $history = [];
+        foreach ($messageIds as $id) {
+            $history[] = [
+                'id' => 'history-entry-'.$id,
+                'messagesAdded' => [
+                    ['message' => ['id' => $id, 'threadId' => 'thread-'.$id]],
+                ],
+            ];
+        }
+
+        $this->queuedHistoryResponse = [
+            'history' => $history,
+            'historyId' => $newHistoryId,
+        ];
     }
 
     /**
