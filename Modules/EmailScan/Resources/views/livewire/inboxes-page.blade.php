@@ -30,6 +30,32 @@
         </aside>
     @endif
 
+    @php
+        $activeBackfills = collect($inboxes)->filter(fn ($i) => $i->backfillFetchedCount !== null)->values();
+    @endphp
+
+    @if ($activeBackfills->count() > 0)
+        {{-- Backfill progress strip — visible only while at least one inbox has an
+             active BackfillInboxJob. wire:poll.2s re-renders the section so the live
+             count climbs without a full page reload; the strip disappears once every
+             inbox has finished and backfill_progress has been cleared. --}}
+        <section
+            wire:poll.2s="refreshBackfillProgress"
+            class="rounded-md border border-slate-200 bg-slate-50 p-4 space-y-2 mb-6"
+            aria-live="polite"
+        >
+            @foreach ($activeBackfills as $inbox)
+                <div class="flex items-center justify-between text-xs text-slate-700">
+                    <span>
+                        Backfilling {{ $inbox->provider === 'gmail' ? 'Gmail' : 'Microsoft 365' }} ({{ $inbox->email }}):
+                        <span style="font-variant-numeric: tabular-nums;">{{ number_format($inbox->backfillFetchedCount) }} / ~{{ number_format($inbox->backfillTotalEstimated ?? 0) }}</span>
+                        messages
+                    </span>
+                </div>
+            @endforeach
+        </section>
+    @endif
+
     @if (count($inboxes) === 0)
         {{-- Empty-state hero per UI-SPEC § Empty state hero (zero inboxes connected). --}}
         <section class="mx-auto max-w-md text-center mt-12">
@@ -74,7 +100,7 @@
                             {{ $providerLabel }} · {{ $lastScanText }} · Window: {{ $windowText }}
                             <button
                                 type="button"
-                                wire:click="$dispatch('toast', { message: 'Backfill window editing arrives in the next plan' })"
+                                wire:click="editWindow({{ $inbox->inboxId }})"
                                 class="ml-1 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-slate-900"
                             >Edit</button>
                         </p>
@@ -112,11 +138,11 @@
         </section>
     @endif
 
-    {{-- Placeholder for backfill modal — arrives in a later plan. The OAuth callback
-         sets the openBackfillForInboxId flash; the modal SFC will read it. --}}
-    @if ($openBackfillForInboxId !== null)
-        {{-- Placeholder until the backfill-window-modal Livewire SFC lands. --}}
-    @endif
+    {{-- Backfill window modal Livewire SFC. Mounted unconditionally so the
+         editWindow() action + the post-OAuth-callback mount() hook can
+         dispatch the backfill-window:open event to open it scoped to the
+         right inbox. --}}
+    <livewire:email-scan.backfill-window-modal />
 
     {{-- Wizard modal (single SFC; branches on the $provider property
          to render the Gmail or Microsoft 365 variant). Mounted
