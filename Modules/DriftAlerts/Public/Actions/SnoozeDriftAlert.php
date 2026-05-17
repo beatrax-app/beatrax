@@ -43,10 +43,18 @@ final class SnoozeDriftAlert
             throw new NotFoundHttpException('Drift alert not found.');
         }
 
+        // Compare via Unix timestamps so the idempotency check stays
+        // correct across timezones. `Carbon::toDateTimeString()`
+        // formats the moment in the instance's current timezone; the
+        // stored `snoozed_until` casts to immutable_datetime in the
+        // app timezone while the caller's `$until` may carry a
+        // distinct offset from its ISO source. Comparing
+        // `getTimestamp()` (seconds since the epoch) is
+        // timezone-independent.
         if (
             $alert->state === 'snoozed'
             && $alert->snoozed_until !== null
-            && $alert->snoozed_until->toDateTimeString() === $until->toDateTimeString()
+            && $alert->snoozed_until->getTimestamp() === $until->getTimestamp()
         ) {
             return;
         }
