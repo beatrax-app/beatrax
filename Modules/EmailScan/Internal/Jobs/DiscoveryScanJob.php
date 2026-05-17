@@ -257,10 +257,15 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         if ($provider === 'gmail') {
             $page = $gmail->listDiscoveryCandidates($inboxId, self::DISCOVERY_KEYWORDS, $allExcludes);
             foreach ($page['messages'] as $msg) {
+                // Always parse to DateTimeImmutable at the boundary
+                // so the downstream foreach can rely on one type.
+                $rawDate = $msg['internalDate'];
                 $messages[] = [
                     'sender_email' => strtolower($msg['fromAddress']),
                     'sender_name' => $msg['fromName'],
-                    'internalDate' => $msg['internalDate'],
+                    'internalDate' => $rawDate !== ''
+                        ? $this->safeParseDate($rawDate, $clock)
+                        : $clock->now()->toDateTimeImmutable(),
                 ];
             }
         } elseif ($provider === 'microsoft') {
@@ -282,7 +287,15 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                     }
                 }
                 $received = $rawMsg['receivedDateTime'] ?? null;
-                $internalDate = is_string($received) && $received !== '' ? $received : 'now';
+                // When the Graph response omits receivedDateTime
+                // (rare, but possible on malformed entries), fall
+                // back to the injected clock rather than the magic
+                // 'now' string literal — keeps the missing-data
+                // path explicit and avoids piggy-backing on
+                // DateTimeImmutable's natural-language parser.
+                $internalDate = is_string($received) && $received !== ''
+                    ? $this->safeParseDate($received, $clock)
+                    : $clock->now()->toDateTimeImmutable();
 
                 $messages[] = [
                     'sender_email' => $sender,
@@ -325,7 +338,9 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                 continue;
             }
 
-            $internalDate = $this->safeParseDate($msg['internalDate'], $clock);
+            // internalDate is already a DateTimeImmutable from the
+            // per-provider boundary above — no second parse needed.
+            $internalDate = $msg['internalDate'];
             $senderName = $msg['sender_name'];
 
             // Upsert discovered_senders row. UNIQUE on
