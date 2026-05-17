@@ -62,12 +62,25 @@ final class DriftThresholdEditor extends Component
 
     public function save(int|string $newValue, CurrentUser $currentUser, SetDriftThresholdForSeries $action): void
     {
-        $effective = $newValue === 'global' ? null : (int) $newValue;
+        // Validate the inbound value before reaching the Public Action.
+        // The action carries its own whitelist (raises
+        // InvalidArgumentException on a non-allowed value) but a
+        // tampered Livewire payload that PHP-coerces to 0 (e.g. the
+        // string "abc") would surface that exception as a noisy
+        // user-facing error. Silently reject anything outside the
+        // popover's allowed set instead.
+        if ($newValue === 'global') {
+            $effective = null;
+        } elseif (is_int($newValue) || (is_string($newValue) && ctype_digit($newValue))) {
+            $candidate = (int) $newValue;
+            if (! in_array($candidate, self::OPTIONS, true)) {
+                return;
+            }
+            $effective = $candidate;
+        } else {
+            return;
+        }
 
-        // Validation lives inside the Public Action (whitelist:
-        // {1,2,5,10,25,50} or null). Anything else raises
-        // InvalidArgumentException so a tampered Livewire payload
-        // cannot smuggle an arbitrary percent through.
         ($action)($this->recurringSeriesId, $currentUser->user(), $effective);
 
         $this->currentValue = $effective;

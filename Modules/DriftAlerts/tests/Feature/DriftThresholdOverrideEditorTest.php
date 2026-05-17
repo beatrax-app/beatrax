@@ -112,20 +112,37 @@ it('saves NULL when "global" is chosen, clearing any prior override', function (
     expect(dteCurrentThreshold($seriesId))->toBeNull();
 });
 
-it('rejects invalid threshold values and leaves the DB row untouched', function (): void {
+it('silently rejects invalid threshold values and leaves the DB row untouched', function (): void {
     $user = dteUser('dte-invalid@diederik.test');
     $seriesId = dteSeries($user, ['drift_threshold_percent' => 10]);
 
-    $threw = false;
-    try {
-        Livewire::actingAs($user)
-            ->test(DriftThresholdEditor::class, ['recurringSeriesId' => $seriesId])
-            ->call('save', 7);
-    } catch (InvalidArgumentException) {
-        $threw = true;
-    }
+    // 7 is not one of the popover's allowed values
+    // (DriftThresholdEditor::OPTIONS). The component rejects the
+    // payload silently so a tampered Livewire request cannot surface
+    // a noisy InvalidArgumentException on the user's screen, and the
+    // DB row stays at its prior value of 10.
+    Livewire::actingAs($user)
+        ->test(DriftThresholdEditor::class, ['recurringSeriesId' => $seriesId])
+        ->call('save', 7)
+        ->assertSet('currentValue', 10);
 
-    expect($threw)->toBeTrue();
+    expect(dteCurrentThreshold($seriesId))->toBe(10);
+});
+
+it('silently rejects non-numeric strings on save and leaves the DB row untouched', function (): void {
+    $user = dteUser('dte-non-numeric@diederik.test');
+    $seriesId = dteSeries($user, ['drift_threshold_percent' => 10]);
+
+    // A tampered Livewire payload could pass the string "abc". Before
+    // the input guard a `(int) "abc"` coercion would have produced 0
+    // and then the Public Action would have raised
+    // InvalidArgumentException; the component now rejects the value
+    // before it reaches the action.
+    Livewire::actingAs($user)
+        ->test(DriftThresholdEditor::class, ['recurringSeriesId' => $seriesId])
+        ->call('save', 'abc')
+        ->assertSet('currentValue', 10);
+
     expect(dteCurrentThreshold($seriesId))->toBe(10);
 });
 
