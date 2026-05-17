@@ -37,7 +37,14 @@
 
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Recurring</h1>
+        <div class="flex items-baseline justify-between gap-4">
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Recurring</h1>
+            <button
+                type="button"
+                wire:click="reDetect"
+                class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+            >Re-detect now</button>
+        </div>
         <p class="mt-2 text-sm text-slate-500">
             Approved subscriptions, fixed payments, and recurring income at a glance.
         </p>
@@ -75,7 +82,10 @@
                             <div class="flex items-center justify-between gap-4">
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm text-slate-900">
-                                        <span class="font-medium">{{ $row->displayName() }}</span>
+                                        <a
+                                            href="{{ route('recurring.series.show', ['seriesId' => $row->seriesId]) }}"
+                                            class="font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                                        >{{ $row->displayName() }}</a>
                                         <span class="ml-2 text-slate-500" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
                                         @if ($row->latestAmount->currency() !== 'EUR' && $row->eurEquivalent !== null)
                                             <span class="ml-1 text-xs text-slate-400" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
@@ -117,7 +127,10 @@
                             <div class="flex items-center justify-between gap-4">
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm text-slate-900">
-                                        <span class="font-medium">{{ $row->displayName() }}</span>
+                                        <a
+                                            href="{{ route('recurring.series.show', ['seriesId' => $row->seriesId]) }}"
+                                            class="font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                                        >{{ $row->displayName() }}</a>
                                         <span class="ml-2 text-slate-500" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
                                         @if ($row->latestAmount->currency() !== 'EUR' && $row->eurEquivalent !== null)
                                             <span class="ml-1 text-xs text-slate-400" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
