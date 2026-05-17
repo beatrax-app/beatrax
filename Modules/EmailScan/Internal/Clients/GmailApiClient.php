@@ -42,7 +42,7 @@ use RuntimeException;
  * client returns an empty page so the discovery loop is inert
  * until the matcher phase wires the real keyword query.
  */
-final class GmailApiClient
+final class GmailApiClient implements GmailApiClientContract
 {
     public function __construct(
         private readonly OAuthSecretsRepository $secrets,

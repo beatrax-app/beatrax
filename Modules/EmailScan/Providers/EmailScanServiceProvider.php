@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Providers;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
+use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\EmlBlobStore;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
@@ -58,6 +59,9 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(EmlBlobStore::class);
         $this->app->singleton(MimeHeaderParser::class);
         $this->app->singleton(GmailApiClient::class);
+        // Tests rebind the contract to FakeGmailApiClient via
+        // $this->app->instance(GmailApiClientContract::class, ...).
+        $this->app->singleton(GmailApiClientContract::class, GmailApiClient::class);
         $this->app->singleton(InboxScanStateMachine::class);
     }
 
