@@ -18,6 +18,7 @@
       - $snoozeTargets : array<'1w'|'1m'|'3m', string ISO8601>
       - $primaryAcknowledge : bool — emerald primary chip if true, slate otherwise
       - $seriesStates : array<int, string> — series id → state
+      - $cancellationImpact : ?CancellationImpactDto — projected savings if cancelled (null = unavailable)
 --}}
 
 @php
@@ -56,6 +57,10 @@
                 @if ($alert->eurEquivalent !== null)
                     <span class="mx-1">·</span>
                     <span class="text-slate-400" style="font-variant-numeric: tabular-nums;">(≈ {{ $fmt($alert->eurEquivalent) }}/yr)</span>
+                @endif
+                @if ($cancellationImpact !== null)
+                    <span class="mx-1">·</span>
+                    <span style="font-variant-numeric: tabular-nums;">Cancel this → save {{ $fmt($cancellationImpact->annualSavings) }}/yr</span>
                 @endif
             </p>
             @if ($seriesState === 'cadence_changed')

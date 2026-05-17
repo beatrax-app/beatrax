@@ -14,6 +14,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
 use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
 use Modules\DriftAlerts\Public\Actions\SnoozeDriftAlert;
+use Modules\DriftAlerts\Public\Dto\CancellationImpactDto;
+use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
 
 /**
@@ -72,6 +74,7 @@ final class DriftPage extends Component
     public function render(
         CurrentUser $currentUser,
         DriftAlertQuery $query,
+        CancellationImpactQuery $impact,
         ViewFactory $views,
         Clock $clock,
     ): View {
@@ -100,6 +103,22 @@ final class DriftPage extends Component
         }
         $seriesStates = $seriesIds === [] ? [] : $query->seriesStatesForUser($user, $seriesIds);
 
+        // CancellationImpactQuery hand-off: one DTO per distinct series
+        // id rendered on the page. The map keys on recurringSeriesId so
+        // the partial pulls the projection inline without a per-row
+        // query. Cross-user / missing series rows fall back to null
+        // gracefully — the partial guards every interpolation behind
+        // `@if ($cancellationImpact !== null)`.
+        /** @var array<int, CancellationImpactDto> $impactBySeriesId */
+        $impactBySeriesId = [];
+        $uniqueSeriesIds = array_values(array_unique($seriesIds));
+        foreach ($uniqueSeriesIds as $sid) {
+            $dto = $impact->forSeries($sid, $user);
+            if ($dto !== null) {
+                $impactBySeriesId[$sid] = $dto;
+            }
+        }
+
         // Snooze targets are domain timestamps computed server-side off
         // the injected clock so `CarbonImmutable::setTestNow()` stays
         // deterministic across the test suite.
@@ -116,6 +135,7 @@ final class DriftPage extends Component
             'grouped' => $grouped,
             'snoozeTargets' => $snoozeTargets,
             'seriesStates' => $seriesStates,
+            'impactBySeriesId' => $impactBySeriesId,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
