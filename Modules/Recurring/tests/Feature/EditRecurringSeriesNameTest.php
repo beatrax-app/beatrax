@@ -97,3 +97,48 @@ it('throws NotFoundHttpException for a cross-user series id', function (): void 
     $fresh = RecurringSeries::query()->findOrFail($series->id);
     expect($fresh->display_name_override)->toBeNull();
 });
+
+it('trims whitespace from the override and treats an all-whitespace value as a clear', function (): void {
+    $series = ersSeries($this->user, 'ers::trim');
+    $series->display_name_override = 'previous';
+    $series->save();
+
+    (ersAction())($series->id, $this->user, '   ');
+
+    /** @var RecurringSeries $fresh */
+    $fresh = RecurringSeries::query()->findOrFail($series->id);
+    expect($fresh->display_name_override)->toBeNull();
+})->group('trim-whitespace');
+
+it('trims surrounding whitespace from a non-empty override', function (): void {
+    $series = ersSeries($this->user, 'ers::trim-edge');
+
+    (ersAction())($series->id, $this->user, '  Spotify Family  ');
+
+    /** @var RecurringSeries $fresh */
+    $fresh = RecurringSeries::query()->findOrFail($series->id);
+    expect($fresh->display_name_override)->toBe('Spotify Family');
+})->group('trim-whitespace-edges');
+
+it('throws InvalidArgumentException for a name exceeding the 120-character cap', function (): void {
+    $series = ersSeries($this->user, 'ers::cap');
+    $tooLong = str_repeat('x', 121);
+
+    expect(fn () => (ersAction())($series->id, $this->user, $tooLong))
+        ->toThrow(InvalidArgumentException::class);
+
+    /** @var RecurringSeries $fresh */
+    $fresh = RecurringSeries::query()->findOrFail($series->id);
+    expect($fresh->display_name_override)->toBeNull();
+})->group('display-name-length-cap');
+
+it('accepts an override at exactly the 120-character cap', function (): void {
+    $series = ersSeries($this->user, 'ers::cap-edge');
+    $atCap = str_repeat('y', 120);
+
+    (ersAction())($series->id, $this->user, $atCap);
+
+    /** @var RecurringSeries $fresh */
+    $fresh = RecurringSeries::query()->findOrFail($series->id);
+    expect($fresh->display_name_override)->toBe($atCap);
+})->group('display-name-length-cap-edge');
