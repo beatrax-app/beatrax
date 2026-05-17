@@ -155,6 +155,12 @@
         </div>
     @endif
 
+    {{-- Inline "Fixed monthly payments" card — top six approved
+         recurring series with View-all link to `/recurring`. The card
+         resolves through Livewire's container; cross-user scoping
+         happens inside FixedPaymentsViewQuery. --}}
+    @livewire('recurring.fixed-payments-card')
+
     {{-- Top spending categories --}}
     <section class="space-y-4">
         <h2 class="text-xl font-semibold text-slate-900">Top spending</h2>
