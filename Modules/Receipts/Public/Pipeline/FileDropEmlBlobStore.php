@@ -114,8 +114,18 @@ final class FileDropEmlBlobStore
         }
 
         $tmp = $absolutePath.'.tmp';
+
+        // Narrow umask BEFORE opening the temp file so it is born at
+        // mode 0600 rather than the umask-0022 default of 0644. The
+        // sibling EmlBlobStore + OAuthSecretsRepository writers (Phase
+        // 6) carry the same pattern. The explicit chmod below remains
+        // as defence-in-depth — together they close both the umask
+        // race and any filesystem that ignores the umask narrowing.
+        $previousUmask = umask(0077);
+
         $fp = @fopen($tmp, 'wb');
         if ($fp === false) {
+            umask($previousUmask);
             throw new RuntimeException(
                 "FileDropEmlBlobStore: could not open temp file at {$tmp}.",
             );
@@ -160,6 +170,8 @@ final class FileDropEmlBlobStore
             throw new RuntimeException(
                 "FileDropEmlBlobStore: unexpected failure writing {$absolutePath}.",
             );
+        } finally {
+            umask($previousUmask);
         }
     }
 
