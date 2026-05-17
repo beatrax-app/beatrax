@@ -6,9 +6,9 @@ namespace Modules\Receipts\Internal\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -23,7 +23,7 @@ use Throwable;
 
 /**
  * Per-user 5-minute scanner for the watched-folder secondary file-drop
- * path (D-704 secondary path / D-718).
+ * path.
  *
  * Walks `storage/app/inbox-drop/{userId}/` for top-level `.eml` /
  * `.mbox` files (subdirectories — including the `processed/` and
@@ -38,8 +38,7 @@ use Throwable;
  * A sibling `.error.txt` lands beside any failed file carrying the
  * thrown exception's message (≤500 chars) for triage.
  *
- * Concurrency contract (mirrors ProcessFetchedInboxMessagesJob from
- * Wave 1):
+ * Concurrency contract:
  *  - `ShouldBeUniqueUntilProcessing` keyed on `uniqueId() = userId`
  *    blocks a second per-user dispatch while a prior pass is still
  *    queued. The lock releases the moment a worker begins handle().
@@ -49,12 +48,12 @@ use Throwable;
  *    healthy scan; short enough to unblock if a worker crashes
  *    mid-handle.
  *
- * Cross-user defence (T-07-04): the constructor takes an `int $userId`
- * and the inbox-drop path is computed via storage_path() with the
- * integer-cast userId. The inner scan loop only walks the
- * `{userId}/` subfolder; never walks above it. A path-traversal
- * attempt via a crafted filename cannot escape this subtree because
- * the file rename targets `basename($path)` only.
+ * Cross-user defence: the constructor takes an `int $userId` and the
+ * inbox-drop path is computed via the injected Application's
+ * `storagePath()` with the integer-cast userId. The inner scan loop
+ * only walks the `{userId}/` subfolder; never walks above it. A
+ * path-traversal attempt via a crafted filename cannot escape this
+ * subtree because the file rename targets `basename($path)` only.
  *
  * Single permitted facade exception: `Cache::driver('redis')` inside
  * `uniqueVia()`. Laravel's queue infrastructure invokes uniqueVia()
@@ -112,19 +111,12 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
 
     public function handle(
         Filesystem $files,
-        DatabaseManager $db,
+        Application $app,
         Clock $clock,
         RecordReceipt $recordReceipt,
         MboxIterator $mboxIterator,
         LoggerInterface $logger,
     ): void {
-        // Touch $db so the static analyser does not flag the unused
-        // argument. The action layer (RecordReceipt) owns its own
-        // DatabaseManager; this job-level DI exists for future
-        // multi-user broadcast / metrics work that may want a direct
-        // connection without re-resolving from the container.
-        unset($db);
-
         $userRow = User::query()->where('id', $this->userId)->first();
         if (! $userRow instanceof User) {
             // The user was deleted between dispatch and worker pickup;
@@ -132,7 +124,7 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
             return;
         }
 
-        $baseDir = storage_path('app/inbox-drop/'.$this->userId);
+        $baseDir = $app->storagePath('app/inbox-drop/'.$this->userId);
         if (! $files->isDirectory($baseDir)) {
             return;
         }
