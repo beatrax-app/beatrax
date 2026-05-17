@@ -57,4 +57,37 @@
             @endif
         </div>
     </form>
+
+    {{-- Watched-folder secondary path (D-704 / D-718).
+
+         Instant-apply toggle (no Save button) — toggling fires
+         wire:click="toggleAutoImport" which writes
+         users.auto_import_drop_folder via the raw query builder.
+         Help text varies between off / on per UI-SPEC § /settings
+         watched-folder section. --}}
+    <section class="space-y-2">
+        <h2 class="text-xs uppercase tracking-wide text-slate-500">Auto-import</h2>
+        <div class="space-y-2">
+            <label for="auto-import-toggle" class="flex items-start gap-3 cursor-pointer">
+                <input
+                    type="checkbox"
+                    id="auto-import-toggle"
+                    wire:model.live="autoImportFromDropFolder"
+                    wire:change="toggleAutoImport"
+                    aria-describedby="auto-import-help"
+                    class="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
+                />
+                <div class="flex-1">
+                    <span class="block text-sm text-slate-900">Auto-import from drop folder</span>
+                    <p id="auto-import-help" class="mt-1 text-xs text-slate-500">
+                        @if ($autoImportFromDropFolder)
+                            Drop folder is active. diederik scans <code class="font-mono text-slate-700">storage/app/inbox-drop/</code> every 5 minutes for new files.
+                        @else
+                            When on, diederik scans <code class="font-mono text-slate-700">storage/app/inbox-drop/</code> every 5 minutes for <code class="font-mono text-slate-700">.eml</code> and <code class="font-mono text-slate-700">.mbox</code> files and imports them through the same matcher pipeline as the wizard. Processed files move to <code class="font-mono text-slate-700">/processed/{YYYY-MM}/</code> so they're never imported twice.
+                        @endif
+                    </p>
+                </div>
+            </label>
+        </div>
+    </section>
 </div>
