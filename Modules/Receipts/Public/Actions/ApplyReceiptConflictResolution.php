@@ -1,0 +1,118 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Receipts\Public\Actions;
+
+use Illuminate\Database\DatabaseManager;
+use InvalidArgumentException;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use stdClass;
+
+/**
+ * Persists the per-user `receipt_conflict_resolution` policy +
+ * resolves every held `pending_enrichment_conflicts` row for the
+ * user according to the chosen policy.
+ *
+ * Two valid choices (T-07-11 enum tampering mitigation enforced via
+ * an explicit whitelist on every __invoke):
+ *
+ *  - `prefer_receipt` — UPDATE transactions.{field_name} with the
+ *    receipt's incoming value for each held conflict; then DELETE
+ *    the pending row.
+ *  - `prefer_first_write` — keep the stored value verbatim; just
+ *    DELETE the pending row.
+ *
+ * Both branches persist the chosen policy on users.receipt_conflict_resolution
+ * so subsequent ApplyEnrichments calls apply the policy silently
+ * without surfacing the toast again.
+ *
+ * Returns the number of pending conflicts resolved.
+ *
+ * Cross-user safety (T-07-09): every read + write is scoped by
+ * `where('user_id', $user->id)` so a foreign user's pending row is
+ * never touched even if the action is invoked with a borrowed
+ * conflict id. The action takes a `User`, not a raw conflict id, so
+ * a caller cannot smuggle in another user's row by id.
+ */
+final class ApplyReceiptConflictResolution
+{
+    /** Allowed policy values — mirrors the DB enum trigger allow-list. */
+    private const ALLOWED_CHOICES = ['prefer_receipt', 'prefer_first_write'];
+
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly Clock $clock,
+    ) {}
+
+    public function __invoke(User $user, string $choice): int
+    {
+        if (! in_array($choice, self::ALLOWED_CHOICES, true)) {
+            throw new InvalidArgumentException(sprintf(
+                'Invalid receipt-conflict resolution choice %s — must be one of %s.',
+                $choice,
+                implode(', ', self::ALLOWED_CHOICES),
+            ));
+        }
+
+        $now = $this->clock->now()->toDateTimeString();
+
+        return $this->db->connection()->transaction(function () use ($user, $choice, $now): int {
+            $this->db->connection()
+                ->table('users')
+                ->where('id', $user->id)
+                ->update([
+                    'receipt_conflict_resolution' => $choice,
+                    'updated_at' => $now,
+                ]);
+
+            $rows = $this->db->connection()
+                ->table('pending_enrichment_conflicts')
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->get();
+
+            $resolved = 0;
+            foreach ($rows as $row) {
+                $this->resolveRow($row, $user, $choice, $now);
+                $resolved++;
+            }
+
+            return $resolved;
+        });
+    }
+
+    private function resolveRow(stdClass $row, User $user, string $choice, string $now): void
+    {
+        $transactionId = self::toInt($row->transaction_id);
+        $fieldName = is_string($row->field_name) ? $row->field_name : '';
+        $conflictId = self::toInt($row->id);
+
+        if ($choice === 'prefer_receipt' && $fieldName !== '') {
+            $incomingRaw = is_string($row->incoming_value) ? $row->incoming_value : 'null';
+            /** @var mixed $incoming */
+            $incoming = json_decode($incomingRaw, associative: true, flags: JSON_THROW_ON_ERROR);
+
+            $this->db->connection()
+                ->table('transactions')
+                ->where('id', $transactionId)
+                ->where('user_id', $user->id)
+                ->update([
+                    $fieldName => $incoming,
+                    'updated_at' => $now,
+                ]);
+        }
+
+        $this->db->connection()
+            ->table('pending_enrichment_conflicts')
+            ->where('id', $conflictId)
+            ->where('user_id', $user->id)
+            ->delete();
+    }
+
+    private static function toInt(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
+    }
+}

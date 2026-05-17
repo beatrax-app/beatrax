@@ -9,12 +9,15 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Import\Public\Events\TransactionImported;
+use Modules\Receipts\Internal\Http\Livewire\ReceiptConflictToast;
 use Modules\Receipts\Internal\Http\Livewire\WizardEmailFileStep;
 use Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt;
 use Modules\Receipts\Internal\MatcherRegistry;
+use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Services\FileImportQuery;
+use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
 /**
  * Wires the Receipts module.
@@ -102,6 +105,11 @@ final class ReceiptsServiceProvider extends ServiceProvider
         // so the Chains module's listener can write candidate
         // chain_links rows scoped by the just-inserted transaction id.
         $this->app->singleton(DispatchChainHintsFromReceipt::class);
+        // Wave 3 — first-conflict toast support: action + read query.
+        // The action is singleton-bound; its __invoke is stateless and
+        // reads the user policy inline per call (no cross-user state).
+        $this->app->singleton(ApplyReceiptConflictResolution::class);
+        $this->app->singleton(ReceiptConflictQuery::class);
 
         $this->app->singleton(
             MatcherRegistry::class,
@@ -138,6 +146,7 @@ final class ReceiptsServiceProvider extends ServiceProvider
         }
 
         $livewire->component('receipts.wizard-email-file-step', WizardEmailFileStep::class);
+        $livewire->component('receipts.receipt-conflict-toast', ReceiptConflictToast::class);
 
         // Wave 2 — subscribe the chain-hint dispatcher to the
         // canonical-row INSERT event so receipts with extracted chain
