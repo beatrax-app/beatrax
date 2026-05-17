@@ -63,8 +63,7 @@
 
         {{-- "Rules" — categorization rule CRUD landing. No badge in
              v1 (rules don't have a "needs attention" count). Placed
-             between Uncategorized and Review chains per UI-SPEC §
-             Navigation Decision. --}}
+             between Uncategorized and Review chains. --}}
         <a
             href="{{ route('rules') }}"
             class="inline-flex items-center rounded-md px-3 py-1.5 text-sm {{ $isActive('/rules') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"

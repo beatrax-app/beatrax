@@ -27,8 +27,8 @@ use Illuminate\Database\Schema\Builder;
  *
  * The column is NOT part of the v3 fingerprint tuple — adding it
  * does not bump the fingerprint version and does not require a
- * re-derive run. The column is nullable so existing transactions
- * (categorised manually before Phase 7) keep working unchanged.
+ * re-derive run. The column is nullable so transactions categorised
+ * before the column existed keep working unchanged.
  */
 return new class extends Migration
 {
