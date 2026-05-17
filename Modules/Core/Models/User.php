@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string $receipt_conflict_resolution
  * @property int $recurring_detection_window_months
  * @property int $recurring_income_min_amount_minor
+ * @property int $drift_alert_threshold_percent
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -43,6 +44,7 @@ final class User extends Authenticatable
         'receipt_conflict_resolution',
         'recurring_detection_window_months',
         'recurring_income_min_amount_minor',
+        'drift_alert_threshold_percent',
     ];
 
     /** @var list<string> */
@@ -50,16 +52,16 @@ final class User extends Authenticatable
 
     /**
      * Default attribute values matching the recurring-related users
-     * column defaults (`recurring_detection_window_months` and
-     * `recurring_income_min_amount_minor`). Eloquent applies these to
-     * a freshly-constructed model so a new instance carries the same
-     * values the schema would apply on insert.
+     * column defaults. Eloquent applies these to a freshly-constructed
+     * model so a new instance carries the same values the schema would
+     * apply on insert.
      *
      * @var array<string, mixed>
      */
     protected $attributes = [
         'recurring_detection_window_months' => 18,
         'recurring_income_min_amount_minor' => 200000,
+        'drift_alert_threshold_percent' => 5,
     ];
 
     /** @return array<string, string> */
@@ -72,6 +74,7 @@ final class User extends Authenticatable
             'auto_import_drop_folder' => 'boolean',
             'recurring_detection_window_months' => 'integer',
             'recurring_income_min_amount_minor' => 'integer',
+            'drift_alert_threshold_percent' => 'integer',
         ];
     }
 }
