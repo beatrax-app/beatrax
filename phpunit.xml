@@ -13,6 +13,7 @@
             <directory>Modules/Import/tests/Unit</directory>
             <directory>Modules/Categorization/tests/Unit</directory>
             <directory>Modules/Transfers/tests/Unit</directory>
+            <directory>Modules/Receipts/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
@@ -22,6 +23,7 @@
             <directory>Modules/Import/tests/Feature</directory>
             <directory>Modules/Categorization/tests/Feature</directory>
             <directory>Modules/Transfers/tests/Feature</directory>
+            <directory>Modules/Receipts/tests/Feature</directory>
         </testsuite>
         <testsuite name="Contracts">
             <directory>tests/Contracts</directory>
@@ -46,6 +48,9 @@
         </testsuite>
         <testsuite name="EmailScanIntegration">
             <directory suffix="Test.php">./Modules/EmailScan/tests/Integration</directory>
+        </testsuite>
+        <testsuite name="ReceiptsContracts">
+            <directory suffix="Test.php">./Modules/Receipts/tests/Contracts</directory>
         </testsuite>
     </testsuites>
     <php>
