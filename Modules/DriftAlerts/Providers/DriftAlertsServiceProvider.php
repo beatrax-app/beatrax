@@ -102,23 +102,36 @@ final class DriftAlertsServiceProvider extends ServiceProvider
      * the DI-only invariant visible at the call site; the global
      * `view()` helper is forbidden in module code.
      *
-     * The composer only fires when the top-nav view actually renders,
-     * meaning at most once per HTTP request that surfaces the nav.
+     * The composer fires once per top-nav render. A boot-scoped memo
+     * (the `$cache` array captured by reference inside the closure)
+     * collapses repeated renders within a single boot cycle to a
+     * single COUNT query — relevant when a Livewire roundtrip
+     * re-emits the nav as part of the same response. Under traditional
+     * FPM, `boot()` runs once per request, so the memo is effectively
+     * request-scoped.
      */
     private function registerTopNavBadgeComposer(): void
     {
         $app = $this->app;
         $factory = $app->make(ViewFactoryContract::class);
 
-        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app): void {
+        /** @var array<int, int> $cache */
+        $cache = [];
+
+        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app, &$cache): void {
             $currentUser = $app->make(CurrentUser::class);
             if (! $currentUser->isAuthenticated()) {
                 $compose->with('driftOpenCount', 0);
 
                 return;
             }
-            $query = $app->make(DriftAlertQuery::class);
-            $compose->with('driftOpenCount', $query->openCountForUser($currentUser->user()));
+            $user = $currentUser->user();
+            $userId = $user->id;
+            if (! array_key_exists($userId, $cache)) {
+                $query = $app->make(DriftAlertQuery::class);
+                $cache[$userId] = $query->openCountForUser($user);
+            }
+            $compose->with('driftOpenCount', $cache[$userId]);
         });
     }
 }
