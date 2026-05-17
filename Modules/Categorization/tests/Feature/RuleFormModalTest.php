@@ -263,3 +263,65 @@ it('accepts a GLOBAL (user_id=NULL) category id for both Create and Update', fun
     $affected = $update($this->user, $ruleId, ['category_id' => $this->music->id]);
     expect($affected)->toBe(1);
 });
+
+it('save() catches InvalidArgumentException from a tampered foreign category id and surfaces a calm error', function (): void {
+    // WR-02: a Livewire request that smuggles a foreign-category id
+    // past the picker funnel will hit the WR-01 ownership guard,
+    // which throws InvalidArgumentException. The component must
+    // catch it and render a calm errorValue instead of a 500.
+    $other = User::create([
+        'email' => 'tamper-foreign-cat@example.com',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+    ]);
+    $foreignCategoryId = Category::create([
+        'user_id' => $other->id,
+        'name' => 'Secret',
+        'slug' => 'secret-foreign-cat',
+        'kind' => 'expense',
+        'display_order' => 999,
+    ])->id;
+
+    Livewire::test(RuleFormModal::class)
+        ->set('field', 'merchant')
+        ->set('match', 'contains')
+        ->set('value', 'TARGET')
+        ->set('categoryId', $foreignCategoryId)
+        ->call('save')
+        ->assertSet('errorValue', 'Invalid field, match, or category — pick from the dropdowns and try again.')
+        ->assertNotDispatched('rule-form:saved');
+
+    expect(
+        DB::table('categorization_rules')
+            ->where('user_id', $this->user->id)
+            ->where('value', 'TARGET')
+            ->exists()
+    )->toBeFalse();
+});
+
+it('save() catches NotFoundHttpException from a foreign editingRuleId and hides the modal calmly', function (): void {
+    // WR-02: a tampered editingRuleId that points to another user's
+    // rule is rejected by UpdateCategorizationRule with
+    // NotFoundHttpException. The component must catch it, surface a
+    // calm message, and dispatch modal-hide instead of a 500.
+    $other = User::create([
+        'email' => 'tamper-foreign-rule@example.com',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+    ]);
+    $foreignRuleId = seedFormRule($other->id, 'merchant', 'contains', 'NETFLIX', $this->streaming->id);
+
+    Livewire::test(RuleFormModal::class)
+        ->set('editingRuleId', $foreignRuleId) // bypass open() which would have masked it
+        ->set('field', 'merchant')
+        ->set('match', 'contains')
+        ->set('value', 'NEW')
+        ->set('categoryId', $this->streaming->id)
+        ->call('save')
+        ->assertSet('errorValue', 'That rule is no longer available.')
+        ->assertDispatched('modal-hide');
+
+    // The foreign rule MUST remain untouched.
+    $row = DB::table('categorization_rules')->where('id', $foreignRuleId)->first();
+    expect($row->value)->toBe('NETFLIX');
+});

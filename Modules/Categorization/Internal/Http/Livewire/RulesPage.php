@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * The `/rules` route landing — the categorization-rule CRUD page.
@@ -62,7 +63,21 @@ final class RulesPage extends Component
 
     public function deleteRule(int $ruleId, CurrentUser $currentUser, DeleteCategorizationRule $delete): void
     {
-        ($delete)($currentUser->user(), $ruleId);
+        // DeleteCategorizationRule throws NotFoundHttpException on
+        // cross-user / missing rules. Without this catch a tampered
+        // Livewire payload would surface as a 500 / framework error
+        // page; catching it lets the page render a calm flash
+        // instead. The action's own ownership guard already prevents
+        // the delete from succeeding cross-user — the catch only
+        // affects the UI surface, not the security boundary.
+        try {
+            ($delete)($currentUser->user(), $ruleId);
+        } catch (NotFoundHttpException) {
+            $this->confirmingDeleteId = null;
+            $this->flashMessage = 'Rule not found (it may have been deleted in another tab).';
+
+            return;
+        }
         $this->confirmingDeleteId = null;
         $this->flashMessage = 'Rule deleted.';
     }

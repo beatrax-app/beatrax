@@ -116,7 +116,7 @@ it('deletes the rule when Yes, delete is invoked and flashes Rule deleted.', fun
     expect(DB::table('categorization_rules')->where('id', $ruleId)->exists())->toBeFalse();
 });
 
-it('refuses to delete a foreign user rule and surfaces 404', function (): void {
+it('refuses to delete a foreign user rule and surfaces a calm flash (not a 500)', function (): void {
     $other = User::create([
         'email' => 'other-rule@example.com',
         'password' => 'opensesame',
@@ -124,9 +124,15 @@ it('refuses to delete a foreign user rule and surfaces 404', function (): void {
     ]);
     $foreignRule = seedRulePageRule($other->id, 'merchant', 'contains', 'NETFLIX', $this->streaming->id);
 
+    // The action throws NotFoundHttpException; the component catches
+    // it (WR-02) and surfaces a calm flash instead of a 500. The
+    // foreign rule MUST remain in the DB — the catch only affects
+    // the UI surface, never the security boundary.
     Livewire::test(RulesPage::class)
         ->call('deleteRule', $foreignRule)
-        ->assertStatus(404);
+        ->assertSet('flashMessage', 'Rule not found (it may have been deleted in another tab).')
+        ->assertSet('confirmingDeleteId', null)
+        ->assertSee('Rule not found');
 
     expect(DB::table('categorization_rules')->where('id', $foreignRule)->exists())->toBeTrue();
 });
