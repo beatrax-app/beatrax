@@ -25,6 +25,14 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * never propagates unexpected payload keys to the SQL builder. The
  * same field / match allow-lists as CreateCategorizationRule apply.
  *
+ * Category-ownership guard: when `category_id` is part of the update
+ * payload, the supplied id MUST refer to a category visible to the
+ * caller (`categories.user_id IS NULL` for the seeded global tree
+ * OR `categories.user_id = $user->id` for owned categories). A miss
+ * throws `InvalidArgumentException`. Mirrors the visibility rule
+ * enforced by `CategoryOptionsQuery::for($user)` and the equivalent
+ * guard in `CreateCategorizationRule`.
+ *
  * Duplicate-rule mitigation mirrors CreateCategorizationRule: a
  * UNIQUE-violation QueryException is translated to a Laravel
  * ValidationException with a calm copy under the `value` field so
@@ -96,6 +104,13 @@ final class UpdateCategorizationRule
             }
             $payload['value'] = $trimmed;
         }
+        if (isset($payload['category_id'])) {
+            $categoryId = is_numeric($payload['category_id'])
+                ? (int) $payload['category_id']
+                : 0;
+            self::assertCategoryVisible($this->db, $categoryId, $user->id);
+            $payload['category_id'] = $categoryId;
+        }
 
         if ($payload === []) {
             // Nothing to write — preserve idempotency by returning 0.
@@ -133,5 +148,30 @@ final class UpdateCategorizationRule
         return str_contains($message, 'UNIQUE constraint failed')
             || str_contains($message, 'Duplicate entry')
             || str_contains($message, 'duplicate key value');
+    }
+
+    /**
+     * Verifies the supplied category is visible to the caller
+     * (global default or owned). Throws InvalidArgumentException on
+     * miss — mirrors the field/match validation shape and the
+     * sibling guard on `CreateCategorizationRule`.
+     */
+    private static function assertCategoryVisible(
+        DatabaseManager $db,
+        int $categoryId,
+        int $userId,
+    ): void {
+        $exists = $db->connection()
+            ->table('categories')
+            ->where('id', $categoryId)
+            ->where(static function ($query) use ($userId): void {
+                $query->whereNull('user_id')->orWhere('user_id', $userId);
+            })
+            ->exists();
+        if (! $exists) {
+            throw new InvalidArgumentException(
+                "UpdateCategorizationRule: category {$categoryId} is not visible to user {$userId}."
+            );
+        }
     }
 }
