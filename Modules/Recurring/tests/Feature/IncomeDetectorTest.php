@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -131,7 +132,7 @@ function idtSeedFixture(DatabaseManager $db, User $user, Account $account, Impor
 
 function idtRunJob(User $user): void
 {
-    $app = \Illuminate\Container\Container::getInstance();
+    $app = Container::getInstance();
     /** @var DatabaseManager $db */
     $db = $app->make(DatabaseManager::class);
     /** @var IncomeSeriesDetector $detector */
