@@ -9,6 +9,7 @@ use Livewire\LivewireManager;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\EmlBlobStore;
+use Modules\EmailScan\Internal\Http\Livewire\BackfillWindowModal;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
@@ -82,5 +83,6 @@ final class EmailScanServiceProvider extends ServiceProvider
         // to render the Gmail or Microsoft 365 variant).
         $livewire->component('email-scan.inboxes-page', InboxesPage::class);
         $livewire->component('email-scan.oauth-client-wizard-modal', OAuthClientWizardModal::class);
+        $livewire->component('email-scan.backfill-window-modal', BackfillWindowModal::class);
     }
 }
