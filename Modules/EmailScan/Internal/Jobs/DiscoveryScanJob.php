@@ -171,6 +171,19 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 
         $connection = $db->connection();
 
+        // SQLite default behaviour is to raise SQLITE_BUSY immediately
+        // when another writer holds the slot. The daily discovery scan
+        // runs concurrently with the hourly incremental scan (different
+        // ShouldBeUnique keys: per-user vs per-inbox). Without a
+        // busy_timeout, a single contended write would throw mid-loop,
+        // the catch (Throwable) in the per-inbox loop would swallow
+        // it, and the per-user pass would silently abort halfway
+        // through. Setting the pragma once at the connection level
+        // inherits across every subsequent query for the duration of
+        // handle() — every other write path in this module already
+        // sets the same 5-second envelope.
+        $connection->statement('PRAGMA busy_timeout = 5000');
+
         /** @var User $user */
         $user = User::query()->where('id', $this->userId)->firstOrFail();
 
