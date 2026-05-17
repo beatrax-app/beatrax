@@ -5,29 +5,29 @@ declare(strict_types=1);
 namespace Modules\Recurring\Public\Actions;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Promotes a pending / approved series to snoozed. Writes
- * `snoozed_until` directly on the row inside the same DB transaction
- * as the state-machine transition so the snooze window and the state
- * column always agree.
+ * Promotes a pending / approved series to snoozed. The state-machine
+ * transition carries the `snoozed_until` patch in its $extraColumns
+ * map so the state flip and the snooze timestamp land inside the
+ * same row-locked transaction and the same audit row — the row can
+ * never be observed in a "future snooze date, original state"
+ * intermediate.
  *
  * Idempotent when re-snoozing to the exact same target timestamp
  * (silent no-op). Cross-user invocation raises NotFoundHttpException.
  *
- * No Public event — Phase 9 / Phase 10 listeners narrate detected /
- * approved / rejected / cadence_flipped transitions only; snooze is
- * a UI-only deferral that downstream surfaces ignore.
+ * No Public event — downstream listeners narrate detected / approved /
+ * rejected / cadence_flipped transitions only; snooze is a UI-only
+ * deferral that downstream surfaces ignore.
  */
 final class SnoozeRecurringSeries
 {
     public function __construct(
-        private readonly DatabaseManager $db,
         private readonly RecurringSeriesStateMachine $stateMachine,
     ) {}
 
@@ -51,27 +51,15 @@ final class SnoozeRecurringSeries
             return;
         }
 
-        $seriesId = $series->id;
         $untilString = $until->toDateTimeString();
 
-        $this->db->connection()->transaction(function () use ($seriesId, $untilString): void {
-            $this->db->connection()->table('recurring_series')
-                ->where('id', $seriesId)
-                ->update([
-                    'snoozed_until' => $untilString,
-                ]);
-        });
-
-        // Reload so the state machine sees the post-update row.
-        /** @var RecurringSeries $fresh */
-        $fresh = RecurringSeries::query()->findOrFail($seriesId);
-
         $this->stateMachine->transition(
-            $fresh,
+            $series,
             'snoozed',
             'user_action',
             'user',
             'snoozed_until='.$untilString,
+            ['snoozed_until' => $untilString],
         );
     }
 }

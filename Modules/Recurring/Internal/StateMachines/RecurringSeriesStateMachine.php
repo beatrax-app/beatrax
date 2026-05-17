@@ -65,12 +65,21 @@ final class RecurringSeriesStateMachine
         private readonly Clock $clock,
     ) {}
 
+    /**
+     * @param  array<string, scalar|null>  $extraColumns  optional metric-style
+     *                                                    patch applied to the same recurring_series row within the
+     *                                                    transition's transaction. Lets callers (e.g. snooze) move a
+     *                                                    companion column (`snoozed_until`) atomically with the state
+     *                                                    flip. `state` and `updated_at` are reserved for the state
+     *                                                    machine and silently overwritten if supplied.
+     */
     public function transition(
         RecurringSeries $series,
         string $toState,
         string $reason,
         string $actor,
         ?string $notes = null,
+        array $extraColumns = [],
     ): void {
         if (! in_array($actor, self::ALLOWED_ACTORS, strict: true)) {
             throw new InvalidArgumentException(
@@ -80,7 +89,7 @@ final class RecurringSeriesStateMachine
 
         $seriesId = self::toInt($series->id);
 
-        $this->db->connection()->transaction(function () use ($seriesId, $toState, $reason, $actor, $notes): void {
+        $this->db->connection()->transaction(function () use ($seriesId, $toState, $reason, $actor, $notes, $extraColumns): void {
             $connection = $this->db->connection();
             $connection->statement('PRAGMA busy_timeout = 5000');
 
@@ -100,12 +109,14 @@ final class RecurringSeriesStateMachine
 
             $now = $this->clock->now()->toDateTimeString();
 
+            $update = array_merge($extraColumns, [
+                'state' => $toState,
+                'updated_at' => $now,
+            ]);
+
             $connection->table('recurring_series')
                 ->where('id', $seriesId)
-                ->update([
-                    'state' => $toState,
-                    'updated_at' => $now,
-                ]);
+                ->update($update);
 
             $userId = self::toIntOrNull($row->user_id);
 
