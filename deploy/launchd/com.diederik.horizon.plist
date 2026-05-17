@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    LaunchAgent: diederik Horizon queue worker / supervisor.
+
+    Runs `php artisan horizon` indefinitely under the user account that
+    runs `diederik:install --launchd`. Horizon supervises every queued
+    job class in the project (BackfillInboxJob, IncrementalScanJob,
+    DiscoveryScanJob, ResolveChainLinksJob, plus the Chain resolver
+    jobs from Phase 5) — restart it and every supervisor under it
+    restarts automatically.
+
+    Placeholders the InstallCommand --launchd path substitutes at
+    install time (NEVER hard-coded; the substitution runs against the
+    user's actual PHP binary + project root):
+
+      {{ABS_PHP_BINARY}}    → PHP_BINARY constant (e.g. /Applications/Herd.app/Contents/Resources/php83/bin/php)
+      {{ABS_PROJECT_ROOT}}  → base_path() (e.g. /Users/<you>/code/diederik)
+
+    Crash-loop guard: ThrottleInterval=10 prevents launchd from
+    re-spawning the process more than once per 10 seconds. A genuinely
+    broken plist (PHP_BINARY pointing at a stale Herd version, project
+    root not present) therefore visibly throttles in `launchctl print`
+    rather than burning CPU.
+
+    KeepAlive.Crashed=true restarts on abnormal exit; SuccessfulExit=false
+    means a clean `exit 0` (e.g. the user runs `horizon:terminate` by
+    hand) does NOT trigger a restart — the user explicitly stopped it.
+
+    Log paths land inside the project so `tail -f storage/logs/launchd-horizon.log`
+    works without needing to know launchd's default log location.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.diederik.horizon</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ABS_PHP_BINARY}}</string>
+        <string>{{ABS_PROJECT_ROOT}}/artisan</string>
+        <string>horizon</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{ABS_PROJECT_ROOT}}</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>Crashed</key>
+        <true/>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{ABS_PROJECT_ROOT}}/storage/logs/launchd-horizon.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ABS_PROJECT_ROOT}}/storage/logs/launchd-horizon.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>

@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
 
@@ -20,17 +21,33 @@ use Modules\Core\Public\Events\UserInstalled;
  * 3. Creates User id=1 if absent. Re-running with the same email is a no-op
  *    and never silently updates the password — a dedicated reset-password
  *    command will land in a later operational-hardening phase.
+ *
+ * The `--launchd` mode is a separate code path: it installs three
+ * macOS LaunchAgent plists from `deploy/launchd/*.plist` to
+ * `~/Library/LaunchAgents/`, substituting `{{ABS_PHP_BINARY}}` (the
+ * PHP_BINARY constant from the currently-running interpreter) and
+ * `{{ABS_PROJECT_ROOT}}` (the project's base path) at install time
+ * so the resulting plists carry the user's actual paths — not
+ * placeholders. The Redis plist is OPTIONAL; pass `--without-redis`
+ * when Docker Desktop auto-starts the container on login.
+ *
+ * The `bootstrapPlist()` helper is `protected` (not private) so the
+ * InstallLaunchdCommandTest can subclass + override it to capture
+ * what would be passed to `launchctl bootstrap` without actually
+ * invoking it on the developer's real machine.
  */
-final class InstallCommand extends Command
+class InstallCommand extends Command
 {
     /** @var string */
     protected $signature = 'diederik:install
         {--email= : Email for the single-user account}
         {--password= : Password for the single-user account}
-        {--period-start-day=1 : Period start day (1-28, 1 = calendar month, 25 = salary cycle)}';
+        {--period-start-day=1 : Period start day (1-28, 1 = calendar month, 25 = salary cycle)}
+        {--launchd : Install macOS launchd plists for Horizon + scheduler + (optional) Redis}
+        {--without-redis : Skip the optional Redis plist (use when Docker Desktop auto-starts the container on login)}';
 
     /** @var string */
-    protected $description = 'Idempotent first-run setup: validate DB path, run migrations, create the single user.';
+    protected $description = 'Idempotent first-run setup: validate DB path, run migrations, create the single user. Pass --launchd to install macOS background workers.';
 
     /**
      * Path tokens that indicate a cloud-sync folder. Matched case-insensitively
@@ -65,12 +82,17 @@ final class InstallCommand extends Command
         private readonly Repository $config,
         private readonly Dispatcher $events,
         private readonly DatabaseManager $db,
+        private readonly Filesystem $files,
     ) {
         parent::__construct();
     }
 
     public function handle(): int
     {
+        if ($this->option('launchd') === true) {
+            return $this->installLaunchdPlists();
+        }
+
         $dbPathValue = $this->config->get('database.connections.sqlite.database');
         $dbPath = is_string($dbPathValue) ? $dbPathValue : '';
 
@@ -203,5 +225,125 @@ final class InstallCommand extends Command
         $day = is_numeric($raw) ? (int) $raw : 1;
 
         return max(1, min(28, $day));
+    }
+
+    /**
+     * Install macOS LaunchAgent plists for Horizon + scheduler +
+     * (optional) Redis. Refuses to run on non-Darwin hosts — the
+     * plists are macOS-only.
+     *
+     * For each plist:
+     *  1. Read the template from `deploy/launchd/com.diederik.{name}.plist`.
+     *  2. Substitute `{{ABS_PHP_BINARY}}` (PHP_BINARY) +
+     *     `{{ABS_PROJECT_ROOT}}` (base_path()) in the contents.
+     *  3. Ensure ~/Library/LaunchAgents/ exists (chmod 700 on first
+     *     create — restricts read access to the user).
+     *  4. Write the rendered plist to `~/Library/LaunchAgents/`.
+     *  5. Bootstrap via `launchctl bootstrap gui/{uid}` so launchd
+     *     picks up the change without needing a reboot. The bootstrap
+     *     call is funnelled through `bootstrapPlist()` so tests can
+     *     stub it.
+     */
+    private function installLaunchdPlists(): int
+    {
+        if (PHP_OS_FAMILY !== 'Darwin') {
+            $this->error('launchd plists are macOS-only; aborting.');
+
+            return self::FAILURE;
+        }
+
+        $home = $_SERVER['HOME'] ?? null;
+        if (! is_string($home) || $home === '') {
+            $this->error('HOME environment variable is not set; cannot resolve ~/Library/LaunchAgents.');
+
+            return self::FAILURE;
+        }
+
+        $launchAgentsDir = $this->resolveLaunchAgentsDir($home);
+        if (! $this->files->isDirectory($launchAgentsDir)) {
+            $this->files->makeDirectory($launchAgentsDir, 0700, recursive: true);
+        }
+
+        $plistNames = ['horizon', 'scheduler'];
+        if ($this->option('without-redis') !== true) {
+            $plistNames[] = 'redis';
+        }
+
+        $substitutions = [
+            '{{ABS_PHP_BINARY}}' => PHP_BINARY,
+            '{{ABS_PROJECT_ROOT}}' => base_path(),
+        ];
+
+        $uid = self::resolveCurrentUid();
+
+        foreach ($plistNames as $name) {
+            $sourcePath = base_path('deploy/launchd/com.diederik.'.$name.'.plist');
+            if (! $this->files->exists($sourcePath)) {
+                $this->error("Source plist not found: {$sourcePath}");
+
+                return self::FAILURE;
+            }
+
+            $template = $this->files->get($sourcePath);
+            $rendered = strtr($template, $substitutions);
+            $targetPath = $launchAgentsDir.'/com.diederik.'.$name.'.plist';
+            $this->files->put($targetPath, $rendered);
+            $this->info("Wrote {$targetPath}");
+
+            $bootstrapExit = $this->bootstrapPlist($uid, $targetPath);
+            if ($bootstrapExit === 0) {
+                $this->info("Loaded com.diederik.{$name}");
+            } else {
+                $this->warn("launchctl bootstrap exited {$bootstrapExit} for com.diederik.{$name} (may already be loaded; check `launchctl list | grep diederik`)");
+            }
+        }
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Resolve the LaunchAgents directory path. Extracted so tests can
+     * override + redirect into a sandbox without mutating the
+     * developer's real ~/Library/LaunchAgents.
+     */
+    protected function resolveLaunchAgentsDir(string $home): string
+    {
+        return $home.'/Library/LaunchAgents';
+    }
+
+    /**
+     * Invoke `launchctl bootstrap gui/{uid} {plistPath}` and return
+     * its exit code. Extracted so tests can override to capture the
+     * intended bootstrap target without actually mutating the
+     * developer's running launchd.
+     *
+     * Returns the launchctl exit code (0 on success; non-zero is
+     * surfaced as a warning, not a hard failure, because launchctl
+     * exits non-zero for "already loaded" which is fine on re-install).
+     */
+    protected function bootstrapPlist(int $uid, string $plistPath): int
+    {
+        $cmd = 'launchctl bootstrap gui/'.$uid.' '.escapeshellarg($plistPath);
+        $exitCode = 1;
+        passthru($cmd, $exitCode);
+
+        return $exitCode;
+    }
+
+    /**
+     * Resolve the current real user id. posix_getuid() is missing on
+     * Windows; the launchd path is Darwin-only so the function is
+     * available wherever this method is reached, but the safety
+     * fallback returns 0 (root) which makes the resulting launchctl
+     * call fail visibly rather than silently writing to the wrong
+     * user's launchd.
+     */
+    private static function resolveCurrentUid(): int
+    {
+        if (function_exists('posix_getuid')) {
+            return posix_getuid();
+        }
+
+        return 0;
     }
 }
