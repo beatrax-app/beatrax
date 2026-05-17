@@ -59,8 +59,10 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
 // Daily discovery scan: dispatch DiscoveryScanJob once per user per
 // day. The job walks every connected inbox with a broad keyword
 // query, populates discovered_senders, and never persists .eml blobs
-// (D-121). The job's ShouldBeUniqueUntilProcessing lock keyed on
-// userId collapses a same-day re-dispatch into a single queued job.
+// — discovery is a metadata-only sweep, the full-body fetch only
+// happens for approved senders. The job's ShouldBeUniqueUntilProcessing
+// lock keyed on userId collapses a same-day re-dispatch into a single
+// queued job.
 // Closure DI mirrors the hourly entry above — DatabaseManager + Bus
 // Dispatcher via the container; no facade reaches into module code.
 // Method order .name() BEFORE .daily()->withoutOverlapping() — Laravel
@@ -79,9 +81,10 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
 // ShouldBeUniqueUntilProcessing lock keyed on userId collapses a
 // same-hour re-dispatch into a single queued job; the withoutOverlapping
 // guard prevents this scheduler closure from racing with itself.
-// Cadence matches Phase 6's incremental scan hourly tick so fetched
-// rows surface as canonical transactions within the same wall-clock
-// hour they arrive.
+// Cadence matches the email-scan hourly tick (the
+// `email-scan.incremental` Schedule entry above) so fetched rows
+// surface as canonical transactions within the same wall-clock hour
+// they arrive.
 Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
     $userIds = $db->connection()->table('users')->pluck('id');
     foreach ($userIds as $id) {
