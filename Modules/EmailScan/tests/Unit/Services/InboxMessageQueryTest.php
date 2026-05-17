@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use InvalidArgumentException;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\EmailScan\Public\Services\InboxMessageQuery;
 

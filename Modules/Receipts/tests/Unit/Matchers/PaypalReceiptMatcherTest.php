@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use DateTimeImmutable;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
