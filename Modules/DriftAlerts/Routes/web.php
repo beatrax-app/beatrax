@@ -12,8 +12,7 @@ declare(strict_types=1);
  * enforced by the underlying Public services + Actions (every read /
  * write scopes by `user_id`).
  *
- * The `Route` facade is the documented carve-out for module Routes
- * files (`BoundaryArchTest` exempts `Modules\*\Routes`).
+ * The `Route` facade is permitted in module Routes files.
  */
 
 use Illuminate\Support\Facades\Route;
