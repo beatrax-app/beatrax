@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schedule;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
+use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
 
 // App-wide artisan command bindings live here. Module-local artisan
 // commands are registered from each module's ServiceProvider.
@@ -68,3 +69,22 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
         $bus->dispatch(new ProcessFetchedInboxMessagesJob((int) $id));
     }
 })->name('receipts.process-fetched-inbox-messages')->hourly()->withoutOverlapping(30);
+
+// Watched-folder secondary path (D-704 / D-718): per-user 5-minute
+// scanner over storage/app/inbox-drop/{userId}/ that imports .eml /
+// .mbox files through the same matcher pipeline as the wizard
+// upload. Only dispatches per-user when auto_import_drop_folder is
+// true so users who never enabled the watched folder pay no queue
+// cost. Method order .name() BEFORE .everyFiveMinutes()
+// ->withoutOverlapping(10) matches the email-scan + receipts entries
+// above so the CallbackEvent's description-required guard is
+// satisfied before withoutOverlapping reads it.
+Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
+    $userIds = $db->connection()
+        ->table('users')
+        ->where('auto_import_drop_folder', true)
+        ->pluck('id');
+    foreach ($userIds as $id) {
+        $bus->dispatch(new ScanInboxDropFolderJob((int) $id));
+    }
+})->name('receipts.scan-drop-folder')->everyFiveMinutes()->withoutOverlapping(10);

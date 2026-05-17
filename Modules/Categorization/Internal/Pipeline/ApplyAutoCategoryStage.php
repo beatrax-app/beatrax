@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Categorization\Internal\Pipeline;
 
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Expression;
 use Modules\Categorization\Internal\Services\RuleEvaluator;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Categorization\Public\Dto\AutoCategorizationOutcomeDto;
@@ -42,6 +44,7 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
     public function __construct(
         private readonly RuleEvaluator $evaluator,
         private readonly LoggerInterface $logger,
+        private readonly DatabaseManager $db,
     ) {}
 
     public function apply(CanonicalTransaction $tx, User $user): AutoCategorizationOutcomeDto
@@ -77,6 +80,21 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
         $canonical = $tx
             ->withCategoryId($outcome->categoryId)
             ->withAutoCategoryProvenance($provenance);
+
+        // Increment the denormalised hits_count on the matched rule so
+        // the /rules page surfaces how often each rule has actually
+        // fired. The atomic UPDATE-with-raw-expression keeps the
+        // counter monotonic under concurrent imports. Memory hits do
+        // not bump a counter — merchant_memories.occurrence_count is
+        // bumped by MerchantMemoryWriter on the TransactionCategorized
+        // event flow already.
+        if ($outcome->source === 'rule' && $outcome->ruleId !== null) {
+            $this->db->connection()
+                ->table('categorization_rules')
+                ->where('id', $outcome->ruleId)
+                ->where('user_id', $user->id)
+                ->update(['hits_count' => new Expression('hits_count + 1')]);
+        }
 
         return AutoCategorizationOutcomeDto::auto(
             canonical: $canonical,

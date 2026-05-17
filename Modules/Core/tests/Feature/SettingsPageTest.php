@@ -96,3 +96,37 @@ it('round-trips default_currency_view = original into the user row', function ()
     expect($this->user->default_currency_view)->toBe('original');
     expect($this->user->period_start_day)->toBe(25);
 })->group('phase-3');
+
+// ----------------------------------------------------------------------
+// Phase 7 — watched-folder secondary path toggle (D-704 / D-718).
+// ----------------------------------------------------------------------
+
+it('initialises autoImportFromDropFolder from the user row on mount', function (): void {
+    $this->user->update(['auto_import_drop_folder' => true]);
+
+    Livewire::test(SettingsPage::class)
+        ->assertSet('autoImportFromDropFolder', true);
+})->group('phase-7');
+
+it('renders the Auto-import section with the locked UI-SPEC copy', function (): void {
+    Livewire::test(SettingsPage::class)
+        ->assertSee('Auto-import')
+        ->assertSee('Auto-import from drop folder')
+        ->assertSee('every 5 minutes');
+})->group('phase-7');
+
+it('persists the toggle to users.auto_import_drop_folder via toggleAutoImport (instant-apply)', function (): void {
+    Livewire::test(SettingsPage::class)
+        ->assertSet('autoImportFromDropFolder', false)
+        ->set('autoImportFromDropFolder', true)
+        ->call('toggleAutoImport');
+
+    expect((bool) $this->user->fresh()->auto_import_drop_folder)->toBeTrue();
+})->group('phase-7');
+
+it('flips the help text from off to on when the toggle is enabled', function (): void {
+    Livewire::test(SettingsPage::class)
+        ->assertSee('Processed files move to')
+        ->set('autoImportFromDropFolder', true)
+        ->assertSee('Drop folder is active.');
+})->group('phase-7');
