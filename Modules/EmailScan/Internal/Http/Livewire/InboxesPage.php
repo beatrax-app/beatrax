@@ -252,7 +252,16 @@ final class InboxesPage extends Component
     ): View {
         $user = $currentUser->user();
         $inboxes = $inboxQuery->forCurrentUser($user);
-        $discoveredCandidates = $discoveredQuery->candidatesForUser($user);
+
+        // Skip the discovered-senders query when the user has no
+        // connected inboxes — the discovered_senders panel cannot
+        // surface anything without an inbox to attach to, and the
+        // join would always return zero rows. Saves one query per
+        // empty-state render AND every 2s wire:poll cycle if the
+        // user lingers on the empty-state hero.
+        $discoveredCandidates = $inboxes === []
+            ? []
+            : $discoveredQuery->candidatesForUser($user);
 
         $view = $views->make('email-scan::livewire.inboxes-page', [
             'inboxes' => $inboxes,
