@@ -153,8 +153,16 @@ final class RecurringSeriesStateMachine
         if ($value === null) {
             return null;
         }
+        if (! is_numeric($value)) {
+            return null;
+        }
+        $int = (int) $value;
 
-        return is_numeric($value) ? (int) $value : null;
+        // SQLite users.id is an autoincrementing surrogate starting
+        // at 1; an id of 0 (or negative) is never a real user. Treat
+        // stringly-numeric '0' as null so the transitions audit row's
+        // FK never points at a phantom user_id=0.
+        return $int > 0 ? $int : null;
     }
 
     private static function toString(mixed $value): string
