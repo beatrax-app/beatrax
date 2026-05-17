@@ -129,23 +129,34 @@ final class EmlBlobStore
     public function put(string $absolutePath, string $rawMime): void
     {
         $dir = dirname($absolutePath);
-        $dirExisted = $this->files->isDirectory($dir);
         $this->files->ensureDirectoryExists($dir, self::DIR_MODE, recursive: true);
-        if (! $dirExisted) {
-            // Apply chmod ONCE on first create. A failure here is
-            // a hard error — the directory must be 0700 before any
-            // .eml lands inside it so cohabiting OS users cannot
-            // enumerate or read another user's blobs.
-            if (! @chmod($dir, self::DIR_MODE)) {
-                throw new RuntimeException(
-                    "EmlBlobStore: failed to chmod 0700 on newly-created directory {$dir}.",
-                );
-            }
-        }
+
+        // chmod every directory level UNDER storage/app/inbox/ down to
+        // the leaf. ensureDirectoryExists chmods only the leaf on first
+        // creation (and inherits umask, typically 0755, for intermediate
+        // levels). Previously a cohabiting OS user could `ls
+        // storage/app/inbox/{user_id}/` and enumerate inbox ids even
+        // though the individual .eml files were 0600. Walking the chain
+        // and chmoding each level to 0700 collapses the directory-tree
+        // enumeration surface to the inbox root's existing protection
+        // posture. The scoping guard stops the walk at the inbox root
+        // so storage/app/ itself does not get silently narrowed.
+        $this->chmodInboxChain($dir);
 
         $tmp = $absolutePath.'.tmp';
+
+        // Narrow umask BEFORE opening the temp file so the file is
+        // born at mode 0600 rather than the umask-0022 default of
+        // 0644 — closes the same race the OAuthSecretsRepository
+        // closed (WR-04). The .eml blobs carry the user's raw inbox
+        // bytes; a cohabiting OS user racing a `cat` between fwrite
+        // and the explicit chmod could otherwise read the message
+        // body in cleartext.
+        $prevUmask = umask(0077);
+
         $fp = @fopen($tmp, 'wb');
         if ($fp === false) {
+            umask($prevUmask);
             throw new RuntimeException(
                 "EmlBlobStore: could not open temp file at {$tmp}.",
             );
@@ -190,6 +201,43 @@ final class EmlBlobStore
             throw new RuntimeException(
                 "EmlBlobStore: unexpected failure writing {$absolutePath}.",
             );
+        } finally {
+            umask($prevUmask);
+        }
+    }
+
+    /**
+     * Walk from `$leafDir` upward and chmod each directory to 0700,
+     * but STOP at the storage/app/inbox/ root. Without this,
+     * intermediate levels under inbox/ (the per-user, per-inbox,
+     * per-year levels) inherit the default Laravel Filesystem
+     * behaviour — mode 0755 on macOS with umask 0022 — letting a
+     * cohabiting OS user enumerate inbox ids even though the .eml
+     * leaves are 0600.
+     *
+     * The scoping `str_starts_with` guard pins the walk to the inbox
+     * subtree so unrelated parents (storage/app/, storage/, etc.) are
+     * never silently narrowed.
+     */
+    private function chmodInboxChain(string $leafDir): void
+    {
+        $root = storage_path('app/inbox');
+        $current = $leafDir;
+        $iters = 0;
+        // Walk upward while we are inside (or AT) the inbox root and
+        // the current path still exists. Cap iterations defensively
+        // in case dirname() loops on a malformed input.
+        while (
+            $iters++ < 32
+            && str_starts_with($current, $root)
+            && is_dir($current)
+        ) {
+            @chmod($current, self::DIR_MODE);
+            $parent = dirname($current);
+            if ($parent === $current) {
+                break;
+            }
+            $current = $parent;
         }
     }
 
