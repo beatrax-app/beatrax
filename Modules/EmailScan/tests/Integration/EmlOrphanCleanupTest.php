@@ -11,7 +11,9 @@ use Illuminate\Support\Sleep;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\Clients\FakeGmailApiClient;
+use Modules\EmailScan\Internal\Clients\FakeGraphApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
+use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\EmlBlobStore;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
@@ -85,6 +87,8 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
     // Bind the Fake.
     $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $this->app->instance(GmailApiClientContract::class, $fake);
+    $graphFake = new FakeGraphApiClient($this->app->make(Filesystem::class));
+    $this->app->instance(GraphApiClientContract::class, $graphFake);
 
     // First pass: inject a one-shot failing connection wrapper so
     // the FIRST per-page transaction throws RuntimeException after
@@ -97,6 +101,7 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
             $failingDb,
             $this->app->make(Clock::class),
             $fake,
+            $graphFake,
             $this->app->make(EmlBlobStore::class),
             $this->app->make(MimeHeaderParser::class),
             $this->app->make(OAuthSecretsRepository::class),
@@ -136,6 +141,8 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
     // it (a fresh Fake mirrors a fresh provider session).
     $fake2 = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $this->app->instance(GmailApiClientContract::class, $fake2);
+    $graphFake2 = new FakeGraphApiClient($this->app->make(Filesystem::class));
+    $this->app->instance(GraphApiClientContract::class, $graphFake2);
 
     $job2 = $this->app->make(BackfillInboxJob::class, ['inboxId' => $inboxId, 'windowMonths' => 3]);
     $this->app->call([$job2, 'handle']);
