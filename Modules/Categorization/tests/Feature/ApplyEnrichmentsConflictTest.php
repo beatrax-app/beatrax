@@ -1,0 +1,364 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Modules\Core\Models\User;
+use Modules\Import\Public\Actions\ApplyEnrichments;
+use Modules\Import\Public\Contracts\AppliesEnrichments;
+use Modules\Import\Public\Dto\PendingEnrichment;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Models\Transaction;
+use Modules\Receipts\Public\Events\ReceiptConflictDetected;
+
+beforeEach(function (): void {
+    $seeded = $this->seedFixtureUserAndAccount();
+    $this->fixtureAccount = $seeded['account'];
+});
+
+// Resolves AppliesEnrichments AFTER Event::fake has rebound the
+// dispatcher, so the action's injected Dispatcher is the fake and
+// Event::assertDispatched can observe the dispatch.
+function resolveApplier(): AppliesEnrichments
+{
+    /** @var AppliesEnrichments $action */
+    $action = app(AppliesEnrichments::class);
+
+    return $action;
+}
+
+function seedConflictTransaction(User $user, Account $account, string $sourceFormat, ?string $sourceRef): Transaction
+{
+    static $idx = 0;
+    $idx++;
+
+    $run = ImportRun::create([
+        'user_id' => $user->id,
+        'source_format' => $sourceFormat,
+        'raw_file_path' => '/tmp/conflict-'.$idx.'.dat',
+        'sha256' => str_pad((string) $idx, 64, 'c', STR_PAD_LEFT),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'confirmed',
+    ]);
+
+    return Transaction::create([
+        'user_id' => $user->id,
+        'account_id' => $account->id,
+        'type' => 'expense',
+        'posted_at' => '2026-03-10',
+        'booked_at' => '2026-03-10 12:00:00',
+        'value_date' => '2026-03-10',
+        'amount_minor' => -2500,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -2500,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'NLPAYPAL ALBERT HEIJN',
+        'counterparty_normalized' => 'nlpaypal albert heijn',
+        'normalization_version' => 1,
+        'source_format' => $sourceFormat,
+        'import_run_id' => $run->id,
+        'source_row_index' => $idx,
+        'source_ref' => $sourceRef,
+        'fingerprint' => str_pad((string) $idx, 64, 'p', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+}
+
+it('PendingEnrichment default conflictingFields is an empty array', function (): void {
+    $pe = new PendingEnrichment(
+        existingTransactionId: 1,
+        newSourceRef: 'X',
+        importRunId: 1,
+        sourceFormat: 'paypal-receipt',
+    );
+    expect($pe->conflictingFields)->toBe([]);
+});
+
+it('no conflict: empty conflictingFields path proceeds with pure source_ref enrichment (Wave 1 path stays green)', function (): void {
+    $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'OLD-REF');
+
+    Event::fake([ReceiptConflictDetected::class]);
+
+    $count = (resolveApplier())([
+        new PendingEnrichment(
+            existingTransactionId: $tx->id,
+            newSourceRef: 'TX-12345',
+            importRunId: 99,
+            sourceFormat: 'paypal-receipt',
+        ),
+    ], $this->fixtureUser);
+
+    expect($count)->toBe(1);
+    $row = DB::table('transactions')->where('id', $tx->id)->first();
+    expect($row->source_ref)->toBe('TX-12345');
+    Event::assertNotDispatched(ReceiptConflictDetected::class);
+    expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
+});
+
+it('unset policy + receipt conflict: holds in pending_enrichment_conflicts + dispatches ReceiptConflictDetected per field; SKIPS per-field write', function (): void {
+    // user's receipt_conflict_resolution defaults to 'unset' (migration default).
+    $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'CSV-REF');
+
+    Event::fake([ReceiptConflictDetected::class]);
+
+    $count = (resolveApplier())([
+        new PendingEnrichment(
+            existingTransactionId: $tx->id,
+            newSourceRef: 'RECEIPT-77',
+            importRunId: $tx->import_run_id,
+            sourceFormat: 'paypal-receipt',
+            conflictingFields: [
+                'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
+            ],
+        ),
+    ], $this->fixtureUser);
+
+    expect($count)->toBe(1);
+
+    // The source_ref still enriches; the per-field write is SKIPPED.
+    $row = DB::table('transactions')->where('id', $tx->id)->first();
+    expect($row->source_ref)->toBe('RECEIPT-77');
+    expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN'); // unchanged
+
+    // Pending conflict landed.
+    $pending = DB::table('pending_enrichment_conflicts')
+        ->where('user_id', $this->fixtureUser->id)
+        ->where('transaction_id', $tx->id)
+        ->where('field_name', 'counterparty_name')
+        ->first();
+    expect($pending)->not->toBeNull();
+    expect((string) $pending->incoming_source_format)->toBe('paypal-receipt');
+
+    // Event fired.
+    Event::assertDispatched(
+        ReceiptConflictDetected::class,
+        fn (ReceiptConflictDetected $e): bool => $e->transactionId === $tx->id
+            && $e->userId === $this->fixtureUser->id
+            && $e->field === 'counterparty_name'
+            && $e->receiptValue === 'Albert Heijn'
+            && $e->csvValue === 'NLPAYPAL ALBERT HEIJN'
+    );
+});
+
+it('prefer_receipt policy: applies incoming values silently; no event; no pending row', function (): void {
+    DB::table('users')->where('id', $this->fixtureUser->id)->update([
+        'receipt_conflict_resolution' => 'prefer_receipt',
+    ]);
+    $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'CSV-REF');
+
+    Event::fake([ReceiptConflictDetected::class]);
+
+    $count = (resolveApplier())([
+        new PendingEnrichment(
+            existingTransactionId: $tx->id,
+            newSourceRef: 'RECEIPT-77',
+            importRunId: 99,
+            sourceFormat: 'paypal-receipt',
+            conflictingFields: [
+                'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
+            ],
+        ),
+    ], $this->fixtureUser);
+
+    expect($count)->toBe(1);
+
+    $row = DB::table('transactions')->where('id', $tx->id)->first();
+    expect($row->source_ref)->toBe('RECEIPT-77');
+    expect($row->counterparty_name)->toBe('Albert Heijn'); // overwritten
+
+    Event::assertNotDispatched(ReceiptConflictDetected::class);
+    expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
+});
+
+it('prefer_first_write policy: keeps stored values; no event; no pending row; source_ref still updates', function (): void {
+    DB::table('users')->where('id', $this->fixtureUser->id)->update([
+        'receipt_conflict_resolution' => 'prefer_first_write',
+    ]);
+    $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'CSV-REF');
+
+    Event::fake([ReceiptConflictDetected::class]);
+
+    $count = (resolveApplier())([
+        new PendingEnrichment(
+            existingTransactionId: $tx->id,
+            newSourceRef: 'RECEIPT-77',
+            importRunId: 99,
+            sourceFormat: 'paypal-receipt',
+            conflictingFields: [
+                'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
+            ],
+        ),
+    ], $this->fixtureUser);
+
+    expect($count)->toBe(1);
+
+    $row = DB::table('transactions')->where('id', $tx->id)->first();
+    expect($row->source_ref)->toBe('RECEIPT-77');
+    expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN'); // kept
+
+    Event::assertNotDispatched(ReceiptConflictDetected::class);
+    expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
+});
+
+it('cross-user T-07-09: pending_enrichment_conflicts for another user is NEVER touched', function (): void {
+    $other = User::create([
+        'email' => 'other-conflict@example.com',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+    ]);
+    $otherAccount = Account::create([
+        'user_id' => $other->id,
+        'name' => 'ASN-other',
+        'slug' => 'asn-other-conflict',
+        'kind' => 'asn',
+        'iban' => 'NL11ASNB0000000000',
+        'default_currency' => 'EUR',
+    ]);
+
+    // Seed a real foreign transaction + a foreign pending row that
+    // FK-validates against transactions.id.
+    $foreignTx = seedConflictTransaction($other, $otherAccount, 'paypal-csv', 'FOREIGN-REF');
+    DB::table('pending_enrichment_conflicts')->insert([
+        'user_id' => $other->id,
+        'transaction_id' => $foreignTx->id,
+        'field_name' => 'counterparty_name',
+        'stored_value' => json_encode('foreign stored'),
+        'incoming_value' => json_encode('foreign incoming'),
+        'incoming_source_format' => 'paypal-receipt',
+        'import_run_id' => null,
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'CSV-REF');
+
+    (resolveApplier())([
+        new PendingEnrichment(
+            existingTransactionId: $tx->id,
+            newSourceRef: 'RECEIPT-77',
+            importRunId: $tx->import_run_id,
+            sourceFormat: 'paypal-receipt',
+            conflictingFields: [
+                'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
+            ],
+        ),
+    ], $this->fixtureUser);
+
+    // The foreign user's pending row is still there, untouched.
+    $foreignStill = DB::table('pending_enrichment_conflicts')
+        ->where('user_id', $other->id)
+        ->where('transaction_id', $foreignTx->id)
+        ->where('field_name', 'counterparty_name')
+        ->first();
+    expect($foreignStill)->not->toBeNull();
+    expect(json_decode((string) $foreignStill->stored_value))->toBe('foreign stored');
+    // The current user has their own pending row.
+    $own = DB::table('pending_enrichment_conflicts')
+        ->where('user_id', $this->fixtureUser->id)
+        ->where('transaction_id', $tx->id)
+        ->where('field_name', 'counterparty_name')
+        ->first();
+    expect($own)->not->toBeNull();
+});
+
+it('non-receipt sourceFormat with unset policy + conflict: keeps stored value silently (no event, no pending row)', function (): void {
+    // Non-receipt-format enrichment (e.g., asn-mt940 vs asn-csv) — the
+    // receipt-vs-CSV first-conflict toast does not fire for these paths.
+    $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'asn-csv', 'CSV-REF');
+
+    Event::fake([ReceiptConflictDetected::class]);
+
+    $count = (resolveApplier())([
+        new PendingEnrichment(
+            existingTransactionId: $tx->id,
+            newSourceRef: 'STRONGER-REF',
+            importRunId: 99,
+            sourceFormat: 'asn-camt053',
+            conflictingFields: [
+                'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Different name'],
+            ],
+        ),
+    ], $this->fixtureUser);
+
+    expect($count)->toBe(1);
+
+    $row = DB::table('transactions')->where('id', $tx->id)->first();
+    expect($row->source_ref)->toBe('STRONGER-REF');
+    expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN'); // kept
+
+    Event::assertNotDispatched(ReceiptConflictDetected::class);
+    expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
+});
+
+it('W6 no-instance-cache: two consecutive __invoke calls for different users honour each user\'s policy independently (singleton safety)', function (): void {
+    $userA = $this->fixtureUser; // unset
+    $userB = User::create([
+        'email' => 'two-user-policy@example.com',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+    ]);
+    DB::table('users')->where('id', $userB->id)->update([
+        'receipt_conflict_resolution' => 'prefer_receipt',
+    ]);
+    $userBAccount = Account::create([
+        'user_id' => $userB->id,
+        'name' => 'ASN-B',
+        'slug' => 'asn-b',
+        'kind' => 'asn',
+        'iban' => 'NL00ASNB9999999999',
+        'default_currency' => 'EUR',
+    ]);
+
+    $txA = seedConflictTransaction($userA, $this->fixtureAccount, 'paypal-csv', 'CSV-A');
+    $txB = seedConflictTransaction($userB, $userBAccount, 'paypal-csv', 'CSV-B');
+
+    // Single action instance (singleton-bound). Two consecutive calls.
+    (resolveApplier())([
+        new PendingEnrichment(
+            existingTransactionId: $txA->id,
+            newSourceRef: 'RECEIPT-A',
+            importRunId: $txA->import_run_id,
+            sourceFormat: 'paypal-receipt',
+            conflictingFields: [
+                'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'For A'],
+            ],
+        ),
+    ], $userA);
+
+    (resolveApplier())([
+        new PendingEnrichment(
+            existingTransactionId: $txB->id,
+            newSourceRef: 'RECEIPT-B',
+            importRunId: $txB->import_run_id,
+            sourceFormat: 'paypal-receipt',
+            conflictingFields: [
+                'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'For B'],
+            ],
+        ),
+    ], $userB);
+
+    // User A (unset policy): per-field write SKIPPED — original stored value kept.
+    $rowA = DB::table('transactions')->where('id', $txA->id)->first();
+    expect($rowA->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN');
+
+    // User B (prefer_receipt policy): per-field write APPLIED — incoming "For B" landed.
+    $rowB = DB::table('transactions')->where('id', $txB->id)->first();
+    expect($rowB->counterparty_name)->toBe('For B');
+});
+
+it('no instance-level cache property is declared on ApplyEnrichments (singleton cross-user safety check)', function (): void {
+    $reflection = new ReflectionClass(ApplyEnrichments::class);
+    foreach ($reflection->getProperties() as $property) {
+        // The class is a final readonly action whose properties are all constructor-injected
+        // collaborators (DatabaseManager, Clock, SourceRefRanker, LoggerInterface, Dispatcher).
+        // A `private ?string $userPolicy` / `private ?string $cached` instance property would
+        // leak across users on the same queue worker process.
+        $name = $property->getName();
+        expect($name)->not->toBe('userPolicy');
+        expect($name)->not->toBe('cached');
+        expect($name)->not->toBe('cachedUserPolicy');
+    }
+});
