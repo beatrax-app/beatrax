@@ -12,6 +12,8 @@ use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
 use Modules\Ingestion\Public\Dto\SniffResult;
 use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvLanguageException;
+use Modules\Receipts\Public\Pipeline\EmlHeaderProfile;
+use Modules\Receipts\Public\Pipeline\MboxHeaderProfile;
 
 /**
  * Validates that a local file matches a declared source format before any
@@ -60,11 +62,73 @@ final class HeaderSniffer
             AsnMt940HeaderProfile::FORMAT => $this->sniffAsnMt940($localPath, $head),
             IcsPdfHeaderProfile::FORMAT => $this->sniffIcsPdf($localPath, $head),
             PaypalCsvLanguageProfile::FORMAT => $this->sniffPaypalCsv($localPath, $head),
+            EmlHeaderProfile::FORMAT => $this->sniffEml($localPath, $head),
+            MboxHeaderProfile::FORMAT => $this->sniffMbox($localPath, $head),
             default => throw new SniffMismatchException(sprintf(
                 'Unsupported sniff target: %s',
                 $declaredFormat,
             )),
         };
+    }
+
+    /**
+     * Validates that the path looks like a single RFC 822 `.eml`
+     * message — `.eml` extension AND a recognised header anchor
+     * (`Return-Path:`, `Received:`, `From:`, or `Message-ID:`) in the
+     * first 8 KB. The header check rejects a renamed `.eml` upload of
+     * an unrelated text file before the zbateson parser is invoked.
+     */
+    private function sniffEml(string $path, string $head): SniffResult
+    {
+        if (preg_match('/\.eml$/i', $path) !== 1) {
+            throw new SniffMismatchException(
+                "That file doesn't look like an email message. Drop in a .eml file."
+            );
+        }
+
+        if (preg_match(EmlHeaderProfile::SIGNATURE_REGEX, $head) !== 1) {
+            throw new SniffMismatchException(
+                "That file doesn't look like an email message. Drop in a .eml file."
+            );
+        }
+
+        return new SniffResult(
+            format: EmlHeaderProfile::FORMAT,
+            delimiter: '',
+            hasHeader: false,
+            encoding: EmlHeaderProfile::SOURCE_ENCODING,
+            columnCount: 0,
+        );
+    }
+
+    /**
+     * Validates that the path looks like an mboxrd archive — `.mbox`
+     * extension AND a literal `From ` (note trailing space) at the
+     * very start of the file. The prefix check rejects a renamed
+     * `.mbox` upload of a single-message `.eml` (which would lack the
+     * `From ` envelope prefix) before MboxIterator is invoked.
+     */
+    private function sniffMbox(string $path, string $head): SniffResult
+    {
+        if (preg_match('/\.mbox$/i', $path) !== 1) {
+            throw new SniffMismatchException(
+                "That file doesn't look like a mailbox archive. Drop in a .mbox file."
+            );
+        }
+
+        if (! str_starts_with($head, MboxHeaderProfile::MBOX_PREFIX)) {
+            throw new SniffMismatchException(
+                "That file doesn't look like a mailbox archive. Drop in a .mbox file."
+            );
+        }
+
+        return new SniffResult(
+            format: MboxHeaderProfile::FORMAT,
+            delimiter: '',
+            hasHeader: false,
+            encoding: MboxHeaderProfile::SOURCE_ENCODING,
+            columnCount: 0,
+        );
     }
 
     /**
