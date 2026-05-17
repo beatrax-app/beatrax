@@ -68,6 +68,10 @@ arch('no Laravel facade usage in module code')
         // builds the lock store from the job's uniqueVia() return,
         // not from container resolution).
         'Modules\\Receipts\\Internal\\Jobs\\ProcessFetchedInboxMessagesJob',
+        // Same carve-out for the watched-folder secondary path
+        // scanner (D-704 secondary / D-718). Same uniqueVia() →
+        // Cache::driver('redis') shape as the other queued jobs above.
+        'Modules\\Receipts\\Internal\\Jobs\\ScanInboxDropFolderJob',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')

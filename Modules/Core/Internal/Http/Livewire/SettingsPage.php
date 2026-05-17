@@ -6,8 +6,10 @@ namespace Modules\Core\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
@@ -39,6 +41,16 @@ final class SettingsPage extends Component
     public int $periodStartDay = 1;
 
     /**
+     * Watched-folder secondary path toggle (D-704 / D-718). When on,
+     * ScanInboxDropFolderJob runs every 5 minutes for this user and
+     * imports any .eml / .mbox files in
+     * storage/app/inbox-drop/{userId}/ through the same matcher
+     * pipeline as the wizard upload path. Default off so the wizard
+     * remains the documented primary entrypoint.
+     */
+    public bool $autoImportFromDropFolder = false;
+
+    /**
      * Inline "Saved." confirmation flag flipped by save() and consumed by
      * the Blade view via `@if ($saved)` + `wire:transition.duration.4000ms`
      * so the confirmation auto-dismisses after four seconds.
@@ -50,6 +62,27 @@ final class SettingsPage extends Component
         $user = $currentUser->user();
         $this->defaultCurrencyView = $user->default_currency_view;
         $this->periodStartDay = $user->period_start_day;
+        $this->autoImportFromDropFolder = (bool) $user->auto_import_drop_folder;
+    }
+
+    /**
+     * Instant-apply toggle for the watched-folder secondary path —
+     * mirrors the currency-display section's "no Save button"
+     * posture (the toggle is its own commit). Writes
+     * users.auto_import_drop_folder directly via the raw query
+     * builder so the change is durable without re-triggering the
+     * defaultCurrencyView / periodStartDay validation envelope.
+     */
+    public function toggleAutoImport(CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
+    {
+        $user = $currentUser->user();
+        $db->connection()
+            ->table('users')
+            ->where('id', $user->id)
+            ->update([
+                'auto_import_drop_folder' => $this->autoImportFromDropFolder,
+                'updated_at' => $clock->now()->toDateTimeString(),
+            ]);
     }
 
     public function save(CurrentUser $currentUser): void

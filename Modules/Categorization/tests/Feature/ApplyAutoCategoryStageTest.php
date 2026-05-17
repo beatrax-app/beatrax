@@ -237,3 +237,18 @@ it('persists auto_category_provenance JSON via RecordTransactions when present',
     expect($decoded['rule_id'] ?? null)->toBe($ruleId);
     expect($decoded['category_id'] ?? null)->toBe($this->streamingId);
 });
+
+it('increments the matched rule hits_count on every rule-fire (Wave 4 deferral closed)', function (): void {
+    $ruleId = seedAutoRule($this->user->id, $this->streamingId);
+
+    /** @var ApplyAutoCategoryStage $stage */
+    $stage = $this->app->make(ApplyAutoCategoryStage::class);
+    $canonical = makeAutoCanonical($this->user->id, $this->account->id);
+
+    $stage->apply($canonical, $this->user);
+    $stage->apply($canonical, $this->user);
+    $stage->apply($canonical, $this->user);
+
+    $hits = (int) DB::table('categorization_rules')->where('id', $ruleId)->value('hits_count');
+    expect($hits)->toBe(3);
+});
