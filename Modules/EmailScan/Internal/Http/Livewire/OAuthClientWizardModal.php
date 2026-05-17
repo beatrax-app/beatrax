@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Internal\Http\Livewire;
 
-use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\EmailScan\Internal\LoopbackRedirectUri;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 /**
@@ -71,7 +71,7 @@ final class OAuthClientWizardModal extends Component
         $this->errorMessage = '';
     }
 
-    public function submit(OAuthSecretsRepository $secrets, ConfigRepository $config): mixed
+    public function submit(OAuthSecretsRepository $secrets, LoopbackRedirectUri $loopback): mixed
     {
         $this->errorMessage = '';
 
@@ -115,7 +115,7 @@ final class OAuthClientWizardModal extends Component
             }
         }
 
-        $redirectUri = $this->computeLoopbackRedirectUri($provider, $config);
+        $redirectUri = $loopback->forProvider($provider);
 
         // Capture the secret into a local so the property can be
         // wiped BEFORE the external call. A thrown exception during
@@ -141,24 +141,14 @@ final class OAuthClientWizardModal extends Component
         $this->dispatch('modal-hide', name: 'oauth-client-wizard-'.$provider);
     }
 
-    public function render(ViewFactory $views, ConfigRepository $config): View
+    public function render(ViewFactory $views, LoopbackRedirectUri $loopback): View
     {
         $provider = $this->provider ?? 'gmail';
-        $redirectUri = $this->computeLoopbackRedirectUri($provider, $config);
+        $redirectUri = $loopback->forProvider($provider);
 
         return $views->make('email-scan::livewire.oauth-client-wizard-modal', [
             'provider' => $provider,
             'redirectUri' => $redirectUri,
         ]);
-    }
-
-    private function computeLoopbackRedirectUri(string $provider, ConfigRepository $config): string
-    {
-        $appUrl = $config->get('app.url');
-        $appUrlString = is_string($appUrl) ? $appUrl : '';
-        $port = parse_url($appUrlString, PHP_URL_PORT);
-        $portInt = is_int($port) && $port > 0 ? $port : 8000;
-
-        return 'http://127.0.0.1:'.$portInt.'/oauth/callback/'.$provider;
     }
 }
