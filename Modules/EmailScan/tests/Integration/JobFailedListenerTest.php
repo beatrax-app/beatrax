@@ -3,41 +3,41 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Queue\Events\JobFailed;
-use Illuminate\Queue\Jobs\Job;
 use Modules\Core\Models\User;
+use Modules\EmailScan\Internal\InboxScanStateMachine;
+use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 
 uses(RefreshDatabase::class);
 
 /*
- * EmailScanServiceProvider::registerJobFailedListener invariant.
+ * Per-job failed() hook invariant.
  *
- * The boot-time JobFailed listener flips inbox_scan_state.status to
- * 'error' when a BackfillInboxJob or IncrementalScanJob exhausts the
- * worker's retry budget. The listener extracts inboxId from the
- * serialised job payload via a defensive regex; this test asserts:
+ * BackfillInboxJob + IncrementalScanJob each define a public
+ * failed(Throwable, InboxScanStateMachine) method that Laravel calls
+ * on the resolved job instance after the worker exhausts its retry
+ * budget. The method flips inbox_scan_state.status to 'error' with
+ * the truncated exception message and swallows invalid transitions
+ * (e.g. an already-needs_reauth row failing again).
  *
- *  1. A JobFailed event carrying an IncrementalScanJob payload with a
- *     valid inbox_id flips the row's status to 'error' and stamps the
- *     truncated exception message.
- *  2. A JobFailed event carrying an unrelated job name (e.g. some
- *     other module's job) leaves the row unchanged.
- *  3. A JobFailed event carrying a malformed payload (no inboxId)
- *     leaves the row unchanged (no throw, no status flip).
+ * This replaces the earlier ServiceProvider-level JobFailed listener
+ * that extracted inboxId from the serialised payload via a regex —
+ * brittle against Laravel-version serialiser-format changes and a
+ * future job class whose property name shared an 'inboxId' prefix.
  *
- * The dispatcher subscription path is reached by binding the real
- * EmailScanServiceProvider via the package boot — no replay or fake
- * is needed; firing JobFailed via the dispatcher invokes the
- * listener.
+ * Test flow per job:
+ *  1. Seed user + inbox + inbox_scan_state with status='idle'.
+ *  2. Instantiate the job with the seeded inboxId.
+ *  3. Invoke failed(new RuntimeException('...'), $stateMachine).
+ *  4. Assert the row's status flipped to 'error' and the error_message
+ *     carries the exception's truncated text.
  */
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
-        'email' => 'failed-listener@example.com',
+        'email' => 'failed-hook@example.com',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -49,7 +49,7 @@ beforeEach(function (): void {
     $this->inboxId = (int) $db->connection()->table('inboxes')->insertGetId([
         'user_id' => $this->user->id,
         'provider' => 'gmail',
-        'email' => 'failed-listener@example.com',
+        'email' => 'failed-hook@example.com',
         'backfill_window_months' => 3,
         'backfill_progress' => null,
         'created_at' => $now,
@@ -66,66 +66,12 @@ beforeEach(function (): void {
     ]);
 });
 
-/**
- * Build a JobFailed event with a synthesised payload that mirrors
- * what Laravel's queue serialiser produces for a queued job.
- */
-function buildJobFailedEvent(string $jobName, ?int $inboxId, string $exceptionMessage): JobFailed
-{
-    $serialisedCommand = $inboxId === null
-        ? 'O:42:"SomeOtherJob":0:{}'
-        : 'O:60:"Modules\\EmailScan\\Internal\\Jobs\\IncrementalScanJob":1:{s:21:"'."\0".'*'."\0".'inboxId";i:'.$inboxId.';}';
+it('BackfillInboxJob::failed() flips inbox_scan_state.status to error with truncated message', function (): void {
+    $job = new BackfillInboxJob(inboxId: $this->inboxId, windowMonths: 3);
+    /** @var InboxScanStateMachine $sm */
+    $sm = $this->app->make(InboxScanStateMachine::class);
 
-    $job = new class($jobName, $serialisedCommand) extends Job
-    {
-        public function __construct(
-            private readonly string $jobName,
-            private readonly string $serialisedCommand,
-        ) {}
-
-        public function resolveName(): string
-        {
-            return $this->jobName;
-        }
-
-        public function payload(): array
-        {
-            return [
-                'data' => [
-                    'command' => $this->serialisedCommand,
-                ],
-            ];
-        }
-
-        public function getJobId(): string
-        {
-            return 'fake-job-id';
-        }
-
-        public function getRawBody(): string
-        {
-            return '';
-        }
-    };
-
-    return new JobFailed(
-        'sync',
-        $job,
-        new RuntimeException($exceptionMessage),
-    );
-}
-
-it('flips inbox_scan_state.status to error when an IncrementalScanJob JobFailed event fires', function (): void {
-    /** @var Dispatcher $events */
-    $events = $this->app->make(Dispatcher::class);
-
-    $event = buildJobFailedEvent(
-        IncrementalScanJob::class,
-        $this->inboxId,
-        'Synthetic provider blew up after exhausting retries.',
-    );
-
-    $events->dispatch($event);
+    $job->failed(new RuntimeException('Synthetic backfill failure.'), $sm);
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -137,20 +83,15 @@ it('flips inbox_scan_state.status to error when an IncrementalScanJob JobFailed 
 
     expect($row)->not->toBeNull();
     expect($row->status)->toBe('error');
-    expect((string) $row->error_message)->toContain('Synthetic provider blew up');
+    expect((string) $row->error_message)->toContain('Synthetic backfill failure');
 });
 
-it('ignores JobFailed events for unrelated jobs (other modules)', function (): void {
-    /** @var Dispatcher $events */
-    $events = $this->app->make(Dispatcher::class);
+it('IncrementalScanJob::failed() flips inbox_scan_state.status to error with truncated message', function (): void {
+    $job = new IncrementalScanJob(inboxId: $this->inboxId);
+    /** @var InboxScanStateMachine $sm */
+    $sm = $this->app->make(InboxScanStateMachine::class);
 
-    $event = buildJobFailedEvent(
-        'Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
-        $this->inboxId,
-        'unrelated failure',
-    );
-
-    $events->dispatch($event);
+    $job->failed(new RuntimeException('Synthetic incremental failure.'), $sm);
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -158,32 +99,56 @@ it('ignores JobFailed events for unrelated jobs (other modules)', function (): v
         ->table('inbox_scan_state')
         ->where('inbox_id', $this->inboxId)
         ->where('folder', 'INBOX')
-        ->first(['status']);
+        ->first(['status', 'error_message']);
 
     expect($row)->not->toBeNull();
-    expect($row->status)->toBe('idle');
+    expect($row->status)->toBe('error');
+    expect((string) $row->error_message)->toContain('Synthetic incremental failure');
 });
 
-it('ignores JobFailed events with an unparseable payload (no inboxId)', function (): void {
-    /** @var Dispatcher $events */
-    $events = $this->app->make(Dispatcher::class);
-
-    $event = buildJobFailedEvent(
-        IncrementalScanJob::class,
-        null,
-        'unparseable payload',
-    );
-
-    $events->dispatch($event);
-
+it('IncrementalScanJob::failed() swallows invalid transitions (needs_reauth → error is rejected)', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
+    $db->connection()
+        ->table('inbox_scan_state')
+        ->where('inbox_id', $this->inboxId)
+        ->where('folder', 'INBOX')
+        ->update([
+            'status' => 'needs_reauth',
+            'error_message' => 'pre-existing reauth required',
+        ]);
+
+    $job = new IncrementalScanJob(inboxId: $this->inboxId);
+    /** @var InboxScanStateMachine $sm */
+    $sm = $this->app->make(InboxScanStateMachine::class);
+
+    // The state machine rejects needs_reauth → error; the failed()
+    // hook MUST swallow the exception so the queue-worker does not
+    // escalate a recovery scenario into a hard error.
+    $job->failed(new RuntimeException('subsequent failure during reauth grace.'), $sm);
+
     $row = $db->connection()
         ->table('inbox_scan_state')
         ->where('inbox_id', $this->inboxId)
         ->where('folder', 'INBOX')
-        ->first(['status']);
+        ->first(['status', 'error_message']);
 
     expect($row)->not->toBeNull();
-    expect($row->status)->toBe('idle');
+    expect($row->status)->toBe('needs_reauth');
+    expect((string) $row->error_message)->toBe('pre-existing reauth required');
+});
+
+it('BackfillInboxJob::failed() on a non-existent inbox swallows the RuntimeException', function (): void {
+    // The state machine raises RuntimeException when applyStatus is
+    // called for an inbox with no inbox_scan_state row. The failed()
+    // hook must swallow this too — a deleted-mid-flight inbox is not
+    // a queue-worker error.
+    $job = new BackfillInboxJob(inboxId: 99999, windowMonths: 3);
+    /** @var InboxScanStateMachine $sm */
+    $sm = $this->app->make(InboxScanStateMachine::class);
+
+    // Must not throw.
+    $job->failed(new RuntimeException('vanished mid-flight.'), $sm);
+
+    expect(true)->toBeTrue(); // side-effect: no throw
 });
