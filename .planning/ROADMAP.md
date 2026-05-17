@@ -176,7 +176,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 08-02-PLAN.md — Wave 1 schema + state: four migrations (recurring_series + occurrences + transitions + users settings) + three Eloquent models + RecurringSeriesStateMachine sole-mutator + four Public DTOs + four Public Events + SeriesDetector contract
   - [x] 08-03-PLAN.md — Wave 2 expense detection + review queue: CadenceInferrer (median-snap + missed-interval tolerance) + ClusterKeyComposer + ExpenseSeriesDetector + DetectRecurringSeriesJob (ShouldBeUniqueUntilProcessing + snooze-expiry pass) + daily scheduler + /recurring/review Livewire SFC + five Public Actions
   - [x] 08-04-PLAN.md — Wave 3 income detection + list view: IncomeSeriesDetector (IBAN-primary + description-fallback) + container tag both detectors + FixedPaymentsViewQuery (N+1-safe with chain fallback) + /recurring Livewire SFC with grouped expense/income/transfers sections + net-flow summary + multi-currency rendering
-  - [ ] 08-05-PLAN.md — Wave 4 drill-in + dashboard + bulk actions: /recurring/series/{id} ApexCharts drill-in (UI-03) + dashboard FixedPaymentsCard with #[Url] toggle + top-nav Recurring badge (View Factory composer) + Re-detect button + bulk Approve/Reject sticky bar + full contract test
+  - [x] 08-05-PLAN.md — Wave 4 drill-in + dashboard + bulk actions: /recurring/series/{id} ApexCharts drill-in (UI-03) + dashboard FixedPaymentsCard with #[Url] toggle + top-nav Recurring badge (View Factory composer) + Re-detect button + bulk Approve/Reject sticky bar + full contract test
 **UI hint**: yes
 
 ### Phase 9: Subscription Drift Detection + Alerts
