@@ -12,6 +12,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
+use Modules\DriftAlerts\Internal\StateMachines\InvalidStateTransitionException;
 use Modules\DriftAlerts\Models\DriftAlert;
 use stdClass;
 
@@ -19,10 +20,6 @@ use stdClass;
  * Hourly scheduled sweep that flips `drift_alerts` rows from
  * `state='snoozed'` to `state='open'` once their `snoozed_until` has
  * elapsed.
- *
- * Mirrors Phase 8's `RecurringSeriesStateMachine::expireSnoozes()`
- * pattern but lives in DriftAlerts because the state machine + audit-
- * row contract are DriftAlerts-owned.
  *
  * Companion to the query-time conditional on `DriftAlertQuery::openForUser`
  * (and the related `openCountForUser` / `totalOpenAnnualizedImpactForUser`
@@ -32,11 +29,23 @@ use stdClass;
  * sweep: the query-time conditional is a read-side projection, never
  * a write.
  *
- * Run hourly via `routes/console.php` (Schedule::job hourly named
+ * Runs hourly via `routes/console.php` (a scheduler entry named
  * `drift-alerts.revive-snoozes`). The sweep is global (no `user_id`
  * scope) — alerts may belong to any user; revival is purely a
  * timer-driven transition, the user-id is preserved on the audit row
  * via the state machine's read of the alert's owning user.
+ *
+ * Retries on transient failure: `tries=3` with exponential backoff
+ * (60s / 5min / 15min). Each individual transition is idempotent at
+ * the state-machine level, so retrying a partially-completed sweep is
+ * safe.
+ *
+ * Concurrent user actions: if a user acknowledges, dismisses, or
+ * re-snoozes a candidate row between the SELECT scan and the
+ * state-machine call, the state-machine transaction will see the new
+ * state under its row lock and raise `InvalidStateTransitionException`.
+ * The sweep catches that exception per-row and skips silently so a
+ * single mid-sweep user action cannot fail the entire job.
  */
 final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
 {
@@ -44,6 +53,11 @@ final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+
+    public int $tries = 3;
+
+    /** @var list<int> */
+    public array $backoff = [60, 300, 900];
 
     public function handle(DatabaseManager $db, DriftAlertStateMachine $stateMachine, Clock $clock): void
     {
@@ -62,28 +76,28 @@ final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
                 continue;
             }
 
-            /** @var DriftAlert|null $alert */
-            $alert = DriftAlert::query()->where('id', $id)->first();
-            if ($alert === null) {
+            try {
+                /** @var DriftAlert|null $alert */
+                $alert = DriftAlert::query()->where('id', $id)->first();
+                if ($alert === null || $alert->state !== 'snoozed') {
+                    continue;
+                }
+
+                $stateMachine->transition(
+                    $alert,
+                    'open',
+                    'detector_revived_snooze',
+                    'detector',
+                    null,
+                    ['snoozed_until' => null],
+                );
+            } catch (InvalidStateTransitionException) {
+                // A concurrent user action moved the row off 'snoozed'
+                // between the candidate scan and the state-machine row
+                // lock. The transition guard correctly refused the
+                // revival; skip this row and continue the sweep.
                 continue;
             }
-
-            // Defensive guard: a concurrent user action between SELECT
-            // and the state-machine call may have flipped the row off
-            // 'snoozed'. The allowed-transitions guard would throw, so
-            // re-read and skip if the row has already moved.
-            if ($alert->state !== 'snoozed') {
-                continue;
-            }
-
-            $stateMachine->transition(
-                $alert,
-                'open',
-                'detector_revived_snooze',
-                'detector',
-                null,
-                ['snoozed_until' => null],
-            );
         }
     }
 }
