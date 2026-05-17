@@ -328,6 +328,21 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
         $now = $clock->now()->toDateTimeString();
         foreach ($messageIds as $messageId) {
+            // Skip messages we already have on disk + indexed. The
+            // history walk can legitimately re-surface a message a
+            // prior backfill pass already persisted; re-fetching the
+            // raw bytes burns provider quota without changing state
+            // (insertOrIgnore would short-circuit the DB write
+            // anyway, and the .eml atomic-rename would overwrite an
+            // identical file).
+            $alreadyFetched = $connection->table('inbox_messages')
+                ->where('inbox_id', $this->inboxId)
+                ->where('provider_message_id', $messageId)
+                ->exists();
+            if ($alreadyFetched) {
+                continue;
+            }
+
             $rawEml = $gmail->getRawMessage($this->inboxId, $messageId);
             $headers = $mime->parseHeaders($rawEml);
             $emlPath = $blobStore->pathFor(
@@ -440,6 +455,19 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
             $messageId = is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '';
             if ($messageId === '') {
+                continue;
+            }
+
+            // Skip messages we already have on disk + indexed. The
+            // Graph delta walk + fallback walk can both legitimately
+            // re-surface a message a prior pass already persisted;
+            // re-fetching its raw bytes burns Graph quota without
+            // changing state.
+            $alreadyFetched = $connection->table('inbox_messages')
+                ->where('inbox_id', $this->inboxId)
+                ->where('provider_message_id', $messageId)
+                ->exists();
+            if ($alreadyFetched) {
                 continue;
             }
 
