@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-// Scenario 15: Weekly streaming credit €10/wk → €11/wk (+10.0%).
-// The weekly cadence multiplier is ×52 (calendar-year approximation
-// chosen for integer consistency with the Phase 8 monthly-equivalent
-// multiplier). Math:
+// Weekly streaming credit €10/wk → €11/wk (+10.0%). The weekly
+// cadence multiplier is ×52 (calendar-year approximation, chosen for
+// integer consistency with the monthly-equivalent multiplier). Math:
 //   delta_minor = -1100 - (-1000) = -100
 //   annualized_impact_minor = -100 × 52 = -5200 (-€52/yr)
 

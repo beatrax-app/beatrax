@@ -32,10 +32,10 @@ use stdClass;
  *
  * `totalOpenAnnualizedImpactForUser` returns a SUM aggregate in
  * original-currency-minor units. When alerts span multiple currencies
- * the headline arithmetic is the responsibility of the renderer (the
- * UI rolls the value up to EUR using each row's stored fx rate; in
- * Wave 3 the EUR shadow is left to a follow-up plan that joins the
- * occurrence row's `fx_rate_used`).
+ * the headline arithmetic is the responsibility of the renderer; the
+ * tile presents the absolute magnitude in EUR. The SUM is in the
+ * original-currency minor units — an EUR FX join is out of scope for
+ * this query.
  *
  * `groupedBySeriesForUser` returns a map from `recurring_series_id` to
  * the list of open alerts in that series — used by the /drift Open
@@ -104,7 +104,8 @@ final readonly class DriftAlertQuery
     /**
      * SUM of `annualized_impact_minor` across open alerts in
      * original-currency-minor units. The dashboard tile renders the
-     * EUR-rolled-up headline; UI-SPEC § 5 documents the rollup.
+     * absolute magnitude in EUR as its headline; the rollup ignores
+     * sign because the tile presents "potential annualized cost".
      */
     public function totalOpenAnnualizedImpactForUser(User $user): int
     {

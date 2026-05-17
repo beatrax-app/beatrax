@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-// Scenario 22: Approved series whose recurring_series.snoozed_until
-// is in the future (the Phase 8 series-level snooze). The Recurring-
-// side projection excludes snoozed series from the detector's input,
-// so the DriftAlerts detector never sees the rows. Zero alerts.
-// Distinct from drift_alerts.snoozed_until (the per-alert snooze)
-// shipped in this phase.
+// Approved series whose recurring_series.snoozed_until is in the
+// future (a series-level snooze). The Recurring-side projection
+// excludes snoozed series from the detector's input, so the
+// DriftAlerts detector never sees the rows. Zero alerts. Distinct
+// from drift_alerts.snoozed_until (the per-alert snooze).
 
 $transactions = [];
 $amounts = [-999, -999, -999, -1199, -1199, -1199];

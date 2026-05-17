@@ -87,11 +87,6 @@ final class DriftAlertsServiceProvider extends ServiceProvider
      * `DetectDriftAlertsJob` for the affected `(user, series)` pair;
      * the job is `ShouldBeUniqueUntilProcessing` so concurrent
      * triggers collapse safely.
-     *
-     * The listener class is delivered by a later wave; Laravel's
-     * container resolves it at dispatch time, not at boot, so the
-     * forward-declared FQN is registered now and the implementation
-     * lands once the listener class exists.
      */
     private function registerListener(Dispatcher $events): void
     {

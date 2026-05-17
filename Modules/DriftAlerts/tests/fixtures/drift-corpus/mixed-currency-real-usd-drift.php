@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 19: USD $11.99 → $14.99 (+25.0% in USD original currency).
+// USD $11.99 → $14.99 (+25.0% in USD original currency).
 // The original-currency drift is real, the alert fires in USD with
 // USD-denominated delta + annualized impact. Math:
 //   delta_minor = -1499 - (-1199) = -300 (signed expense, in USD cents)

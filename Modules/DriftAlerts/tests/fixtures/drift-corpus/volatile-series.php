@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-// Scenario 13: Variable monthly bill (think electricity in NL with
-// seasonal heating swings) where each occurrence sits ±30% from the
-// last. The default ±5% threshold fires on virtually every pair —
-// documenting the "alert avalanche" UX problem the per-series
-// override is designed to solve (scenario 14 below resolves it).
+// Variable monthly bill (think electricity in NL with seasonal
+// heating swings) where each occurrence sits ±30% from the last. The
+// default ±5% threshold fires on virtually every pair — documenting
+// the "alert avalanche" UX problem the per-series override is
+// designed to solve.
 // Math for each pair (signed deltas + ×12 annual multipliers):
 //   100 → 130: delta = -3000; annual = -36000
 //   130 → 95:  delta = +3500; annual = +42000 (incorrect direction —

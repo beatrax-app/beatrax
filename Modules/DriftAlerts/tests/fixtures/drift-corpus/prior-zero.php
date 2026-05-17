@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario 12: Prior occurrence amount is 0 cents (a refund-zeroed
+// Prior occurrence amount is 0 cents (a refund-zeroed
 // or no-charge period). The detector skips evaluation when the prior
 // is 0 to avoid divide-by-zero. Expected: zero alerts.
 

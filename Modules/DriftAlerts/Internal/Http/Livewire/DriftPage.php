@@ -21,13 +21,12 @@ use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
 /**
  * `/drift` page — the dedicated drift-alerts surface. Three tabs
  * (Open / History / Dismissed) backed by `DriftAlertQuery` reads.
- * Per-row Acknowledge / Snooze (Phase 8 D-810 popover) / "I cancelled
+ * Per-row Acknowledge / Snooze (1w / 1m / 3m popover) / "I cancelled
  * this" actions dispatch a toast on success.
  *
  * Service collaborators arrive as parameters on action methods and
  * `render()`. Constructor injection is banned on Livewire `Component`
- * subclasses by phpstan-strict-rules; the pattern matches
- * `RecurringReviewPage` and `FixedPaymentsCard`.
+ * subclasses by phpstan-strict-rules.
  */
 final class DriftPage extends Component
 {

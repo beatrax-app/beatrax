@@ -11,16 +11,15 @@ use Modules\DriftAlerts\Models\DriftAlert;
 /**
  * Eloquent factory for the drift_alerts table.
  *
- * Default state mirrors the canonical "Spotify-style 15% expense drift"
- * the Wave 0 corpus uses as its core fixture (€9.99 → €11.49 monthly,
- * +€1.80 delta, +€21.60 annualized at the ×12 monthly multiplier).
- * State factories cover the four lifecycle phases: open() (the
- * default), acknowledged(), snoozed($until), and dismissedCancelled().
+ * The default state mirrors a 15% monthly expense drift (€9.99 →
+ * €11.49, +€1.80 delta, +€21.60 annualized at the ×12 monthly
+ * multiplier). State factories cover the four lifecycle phases:
+ * open() (the default), acknowledged(), snoozed($until), and
+ * dismissedCancelled().
  *
- * The `protected $model` reference is a string FQN; the
- * `DriftAlert` Eloquent model lands in a later wave (the table
- * migration ships then) so production wiring resolves the class at
- * factory-invoke time, not at factory-class-load time.
+ * Callers must override the three FK columns (`user_id`,
+ * `recurring_series_id`, `latest_occurrence_id`) — the schema
+ * constraints reject the factory defaults of `null`.
  *
  * @extends Factory<DriftAlert>
  */
