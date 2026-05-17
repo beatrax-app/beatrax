@@ -61,6 +61,7 @@
             "Modules\\Import\\Tests\\": "Modules/Import/tests/",
             "Modules\\Categorization\\Tests\\": "Modules/Categorization/tests/",
             "Modules\\Chains\\Tests\\": "Modules/Chains/tests/",
+            "Modules\\DriftAlerts\\Tests\\": "Modules/DriftAlerts/tests/",
             "Modules\\EmailScan\\Tests\\": "Modules/EmailScan/tests/",
             "Modules\\Receipts\\Tests\\": "Modules/Receipts/tests/",
             "Modules\\Recurring\\Tests\\": "Modules/Recurring/tests/",

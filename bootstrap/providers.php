@@ -6,6 +6,7 @@ use App\Providers\HorizonServiceProvider;
 use Modules\Categorization\Providers\CategorizationServiceProvider;
 use Modules\Chains\Providers\ChainsServiceProvider;
 use Modules\Core\Providers\CoreServiceProvider;
+use Modules\DriftAlerts\Providers\DriftAlertsServiceProvider;
 use Modules\EmailScan\Providers\EmailScanServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
@@ -26,4 +27,5 @@ return [
     TransfersServiceProvider::class,
     ReceiptsServiceProvider::class,
     RecurringServiceProvider::class,
+    DriftAlertsServiceProvider::class,
 ];
