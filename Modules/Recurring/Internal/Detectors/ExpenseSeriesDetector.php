@@ -205,6 +205,15 @@ final class ExpenseSeriesDetector implements SeriesDetector
             return;
         }
 
+        if ($existing->state === 'snoozed') {
+            // Snooze is a "hide for now" affordance; refreshing the
+            // metrics in the background would surface a different
+            // amount than the one the user paused on. The
+            // snooze-expiry pass on the next sweep flips snoozed →
+            // pending and the next normal refresh then runs.
+            return;
+        }
+
         $this->refreshExistingSeries(
             $existing,
             $clusterKey,
