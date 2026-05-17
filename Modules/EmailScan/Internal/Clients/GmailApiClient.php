@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Internal\Clients;
 
+use DateTimeImmutable;
 use Google\Client as GoogleClient;
 use Google\Service\Exception as GoogleServiceException;
 use Google\Service\Gmail as GmailService;
@@ -55,13 +56,30 @@ final class GmailApiClient implements GmailApiClientContract
      * 100-message page size — the fetcher walks pages until
      * nextPageToken is null.
      *
+     * When `$windowStart` is non-null, the q-string also carries
+     * Gmail's `after:` operator (unix-timestamp form for sub-day
+     * precision) so the IncrementalScanJob's cursor-expiry fallback
+     * walk is bounded to the last_scan_at-minus-7-days window the
+     * caller passes in.
+     *
      * @param  list<string>  $senderPatterns
      * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, historyId: ?string, resultSizeEstimate: int}
      */
-    public function listSenderMessages(int $inboxId, array $senderPatterns, ?string $pageToken): array
-    {
+    public function listSenderMessages(
+        int $inboxId,
+        array $senderPatterns,
+        ?string $pageToken,
+        ?DateTimeImmutable $windowStart = null,
+    ): array {
         $resource = $this->messagesResource($inboxId);
         $q = 'from:('.implode(' OR ', $senderPatterns).')';
+        if ($windowStart !== null) {
+            // Gmail's `after:` operator accepts both date strings
+            // ("after:2026/05/10") and unix timestamps. The unix-
+            // timestamp form gives sub-day precision so the 7-day
+            // fallback window is tight against the lower bound.
+            $q .= ' after:'.$windowStart->getTimestamp();
+        }
         $params = ['q' => $q, 'maxResults' => 100];
         if ($pageToken !== null && $pageToken !== '') {
             $params['pageToken'] = $pageToken;

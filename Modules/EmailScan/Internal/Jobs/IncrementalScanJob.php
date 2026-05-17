@@ -563,8 +563,12 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
     /**
      * Date-bounded fallback walk over Gmail's listSenderMessages —
      * invoked when listHistory's startHistoryId has aged out
-     * (CursorExpiredException). Walks at most FALLBACK_WALK_HARD_CAP
-     * messages defensively.
+     * (CursorExpiredException). The walk passes
+     * `$windowStart = last_scan_at - FALLBACK_WALK_DAYS` so the
+     * server-side `after:` filter trims the result set tightly
+     * against the recovery window the docblock promises. The
+     * FALLBACK_WALK_HARD_CAP message ceiling stays as the
+     * defence-in-depth bound against a runaway page walk.
      *
      * @param  list<string>  $senderPatterns
      * @return list<string>
@@ -575,11 +579,15 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         array $senderPatterns,
         Clock $clock,
     ): array {
-        unset($stateRow, $clock); // window-cap inputs reserved for production walk shape
+        $lastScanAt = is_string($stateRow->last_scan_at ?? null) && $stateRow->last_scan_at !== ''
+            ? $this->safeParseDate($stateRow->last_scan_at, $clock)
+            : $clock->now()->toDateTimeImmutable();
+        $windowStart = $lastScanAt->modify('-'.self::FALLBACK_WALK_DAYS.' days');
+
         $ids = [];
         $pageToken = null;
         do {
-            $page = $gmail->listSenderMessages($this->inboxId, $senderPatterns, $pageToken);
+            $page = $gmail->listSenderMessages($this->inboxId, $senderPatterns, $pageToken, $windowStart);
             foreach ($page['messages'] as $msg) {
                 $id = $msg['id'];
                 if ($id === '') {

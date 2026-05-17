@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Internal\Clients;
 
+use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
 use RuntimeException;
 
@@ -88,12 +89,17 @@ final class FakeGmailApiClient implements GmailApiClientContract
      * @param  list<string>  $senderPatterns
      * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, historyId: ?string, resultSizeEstimate: int}
      */
-    public function listSenderMessages(int $inboxId, array $senderPatterns, ?string $pageToken): array
-    {
+    public function listSenderMessages(
+        int $inboxId,
+        array $senderPatterns,
+        ?string $pageToken,
+        ?DateTimeImmutable $windowStart = null,
+    ): array {
         $this->calls[] = ['method' => __FUNCTION__, 'args' => [
             'inboxId' => $inboxId,
             'senderPatterns' => $senderPatterns,
             'pageToken' => $pageToken,
+            'windowStart' => $windowStart?->format(\DateTimeInterface::ATOM),
         ]];
 
         $this->maybeThrowRateLimit($inboxId);
