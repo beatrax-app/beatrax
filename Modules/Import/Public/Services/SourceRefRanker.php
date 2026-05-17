@@ -40,6 +40,22 @@ final class SourceRefRanker
             // the FingerprintStage prefer the receipt at the cross-
             // format enrichment site.
             'paypal-receipt' => 2,
+            // ICS receipts (email) beat ICS PDF (consumer-portal
+            // statement) on ENRICHED for the merchant-name field: the
+            // email-receipt anchor carries a clean "Verkoper: <name>"
+            // value while the PDF row carries the same merchant fused
+            // with a city + country fragment in the "Omschrijving"
+            // column. Rank 2 places the receipt one above the PDF so
+            // when both surface for the same logical card-charge the
+            // receipt-derived reference (when present) wins.
+            'ics-receipt' => 2,
+            'ics-pdf' => 1,
+            // Google Play receipts are standalone in v1 — Google Play
+            // has no other ingestion path. Rank below paypal-receipt
+            // (no cross-format dedup risk; the (account_id, currency,
+            // amount) tuple keeps Google Play disjoint from ASN/ICS
+            // rows under v3 fingerprint).
+            'google-play-receipt' => 1,
             'asn-csv' => 1,
             // PayPal Activity Download CSV rides in the same band as
             // asn-csv. PayPal rows never collide with ASN rows under

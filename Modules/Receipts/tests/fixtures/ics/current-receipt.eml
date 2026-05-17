@@ -1,0 +1,20 @@
+From: noreply@ics.nl
+To: kaarthouder@example.test
+Subject: Aankoopnotificatie
+Date: Sun, 12 Apr 2026 10:15:00 +0200
+Message-ID: <ics-deterministic-1@ics.nl>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<html><body>
+<p>Beste kaarthouder,</p>
+<p>Met uw ICS-creditcard is een aankoop gedaan.</p>
+<table>
+  <tr><td>Verkoper:</td><td>SYNTHETIC ICS TINY</td></tr>
+  <tr><td>Bedrag:</td><td>&euro; 1,00 EUR</td></tr>
+  <tr><td>Kaart eindigend op 1234</td></tr>
+  <tr><td>Referentienummer:</td><td>XYZ123</td></tr>
+</table>
+<p>Met vriendelijke groet,<br>International Card Services BV</p>
+</body></html>
