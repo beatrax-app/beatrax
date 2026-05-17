@@ -77,7 +77,22 @@ use Throwable;
  *  - Per-page: bump `inboxes.backfill_progress` so the /inboxes
  *    progress strip's `wire:poll.2s` has fresh counters to render.
  *  - Between pages: sleep two seconds via Sleep::sleep so the
- *    provider quota envelope is not exhausted by a tight loop.
+ *    provider quota envelope is not exhausted by a tight loop. The
+ *    sleep is fakeable in tests via Sleep::fake().
+ *
+ * Cooperative-shutdown caveat (acknowledged trade-off): `Sleep::sleep`
+ * blocks the worker for the full two seconds without checking whether
+ * the queue worker has been signalled to restart (e.g. via
+ * `php artisan queue:restart`, which workers honour between jobs but
+ * not mid-sleep). A year-long backfill therefore extends the lag a
+ * `queue:restart` takes to complete by up to a few minutes per inbox.
+ * For the single-user v1 deployment this is acceptable; the multi-
+ * user readiness goal makes it worth revisiting later — the cleaner
+ * shape is `release(60)` between pages so the worker is freed for
+ * other tenants instead of holding the slot across the throttle
+ * wait, but that requires reshaping the job's state-carry-across-
+ * dispatch contract (the per-page accumulators currently live on the
+ * stack frame of handle()).
  *
  * Window clamp (defensive): the slider clamps client-side, but a
  * crafted POST could carry windowMonths=999. The handler re-clamps
