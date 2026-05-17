@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Internal\Http\Controllers;
 
-use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\EmailScan\Internal\LoopbackRedirectUri;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\InvalidStateException;
@@ -56,7 +56,7 @@ final class OAuthCallbackController
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly Redirector $redirector,
-        private readonly ConfigRepository $config,
+        private readonly LoopbackRedirectUri $loopback,
     ) {}
 
     public function __invoke(Request $request, string $provider): RedirectResponse
@@ -103,7 +103,7 @@ final class OAuthCallbackController
                 ->with('oauth_failed', 'OAuth callback returned no authorization code.');
         }
 
-        $redirectUri = $this->computeLoopbackRedirectUri($provider);
+        $redirectUri = $this->loopback->forProvider($provider);
 
         try {
             $tokenWithEmail = $oauth->exchangeAuthorizationCode($code, $redirectUri);
@@ -243,15 +243,5 @@ final class OAuthCallbackController
         return $this->redirector
             ->route('inboxes.index')
             ->with('open_backfill_modal', $inboxId);
-    }
-
-    private function computeLoopbackRedirectUri(string $provider): string
-    {
-        $appUrl = $this->config->get('app.url');
-        $appUrlString = is_string($appUrl) ? $appUrl : '';
-        $port = parse_url($appUrlString, PHP_URL_PORT);
-        $portInt = is_int($port) && $port > 0 ? $port : 8000;
-
-        return 'http://127.0.0.1:'.$portInt.'/oauth/callback/'.$provider;
     }
 }

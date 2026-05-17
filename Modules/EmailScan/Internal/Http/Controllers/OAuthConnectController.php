@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Internal\Http\Controllers;
 
-use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\EmailScan\Internal\LoopbackRedirectUri;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
@@ -43,8 +43,8 @@ final class OAuthConnectController
         private readonly OAuthStateRepository $oauthState,
         private readonly CurrentUser $currentUser,
         private readonly Redirector $redirector,
-        private readonly ConfigRepository $config,
         private readonly InboxQuery $inboxQuery,
+        private readonly LoopbackRedirectUri $loopback,
     ) {}
 
     public function __invoke(Request $request, string $provider): RedirectResponse
@@ -74,21 +74,11 @@ final class OAuthConnectController
             }
         }
 
-        $redirectUri = $this->computeLoopbackRedirectUri($provider);
+        $redirectUri = $this->loopback->forProvider($provider);
 
         $state = $this->oauthState->issueState($provider, $this->currentUser->user()->id, $existingInboxId);
         $authorizationUrl = $oauth->getAuthorizationUrl($state, $redirectUri);
 
         return $this->redirector->away($authorizationUrl);
-    }
-
-    private function computeLoopbackRedirectUri(string $provider): string
-    {
-        $appUrl = $this->config->get('app.url');
-        $appUrlString = is_string($appUrl) ? $appUrl : '';
-        $port = parse_url($appUrlString, PHP_URL_PORT);
-        $portInt = is_int($port) && $port > 0 ? $port : 8000;
-
-        return 'http://127.0.0.1:'.$portInt.'/oauth/callback/'.$provider;
     }
 }
