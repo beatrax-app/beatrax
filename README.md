@@ -81,6 +81,47 @@ failed-job inspection. The auth gate is enforced in
 The HTTP server, database, and Redis container are all bound to loopback only.
 Production cloud deployment is out of scope.
 
+## Background workers (Phase 6+)
+
+### Background workers via macOS launchd
+
+After running `php artisan diederik:install --launchd`, three LaunchAgents are registered:
+
+- `com.diederik.horizon` — runs `php artisan horizon` (queue worker supervisor).
+- `com.diederik.scheduler` — runs `php artisan schedule:work` (hourly Gmail/Graph incremental scans + daily discovery).
+- `com.diederik.redis` — optional; only installed when you're not running Docker Desktop on login. Otherwise pass `--without-redis`.
+
+The plists run under your user account (no root). All three include `KeepAlive` so they restart on crash. The plists live in version control under `deploy/launchd/` with `{{ABS_PHP_BINARY}}` + `{{ABS_PROJECT_ROOT}}` placeholders; the install command substitutes both before writing the rendered plist to `~/Library/LaunchAgents/` and running `launchctl bootstrap gui/$(id -u)`.
+
+**First-run permission grant**: macOS may prompt for Terminal accessibility / Full Disk Access on the first run; grant in System Settings → Privacy & Security → Accessibility / Full Disk Access.
+
+**Log locations**: `storage/logs/launchd-horizon.log`, `storage/logs/launchd-scheduler.log`, `storage/logs/launchd-redis.log` (plus matching `.err.log` files for stderr).
+
+**Re-run after upgrade**: If Laravel Herd is upgraded (which changes the PHP binary path), re-run `php artisan diederik:install --launchd` so the plists pick up the new binary.
+
+**Verifying the install**:
+
+```sh
+launchctl list | grep com.diederik
+```
+
+Expected output (with `--without-redis` passed):
+
+```
+com.diederik.scheduler
+com.diederik.horizon
+```
+
+Without `--without-redis`, `com.diederik.redis` appears as a third line.
+
+**Stopping the workers**:
+
+```sh
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.diederik.horizon.plist
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.diederik.scheduler.plist
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.diederik.redis.plist  # if installed
+```
+
 ## Backups
 
 Plain `cp database.sqlite` is unsafe in WAL mode — the `.sqlite-wal` and
