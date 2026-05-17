@@ -1,0 +1,67 @@
+{{-- Backfill window picker modal.
+
+     Compact Flux modal anchored to a specific inbox row. The user picks
+     a 1-12 month window (default 3); on confirm the BackfillInboxJob is
+     dispatched and the modal closes. dismissible="true" because Cancel
+     is a no-op (no inbox state mutates).
+
+     Auto-opens once after the OAuth callback redirect via the
+     `backfill-window:open` Livewire event. Re-opens via the inline
+     [Edit] link on every connected-inbox row.
+
+     The slider is a plain <input type="range"> wired with wire:model.live
+     so the inline readout updates on every drag tick — the installed
+     Flux build does not ship a flux:input.range primitive yet, so the
+     hand-rolled range input fills the gap with the same focus chrome. --}}
+
+<div>
+    <flux:modal name="backfill-window-{{ $inboxId ?? 0 }}" class="md:max-w-lg" dismissible="true">
+        <div class="space-y-6">
+            <flux:heading size="lg">How far back should we look?</flux:heading>
+
+            <p class="text-sm text-slate-500">
+                Importing further back fetches more receipts but uses more provider quota. Pick a window between 1 and 12 months. You can change this later.
+            </p>
+
+            <div>
+                <input
+                    type="range"
+                    min="1"
+                    max="12"
+                    step="1"
+                    wire:model.live="months"
+                    class="w-full accent-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                    aria-label="Backfill window in months"
+                />
+                <div class="flex justify-between text-xs text-slate-500 px-1 mt-2">
+                    <span>1</span>
+                    <span>3</span>
+                    <span>6</span>
+                    <span>9</span>
+                    <span>12</span>
+                </div>
+            </div>
+
+            <div class="text-sm font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
+                {{ $months === 1 ? '1 month' : $months . ' months' }}
+            </div>
+
+            @if ($errorMessage !== '')
+                <div class="text-xs text-rose-600">{{ $errorMessage }}</div>
+            @endif
+
+            <div class="flex justify-end gap-2">
+                <button
+                    type="button"
+                    wire:click="$dispatch('modal-hide', { name: 'backfill-window-{{ $inboxId ?? 0 }}' })"
+                    class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                >Cancel</button>
+                <button
+                    type="button"
+                    wire:click="submit"
+                    class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                >Start backfill</button>
+            </div>
+        </div>
+    </flux:modal>
+</div>
