@@ -58,6 +58,10 @@ final class CategorizationServiceProvider extends ServiceProvider
         $this->app->singleton(CreateCategorizationRule::class);
         $this->app->singleton(UpdateCategorizationRule::class);
         $this->app->singleton(DeleteCategorizationRule::class);
+        // MerchantMemoryWriter is stateless; binding it as a singleton
+        // avoids a fresh container resolution per TransactionCategorized
+        // dispatch and matches the binding pattern other listeners use.
+        $this->app->singleton(MerchantMemoryWriter::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
