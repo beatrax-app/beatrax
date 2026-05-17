@@ -35,12 +35,13 @@ function ackdaUser(string $email): User
 
 function ackdaTransaction(DatabaseManager $db, int $userId): int
 {
+    $suffix = bin2hex(random_bytes(4));
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId,
         'name' => 'ASN test',
-        'slug' => 'ackda-asn-'.bin2hex(random_bytes(4)),
+        'slug' => 'ackda-asn-'.$suffix,
         'kind' => 'asn_bank',
-        'iban' => 'NL00ASNB',
+        'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-05-19 00:00:00',
         'updated_at' => '2026-05-19 00:00:00',
@@ -49,8 +50,8 @@ function ackdaTransaction(DatabaseManager $db, int $userId): int
     $runId = $db->connection()->table('import_runs')->insertGetId([
         'user_id' => $userId,
         'source_format' => 'asn-csv',
-        'raw_file_path' => '/tmp/ackda.csv',
-        'sha256' => str_repeat('a', 64),
+        'raw_file_path' => '/tmp/ackda-'.$suffix.'.csv',
+        'sha256' => hash('sha256', 'ackda-run-'.$suffix),
         'uploaded_at' => '2026-05-19 00:00:00',
         'status' => 'previewed',
         'created_at' => '2026-05-19 00:00:00',

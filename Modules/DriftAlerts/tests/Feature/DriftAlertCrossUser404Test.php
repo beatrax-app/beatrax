@@ -36,12 +36,13 @@ function xduUser(string $email): User
 
 function xduTransaction(DatabaseManager $db, int $userId): int
 {
+    $suffix = bin2hex(random_bytes(4));
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId,
         'name' => 'ASN test',
-        'slug' => 'xdu-asn-'.bin2hex(random_bytes(4)),
+        'slug' => 'xdu-asn-'.$suffix,
         'kind' => 'asn_bank',
-        'iban' => 'NL00ASNB',
+        'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-05-19 00:00:00',
         'updated_at' => '2026-05-19 00:00:00',
@@ -50,8 +51,8 @@ function xduTransaction(DatabaseManager $db, int $userId): int
     $runId = $db->connection()->table('import_runs')->insertGetId([
         'user_id' => $userId,
         'source_format' => 'asn-csv',
-        'raw_file_path' => '/tmp/xdu.csv',
-        'sha256' => str_repeat('d', 64),
+        'raw_file_path' => '/tmp/xdu-'.$suffix.'.csv',
+        'sha256' => hash('sha256', 'xdu-run-'.$suffix),
         'uploaded_at' => '2026-05-19 00:00:00',
         'status' => 'previewed',
         'created_at' => '2026-05-19 00:00:00',
