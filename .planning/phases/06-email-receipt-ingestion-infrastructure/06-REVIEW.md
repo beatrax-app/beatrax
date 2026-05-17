@@ -82,9 +82,10 @@ files_reviewed_list:
 findings:
   critical: 0
   warning: 0
-  info: 2
-  total: 2
-status: clean
+  info: 0
+  total: 0
+status: resolved
+resolution_iteration: 3
 ---
 
 # Phase 6: Code Review Report (Iteration 3 — Final)
@@ -300,7 +301,20 @@ The contract already accepts the optional `$sinceOverride` parameter
 
 ---
 
+## Resolution (iter-3)
+
+Both INFO findings fixed and committed atomically:
+
+| ID    | Commit    | Summary                                                                   |
+|-------|-----------|---------------------------------------------------------------------------|
+| IN-01 | `9579bb4` | `EmlBlobStore::chmodInboxChain` prefix match narrowed with `DIRECTORY_SEPARATOR` |
+| IN-02 | `3ea1115` | `IncrementalScanJob` Microsoft cursor-expiry baseline anchored to pre-walk `$walkStartedAt` |
+
+Iteration 3 is the cap. Across three iterations the reviewer surfaced 35 distinct findings (20 + 13 + 2). All 35 are now resolved with atomic fix commits. Full test suite green at 1184 passing (1 documented pre-existing baseline failure unrelated to Phase 6).
+
+---
+
 _Reviewed: 2026-05-17_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
-_Iteration: 3 (final cap)_
+_Iteration: 3 (final cap — resolved)_
