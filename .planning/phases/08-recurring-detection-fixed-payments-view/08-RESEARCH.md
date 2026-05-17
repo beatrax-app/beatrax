@@ -1045,7 +1045,11 @@ return new class extends Migration {
 
 **Each `[ASSUMED]` claim above needs user confirmation in plan-check or discuss before being locked.**
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Every question below was answered during plan-phase; the planner's choice and the
+> implementing plan/task are recorded inline. Original question text is preserved so
+> the audit trail remains intact.
 
 ### Q1: ApexCharts is not installed — install it, swap it, or escape-hatch?
 
@@ -1056,12 +1060,14 @@ return new class extends Migration {
   2. **Use Chart.js** (~70KB; less polished defaults; Filament's chart widget basis)
   3. **Tailwind-only SVG sparkline** (zero JS dependency; matches calm aesthetic; loses interactive tooltips) — best fit for the "Linear/Notion calm" brief
 - **Blocker level:** Wave 4 cannot ship without resolution.
+- **RESOLVED:** Path 1 — install ApexCharts in Wave 0 (matches D-827 explicit lock). Implemented in **Plan 01 Task 3** (`npm install apexcharts@^3 --save-dev`, expose `window.ApexCharts` in `resources/js/app.js`, smoke component at `resources/views/components/apex-chart-smoke.blade.php`). Drill-in consumer lands in Plan 05 Task 1.
 
 ### Q2: Where does the snooze-expiry sweep live — inside `DetectRecurringSeriesJob` or as a separate scheduled task?
 
 - **What we know:** D-810 locks the snooze UX; D-801 locks the trigger model.
 - **What's unclear:** Should the snooze-expiry pass (Pitfall 8) be the first step inside the daily detector, or a separate `Schedule::call(...)->hourly()` to surface expired suggestions faster?
 - **Recommendation:** Bundle inside `DetectRecurringSeriesJob` to keep one source of truth. Hourly surface for snooze-expiry would be a v2 improvement if users report "I snoozed yesterday and it's still hidden 4 hours after the snooze-until time."
+- **RESOLVED:** Bundled inside `DetectRecurringSeriesJob::handle()` as the first pass. Implemented in **Plan 03 Task 1** — the job selects snoozed series whose `snoozed_until` has elapsed and calls `RecurringSeriesStateMachine::transition($series, 'pending', 'snooze_expired', 'detector')` before running any detector. Audit row carries `actor='detector'` so the source of the flip is unambiguous.
 
 ### Q3: Container-tag mechanics for `SeriesDetector` (D-849)
 
@@ -1078,6 +1084,7 @@ return new class extends Migration {
   // Job uses: iterable $detectors injected via $this->app->tagged('recurring.detector')
   ```
 - **Recommendation:** Use container tagging. Document in `RecurringServiceProvider`. PHPDoc the tag name in `SeriesDetector` contract.
+- **RESOLVED:** Container tag `'recurring.detector'` is used. Implemented across **Plan 03 Task 1** (registers `ExpenseSeriesDetector` and tags it; `DetectRecurringSeriesJob::handle()` receives `iterable $detectors`) and **Plan 04 Task 1** (appends `IncomeSeriesDetector` to the tag array). The tag name is PHPDoc'd on the `SeriesDetector` contract in Plan 02 Task 3.
 
 ### Q4: Exact mechanism for `noSynchronousDetectionInRequestLifecycle` (D-850)
 
@@ -1086,6 +1093,7 @@ return new class extends Migration {
   1. **Marker interface** — `interface RunsDetection {}` implemented by detectors + the job. Arch test asserts no `Modules/Recurring/Internal/Http/` file imports any `RunsDetection` implementor.
   2. **Naming convention** — files named `*Detector` may only be imported by `*Job` or `*Command` callsites. Arch test scans paths.
 - **Recommendation:** Marker interface is cleaner; tests are more explicit. Mirror the `Symfony\Component\HttpKernel\Exception\NotFoundHttpException` import style — the interface lives at `Modules/Recurring/Public/Contracts/RunsDetection.php`.
+- **RESOLVED:** Use the existing `SeriesDetector` Public contract as the marker (single contract, both purposes — no separate `RunsDetection` interface needed). Implemented in **Plan 01 Task 2** — the `noSynchronousDetectionInRequestLifecycle` arch invariant asserts no file under `Modules/Recurring/Internal/Http` (or `Modules/Recurring/Resources`) imports `Modules\\Recurring\\Public\\Contracts\\SeriesDetector`. The Livewire `reDetect` action in Plan 05 imports `DetectRecurringSeriesJob` (a queued Job class, not a `SeriesDetector` implementation), so the rule stays green.
 
 ### Q5: Cluster key shape for the `recurring_series.cluster_key` UNIQUE constraint
 
@@ -1094,12 +1102,15 @@ return new class extends Migration {
   - Expense: `"merchant:{merchant_id}|cur:{original_currency}"` — but `merchant_id` is null on transactions table (Phase 7 RESEARCH note); fallback is `counterparty_normalized`
   - Income: `"iban:{counterparty_iban}"` if non-null, else `"desc:{counterparty_normalized}"`
 - **Recommendation:** Use a small `ClusterKeyComposer` value-object class (mirrors `FingerprintComposer` from Ledger) so the formatting is centralized and testable. Planner picks the exact string shape.
+- **RESOLVED:** Shape locked as `"{direction}::{normalised-counterparty-or-iban}::{original-currency-lower}::{cadence-band}"` (e.g. `expense::spotify-bv::eur::monthly`). Implemented in **Plan 03 Task 1** as `Modules/Recurring/Internal/Detection/ClusterKeyComposer.php` — `final readonly class` with a deterministic `compose()` method that lowercases all parts, replaces non-alphanumeric runs with single hyphens, and caps each part at 60 characters to fit the `cluster_key` column. Unit-tested for determinism in `ClusterKeyComposerTest`.
 
 ### Q6: How does the dashboard "Fixed monthly payments" card avoid an N+1 on `chain_links` joins?
 
 - **What we know:** The card renders 6 rows × funding-chain icon each.
 - **What's unclear:** Naïve implementation lazy-loads `RecurringSeries::chainLink` for each row. Need a single eager-load query.
 - **Recommendation:** `FixedPaymentsViewQuery::topByMonthlyEquivalent(User, int $limit)` returns a list of `RecurringSeriesDto` with pre-joined `latest_funding_chain_link_id` — single query, no N+1.
+- **RESOLVED:** Single LEFT JOIN against `chain_links` plus one batch `MerchantMemoryQuery::forCounterpartiesNormalized` call (≤ 3 queries total for N≥10 series). Implemented in **Plan 04 Task 2** (`FixedPaymentsViewQuery::viewForUser` and `topByMonthlyEquivalent`); the `n-plus-one-budget` slice in `FixedPaymentsViewQueryTest` asserts the query count via `DB::listen`. The D-829 chain-fallback (latest occurrence's chain when newest is unresolved) is computed in the same query plan via a correlated subquery.
+
 
 ## Environment Availability
 

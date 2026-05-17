@@ -172,11 +172,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User can click into any fixed payment and see every historical occurrence plus an amount trend over time
   5. Recurring income (monthly salary, regular transfers in) appears alongside recurring expenses so cash-flow logic can balance both sides
 **Plans**: 5 plans
-  - [x] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
-  - [x] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
-  - [x] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
-  - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
-  - [ ] 05-05-PLAN.md — Wave 4 UI surfaces: /chains/review (CHN-03) + chain drawer Flux flyout (UI-02 + CHN-04) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge + failed-job toast + wizard polling
+  - [ ] 08-01-PLAN.md — Wave 0 enablement: Modules/Recurring/ skeleton + ApexCharts install + four BoundaryArchTest invariants + MerchantMemoryQuery batch method + Wave 0 fixture corpus + contract test scaffold
+  - [ ] 08-02-PLAN.md — Wave 1 schema + state: four migrations (recurring_series + occurrences + transitions + users settings) + three Eloquent models + RecurringSeriesStateMachine sole-mutator + four Public DTOs + four Public Events + SeriesDetector contract
+  - [ ] 08-03-PLAN.md — Wave 2 expense detection + review queue: CadenceInferrer (median-snap + missed-interval tolerance) + ClusterKeyComposer + ExpenseSeriesDetector + DetectRecurringSeriesJob (ShouldBeUniqueUntilProcessing + snooze-expiry pass) + daily scheduler + /recurring/review Livewire SFC + five Public Actions
+  - [ ] 08-04-PLAN.md — Wave 3 income detection + list view: IncomeSeriesDetector (IBAN-primary + description-fallback) + container tag both detectors + FixedPaymentsViewQuery (N+1-safe with chain fallback) + /recurring Livewire SFC with grouped expense/income/transfers sections + net-flow summary + multi-currency rendering
+  - [ ] 08-05-PLAN.md — Wave 4 drill-in + dashboard + bulk actions: /recurring/series/{id} ApexCharts drill-in (UI-03) + dashboard FixedPaymentsCard with #[Url] toggle + top-nav Recurring badge (View Factory composer) + Re-detect button + bulk Approve/Reject sticky bar + full contract test
 **UI hint**: yes
 
 ### Phase 9: Subscription Drift Detection + Alerts
