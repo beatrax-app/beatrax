@@ -65,6 +65,15 @@ final class FakeGmailApiClient implements GmailApiClientContract
      */
     private ?array $queuedHistoryResponse = null;
 
+    /**
+     * Plan 09: queued listDiscoveryCandidates responses. Each call to
+     * `listDiscoveryCandidates` shifts the front entry; once empty
+     * the default three-row fixture is replayed.
+     *
+     * @var list<array{messages: list<array{id: string, fromAddress: string, fromName: ?string, internalDate: string}>, nextPageToken: ?string}>
+     */
+    private array $queuedDiscoveryResponses = [];
+
     public function __construct(
         private readonly Filesystem $files,
         private readonly string $fixtureRoot = __DIR__.'/../../tests/fixtures/api-responses/gmail',
@@ -197,13 +206,24 @@ final class FakeGmailApiClient implements GmailApiClientContract
     }
 
     /**
-     * Replays the broader discovery query. Wave 0 returns the same
-     * three-message page that the primary scan serves, leaving sender
-     * filtering up to the caller.
+     * Plan 09: replays the discovery query as the production wrapper
+     * would surface it — one entry per message carrying the parsed
+     * sender address + name + internalDate (NOT the raw .eml body —
+     * discovery never persists blobs).
+     *
+     * Test-controllable shape:
+     *  - `queueDiscoveryResponse([...])` queues a specific list of
+     *    sender records for the next call. The next call shifts the
+     *    queue front; subsequent calls return the default seeded
+     *    candidates (the three known-sender fixture rows from
+     *    messages-list-page-1.json).
+     *  - `simulateRateLimit($inboxId, $retryAfter)` arms the listDiscovery
+     *    surface via the shared rate-limit pool (same as
+     *    listSenderMessages).
      *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
-     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string}
+     * @return array{messages: list<array{id: string, fromAddress: string, fromName: ?string, internalDate: string}>, nextPageToken: ?string}
      */
     public function listDiscoveryCandidates(int $inboxId, array $keywords, array $excludeSenders): array
     {
@@ -213,13 +233,40 @@ final class FakeGmailApiClient implements GmailApiClientContract
             'excludeSenders' => $excludeSenders,
         ]];
 
-        $payload = $this->readJson('messages-list-page-1.json');
-        /** @var list<array{id: string, threadId: string}> $messages */
-        $messages = is_array($payload['messages'] ?? null) ? $payload['messages'] : [];
+        $this->maybeThrowRateLimit($inboxId);
 
+        if ($this->queuedDiscoveryResponses !== []) {
+            return array_shift($this->queuedDiscoveryResponses);
+        }
+
+        // Default fixture replay — synthesise the three Wave 0 sender
+        // metadata rows so any pre-existing test calling
+        // listDiscoveryCandidates without queueing keeps seeing the
+        // same shape (with the new richer fields). Coordinates land
+        // on the same dates the .eml fixtures use so other callers can
+        // cross-reference.
         return [
-            'messages' => $messages,
+            'messages' => [
+                ['id' => 'paypal-sample-receipt', 'fromAddress' => 'service@paypal.com', 'fromName' => 'PayPal', 'internalDate' => '2026-05-11T09:14:21Z'],
+                ['id' => 'ics-sample-statement-notice', 'fromAddress' => 'noreply@ics.nl', 'fromName' => 'ICS Cards', 'internalDate' => '2026-05-12T06:00:13Z'],
+                ['id' => 'googleplay-sample-purchase', 'fromAddress' => 'googleplay-noreply@google.com', 'fromName' => 'Google Play', 'internalDate' => '2026-05-13T17:45:49Z'],
+            ],
             'nextPageToken' => null,
+        ];
+    }
+
+    /**
+     * Plan 09: queue the next listDiscoveryCandidates response. Each
+     * queued entry is consumed (FIFO) by the next call; once the queue
+     * empties, calls fall back to the default three-row fixture.
+     *
+     * @param  list<array{id: string, fromAddress: string, fromName: ?string, internalDate: string}>  $messages
+     */
+    public function queueDiscoveryResponse(array $messages, ?string $nextPageToken = null): void
+    {
+        $this->queuedDiscoveryResponses[] = [
+            'messages' => $messages,
+            'nextPageToken' => $nextPageToken,
         ];
     }
 

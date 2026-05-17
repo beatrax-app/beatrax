@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Schedule;
+use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 
 // App-wide artisan command bindings live here. Module-local artisan
@@ -34,15 +35,19 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
     }
 })->name('email-scan.incremental')->hourly()->withoutOverlapping(30);
 
-// DiscoveryScanJob daily — Plan 09 will uncomment + extend with the
-// real DiscoveryScanJob class once it ships. The commented placeholder
-// keeps the Phase 6 scheduler surface visible in one place so the next
-// plan can land alongside this hourly entry rather than scattering
-// scheduler wiring across the codebase.
-//
-// Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
-//     $userIds = $db->connection()->table('users')->pluck('id');
-//     foreach ($userIds as $id) {
-//         $bus->dispatch(new \Modules\EmailScan\Internal\Jobs\DiscoveryScanJob((int) $id));
-//     }
-// })->daily()->name('email-scan.discovery');
+// Daily discovery scan: dispatch DiscoveryScanJob once per user per
+// day. The job walks every connected inbox with a broad keyword
+// query, populates discovered_senders, and never persists .eml blobs
+// (D-121). The job's ShouldBeUniqueUntilProcessing lock keyed on
+// userId collapses a same-day re-dispatch into a single queued job.
+// Closure DI mirrors the hourly entry above — DatabaseManager + Bus
+// Dispatcher via the container; no facade reaches into module code.
+// Method order .name() BEFORE .daily()->withoutOverlapping() — Laravel
+// CallbackEvent::withoutOverlapping (line 141) throws LogicException
+// when description is not set yet (same shape as the hourly entry).
+Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
+    $userIds = $db->connection()->table('users')->pluck('id');
+    foreach ($userIds as $id) {
+        $bus->dispatch(new DiscoveryScanJob((int) $id));
+    }
+})->name('email-scan.discovery')->daily()->withoutOverlapping(30);

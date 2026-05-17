@@ -149,22 +149,117 @@ final class GmailApiClient implements GmailApiClientContract
     }
 
     /**
-     * Reserved for the discovery scan plan. The production body
-     * arrives there; this client returns an empty page so any caller
-     * wiring against the contract compiles without exercising live
-     * keyword search.
+     * Daily-discovery query: `users.messages.list` with a broad
+     * `subject:(...)` keyword filter minus the `-from:(...)` allow-list
+     * of senders the caller already knows about, paged at 100. For
+     * every list-entry the implementation fetches headers ONLY via
+     * `users.messages.get?format=metadata&metadataHeaders=['From','Date']`
+     * so the response carries the parsed sender + date without ever
+     * persisting a `.eml` body byte.
+     *
+     * The discovery surface deliberately does NOT call getRawMessage —
+     * the `format=metadata` fetch is the discovery-loop invariant
+     * (D-121: NO .eml blobs from discovery).
      *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
-     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string}
+     * @return array{messages: list<array{id: string, fromAddress: string, fromName: ?string, internalDate: string}>, nextPageToken: ?string}
      */
     public function listDiscoveryCandidates(int $inboxId, array $keywords, array $excludeSenders): array
     {
-        unset($inboxId, $keywords, $excludeSenders);
+        $resource = $this->messagesResource($inboxId);
+
+        // Build the broad keyword subject filter. Each keyword is
+        // wrapped in double quotes so Gmail treats it as an exact-phrase
+        // match (avoids partial-word hits like "invoice" matching
+        // "invoiceless"). Inner double quotes inside a keyword are
+        // backslash-escaped per Gmail's query-string conventions.
+        $quotedKeywords = array_map(
+            static fn (string $k): string => '"'.str_replace('"', '\\"', $k).'"',
+            $keywords,
+        );
+        $q = 'subject:('.implode(' OR ', $quotedKeywords).')';
+
+        if ($excludeSenders !== []) {
+            // Strip operator-significant characters from each exclude
+            // pattern so a hostile/malformed sender string cannot break
+            // the query. Gmail's exclude syntax is `-from:(...)` with
+            // OR-joined entries; parentheses and the literal token "OR"
+            // would otherwise be interpreted as query operators.
+            $safeExcludes = array_map(
+                static fn (string $s): string => str_replace(['(', ')', ' OR '], '', $s),
+                $excludeSenders,
+            );
+            $q .= ' -from:('.implode(' OR ', $safeExcludes).')';
+        }
+
+        $params = ['q' => $q, 'maxResults' => 100];
+
+        try {
+            $response = $resource->listUsersMessages('me', $params);
+        } catch (GoogleServiceException $e) {
+            throw $this->mapRateLimit($e);
+        }
+
+        $messages = [];
+        foreach ($response->getMessages() as $m) {
+            $messageId = $m->getId();
+            if ($messageId === '') {
+                continue;
+            }
+
+            // Per-message metadata fetch — headers only, NO body. The
+            // payload's internalDate field is milliseconds since epoch;
+            // the From header is the parsed sender (RFC 822 syntax).
+            try {
+                $meta = $resource->get('me', $messageId, [
+                    'format' => 'metadata',
+                    'metadataHeaders' => ['From', 'Date'],
+                ]);
+            } catch (GoogleServiceException $e) {
+                // A single-message failure must not abort the whole
+                // discovery walk — surface it to the caller via the
+                // typed sentinel so the rate-limit envelope is honoured
+                // when applicable.
+                throw $this->mapRateLimit($e);
+            }
+
+            $internalDateMs = $meta->getInternalDate();
+            $internalDateIso = self::internalDateMsToIso($internalDateMs);
+
+            $payload = $meta->getPayload();
+            $fromAddress = '';
+            $fromName = null;
+            $headers = $payload->getHeaders();
+            foreach ($headers as $header) {
+                if (strcasecmp($header->getName(), 'From') === 0) {
+                    [$fromAddress, $fromName] = self::parseFromHeader($header->getValue());
+                    break;
+                }
+            }
+
+            if ($fromAddress === '') {
+                // Skip rows without a parseable sender — they would
+                // never make it into a candidate row anyway.
+                continue;
+            }
+
+            $messages[] = [
+                'id' => $messageId,
+                'fromAddress' => $fromAddress,
+                'fromName' => $fromName,
+                'internalDate' => $internalDateIso,
+            ];
+        }
+
+        $nextPageToken = $response->getNextPageToken();
+        if ($nextPageToken === '') {
+            $nextPageToken = null;
+        }
 
         return [
-            'messages' => [],
-            'nextPageToken' => null,
+            'messages' => $messages,
+            'nextPageToken' => $nextPageToken,
         ];
     }
 
@@ -295,5 +390,53 @@ final class GmailApiClient implements GmailApiClientContract
         }
 
         return $decoded;
+    }
+
+    /**
+     * Convert Gmail's internalDate (milliseconds-since-epoch string)
+     * into an ISO 8601 / RFC 3339 UTC string. Falls back to the
+     * current time when the upstream value is missing or unparseable —
+     * the discovery loop only uses internalDate to populate the
+     * `last_seen_at` column for ordering, not for any settlement
+     * arithmetic, so a fallback to "now" is safe.
+     */
+    private static function internalDateMsToIso(mixed $internalDateMs): string
+    {
+        if (! is_numeric($internalDateMs)) {
+            return gmdate('Y-m-d\TH:i:s\Z');
+        }
+        $seconds = intdiv((int) $internalDateMs, 1000);
+
+        return gmdate('Y-m-d\TH:i:s\Z', $seconds);
+    }
+
+    /**
+     * Parse an RFC 822 From header value into a `[address, name]` pair.
+     * Accepts both `"Name" <addr@example.com>` and bare `addr@example.com`
+     * forms. The address is lowercased so downstream callers can
+     * compare without re-normalising; the name is null when no
+     * display-name is present.
+     *
+     * @return array{0: string, 1: ?string}
+     */
+    private static function parseFromHeader(string $rawValue): array
+    {
+        $trimmed = trim($rawValue);
+        if ($trimmed === '') {
+            return ['', null];
+        }
+
+        // `"Name" <addr@example.com>` or `Name <addr@example.com>`
+        if (preg_match('/^(?<name>.*?)\s*<(?<addr>[^>]+)>\s*$/u', $trimmed, $matches) === 1) {
+            $name = trim($matches['name'], " \t\n\r\0\x0B\"");
+            $addr = strtolower(trim($matches['addr']));
+
+            return [$addr, $name !== '' ? $name : null];
+        }
+
+        // Bare `addr@example.com`
+        $addr = strtolower($trimmed);
+
+        return [$addr, null];
     }
 }
