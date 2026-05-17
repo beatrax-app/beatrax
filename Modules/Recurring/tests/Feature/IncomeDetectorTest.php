@@ -335,3 +335,97 @@ it('does not touch expense-type transactions', function (): void {
         ->count();
     expect($count)->toBe(0);
 })->group('income-detector-ignores-expenses');
+
+it('keeps two IBAN-distinct payroll series isolated when both share a detected_name and one cadence flips', function (): void {
+    // Two employers with the SAME normalized detected_name but
+    // DISTINCT IBANs. Pass 1 seeds 13 monthly occurrences each. Pass 2
+    // inserts three additional Employer B occurrences at a quarterly
+    // cadence to push Employer B's cluster_key into a different
+    // cadence band — the cadence-flip fallback must resolve to
+    // Employer B's row (matched by cluster_counterparty_key), not
+    // Employer A's row (which shares the detected_name).
+    $start = CarbonImmutable::parse('2024-04-25');
+    for ($i = 0; $i < 13; $i++) {
+        $date = $start->addMonths($i)->toDateString();
+        idtSeedTx(
+            $this->db, $this->user, $this->account, $this->run,
+            $date,
+            300000, 'EUR', 300000, 'EUR',
+            'shared name', 'NL00EMPA0000000001',
+            'income',
+            1000 + $i,
+            'sn-a-'.$i,
+        );
+        idtSeedTx(
+            $this->db, $this->user, $this->account, $this->run,
+            $date,
+            320000, 'EUR', 320000, 'EUR',
+            'shared name', 'NL00EMPB0000000002',
+            'income',
+            2000 + $i,
+            'sn-b-'.$i,
+        );
+    }
+
+    idtRunJob($this->user);
+
+    /** @var list<RecurringSeries> $afterFirstPass */
+    $afterFirstPass = RecurringSeries::query()
+        ->where('user_id', $this->user->id)
+        ->where('direction', 'income')
+        ->orderBy('cluster_counterparty_key')
+        ->get()->all();
+    expect($afterFirstPass)->toHaveCount(2);
+    expect($afterFirstPass[0]->cluster_counterparty_key)->toBe('NL00EMPA0000000001');
+    expect($afterFirstPass[1]->cluster_counterparty_key)->toBe('NL00EMPB0000000002');
+
+    // Approve both so a cadence flip pushes them through the
+    // approved→cadence_changed seam (which is where the bug
+    // manifested: the wrong row would get demoted).
+    /** @var RecurringSeriesStateMachine $machine */
+    $machine = $this->app->make(RecurringSeriesStateMachine::class);
+    foreach ($afterFirstPass as $row) {
+        $machine->transition($row, 'approved', 'user_action', 'user');
+    }
+
+    // Replace Employer B's recent occurrences with a quarterly pattern
+    // so the cluster_key (which encodes the cadence band) flips for B
+    // but not for A.
+    $this->db->connection()->table('transactions')
+        ->where('user_id', $this->user->id)
+        ->where('counterparty_iban', 'NL00EMPB0000000002')
+        ->delete();
+    $quarterlyStart = CarbonImmutable::parse('2025-06-01');
+    for ($i = 0; $i < 4; $i++) {
+        $date = $quarterlyStart->addMonths($i * 3)->toDateString();
+        idtSeedTx(
+            $this->db, $this->user, $this->account, $this->run,
+            $date,
+            320000, 'EUR', 320000, 'EUR',
+            'shared name', 'NL00EMPB0000000002',
+            'income',
+            3000 + $i,
+            'sn-b-q-'.$i,
+        );
+    }
+
+    idtRunJob($this->user);
+
+    /** @var RecurringSeries $employerA */
+    $employerA = RecurringSeries::query()
+        ->where('user_id', $this->user->id)
+        ->where('cluster_counterparty_key', 'NL00EMPA0000000001')
+        ->firstOrFail();
+    /** @var RecurringSeries $employerB */
+    $employerB = RecurringSeries::query()
+        ->where('user_id', $this->user->id)
+        ->where('cluster_counterparty_key', 'NL00EMPB0000000002')
+        ->firstOrFail();
+
+    expect($employerA->state)->toBe('approved');
+    expect($employerA->cadence)->toBe('monthly');
+    expect($employerA->latest_amount_minor)->toBe(300000);
+
+    expect($employerB->cadence)->toBe('quarterly');
+    expect($employerB->state)->toBe('cadence_changed');
+})->group('cadence-flip-isolated-by-cluster-counterparty-key');

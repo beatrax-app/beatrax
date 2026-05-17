@@ -175,16 +175,18 @@ final class IncomeSeriesDetector implements SeriesDetector
             ->where('latest_currency', $currency)
             ->first();
 
-        // Cadence-flip lookup mirrors the expense detector: walk both
-        // the cluster_key and the (detected_name, currency) seam so an
-        // existing approved row whose cadence has flipped resolves to
-        // the same series rather than spawning a parallel one keyed
-        // under the new cadence band.
+        // Cadence-flip fallback: when `cluster_key` misses because the
+        // cadence band has flipped, look up by the persisted
+        // counterparty key (IBAN when present, otherwise the
+        // normalized counterparty description). Keying on the
+        // counterparty identifier (not on detected_name) is what
+        // keeps two payroll providers that share a normalized display
+        // string from collapsing into one another.
         /** @var RecurringSeries|null $existingByCounterparty */
         $existingByCounterparty = RecurringSeries::query()
             ->where('user_id', $user->id)
             ->where('direction', 'income')
-            ->where('detected_name', $counterpartyNormalized)
+            ->where('cluster_counterparty_key', $counterpartyKey)
             ->where('latest_currency', $currency)
             ->first();
 
@@ -199,6 +201,7 @@ final class IncomeSeriesDetector implements SeriesDetector
             $this->insertNewSeries(
                 $user,
                 $counterpartyNormalized,
+                $counterpartyKey,
                 $currency,
                 $clusterKey,
                 $cadenceResult['cadence'],
@@ -219,6 +222,7 @@ final class IncomeSeriesDetector implements SeriesDetector
         $this->refreshExistingSeries(
             $existing,
             $clusterKey,
+            $counterpartyKey,
             $cadenceResult['cadence'],
             $latestAmount,
             $currency,
@@ -236,6 +240,7 @@ final class IncomeSeriesDetector implements SeriesDetector
     private function insertNewSeries(
         User $user,
         string $counterpartyNormalized,
+        string $counterpartyKey,
         string $currency,
         string $clusterKey,
         string $cadence,
@@ -261,6 +266,7 @@ final class IncomeSeriesDetector implements SeriesDetector
             'next_expected_at' => $nextExpectedAt?->toDateString(),
             'next_expected_confidence_low' => $confidenceLow,
             'cluster_key' => $clusterKey,
+            'cluster_counterparty_key' => $counterpartyKey,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -282,6 +288,7 @@ final class IncomeSeriesDetector implements SeriesDetector
     private function refreshExistingSeries(
         RecurringSeries $series,
         string $clusterKey,
+        string $counterpartyKey,
         string $cadence,
         int $latestAmountMinor,
         string $currency,
@@ -301,6 +308,7 @@ final class IncomeSeriesDetector implements SeriesDetector
             ->update([
                 'cadence' => $cadence,
                 'cluster_key' => $clusterKey,
+                'cluster_counterparty_key' => $counterpartyKey,
                 'latest_amount_minor' => $latestAmountMinor,
                 'latest_currency' => $currency,
                 'monthly_equivalent_minor' => $monthlyEquivalentMinor,
