@@ -81,7 +81,7 @@ it('every drift-corpus fixture returns the documented shape', function (string $
     ];
     $allowedDirections = ['expense', 'income'];
     $allowedStates = ['open', 'acknowledged', 'snoozed', 'dismissed_cancelled'];
-    $allowedThresholdSources = ['global', 'series_override'];
+    $allowedThresholdSources = ['default', 'global', 'series_override'];
 
     foreach ($alerts as $index => $alert) {
         assertIsArray($alert, "Fixture {$name}: alert #{$index} must be an associative array.");
@@ -114,7 +114,7 @@ it('every drift-corpus fixture returns the documented shape', function (string $
             assertContains(
                 $alert['threshold_source'],
                 $allowedThresholdSources,
-                "Fixture {$name}: alert #{$index}.threshold_source must be global or series_override."
+                "Fixture {$name}: alert #{$index}.threshold_source must be default, global, or series_override."
             );
         }
     }
