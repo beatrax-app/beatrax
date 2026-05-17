@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 
 /**
@@ -43,6 +45,21 @@ final class RecurringPage extends Component
     public function toggleTransfers(): void
     {
         $this->transfersExpanded = ! $this->transfersExpanded;
+    }
+
+    /**
+     * Dispatches the same `DetectRecurringSeriesJob` the daily sweep
+     * dispatches. The job's per-user `ShouldBeUniqueUntilProcessing`
+     * lock collapses spam-clicks into a single queued pass at the
+     * worker boundary. The HTTP layer only enqueues — no detector
+     * runs synchronously, so the
+     * `noSynchronousDetectionInRequestLifecycle` arch invariant stays
+     * green.
+     */
+    public function reDetect(CurrentUser $currentUser, Dispatcher $bus): void
+    {
+        $bus->dispatch(new DetectRecurringSeriesJob($currentUser->user()->id));
+        $this->dispatch('toast', message: 'Detecting recurring series…', undoAction: '', undoPayload: null);
     }
 
     public function render(

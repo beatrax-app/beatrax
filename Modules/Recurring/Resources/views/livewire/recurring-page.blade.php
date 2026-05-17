@@ -37,7 +37,14 @@
 
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Recurring</h1>
+        <div class="flex items-baseline justify-between gap-4">
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Recurring</h1>
+            <button
+                type="button"
+                wire:click="reDetect"
+                class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+            >Re-detect now</button>
+        </div>
         <p class="mt-2 text-sm text-slate-500">
             Approved subscriptions, fixed payments, and recurring income at a glance.
         </p>

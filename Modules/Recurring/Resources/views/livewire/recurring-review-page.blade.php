@@ -47,6 +47,26 @@
         @endforeach
     </nav>
 
+    @if (count($selectedIds) > 0)
+        <div
+            class="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-lg"
+            role="region"
+            aria-label="Bulk actions"
+        >
+            <span class="text-xs text-slate-500" style="font-variant-numeric: tabular-nums;">{{ count($selectedIds) }} selected</span>
+            <button
+                type="button"
+                wire:click="bulkApprove"
+                class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+            >Approve {{ count($selectedIds) }}</button>
+            <button
+                type="button"
+                wire:click="bulkReject"
+                class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
+            >Reject {{ count($selectedIds) }}</button>
+        </div>
+    @endif
+
     @if (count($rows) === 0)
         <div class="rounded-lg border border-slate-200 bg-white p-6">
             <h2 class="text-base font-semibold text-slate-900">Nothing to review</h2>
@@ -69,7 +89,7 @@
                             <p class="text-sm text-slate-900">
                                 <input
                                     type="checkbox"
-                                    wire:model="selectedIds"
+                                    wire:model.live="selectedIds"
                                     value="{{ $row->seriesId }}"
                                     aria-label="Select recurring series {{ $row->seriesId }}"
                                     class="mr-2 align-middle"
