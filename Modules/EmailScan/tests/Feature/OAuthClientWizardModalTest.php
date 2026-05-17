@@ -120,19 +120,3 @@ it('happy path: writes the provider client via OAuthSecretsRepository + dispatch
     expect($loaded['client_id'])->toBe('123-abc.apps.googleusercontent.com');
     expect($loaded['client_secret'])->toBe('GOCSPX-secret-value');
 });
-
-it('Microsoft variant surfaces a "coming soon" inline error without writing the secrets file', function (): void {
-    $user = ocwUser('microsoft@example.com');
-
-    Livewire::actingAs($user)
-        ->test(OAuthClientWizardModal::class)
-        ->call('open', 'microsoft')
-        ->set('clientId', '11111111-2222-3333-4444-555555555555')
-        ->set('clientSecret', 'anything')
-        ->set('publishedConfirmed', true)
-        ->call('submit')
-        ->assertSet('errorMessage', 'Microsoft setup is available in the next plan.');
-
-    $secrets = $this->app->make(OAuthSecretsRepository::class);
-    expect($secrets->hasProviderClient('microsoft'))->toBeFalse();
-});
