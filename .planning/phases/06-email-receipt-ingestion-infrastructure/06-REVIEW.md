@@ -84,7 +84,7 @@ findings:
   warning: 8
   info: 3
   total: 13
-status: issues_found
+status: resolved
 ---
 
 # Phase 6: Code Review Report (Iteration 2)
@@ -434,4 +434,44 @@ While there, mirror the same guard for `$msg['fromAddress']` — it's typed `str
 _Reviewed: 2026-05-17_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+_Iteration: 2_
+
+---
+
+## Resolution (iter-2)
+
+All 13 findings (2 BLOCKER + 8 WARNING + 3 INFO) were addressed in the
+following commits on `gsd-reviewfix/06-iter2`. Every fix carries an
+atomic regression test where the original review surfaced a previously-
+missing behaviour boundary; existing tests were updated only when the
+fix changed semantics (WR-07's `parseHeaders` removal forced
+test-side adaptations). The single known pre-existing baseline failure
+in `Modules/Ledger/tests/Unit/TransactionTypeTest.php:74` is unrelated
+to phase 6 and was not touched.
+
+| ID    | Commit    | Summary                                                                |
+|-------|-----------|------------------------------------------------------------------------|
+| CR-01 | 936dccc   | Host allow-list on GraphApiClient HTTP boundary (SSRF / bearer-token leak guard) |
+| CR-01 | d9f5a6f   | Follow-up: reword PHPDoc to avoid `@odata` tag mis-parse                |
+| CR-02 | 84a598b   | Reject cross-provider reconnect on OAuthConnectController              |
+| WR-01 | 2a35654   | Honour user-selected backfill window in Gmail branch                   |
+| WR-02 | 7179bb9   | Pin Microsoft delta baseline to pre-walk anchor                        |
+| WR-03 | 66f2de4   | Paginate DiscoveryScanJob with DISCOVERY_MAX_PAGES hard cap            |
+| WR-04 | 2f718c1   | Narrow umask before fopen in OAuthSecretsRepository                    |
+| WR-05 | 973777d   | Walk chmod up the inbox tree + narrow umask in EmlBlobStore::put       |
+| WR-06 | b34147b   | Set `PRAGMA busy_timeout=5000` at handle() entry in DiscoveryScanJob   |
+| WR-07 | f0bbfe3   | Route MimeHeaderParser fallback date through Clock                     |
+| WR-08 | 832913b   | Catch SecretsWriteFailed in OAuthClientWizardModal::submit             |
+| IN-01 | 53b6d17   | Lift OAuth flash reads out of `session()` helper into `mount()`        |
+| IN-02 | 228deca   | Skip needs_reauth inboxes in hourly incremental scheduler              |
+| IN-03 | 66f2de4   | (folded into WR-03 commit) Defensive boundary narrowing on Gmail discovery |
+
+Test posture after the fix pass:
+
+- 1184 passed / 6 skipped / 1 expected baseline failure (16,171 assertions)
+- `vendor/bin/pint --test Modules/EmailScan routes/console.php` → green
+- `vendor/bin/phpstan analyse Modules/EmailScan` → no errors
+
+_Resolved: 2026-05-17_
+_Fixer: Claude (gsd-code-fixer)_
 _Iteration: 2_
