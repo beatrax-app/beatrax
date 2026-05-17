@@ -1,0 +1,93 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\DriftAlerts\Internal\Mapping;
+
+use Carbon\CarbonImmutable;
+use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
+use Modules\Ledger\Public\ValueObjects\Money;
+use stdClass;
+
+/**
+ * Shared hydrator for `drift_alerts` rows → `DriftAlertDto`.
+ *
+ * Static-only: no constructor dependencies. The mapper does not read
+ * services or touch the DB; it is pure-data transformation.
+ *
+ * The caller passes the series's display name (resolved at the query
+ * layer from `recurring_series.display_name_override` or `detected_name`)
+ * and the optional EUR-equivalent in minor units (null when the
+ * original currency is already EUR or when no FX shadow is available).
+ */
+final class DriftAlertDtoMapper
+{
+    /**
+     * @param  stdClass  $row  raw drift_alerts row
+     * @param  string|null  $seriesDisplayName  resolved series display
+     *                                          string supplied by the
+     *                                          query layer
+     * @param  int|null  $eurEquivalentMinor  EUR-equivalent of the
+     *                                        delta when original
+     *                                        currency is non-EUR
+     */
+    public static function hydrate(stdClass $row, ?string $seriesDisplayName = null, ?int $eurEquivalentMinor = null): DriftAlertDto
+    {
+        $currency = self::toString($row->currency);
+        $baselineAmount = Money::ofMinor(self::toInt($row->baseline_amount_minor), $currency);
+        $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor), $currency);
+        $delta = Money::ofMinor(self::toInt($row->delta_minor), $currency);
+        $annualizedImpact = Money::ofMinor(self::toInt($row->annualized_impact_minor), $currency);
+
+        $eurEquivalent = null;
+        if ($eurEquivalentMinor !== null && $currency !== 'EUR') {
+            $eurEquivalent = Money::ofMinor($eurEquivalentMinor, 'EUR');
+        }
+
+        $detectedAt = CarbonImmutable::parse(self::toString($row->detected_at));
+
+        $snoozedUntil = null;
+        $rawSnooze = $row->snoozed_until ?? null;
+        if (is_string($rawSnooze) && $rawSnooze !== '') {
+            $snoozedUntil = CarbonImmutable::parse($rawSnooze);
+        }
+
+        $actionedAt = null;
+        $rawActioned = $row->actioned_at ?? null;
+        if (is_string($rawActioned) && $rawActioned !== '') {
+            $actionedAt = CarbonImmutable::parse($rawActioned);
+        }
+
+        return new DriftAlertDto(
+            driftAlertId: self::toInt($row->id),
+            recurringSeriesId: self::toInt($row->recurring_series_id),
+            direction: self::toString($row->direction),
+            displayName: $seriesDisplayName ?? '',
+            state: self::toString($row->state),
+            baselineAmount: $baselineAmount,
+            latestAmount: $latestAmount,
+            delta: $delta,
+            annualizedImpact: $annualizedImpact,
+            eurEquivalent: $eurEquivalent,
+            thresholdPercentUsed: self::toInt($row->threshold_percent_used),
+            thresholdSource: self::toString($row->threshold_source),
+            detectedAt: $detectedAt,
+            actionedAt: $actionedAt,
+            snoozedUntil: $snoozedUntil,
+        );
+    }
+
+    private static function toInt(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    private static function toString(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        return is_scalar($value) ? (string) $value : '';
+    }
+}
