@@ -1,0 +1,62 @@
+<?php
+
+declare(strict_types=1);
+
+// Multi-employer payroll — 6 monthly incomes from IBAN_A + 6 from
+// IBAN_B, both at +€2200. Each distinct IBAN cluster becomes its own
+// income series. Expectation: TWO income series, both monthly.
+
+$transactions = [];
+$start = new DateTimeImmutable('2025-10-25');
+for ($i = 0; $i < 6; $i++) {
+    $d = $start->modify('+'.$i.' months');
+    $transactions[] = [
+        'account_id' => null,
+        'type' => 'income',
+        'posted_at' => $d->format('Y-m-d'),
+        'booked_at' => $d->format('Y-m-d'),
+        'amount_minor' => 220000,
+        'currency' => 'EUR',
+        'original_amount_minor' => 220000,
+        'original_currency' => 'EUR',
+        'counterparty_normalized' => 'employer a',
+        'counterparty_iban' => 'NL00EMPA0000000001',
+    ];
+    $transactions[] = [
+        'account_id' => null,
+        'type' => 'income',
+        'posted_at' => $d->format('Y-m-d'),
+        'booked_at' => $d->format('Y-m-d'),
+        'amount_minor' => 220000,
+        'currency' => 'EUR',
+        'original_amount_minor' => 220000,
+        'original_currency' => 'EUR',
+        'counterparty_normalized' => 'employer b',
+        'counterparty_iban' => 'NL00EMPB0000000002',
+    ];
+}
+
+return [
+    'transactions' => $transactions,
+    'expected' => [
+        'series_count' => 2,
+        'series' => [
+            [
+                'direction' => 'income',
+                'cadence' => 'monthly',
+                'counterparty_iban' => 'NL00EMPA0000000001',
+                'latest_amount_minor' => 220000,
+                'currency' => 'EUR',
+                'monthly_equivalent_minor' => 220000,
+            ],
+            [
+                'direction' => 'income',
+                'cadence' => 'monthly',
+                'counterparty_iban' => 'NL00EMPB0000000002',
+                'latest_amount_minor' => 220000,
+                'currency' => 'EUR',
+                'monthly_equivalent_minor' => 220000,
+            ],
+        ],
+    ],
+];
