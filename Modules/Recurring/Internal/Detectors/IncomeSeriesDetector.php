@@ -16,6 +16,7 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesDetected;
+use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use stdClass;
 
 /**
@@ -298,6 +299,15 @@ final class IncomeSeriesDetector implements SeriesDetector
             detectedName: $counterpartyNormalized,
             cadence: $cadence,
         ));
+
+        $this->events->dispatch(new RecurringSeriesMetricsRefreshed(
+            userId: $user->id,
+            recurringSeriesId: $newId,
+            direction: 'income',
+            cadence: $cadence,
+            latestAmountMinor: $latestAmountMinor,
+            latestCurrency: $currency,
+        ));
     }
 
     /**
@@ -357,6 +367,15 @@ final class IncomeSeriesDetector implements SeriesDetector
                 ));
             }
         }
+
+        $this->events->dispatch(new RecurringSeriesMetricsRefreshed(
+            userId: $user->id,
+            recurringSeriesId: $seriesId,
+            direction: 'income',
+            cadence: $cadence,
+            latestAmountMinor: $latestAmountMinor,
+            latestCurrency: $currency,
+        ));
     }
 
     /**
