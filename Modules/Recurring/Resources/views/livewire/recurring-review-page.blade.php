@@ -159,7 +159,7 @@
                                         >3 months</button>
                                     </div>
                                 </div>
-                                <div x-data="{ editing: false, newName: '{{ $row->displayName() }}' }" class="relative">
+                                <div x-data="{ editing: false, newName: @js($row->displayName()) }" class="relative">
                                     <button
                                         type="button"
                                         x-on:click="editing = ! editing"

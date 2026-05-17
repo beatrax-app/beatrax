@@ -173,3 +173,27 @@ it('renders an empty-state message when no pending series exist', function (): v
         ->assertOk()
         ->assertSeeText('Nothing to review');
 });
+
+it('encodes a display name that contains an apostrophe as a JS-safe string literal in the edit-name x-data block', function (): void {
+    // The legacy template interpolated $row->displayName() directly
+    // inside single-quoted Alpine source — an apostrophe in the name
+    // would terminate the JS string early, break the SFC, and (in a
+    // future multi-user scenario) create an XSS sink. @js() must emit
+    // a JSON-encoded string with the apostrophe properly escaped or
+    // wrapped in double quotes.
+    rrpSeries($this->user, 'pending', 'rrp::xss', "alice's plan");
+
+    $response = $this->actingAs($this->user)->get(route('recurring.review'));
+    $response->assertOk();
+
+    $content = (string) $response->getContent();
+    // Forbid the unsafe shape: a single-quoted JS string carrying a
+    // bare apostrophe in the body (browser-decoded `&#039;` collapses
+    // to `'` and breaks JS parsing).
+    expect($content)->not->toContain("newName: 'alice's plan'");
+    // The safe shape is Laravel's @js() output: a single-quoted JS
+    // string whose apostrophe is escaped to the `'` form so the
+    // attribute value parses cleanly as JS regardless of the quote
+    // style the browser uses for the attribute itself.
+    expect($content)->toContain('alice\\u0027s plan');
+})->group('display-name-js-safe');
