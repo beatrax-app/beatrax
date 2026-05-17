@@ -189,11 +189,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Each drift alert persists until the user explicitly acts on it — it cannot be silently missed by navigating away
   3. User can acknowledge the new price, snooze for a configurable interval, or jump into a what-if scenario that models cancellation of the series, and each decision is recorded with timestamp for auditability
 **Plans**: 5 plans
-  - [x] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
-  - [x] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
-  - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
-  - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
-  - [ ] 05-05-PLAN.md — Wave 4 UI surfaces: /chains/review (CHN-03) + chain drawer Flux flyout (UI-02 + CHN-04) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge + failed-job toast + wizard polling
+  - [ ] 09-01-PLAN.md — Wave 0 enablement: Modules/DriftAlerts/ module skeleton (composer.json + ServiceProvider + Routes/web.php + tests Pest.php + TestCase) + 5 BoundaryArchTest invariants (noFacadeCallsFromDriftAlerts + noRecurringSeriesWritesFromDriftAlerts + crossModuleAccessGoesThroughPublic + noSynchronousDriftDetectionInRequestLifecycle + noOtherDriftAlertStateMutator) + 24-scenario synthesised drift fixture corpus + DriftAlertFactory + DriftAlertTransitionFactory + FixtureCorpusTest
+  - [ ] 09-02-PLAN.md — Wave 1 schema + state: 4 migrations (drift_alerts + drift_alert_transitions + recurring_series.drift_threshold_percent + users.drift_alert_threshold_percent) with BEFORE INSERT/UPDATE trigger pair on drift_alerts.state + 2 Eloquent models (DriftAlert + DriftAlertTransition) + 2 Public DTOs (DriftAlertDto + CancellationImpactDto) + DriftAlertStateMachine sole-mutator + InvalidStateTransitionException + 5 unit tests (REC-06, REC-08)
+  - [ ] 09-03-PLAN.md — Wave 2 detection pipeline: Modules/Recurring/Public/Events/RecurringSeriesMetricsRefreshed (new Public event) + dispatch wired in ExpenseSeriesDetector + IncomeSeriesDetector at refreshExistingSeries + insertNewSeries + DriftEvaluator (Internal math) + DetectDriftAlertsJob (ShouldBeUniqueUntilProcessing keyed (userId, seriesId), Cache::driver('redis') uniqueVia carve-out) + EvaluateDriftOnMetricsRefreshed listener + DriftAlertOpened Public event + 6 unit tests + tests/Contracts/DriftDetectionContractTest end-to-end over 24-scenario corpus (REC-06, REC-07, REC-08)
+  - [ ] 09-04-PLAN.md — Wave 3 user-facing surface: 3 Public Actions (AcknowledgeDriftAlert + SnoozeDriftAlert + DismissDriftAlertAsCancelled) + 3 Public Events (DriftAlertAcknowledged + DriftAlertSnoozed + DriftAlertDismissedCancelled) + DriftAlertQuery Public Service + DriftAlertDtoMapper + DriftPage Livewire SFC (Open/History/Dismissed tabs, grouped-by-series collapsible) + drift-page.blade.php + DashboardDriftBadge tile + top-nav compound badge composer integration + 7 feature tests including DriftAlertCrossUser404Test + human-verify checkpoint (REC-07, REC-08)
+  - [ ] 09-05-PLAN.md — Wave 4 polish: CancellationImpactQuery Public Service (Phase 10 hand-off) + inline "Cancel this → save €X/yr" display + DriftThresholdEditor Livewire popover mounted on /drift + /recurring/series/{id} + SetDriftThresholdForSeries Recurring-side Public Action + /settings global drift threshold field + hybrid snooze-revival (RevivedExpiredDriftSnoozesJob hourly Schedule::call + query-time conditional on DriftAlertQuery::openForUser) + 5 feature tests (REC-06, REC-07)
 **UI hint**: yes
 
 ### Phase 10: Cash-Flow Forecasting + What-If Scenarios
@@ -246,6 +246,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 6. Email Receipt Ingestion Infrastructure | 0/9 | Not started | - |
 | 7. Email Template Matchers + Categorization Learning | 0/TBD | Not started | - |
 | 8. Recurring Detection + Fixed Payments View | 0/TBD | Not started | - |
-| 9. Subscription Drift Detection + Alerts | 0/TBD | Not started | - |
+| 9. Subscription Drift Detection + Alerts | 0/5 | Ready to execute | - |
 | 10. Cash-Flow Forecasting + What-If Scenarios | 0/TBD | Not started | - |
 | 11. Operational Hardening | 0/TBD | Not started | - |
