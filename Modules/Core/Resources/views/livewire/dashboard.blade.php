@@ -155,6 +155,13 @@
         </div>
     @endif
 
+    {{-- Inline "Drift alerts" tile — count + EUR-roll-up annualized
+         impact for open drift_alerts. The tile renders no chrome when
+         the user has zero open drift alerts; the dashboard collapses
+         gracefully on a quiet day. Cross-user scoping happens inside
+         DriftAlertQuery. --}}
+    @livewire('drift-alerts.dashboard-drift-badge')
+
     {{-- Inline "Fixed monthly payments" card — top six approved
          recurring series with View-all link to `/recurring`. The card
          resolves through Livewire's container; cross-user scoping
