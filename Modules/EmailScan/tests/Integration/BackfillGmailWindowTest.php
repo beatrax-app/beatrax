@@ -1,0 +1,183 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Filesystem\Filesystem;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Sleep;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Internal\Clients\FakeGmailApiClient;
+use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
+use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
+
+uses(RefreshDatabase::class);
+
+/*
+ * Gmail backfill window plumbing regression test (WR-01 iter-2).
+ *
+ * Asserts that the user-selected backfill window (the slider value
+ * in the BackfillWindowModal, stored as inboxes.backfill_window_months
+ * and forwarded to BackfillInboxJob as the windowMonths constructor
+ * arg) propagates into the Gmail listSenderMessages call as a
+ * `$windowStart` argument — without which Gmail walks the full
+ * sender-allow-list history back to inbox creation.
+ *
+ * The Fake captures every `listSenderMessages` call's args; the test
+ * inspects the recorded args to prove the window lower bound matches
+ * `now() - windowMonths months`.
+ */
+
+beforeEach(function (): void {
+    Sleep::fake();
+
+    $this->inboxRoot = storage_path('app/inbox');
+    if (is_dir($this->inboxRoot)) {
+        $this->app->make(Filesystem::class)->deleteDirectory($this->inboxRoot);
+    }
+});
+
+afterEach(function (): void {
+    if (is_dir($this->inboxRoot)) {
+        $this->app->make(Filesystem::class)->deleteDirectory($this->inboxRoot);
+    }
+});
+
+it('passes the user-selected window (3 months) into the Gmail listSenderMessages windowStart arg', function (): void {
+    // Freeze clock so the windowStart arithmetic is deterministic.
+    $fixedNow = CarbonImmutable::create(2026, 5, 17, 12, 0, 0, 'UTC');
+    CarbonImmutable::setTestNow($fixedNow);
+
+    $clock = new class($fixedNow) implements Clock
+    {
+        public function __construct(private readonly CarbonImmutable $now) {}
+
+        public function now(): CarbonImmutable
+        {
+            return $this->now;
+        }
+    };
+    $this->app->instance(Clock::class, $clock);
+
+    $user = User::query()->create([
+        'email' => 'gmail-window@example.com',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+    ]);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $now = $fixedNow->toDateTimeString();
+
+    $inboxId = (int) $db->connection()->table('inboxes')->insertGetId([
+        'user_id' => $user->id,
+        'provider' => 'gmail',
+        'email' => 'gmail-window@example.com',
+        'backfill_window_months' => 3,
+        'backfill_progress' => null,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+    $db->connection()->table('inbox_scan_state')->insert([
+        'user_id' => $user->id,
+        'inbox_id' => $inboxId,
+        'folder' => 'INBOX',
+        'status' => 'idle',
+        'retry_attempts' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
+    $this->app->instance(GmailApiClientContract::class, $fake);
+
+    /** @var BackfillInboxJob $job */
+    $job = $this->app->make(BackfillInboxJob::class, ['inboxId' => $inboxId, 'windowMonths' => 3]);
+    $this->app->call([$job, 'handle']);
+
+    // The Fake captures the windowStart in the first
+    // listSenderMessages call's args. Confirm:
+    //  - the call WAS made with a non-null windowStart (regression
+    //    guard: previously this was null, so Gmail walked all-time).
+    //  - the windowStart is exactly 3 months before the fixed now.
+    $calls = array_values(array_filter(
+        $fake->getRequestedCalls(),
+        static fn (array $c): bool => $c['method'] === 'listSenderMessages',
+    ));
+
+    expect($calls)->not->toBeEmpty();
+    $firstCallArgs = $calls[0]['args'];
+    expect($firstCallArgs['windowStart'] ?? null)->not->toBeNull(
+        'WR-01 regression: windowStart must be passed into Gmail backfill so the user-selected window is honoured.',
+    );
+
+    $expectedStart = $fixedNow->modify('-3 months')->format(DateTimeInterface::ATOM);
+    expect($firstCallArgs['windowStart'])->toBe($expectedStart);
+
+    CarbonImmutable::setTestNow();
+});
+
+it('plumbs a 12-month window correctly', function (): void {
+    $fixedNow = CarbonImmutable::create(2026, 5, 17, 12, 0, 0, 'UTC');
+    CarbonImmutable::setTestNow($fixedNow);
+
+    $clock = new class($fixedNow) implements Clock
+    {
+        public function __construct(private readonly CarbonImmutable $now) {}
+
+        public function now(): CarbonImmutable
+        {
+            return $this->now;
+        }
+    };
+    $this->app->instance(Clock::class, $clock);
+
+    $user = User::query()->create([
+        'email' => 'gmail-window-12@example.com',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+    ]);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $now = $fixedNow->toDateTimeString();
+
+    $inboxId = (int) $db->connection()->table('inboxes')->insertGetId([
+        'user_id' => $user->id,
+        'provider' => 'gmail',
+        'email' => 'gmail-window-12@example.com',
+        'backfill_window_months' => 12,
+        'backfill_progress' => null,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+    $db->connection()->table('inbox_scan_state')->insert([
+        'user_id' => $user->id,
+        'inbox_id' => $inboxId,
+        'folder' => 'INBOX',
+        'status' => 'idle',
+        'retry_attempts' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
+    $this->app->instance(GmailApiClientContract::class, $fake);
+
+    /** @var BackfillInboxJob $job */
+    $job = $this->app->make(BackfillInboxJob::class, ['inboxId' => $inboxId, 'windowMonths' => 12]);
+    $this->app->call([$job, 'handle']);
+
+    $calls = array_values(array_filter(
+        $fake->getRequestedCalls(),
+        static fn (array $c): bool => $c['method'] === 'listSenderMessages',
+    ));
+
+    expect($calls)->not->toBeEmpty();
+    expect($calls[0]['args']['windowStart'])
+        ->toBe($fixedNow->modify('-12 months')->format(DateTimeInterface::ATOM));
+
+    CarbonImmutable::setTestNow();
+});

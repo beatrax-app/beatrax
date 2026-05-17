@@ -224,6 +224,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 $sm,
                 $userId,
                 $senderPatterns,
+                $window,
             );
 
             return;
@@ -269,8 +270,19 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         InboxScanStateMachine $sm,
         int $userId,
         array $senderPatterns,
+        int $windowMonths,
     ): void {
         $sm->applyStatus($this->inboxId, 'backfilling');
+
+        // Honour the user-selected backfill window — the Gmail
+        // `after:` operator bounds the q= search to a date floor so
+        // the walk stops at the slider value rather than racing the
+        // dawn-of-inbox quota cap. The Microsoft branch already
+        // computes the equivalent receivedDateTime floor below; the
+        // two branches must apply the same window semantics or a
+        // user toggling "3 months" gets wildly different fetched
+        // corpora depending on provider.
+        $windowStart = $clock->now()->modify("-{$windowMonths} months")->toDateTimeImmutable();
 
         // Mutable accumulators captured by the page closure. The
         // running estimate is the max() of the per-page hints; the
@@ -290,8 +302,8 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 $mime,
                 $sm,
                 $userId,
-                fetchNextPage: function (?string $cursor) use ($gmail, $senderPatterns, $accum): array {
-                    $page = $gmail->listSenderMessages($this->inboxId, $senderPatterns, $cursor);
+                fetchNextPage: function (?string $cursor) use ($gmail, $senderPatterns, $windowStart, $accum): array {
+                    $page = $gmail->listSenderMessages($this->inboxId, $senderPatterns, $cursor, $windowStart);
                     $accum->estimated = max($accum->estimated, $page['resultSizeEstimate']);
                     if ($page['historyId'] !== null) {
                         $accum->highestHistoryId = $page['historyId'];
