@@ -21,7 +21,7 @@ use RuntimeException;
  * interface; both must adopt the same shape so the test seam stays
  * drop-in compatible.
  */
-final class FakeGraphApiClient
+final class FakeGraphApiClient implements GraphApiClientContract
 {
     /**
      * @var list<array{method: string, args: array<int|string, mixed>}>

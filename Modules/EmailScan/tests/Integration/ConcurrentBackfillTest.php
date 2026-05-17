@@ -11,7 +11,9 @@ use Illuminate\Support\Sleep;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\Clients\FakeGmailApiClient;
+use Modules\EmailScan\Internal\Clients\FakeGraphApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
+use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\EmlBlobStore;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
@@ -92,6 +94,8 @@ it('issues PRAGMA busy_timeout = 5000 inside every per-page transaction', functi
 
     $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $this->app->instance(GmailApiClientContract::class, $fake);
+    $graphFake = new FakeGraphApiClient($this->app->make(Filesystem::class));
+    $this->app->instance(GraphApiClientContract::class, $graphFake);
 
     $statementsInTransactions = [];
     $recordingDb = new RecordingDatabaseManager(
@@ -104,6 +108,7 @@ it('issues PRAGMA busy_timeout = 5000 inside every per-page transaction', functi
         $recordingDb,
         $this->app->make(Clock::class),
         $fake,
+        $graphFake,
         $this->app->make(EmlBlobStore::class),
         $this->app->make(MimeHeaderParser::class),
         $this->app->make(OAuthSecretsRepository::class),
