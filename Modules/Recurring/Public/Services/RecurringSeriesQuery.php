@@ -162,7 +162,17 @@ final readonly class RecurringSeriesQuery
         /** @var stdClass $seriesRow */
         $currency = self::toString($seriesRow->latest_currency);
         if ($currency === '') {
-            $currency = 'EUR';
+            // Schema guarantees latest_currency is non-null + 3 chars.
+            // An empty value here means the row is corrupt or the
+            // detector wrote a malformed insert. Return an empty
+            // payload rather than fabricating an EUR label that
+            // would mislead the chart axis.
+            return new RecurringSeriesAmountTrendDto(
+                seriesId: $seriesId,
+                currency: '',
+                points: [],
+                maxPoints: $maxPoints,
+            );
         }
 
         $effectiveLimit = max(1, $maxPoints);
