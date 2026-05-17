@@ -71,7 +71,7 @@ final class FakeGmailApiClient implements GmailApiClientContract
      * `listDiscoveryCandidates` shifts the front entry; once empty
      * the default three-row fixture is replayed.
      *
-     * @var list<array{messages: list<array{id: string, fromAddress: string, fromName: ?string, internalDate: string}>, nextPageToken: ?string}>
+     * @var list<array{messages: list<array<string, mixed>>, nextPageToken: ?string}>
      */
     private array $queuedDiscoveryResponses = [];
 
@@ -229,14 +229,19 @@ final class FakeGmailApiClient implements GmailApiClientContract
      *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
-     * @return array{messages: list<array{id: string, fromAddress: string, fromName: ?string, internalDate: string}>, nextPageToken: ?string}
+     * @return array{messages: list<array<string, mixed>>, nextPageToken: ?string}
      */
-    public function listDiscoveryCandidates(int $inboxId, array $keywords, array $excludeSenders): array
-    {
+    public function listDiscoveryCandidates(
+        int $inboxId,
+        array $keywords,
+        array $excludeSenders,
+        ?string $pageToken = null,
+    ): array {
         $this->calls[] = ['method' => __FUNCTION__, 'args' => [
             'inboxId' => $inboxId,
             'keywords' => $keywords,
             'excludeSenders' => $excludeSenders,
+            'pageToken' => $pageToken,
         ]];
 
         $this->maybeThrowRateLimit($inboxId);
@@ -266,7 +271,7 @@ final class FakeGmailApiClient implements GmailApiClientContract
      * queued entry is consumed (FIFO) by the next call; once the queue
      * empties, calls fall back to the default three-row fixture.
      *
-     * @param  list<array{id: string, fromAddress: string, fromName: ?string, internalDate: string}>  $messages
+     * @param  list<array<string, mixed>>  $messages
      */
     public function queueDiscoveryResponse(array $messages, ?string $nextPageToken = null): void
     {
