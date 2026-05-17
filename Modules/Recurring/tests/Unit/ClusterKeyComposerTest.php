@@ -22,7 +22,7 @@ it('composes a canonical lowercase double-colon-separated key', function (): voi
 it('collapses punctuation in the counterparty into single hyphens', function (): void {
     $composer = new ClusterKeyComposer;
 
-    expect($composer->compose('expense', "Acme,  Inc. / Cloud!", 'USD', 'quarterly'))
+    expect($composer->compose('expense', 'Acme,  Inc. / Cloud!', 'USD', 'quarterly'))
         ->toBe('expense::acme-inc-cloud::usd::quarterly');
 });
 
