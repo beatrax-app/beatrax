@@ -9,6 +9,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
+use Modules\Recurring\Internal\Detectors\IncomeSeriesDetector;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
@@ -16,31 +17,30 @@ use Modules\Recurring\Models\RecurringSeries;
 /*
  * Recurring detection end-to-end contract.
  *
- * Loads each Wave 0 expense-side fixture, seeds the matching
- * transactions, runs the sweep job synchronously, and asserts the
- * detector produces the expected expense-series count per fixture.
- *
- * Income-side fixtures stay skipped until Plan 04 ships the
- * IncomeSeriesDetector — flagged by the per-fixture
- * `skip_until_income_detector` marker in this contract's expectation
- * table.
+ * Loads each Wave 0 fixture, seeds the matching transactions, runs the
+ * sweep job synchronously over both the expense AND income detectors,
+ * and asserts each detector produces the expected per-direction series
+ * count per fixture.
  */
 
 /**
- * @return array<string, array{0: string, 1: int}>
+ * @return array<string, array{0: string, 1: int, 2: int}>
+ *                                                         [fixtureName, expectedExpenseSeriesCount, expectedIncomeSeriesCount]
  */
 function rdctExpenseFixtureExpectations(): array
 {
     return [
-        'stable-monthly-spotify' => ['stable-monthly-spotify', 1],
-        'drifting-monthly-spotify' => ['drifting-monthly-spotify', 1],
-        'quarterly-insurance' => ['quarterly-insurance', 1],
-        'yearly-domain' => ['yearly-domain', 1],
-        'weekly-streaming' => ['weekly-streaming', 1],
-        'irregular-gym-must-not-cluster' => ['irregular-gym-must-not-cluster', 0],
-        'missing-month-subscription' => ['missing-month-subscription', 1],
-        'mixed-currency-netflix-usd' => ['mixed-currency-netflix-usd', 1],
-        'variable-amount-beyond-tolerance-bills' => ['variable-amount-beyond-tolerance-bills', 0],
+        'stable-monthly-spotify' => ['stable-monthly-spotify', 1, 0],
+        'drifting-monthly-spotify' => ['drifting-monthly-spotify', 1, 0],
+        'quarterly-insurance' => ['quarterly-insurance', 1, 0],
+        'yearly-domain' => ['yearly-domain', 1, 0],
+        'weekly-streaming' => ['weekly-streaming', 1, 0],
+        'irregular-gym-must-not-cluster' => ['irregular-gym-must-not-cluster', 0, 0],
+        'missing-month-subscription' => ['missing-month-subscription', 1, 0],
+        'mixed-currency-netflix-usd' => ['mixed-currency-netflix-usd', 1, 0],
+        'variable-amount-beyond-tolerance-bills' => ['variable-amount-beyond-tolerance-bills', 0, 0],
+        'monthly-salary' => ['monthly-salary', 0, 1],
+        'two-employer-salary' => ['two-employer-salary', 0, 2],
     ];
 }
 
@@ -87,6 +87,10 @@ function rdctSeedFixture(
 ): void {
     $fixture = require base_path('Modules/Recurring/tests/fixtures/synthesised/'.$fixtureName.'.php');
     foreach ($fixture['transactions'] as $i => $row) {
+        $iban = isset($row['counterparty_iban']) ? (string) $row['counterparty_iban'] : null;
+        if ($iban === '') {
+            $iban = null;
+        }
         $db->connection()->table('transactions')->insert([
             'user_id' => $user->id,
             'account_id' => $account->id,
@@ -99,6 +103,7 @@ function rdctSeedFixture(
             'settled_amount_minor' => (int) $row['amount_minor'],
             'settled_currency' => (string) $row['currency'],
             'counterparty_name' => (string) $row['counterparty_normalized'],
+            'counterparty_iban' => $iban,
             'counterparty_normalized' => (string) $row['counterparty_normalized'],
             'normalization_version' => 3,
             'source_format' => 'asn-csv',
@@ -112,7 +117,7 @@ function rdctSeedFixture(
     }
 }
 
-it('asserts the expected expense-series count for each Wave 0 fixture', function (string $fixtureName, int $expectedExpenseSeriesCount): void {
+it('asserts the expected expense + income series counts for each Wave 0 fixture', function (string $fixtureName, int $expectedExpenseSeriesCount, int $expectedIncomeSeriesCount): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
 
     /** @var DatabaseManager $db */
@@ -129,21 +134,28 @@ it('asserts the expected expense-series count for each Wave 0 fixture', function
 
     rdctSeedFixture($db, $user, $account, $run, $fixtureName);
 
-    /** @var ExpenseSeriesDetector $detector */
-    $detector = app(ExpenseSeriesDetector::class);
+    /** @var ExpenseSeriesDetector $expense */
+    $expense = app(ExpenseSeriesDetector::class);
+    /** @var IncomeSeriesDetector $income */
+    $income = app(IncomeSeriesDetector::class);
     /** @var Clock $clock */
     $clock = app(Clock::class);
     /** @var RecurringSeriesStateMachine $machine */
     $machine = app(RecurringSeriesStateMachine::class);
 
-    (new DetectRecurringSeriesJob($user->id))->handle($db, $clock, [$detector], $machine);
+    (new DetectRecurringSeriesJob($user->id))->handle($db, $clock, [$expense, $income], $machine);
 
-    $actual = RecurringSeries::query()
+    $actualExpense = RecurringSeries::query()
         ->where('user_id', $user->id)
         ->where('direction', 'expense')
         ->count();
+    $actualIncome = RecurringSeries::query()
+        ->where('user_id', $user->id)
+        ->where('direction', 'income')
+        ->count();
 
-    expect($actual)->toBe($expectedExpenseSeriesCount);
+    expect($actualExpense)->toBe($expectedExpenseSeriesCount);
+    expect($actualIncome)->toBe($expectedIncomeSeriesCount);
 
     CarbonImmutable::setTestNow();
 })->with(rdctExpenseFixtureExpectations());
