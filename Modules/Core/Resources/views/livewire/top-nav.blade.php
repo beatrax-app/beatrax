@@ -91,18 +91,41 @@
              RecurringSeriesQuery injected via the
              RecurringServiceProvider View Factory composer (View
              Factory contract resolved via $this->app->make(), never
-             the view() global helper). Badge hides when count = 0;
-             caps at "99+" when > 99. --}}
+             the view() global helper). Compound badge: when the
+             DriftAlerts composer (DriftAlertsServiceProvider) reports
+             a positive `driftOpenCount`, a rose-50 secondary chip
+             renders alongside the existing pending pill. Either pill
+             hides individually when its count is 0; both hide when
+             both are 0. Each count caps at "99+" when > 99. --}}
+        @php
+            $pendingCount = (int) ($recurringPendingCount ?? 0);
+            $driftCount = (int) ($driftOpenCount ?? 0);
+            $pendingLabel = $pendingCount > 99 ? '99+' : (string) $pendingCount;
+            $driftLabel = $driftCount > 99 ? '99+' : (string) $driftCount;
+        @endphp
         <a
             href="{{ route('recurring.index') }}"
+            @if ($pendingCount > 0 || $driftCount > 0)
+                aria-label="Recurring;{{ $pendingCount > 0 ? ' '.$pendingLabel.' pending recurring suggestions' : '' }}{{ $pendingCount > 0 && $driftCount > 0 ? ',' : '' }}{{ $driftCount > 0 ? ' '.$driftLabel.' open drift alerts' : '' }}"
+            @endif
             class="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm {{ $isActive('/recurring') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
         >
             Recurring
-            @if (($recurringPendingCount ?? 0) > 0)
-                <span
-                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white"
-                    style="font-variant-numeric: tabular-nums;"
-                >{{ $recurringPendingCount > 99 ? '99+' : $recurringPendingCount }}</span>
+            @if ($pendingCount > 0 || $driftCount > 0)
+                <span class="inline-flex items-center gap-1">
+                    @if ($pendingCount > 0)
+                        <span
+                            class="inline-flex items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white"
+                            style="font-variant-numeric: tabular-nums;"
+                        >{{ $pendingLabel }}</span>
+                    @endif
+                    @if ($driftCount > 0)
+                        <span
+                            class="inline-flex items-center justify-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700"
+                            style="font-variant-numeric: tabular-nums;"
+                        >{{ $driftLabel }}<span class="ml-0.5" aria-hidden="true">↗</span></span>
+                    @endif
+                </span>
             @endif
         </a>
 
