@@ -34,12 +34,16 @@ abstract class FingerprintDisposition extends Data
         return new DuplicateDisposition;
     }
 
-    public static function enriched(int $existingId, ?string $fromSourceRef, string $toSourceRef): EnrichedDisposition
+    /**
+     * @param  array<string, array{stored: mixed, incoming: mixed}>  $conflictingFields
+     */
+    public static function enriched(int $existingId, ?string $fromSourceRef, string $toSourceRef, array $conflictingFields = []): EnrichedDisposition
     {
         return new EnrichedDisposition(
             existingTransactionId: $existingId,
             fromSourceRef: $fromSourceRef,
             toSourceRef: $toSourceRef,
+            conflictingFields: $conflictingFields,
         );
     }
 
