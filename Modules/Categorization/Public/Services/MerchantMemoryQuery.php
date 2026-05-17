@@ -12,10 +12,10 @@ use Modules\Categorization\Public\Dto\MerchantMemoryDto;
 use Modules\Core\Models\User;
 
 /**
- * Read-side projection of merchant_memories. Used by the future
- * correction-divergence drawer panel ("Auto-categorized from merchant
- * history") + as a reference query for RuleEvaluator (which inlines
- * the same JOIN shape for the hot-path import lookup).
+ * Read-side projection of merchant_memories. Used by the correction-
+ * divergence drawer panel ("Auto-categorized from merchant history")
+ * and as a reference query for RuleEvaluator (which inlines the same
+ * JOIN shape for the hot-path import lookup).
  *
  * Every read scopes by `user_id` so a foreign user's memory never
  * surfaces.

@@ -31,8 +31,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
  * Constructor-free Livewire component; service collaborators arrive
  * as parameters on action methods + render(). The strict-rules
  * ruleset forbids property-based constructor injection on Component
- * subclasses, and `auth()` / `Auth::user()` / facade lookups are
- * out of bounds project-wide.
+ * subclasses; `auth()` / `Auth::user()` / facade lookups are out of
+ * bounds project-wide.
  */
 final class RulesPage extends Component
 {
