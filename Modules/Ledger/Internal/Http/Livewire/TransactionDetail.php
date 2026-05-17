@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
+use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -151,6 +152,107 @@ final class TransactionDetail extends Component
         $this->dispatch('toast', message: $message);
 
         $this->reclassifyType = '';
+    }
+
+    /**
+     * Reclassify the transaction's category. Reads the row's prior
+     * `auto_category_provenance` BEFORE invoking AssignsCategory so
+     * the correction-divergence bridge can compare against the rule
+     * that fired at import time. After AssignsCategory returns (which
+     * already dispatches the framework `CategorizationDiverged`
+     * event), this method re-emits the Livewire-local
+     * `correction-divergence:fire` event so the globally-mounted
+     * CorrectionDivergenceToast SFC surfaces the Update rule / Keep
+     * current rule choice within the same request lifecycle.
+     *
+     * The dual-channel pattern (framework event + Livewire-local
+     * event) keeps the framework event reusable by non-UI
+     * consumers (audit-log, analytics) while the local event drives
+     * the toast without depending on a redirect or broadcaster.
+     *
+     * Cross-user safety: AssignsCategory's implementation scopes the
+     * UPDATE by user_id; a foreign-user transaction returns 0 rows
+     * affected and no event fires. The Livewire-local
+     * `correction-divergence:fire` event carries the explicit
+     * `$userId` field so the toast SFC can perform its T-07-09
+     * cross-user guard defensively.
+     */
+    public function reclassifyCategory(
+        int $newCategoryId,
+        CurrentUser $currentUser,
+        AssignsCategory $assign,
+        DatabaseManager $db,
+    ): void {
+        $user = $currentUser->user();
+
+        $priorProvenance = self::readPriorProvenance($db, $this->transactionId, $user->id);
+
+        $affected = ($assign)($this->transactionId, $newCategoryId, $user);
+        if ($affected === 0) {
+            return;
+        }
+
+        if ($priorProvenance === null) {
+            return;
+        }
+
+        $source = $priorProvenance['source'] ?? null;
+        if ($source !== 'rule') {
+            return;
+        }
+
+        $ruleIdRaw = $priorProvenance['rule_id'] ?? null;
+        if (! is_int($ruleIdRaw) && ! is_numeric($ruleIdRaw)) {
+            return;
+        }
+        $ruleId = (int) $ruleIdRaw;
+        if ($ruleId === 0) {
+            return;
+        }
+
+        $oldCategoryRaw = $priorProvenance['category_id'] ?? null;
+        if (! is_int($oldCategoryRaw) && ! is_numeric($oldCategoryRaw)) {
+            return;
+        }
+        $oldCategoryId = (int) $oldCategoryRaw;
+
+        if ($newCategoryId === $oldCategoryId) {
+            return;
+        }
+
+        $this->dispatch(
+            'correction-divergence:fire',
+            transactionId: $this->transactionId,
+            ruleId: $ruleId,
+            oldCategoryId: $oldCategoryId,
+            newCategoryId: $newCategoryId,
+            userId: $user->id,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function readPriorProvenance(DatabaseManager $db, int $transactionId, int $userId): ?array
+    {
+        $raw = $db->connection()
+            ->table('transactions')
+            ->where('id', $transactionId)
+            ->where('user_id', $userId)
+            ->value('auto_category_provenance');
+
+        if (! is_string($raw) || $raw === '') {
+            return null;
+        }
+
+        /** @var mixed $decoded */
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        /** @var array<string, mixed> $decoded */
+        return $decoded;
     }
 
     public function render(CurrentUser $currentUser, ViewFactory $views): View
