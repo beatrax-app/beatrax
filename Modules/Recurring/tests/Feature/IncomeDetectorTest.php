@@ -336,6 +336,64 @@ it('does not touch expense-type transactions', function (): void {
     expect($count)->toBe(0);
 })->group('income-detector-ignores-expenses');
 
+it('leaves a snoozed series untouched — refreshing metrics during snooze would wake the row up', function (): void {
+    // Seed 12 monthly occurrences, run the detector to produce a
+    // pending series, transition it to snoozed, then run the detector
+    // again. The amount on the row must NOT have moved.
+    $start = CarbonImmutable::parse('2024-04-25');
+    for ($i = 0; $i < 12; $i++) {
+        $date = $start->addMonths($i)->toDateString();
+        idtSeedTx(
+            $this->db, $this->user, $this->account, $this->run,
+            $date,
+            280000, 'EUR', 280000, 'EUR',
+            'snooze probe employer', 'NL00SNZ00000000001',
+            'income',
+            7000 + $i,
+            'snz-'.$i,
+        );
+    }
+
+    idtRunJob($this->user);
+
+    /** @var RecurringSeries $row */
+    $row = RecurringSeries::query()
+        ->where('user_id', $this->user->id)
+        ->where('direction', 'income')
+        ->firstOrFail();
+    expect($row->latest_amount_minor)->toBe(280000);
+
+    /** @var RecurringSeriesStateMachine $machine */
+    $machine = $this->app->make(RecurringSeriesStateMachine::class);
+    $machine->transition(
+        $row,
+        'snoozed',
+        'user_action',
+        'user',
+        notes: 'snoozed_until=2026-09-01 00:00:00',
+        extraColumns: ['snoozed_until' => '2026-09-01 00:00:00'],
+    );
+
+    // Add a fresh occurrence with a different amount so a refresh
+    // would noticeably change the row.
+    idtSeedTx(
+        $this->db, $this->user, $this->account, $this->run,
+        '2025-05-25',
+        290000, 'EUR', 290000, 'EUR',
+        'snooze probe employer', 'NL00SNZ00000000001',
+        'income',
+        7999,
+        'snz-new',
+    );
+
+    idtRunJob($this->user);
+
+    /** @var RecurringSeries $fresh */
+    $fresh = RecurringSeries::query()->findOrFail($row->id);
+    expect($fresh->state)->toBe('snoozed');
+    expect($fresh->latest_amount_minor)->toBe(280000);
+})->group('snoozed-series-skipped-on-sweep');
+
 it('suppresses every cadence variant when the counterparty has a rejected series — partial cadence-only un-rejection is not supported', function (): void {
     // Seed 12 monthly occurrences for an income source, run the
     // detector once so a series exists, mark that series rejected,
