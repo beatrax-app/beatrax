@@ -1,0 +1,20 @@
+From: googleplay-noreply@google.com
+To: user@example.test
+Subject: Your Google Play Order Receipt
+Date: Sun, 17 May 2026 09:30:00 +0000
+Message-ID: <gp-deterministic-1@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hello,
+
+Thanks for your order!
+
+Order Number: GPA.1234-5678-9012-34567
+Date: May 17, 2026
+Item: Spotify Premium (1 month)
+Price: $12.99 USD
+Total: $12.99 USD
+
+Visit Google Play to view your order history.
