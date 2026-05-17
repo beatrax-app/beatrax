@@ -17,7 +17,7 @@ use stdClass;
 /**
  * Public read API over `recurring_series`. Every method scopes by
  * `user_id` and returns Spatie-Data DTOs so the review page, the
- * fixed-payments view, the dashboard tile, and Phase 9 / Phase 10
+ * fixed-payments view, the dashboard tile, and downstream module
  * listeners read a single canonical shape.
  *
  * Cross-user reads return an empty list or `null`; cross-user 404s
@@ -28,7 +28,9 @@ use stdClass;
  * Cursor pagination on `id` matches the chains-side review queue.
  * `approvedForUser` orders by `monthly_equivalent_minor DESC` then
  * `id DESC` so the dashboard tile + fixed-payments view consume a
- * stable, "largest first" projection.
+ * stable, "largest first" projection; its cursor is a composite of
+ * the cursor row's `(monthly_equivalent_minor, id)` so subsequent
+ * pages follow the primary sort instead of an id-only window.
  */
 final readonly class RecurringSeriesQuery
 {

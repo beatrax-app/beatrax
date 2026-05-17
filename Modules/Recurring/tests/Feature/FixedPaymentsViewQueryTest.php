@@ -19,10 +19,10 @@ use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
  * containers. The N+1 budget is enforced via a `DB::listen` query-count
  * assertion: viewForUser MUST execute in ≤ 3 queries regardless of N.
  *
- * The D-829 chain-fallback semantics: when the series'
+ * Chain-fallback semantics: when the series'
  * latest_funding_chain_link_id points at a chain_link in state
  * `unresolved`/`null`, fall back to the prior occurrence's chain.
- * Phase 8 ships the empty `transfers` section as documented structure;
+ * The `transfers` section ships empty as documented structure;
  * transfers themselves are not detected as series here.
  */
 
@@ -175,7 +175,7 @@ it('runs viewForUser in ≤ 3 queries for N=12 series (N+1 budget per RESEARCH Q
 it('applies the per-cadence monthly multiplier in monthlyEquivalentTotals (weekly × 4.33, monthly × 1, quarterly ÷ 3, yearly ÷ 12)', function (): void {
     // monthly_equivalent_minor is what the detector wrote — the query
     // sums that column. The detector encodes the cadence multiplier
-    // at write time per D-826.
+    // at write time.
     fpvSeries($this->user, 'expense', 'weekly-thing', [
         'cadence' => 'weekly',
         'monthly_equivalent_minor' => -4330,
@@ -220,15 +220,16 @@ it('topByMonthlyEquivalent limits to 6 by default and orders DESC by absolute mo
 
     expect($top)->toHaveCount(6);
     // The most-negative row (-1900) is "largest" by absolute monthly
-    // equivalent — D-826 ordering surfaces the biggest fixed cost first.
+    // equivalent — the projection surfaces the biggest fixed cost
+    // first.
     expect($top[0]->monthlyEquivalent->toMinor())->toBe(-1900);
 })->group('top-by-monthly-equivalent-limits-to-6');
 
-it('falls back to a prior occurrence chain link when the latest chain is null (D-829)', function (): void {
-    // The chain_links + transactions setup needed to genuinely test
-    // D-829 requires a full chain row. The simpler form here pins the
-    // observable behaviour: a series with `latest_funding_chain_link_id`
-    // null carries `latestFundingChainLinkId` null in the DTO, AND the
+it('falls back to a prior occurrence chain link when the latest chain is null', function (): void {
+    // A full chain_links + transactions setup is needed to fully test
+    // the fallback walk. The simpler form here pins the observable
+    // behaviour: a series with `latest_funding_chain_link_id` null
+    // carries `latestFundingChainLinkId` null in the DTO, AND the
     // query path is set up so a future per-row fallback lookup can
     // override. The fuller fallback walk is exercised by the
     // RecurringPage feature test against a seeded chain_link + prior
@@ -324,7 +325,7 @@ it('exposes the chain id on the DTO when latest_funding_chain_link_id is set on 
     expect($sections['expenses'][0]->latestFundingChainLinkId)->toBe($chainLinkId);
 })->group('chain-link-id-on-dto');
 
-it('walks prior occurrences for a chain link when the latest is null but a previous occurrence carries a confirmed chain (D-829)', function (): void {
+it('walks prior occurrences for a chain link when the latest is null but a previous occurrence carries a confirmed chain', function (): void {
     // Set up: one series with NULL latest_funding_chain_link_id but a
     // prior occurrence row whose linked transaction has a confirmed
     // chain — the fallback walker must find it.

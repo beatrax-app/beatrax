@@ -107,7 +107,7 @@ final class IncomeSeriesDetector implements SeriesDetector
             }
 
             // IBAN-primary cluster key with normalized-description
-            // fallback (D-817). An IBAN identifies the upstream payer
+            // fallback. An IBAN identifies the upstream payer
             // (employer, freelance client) more stably than the free-
             // form description — banks rewrite the description text
             // over time but the SEPA IBAN is constant.

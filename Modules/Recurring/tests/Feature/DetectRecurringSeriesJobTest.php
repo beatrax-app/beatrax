@@ -23,9 +23,10 @@ use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
  *
  * The job is invoked synchronously via `handle(...)` so the test
  * exercises the snooze-expiry pass, the container-tagged detector
- * iteration, and the per-fixture cluster outcomes against the Wave 0
- * fixture corpus. Queue dispatch + worker lifecycle is covered by the
- * Chains job tests and is intentionally out of scope here.
+ * iteration, and the per-fixture cluster outcomes against the
+ * synthesised fixture corpus. Queue dispatch + worker lifecycle is
+ * covered by the Chains job tests and is intentionally out of scope
+ * here.
  */
 
 function drsjUser(string $email): User
@@ -64,7 +65,7 @@ function drsjImportRun(User $user, string $sha): ImportRun
 
 /**
  * Seeds a transactions row mirroring the canonical fixture shape. The
- * Wave 0 corpus uses `original_amount_minor` / `original_currency` as
+ * fixture corpus uses `original_amount_minor` / `original_currency` as
  * the per-fixture key names; the transactions schema names the native-
  * currency columns `amount_minor` / `currency` and the settled-side
  * pair `settled_amount_minor` / `settled_currency`. The detector reads
@@ -111,7 +112,7 @@ function drsjSeedTx(
 }
 
 /**
- * Loads a Wave 0 fixture and seeds the matching transactions. Each
+ * Loads a fixture file and seeds the matching transactions. Each
  * fixture row's `original_amount_minor` / `original_currency` becomes
  * the transactions native-currency pair; the `amount_minor` /
  * `currency` fixture pair becomes the settled-currency pair (this is
@@ -518,7 +519,7 @@ it('uses container-tag dispatch — DetectRecurringSeriesJob receives the recurr
     expect($collected)->toContain(ExpenseSeriesDetector::class);
 })->group('container-tag');
 
-it('does not detect income-type transactions in Plan 03 (income detector lands in Plan 04)', function (): void {
+it('does not detect income-type transactions when only the expense detector is wired', function (): void {
     drsjSeedFixture($this->db, $this->user, $this->account, $this->run, 'monthly-salary');
 
     /** @var ExpenseSeriesDetector $detector */

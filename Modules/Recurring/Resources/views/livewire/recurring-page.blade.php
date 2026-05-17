@@ -1,15 +1,16 @@
 {{--
     /recurring page — grouped expense + income + transfers sections
-    with the net-flow header at the top per D-818 / D-819 / D-852.
+    with the net-flow header at the top of the page.
 
-    Each row carries the latest amount (original currency primary +
-    EUR shadow when distinct per D-840), the EUR monthly equivalent
-    (with the per-cadence multiplier already applied by the detector
-    at write time per D-826), a chain badge when a confirmed/candidate
-    funding chain is attached, a category badge (read-only — wired
-    behind MerchantMemoryQuery in a later plan), and the next-expected-
-    charge text (dim/italic via `data-confidence-low="true"` when the
-    cadence stddev tripped the low-confidence signal per D-830).
+    Each row carries the latest amount (original currency primary,
+    EUR shadow when the original currency is not EUR), the EUR
+    monthly equivalent (the detector applies the per-cadence
+    multiplier at write time so this read site only formats), a
+    chain badge when a confirmed/candidate funding chain is attached,
+    a category badge (read-only via MerchantMemoryQuery), and the
+    next-expected-charge text — rendered dim/italic via
+    `data-confidence-low="true"` when the cadence standard deviation
+    tripped the low-confidence signal.
 
     Blade default `{{ }}` escaping for every interpolation. No raw
     HTML output anywhere.
