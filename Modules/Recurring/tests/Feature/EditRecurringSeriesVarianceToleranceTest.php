@@ -235,8 +235,7 @@ it('honours the new tolerance on the next detector sweep so a wider amount band 
 
     // Quench the unused-container linter — Container::getInstance()
     // is referenced in the helper's Use list for the per-fixture
-    // dispatch shape from Plan 04 even when this slice does not need
-    // it directly.
+    // dispatch shape even when this slice does not need it directly.
     expect(Container::getInstance())->not->toBeNull();
     expect(Dispatcher::class)->toBeString();
 })->group('detector-honours-new-tolerance');

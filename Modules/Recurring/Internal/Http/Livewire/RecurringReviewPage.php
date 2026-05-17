@@ -40,9 +40,10 @@ final class RecurringReviewPage extends Component
     public ?int $cursorId = null;
 
     /**
-     * Selected series ids for the bulk-action bar — full wiring lands
-     * in Plan 05. The Blade view renders checkboxes alongside each
-     * row so the per-row markup already exposes the seam.
+     * Selected series ids for the bulk-action bar. The Blade view
+     * renders a checkbox alongside each row; the sticky action bar
+     * surfaces only when the list is non-empty and calls
+     * `bulkApprove()` / `bulkReject()`.
      *
      * @var array<int, int>
      */

@@ -6,9 +6,9 @@ use Carbon\CarbonImmutable;
 use Modules\Recurring\Internal\CadenceInferrer;
 
 /*
- * Cadence inference dataset — snap-band boundaries (D-843), missed-
- * interval tolerance (D-844), confidence-low signalling (D-830) and the
- * two-occurrence minimum (D-803). Each row drives a single call into
+ * Cadence inference dataset — snap-band boundaries, missed-interval
+ * tolerance, the confidence-low signal, and the two-occurrence
+ * minimum. Each row drives a single call into
  * `CadenceInferrer::infer($timestamps)` and asserts the resulting
  * cadence class plus, where load-bearing, the missed_count and
  * confidence_low flags.

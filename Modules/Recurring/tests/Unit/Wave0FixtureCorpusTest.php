@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 /**
- * Validates the structural shape of the Wave 0 fixture corpus that
- * later waves' contract test consumes. Each synthesised fixture must
- * return a `['transactions' => list<array>, 'expected' => array]`
- * pair, and every transaction row must carry the canonical key set
- * the detector reads.
+ * Validates the structural shape of the synthesised fixture corpus
+ * that the detector contract test consumes. Each fixture must return
+ * a `['transactions' => list<array>, 'expected' => array]` pair,
+ * and every transaction row must carry the canonical key set the
+ * detector reads.
  */
 it('exposes exactly 11 synthesised fixture files', function (): void {
     $files = glob(__DIR__.'/../fixtures/synthesised/*.php');

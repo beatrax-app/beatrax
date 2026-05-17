@@ -213,7 +213,7 @@ it('drops income below the recurring_income_min_amount_minor threshold so small 
     expect($count)->toBe(0);
 })->group('income-threshold');
 
-it('produces two distinct income series for multi-IBAN payroll (D-821)', function (): void {
+it('produces two distinct income series for multi-IBAN payroll', function (): void {
     idtSeedFixture($this->db, $this->user, $this->account, $this->run, 'two-employer-salary');
 
     idtRunJob($this->user);
@@ -231,7 +231,7 @@ it('produces two distinct income series for multi-IBAN payroll (D-821)', functio
     expect($series[0]->cluster_key)->not->toBe($series[1]->cluster_key);
 })->group('two-employer');
 
-it('falls back to counterparty_normalized when IBAN is null (D-817 fallback)', function (): void {
+it('falls back to counterparty_normalized when IBAN is null', function (): void {
     // 12 monthly income rows from a freelance client with NULL IBAN but
     // consistent normalized description; should cluster on description.
     $start = CarbonImmutable::parse('2025-04-25');
@@ -260,7 +260,7 @@ it('falls back to counterparty_normalized when IBAN is null (D-817 fallback)', f
     expect($series[0]->detected_name)->toBe('freelance client x');
 })->group('iban-missing-falls-back-to-description');
 
-it('clusters mixed-currency income (EUR vs USD same employer) into two separate series per D-839', function (): void {
+it('clusters mixed-currency income (EUR vs USD same employer) into two separate series', function (): void {
     // Six monthly EUR + six monthly USD income rows from the same IBAN.
     // Each currency must cluster as its own series.
     $start = CarbonImmutable::parse('2025-10-25');

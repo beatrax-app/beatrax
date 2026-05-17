@@ -17,10 +17,10 @@ use Modules\Recurring\Models\RecurringSeries;
 /*
  * Recurring detection end-to-end contract.
  *
- * Loads each Wave 0 fixture, seeds the matching transactions, runs the
- * sweep job synchronously over both the expense AND income detectors,
- * and asserts each detector produces the expected per-direction series
- * count per fixture.
+ * Loads each synthesised fixture, seeds the matching transactions,
+ * runs the sweep job synchronously over both the expense AND income
+ * detectors, and asserts each detector produces the expected per-
+ * direction series count per fixture.
  */
 
 /**
@@ -121,7 +121,7 @@ function rdctSeedFixture(
     }
 }
 
-it('asserts the expected expense + income series counts for each Wave 0 fixture', function (string $fixtureName, int $expectedExpenseSeriesCount, int $expectedIncomeSeriesCount): void {
+it('asserts the expected expense + income series counts for each synthesised fixture', function (string $fixtureName, int $expectedExpenseSeriesCount, int $expectedIncomeSeriesCount): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
 
     /** @var DatabaseManager $db */
@@ -164,7 +164,7 @@ it('asserts the expected expense + income series counts for each Wave 0 fixture'
     CarbonImmutable::setTestNow();
 })->with(rdctExpenseFixtureExpectations());
 
-it('produces no duplicate series rows when the full Wave 0 corpus runs twice through DetectRecurringSeriesJob (full-corpus idempotency)', function (): void {
+it('produces no duplicate series rows when the full fixture corpus runs twice through DetectRecurringSeriesJob (full-corpus idempotency)', function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
 
     /** @var DatabaseManager $db */
@@ -208,7 +208,7 @@ it('produces no duplicate series rows when the full Wave 0 corpus runs twice thr
     $afterSecondRun = RecurringSeries::query()->where('user_id', $user->id)->count();
 
     // Re-running the sweep against the same transaction set must NOT
-    // create additional series rows. The Phase 8 detector keys on
+    // create additional series rows. The detector keys on
     // (user_id, direction, cluster_key, latest_currency) so duplicate
     // detection collapses cleanly.
     expect($afterSecondRun)->toBe($afterFirstRun);

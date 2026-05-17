@@ -8,9 +8,9 @@ namespace Modules\Recurring\Public\Events;
  * Dispatched the first time a sweep run promotes a candidate cluster
  * into a `pending` recurring_series row.
  *
- * Downstream consumers (Phase 9 / Phase 10) listen to surface a calm
- * top-nav badge and to schedule the user-facing review prompt without
- * coupling to the detector internals.
+ * Downstream consumers listen to surface the top-nav badge and to
+ * schedule the user-facing review prompt without coupling to the
+ * detector internals.
  */
 final readonly class RecurringSeriesDetected
 {
