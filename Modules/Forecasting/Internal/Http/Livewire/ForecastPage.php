@@ -533,21 +533,31 @@ final class ForecastPage extends Component
             }
             $b = $this->pointAtIndex($baseline, $horizonKey);
             $s = $this->pointAtIndex($scenario, $horizonKey);
+            // If either DTO is missing the day-N point (malformed
+            // result_json), skip this horizon rather than substituting
+            // the last-available point's value as if it were day-N.
+            if ($b === null || $s === null) {
+                continue;
+            }
             $result[$horizonKey] = $s - $b;
         }
 
         return $result;
     }
 
-    private function pointAtIndex(ForecastDto $dto, int $dayOffset): int
+    private function pointAtIndex(ForecastDto $dto, int $dayOffset): ?int
     {
         $points = $dto->points;
         if ($points === []) {
-            return 0;
+            return null;
         }
-        $idx = min(count($points) - 1, $dayOffset);
+        if ($dayOffset > count($points) - 1) {
+            // Missing day-N point — surface a "skip" signal rather than
+            // silently substituting the last available point.
+            return null;
+        }
 
-        return $points[$idx]->pointMinor;
+        return $points[$dayOffset]->pointMinor;
     }
 
     /**
