@@ -142,7 +142,7 @@ it('sums per-account point estimates in EUR on the aggregate chart payload', fun
     // assert the aggregated y value (100000 + 50000 = 1500 EUR-major)
     // appears in the decoded JSON.
     $matches = [];
-    expect(preg_match("/data-testid=\"all-accounts-aggregate-chart\"[^>]*data-options='([^']+)'/", $content, $matches))->toBe(1);
+    expect(preg_match('/data-testid="all-accounts-aggregate-chart"[^>]*data-options="([^"]+)"/', $content, $matches))->toBe(1);
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
     expect($decoded)->toBeArray();
     expect($decoded['series'][0]['data'][0]['y'])->toBe(1500);
@@ -161,7 +161,7 @@ it('renders the buffer floor as the sum of per-account forecast_min_buffer_minor
     // total buffer floor in major units) should equal 800 = (50000 +
     // 30000) / 100.
     $matches = [];
-    expect(preg_match("/data-testid=\"all-accounts-aggregate-chart\"[^>]*data-options='([^']+)'/", $content, $matches))->toBe(1);
+    expect(preg_match('/data-testid="all-accounts-aggregate-chart"[^>]*data-options="([^"]+)"/', $content, $matches))->toBe(1);
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
     expect($decoded)->toBeArray();
     expect($decoded['annotations']['yaxis'][0]['y2'])->toBe(800);
