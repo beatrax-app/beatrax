@@ -12,6 +12,7 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
 use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
+use Modules\Forecasting\Internal\Http\Livewire\ForecastHighlightsTile;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnDriftDismissed;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
@@ -84,6 +85,10 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(SetAccountForecastBuffer::class);
         $this->app->singleton(ForecastHighlightsQuery::class);
 
+        // Wave 3 dashboard tile Livewire SFC (singleton-bound so it
+        // resolves once per request).
+        $this->app->singleton(ForecastHighlightsTile::class);
+
         // Wave 2 Public read API + DTO mapper.
         $this->app->singleton(ForecastDtoMapper::class);
         $this->app->singleton(ForecastQuery::class);
@@ -104,6 +109,7 @@ final class ForecastingServiceProvider extends ServiceProvider
 
         $livewire->component('forecasting.forecast-page', ForecastPage::class);
         $livewire->component('forecasting.account-buffer-editor', AccountBufferEditor::class);
+        $livewire->component('forecasting.forecast-highlights-tile', ForecastHighlightsTile::class);
 
         $this->registerListeners($events);
         $this->registerTopNavBadgeComposer();
@@ -152,17 +158,23 @@ final class ForecastingServiceProvider extends ServiceProvider
         $app = $this->app;
         $factory = $app->make(ViewFactoryContract::class);
 
-        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app): void {
-            // Reading $app->make(CurrentUser::class) here keeps the
-            // closure shape identical to the wave-3 swap-in target so
-            // adding the active-shortfall count is a body-only change.
+        /** @var array<int, int> $cache */
+        $cache = [];
+
+        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app, &$cache): void {
             $currentUser = $app->make(CurrentUser::class);
             if (! $currentUser->isAuthenticated()) {
                 $compose->with('forecastShortfallCount', 0);
 
                 return;
             }
-            $compose->with('forecastShortfallCount', 0);
+            $user = $currentUser->user();
+            $userId = $user->id;
+            if (! array_key_exists($userId, $cache)) {
+                $query = $app->make(ForecastHighlightsQuery::class);
+                $cache[$userId] = $query->activeShortfallCountForUser($user);
+            }
+            $compose->with('forecastShortfallCount', $cache[$userId]);
         });
     }
 }
