@@ -41,7 +41,10 @@ return new class extends Migration
     {
         $this->schema()->create('forecast_scenario_mutations', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
+            // user_id is non-nullable (chain_resolution_runs + forecast_runs
+            // precedent): every mutation belongs to exactly one user, and a
+            // NULL would silently escape per-user filters.
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('forecast_scenario_id')->constrained('forecast_scenarios')->cascadeOnDelete();
             $table->string('kind', 40);
             $table->unsignedBigInteger('target_series_id')->nullable();

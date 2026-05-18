@@ -16,8 +16,14 @@ use Illuminate\Database\Schema\Builder;
  * permitted (enforced by the noScenarioMutationsJoinedToTransactionQueries
  * arch test).
  *
- * `user_id` is nullable + cascade-on-delete: scenarios are user-owned
- * and deleting the user wipes their scenarios cleanly.
+ * `user_id` is non-nullable + cascade-on-delete: scenarios are
+ * user-owned and deleting the user wipes their scenarios cleanly.
+ * Non-null at the schema layer (matching the chain_resolution_runs +
+ * forecast_runs precedent) so a future code path that forgets to set
+ * user_id surfaces immediately at INSERT time rather than landing a
+ * NULL row that escapes every `where('user_id', ...)` filter — and so
+ * SQLite's NULL-distinct-in-UNIQUE behaviour cannot let two NULL-user
+ * scenarios with the same name coexist.
  *
  * Indexes:
  *   - UNIQUE(user_id, name) — scenario names are unique per-user, so
@@ -32,7 +38,7 @@ return new class extends Migration
     {
         $this->schema()->create('forecast_scenarios', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('name', 120);
             $table->text('description')->nullable();
             $table->timestamps();
