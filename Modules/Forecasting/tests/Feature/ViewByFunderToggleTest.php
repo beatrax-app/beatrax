@@ -1,0 +1,280 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Chains\Models\ChainLink;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Forecasting\Internal\Pipeline\ChainAwareForecastRouter;
+use Modules\Forecasting\Internal\Pipeline\ForecastContribution;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Models\Transaction;
+use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Models\RecurringSeriesOccurrence;
+
+uses(RefreshDatabase::class);
+
+/*
+ * Feature coverage for the `viewByFunder=true` collapse semantics that
+ * the ChainAwareForecastRouter applies as a final aggregation step.
+ *
+ * The collapse runs AFTER chain rewriting + ICS bulk-iDEAL synthesis,
+ * so all contributions are already on their funder account by the time
+ * the aggregation starts. The aggregator groups by `(accountId, date)`
+ * and sums signed point/low/high values; the resulting list has at
+ * most one entry per (account, day) pair.
+ */
+
+function vbftClock(): Clock
+{
+    return new class implements Clock
+    {
+        public function now(): CarbonImmutable
+        {
+            return CarbonImmutable::parse('2026-05-01 00:00:00');
+        }
+    };
+}
+
+function vbftUser(string $email): User
+{
+    return User::query()->create([
+        'email' => $email,
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+}
+
+function vbftAccount(User $user, string $kind, string $slug): Account
+{
+    return Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'vbft '.$slug,
+        'slug' => $slug,
+        'kind' => $kind,
+        'iban' => 'VBFT-'.strtoupper($slug),
+        'default_currency' => 'EUR',
+    ]);
+}
+
+beforeEach(function (): void {
+    $this->user = vbftUser('vbft@diederik.test');
+    $this->router = app(ChainAwareForecastRouter::class);
+});
+
+it('returns per-series contributions unchanged when viewByFunder is false', function (): void {
+    $asn = vbftAccount($this->user, 'asn', 'asn');
+
+    $a = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-15'),
+        pointMinor: -1000,
+        lowMinor: -1100,
+        highMinor: -900,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: 101,
+        accountId: $asn->id,
+    );
+    $b = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-15'),
+        pointMinor: -2000,
+        lowMinor: -2200,
+        highMinor: -1800,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: 202,
+        accountId: $asn->id,
+    );
+
+    $routed = $this->router->route([$a, $b], $this->user, viewByFunder: false);
+
+    // No chain link + no next settlement → both contributions land on the same
+    // account untouched; the per-series identity is preserved.
+    expect($routed)->toHaveCount(2);
+    expect($routed[0]->seriesId)->toBe(101);
+    expect($routed[1]->seriesId)->toBe(202);
+});
+
+it('aggregates per-day per-account contributions when viewByFunder is true', function (): void {
+    $asn = vbftAccount($this->user, 'asn', 'asn');
+
+    $a = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-15'),
+        pointMinor: -1000,
+        lowMinor: -1100,
+        highMinor: -900,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: 101,
+        accountId: $asn->id,
+    );
+    $b = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-15'),
+        pointMinor: -2000,
+        lowMinor: -2200,
+        highMinor: -1800,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: 202,
+        accountId: $asn->id,
+    );
+
+    $routed = $this->router->route([$a, $b], $this->user, viewByFunder: true);
+
+    // Single (accountId, date) bucket — point/low/high are signed sums.
+    expect($routed)->toHaveCount(1);
+    expect($routed[0]->pointMinor)->toBe(-3000);
+    expect($routed[0]->lowMinor)->toBe(-3300);
+    expect($routed[0]->highMinor)->toBe(-2700);
+    expect($routed[0]->seriesId)->toBe(0); // Aggregate marker.
+    expect($routed[0]->accountId)->toBe($asn->id);
+});
+
+it('keeps contributions on distinct days as separate entries even when viewByFunder is true', function (): void {
+    $asn = vbftAccount($this->user, 'asn', 'asn');
+
+    $a = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-15'),
+        pointMinor: -1000,
+        lowMinor: -1100,
+        highMinor: -900,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: 101,
+        accountId: $asn->id,
+    );
+    $b = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-06-15'),
+        pointMinor: -2000,
+        lowMinor: -2200,
+        highMinor: -1800,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: 101,
+        accountId: $asn->id,
+    );
+
+    $routed = $this->router->route([$a, $b], $this->user, viewByFunder: true);
+
+    expect($routed)->toHaveCount(2);
+});
+
+it('collapses chain-resolved per-series contributions onto the funder ASN account when viewByFunder is true', function (): void {
+    $asn = vbftAccount($this->user, 'asn', 'asn');
+    $paypal = vbftAccount($this->user, 'paypal', 'paypal');
+
+    $run = ImportRun::query()->create([
+        'user_id' => $this->user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/vbft.csv',
+        'sha256' => str_repeat('v', 64),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
+    ]);
+
+    $row = 1;
+    $rowFn = static function () use (&$row): int {
+        return $row++;
+    };
+
+    $funded = Transaction::query()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $paypal->id,
+        'type' => 'expense',
+        'posted_at' => '2026-04-15',
+        'booked_at' => '2026-04-15 09:00:00',
+        'value_date' => '2026-04-15',
+        'amount_minor' => -12000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -12000,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'Netflix',
+        'counterparty_normalized' => 'netflix',
+        'normalization_version' => 3,
+        'source_format' => 'asn-csv',
+        'import_run_id' => $run->id,
+        'source_row_index' => $rowFn(),
+        'fingerprint' => str_pad('vbft-funded', 64, 'f', STR_PAD_LEFT),
+        'fingerprint_version' => 3,
+    ]);
+    $funder = Transaction::query()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $asn->id,
+        'type' => 'expense',
+        'posted_at' => '2026-04-15',
+        'booked_at' => '2026-04-15 09:00:00',
+        'value_date' => '2026-04-15',
+        'amount_minor' => -12000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -12000,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'PayPal ASN',
+        'counterparty_normalized' => 'paypal asn',
+        'normalization_version' => 3,
+        'source_format' => 'asn-csv',
+        'import_run_id' => $run->id,
+        'source_row_index' => $rowFn(),
+        'fingerprint' => str_pad('vbft-funder', 64, 'g', STR_PAD_LEFT),
+        'fingerprint_version' => 3,
+    ]);
+
+    $series = RecurringSeries::query()->create([
+        'user_id' => $this->user->id,
+        'cadence' => 'monthly',
+        'direction' => 'expense',
+        'detected_name' => 'Netflix',
+        'state' => 'approved',
+        'variance_tolerance_percent' => 5,
+        'latest_amount_minor' => -12000,
+        'latest_currency' => 'EUR',
+        'cluster_key' => 'vbft-netflix',
+        'next_expected_at' => '2026-05-15',
+    ]);
+    RecurringSeriesOccurrence::query()->create([
+        'user_id' => $this->user->id,
+        'recurring_series_id' => $series->id,
+        'transaction_id' => $funded->id,
+        'observed_at' => '2026-04-15',
+        'observed_amount_minor' => -12000,
+        'observed_currency' => 'EUR',
+    ]);
+
+    ChainLink::query()->create([
+        'user_id' => $this->user->id,
+        'from_transaction_id' => $funded->id,
+        'to_transaction_id' => $funder->id,
+        'kind' => 'paypal_funding',
+        'state' => 'confirmed',
+        'confidence' => 1.0,
+        'resolver' => 'user',
+        'evidence' => json_encode(['signature_hash' => 'paypal-netflix']),
+    ]);
+
+    // A second PayPal-funded series with the same chain target ASN
+    // funder + same charge date — these two should collapse into one
+    // aggregate entry on the ASN funder after viewByFunder=true.
+    $contribA = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-15'),
+        pointMinor: -12000,
+        lowMinor: -12600,
+        highMinor: -11400,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: $series->id,
+        accountId: $paypal->id, // Pre-routing, on the original account.
+    );
+
+    $routed = $this->router->route([$contribA], $this->user, viewByFunder: true);
+
+    // The router rewrites the PayPal contribution onto the ASN funder
+    // first (step 1), then the collapse pass produces one aggregated
+    // entry on the funder for that day.
+    expect($routed)->toHaveCount(1);
+    expect($routed[0]->accountId)->toBe($asn->id);
+    expect($routed[0]->seriesId)->toBe(0);
+    expect($routed[0]->pointMinor)->toBe(-12000);
+});

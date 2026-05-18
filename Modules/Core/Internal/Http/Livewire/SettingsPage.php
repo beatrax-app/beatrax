@@ -144,14 +144,56 @@ final class SettingsPage extends Component
         $this->dispatch('settings-saved');
     }
 
-    public function render(ViewFactory $views, CurrentUser $currentUser): View
+    public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db): View
     {
+        // Load every account the user owns so the Forecasting section
+        // can mount one OpeningBalanceEditor per row.
+        $accounts = $db->connection()->table('accounts')
+            ->where('user_id', $currentUser->user()->id)
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get([
+                'id',
+                'name',
+                'kind',
+                'default_currency',
+                'forecast_min_buffer_minor',
+                'opening_balance_minor',
+                'opening_balance_as_of_date',
+            ]);
+
+        $accountList = [];
+        foreach ($accounts as $row) {
+            /** @var \stdClass $row */
+            $rawAsOf = $row->opening_balance_as_of_date ?? null;
+            $asOf = null;
+            if ($rawAsOf instanceof \DateTimeInterface) {
+                $asOf = $rawAsOf->format('Y-m-d');
+            } elseif (is_string($rawAsOf) && $rawAsOf !== '') {
+                $asOf = substr($rawAsOf, 0, 10);
+            }
+            $accountList[] = [
+                'id' => is_numeric($row->id ?? null) ? (int) $row->id : 0,
+                'name' => is_string($row->name ?? null) ? $row->name : '',
+                'kind' => is_string($row->kind ?? null) ? $row->kind : '',
+                'default_currency' => is_string($row->default_currency ?? null) ? $row->default_currency : 'EUR',
+                'forecast_min_buffer_minor' => is_numeric($row->forecast_min_buffer_minor ?? null)
+                    ? (int) $row->forecast_min_buffer_minor
+                    : null,
+                'opening_balance_minor' => is_numeric($row->opening_balance_minor ?? null)
+                    ? (int) $row->opening_balance_minor
+                    : null,
+                'opening_balance_as_of_date' => $asOf,
+            ];
+        }
+
         return $views->make('core::livewire.settings-page', [
             // Expose the per-user inbox-drop path so the help text
             // renders the directory the user must actually create
             // (storage/app/inbox-drop/{userId}/) rather than the
             // root inbox-drop folder.
             'userId' => $currentUser->user()->id,
+            'forecastingAccounts' => $accountList,
         ]);
     }
 

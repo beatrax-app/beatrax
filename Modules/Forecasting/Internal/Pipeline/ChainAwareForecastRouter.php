@@ -39,8 +39,12 @@ use Modules\Core\Public\Contracts\Clock;
  *      settlement — prefer the synthesised contribution as the
  *      authoritative source (the Phase 5 next-settlement math is the
  *      one ground truth).
- *   4. The `$viewByFunder` flag is forward-only at Wave 3 (pass-through);
- *      Wave 5 lands the actual UI-side collapse semantics.
+ *   4. When `$viewByFunder=true`, the router collapses per-series
+ *      contributions onto a single per-day-per-account aggregate so the
+ *      downstream chart shows ONE line per funder account instead of
+ *      N series-tagged lines. The aggregation runs after steps 1–3,
+ *      so chain-resolved series and the synthesised ICS settlement are
+ *      already on the funder account by the time collapse begins.
  *
  * FX conversion does NOT happen here (RESEARCH Pitfall 6). Each
  * contribution is left in its original currency; `DailyFold` applies
@@ -65,8 +69,6 @@ final readonly class ChainAwareForecastRouter
      */
     public function route(array $contributions, User $user, bool $viewByFunder = false): array
     {
-        unset($viewByFunder); // Wave 5 deliverable — pass-through for now.
-
         // Step 1 — rewrite per-occurrence contributions onto the funder
         // account when the series has a confirmed-or-deterministic chain
         // link. Memoise the per-series lookup so a series with N
@@ -140,7 +142,72 @@ final readonly class ChainAwareForecastRouter
             }
         }
 
+        if ($viewByFunder) {
+            $routed = $this->collapseByFunder($routed);
+        }
+
         return $routed;
+    }
+
+    /**
+     * Collapse per-series contributions onto a single per-day-per-account
+     * aggregate. The chain-resolution + ICS-bulk-iDEAL synthesis has
+     * already routed each contribution onto its funder account by the
+     * time this method runs; this aggregator merely sums every
+     * contribution sharing a `(accountId, date)` tuple into one entry
+     * per tuple so the downstream chart renders ONE line per account.
+     *
+     * Sign + currency / fxRateUsed handling: the collapse assumes
+     * contributions sharing a (accountId, date) tuple are already in the
+     * funder account's default currency by the time the daily fold
+     * consumes them. Wave 5 does NOT inject currency conversion here —
+     * that stays at the daily-fold boundary; this aggregator preserves
+     * the currency of the first contribution at each tuple and sets
+     * `fxRateUsed` and `seriesId` to null/0 to mark the entry as the
+     * aggregate. The daily fold's quadrature math composes correctly
+     * because the per-tuple sum is exactly what a per-funder chart
+     * requires.
+     *
+     * @param  list<ForecastContribution>  $contributions
+     * @return list<ForecastContribution>
+     */
+    private function collapseByFunder(array $contributions): array
+    {
+        /** @var array<string, array{date: CarbonImmutable, accountId: int, currency: string, point: int, low: int, high: int}> $buckets */
+        $buckets = [];
+
+        foreach ($contributions as $c) {
+            $key = $c->accountId.'|'.$c->date->toDateString();
+            if (! array_key_exists($key, $buckets)) {
+                $buckets[$key] = [
+                    'date' => $c->date,
+                    'accountId' => $c->accountId,
+                    'currency' => $c->currency,
+                    'point' => 0,
+                    'low' => 0,
+                    'high' => 0,
+                ];
+            }
+            $buckets[$key]['point'] += $c->pointMinor;
+            $buckets[$key]['low'] += $c->lowMinor;
+            $buckets[$key]['high'] += $c->highMinor;
+        }
+
+        $aggregated = [];
+        foreach ($buckets as $b) {
+            $aggregated[] = new ForecastContribution(
+                date: $b['date'],
+                pointMinor: $b['point'],
+                lowMinor: $b['low'],
+                highMinor: $b['high'],
+                currency: $b['currency'],
+                fxRateUsed: null,
+                seriesId: 0,
+                accountId: $b['accountId'],
+            );
+        }
+
+        return $aggregated;
     }
 
     /**

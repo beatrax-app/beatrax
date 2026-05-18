@@ -11,6 +11,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
+use Modules\Forecasting\Public\Dto\SeriesConfidenceDto;
+use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -46,6 +48,7 @@ final readonly class ForecastQuery
         private DatabaseManager $db,
         private Clock $clock,
         private ForecastDtoMapper $mapper,
+        private RecurringSeriesQuery $seriesQuery,
     ) {}
 
     public function forUser(int $accountId, int $horizonDays, ?int $scenarioId, User $user): ForecastDto
@@ -109,13 +112,97 @@ final readonly class ForecastQuery
             ? CarbonImmutable::parse($decoded['as_of'])
             : $asOf;
 
-        return $this->mapper->mapForecast(
+        $dto = $this->mapper->mapForecast(
             accountResult: $accountResult,
             horizonDays: $horizonDays,
             scenarioId: $scenarioId,
             asOf: $runAsOf,
             isComputing: false,
         );
+
+        $confidence = $this->resolveSeriesConfidenceForAccount($accountId, $user);
+
+        return new ForecastDto(
+            accountId: $dto->accountId,
+            accountName: $dto->accountName,
+            defaultCurrency: $dto->defaultCurrency,
+            horizonDays: $dto->horizonDays,
+            scenarioId: $dto->scenarioId,
+            asOf: $dto->asOf,
+            todayBalanceMinor: $dto->todayBalanceMinor,
+            points: $dto->points,
+            seriesConfidence: $confidence,
+            isComputing: $dto->isComputing,
+        );
+    }
+
+    /**
+     * Compute one `SeriesConfidenceDto` per approved series that
+     * contributes to the given account. The bucket thresholds are
+     * locked at code level (UI-SPEC):
+     *   - band_width / |point| <= 10%  → high
+     *   - 10% < ratio          <= 25%  → medium
+     *   - 25% < ratio                  → low
+     *
+     * The band width is derived from the series's
+     * `variance_tolerance_percent`: a series with var=5% has a band of
+     * 10% of the magnitude (low at -5%, high at +5% → width 10%); var
+     * of 10% has a 20%-wide band; etc. This is the envelope-tier
+     * formula. Percentile-tier series get an empirical band on the
+     * chart but the legend still reads the configured variance
+     * tolerance — the variance is the user-visible signal of how
+     * confident the projection is on this series.
+     *
+     * @return list<SeriesConfidenceDto>
+     */
+    private function resolveSeriesConfidenceForAccount(int $accountId, User $user): array
+    {
+        $allSeries = $this->seriesQuery->allApprovedForUser($user);
+        if ($allSeries === []) {
+            return [];
+        }
+
+        $seriesIds = array_map(static fn ($s): int => $s->seriesId, $allSeries);
+        $accountIdBySeriesId = $this->seriesQuery->accountIdsForSeriesIds($seriesIds, $user);
+
+        $result = [];
+        foreach ($allSeries as $series) {
+            $seriesAccountId = $accountIdBySeriesId[$series->seriesId] ?? null;
+            if ($seriesAccountId !== $accountId) {
+                continue;
+            }
+
+            $point = $series->latestAmount->toMinor();
+            if ($point === 0) {
+                continue;
+            }
+            $tol = $series->varianceTolerancePercent;
+            $bandRatio = (2 * $tol); // band_width / |point| in percent.
+
+            $confidence = match (true) {
+                $bandRatio <= 10 => 'high',
+                $bandRatio <= 25 => 'medium',
+                default => 'low',
+            };
+
+            $magnitude = abs($point);
+            $bandWidthMinor = (int) round($magnitude * $bandRatio / 100);
+
+            $displayName = $series->displayNameOverride !== null && $series->displayNameOverride !== ''
+                ? $series->displayNameOverride
+                : $series->detectedName;
+
+            $result[] = new SeriesConfidenceDto(
+                seriesId: $series->seriesId,
+                seriesName: $displayName,
+                confidence: $confidence,
+                pointMinor: $point,
+                bandWidthMinor: $bandWidthMinor,
+                currency: $series->latestAmount->currency(),
+            );
+        }
+
+        return $result;
     }
 
     private function computingSentinel(
