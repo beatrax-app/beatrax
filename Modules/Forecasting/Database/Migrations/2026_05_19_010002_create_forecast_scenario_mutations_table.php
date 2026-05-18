@@ -54,10 +54,41 @@ return new class extends Migration
             $table->index(['user_id', 'forecast_scenario_id']);
             $table->index('kind');
         });
+
+        // Defence-in-depth kind-enum guard at the schema layer. The
+        // typed ORM cast enforces this at the Eloquent boundary, but a
+        // raw INSERT / future Artisan command / manual SQL fix could
+        // otherwise land an invalid value and silently corrupt the
+        // table. Mirror the recurring_series.state trigger pattern:
+        // BEFORE INSERT + BEFORE UPDATE on `kind`, with RAISE(ABORT) on
+        // a violating value.
+        $conn = $this->db()->connection($this->getConnection());
+        $conn->statement(<<<'SQL'
+            CREATE TRIGGER forecast_scenario_mutations_kind_insert_check
+            BEFORE INSERT ON forecast_scenario_mutations
+            FOR EACH ROW
+            WHEN NEW.kind NOT IN ('cancel_series', 'add_one_off', 'add_recurring', 'change_series_amount', 'shift_series_date')
+            BEGIN
+                SELECT RAISE(ABORT, 'forecast_scenario_mutations.kind must be one of: cancel_series, add_one_off, add_recurring, change_series_amount, shift_series_date');
+            END
+        SQL);
+
+        $conn->statement(<<<'SQL'
+            CREATE TRIGGER forecast_scenario_mutations_kind_update_check
+            BEFORE UPDATE OF kind ON forecast_scenario_mutations
+            FOR EACH ROW
+            WHEN NEW.kind NOT IN ('cancel_series', 'add_one_off', 'add_recurring', 'change_series_amount', 'shift_series_date')
+            BEGIN
+                SELECT RAISE(ABORT, 'forecast_scenario_mutations.kind must be one of: cancel_series, add_one_off, add_recurring, change_series_amount, shift_series_date');
+            END
+        SQL);
     }
 
     public function down(): void
     {
+        $conn = $this->db()->connection($this->getConnection());
+        $conn->statement('DROP TRIGGER IF EXISTS forecast_scenario_mutations_kind_update_check');
+        $conn->statement('DROP TRIGGER IF EXISTS forecast_scenario_mutations_kind_insert_check');
         $this->schema()->dropIfExists('forecast_scenario_mutations');
     }
 
