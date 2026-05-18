@@ -14,6 +14,7 @@ use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
 use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastHighlightsTile;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
+use Modules\Forecasting\Internal\Http\Livewire\ScenarioEditorSidebar;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnDriftDismissed;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
@@ -132,6 +133,7 @@ final class ForecastingServiceProvider extends ServiceProvider
         $livewire->component('forecasting.forecast-page', ForecastPage::class);
         $livewire->component('forecasting.account-buffer-editor', AccountBufferEditor::class);
         $livewire->component('forecasting.forecast-highlights-tile', ForecastHighlightsTile::class);
+        $livewire->component('forecasting.scenario-editor-sidebar', ScenarioEditorSidebar::class);
 
         $this->registerListeners($events);
         $this->registerTopNavBadgeComposer();
