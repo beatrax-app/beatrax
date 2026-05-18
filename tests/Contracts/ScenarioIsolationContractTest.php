@@ -71,7 +71,7 @@ function sisSeedSubstrate(DatabaseManager $db): array
         'user_id' => $user->id,
         'name' => 'SIS ASN',
         'slug' => 'sis-asn-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn_bank',
+        'kind' => 'asn',
         'iban' => 'SIS'.strtoupper(bin2hex(random_bytes(4))),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 200000,

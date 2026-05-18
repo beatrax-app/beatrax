@@ -18,7 +18,7 @@ use stdClass;
  * The resolver routes by `accounts.kind` to the most authoritative
  * starting point available:
  *
- *   - `asn_bank` → most recent `statement_summaries.closing_balance_minor`
+ *   - `asn` → most recent `statement_summaries.closing_balance_minor`
  *   - `ics_card` → most recent `card_statements` "open balance" (the
  *     remaining amount owed; surfaced as a SIGNED running-balance
  *     position so the projection math composes cleanly)
@@ -57,7 +57,7 @@ final readonly class BalanceAnchorResolver
         $kind = self::toString($account->getAttribute('kind'));
         $defaultCurrency = self::toString($account->getAttribute('default_currency'));
 
-        if ($kind === 'asn_bank') {
+        if ($kind === 'asn') {
             $anchor = $this->fromStatementSummaries($accountId, $user->id);
             if ($anchor !== null) {
                 return $anchor;
