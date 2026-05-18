@@ -17,9 +17,11 @@ use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
+use Modules\Forecasting\Internal\Pipeline\ChainAwareForecastRouter;
 use Modules\Forecasting\Internal\Pipeline\DailyFold;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 use Modules\Forecasting\Internal\Pipeline\RangeProjector;
+use Modules\Forecasting\Internal\Pipeline\ShortfallDetector;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
@@ -69,6 +71,10 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(DailyFold::class);
         $this->app->singleton(ProjectionPipeline::class);
         $this->app->singleton(ForecastRunStateMachine::class);
+
+        // Wave 3 chain-aware routing + shortfall detection.
+        $this->app->singleton(ChainAwareForecastRouter::class);
+        $this->app->singleton(ShortfallDetector::class);
 
         // Wave 2 Public read API + DTO mapper.
         $this->app->singleton(ForecastDtoMapper::class);
