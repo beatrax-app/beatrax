@@ -11,16 +11,22 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
+use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
+use Modules\Forecasting\Internal\Http\Livewire\ForecastHighlightsTile;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnDriftDismissed;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
+use Modules\Forecasting\Internal\Pipeline\ChainAwareForecastRouter;
 use Modules\Forecasting\Internal\Pipeline\DailyFold;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 use Modules\Forecasting\Internal\Pipeline\RangeProjector;
+use Modules\Forecasting\Internal\Pipeline\ShortfallDetector;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
+use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
+use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Recurring\Public\Events\RecurringSeriesApproved;
@@ -70,6 +76,19 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(ProjectionPipeline::class);
         $this->app->singleton(ForecastRunStateMachine::class);
 
+        // Wave 3 chain-aware routing + shortfall detection.
+        $this->app->singleton(ChainAwareForecastRouter::class);
+        $this->app->singleton(ShortfallDetector::class);
+
+        // Wave 3 Public Action + read service for the buffer editor and
+        // the dashboard / top-nav surfaces.
+        $this->app->singleton(SetAccountForecastBuffer::class);
+        $this->app->singleton(ForecastHighlightsQuery::class);
+
+        // Wave 3 dashboard tile Livewire SFC (singleton-bound so it
+        // resolves once per request).
+        $this->app->singleton(ForecastHighlightsTile::class);
+
         // Wave 2 Public read API + DTO mapper.
         $this->app->singleton(ForecastDtoMapper::class);
         $this->app->singleton(ForecastQuery::class);
@@ -89,6 +108,8 @@ final class ForecastingServiceProvider extends ServiceProvider
         }
 
         $livewire->component('forecasting.forecast-page', ForecastPage::class);
+        $livewire->component('forecasting.account-buffer-editor', AccountBufferEditor::class);
+        $livewire->component('forecasting.forecast-highlights-tile', ForecastHighlightsTile::class);
 
         $this->registerListeners($events);
         $this->registerTopNavBadgeComposer();
@@ -137,17 +158,23 @@ final class ForecastingServiceProvider extends ServiceProvider
         $app = $this->app;
         $factory = $app->make(ViewFactoryContract::class);
 
-        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app): void {
-            // Reading $app->make(CurrentUser::class) here keeps the
-            // closure shape identical to the wave-3 swap-in target so
-            // adding the active-shortfall count is a body-only change.
+        /** @var array<int, int> $cache */
+        $cache = [];
+
+        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app, &$cache): void {
             $currentUser = $app->make(CurrentUser::class);
             if (! $currentUser->isAuthenticated()) {
                 $compose->with('forecastShortfallCount', 0);
 
                 return;
             }
-            $compose->with('forecastShortfallCount', 0);
+            $user = $currentUser->user();
+            $userId = $user->id;
+            if (! array_key_exists($userId, $cache)) {
+                $query = $app->make(ForecastHighlightsQuery::class);
+                $cache[$userId] = $query->activeShortfallCountForUser($user);
+            }
+            $compose->with('forecastShortfallCount', $cache[$userId]);
         });
     }
 }

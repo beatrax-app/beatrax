@@ -129,6 +129,34 @@
             @endif
         </a>
 
+        {{-- "Forecast" — projected balance over 30/60/90 days. The
+             optional rose-50 pill (↘ glyph) surfaces when at least
+             one baseline shortfall window is active in the next 30
+             days; the count caps at "99+" when >99. The composer
+             body lives in ForecastingServiceProvider and reads from
+             ForecastHighlightsQuery::activeShortfallCountForUser.
+             D-1025 — flat slot between Recurring and Settings (no
+             "Money" parent menu). --}}
+        @php
+            $forecastShortfallCount ??= 0;
+            $shortfallLabel = $forecastShortfallCount > 99 ? '99+' : (string) $forecastShortfallCount;
+        @endphp
+        <a
+            href="{{ route('forecast.index') }}"
+            class="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm {{ $isActive('/forecast') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+            @if ($forecastShortfallCount > 0)
+                aria-label="Forecast; {{ $shortfallLabel }} active shortfall {{ $forecastShortfallCount === 1 ? 'window' : 'windows' }} in the next 30 days"
+            @endif
+        >
+            Forecast
+            @if ($forecastShortfallCount > 0)
+                <span
+                    class="inline-flex items-center justify-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700"
+                    style="font-variant-numeric: tabular-nums;"
+                >{{ $shortfallLabel }}<span class="ml-0.5" aria-hidden="true">↘</span></span>
+            @endif
+        </a>
+
         <a
             href="{{ route('settings') }}"
             class="inline-flex items-center rounded-md px-3 py-1.5 text-sm {{ $isActive('/settings') }} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"

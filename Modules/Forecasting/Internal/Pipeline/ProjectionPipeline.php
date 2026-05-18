@@ -60,6 +60,8 @@ final readonly class ProjectionPipeline
         private ForecastRunStateMachine $stateMachine,
         private RecurringSeriesQuery $seriesQuery,
         private Clock $clock,
+        private ChainAwareForecastRouter $router,
+        private ShortfallDetector $shortfall,
     ) {}
 
     public function project(User $user, ?int $scenarioId, int $horizonDays): void
@@ -70,7 +72,7 @@ final readonly class ProjectionPipeline
         $this->stateMachine->start($run);
 
         try {
-            $result = $this->computeResult($user, $asOf, $horizonDays);
+            $result = $this->computeResult($user, $scenarioId, $asOf, $horizonDays);
 
             $encoded = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             if ($encoded === false) {
@@ -103,7 +105,7 @@ final readonly class ProjectionPipeline
     /**
      * @return array{as_of: string, horizon_days: int, accounts: array<int, array{account_id: int, account_name: string, default_currency: string, today_balance_minor: int, anchor_source: string, points: list<array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}>}>}
      */
-    private function computeResult(User $user, CarbonImmutable $asOf, int $horizonDays): array
+    private function computeResult(User $user, ?int $scenarioId, CarbonImmutable $asOf, int $horizonDays): array
     {
         $allSeries = $this->seriesQuery->allApprovedForUser($user);
 
@@ -119,6 +121,44 @@ final readonly class ProjectionPipeline
             ->orderBy('id')
             ->get();
 
+        // Collect ALL contributions across ALL series first so the
+        // chain-aware router can rewrite an account-id-routed
+        // contribution (e.g. a PayPal series whose chain link points at
+        // an ASN funder) before the per-account daily fold buckets
+        // them. The router also synthesises the next ICS bulk-iDEAL
+        // settlement contribution onto the funder account.
+        $allContributions = [];
+        foreach ($allSeries as $series) {
+            $seriesAccountId = $accountIdBySeriesId[$series->seriesId] ?? null;
+            if ($seriesAccountId === null) {
+                continue;
+            }
+            $seriesContribs = $this->projector->envelope(
+                series: $series,
+                accountId: $seriesAccountId,
+                asOf: $asOf,
+                horizonDays: $horizonDays,
+                user: $user,
+            );
+            foreach ($seriesContribs as $contrib) {
+                $allContributions[] = $contrib;
+            }
+        }
+
+        $routed = $this->router->route(
+            contributions: $allContributions,
+            user: $user,
+            viewByFunder: false,
+        );
+
+        // Bucket the routed contributions by accountId.
+        /** @var array<int, list<ForecastContribution>> $byAccount */
+        $byAccount = [];
+        foreach ($routed as $contrib) {
+            $byAccount[$contrib->accountId] ??= [];
+            $byAccount[$contrib->accountId][] = $contrib;
+        }
+
         $accountsResult = [];
 
         foreach ($accounts as $account) {
@@ -130,24 +170,7 @@ final readonly class ProjectionPipeline
                 $defaultCurrency = 'EUR';
             }
 
-            // Collect per-series contributions for this account.
-            $contributions = [];
-            foreach ($allSeries as $series) {
-                $seriesAccountId = $accountIdBySeriesId[$series->seriesId] ?? null;
-                if ($seriesAccountId !== $accountId) {
-                    continue;
-                }
-                $seriesContribs = $this->projector->envelope(
-                    series: $series,
-                    accountId: $accountId,
-                    asOf: $asOf,
-                    horizonDays: $horizonDays,
-                    user: $user,
-                );
-                foreach ($seriesContribs as $contrib) {
-                    $contributions[] = $contrib;
-                }
-            }
+            $contributions = $byAccount[$accountId] ?? [];
 
             $folded = $this->fold->fold(
                 openingBalanceMinor: $anchor->openingBalanceMinor,
@@ -158,6 +181,20 @@ final readonly class ProjectionPipeline
             );
 
             $points = array_values($folded);
+
+            $effectiveBuffer = isset($account->forecast_min_buffer_minor) && is_numeric($account->forecast_min_buffer_minor)
+                ? (int) $account->forecast_min_buffer_minor
+                : null;
+
+            // Detect + persist shortfall windows for this account.
+            $this->shortfall->detect(
+                dailyPoints: $points,
+                accountId: $accountId,
+                scenarioId: $scenarioId,
+                effectiveBufferMinor: $effectiveBuffer,
+                currency: $defaultCurrency,
+                user: $user,
+            );
 
             $accountsResult[$accountId] = [
                 'account_id' => $accountId,

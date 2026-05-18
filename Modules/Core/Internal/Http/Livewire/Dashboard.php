@@ -164,11 +164,6 @@ final class Dashboard extends Component
             $tiles = $glance->forByCurrency($user, $period);
         }
 
-        // D-99 / D-100 — render the "Next ICS settlement" tile when an
-        // open card_statement exists; the Blade hides the tile entirely
-        // when this is null (no "—" placeholder).
-        $nextSettlement = $glance->nextIcsSettlement($user);
-
         // Email-scan-health tile. Null = hide the tile entirely (no
         // connected inboxes). The dashboard Blade reads the same null-
         // first contract as the Next-ICS-settlement tile above.
@@ -202,7 +197,6 @@ final class Dashboard extends Component
         return $views->make('core::livewire.dashboard', [
             'summary' => $summary,
             'tiles' => $tiles,
-            'nextSettlement' => $nextSettlement,
             'emailScanHealth' => $emailScanHealth,
             'reauthInboxCount' => $reauthInboxCount,
             'reauthToastDismissed' => $this->reauthToastDismissed,
