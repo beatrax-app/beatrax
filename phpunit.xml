@@ -44,6 +44,9 @@
         <testsuite name="DriftAlerts">
             <directory suffix="Test.php">./Modules/DriftAlerts/tests</directory>
         </testsuite>
+        <testsuite name="Forecasting">
+            <directory suffix="Test.php">./Modules/Forecasting/tests</directory>
+        </testsuite>
         <testsuite name="EmailScanUnit">
             <directory suffix="Test.php">./Modules/EmailScan/tests/Unit</directory>
         </testsuite>
