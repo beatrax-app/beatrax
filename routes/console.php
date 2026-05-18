@@ -173,7 +173,7 @@ Schedule::call(function (Dispatcher $bus, ScenarioQuery $scenarioQuery): void {
     User::query()->lazyById(100)->each(function (User $user) use ($bus, $scenarioQuery): void {
         foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
             $bus->dispatch(new ProjectForecastJob(
-                userId: (int) $user->id,
+                userId: $user->id,
                 scenarioId: null,
                 horizonDays: $horizon,
             ));
@@ -181,7 +181,7 @@ Schedule::call(function (Dispatcher $bus, ScenarioQuery $scenarioQuery): void {
         foreach ($scenarioQuery->forUser($user) as $scenario) {
             foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
                 $bus->dispatch(new ProjectForecastJob(
-                    userId: (int) $user->id,
+                    userId: $user->id,
                     scenarioId: $scenario->id,
                     horizonDays: $horizon,
                 ));

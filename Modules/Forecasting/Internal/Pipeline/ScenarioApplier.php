@@ -240,7 +240,12 @@ final readonly class ScenarioApplier
             // Sort by count DESC, then by accountId ASC for a
             // deterministic tie-break.
             uksort($counts, static function (int $a, int $b) use ($counts): int {
-                return $counts[$b] <=> $counts[$a] ?: $a <=> $b;
+                $byCount = $counts[$b] <=> $counts[$a];
+                if ($byCount !== 0) {
+                    return $byCount;
+                }
+
+                return $a <=> $b;
             });
 
             return array_key_first($counts);
