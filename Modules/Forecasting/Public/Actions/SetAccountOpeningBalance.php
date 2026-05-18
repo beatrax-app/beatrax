@@ -112,7 +112,7 @@ final class SetAccountOpeningBalance
                 ]);
         });
 
-        foreach ([30, 60, 90] as $horizon) {
+        foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
             $this->bus->dispatch(new ProjectForecastJob(
                 userId: $user->id,
                 scenarioId: null,
