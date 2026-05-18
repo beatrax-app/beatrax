@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
 use Modules\Forecasting\Public\Actions\DeleteScenario;
 use Modules\Forecasting\Public\Actions\EditScenarioMutation;
@@ -451,13 +452,8 @@ final class ScenarioEditorSidebar extends Component
         } else {
             throw new \InvalidArgumentException('Amount is required.');
         }
-        $normalised = str_replace([' ', '.'], ['', ''], $raw);
-        $normalised = str_replace(',', '.', $normalised);
-        if (! is_numeric($normalised)) {
-            throw new \InvalidArgumentException('Amount must be a number.');
-        }
 
-        return (int) round(((float) $normalised) * 100);
+        return AmountStringParser::toMinor($raw);
     }
 
     private function summaryFor(string $kind, ScenarioMutationPayload $payload): string

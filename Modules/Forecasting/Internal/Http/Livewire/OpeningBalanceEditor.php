@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountOpeningBalance;
 use Modules\Forecasting\Public\Exceptions\OpeningBalanceDivergenceWarning;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -201,41 +202,19 @@ final class OpeningBalanceEditor extends Component
     /**
      * Parse the user input (locale-aware "500,00" / "500.00" / "500"
      * including a negative sign for credit-card / overdrawn accounts)
-     * to BIGINT minor units. Returns false on any non-numeric input.
+     * to BIGINT minor units. Returns false on any non-numeric or empty
+     * input.
      */
     private function parseInputToMinor(string $input): int|false
     {
-        $trimmed = trim($input);
-        if ($trimmed === '') {
+        if (trim($input) === '') {
             return false;
         }
 
-        $negative = false;
-        if (str_starts_with($trimmed, '-')) {
-            $negative = true;
-            $trimmed = ltrim(substr($trimmed, 1));
-        }
-
-        $normalised = str_replace([' '], '', $trimmed);
-        $commaPos = strrpos($normalised, ',');
-        $dotPos = strrpos($normalised, '.');
-        if ($commaPos !== false && $dotPos !== false) {
-            if ($commaPos > $dotPos) {
-                $normalised = str_replace('.', '', $normalised);
-                $normalised = str_replace(',', '.', $normalised);
-            } else {
-                $normalised = str_replace(',', '', $normalised);
-            }
-        } elseif ($commaPos !== false) {
-            $normalised = str_replace(',', '.', $normalised);
-        }
-
-        if (! is_numeric($normalised)) {
+        try {
+            return AmountStringParser::toMinor($input);
+        } catch (InvalidArgumentException) {
             return false;
         }
-        $float = (float) $normalised;
-        $minor = (int) round($float * 100);
-
-        return $negative ? -$minor : $minor;
     }
 }
