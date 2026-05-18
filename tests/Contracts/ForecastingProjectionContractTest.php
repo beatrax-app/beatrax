@@ -68,7 +68,7 @@ function fpctUser(): User
 function fpctMapFixtureKindToDbKind(string $fixtureKind): string
 {
     return match ($fixtureKind) {
-        'asn' => 'asn_bank',
+        'asn' => 'asn',
         'ics' => 'ics_card',
         default => $fixtureKind,
     };
