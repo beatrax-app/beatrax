@@ -297,6 +297,50 @@ it('links to /forecast (replaces the non-link Phase 5 tile)', function (): void 
         ->assertSee('href="'.route('forecast.index').'"', escape: false);
 });
 
+it('preserves the minus sign when the lowest projected balance is negative (overdraft)', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $db->connection()->table('forecast_runs')->insert([
+        'user_id' => $this->user->id,
+        'scenario_id' => null,
+        'horizon_days' => 30,
+        'status' => 'complete',
+        'result_json' => json_encode([
+            'as_of' => '2026-05-19',
+            'horizon_days' => 30,
+            'accounts' => [
+                (string) $this->asn->id => [
+                    'account_id' => $this->asn->id,
+                    'account_name' => $this->asn->name,
+                    'default_currency' => 'EUR',
+                    'today_balance_minor' => 5000,
+                    'anchor_source' => 'user_input_opening_balance',
+                    'points' => [
+                        ['date' => '2026-05-19', 'low_minor' => 5000, 'point_minor' => 5000, 'high_minor' => 5000, 'currency' => 'EUR'],
+                        // Projection dips into overdraft.
+                        ['date' => '2026-05-25', 'low_minor' => -12345, 'point_minor' => -12345, 'high_minor' => -12345, 'currency' => 'EUR'],
+                    ],
+                ],
+            ],
+        ]),
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    // The rendered tile must contain the negative-formatted figure
+    // (locale "-123,45" or "€ -123,45"). The earlier abs()-stripping
+    // bug rendered "€ 123,45" with no sign, masking the overdraft.
+    // We verify the negative sign appears in proximity to the digits.
+    $response = $this->actingAs($this->user)->get('/');
+    $response->assertOk();
+    $body = $response->getContent();
+    expect($body)->not->toBeFalse();
+    // Money::ofMinor(-12345)->format('nl_NL') yields "€ -123,45"
+    // (currency-symbol-then-minus-then-figure under PHP intl rules).
+    expect($body)->toContain('-123,45');
+});
+
 it('does not surface another user shortfall in the tile (cross-user isolation)', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

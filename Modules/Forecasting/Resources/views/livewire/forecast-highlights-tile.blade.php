@@ -16,11 +16,16 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
+    // Preserve the sign so a projected dip BELOW zero (overdraft) renders
+    // with the minus sign per nl_NL locale convention. Surfacing the sign
+    // is the whole point of the "lowest projected balance" tile — without
+    // it the user cannot distinguish "the account is at €100 and dips no
+    // further" from "the account hits −€100".
     $fmtMinor = static function (?int $minor, string $currency = 'EUR'): string {
         if ($minor === null) {
             return '';
         }
-        return Money::ofMinor(abs($minor), $currency)->format('nl_NL');
+        return Money::ofMinor($minor, $currency)->format('nl_NL');
     };
     $lowestFormatted = $fmtMinor($dto->lowestProjectedBalanceMinor);
     $nextSettlementFormatted = $dto->nextIcsSettlement !== null
