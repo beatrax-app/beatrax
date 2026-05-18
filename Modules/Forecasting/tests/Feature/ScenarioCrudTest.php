@@ -446,6 +446,64 @@ it('17. ScenarioApplier shift_series_date with scope=all_subsequent: shifts ever
     expect($dates)->toBe(['2026-06-02', '2026-07-02']);
 });
 
+it('19. ScenarioApplier add_one_off on an empty baseline throws InvalidArgumentException (no silent loss)', function (): void {
+    /** @var CreateScenario $create */
+    $create = $this->app->make(CreateScenario::class);
+    /** @var AddScenarioMutation $add */
+    $add = $this->app->make(AddScenarioMutation::class);
+    /** @var ScenarioApplier $applier */
+    $applier = $this->app->make(ScenarioApplier::class);
+
+    $scenarioId = ($create)($this->user, 'One-off on empty baseline');
+    ($add)($scenarioId, $this->user, 'add_one_off', new AddOneOffPayload(
+        date: '2026-05-25',
+        amountMinor: 5000,
+        currency: 'EUR',
+        direction: 'expense',
+    ));
+
+    $asOf = CarbonImmutable::parse('2026-05-19');
+    // The empty baseline (fresh import, no approved series) must surface
+    // a loud error rather than landing on accountId=0 which the daily
+    // fold silently drops.
+    expect(fn () => $applier->apply([], $scenarioId, $this->user, $asOf, 30))
+        ->toThrow(InvalidArgumentException::class, 'baseline projection has no contributions');
+});
+
+it('20. ScenarioApplier pickAccountIdForOneOff: deterministic tie-break by accountId ASC', function (): void {
+    /** @var CreateScenario $create */
+    $create = $this->app->make(CreateScenario::class);
+    /** @var AddScenarioMutation $add */
+    $add = $this->app->make(AddScenarioMutation::class);
+    /** @var ScenarioApplier $applier */
+    $applier = $this->app->make(ScenarioApplier::class);
+
+    $scenarioId = ($create)($this->user, 'Tie-break one-off');
+    ($add)($scenarioId, $this->user, 'add_one_off', new AddOneOffPayload(
+        date: '2026-05-25',
+        amountMinor: 5000,
+        currency: 'EUR',
+        direction: 'expense',
+    ));
+
+    $asOf = CarbonImmutable::parse('2026-05-19');
+    // Two accounts with exactly 1 contribution each; the higher
+    // accountId (42) is fed FIRST in the baseline. The earlier arsort
+    // implementation would tie-break by insertion order and pick 42;
+    // the corrected uksort picks the LOWER accountId (7) deterministically.
+    $baseline = [
+        new ForecastContribution(date: $asOf->addDays(5), pointMinor: -100, lowMinor: -100, highMinor: -100, currency: 'EUR', fxRateUsed: null, seriesId: 100, accountId: 42),
+        new ForecastContribution(date: $asOf->addDays(6), pointMinor: -100, lowMinor: -100, highMinor: -100, currency: 'EUR', fxRateUsed: null, seriesId: 101, accountId: 7),
+    ];
+
+    $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 30);
+
+    // 2 baseline + 1 appended one-off.
+    expect($result)->toHaveCount(3);
+    $oneOff = $result[2];
+    expect($oneOff->accountId)->toBe(7); // ASC tie-break.
+});
+
 it('18. ScenarioApplier source file does NOT contain JOINs onto transaction-substrate tables', function (): void {
     $contents = (string) file_get_contents(base_path('Modules/Forecasting/Internal/Pipeline/ScenarioApplier.php'));
     $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
