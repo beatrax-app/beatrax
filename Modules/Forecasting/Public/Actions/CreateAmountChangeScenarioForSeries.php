@@ -1,0 +1,70 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Forecasting\Public\Actions;
+
+use Illuminate\Database\DatabaseManager;
+use Modules\Core\Models\User;
+use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
+use stdClass;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+/**
+ * Launchpad — Phase 8 recurring-series-detail "Model amount change…"
+ * dropdown target.
+ *
+ * Looks up the series (cross-user-scoped), creates a new scenario
+ * named `Change {series_name} amount`, and seeds a single
+ * `change_series_amount` mutation against that series with the
+ * user-supplied new amount. CreateScenario + AddScenarioMutation are
+ * wrapped in a single DB transaction.
+ *
+ * Returns the new scenario id; the caller redirects to
+ * `/forecast?scenarioId={id}`.
+ */
+final class CreateAmountChangeScenarioForSeries
+{
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly CreateScenario $createScenario,
+        private readonly AddScenarioMutation $addMutation,
+    ) {}
+
+    public function __invoke(int $recurringSeriesId, User $user, int $newAmountMinor): int
+    {
+        $series = $this->db->connection()->table('recurring_series')
+            ->where('id', $recurringSeriesId)
+            ->where('user_id', $user->id)
+            ->first(['id', 'detected_name', 'display_name_override']);
+        if ($series === null) {
+            throw new NotFoundHttpException('Recurring series not found.');
+        }
+        /** @var stdClass $series */
+        $name = $this->resolveSeriesName($series);
+
+        return $this->db->connection()->transaction(function () use ($user, $name, $recurringSeriesId, $newAmountMinor): int {
+            $scenarioId = ($this->createScenario)($user, "Change {$name} amount");
+            ($this->addMutation)(
+                $scenarioId,
+                $user,
+                'change_series_amount',
+                new ChangeSeriesAmountPayload(seriesId: $recurringSeriesId, newAmountMinor: $newAmountMinor),
+            );
+
+            return $scenarioId;
+        });
+    }
+
+    private function resolveSeriesName(stdClass $row): string
+    {
+        if (isset($row->display_name_override) && is_string($row->display_name_override) && $row->display_name_override !== '') {
+            return $row->display_name_override;
+        }
+        if (isset($row->detected_name) && is_string($row->detected_name) && $row->detected_name !== '') {
+            return $row->detected_name;
+        }
+
+        return 'series';
+    }
+}

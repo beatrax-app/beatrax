@@ -7,6 +7,7 @@ namespace Modules\DriftAlerts\Internal\Http\Livewire;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Routing\Redirector;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
@@ -17,6 +18,7 @@ use Modules\DriftAlerts\Public\Actions\SnoozeDriftAlert;
 use Modules\DriftAlerts\Public\Dto\CancellationImpactDto;
 use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
+use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
 
 /**
  * `/drift` page — the dedicated drift-alerts surface. Three tabs
@@ -86,6 +88,25 @@ final class DriftPage extends Component
     {
         ($action)($alertId, $currentUser->user());
         $this->dispatch('toast', message: 'Dismissed as cancelled');
+    }
+
+    /**
+     * Phase 10 launchpad — invoke the Forecasting Public Action that
+     * atomically creates a new scenario pre-seeded with a
+     * `cancel_series` mutation for the alert's underlying series, then
+     * redirect to `/forecast?scenarioId={new}`. The drift_alerts row
+     * itself is NOT modified — modelling is non-destructive; the user
+     * can still dismiss or acknowledge later.
+     */
+    public function modelCancelInForecast(
+        int $alertId,
+        CurrentUser $currentUser,
+        CreateCancellationScenarioForAlert $action,
+        Redirector $redirector,
+    ): mixed {
+        $newId = ($action)($alertId, $currentUser->user());
+
+        return $redirector->to('/forecast?scenarioId='.$newId);
     }
 
     public function render(

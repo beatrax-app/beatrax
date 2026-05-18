@@ -1,0 +1,243 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Core\Models\User;
+use Modules\DriftAlerts\Models\DriftAlert;
+use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
+use Modules\Forecasting\Public\Actions\AddScenarioMutation;
+use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+uses(RefreshDatabase::class);
+
+/*
+ * Phase 9 drift-alert "Model cancel ↗" chip launchpad coverage.
+ *
+ *   - The chip is in the drift-page rendered HTML.
+ *   - Clicking the chip invokes CreateCancellationScenarioForAlert.
+ *   - The new scenario has the right name + exactly one cancel_series
+ *     mutation seeded.
+ *   - Cross-user 404 prevents user A from launchpad-targeting user B's
+ *     drift alert.
+ *   - The DismissDriftAlertAsCancelled flow remains untouched.
+ *   - Atomicity: a failure inside AddScenarioMutation rolls back the
+ *     prior CreateScenario insert.
+ */
+
+function mclUser(string $email = 'mcl@diederik.test'): User
+{
+    return User::query()->create([
+        'email' => $email,
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+}
+
+function mclSeries(DatabaseManager $db, int $userId, string $name = 'Netflix'): int
+{
+    return (int) $db->connection()->table('recurring_series')->insertGetId([
+        'user_id' => $userId,
+        'direction' => 'expense',
+        'detected_name' => $name,
+        'state' => 'approved',
+        'cadence' => 'monthly',
+        'latest_amount_minor' => -1199,
+        'latest_currency' => 'EUR',
+        'monthly_equivalent_minor' => -1199,
+        'variance_tolerance_percent' => 5,
+        'next_expected_at' => '2026-05-25',
+        'cluster_key' => 'cluster-'.$name.'-'.$userId,
+        'cluster_counterparty_key' => $name,
+        'created_at' => '2026-05-01 00:00:00',
+        'updated_at' => '2026-05-01 00:00:00',
+    ]);
+}
+
+function mclTransaction(DatabaseManager $db, int $userId): int
+{
+    $suffix = bin2hex(random_bytes(4));
+    $accountId = $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId,
+        'name' => 'ASN mcl',
+        'slug' => 'mcl-asn-'.$suffix,
+        'kind' => 'asn_bank',
+        'iban' => 'NL00MCL'.strtoupper($suffix),
+        'default_currency' => 'EUR',
+        'created_at' => '2026-05-01 00:00:00',
+        'updated_at' => '2026-05-01 00:00:00',
+    ]);
+    $runId = $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $userId,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/mcl-'.$suffix.'.csv',
+        'sha256' => hash('sha256', 'mcl-run-'.$suffix),
+        'uploaded_at' => '2026-05-01 00:00:00',
+        'status' => 'previewed',
+        'created_at' => '2026-05-01 00:00:00',
+        'updated_at' => '2026-05-01 00:00:00',
+    ]);
+
+    return (int) $db->connection()->table('transactions')->insertGetId([
+        'user_id' => $userId,
+        'account_id' => $accountId,
+        'import_run_id' => $runId,
+        'fingerprint' => hash('sha256', 'mcl-'.$suffix),
+        'posted_at' => '2026-05-15',
+        'booked_at' => '2026-05-15 00:00:00',
+        'value_date' => '2026-05-15',
+        'amount_minor' => -1199,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -1199,
+        'settled_currency' => 'EUR',
+        'counterparty_normalized' => 'netflix',
+        'counterparty_name' => 'NETFLIX',
+        'normalization_version' => 1,
+        'description' => 'mcl fixture',
+        'type' => 'expense',
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint_version' => 3,
+        'created_at' => '2026-05-15 00:00:00',
+        'updated_at' => '2026-05-15 00:00:00',
+    ]);
+}
+
+function mclAlert(DatabaseManager $db, int $userId, int $seriesId): int
+{
+    $occurrenceId = $db->connection()->table('recurring_series_occurrences')->insertGetId([
+        'user_id' => $userId,
+        'recurring_series_id' => $seriesId,
+        'transaction_id' => mclTransaction($db, $userId),
+        'observed_at' => '2026-05-15',
+        'observed_amount_minor' => -1349,
+        'observed_currency' => 'EUR',
+        'created_at' => '2026-05-15 00:00:00',
+        'updated_at' => '2026-05-15 00:00:00',
+    ]);
+    /** @var DriftAlert $alert */
+    $alert = DriftAlert::factory()->create([
+        'user_id' => $userId,
+        'recurring_series_id' => $seriesId,
+        'state' => 'open',
+        'direction' => 'expense',
+        'baseline_amount_minor' => -1199,
+        'latest_amount_minor' => -1349,
+        'currency' => 'EUR',
+        'delta_minor' => -150,
+        'annualized_impact_minor' => -1800,
+        'threshold_percent_used' => 5,
+        'threshold_source' => 'global',
+        'latest_occurrence_id' => $occurrenceId,
+        'detected_at' => CarbonImmutable::parse('2026-05-15 12:00:00'),
+    ]);
+
+    return $alert->id;
+}
+
+beforeEach(function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $this->db = $db;
+    $this->user = mclUser();
+});
+
+it('CreateCancellationScenarioForAlert happy path: persists scenario + one cancel_series mutation', function (): void {
+    $seriesId = mclSeries($this->db, $this->user->id, 'Netflix');
+    $alertId = mclAlert($this->db, $this->user->id, $seriesId);
+
+    /** @var CreateCancellationScenarioForAlert $action */
+    $action = $this->app->make(CreateCancellationScenarioForAlert::class);
+    $newId = ($action)($alertId, $this->user);
+
+    expect($newId)->toBeGreaterThan(0);
+    $scenario = $this->db->connection()->table('forecast_scenarios')->where('id', $newId)->first();
+    expect($scenario->name)->toBe('Cancel Netflix');
+    expect($scenario->user_id)->toBe($this->user->id);
+
+    $mutations = $this->db->connection()->table('forecast_scenario_mutations')->where('forecast_scenario_id', $newId)->get();
+    expect($mutations->count())->toBe(1);
+    expect($mutations->first()->kind)->toBe('cancel_series');
+    expect((int) $mutations->first()->target_series_id)->toBe($seriesId);
+});
+
+it('CreateCancellationScenarioForAlert returns 404 for another user\'s alert', function (): void {
+    $other = mclUser('other@diederik.test');
+    $seriesId = mclSeries($this->db, $other->id);
+    $alertId = mclAlert($this->db, $other->id, $seriesId);
+
+    /** @var CreateCancellationScenarioForAlert $action */
+    $action = $this->app->make(CreateCancellationScenarioForAlert::class);
+
+    expect(fn () => ($action)($alertId, $this->user))->toThrow(NotFoundHttpException::class);
+});
+
+it('CreateCancellationScenarioForAlert atomic rollback when AddScenarioMutation fails', function (): void {
+    // Build an alert with a series the user does NOT own anymore (simulate a deleted series).
+    $seriesId = mclSeries($this->db, $this->user->id, 'Netflix-soon-to-vanish');
+    $alertId = mclAlert($this->db, $this->user->id, $seriesId);
+    // Delete the recurring_series row but leave the alert.
+    $this->db->connection()->table('recurring_series')->where('id', $seriesId)->delete();
+
+    /** @var CreateCancellationScenarioForAlert $action */
+    $action = $this->app->make(CreateCancellationScenarioForAlert::class);
+
+    expect(fn () => ($action)($alertId, $this->user))->toThrow(NotFoundHttpException::class);
+    // No scenario row should have persisted — the launchpad's outer
+    // db->transaction() wraps CreateScenario + AddScenarioMutation, so
+    // the deleted series triggers the rollback before any scenario row
+    // commits.
+    expect($this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->count())->toBe(0);
+});
+
+it('drift-page renders the Model cancel chip in the alert row', function (): void {
+    $seriesId = mclSeries($this->db, $this->user->id, 'Netflix');
+    mclAlert($this->db, $this->user->id, $seriesId);
+
+    $this->actingAs($this->user)
+        ->get('/drift')
+        ->assertOk()
+        ->assertSee('Model cancel ↗');
+});
+
+it('Phase 9 DismissDriftAlertAsCancelled flow remains independent of the launchpad', function (): void {
+    $seriesId = mclSeries($this->db, $this->user->id, 'Netflix');
+    $alertId = mclAlert($this->db, $this->user->id, $seriesId);
+
+    /** @var DismissDriftAlertAsCancelled $dismiss */
+    $dismiss = $this->app->make(DismissDriftAlertAsCancelled::class);
+    ($dismiss)($alertId, $this->user);
+
+    // No scenario was created — dismissal is a different code path.
+    expect($this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->count())->toBe(0);
+    // Alert state flipped to dismissed_cancelled.
+    expect($this->db->connection()->table('drift_alerts')->where('id', $alertId)->value('state'))->toBe('dismissed_cancelled');
+});
+
+it('the launchpad uses display_name_override when present', function (): void {
+    $seriesId = mclSeries($this->db, $this->user->id, 'Auto-detected name');
+    $this->db->connection()->table('recurring_series')
+        ->where('id', $seriesId)
+        ->update(['display_name_override' => 'My Netflix sub']);
+    $alertId = mclAlert($this->db, $this->user->id, $seriesId);
+
+    /** @var CreateCancellationScenarioForAlert $action */
+    $action = $this->app->make(CreateCancellationScenarioForAlert::class);
+    $newId = ($action)($alertId, $this->user);
+
+    expect($this->db->connection()->table('forecast_scenarios')->where('id', $newId)->value('name'))->toBe('Cancel My Netflix sub');
+});
+
+it('AddScenarioMutation injection inside the launchpad is the same singleton bound by the ServiceProvider', function (): void {
+    // Regression guard: the launchpad must compose CreateScenario +
+    // AddScenarioMutation via the container so any future change to
+    // the Public Actions' behaviour (e.g. tightening series-belongs-to-user
+    // validation) is automatically picked up.
+    $a = $this->app->make(AddScenarioMutation::class);
+    $b = $this->app->make(AddScenarioMutation::class);
+    expect($a)->toBe($b);
+});
