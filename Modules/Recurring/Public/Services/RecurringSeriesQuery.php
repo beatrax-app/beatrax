@@ -437,6 +437,91 @@ final readonly class RecurringSeriesQuery
         return $result;
     }
 
+    /**
+     * Returns every approved (and cadence_changed) recurring series
+     * row for the user — unpaged. Forecasting's projection pipeline
+     * needs the full set in a single read; the paged
+     * `approvedForUser` projection is sized for the review surface's
+     * 26-row pages, not for a batch computation that walks every
+     * series the user has approved.
+     *
+     * `cadence_changed` rows are included because they still
+     * represent an approved recurring pattern from the user's
+     * perspective — only the cadence reclassification is pending
+     * the user's re-confirmation. Excluding them would silently drop
+     * series from the forecast band the moment they flip.
+     *
+     * @return list<RecurringSeriesDto>
+     */
+    public function allApprovedForUser(User $user): array
+    {
+        $rows = $this->db->connection()->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->whereIn('state', ['approved', 'cadence_changed'])
+            ->orderByDesc('monthly_equivalent_minor')
+            ->orderByDesc('id')
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $result[] = $this->toDto($row);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Resolve the originating account_id for each id in `$seriesIds`
+     * belonging to `$user`. The mapping is derived from the most-
+     * recent `recurring_series_occurrences` row per series and the
+     * `transactions.account_id` it points at — the recurring_series
+     * row itself does not carry an account column.
+     *
+     * Missing series, cross-user series, and series with zero
+     * occurrences are silently absent from the result map.
+     *
+     * @param  array<int|string, mixed>  $seriesIds
+     * @return array<int, int>
+     */
+    public function accountIdsForSeriesIds(array $seriesIds, User $user): array
+    {
+        $clean = [];
+        foreach ($seriesIds as $id) {
+            $i = is_numeric($id) ? (int) $id : 0;
+            if ($i > 0) {
+                $clean[] = $i;
+            }
+        }
+        $unique = array_values(array_unique($clean));
+        if ($unique === []) {
+            return [];
+        }
+
+        $rows = $this->db->connection()->table('recurring_series_occurrences as rso')
+            ->join('transactions as t', 't.id', '=', 'rso.transaction_id')
+            ->where('rso.user_id', $user->id)
+            ->where('t.user_id', $user->id)
+            ->whereIn('rso.recurring_series_id', $unique)
+            ->orderByDesc('rso.observed_at')
+            ->orderByDesc('rso.id')
+            ->get(['rso.recurring_series_id as series_id', 't.account_id as account_id']);
+
+        $map = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $seriesId = self::toInt($row->series_id);
+            if ($seriesId === 0 || isset($map[$seriesId])) {
+                // The first row for each series_id wins thanks to the
+                // ORDER BY rso.observed_at DESC + rso.id DESC ordering.
+                continue;
+            }
+            $map[$seriesId] = self::toInt($row->account_id);
+        }
+
+        return $map;
+    }
+
     private function toDto(stdClass $row): RecurringSeriesDto
     {
         // RecurringSeriesQuery reads the raw chain-link column with
