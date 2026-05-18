@@ -7,10 +7,12 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\Schedule;
+use Modules\Core\Models\User;
 use Modules\DriftAlerts\Internal\Jobs\RevivedExpiredDriftSnoozesJob;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
+use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
 use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
@@ -164,15 +166,25 @@ Schedule::call(function (Dispatcher $bus): void {
 // container; no facade reaches into module code. Method order
 // .name() BEFORE .daily()->withoutOverlapping(30) — CallbackEvent's
 // description-required guard fires otherwise.
-Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
-    $userIds = $db->connection()->table('users')->pluck('id');
-    foreach ($userIds as $userId) {
+Schedule::call(function (DatabaseManager $db, Dispatcher $bus, ScenarioQuery $scenarioQuery): void {
+    $users = User::query()->get();
+    foreach ($users as $user) {
         foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
             $bus->dispatch(new ProjectForecastJob(
-                userId: (int) $userId,
+                userId: (int) $user->id,
                 scenarioId: null,
                 horizonDays: $horizon,
             ));
         }
+        foreach ($scenarioQuery->forUser($user) as $scenario) {
+            foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
+                $bus->dispatch(new ProjectForecastJob(
+                    userId: (int) $user->id,
+                    scenarioId: $scenario->id,
+                    horizonDays: $horizon,
+                ));
+            }
+        }
     }
+    unset($db);
 })->name('forecasting.daily-sweep')->daily()->withoutOverlapping(30);
