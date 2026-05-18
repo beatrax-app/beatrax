@@ -174,6 +174,89 @@ it('rejects NULL user_id on forecast_runs (NOT NULL constraint)', function (): v
     expect($this->db->connection()->table('forecast_runs')->count())->toBe(0);
 });
 
+it('rejects NULL user_id on forecast_scenarios (NOT NULL constraint)', function (): void {
+    $caught = null;
+    try {
+        $this->db->connection()->table('forecast_scenarios')->insert([
+            'user_id' => null,
+            'name' => 'orphan',
+            'description' => null,
+            'created_at' => '2026-05-19 00:00:00',
+            'updated_at' => '2026-05-19 00:00:00',
+        ]);
+    } catch (QueryException $e) {
+        $caught = $e;
+    }
+
+    expect($caught)->not->toBeNull();
+    expect($this->db->connection()->table('forecast_scenarios')->count())->toBe(0);
+});
+
+it('rejects NULL user_id on forecast_scenario_mutations (NOT NULL constraint)', function (): void {
+    // Seed a parent scenario so the FK is satisfiable; the NOT-NULL
+    // on user_id is what we're isolating.
+    $scenarioId = $this->db->connection()->table('forecast_scenarios')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => 'parent',
+        'description' => null,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $caught = null;
+    try {
+        $this->db->connection()->table('forecast_scenario_mutations')->insert([
+            'user_id' => null,
+            'forecast_scenario_id' => $scenarioId,
+            'kind' => 'cancel_series',
+            'target_series_id' => null,
+            'payload' => json_encode(['kind' => 'cancel_series', 'seriesId' => 1]),
+            'created_at' => '2026-05-19 00:00:00',
+            'updated_at' => '2026-05-19 00:00:00',
+        ]);
+    } catch (QueryException $e) {
+        $caught = $e;
+    }
+
+    expect($caught)->not->toBeNull();
+    expect($this->db->connection()->table('forecast_scenario_mutations')->count())->toBe(0);
+});
+
+it('rejects NULL user_id on forecast_shortfall_windows (NOT NULL constraint)', function (): void {
+    // Seed a parent account so the FK is satisfiable.
+    $accountId = $this->db->connection()->table('accounts')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => 'mig-test',
+        'slug' => 'mig-test',
+        'kind' => 'asn',
+        'iban' => 'MIGTEST123',
+        'default_currency' => 'EUR',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $caught = null;
+    try {
+        $this->db->connection()->table('forecast_shortfall_windows')->insert([
+            'user_id' => null,
+            'account_id' => $accountId,
+            'scenario_id' => null,
+            'starts_at' => '2026-05-19',
+            'ends_at' => '2026-05-20',
+            'lowest_balance_minor' => -100,
+            'currency' => 'EUR',
+            'buffer_used_minor' => 0,
+            'created_at' => '2026-05-19 00:00:00',
+            'updated_at' => '2026-05-19 00:00:00',
+        ]);
+    } catch (QueryException $e) {
+        $caught = $e;
+    }
+
+    expect($caught)->not->toBeNull();
+    expect($this->db->connection()->table('forecast_shortfall_windows')->count())->toBe(0);
+});
+
 it('adds three nullable forecast columns to accounts without breaking existing inserts', function (): void {
     $schema = $this->db->connection()->getSchemaBuilder();
 
