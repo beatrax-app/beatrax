@@ -7,8 +7,10 @@ namespace Modules\Forecasting\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Routing\Redirector;
+use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
 use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -124,20 +126,12 @@ final class ModelWhatIfDropdown extends Component
 
     private function parseAmountToMinor(string $input): ?int
     {
-        $trimmed = trim($input);
-        if ($trimmed === '') {
-            return null;
-        }
-        $normalised = str_replace([' ', '.'], ['', ''], $trimmed);
-        $normalised = str_replace(',', '.', $normalised);
-        if (! is_numeric($normalised)) {
-            return null;
-        }
-        $value = (float) $normalised;
-        if ($value <= 0) {
+        try {
+            $minor = AmountStringParser::toMinor($input, allowNegative: false, requireNonZero: true);
+        } catch (InvalidArgumentException) {
             return null;
         }
 
-        return (int) round($value * 100);
+        return $minor;
     }
 }
