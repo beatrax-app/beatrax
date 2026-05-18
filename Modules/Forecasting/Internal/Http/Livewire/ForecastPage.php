@@ -243,24 +243,31 @@ final class ForecastPage extends Component
             }
         }
 
+        // A tampered or stale ?account= value (anything that is neither
+        // 'all' nor a numeric account id) falls back to the All-accounts
+        // tab — matching the `#[Url(as: 'account', except: 'all')]`
+        // intent. Renders the All-accounts view rather than a blank page
+        // with no error or fallback.
+        if ($this->account !== 'all' && ! is_numeric($this->account)) {
+            $this->account = 'all';
+        }
+
         $isAllAccountsView = $this->account === 'all';
         if ($isAllAccountsView) {
             // Aggregate-tab render path. The page renders a single-line
             // EUR-rollup chart instead of a per-account rangeArea band.
             $selectedAccountId = null;
         } else {
-            $selectedAccountId = is_numeric($this->account) ? (int) $this->account : null;
-            if ($selectedAccountId !== null) {
-                $owns = false;
-                foreach ($accountList as $a) {
-                    if ($a['id'] === $selectedAccountId) {
-                        $owns = true;
-                        break;
-                    }
+            $selectedAccountId = (int) $this->account;
+            $owns = false;
+            foreach ($accountList as $a) {
+                if ($a['id'] === $selectedAccountId) {
+                    $owns = true;
+                    break;
                 }
-                if (! $owns) {
-                    throw new NotFoundHttpException('Account not found.');
-                }
+            }
+            if (! $owns) {
+                throw new NotFoundHttpException('Account not found.');
             }
         }
 

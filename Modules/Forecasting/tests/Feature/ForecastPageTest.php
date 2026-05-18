@@ -137,3 +137,18 @@ it('renders the empty-state hero when the user has no accounts', function (): vo
 it('redirects unauthenticated visits to /login', function (): void {
     $this->get('/forecast')->assertRedirect('/login');
 });
+
+it('falls back to the All-accounts tab when ?account= is a non-numeric tampered value', function (): void {
+    // Seed at least one account so the empty-state hero is not shown
+    // (we want to verify the All-accounts aggregate view is rendered,
+    // not the empty fallback).
+    fpgAccount($this->db, $this->user->id, 'ASN Fallback');
+
+    $response = $this->actingAs($this->user)->get('/forecast?account=garbage');
+
+    $response->assertOk();
+    $content = (string) $response->getContent();
+    // The all-accounts aggregate chart container ID is the testid the
+    // aggregate-line-chart partial uses.
+    expect($content)->toContain('data-testid="all-accounts-aggregate-chart"');
+});
