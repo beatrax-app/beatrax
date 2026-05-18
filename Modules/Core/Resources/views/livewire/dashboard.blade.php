@@ -48,45 +48,25 @@
         </div>
     </header>
 
-    {{-- Status tile row — "Next ICS settlement" + "Email scan health"
-         tiles. Either tile may be hidden when its source query returns
-         null; the row collapses to a single tile or vanishes entirely
-         depending on which surfaces have data. Side-by-side on desktop
-         (md:grid-cols-2), stacked on mobile. --}}
-    @if ((isset($nextSettlement) && $nextSettlement !== null) || (isset($emailScanHealth) && $emailScanHealth !== null))
-        <section class="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Status tiles">
-            {{-- "Next ICS settlement" tile. Hides entirely when
-                 `$nextSettlement` is null. Border / radius / padding
-                 match the surrounding tile chrome verbatim. Tile
-                 amount uses Display 32px semibold tabular-nums in
-                 slate-900 (never emerald — emerald is reserved for
-                 net-positive KPIs and an outstanding settlement
-                 balance is never positive-good). --}}
-            @if (isset($nextSettlement) && $nextSettlement !== null)
-                <div class="rounded-lg border border-slate-200 bg-white p-6">
-                    <p class="text-base font-semibold text-slate-900">Next ICS settlement</p>
-                    <p class="mt-2 text-3xl font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
-                        {{ $nextSettlement->amount->format('nl_NL') }}
-                    </p>
-                    <p class="mt-1 text-xs text-slate-500">due ~{{ $nextSettlement->dueDate->format('d M') }}</p>
-                </div>
-            @endif
+    {{-- Status tile row — Forecast highlights + Email scan health.
+         Phase 5's "Next ICS settlement" inline tile is REPLACED by the
+         Phase 10 Forecast highlights Livewire tile (strict superset —
+         the next-settlement line is preserved). Either tile may be
+         hidden when its source query returns no data. Side-by-side on
+         desktop (md:grid-cols-2), stacked on mobile. --}}
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Status tiles">
+        @livewire('forecasting.forecast-highlights-tile')
 
-            {{-- "Email scan health" tile.
-                 Wrapped in an <a> so the whole card is clickable; the inner
-                 hover:ring-2 provides the affordance. Hidden entirely when
-                 `$emailScanHealth` is null (zero connected inboxes). --}}
-            @if (isset($emailScanHealth) && $emailScanHealth !== null)
-                <a
-                    href="{{ route('inboxes.index') }}"
-                    class="block rounded-lg transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
-                    aria-label="Email scan health — {{ count($emailScanHealth->lines) + $emailScanHealth->overflowCount }} connected {{ ($emailScanHealth->overflowCount + count($emailScanHealth->lines)) === 1 ? 'inbox' : 'inboxes' }}"
-                >
-                    @include('email-scan::livewire.email-scan-health-tile', ['tile' => $emailScanHealth])
-                </a>
-            @endif
-        </section>
-    @endif
+        @if (isset($emailScanHealth) && $emailScanHealth !== null)
+            <a
+                href="{{ route('inboxes.index') }}"
+                class="block rounded-lg transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                aria-label="Email scan health — {{ count($emailScanHealth->lines) + $emailScanHealth->overflowCount }} connected {{ ($emailScanHealth->overflowCount + count($emailScanHealth->lines)) === 1 ? 'inbox' : 'inboxes' }}"
+            >
+                @include('email-scan::livewire.email-scan-health-tile', ['tile' => $emailScanHealth])
+            </a>
+        @endif
+    </section>
 
     {{-- KPI tiles: the primary focal point of the dashboard.
 
