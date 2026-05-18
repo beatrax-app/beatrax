@@ -1,0 +1,48 @@
+{{--
+    Net diff tile partial — rendered ABOVE the side-by-side baseline +
+    scenario panel pair on the /forecast page when a scenario is
+    active.
+
+    Three direction-aware delta numerics at horizon day 30 / 60 / 90:
+    positive (scenario is BETTER than baseline) tints emerald-700,
+    negative (scenario is WORSE) tints rose-700, zero leaves the
+    numeric in default slate-900. The locale-aware Money formatter
+    uses the project's nl_NL EUR convention (Phase 3 D-46).
+
+    Inputs:
+      - $netDiff: array<int, int> keyed by 30/60/90 with signed
+        minor-unit deltas (scenario - baseline).
+      - $netDiffCurrency: ISO 4217 currency string for the formatter.
+--}}
+@php
+    $fmt = static function (int $absMinor, string $currency = 'EUR'): string {
+        $value = $absMinor / 100;
+        $formatter = new \NumberFormatter('nl_NL', \NumberFormatter::CURRENCY);
+        $rendered = $formatter->formatCurrency($value, $currency);
+
+        return $rendered === false ? number_format($value, 2, ',', '.') : $rendered;
+    };
+@endphp
+
+<section class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4" aria-label="Net diff between baseline and scenario at horizon days 30 / 60 / 90">
+    <p class="text-sm text-slate-500">Net diff</p>
+    <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        @foreach ([30, 60, 90] as $horizonKey)
+            @php
+                $delta = $netDiff[$horizonKey] ?? 0;
+                $sign = $delta > 0 ? '+' : ($delta < 0 ? '−' : '');
+                $tint = $delta > 0 ? 'text-emerald-700' : ($delta < 0 ? 'text-rose-700' : 'text-slate-900');
+                $aria = $delta > 0 ? 'better than baseline' : ($delta < 0 ? 'worse than baseline' : 'equal to baseline');
+                $formatted = $fmt(abs($delta), $netDiffCurrency ?? 'EUR');
+            @endphp
+            <div>
+                <p
+                    class="text-3xl font-semibold {{ $tint }}"
+                    style="font-variant-numeric: tabular-nums;"
+                    aria-label="Net difference at day {{ $horizonKey }}: {{ $sign }}{{ $formatted }}, scenario is {{ $aria }}"
+                >{{ $sign }}{{ $formatted }}</p>
+                <p class="mt-1 text-xs text-slate-500" style="font-variant-numeric: tabular-nums;">at day {{ $horizonKey }}</p>
+            </div>
+        @endforeach
+    </div>
+</section>
