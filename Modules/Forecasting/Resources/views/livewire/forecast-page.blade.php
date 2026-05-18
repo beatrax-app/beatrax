@@ -213,6 +213,7 @@
                 @include('forecasting::livewire.partials.net-diff-tile', [
                     'netDiff' => $netDiff,
                     'netDiffCurrency' => $defaultCurrency,
+                    'horizonDays' => \Modules\Forecasting\Internal\Jobs\ProjectForecastJob::HORIZON_DAYS,
                 ])
             @endif
 

@@ -12,6 +12,7 @@ use Livewire\Component;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Public\Actions\CreateScenario;
 use Modules\Forecasting\Public\Actions\DeleteScenario;
@@ -98,7 +99,7 @@ final class ForecastPage extends Component
 
     public function setHorizon(int $days): void
     {
-        if (! in_array($days, [30, 60, 90], true)) {
+        if (! in_array($days, ProjectForecastJob::HORIZON_DAYS, true)) {
             return;
         }
         $this->horizon = $days;
@@ -295,7 +296,10 @@ final class ForecastPage extends Component
         $scenarioChartElementId = null;
         $scenarioPanelColor = '#0F172A';
         /** @var array<int, int> $netDiff */
-        $netDiff = [30 => 0, 60 => 0, 90 => 0];
+        $netDiff = [];
+        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
+            $netDiff[$horizonKey] = 0;
+        }
 
         // Read the user's saved scenarios so the picker is populated;
         // shared between empty + populated states.
@@ -526,8 +530,11 @@ final class ForecastPage extends Component
      */
     private function computeNetDiff(ForecastDto $baseline, ForecastDto $scenario): array
     {
-        $result = [30 => 0, 60 => 0, 90 => 0];
-        foreach ([30, 60, 90] as $horizonKey) {
+        $result = [];
+        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
+            $result[$horizonKey] = 0;
+        }
+        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
             if ($horizonKey > $baseline->horizonDays || $horizonKey > $scenario->horizonDays) {
                 continue;
             }
