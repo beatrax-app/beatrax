@@ -446,13 +446,35 @@ it('17. ScenarioApplier shift_series_date with scope=all_subsequent: shifts ever
     expect($dates)->toBe(['2026-06-02', '2026-07-02']);
 });
 
-it('19. ScenarioApplier add_one_off on an empty baseline throws InvalidArgumentException (no silent loss)', function (): void {
+it('19. ScenarioApplier add_one_off on an empty baseline falls back to the user lowest-id account', function (): void {
     /** @var CreateScenario $create */
     $create = $this->app->make(CreateScenario::class);
     /** @var AddScenarioMutation $add */
     $add = $this->app->make(AddScenarioMutation::class);
     /** @var ScenarioApplier $applier */
     $applier = $this->app->make(ScenarioApplier::class);
+
+    // Seed two accounts so the fallback has something to pick from.
+    $low = $this->db->connection()->table('accounts')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => 'A-low',
+        'slug' => 'a-low',
+        'kind' => 'asn',
+        'iban' => 'SCALOW001',
+        'default_currency' => 'EUR',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+    $this->db->connection()->table('accounts')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => 'B-high',
+        'slug' => 'b-high',
+        'kind' => 'asn',
+        'iban' => 'SCAHIGH002',
+        'default_currency' => 'EUR',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
 
     $scenarioId = ($create)($this->user, 'One-off on empty baseline');
     ($add)($scenarioId, $this->user, 'add_one_off', new AddOneOffPayload(
@@ -463,11 +485,13 @@ it('19. ScenarioApplier add_one_off on an empty baseline throws InvalidArgumentE
     ));
 
     $asOf = CarbonImmutable::parse('2026-05-19');
-    // The empty baseline (fresh import, no approved series) must surface
-    // a loud error rather than landing on accountId=0 which the daily
-    // fold silently drops.
-    expect(fn () => $applier->apply([], $scenarioId, $this->user, $asOf, 30))
-        ->toThrow(InvalidArgumentException::class, 'baseline projection has no contributions');
+    // Empty baseline → the applier resolves the user's lowest-id account
+    // ($low) as the landing pad rather than dropping the contribution.
+    $result = $applier->apply([], $scenarioId, $this->user, $asOf, 30);
+
+    expect($result)->toHaveCount(1);
+    expect($result[0]->accountId)->toBe($low);
+    expect($result[0]->pointMinor)->toBe(-5000);
 });
 
 it('20. ScenarioApplier pickAccountIdForOneOff: deterministic tie-break by accountId ASC', function (): void {
