@@ -1,9 +1,9 @@
 {{--
     Dashboard "Forecast highlights" tile.
 
-    REPLACES the Phase 5 "Next ICS settlement" inline tile (D-1013).
-    Strict superset: the next-settlement line is preserved as a meta
-    line beneath the lowest-projected-balance line.
+    Replaces the earlier "Next ICS settlement" inline tile as a strict
+    superset: the next-settlement line is preserved as a meta line
+    beneath the lowest-projected-balance line.
 
     Hidden entirely (renders nothing) when the user has neither a
     lowest-projected balance NOR a next ICS settlement — the

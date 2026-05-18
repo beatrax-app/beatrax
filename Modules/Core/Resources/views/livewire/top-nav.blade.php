@@ -135,8 +135,8 @@
              days; the count caps at "99+" when >99. The composer
              body lives in ForecastingServiceProvider and reads from
              ForecastHighlightsQuery::activeShortfallCountForUser.
-             D-1025 — flat slot between Recurring and Settings (no
-             "Money" parent menu). --}}
+             Flat slot between Recurring and Settings (no "Money"
+             parent menu). --}}
         @php
             $forecastShortfallCount ??= 0;
             $shortfallLabel = $forecastShortfallCount > 99 ? '99+' : (string) $forecastShortfallCount;

@@ -16,10 +16,10 @@ use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
  * line is preserved alongside the new lowest-projected-balance +
  * active-shortfall-count lines).
  *
- * The tile is text-only (UI-SPEC D-1026 — no sparkline). Drills to
- * `/forecast` on click. Hidden when the user has neither a
- * lowest-projected balance nor a next ICS settlement (calm-day
- * collapse — same precedent as the Phase 9 dashboard drift badge).
+ * The tile is text-only (no sparkline). Drills to `/forecast` on click.
+ * Hidden when the user has neither a lowest-projected balance nor a
+ * next ICS settlement (calm-day collapse — same precedent as the
+ * dashboard drift badge).
  *
  * Constructor injection is banned on Livewire `Component` subclasses
  * by phpstan-strict-rules; collaborators arrive on `render()` as

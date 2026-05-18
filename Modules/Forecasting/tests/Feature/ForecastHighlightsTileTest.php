@@ -16,11 +16,11 @@ uses(RefreshDatabase::class);
 /*
  * Feature coverage for the dashboard "Forecast highlights" Livewire tile.
  *
- * REPLACES Modules/Chains/tests/Feature/NextIcsSettlementTileTest (D-1013):
- *   - The Phase 5 next-settlement tile case (case 1) is ported verbatim
- *     here — the new tile is a strict superset and STILL renders the
- *     next-settlement line.
- *   - The Phase 5 hidden-state test (case 6 — "Dashboard hides ... when
+ * Replaces Modules/Chains/tests/Feature/NextIcsSettlementTileTest as a
+ * strict superset:
+ *   - The earlier next-settlement tile case (case 1) is ported verbatim
+ *     here — the new tile STILL renders the next-settlement line.
+ *   - The earlier hidden-state test (case 6 — "Dashboard hides ... when
  *     nextIcsSettlement returns null") is ported.
  *
  * New Phase 10 cases:

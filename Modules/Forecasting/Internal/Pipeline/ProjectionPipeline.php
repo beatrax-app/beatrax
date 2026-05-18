@@ -152,12 +152,13 @@ final readonly class ProjectionPipeline
             viewByFunder: false,
         );
 
-        // Wave 4 scenario branch (FCT-03 boundary). When the projection is
-        // for a saved scenario, the ScenarioApplier folds the user's
-        // mutations on top of the baseline contributions purely in memory
-        // — it NEVER joins forecast_scenario_mutations onto the
-        // transaction substrate. The noScenarioMutationsJoinedToTransactionQueries
-        // arch invariant is the load-bearing structural enforcement.
+        // Scenario branch — the scenario-isolation boundary. When the
+        // projection is for a saved scenario, the ScenarioApplier folds
+        // the user's mutations on top of the baseline contributions
+        // purely in memory — it NEVER joins forecast_scenario_mutations
+        // onto the transaction substrate. The
+        // noScenarioMutationsJoinedToTransactionQueries arch invariant
+        // is the load-bearing structural enforcement.
         if ($scenarioId !== null) {
             $routed = $this->scenarioApplier->apply(
                 baselineContributions: $routed,

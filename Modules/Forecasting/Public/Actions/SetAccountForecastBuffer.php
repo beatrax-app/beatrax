@@ -28,7 +28,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *     shortfall band.
  *
  * `$bufferMinor === null` clears the buffer (effective zero-crossing
- * default per D-1011).
+ * default).
  */
 final class SetAccountForecastBuffer
 {
