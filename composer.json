@@ -48,6 +48,7 @@
         "psr-4": {
             "App\\": "app/",
             "Modules\\": "Modules/",
+            "Modules\\Forecasting\\": "Modules/Forecasting/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }
@@ -63,6 +64,7 @@
             "Modules\\Chains\\Tests\\": "Modules/Chains/tests/",
             "Modules\\DriftAlerts\\Tests\\": "Modules/DriftAlerts/tests/",
             "Modules\\EmailScan\\Tests\\": "Modules/EmailScan/tests/",
+            "Modules\\Forecasting\\Tests\\": "Modules/Forecasting/tests/",
             "Modules\\Receipts\\Tests\\": "Modules/Receipts/tests/",
             "Modules\\Recurring\\Tests\\": "Modules/Recurring/tests/",
             "Modules\\Transfers\\Tests\\": "Modules/Transfers/tests/"

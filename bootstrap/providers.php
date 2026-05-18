@@ -8,6 +8,7 @@ use Modules\Chains\Providers\ChainsServiceProvider;
 use Modules\Core\Providers\CoreServiceProvider;
 use Modules\DriftAlerts\Providers\DriftAlertsServiceProvider;
 use Modules\EmailScan\Providers\EmailScanServiceProvider;
+use Modules\Forecasting\Providers\ForecastingServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
@@ -28,4 +29,5 @@ return [
     ReceiptsServiceProvider::class,
     RecurringServiceProvider::class,
     DriftAlertsServiceProvider::class,
+    ForecastingServiceProvider::class,
 ];

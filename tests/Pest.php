@@ -25,6 +25,7 @@ foreach (
         'Modules/Core' => Modules\Core\Tests\TestCase::class,
         'Modules/DriftAlerts' => Modules\DriftAlerts\Tests\TestCase::class,
         'Modules/EmailScan' => Modules\EmailScan\Tests\TestCase::class,
+        'Modules/Forecasting' => Modules\Forecasting\Tests\TestCase::class,
         'Modules/Import' => Modules\Import\Tests\TestCase::class,
         'Modules/Ingestion' => Modules\Ingestion\Tests\TestCase::class,
         'Modules/Ledger' => Modules\Ledger\Tests\TestCase::class,
