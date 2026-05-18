@@ -79,6 +79,15 @@ parameters:
         -
             message: '#Illuminate\\Support\\Facades\\Cache facade should not be used\.#'
             path: Modules/DriftAlerts/Internal/Jobs/DetectDriftAlertsJob.php
+        # Same carve-out for the Forecasting per-(user, scenario, horizon)
+        # projection job. Laravel calls ProjectForecastJob::uniqueVia()
+        # at queue-push time before constructor DI completes; a
+        # constructor-injected Repository is not an option. The
+        # BoundaryArchTest facade-ignore list at the top of the file
+        # mirrors this allow-list.
+        -
+            message: '#Illuminate\\Support\\Facades\\Cache facade should not be used\.#'
+            path: Modules/Forecasting/Internal/Jobs/ProjectForecastJob.php
     allowedGlobalFunctions:
         - 'app_path'
         - 'base_path'

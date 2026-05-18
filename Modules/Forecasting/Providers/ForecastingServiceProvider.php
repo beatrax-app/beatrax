@@ -15,6 +15,11 @@ use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnDriftDismissed;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
+use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
+use Modules\Forecasting\Internal\Pipeline\DailyFold;
+use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
+use Modules\Forecasting\Internal\Pipeline\RangeProjector;
+use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
@@ -51,6 +56,15 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(ProjectForecastOnRecurringChange::class);
         $this->app->singleton(ProjectForecastOnDriftDismissed::class);
         $this->app->singleton(ProjectForecastOnScenarioChange::class);
+
+        // Wave 2 projection pipeline + state machine. The job itself is
+        // constructor-positional (userId, scenarioId, horizonDays) so it
+        // is dispatched, not container-resolved — no singleton entry.
+        $this->app->singleton(BalanceAnchorResolver::class);
+        $this->app->singleton(RangeProjector::class);
+        $this->app->singleton(DailyFold::class);
+        $this->app->singleton(ProjectionPipeline::class);
+        $this->app->singleton(ForecastRunStateMachine::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
