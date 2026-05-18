@@ -62,6 +62,7 @@ final readonly class ProjectionPipeline
         private Clock $clock,
         private ChainAwareForecastRouter $router,
         private ShortfallDetector $shortfall,
+        private ScenarioApplier $scenarioApplier,
     ) {}
 
     public function project(User $user, ?int $scenarioId, int $horizonDays): void
@@ -150,6 +151,22 @@ final readonly class ProjectionPipeline
             user: $user,
             viewByFunder: false,
         );
+
+        // Wave 4 scenario branch (FCT-03 boundary). When the projection is
+        // for a saved scenario, the ScenarioApplier folds the user's
+        // mutations on top of the baseline contributions purely in memory
+        // — it NEVER joins forecast_scenario_mutations onto the
+        // transaction substrate. The noScenarioMutationsJoinedToTransactionQueries
+        // arch invariant is the load-bearing structural enforcement.
+        if ($scenarioId !== null) {
+            $routed = $this->scenarioApplier->apply(
+                baselineContributions: $routed,
+                scenarioId: $scenarioId,
+                user: $user,
+                asOf: $asOf,
+                horizonDays: $horizonDays,
+            );
+        }
 
         // Bucket the routed contributions by accountId.
         /** @var array<int, list<ForecastContribution>> $byAccount */
