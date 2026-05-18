@@ -97,8 +97,8 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(ChainAwareForecastRouter::class);
         $this->app->singleton(ShortfallDetector::class);
 
-        // Wave 4 scenario applier (in-memory transform on top of the
-        // baseline routed contributions — the FCT-03 boundary).
+        // Scenario applier (in-memory transform on top of the baseline
+        // routed contributions — the scenario-isolation boundary).
         $this->app->singleton(ScenarioApplier::class);
 
         // Wave 3 Public Action + read service for the buffer editor and

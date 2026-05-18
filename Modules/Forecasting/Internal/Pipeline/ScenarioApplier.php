@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\ScenarioMutationDto;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
@@ -16,9 +16,11 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayloa
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Psr\Log\LoggerInterface;
 
 /**
- * The load-bearing FCT-03 in-memory transform.
+ * The load-bearing scenario in-memory transform. Walls scenario
+ * mutations off from any transaction-substrate JOIN.
  *
  * Reads `forecast_scenario_mutations` (Forecasting-owned) via
  * `ScenarioQuery` and reads `recurring_series` (Recurring-owned) via
@@ -27,17 +29,24 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
  * both reads are typed Public surfaces. ScenarioApplier NEVER joins
  * `forecast_scenario_mutations` onto `transactions`,
  * `recurring_series_occurrences`, `chain_links`, or `card_statements`.
- * The
- * `noScenarioMutationsJoinedToTransactionQueries` arch invariant from
- * Plan 10-01 is the single most load-bearing structural enforcement of
- * the FCT-03 boundary, and Wave 5's ScenarioIsolationContractTest will
- * add a runtime end-to-end proof.
+ * The `noScenarioMutationsJoinedToTransactionQueries` arch invariant is
+ * the single most load-bearing structural enforcement of the
+ * scenario-isolation boundary, and ScenarioIsolationContractTest adds
+ * a runtime end-to-end proof.
  *
  * The series_id validation in `AddScenarioMutation` /
  * `EditScenarioMutation` guarantees every persisted series_id belongs
  * to a user-owned recurring series; the Applier trusts that contract
  * and silently skips mutations whose referenced series has since been
  * deleted (the scenario row can outlive a series row).
+ *
+ * Defensive logging: when `forSeries` returns null but the underlying
+ * recurring_series row exists, the persisted series_id refers to
+ * another user's row — a contract violation that should never reach the
+ * Applier through the Public Actions but COULD surface if a future
+ * seeder / Artisan command / admin tool skips the Action layer. The
+ * Applier logs a warning and continues with the silent skip; the log
+ * provides the audit trail for diagnosing the upstream leak.
  *
  * Algorithm:
  *  1. Load the scenario's mutations.
@@ -70,7 +79,8 @@ final readonly class ScenarioApplier
     public function __construct(
         private ScenarioQuery $scenarioQuery,
         private RecurringSeriesQuery $seriesQuery,
-        private Clock $clock,
+        private DatabaseManager $db,
+        private LoggerInterface $logger,
     ) {}
 
     /**
@@ -84,13 +94,6 @@ final readonly class ScenarioApplier
         CarbonImmutable $asOf,
         int $horizonDays,
     ): array {
-        // Clock is constructor-injected for parity with sibling pipeline
-        // stages; the static-analysis visibility is preserved via the
-        // following touch so phpstan-strict-rules accepts the unused
-        // promoted property until a later wave uses it.
-        $now = $this->clock->now();
-        unset($now);
-
         $mutations = $this->scenarioQuery->mutationsFor($scenarioId, $user);
         if ($mutations === []) {
             return $baselineContributions;
@@ -205,10 +208,18 @@ final readonly class ScenarioApplier
      * One-off mutations are not bound to any recurring series and the
      * UI does not ask the user to pick a target account in Wave 4.
      * Land the contribution on whichever account already has the most
-     * baseline traffic so the daily fold sees the one-off; if the
-     * baseline is empty (new account / first run), fall back to
-     * accountId=0 — the daily fold's bucket-or-skip behaviour handles
-     * that gracefully.
+     * baseline traffic so the daily fold sees the one-off.
+     *
+     * Tie-break: when two accounts have equal contribution counts, the
+     * lower accountId wins so the result is deterministic regardless of
+     * the order RangeProjector emits baseline contributions.
+     *
+     * Throws \InvalidArgumentException when the baseline is empty (no
+     * approved series / fresh-import user). Returning a 0 sentinel here
+     * would silently drop the one-off contribution at the per-account
+     * fold (no $byAccount[0] bucket), so the user's scenario chart
+     * would look identical to baseline. The Public Action catches this
+     * exception and surfaces a helpful UI message.
      *
      * @param  list<ForecastContribution>  $contributions
      */
@@ -219,9 +230,15 @@ final readonly class ScenarioApplier
             $counts[$c->accountId] = ($counts[$c->accountId] ?? 0) + 1;
         }
         if ($counts === []) {
-            return 0;
+            throw new \InvalidArgumentException(
+                'Cannot place a one-off scenario mutation: the baseline projection has no contributions yet. Approve at least one recurring series first so the mutation has an account to land on.'
+            );
         }
-        arsort($counts);
+        // Sort by count DESC, then by accountId ASC for a deterministic
+        // tie-break.
+        uksort($counts, static function (int $a, int $b) use ($counts): int {
+            return $counts[$b] <=> $counts[$a] ?: $a <=> $b;
+        });
 
         return array_key_first($counts);
     }
@@ -293,6 +310,8 @@ final readonly class ScenarioApplier
     {
         $series = $this->seriesQuery->forSeries($payload->seriesId, $user);
         if ($series === null) {
+            $this->logCrossUserMismatchIfAny('change_series_amount', $payload->seriesId, $user);
+
             return $contributions; // referenced series gone — skip silently.
         }
         $tol = $series->varianceTolerancePercent;
@@ -427,5 +446,33 @@ final readonly class ScenarioApplier
             'yearly' => $cursor->addYearNoOverflow(),
             default => null,
         };
+    }
+
+    /**
+     * When `forSeries` returns null, double-check whether the underlying
+     * recurring_series row exists at all. If it does, the persisted
+     * series_id belongs to ANOTHER user — a contract violation that
+     * should never reach the Applier through the Public Actions. Log a
+     * warning so a future audit can trace the upstream leak. The
+     * lookup uses recurring_series.id only (no JOIN onto occurrences /
+     * transactions), preserving the no-transaction-substrate invariant.
+     */
+    private function logCrossUserMismatchIfAny(string $mutationKind, int $seriesId, User $user): void
+    {
+        $exists = $this->db->connection()->table('recurring_series')
+            ->where('id', $seriesId)
+            ->exists();
+        if (! $exists) {
+            return; // genuinely deleted — silent skip is correct.
+        }
+
+        $this->logger->warning(
+            'ScenarioApplier: cross-user series reference detected (mutation skipped)',
+            [
+                'mutation_kind' => $mutationKind,
+                'series_id' => $seriesId,
+                'user_id' => $user->id,
+            ],
+        );
     }
 }
