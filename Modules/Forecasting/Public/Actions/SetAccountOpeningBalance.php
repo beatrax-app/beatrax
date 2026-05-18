@@ -41,6 +41,13 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class SetAccountOpeningBalance
 {
+    /**
+     * Diff threshold above which the Action raises
+     * `OpeningBalanceDivergenceWarning` instead of silently committing.
+     * 50_000 minor units = €500.
+     */
+    public const DIVERGENCE_WARNING_THRESHOLD_MINOR = 50_000;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -84,7 +91,7 @@ final class SetAccountOpeningBalance
                     ->where('booked_at', '<=', $asOf->endOfDay()->toDateTimeString())
                     ->sum('amount_minor');
                 $diff = $openingBalanceMinor - $sum;
-                if (abs($diff) > 50000) {
+                if (abs($diff) > self::DIVERGENCE_WARNING_THRESHOLD_MINOR) {
                     throw new OpeningBalanceDivergenceWarning(
                         diffMinor: $diff,
                         sumOfTransactionsMinor: $sum,
