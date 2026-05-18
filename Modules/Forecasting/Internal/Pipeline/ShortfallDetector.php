@@ -18,12 +18,13 @@ use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
  *
  * Effective buffer:
  *   - `accounts.forecast_min_buffer_minor` when set, else 0
- *     (zero-crossing default per D-1011).
+ *     (zero-crossing default).
  *
  * Audit honesty: the captured `buffer_used_minor` is the buffer
  * effective at detection time. A later buffer edit triggers a
  * re-projection that writes NEW rows; historical rows survive in the
- * table with the original buffer captured (Phase 9 D-915 mirror).
+ * table with the original buffer captured (Drift-alerts honest-audit
+ * mirror).
  *
  * Pre-write cleanup: every detect() call deletes the previous
  * `(user_id, account_id, scenario_id)` windows BEFORE inserting new
