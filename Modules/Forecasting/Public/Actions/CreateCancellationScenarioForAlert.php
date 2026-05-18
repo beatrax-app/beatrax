@@ -1,0 +1,80 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Forecasting\Public\Actions;
+
+use Illuminate\Database\DatabaseManager;
+use Modules\Core\Models\User;
+use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
+use stdClass;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+/**
+ * Launchpad — Phase 9 drift-alert "Model cancel" chip target.
+ *
+ * Looks up the alert + its underlying recurring series (both
+ * cross-user-scoped), creates a new scenario named `Cancel {series_name}`,
+ * and seeds a single `cancel_series` mutation against that series. The
+ * two Public Action invocations are wrapped in a single DB transaction
+ * so a partial scenario-with-no-mutation never persists.
+ *
+ * Returns the new scenario id; the caller redirects to
+ * `/forecast?scenarioId={id}` so the user lands inside the pre-seeded
+ * what-if view.
+ */
+final class CreateCancellationScenarioForAlert
+{
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly CreateScenario $createScenario,
+        private readonly AddScenarioMutation $addMutation,
+    ) {}
+
+    public function __invoke(int $driftAlertId, User $user): int
+    {
+        $alert = $this->db->connection()->table('drift_alerts')
+            ->where('id', $driftAlertId)
+            ->where('user_id', $user->id)
+            ->first(['id', 'recurring_series_id']);
+        if ($alert === null) {
+            throw new NotFoundHttpException('Drift alert not found.');
+        }
+        /** @var stdClass $alert */
+        $seriesId = isset($alert->recurring_series_id) && is_numeric($alert->recurring_series_id)
+            ? (int) $alert->recurring_series_id
+            : 0;
+        if ($seriesId === 0) {
+            throw new NotFoundHttpException('Recurring series not found on alert.');
+        }
+
+        $series = $this->db->connection()->table('recurring_series')
+            ->where('id', $seriesId)
+            ->where('user_id', $user->id)
+            ->first(['id', 'detected_name', 'display_name_override']);
+        if ($series === null) {
+            throw new NotFoundHttpException('Recurring series not found.');
+        }
+        /** @var stdClass $series */
+        $name = $this->resolveSeriesName($series);
+
+        return $this->db->connection()->transaction(function () use ($user, $name, $seriesId): int {
+            $scenarioId = ($this->createScenario)($user, "Cancel {$name}");
+            ($this->addMutation)($scenarioId, $user, 'cancel_series', new CancelSeriesPayload(seriesId: $seriesId));
+
+            return $scenarioId;
+        });
+    }
+
+    private function resolveSeriesName(stdClass $row): string
+    {
+        if (isset($row->display_name_override) && is_string($row->display_name_override) && $row->display_name_override !== '') {
+            return $row->display_name_override;
+        }
+        if (isset($row->detected_name) && is_string($row->detected_name) && $row->detected_name !== '') {
+            return $row->detected_name;
+        }
+
+        return 'series';
+    }
+}
