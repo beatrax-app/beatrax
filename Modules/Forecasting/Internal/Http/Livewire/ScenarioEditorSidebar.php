@@ -458,8 +458,24 @@ final class ScenarioEditorSidebar extends Component
 
     private function summaryFor(string $kind, ScenarioMutationPayload $payload): string
     {
+        // Resolve the series display name from the catalog already
+        // populated by render(); fall back to "series #N" only when the
+        // series is missing from the catalog (e.g. deleted or filtered).
+        $resolveName = function (int $seriesId): string {
+            foreach ($this->availableSeries as $entry) {
+                if (($entry['id'] ?? null) === $seriesId) {
+                    $name = $entry['name'] ?? null;
+                    if (is_string($name) && $name !== '') {
+                        return $name;
+                    }
+                }
+            }
+
+            return 'series #'.$seriesId;
+        };
+
         if ($payload instanceof CancelSeriesPayload) {
-            return 'Cancel series #'.$payload->seriesId;
+            return 'Cancel '.$resolveName($payload->seriesId);
         }
         if ($payload instanceof AddOneOffPayload) {
             $sign = $payload->direction === 'income' ? '+' : '−';
@@ -476,12 +492,12 @@ final class ScenarioEditorSidebar extends Component
         if ($payload instanceof ChangeSeriesAmountPayload) {
             $amount = number_format($payload->newAmountMinor / 100, 2, ',', '.');
 
-            return "Series #{$payload->seriesId}: new amount {$amount}";
+            return $resolveName($payload->seriesId).": new amount {$amount}";
         }
         if ($payload instanceof ShiftSeriesDatePayload) {
             $scope = $payload->scope === 'all_subsequent' ? 'all subsequent' : 'next';
 
-            return "Series #{$payload->seriesId}: shift {$scope} to {$payload->newNextDate}";
+            return $resolveName($payload->seriesId).": shift {$scope} to {$payload->newNextDate}";
         }
 
         return $kind;
