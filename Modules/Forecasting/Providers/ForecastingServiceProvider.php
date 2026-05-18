@@ -123,9 +123,12 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(CreateCancellationScenarioForSeries::class);
         $this->app->singleton(CreateAmountChangeScenarioForSeries::class);
 
-        // Wave 3 dashboard tile Livewire SFC (singleton-bound so it
-        // resolves once per request).
-        $this->app->singleton(ForecastHighlightsTile::class);
+        // The dashboard tile Livewire SFC is intentionally NOT bound as
+        // a singleton: Livewire's mount/render lifecycle resolves a fresh
+        // instance per request via `LivewireManager::component(...)`
+        // already, and singleton-binding a Component subclass would
+        // surface stale public-property state across requests under any
+        // future long-running process (Octane / Reverb).
 
         // Wave 2 Public read API + DTO mapper.
         $this->app->singleton(ForecastDtoMapper::class);
