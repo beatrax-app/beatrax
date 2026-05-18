@@ -12,6 +12,8 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
+use Modules\Forecasting\Public\Actions\CreateScenario;
+use Modules\Forecasting\Public\Actions\DeleteScenario;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
@@ -64,7 +66,34 @@ final class ForecastPage extends Component
     #[Url(as: 'viewByFunder', except: false)]
     public bool $viewByFunder = false;
 
-    protected $listeners = ['buffer-editor:saved' => 'onBufferSaved'];
+    /**
+     * Inline two-step delete-scenario confirm state. Holds the
+     * scenarioId currently in "are you sure?" mode; null when not
+     * confirming.
+     */
+    public ?int $confirmingDeleteForScenarioId = null;
+
+    /**
+     * Whether the inline "+ New scenario" form is open.
+     */
+    public bool $creatingScenario = false;
+
+    /**
+     * Inline new-scenario name input bound to the create form.
+     */
+    public string $newScenarioName = '';
+
+    /**
+     * Inline new-scenario error message rendered next to the form.
+     */
+    public ?string $createScenarioError = null;
+
+    protected $listeners = [
+        'buffer-editor:saved' => 'onBufferSaved',
+        'scenario-mutated' => '$refresh',
+        'scenario-renamed' => '$refresh',
+        'scenario-deleted' => 'onScenarioDeleted',
+    ];
 
     public function setHorizon(int $days): void
     {
@@ -81,11 +110,102 @@ final class ForecastPage extends Component
         $this->dispatch('forecast-updated');
     }
 
+    public function setScenario(?int $scenarioId): void
+    {
+        $this->scenarioId = $scenarioId;
+        $this->confirmingDeleteForScenarioId = null;
+        $this->dispatch('forecast-updated');
+    }
+
+    public function toggleViewByFunder(): void
+    {
+        $this->viewByFunder = ! $this->viewByFunder;
+        $this->dispatch('forecast-updated');
+    }
+
+    public function startCreateScenario(): void
+    {
+        $this->creatingScenario = true;
+        $this->newScenarioName = '';
+        $this->createScenarioError = null;
+    }
+
+    public function cancelCreateScenario(): void
+    {
+        $this->creatingScenario = false;
+        $this->newScenarioName = '';
+        $this->createScenarioError = null;
+    }
+
+    public function saveNewScenario(CurrentUser $currentUser, CreateScenario $action): void
+    {
+        $this->createScenarioError = null;
+        $name = trim($this->newScenarioName);
+        if ($name === '') {
+            $this->createScenarioError = 'Scenario name cannot be empty.';
+
+            return;
+        }
+        try {
+            $newId = ($action)($currentUser->user(), $name);
+        } catch (\InvalidArgumentException $e) {
+            $this->createScenarioError = $e->getMessage();
+
+            return;
+        }
+        $this->creatingScenario = false;
+        $this->newScenarioName = '';
+        $this->scenarioId = $newId;
+        $this->dispatch('toast', message: 'Scenario "'.$name.'" created.');
+        $this->dispatch('forecast-updated');
+    }
+
+    public function confirmDeleteScenario(int $scenarioId): void
+    {
+        $this->confirmingDeleteForScenarioId = $scenarioId;
+    }
+
+    public function cancelDeleteScenario(): void
+    {
+        $this->confirmingDeleteForScenarioId = null;
+    }
+
+    public function deleteScenario(int $scenarioId, CurrentUser $currentUser, DeleteScenario $action): void
+    {
+        try {
+            ($action)($scenarioId, $currentUser->user());
+        } catch (NotFoundHttpException) {
+            $this->confirmingDeleteForScenarioId = null;
+
+            return;
+        }
+        $this->confirmingDeleteForScenarioId = null;
+        if ($this->scenarioId === $scenarioId) {
+            $this->scenarioId = null;
+        }
+        $this->dispatch('toast', message: 'Scenario deleted.');
+        $this->dispatch('forecast-updated');
+    }
+
     public function onBufferSaved(): void
     {
         // Re-render the chart with the new buffer floor + any newly
         // detected shortfall band. The browser-side ApexCharts wrapper
         // listens for the `forecast-updated` event on the partial.
+        $this->dispatch('forecast-updated');
+    }
+
+    public function onScenarioDeleted(): void
+    {
+        $this->scenarioId = null;
+        $this->dispatch('forecast-updated');
+    }
+
+    public function refreshProjectionStatus(): void
+    {
+        // wire:poll target — when the projection status flips to complete,
+        // the next render unmounts the conditional wire:poll element and
+        // polling halts (RESEARCH Pitfall 3 mitigation).
         $this->dispatch('forecast-updated');
     }
 
@@ -154,6 +274,32 @@ final class ForecastPage extends Component
         $selectedAccountName = '';
         $shortfallWindows = [];
 
+        $scenario = null;
+        $scenarioApexOptions = null;
+        $scenarioChartElementId = null;
+        $scenarioPanelColor = '#0F172A';
+        /** @var array<int, int> $netDiff */
+        $netDiff = [30 => 0, 60 => 0, 90 => 0];
+
+        // Read the user's saved scenarios so the picker is populated;
+        // shared between empty + populated states.
+        $scenarios = $scenarioQuery->forUser($user);
+
+        // Wave 4 cross-user 404 on scenarioId — refuse to render if the
+        // selected scenarioId belongs to another user.
+        if ($this->scenarioId !== null) {
+            $owns = false;
+            foreach ($scenarios as $s) {
+                if ($s->id === $this->scenarioId) {
+                    $owns = true;
+                    break;
+                }
+            }
+            if (! $owns) {
+                throw new NotFoundHttpException('Scenario not found.');
+            }
+        }
+
         if ($selectedAccountId !== null) {
             $baseline = $forecastQuery->forUser($selectedAccountId, $this->horizon, null, $user);
             $todayBalanceMinor = $baseline->todayBalanceMinor;
@@ -188,15 +334,31 @@ final class ForecastPage extends Component
                 $shortfallWindows[] = $mapper->mapShortfallWindow($row);
             }
 
-            $apexOptions = $this->buildApexOptions($baseline, $effectiveBufferMinor);
+            // Load scenario forecast when the picker has an active selection.
+            if ($this->scenarioId !== null) {
+                $scenario = $forecastQuery->forUser($selectedAccountId, $this->horizon, $this->scenarioId, $user);
+                $netDiff = $this->computeNetDiff($baseline, $scenario);
+                $scenarioPanelColor = $netDiff[30] > 0
+                    ? '#047857'
+                    : ($netDiff[30] < 0 ? '#BE123C' : '#0F172A');
+            }
+
+            // Shared y-axis (RESEARCH Pitfall 2): compute the union range
+            // across both panels' points + the buffer floor so the chart's
+            // y-axis is identical and the visual delta is honest.
+            [$yMin, $yMax] = $this->computeSharedYAxisRange($baseline, $scenario, $effectiveBufferMinor);
+
+            $apexOptions = $this->buildApexOptions($baseline, $effectiveBufferMinor, $yMin, $yMax, '#0F172A');
             $chartElementId = 'forecast-chart-baseline-'.$selectedAccountId;
+
+            if ($scenario !== null) {
+                $scenarioApexOptions = $this->buildApexOptions($scenario, $effectiveBufferMinor, $yMin, $yMax, $scenarioPanelColor);
+                $scenarioChartElementId = 'forecast-chart-scenario-'.$selectedAccountId.'-'.$this->scenarioId;
+            }
         }
 
-        // Scenario picker (Wave 2 baseline-only — read the user's saved scenarios so the picker is forward-complete for Wave 4).
-        $scenarios = $scenarioQuery->forUser($user);
-
         $now = $clock->now();
-        unset($now); // Reserved for Wave 4 — keeps the Clock constructor-injected via render() parameter resolution.
+        unset($now); // Reserved for Wave 5 — keeps the Clock constructor-injected via render() parameter resolution.
 
         $view = $views->make('forecasting::livewire.forecast-page', [
             'accounts' => $accountList,
@@ -206,6 +368,11 @@ final class ForecastPage extends Component
             'baseline' => $baseline,
             'apexOptions' => $apexOptions,
             'chartElementId' => $chartElementId,
+            'scenario' => $scenario,
+            'scenarioApexOptions' => $scenarioApexOptions,
+            'scenarioChartElementId' => $scenarioChartElementId,
+            'scenarioPanelColor' => $scenarioPanelColor,
+            'netDiff' => $netDiff,
             'horizon' => $this->horizon,
             'isEmpty' => $isEmpty,
             'todayBalanceMinor' => $todayBalanceMinor,
@@ -215,6 +382,12 @@ final class ForecastPage extends Component
             'effectiveBufferMinor' => $effectiveBufferMinor,
             'shortfallWindows' => $shortfallWindows,
             'scenarios' => $scenarios,
+            'activeScenarioId' => $this->scenarioId,
+            'viewByFunder' => $this->viewByFunder,
+            'confirmingDeleteForScenarioId' => $this->confirmingDeleteForScenarioId,
+            'creatingScenario' => $this->creatingScenario,
+            'newScenarioName' => $this->newScenarioName,
+            'createScenarioError' => $this->createScenarioError,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -224,24 +397,95 @@ final class ForecastPage extends Component
     }
 
     /**
+     * Pre-compute the shared y-axis range across baseline + scenario
+     * (when present) so both panels render against identical bounds.
+     * RESEARCH Pitfall 2 mitigation — without this, the scenario's
+     * y-axis would auto-scale and the visual delta would lie.
+     *
+     * @return array{0: float, 1: float}
+     */
+    private function computeSharedYAxisRange(ForecastDto $baseline, ?ForecastDto $scenario, ?int $effectiveBufferMinor): array
+    {
+        $lows = [];
+        $highs = [];
+        foreach ($baseline->points as $p) {
+            $lows[] = $p->lowMinor;
+            $highs[] = $p->highMinor;
+        }
+        if ($scenario !== null) {
+            foreach ($scenario->points as $p) {
+                $lows[] = $p->lowMinor;
+                $highs[] = $p->highMinor;
+            }
+        }
+        if ($effectiveBufferMinor !== null) {
+            $lows[] = $effectiveBufferMinor;
+            $highs[] = $effectiveBufferMinor;
+        }
+
+        $yMin = ($lows === [] ? 0 : min($lows)) / 100 - 1;
+        $yMax = ($highs === [] ? 0 : max($highs)) / 100 + 1;
+
+        return [$yMin, $yMax];
+    }
+
+    /**
+     * Compute the three-horizon Net diff (scenario - baseline) at days
+     * 30, 60, 90 from asOf — read each panel's `pointMinor` at the
+     * target date.
+     *
+     * @return array<int, int>
+     */
+    private function computeNetDiff(ForecastDto $baseline, ForecastDto $scenario): array
+    {
+        $result = [30 => 0, 60 => 0, 90 => 0];
+        foreach ([30, 60, 90] as $horizonKey) {
+            if ($horizonKey > $baseline->horizonDays || $horizonKey > $scenario->horizonDays) {
+                continue;
+            }
+            $b = $this->pointAtIndex($baseline, $horizonKey);
+            $s = $this->pointAtIndex($scenario, $horizonKey);
+            $result[$horizonKey] = $s - $b;
+        }
+
+        return $result;
+    }
+
+    private function pointAtIndex(ForecastDto $dto, int $dayOffset): int
+    {
+        $points = $dto->points;
+        if ($points === []) {
+            return 0;
+        }
+        $idx = min(count($points) - 1, $dayOffset);
+
+        return $points[$idx]->pointMinor;
+    }
+
+    /**
      * @return array<string, mixed>
      */
-    private function buildApexOptions(ForecastDto $baseline, ?int $effectiveBufferMinor = null): array
-    {
+    private function buildApexOptions(
+        ForecastDto $forecast,
+        ?int $effectiveBufferMinor = null,
+        ?float $yMinOverride = null,
+        ?float $yMaxOverride = null,
+        string $panelColor = '#0F172A',
+    ): array {
         $rangeData = [];
         $lineData = [];
         $lows = [];
         $highs = [];
 
-        foreach ($baseline->points as $point) {
+        foreach ($forecast->points as $point) {
             $rangeData[] = ['x' => $point->date, 'y' => [$point->lowMinor / 100, $point->highMinor / 100]];
             $lineData[] = ['x' => $point->date, 'y' => $point->pointMinor / 100];
             $lows[] = $point->lowMinor;
             $highs[] = $point->highMinor;
         }
 
-        $yMin = ($lows === [] ? 0 : min($lows)) / 100 - 1;
-        $yMax = ($highs === [] ? 0 : max($highs)) / 100 + 1;
+        $yMin = $yMinOverride ?? (($lows === [] ? 0 : min($lows)) / 100 - 1);
+        $yMax = $yMaxOverride ?? (($highs === [] ? 0 : max($highs)) / 100 + 1);
 
         // Wave 3 shortfall band overlay (RESEARCH Pattern 1). Render
         // the rose-50 region BELOW the buffer floor so the user sees
@@ -277,7 +521,7 @@ final class ForecastPage extends Component
             ],
             'fill' => ['opacity' => [0.2, 1.0]],
             'stroke' => ['curve' => 'straight', 'width' => [0, 2.5]],
-            'colors' => ['#0F172A', '#0F172A'],
+            'colors' => [$panelColor, $panelColor],
             'xaxis' => [
                 'type' => 'datetime',
                 'labels' => ['style' => ['fontSize' => '12px', 'colors' => '#64748B']],
