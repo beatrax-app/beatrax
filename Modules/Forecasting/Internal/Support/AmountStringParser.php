@@ -82,6 +82,13 @@ final class AmountStringParser
             throw new InvalidArgumentException('Amount must be a number.');
         }
 
+        // Reject a stripped leading '-' if the caller has banned negatives.
+        // (The float value at this point is unsigned because the sign was
+        // peeled off before `str_starts_with('-')` above.)
+        if (! $allowNegative && $negative) {
+            throw new InvalidArgumentException('Amount must be zero or positive.');
+        }
+
         $float = (float) $normalised;
         if (! $allowNegative && $float < 0) {
             throw new InvalidArgumentException('Amount must be zero or positive.');
