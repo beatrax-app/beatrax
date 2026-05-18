@@ -192,6 +192,34 @@ it('rejects NULL user_id on forecast_scenarios (NOT NULL constraint)', function 
     expect($this->db->connection()->table('forecast_scenarios')->count())->toBe(0);
 });
 
+it('rejects an unknown kind on forecast_scenario_mutations via the kind-enum trigger', function (): void {
+    $scenarioId = $this->db->connection()->table('forecast_scenarios')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => 'kind-trigger-parent',
+        'description' => null,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $caught = null;
+    try {
+        $this->db->connection()->table('forecast_scenario_mutations')->insert([
+            'user_id' => $this->user->id,
+            'forecast_scenario_id' => $scenarioId,
+            'kind' => 'definitely_not_allowed', // out-of-enum
+            'target_series_id' => null,
+            'payload' => json_encode(['kind' => 'definitely_not_allowed']),
+            'created_at' => '2026-05-19 00:00:00',
+            'updated_at' => '2026-05-19 00:00:00',
+        ]);
+    } catch (QueryException $e) {
+        $caught = $e;
+    }
+
+    expect($caught)->not->toBeNull();
+    expect($this->db->connection()->table('forecast_scenario_mutations')->count())->toBe(0);
+});
+
 it('rejects NULL user_id on forecast_scenario_mutations (NOT NULL constraint)', function (): void {
     // Seed a parent scenario so the FK is satisfiable; the NOT-NULL
     // on user_id is what we're isolating.
