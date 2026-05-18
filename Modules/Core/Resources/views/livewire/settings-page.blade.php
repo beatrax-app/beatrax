@@ -118,6 +118,36 @@
         </div>
     </form>
 
+    {{-- Forecasting section.
+
+         One per-account row with an inline OpeningBalanceEditor. The
+         Forecasting module owns the editor + its Save logic; the
+         Settings page hosts the section as the stable location the
+         /forecast page's "Adjust buffers ↗" deep link points at. --}}
+    <section class="space-y-3" id="forecast-buffers">
+        <h2 class="text-xs uppercase tracking-wide text-slate-500">Forecasting</h2>
+        <p class="text-sm text-slate-500">
+            diederik projects your balance forward from your accounts' current state. For accounts without statement balances (PayPal, legacy CSV imports), set the opening balance here so projections start from a known point.
+        </p>
+
+        @if (count($forecastingAccounts ?? []) === 0)
+            <p class="text-sm text-slate-500">No accounts yet — import a statement to add one.</p>
+        @else
+            <div class="space-y-3">
+                @foreach ($forecastingAccounts as $account)
+                    @livewire('forecasting.opening-balance-editor', [
+                        'accountId' => $account['id'],
+                        'accountName' => $account['name'],
+                        'accountKind' => $account['kind'],
+                        'currentOpeningMinor' => $account['opening_balance_minor'],
+                        'currentAsOfDate' => $account['opening_balance_as_of_date'],
+                        'currency' => $account['default_currency'],
+                    ], key('opening-balance-editor-' . $account['id']))
+                @endforeach
+            </div>
+        @endif
+    </section>
+
     {{-- Watched-folder secondary path.
 
          Instant-apply toggle (no Save button) — toggling fires

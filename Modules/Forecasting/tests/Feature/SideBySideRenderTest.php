@@ -103,10 +103,10 @@ beforeEach(function (): void {
     $this->accountId = sbsAccount($db, $this->user->id);
 });
 
-it('renders only the baseline chart when scenarioId is null', function (): void {
+it('renders only the baseline chart when scenarioId is null on a per-account tab', function (): void {
     sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 30, 'complete', sbsPoints(100000, 30));
     $this->actingAs($this->user)
-        ->get('/forecast')
+        ->get('/forecast?account='.$this->accountId)
         ->assertOk()
         ->assertSee('forecast-chart-baseline-')
         ->assertDontSee('forecast-chart-scenario-');
@@ -121,7 +121,7 @@ it('renders both panels when scenarioId is set', function (): void {
     sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 30, 'complete', sbsPoints(100000, 30));
     sbsForecastRun($this->db, $this->user->id, $this->accountId, $scenario->id, 30, 'complete', sbsPoints(110000, 30));
     $this->actingAs($this->user)
-        ->get('/forecast?scenarioId='.$scenario->id)
+        ->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id)
         ->assertOk()
         ->assertSee('forecast-chart-baseline-')
         ->assertSee('forecast-chart-scenario-')
@@ -139,7 +139,7 @@ it('renders the Net diff tile with three horizon labels when a scenario is activ
     sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 90, 'complete', sbsPoints(100000, 90));
     sbsForecastRun($this->db, $this->user->id, $this->accountId, $scenario->id, 30, 'complete', sbsPoints(105000, 30));
     $this->actingAs($this->user)
-        ->get('/forecast?scenarioId='.$scenario->id)
+        ->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id)
         ->assertOk()
         ->assertSee('at day 30')
         ->assertSee('at day 60')
@@ -155,7 +155,7 @@ it('tints the Net diff numeric emerald-700 when the scenario improves the baseli
     sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 30, 'complete', sbsPoints(50000, 30));
     sbsForecastRun($this->db, $this->user->id, $this->accountId, $scenario->id, 30, 'complete', sbsPoints(70000, 30));
     $this->actingAs($this->user)
-        ->get('/forecast?scenarioId='.$scenario->id)
+        ->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id)
         ->assertOk()
         ->assertSee('text-emerald-700');
 });
@@ -169,7 +169,7 @@ it('tints the Net diff numeric rose-700 when the scenario worsens the baseline',
     sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 30, 'complete', sbsPoints(100000, 30));
     sbsForecastRun($this->db, $this->user->id, $this->accountId, $scenario->id, 30, 'complete', sbsPoints(80000, 30));
     $this->actingAs($this->user)
-        ->get('/forecast?scenarioId='.$scenario->id)
+        ->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id)
         ->assertOk()
         ->assertSee('text-rose-700');
 });
@@ -183,7 +183,7 @@ it('activates the wire:poll.2s element only while the latest run is pending or r
     sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 30, 'complete', sbsPoints(100000, 30));
     sbsForecastRun($this->db, $this->user->id, $this->accountId, $scenario->id, 30, 'pending', sbsPoints(100000, 30));
     $this->actingAs($this->user)
-        ->get('/forecast?scenarioId='.$scenario->id)
+        ->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id)
         ->assertOk()
         ->assertSee('wire:poll.2s');
 });
@@ -197,7 +197,7 @@ it('does NOT render the wire:poll.2s element when both runs are complete', funct
     sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 30, 'complete', sbsPoints(100000, 30));
     sbsForecastRun($this->db, $this->user->id, $this->accountId, $scenario->id, 30, 'complete', sbsPoints(105000, 30));
     $this->actingAs($this->user)
-        ->get('/forecast?scenarioId='.$scenario->id)
+        ->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id)
         ->assertOk()
         ->assertDontSee('wire:poll.2s');
 });
@@ -211,7 +211,7 @@ it('returns 404 when scenarioId belongs to another user', function (): void {
     ]);
     sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 30, 'complete', sbsPoints(100000, 30));
     $this->actingAs($this->user)
-        ->get('/forecast?scenarioId='.$scenario->id)
+        ->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id)
         ->assertNotFound();
 });
 
@@ -223,7 +223,7 @@ it('computes a shared y-axis range across both panels', function (): void {
     ]);
     sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 30, 'complete', sbsPoints(100000, 30));
     sbsForecastRun($this->db, $this->user->id, $this->accountId, $scenario->id, 30, 'complete', sbsPoints(50000, 30));
-    $resp = $this->actingAs($this->user)->get('/forecast?scenarioId='.$scenario->id);
+    $resp = $this->actingAs($this->user)->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id);
     $resp->assertOk();
     $html = $resp->getContent();
     // Both panels must contain the same yaxis min and max — find both yaxis fragments and confirm they are identical.
