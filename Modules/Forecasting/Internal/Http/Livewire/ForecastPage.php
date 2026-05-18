@@ -11,6 +11,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
@@ -63,6 +64,8 @@ final class ForecastPage extends Component
     #[Url(as: 'viewByFunder', except: false)]
     public bool $viewByFunder = false;
 
+    protected $listeners = ['buffer-editor:saved' => 'onBufferSaved'];
+
     public function setHorizon(int $days): void
     {
         if (! in_array($days, [30, 60, 90], true)) {
@@ -78,6 +81,14 @@ final class ForecastPage extends Component
         $this->dispatch('forecast-updated');
     }
 
+    public function onBufferSaved(): void
+    {
+        // Re-render the chart with the new buffer floor + any newly
+        // detected shortfall band. The browser-side ApexCharts wrapper
+        // listens for the `forecast-updated` event on the partial.
+        $this->dispatch('forecast-updated');
+    }
+
     public function render(
         CurrentUser $currentUser,
         ForecastQuery $forecastQuery,
@@ -85,6 +96,7 @@ final class ForecastPage extends Component
         DatabaseManager $db,
         ViewFactory $views,
         Clock $clock,
+        ForecastDtoMapper $mapper,
     ): View {
         $user = $currentUser->user();
 
@@ -138,17 +150,45 @@ final class ForecastPage extends Component
         $horizonLowMinor = 0;
         $horizonHighMinor = 0;
         $defaultCurrency = 'EUR';
+        $effectiveBufferMinor = null;
+        $selectedAccountName = '';
+        $shortfallWindows = [];
 
         if ($selectedAccountId !== null) {
             $baseline = $forecastQuery->forUser($selectedAccountId, $this->horizon, null, $user);
             $todayBalanceMinor = $baseline->todayBalanceMinor;
             $defaultCurrency = $baseline->defaultCurrency;
+            $selectedAccountName = $baseline->accountName;
             $lastPoint = $baseline->points === [] ? null : $baseline->points[count($baseline->points) - 1];
             if ($lastPoint instanceof ForecastPointDto) {
                 $horizonLowMinor = $lastPoint->lowMinor;
                 $horizonHighMinor = $lastPoint->highMinor;
             }
-            $apexOptions = $this->buildApexOptions($baseline);
+
+            // Load the effective per-account buffer for the popover
+            // trigger label + the chart's annotations.yaxis shortfall
+            // band overlay.
+            $accountRow = $db->connection()->table('accounts')
+                ->where('id', $selectedAccountId)
+                ->where('user_id', $user->id)
+                ->first(['forecast_min_buffer_minor']);
+            if ($accountRow !== null && isset($accountRow->forecast_min_buffer_minor) && is_numeric($accountRow->forecast_min_buffer_minor)) {
+                $effectiveBufferMinor = (int) $accountRow->forecast_min_buffer_minor;
+            }
+
+            // Load any baseline shortfall windows for the inline badge.
+            $windowRows = $db->connection()->table('forecast_shortfall_windows')
+                ->where('user_id', $user->id)
+                ->where('account_id', $selectedAccountId)
+                ->whereNull('scenario_id')
+                ->orderBy('starts_at')
+                ->get();
+            foreach ($windowRows as $row) {
+                /** @var stdClass $row */
+                $shortfallWindows[] = $mapper->mapShortfallWindow($row);
+            }
+
+            $apexOptions = $this->buildApexOptions($baseline, $effectiveBufferMinor);
             $chartElementId = 'forecast-chart-baseline-'.$selectedAccountId;
         }
 
@@ -161,6 +201,8 @@ final class ForecastPage extends Component
         $view = $views->make('forecasting::livewire.forecast-page', [
             'accounts' => $accountList,
             'selectedAccountId' => $selectedAccountId,
+            'selectedAccountName' => $selectedAccountName,
+            'selectedAccountCurrency' => $defaultCurrency,
             'baseline' => $baseline,
             'apexOptions' => $apexOptions,
             'chartElementId' => $chartElementId,
@@ -170,6 +212,8 @@ final class ForecastPage extends Component
             'horizonLowMinor' => $horizonLowMinor,
             'horizonHighMinor' => $horizonHighMinor,
             'defaultCurrency' => $defaultCurrency,
+            'effectiveBufferMinor' => $effectiveBufferMinor,
+            'shortfallWindows' => $shortfallWindows,
             'scenarios' => $scenarios,
         ]);
 
@@ -182,7 +226,7 @@ final class ForecastPage extends Component
     /**
      * @return array<string, mixed>
      */
-    private function buildApexOptions(ForecastDto $baseline): array
+    private function buildApexOptions(ForecastDto $baseline, ?int $effectiveBufferMinor = null): array
     {
         $rangeData = [];
         $lineData = [];
@@ -198,6 +242,25 @@ final class ForecastPage extends Component
 
         $yMin = ($lows === [] ? 0 : min($lows)) / 100 - 1;
         $yMax = ($highs === [] ? 0 : max($highs)) / 100 + 1;
+
+        // Wave 3 shortfall band overlay (RESEARCH Pattern 1). Render
+        // the rose-50 region BELOW the buffer floor so the user sees
+        // immediately where the projected balance dips below the floor.
+        $annotations = [];
+        if ($effectiveBufferMinor !== null) {
+            $bufferValue = $effectiveBufferMinor / 100;
+            $annotations = [
+                'yaxis' => [
+                    [
+                        'y' => $yMin - 10,
+                        'y2' => $bufferValue,
+                        'fillColor' => '#FECDD3', // rose-50
+                        'opacity' => 0.4,
+                        'label' => ['text' => '', 'position' => 'left'],
+                    ],
+                ],
+            ];
+        }
 
         return [
             'chart' => [
@@ -228,6 +291,7 @@ final class ForecastPage extends Component
             'grid' => ['borderColor' => '#E2E8F0', 'strokeDashArray' => 0],
             'legend' => ['show' => false],
             'tooltip' => ['shared' => true, 'intersect' => false],
+            'annotations' => $annotations,
         ];
     }
 
