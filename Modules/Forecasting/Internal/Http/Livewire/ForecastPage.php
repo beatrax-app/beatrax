@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
@@ -242,8 +243,11 @@ final class ForecastPage extends Component
             }
         }
 
-        if ($this->account === 'all') {
-            $selectedAccountId = $firstAccountId;
+        $isAllAccountsView = $this->account === 'all';
+        if ($isAllAccountsView) {
+            // Aggregate-tab render path. The page renders a single-line
+            // EUR-rollup chart instead of a per-account rangeArea band.
+            $selectedAccountId = null;
         } else {
             $selectedAccountId = is_numeric($this->account) ? (int) $this->account : null;
             if ($selectedAccountId !== null) {
@@ -260,8 +264,8 @@ final class ForecastPage extends Component
             }
         }
 
-        // Empty-state guard: no accounts at all OR no first account selected.
-        $isEmpty = $selectedAccountId === null;
+        // Empty-state guard: no accounts at all.
+        $isEmpty = count($accountList) === 0;
 
         $baseline = null;
         $apexOptions = null;
@@ -273,6 +277,11 @@ final class ForecastPage extends Component
         $effectiveBufferMinor = null;
         $selectedAccountName = '';
         $shortfallWindows = [];
+        /** @var list<array{date: string, point_minor: int}> $aggregatePoints */
+        $aggregatePoints = [];
+        $aggregateBufferFloor = 0;
+        $aggregateChartElementId = null;
+        $aggregateCurrency = 'EUR';
 
         $scenario = null;
         $scenarioApexOptions = null;
@@ -357,8 +366,19 @@ final class ForecastPage extends Component
             }
         }
 
+        if ($isAllAccountsView && ! $isEmpty) {
+            [$aggregatePoints, $aggregateBufferFloor] = $this->computeAllAccountsAggregate(
+                accountList: $accountList,
+                horizon: $this->horizon,
+                forecastQuery: $forecastQuery,
+                db: $db,
+                user: $user,
+            );
+            $aggregateChartElementId = 'forecast-chart-aggregate-'.$this->horizon;
+        }
+
         $now = $clock->now();
-        unset($now); // Reserved for Wave 5 — keeps the Clock constructor-injected via render() parameter resolution.
+        unset($now); // Clock is kept on the render() signature for an explicit "as of" badge Wave 5 does not yet render.
 
         $view = $views->make('forecasting::livewire.forecast-page', [
             'accounts' => $accountList,
@@ -388,6 +408,11 @@ final class ForecastPage extends Component
             'creatingScenario' => $this->creatingScenario,
             'newScenarioName' => $this->newScenarioName,
             'createScenarioError' => $this->createScenarioError,
+            'isAllAccountsView' => $isAllAccountsView,
+            'aggregatePoints' => $aggregatePoints,
+            'aggregateBufferFloor' => $aggregateBufferFloor,
+            'aggregateChartElementId' => $aggregateChartElementId,
+            'aggregateCurrency' => $aggregateCurrency,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -397,10 +422,66 @@ final class ForecastPage extends Component
     }
 
     /**
+     * Sum every account's per-day point estimate into a single
+     * date-indexed series for the All accounts aggregate chart. The
+     * rollup is in EUR — for accounts whose default_currency is
+     * non-EUR the per-account ForecastDto already carries amounts in
+     * that currency, and the per-point `currency` field tags the
+     * unit. Wave 5's All-accounts aggregate intentionally simplifies:
+     * the per-account default_currency is treated as already-converted
+     * (PayPal-USD points carry the per-occurrence settled-EUR amount
+     * from upstream FX conversion). Multi-currency edge cases are
+     * captured at the per-account chart's `series-confidence-row`
+     * legend rather than smudged into the aggregate.
+     *
+     * Buffer floor is the sum of every account's
+     * `forecast_min_buffer_minor` (treating NULL as 0).
+     *
+     * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
+     * @return array{0: list<array{date: string, point_minor: int}>, 1: int}
+     */
+    private function computeAllAccountsAggregate(
+        array $accountList,
+        int $horizon,
+        ForecastQuery $forecastQuery,
+        DatabaseManager $db,
+        User $user,
+    ): array {
+        /** @var array<string, int> $byDate */
+        $byDate = [];
+        foreach ($accountList as $account) {
+            $dto = $forecastQuery->forUser($account['id'], $horizon, null, $user);
+            foreach ($dto->points as $p) {
+                $byDate[$p->date] = ($byDate[$p->date] ?? 0) + $p->pointMinor;
+            }
+        }
+
+        ksort($byDate, SORT_STRING);
+        $aggregatePoints = [];
+        foreach ($byDate as $date => $sumPoint) {
+            $aggregatePoints[] = ['date' => $date, 'point_minor' => $sumPoint];
+        }
+
+        $bufferRows = $db->connection()->table('accounts')
+            ->where('user_id', $user->id)
+            ->whereNotNull('forecast_min_buffer_minor')
+            ->get(['forecast_min_buffer_minor']);
+        $bufferFloor = 0;
+        foreach ($bufferRows as $row) {
+            /** @var stdClass $row */
+            if (is_numeric($row->forecast_min_buffer_minor ?? null)) {
+                $bufferFloor += (int) $row->forecast_min_buffer_minor;
+            }
+        }
+
+        return [$aggregatePoints, $bufferFloor];
+    }
+
+    /**
      * Pre-compute the shared y-axis range across baseline + scenario
      * (when present) so both panels render against identical bounds.
-     * RESEARCH Pitfall 2 mitigation — without this, the scenario's
-     * y-axis would auto-scale and the visual delta would lie.
+     * Without this, the scenario's y-axis would auto-scale and the
+     * visual delta would lie.
      *
      * @return array{0: float, 1: float}
      */

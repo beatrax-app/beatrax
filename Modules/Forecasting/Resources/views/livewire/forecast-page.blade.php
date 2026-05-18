@@ -61,6 +61,17 @@
     @else
         @if (count($accounts) > 0)
             <nav class="mb-6 flex flex-wrap items-center gap-2 border-b border-slate-200" role="tablist" aria-label="Account">
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected="{{ $isAllAccountsView ? 'true' : 'false' }}"
+                    wire:click="setAccount('all')"
+                    @class([
+                        'px-3 py-2 text-sm',
+                        'border-b-2 border-slate-900 font-medium text-slate-900' => $isAllAccountsView,
+                        'border-b-2 border-transparent text-slate-500 hover:text-slate-900' => ! $isAllAccountsView,
+                    ])
+                >All accounts</button>
                 @foreach ($accounts as $account)
                     <button
                         type="button"
@@ -174,6 +185,28 @@
             @endif
         </div>
 
+        {{-- All-accounts aggregate region. Renders a single-line EUR
+             rollup chart instead of a per-account rangeArea band. The
+             confidence legend hides on this tab since the aggregate has
+             no per-series identity. --}}
+        @if ($isAllAccountsView)
+            <section class="rounded-lg border border-slate-200 bg-white p-4">
+                <header class="mb-3">
+                    <h2 class="text-base font-semibold text-slate-900">All accounts · Baseline</h2>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Combined balance across every account, projected over the next {{ $horizon }} days.
+                    </p>
+                </header>
+
+                @include('forecasting::livewire.partials.aggregate-line-chart', [
+                    'chartElementId' => $aggregateChartElementId,
+                    'aggregatePoints' => $aggregatePoints,
+                    'aggregateBufferFloor' => $aggregateBufferFloor,
+                    'aggregateCurrency' => $aggregateCurrency,
+                ])
+            </section>
+        @endif
+
         {{-- Net diff tile + side-by-side region. --}}
         @if ($baseline instanceof ForecastDto)
             @if ($scenario instanceof ForecastDto)
@@ -183,7 +216,13 @@
                 ])
             @endif
 
-            <div class="grid grid-cols-1 gap-6 @if ($scenario instanceof ForecastDto) lg:grid-cols-[1fr_18rem] @endif">
+            @php
+                $showConfidenceLegend = ! ($scenario instanceof ForecastDto) && count($baseline->seriesConfidence) >= 0;
+                $sidebarColumnClass = ($scenario instanceof ForecastDto) || $showConfidenceLegend
+                    ? 'lg:grid-cols-[1fr_18rem]'
+                    : '';
+            @endphp
+            <div class="grid grid-cols-1 gap-6 {{ $sidebarColumnClass }}">
                 <div class="grid grid-cols-1 gap-4 @if ($scenario instanceof ForecastDto) lg:grid-cols-2 @endif">
                     <section class="rounded-lg border border-slate-200 bg-white p-4">
                         <header class="mb-3 flex items-baseline justify-between gap-4">
@@ -271,6 +310,19 @@
                         @livewire('forecasting.scenario-editor-sidebar', [
                             'scenarioId' => $activeScenarioId,
                         ], key('scenario-sidebar-' . $activeScenarioId))
+                    </aside>
+                @elseif ($showConfidenceLegend)
+                    <aside class="rounded-lg border border-slate-200 bg-white p-4 space-y-2" data-testid="confidence-legend">
+                        <h3 class="text-sm font-medium text-slate-700">Series confidence</h3>
+                        @if (count($baseline->seriesConfidence) === 0)
+                            <p class="text-xs text-slate-500">No series contribute to this account's forecast yet.</p>
+                        @else
+                            <ul class="space-y-1">
+                                @foreach ($baseline->seriesConfidence as $confidence)
+                                    @include('forecasting::livewire.partials.series-confidence-row', ['confidence' => $confidence])
+                                @endforeach
+                            </ul>
+                        @endif
                     </aside>
                 @endif
             </div>
