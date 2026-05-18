@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
+use Modules\Forecasting\Public\Dto\SeriesConfidenceDto;
 use Modules\Forecasting\Public\Dto\ShortfallWindowDto;
 use stdClass;
 
@@ -36,8 +37,8 @@ final readonly class ForecastDtoMapper
      * resolves it via its own query path; the mapper stays static-only
      * and side-effect-free).
      *
-     * @param  array<array-key, mixed>             $accountResult
-     * @param  list<\Modules\Forecasting\Public\Dto\SeriesConfidenceDto> $seriesConfidence
+     * @param  array<array-key, mixed>  $accountResult
+     * @param  list<SeriesConfidenceDto>  $seriesConfidence
      */
     public function mapForecast(
         array $accountResult,

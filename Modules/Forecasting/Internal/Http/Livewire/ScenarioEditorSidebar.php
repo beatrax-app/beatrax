@@ -463,11 +463,8 @@ final class ScenarioEditorSidebar extends Component
         // series is missing from the catalog (e.g. deleted or filtered).
         $resolveName = function (int $seriesId): string {
             foreach ($this->availableSeries as $entry) {
-                if (($entry['id'] ?? null) === $seriesId) {
-                    $name = $entry['name'] ?? null;
-                    if (is_string($name) && $name !== '') {
-                        return $name;
-                    }
+                if ($entry['id'] === $seriesId && $entry['name'] !== '') {
+                    return $entry['name'];
                 }
             }
 
