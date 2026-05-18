@@ -1,0 +1,94 @@
+<?php
+
+declare(strict_types=1);
+
+use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
+use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
+use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
+
+/*
+ * Constructor-level enum validation on the three Public mutation
+ * payloads that previously accepted arbitrary string values for their
+ * `direction`, `cadence`, and `scope` fields. The downstream
+ * ScenarioApplier branches on those strings; a typo silently flipped
+ * the income/expense sign or shrank the shift scope. Tightened at the
+ * constructor so the typed JSON cast (which invokes the constructor
+ * on read) surfaces a corrupt DB row loudly rather than silently
+ * mis-rendering.
+ */
+
+it('AddOneOffPayload accepts a valid direction', function (string $direction): void {
+    $payload = new AddOneOffPayload(
+        date: '2026-06-01',
+        amountMinor: -1000,
+        currency: 'EUR',
+        direction: $direction,
+    );
+    expect($payload->direction)->toBe($direction);
+})->with(['expense', 'income']);
+
+it('AddOneOffPayload rejects an unknown direction', function (): void {
+    expect(fn () => new AddOneOffPayload(
+        date: '2026-06-01',
+        amountMinor: -1000,
+        currency: 'EUR',
+        direction: 'Income', // capitalized — would silently mean 'expense' downstream
+    ))->toThrow(InvalidArgumentException::class, "must be one of: 'expense' | 'income'");
+});
+
+it('AddOneOffPayload rejects an empty direction', function (): void {
+    expect(fn () => new AddOneOffPayload(
+        date: '2026-06-01',
+        amountMinor: -1000,
+        currency: 'EUR',
+        direction: '',
+    ))->toThrow(InvalidArgumentException::class);
+});
+
+it('AddRecurringPayload accepts every documented cadence', function (string $cadence): void {
+    $payload = new AddRecurringPayload(
+        startDate: '2026-06-01',
+        amountMinor: -1000,
+        currency: 'EUR',
+        direction: 'expense',
+        cadence: $cadence,
+    );
+    expect($payload->cadence)->toBe($cadence);
+})->with(['weekly', 'monthly', 'quarterly', 'yearly']);
+
+it('AddRecurringPayload rejects an unknown cadence', function (): void {
+    expect(fn () => new AddRecurringPayload(
+        startDate: '2026-06-01',
+        amountMinor: -1000,
+        currency: 'EUR',
+        direction: 'expense',
+        cadence: 'biweekly', // not in the allowed set
+    ))->toThrow(InvalidArgumentException::class, "must be one of: 'weekly' | 'monthly' | 'quarterly' | 'yearly'");
+});
+
+it('AddRecurringPayload rejects an unknown direction even with a valid cadence', function (): void {
+    expect(fn () => new AddRecurringPayload(
+        startDate: '2026-06-01',
+        amountMinor: -1000,
+        currency: 'EUR',
+        direction: 'credit', // not in the allowed set
+        cadence: 'monthly',
+    ))->toThrow(InvalidArgumentException::class, "must be one of: 'expense' | 'income'");
+});
+
+it('ShiftSeriesDatePayload accepts a valid scope', function (string $scope): void {
+    $payload = new ShiftSeriesDatePayload(
+        seriesId: 7,
+        newNextDate: '2026-06-15',
+        scope: $scope,
+    );
+    expect($payload->scope)->toBe($scope);
+})->with(['next', 'all_subsequent']);
+
+it('ShiftSeriesDatePayload rejects an unknown scope', function (): void {
+    expect(fn () => new ShiftSeriesDatePayload(
+        seriesId: 7,
+        newNextDate: '2026-06-15',
+        scope: 'next_only', // typo — would silently fall through to 'next' downstream
+    ))->toThrow(InvalidArgumentException::class, "must be one of: 'next' | 'all_subsequent'");
+});
