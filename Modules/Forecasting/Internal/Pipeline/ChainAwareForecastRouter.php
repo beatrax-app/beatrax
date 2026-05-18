@@ -21,7 +21,7 @@ use Modules\Core\Public\Contracts\Clock;
  * contribution for the upcoming ICS bulk-iDEAL settlement on the
  * funder's debit date.
  *
- * Algorithm (D-1002):
+ * Algorithm — chain-aware contribution routing:
  *
  *   1. For each contribution, look up `ChainLinkQuery::confirmedAndDeterministicForSeries`.
  *      When the series has at least one confirmed or deterministic
@@ -32,13 +32,17 @@ use Modules\Core\Public\Contracts\Clock;
  *      bulk-iDEAL settlement contribution on the ASN funder account
  *      via `CardStatementQuery::nextSettlementForUser`. The synthesised
  *      contribution lands on the funder account id the DTO already
- *      carries (resolved by Plan 10-02 Task 4 via the most-recent
- *      confirmed `ics_bulk_settle` chain_link).
- *   3. De-duplicate (funder account id, date) tuples that overlap
- *      between a Phase 8 recurring series and the synthesised ICS
- *      settlement — prefer the synthesised contribution as the
- *      authoritative source (the Phase 5 next-settlement math is the
- *      one ground truth).
+ *      carries (resolved via the most-recent confirmed
+ *      `ics_bulk_settle` chain_link).
+ *   3. De-duplicate against the SPECIFIC chain-routed ICS contributions
+ *      moved onto the funder account in step 1 that collide with the
+ *      synthesised settlement's (account, date) tuple. The dedup is
+ *      tightly scoped — only contributions whose seriesId was routed
+ *      onto the funder by step 1 are eligible for removal. Unrelated
+ *      recurring series (e.g. a salary inflow, a Netflix outflow) that
+ *      project an occurrence on the settlement date are preserved
+ *      verbatim so the daily fold sums them alongside the synthesised
+ *      settlement.
  *   4. When `$viewByFunder=true`, the router collapses per-series
  *      contributions onto a single per-day-per-account aggregate so the
  *      downstream chart shows ONE line per funder account instead of
@@ -77,6 +81,13 @@ final readonly class ChainAwareForecastRouter
         $funderBySeries = [];
 
         $routed = [];
+        // Set of seriesId values whose contributions were rewritten in
+        // step 1 onto a funder account. Step 3 uses this to scope the
+        // dedup tightly to chain-routed series only — recurring series
+        // with no chain link whose occurrence happens to land on the
+        // settlement date are preserved.
+        /** @var array<int, true> $chainRoutedSeriesIds */
+        $chainRoutedSeriesIds = [];
         foreach ($contributions as $contribution) {
             $funderAccountId = $this->resolveFunderForSeries(
                 $contribution->seriesId,
@@ -90,6 +101,7 @@ final readonly class ChainAwareForecastRouter
                 continue;
             }
 
+            $chainRoutedSeriesIds[$contribution->seriesId] = true;
             $routed[] = new ForecastContribution(
                 date: $contribution->date,
                 pointMinor: $contribution->pointMinor,
@@ -124,15 +136,24 @@ final readonly class ChainAwareForecastRouter
                     accountId: $nextSettlement->accountId,
                 );
 
-                // De-duplicate (funder account, date) overlaps with a
-                // routed Phase 8 contribution. Prefer the synthesised
-                // contribution — Phase 5 next-settlement math is the
-                // authoritative source.
+                // Scoped dedup: drop ONLY the contributions that were
+                // chain-routed onto the funder in step 1 and now collide
+                // with the synthesised settlement's (account, date)
+                // tuple. The synthesised next-settlement amount is the
+                // authoritative source for those rewritten series. Any
+                // OTHER contribution sharing the (account, date) tuple
+                // (an unrelated recurring series whose occurrence
+                // happens to land on the settlement day) survives, so
+                // the daily fold sums it alongside the settlement.
                 $dedup = [];
                 $dueKey = $synth->accountId.'|'.$dueDate->toDateString();
                 foreach ($routed as $c) {
                     $cKey = $c->accountId.'|'.$c->date->toDateString();
-                    if ($cKey === $dueKey) {
+                    if (
+                        $cKey === $dueKey
+                        && $c->seriesId !== 0
+                        && array_key_exists($c->seriesId, $chainRoutedSeriesIds)
+                    ) {
                         continue;
                     }
                     $dedup[] = $c;
