@@ -30,13 +30,13 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * payloads: validates `$payload->seriesId` belongs to a recurring
  * series owned by `$user` by reading `recurring_series` directly via
  * the raw query builder (scoped by user_id). A missing or cross-user
- * series id raises `NotFoundHttpException` — the FCT-03 cross-substrate
+ * series id raises `NotFoundHttpException` — the cross-substrate
  * boundary lives at the Action layer; ScenarioApplier later TRUSTS the
  * persisted state.
  *
  * Persistence routes through the Eloquent model so the typed
  * `ScenarioMutationPayloadCast` runs and the JSON envelope is
- * validated end-to-end (Wave 1 cast contract). Returns the new
+ * validated end-to-end. Returns the new
  * mutation id and dispatches `ScenarioMutated`.
  */
 final class AddScenarioMutation

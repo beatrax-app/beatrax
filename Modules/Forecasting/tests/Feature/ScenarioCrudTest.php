@@ -33,10 +33,10 @@ uses(RefreshDatabase::class);
  * Feature coverage for the Wave 4 scenario-CRUD Public Actions +
  * ScenarioApplier + ProjectForecastOnScenarioChange listener fan-out.
  *
- * The FCT-03 boundary is exercised end-to-end: persisted mutations
- * round-trip through the typed cast; ScenarioApplier transforms
- * baseline contributions in pure PHP; the load-bearing arch invariant
- * `noScenarioMutationsJoinedToTransactionQueries` stays green.
+ * The scenario-isolation boundary is exercised end-to-end: persisted
+ * mutations round-trip through the typed cast; ScenarioApplier
+ * transforms baseline contributions in pure PHP; the load-bearing arch
+ * invariant `noScenarioMutationsJoinedToTransactionQueries` stays green.
  */
 
 function scUser(string $email): User

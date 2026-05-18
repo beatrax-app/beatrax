@@ -17,10 +17,11 @@ use stdClass;
  *
  * Returns a single `ForecastHighlightsDto` from `forUser` carrying the
  * lowest-projected-balance line + the active-shortfall count + the
- * next ICS bulk-iDEAL settlement (Phase 5 strict superset). The
- * top-nav badge composer uses the lighter `activeShortfallCountForUser`
- * which only counts baseline rows (scenario shortfalls do NOT count
- * toward the badge per D-1013).
+ * next ICS bulk-iDEAL settlement (strict superset of the earlier
+ * next-settlement-only tile). The top-nav badge composer uses the
+ * lighter `activeShortfallCountForUser` which only counts baseline rows
+ * — scenario shortfalls are "what-if" simulations and do NOT count
+ * toward the badge.
  *
  * Baseline-only filter (`scenario_id IS NULL`): the dashboard +
  * top-nav represent the user's CURRENT financial picture. Scenarios
