@@ -1,0 +1,315 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Chains\Models\CardStatement;
+use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Services\CardStatementQuery;
+use Modules\Chains\Public\Services\ChainLinkQuery;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Forecasting\Internal\Pipeline\ChainAwareForecastRouter;
+use Modules\Forecasting\Internal\Pipeline\ForecastContribution;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Models\Transaction;
+use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Models\RecurringSeriesOccurrence;
+
+uses(RefreshDatabase::class);
+
+/*
+ * Unit coverage for ChainAwareForecastRouter.
+ *
+ * Covers the four documented routing behaviours:
+ *   - PayPal-funded ASN: a series whose occurrences carry a confirmed
+ *     chain_link to an ASN funder transaction is rewritten onto the
+ *     funder account.
+ *   - PayPal-only (no chain link): contribution stays on the original
+ *     account.
+ *   - ICS bulk-iDEAL synthesis: a non-null nextSettlement injects a
+ *     synthesised contribution on the funder account on the due date.
+ *   - De-duplication: when a routed Phase 8 contribution overlaps
+ *     (funder account + date) with the synthesised settlement, the
+ *     synthesised one wins.
+ *   - Pass-through: zero chain links + no next settlement leaves the
+ *     contribution list unchanged.
+ */
+
+function carfUser(string $email): User
+{
+    return User::query()->create([
+        'email' => $email,
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+}
+
+function carfAccount(User $user, string $kind, string $slug): Account
+{
+    return Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'carf '.$slug,
+        'slug' => $slug,
+        'kind' => $kind,
+        'iban' => 'CARF-'.strtoupper($slug),
+        'default_currency' => 'EUR',
+    ]);
+}
+
+function carfImportRun(User $user, string $sha): ImportRun
+{
+    return ImportRun::query()->create([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/carf-'.substr($sha, 0, 6).'.csv',
+        'sha256' => $sha,
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
+    ]);
+}
+
+/**
+ * @param  array<string, mixed>  $overrides
+ */
+function carfTxn(User $user, Account $account, ImportRun $run, array $overrides = []): Transaction
+{
+    static $row = 0;
+    $row++;
+
+    $defaults = [
+        'user_id' => $user->id,
+        'account_id' => $account->id,
+        'type' => 'expense',
+        'posted_at' => '2026-04-15',
+        'booked_at' => '2026-04-15 09:00:00',
+        'value_date' => '2026-04-15',
+        'amount_minor' => -1000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -1000,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'Carf Co',
+        'counterparty_normalized' => 'carf co',
+        'normalization_version' => 3,
+        'source_format' => 'asn-csv',
+        'import_run_id' => $run->id,
+        'source_row_index' => $row,
+        'fingerprint' => str_pad('carf-'.$row, 64, 'c', STR_PAD_LEFT),
+        'fingerprint_version' => 3,
+    ];
+
+    return Transaction::query()->create(array_merge($defaults, $overrides));
+}
+
+function carfRouter(?Clock $clock = null): ChainAwareForecastRouter
+{
+    $clock ??= new class implements Clock
+    {
+        public function now(): CarbonImmutable
+        {
+            return CarbonImmutable::parse('2026-05-01 00:00:00');
+        }
+    };
+
+    /** @var ChainLinkQuery $chainQuery */
+    $chainQuery = app(ChainLinkQuery::class);
+    /** @var CardStatementQuery $cardStatementQuery */
+    $cardStatementQuery = app(CardStatementQuery::class);
+
+    return new ChainAwareForecastRouter($chainQuery, $cardStatementQuery, $clock);
+}
+
+beforeEach(function (): void {
+    $this->user = carfUser('router@diederik.test');
+});
+
+it('passes contributions through unchanged when no chain links + no next settlement exist', function (): void {
+    $asn = carfAccount($this->user, 'asn', 'asn');
+    $contribution = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-10'),
+        pointMinor: -12000,
+        lowMinor: -12600,
+        highMinor: -11400,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: 101,
+        accountId: $asn->id,
+    );
+
+    $routed = carfRouter()->route([$contribution], $this->user);
+
+    expect($routed)->toHaveCount(1);
+    expect($routed[0]->accountId)->toBe($asn->id);
+    expect($routed[0]->seriesId)->toBe(101);
+});
+
+it('rewrites a PayPal series contribution onto the ASN funder via confirmed chain link', function (): void {
+    $asn = carfAccount($this->user, 'asn', 'asn');
+    $paypal = carfAccount($this->user, 'paypal', 'paypal');
+    $run = carfImportRun($this->user, str_repeat('a', 64));
+
+    // Funded charge (PayPal) + funder (ASN) txn pair. The chain_link's
+    // from_transaction_id is the PayPal charge; to_transaction_id is
+    // the ASN funder transaction.
+    $funded = carfTxn($this->user, $paypal, $run, [
+        'amount_minor' => -12000,
+        'counterparty_name' => 'Netflix',
+        'counterparty_normalized' => 'netflix',
+    ]);
+    $funder = carfTxn($this->user, $asn, $run, [
+        'amount_minor' => -12000,
+        'counterparty_name' => 'PayPal ASN',
+        'counterparty_normalized' => 'paypal asn',
+    ]);
+
+    $series = RecurringSeries::query()->create([
+        'user_id' => $this->user->id,
+        'cadence' => 'monthly',
+        'direction' => 'expense',
+        'detected_name' => 'Netflix',
+        'state' => 'approved',
+        'variance_tolerance_percent' => 5,
+        'latest_amount_minor' => -12000,
+        'latest_currency' => 'EUR',
+        'cluster_key' => 'netflix',
+        'next_expected_at' => '2026-05-15',
+    ]);
+    RecurringSeriesOccurrence::query()->create([
+        'user_id' => $this->user->id,
+        'recurring_series_id' => $series->id,
+        'transaction_id' => $funded->id,
+        'observed_at' => '2026-04-15',
+        'observed_amount_minor' => -12000,
+        'observed_currency' => 'EUR',
+    ]);
+
+    ChainLink::query()->create([
+        'user_id' => $this->user->id,
+        'from_transaction_id' => $funded->id,
+        'to_transaction_id' => $funder->id,
+        'kind' => 'paypal_funding',
+        'state' => 'confirmed',
+        'confidence' => 1.0,
+        'resolver' => 'user',
+        'evidence' => json_encode(['signature_hash' => 'paypal-netflix']),
+    ]);
+
+    $contribution = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-15'),
+        pointMinor: -12000,
+        lowMinor: -12600,
+        highMinor: -11400,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: $series->id,
+        accountId: $paypal->id,
+    );
+
+    $routed = carfRouter()->route([$contribution], $this->user);
+
+    expect($routed)->toHaveCount(1);
+    expect($routed[0]->accountId)->toBe($asn->id);
+    expect($routed[0]->pointMinor)->toBe(-12000);
+});
+
+it('leaves a PayPal series contribution unchanged when there is no chain link', function (): void {
+    $paypal = carfAccount($this->user, 'paypal', 'paypal');
+
+    $series = RecurringSeries::query()->create([
+        'user_id' => $this->user->id,
+        'cadence' => 'monthly',
+        'direction' => 'expense',
+        'detected_name' => 'Loose PayPal',
+        'state' => 'approved',
+        'variance_tolerance_percent' => 5,
+        'latest_amount_minor' => -3000,
+        'latest_currency' => 'EUR',
+        'cluster_key' => 'loose-paypal',
+        'next_expected_at' => '2026-05-15',
+    ]);
+
+    $contribution = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-15'),
+        pointMinor: -3000,
+        lowMinor: -3150,
+        highMinor: -2850,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: $series->id,
+        accountId: $paypal->id,
+    );
+
+    $routed = carfRouter()->route([$contribution], $this->user);
+
+    expect($routed)->toHaveCount(1);
+    expect($routed[0]->accountId)->toBe($paypal->id);
+});
+
+it('synthesises a next ICS bulk-iDEAL settlement contribution onto the funder ASN account', function (): void {
+    $asn = carfAccount($this->user, 'asn', 'asn');
+    $ics = carfAccount($this->user, 'ics_card', 'ics');
+    $run = carfImportRun($this->user, str_repeat('b', 64));
+
+    CardStatement::query()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $ics->id,
+        'import_run_id' => $run->id,
+        'period_start' => '2026-04-01 00:00:00',
+        'period_end' => '2026-04-30 23:59:59',
+        'total_amount_minor' => -120000,
+        'open_balance_minor' => 120000,
+        'state' => 'open',
+    ]);
+
+    // No existing contributions; the synthesised one is the only entry.
+    $routed = carfRouter()->route([], $this->user);
+
+    expect($routed)->toHaveCount(1);
+    expect($routed[0]->accountId)->toBe($asn->id);
+    expect($routed[0]->pointMinor)->toBe(-120000);
+    expect($routed[0]->currency)->toBe('EUR');
+    expect($routed[0]->date->toDateString())->toBe('2026-05-05'); // period_end + 5 days
+});
+
+it('de-duplicates a synthesised settlement against a routed Phase 8 contribution on the same (funder, date)', function (): void {
+    $asn = carfAccount($this->user, 'asn', 'asn');
+    $ics = carfAccount($this->user, 'ics_card', 'ics');
+    $run = carfImportRun($this->user, str_repeat('c', 64));
+
+    CardStatement::query()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $ics->id,
+        'import_run_id' => $run->id,
+        'period_start' => '2026-04-01 00:00:00',
+        'period_end' => '2026-04-30 23:59:59',
+        'total_amount_minor' => -50000,
+        'open_balance_minor' => 50000,
+        'state' => 'open',
+    ]);
+
+    // A phantom Phase 8 contribution already lands on the same funder
+    // account and same date the synthesised one would pick.
+    $overlap = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-05'),
+        pointMinor: -50000,
+        lowMinor: -55000,
+        highMinor: -45000,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: 9999,
+        accountId: $asn->id,
+    );
+
+    $routed = carfRouter()->route([$overlap], $this->user);
+
+    // Exactly one row remains; the synthesised contribution wins
+    // (seriesId 0, point exactly equal to settlement, low == high).
+    expect($routed)->toHaveCount(1);
+    expect($routed[0]->seriesId)->toBe(0);
+    expect($routed[0]->pointMinor)->toBe(-50000);
+    expect($routed[0]->lowMinor)->toBe(-50000);
+    expect($routed[0]->highMinor)->toBe(-50000);
+});
