@@ -153,8 +153,14 @@ it('round-trips ShiftSeriesDatePayload through the cast', function (): void {
 });
 
 it('throws InvalidArgumentException when the row\'s kind is unknown', function (): void {
-    // Insert a row directly via the query builder, bypassing the cast,
-    // so the row carries an out-of-band kind value the cast must reject.
+    // Drop the schema-layer kind-enum triggers temporarily so the test
+    // can land an out-of-band 'foo' kind value into the table and
+    // exercise the cast's getter rejection branch in isolation. The
+    // dedicated MigrationsTest case asserts the triggers themselves
+    // reject the invalid value at INSERT time.
+    $this->db->connection()->statement('DROP TRIGGER IF EXISTS forecast_scenario_mutations_kind_insert_check');
+    $this->db->connection()->statement('DROP TRIGGER IF EXISTS forecast_scenario_mutations_kind_update_check');
+
     $rowId = $this->db->connection()->table('forecast_scenario_mutations')->insertGetId([
         'user_id' => $this->user->id,
         'forecast_scenario_id' => $this->scenario->id,

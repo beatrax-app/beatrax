@@ -127,10 +127,10 @@ final readonly class ScenarioApplier
             return $this->applyCancelSeries($contributions, $payload);
         }
         if ($payload instanceof AddOneOffPayload) {
-            return $this->applyAddOneOff($contributions, $payload, $asOf, $horizonEnd);
+            return $this->applyAddOneOff($contributions, $payload, $asOf, $horizonEnd, $user);
         }
         if ($payload instanceof AddRecurringPayload) {
-            return $this->applyAddRecurring($contributions, $payload, $asOf, $horizonEnd);
+            return $this->applyAddRecurring($contributions, $payload, $asOf, $horizonEnd, $user);
         }
         if ($payload instanceof ChangeSeriesAmountPayload) {
             return $this->applyChangeSeriesAmount($contributions, $payload, $user);
@@ -174,6 +174,7 @@ final readonly class ScenarioApplier
         AddOneOffPayload $payload,
         CarbonImmutable $asOf,
         CarbonImmutable $horizonEnd,
+        User $user,
     ): array {
         try {
             $date = CarbonImmutable::parse($payload->date)->startOfDay();
@@ -188,8 +189,13 @@ final readonly class ScenarioApplier
         $sign = $payload->direction === 'income' ? 1 : -1;
         $signed = $sign * $magnitude;
 
-        // One-off has no variance envelope per UI-SPEC; low = point = high.
-        $accountId = $this->pickAccountIdForOneOff($contributions);
+        // One-off has no variance envelope; low = point = high.
+        $accountId = $this->pickAccountIdForOneOff($contributions, $user);
+        if ($accountId === 0) {
+            // No account to land on (empty baseline AND no owned account).
+            // Skip the mutation; the warning has been logged.
+            return $contributions;
+        }
         $contributions[] = new ForecastContribution(
             date: $date,
             pointMinor: $signed,
@@ -206,7 +212,7 @@ final readonly class ScenarioApplier
 
     /**
      * One-off mutations are not bound to any recurring series and the
-     * UI does not ask the user to pick a target account in Wave 4.
+     * UI does not ask the user to pick a target account on the form.
      * Land the contribution on whichever account already has the most
      * baseline traffic so the daily fold sees the one-off.
      *
@@ -214,33 +220,48 @@ final readonly class ScenarioApplier
      * lower accountId wins so the result is deterministic regardless of
      * the order RangeProjector emits baseline contributions.
      *
-     * Throws \InvalidArgumentException when the baseline is empty (no
-     * approved series / fresh-import user). Returning a 0 sentinel here
-     * would silently drop the one-off contribution at the per-account
-     * fold (no $byAccount[0] bucket), so the user's scenario chart
-     * would look identical to baseline. The Public Action catches this
-     * exception and surfaces a helpful UI message.
+     * Empty-baseline fallback: when no contributions exist (fresh-import
+     * user / no approved series), fall back to the user's lowest-id
+     * owned account. Returning a 0 sentinel here would silently drop the
+     * one-off at the per-account fold (no $byAccount[0] bucket), so the
+     * user's scenario chart would look identical to baseline. If the
+     * user owns no accounts at all, log a warning and return 0 — the
+     * caller skips the mutation rather than emitting a phantom row.
      *
      * @param  list<ForecastContribution>  $contributions
      */
-    private function pickAccountIdForOneOff(array $contributions): int
+    private function pickAccountIdForOneOff(array $contributions, User $user): int
     {
         $counts = [];
         foreach ($contributions as $c) {
             $counts[$c->accountId] = ($counts[$c->accountId] ?? 0) + 1;
         }
-        if ($counts === []) {
-            throw new \InvalidArgumentException(
-                'Cannot place a one-off scenario mutation: the baseline projection has no contributions yet. Approve at least one recurring series first so the mutation has an account to land on.'
-            );
-        }
-        // Sort by count DESC, then by accountId ASC for a deterministic
-        // tie-break.
-        uksort($counts, static function (int $a, int $b) use ($counts): int {
-            return $counts[$b] <=> $counts[$a] ?: $a <=> $b;
-        });
+        if ($counts !== []) {
+            // Sort by count DESC, then by accountId ASC for a
+            // deterministic tie-break.
+            uksort($counts, static function (int $a, int $b) use ($counts): int {
+                return $counts[$b] <=> $counts[$a] ?: $a <=> $b;
+            });
 
-        return array_key_first($counts);
+            return array_key_first($counts);
+        }
+
+        // Empty baseline — pick the user's lowest-id account as the
+        // landing pad.
+        $accountId = $this->db->connection()->table('accounts')
+            ->where('user_id', $user->id)
+            ->orderBy('id')
+            ->value('id');
+        if (is_numeric($accountId) && (int) $accountId > 0) {
+            return (int) $accountId;
+        }
+
+        $this->logger->warning(
+            'ScenarioApplier: cannot place a one-off scenario mutation — empty baseline AND user owns no accounts (mutation skipped)',
+            ['user_id' => $user->id],
+        );
+
+        return 0;
     }
 
     /**
@@ -252,6 +273,7 @@ final readonly class ScenarioApplier
         AddRecurringPayload $payload,
         CarbonImmutable $asOf,
         CarbonImmutable $horizonEnd,
+        User $user,
     ): array {
         try {
             $start = CarbonImmutable::parse($payload->startDate)->startOfDay();
@@ -277,7 +299,10 @@ final readonly class ScenarioApplier
             $highMinor = $high5;
         }
 
-        $accountId = $this->pickAccountIdForOneOff($contributions);
+        $accountId = $this->pickAccountIdForOneOff($contributions, $user);
+        if ($accountId === 0) {
+            return $contributions;
+        }
 
         $cursor = $start;
         while ($cursor->lessThanOrEqualTo($horizonEnd)) {
