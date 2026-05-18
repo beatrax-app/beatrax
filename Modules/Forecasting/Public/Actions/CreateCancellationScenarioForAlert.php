@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
+use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
 use stdClass;
@@ -58,12 +59,36 @@ final class CreateCancellationScenarioForAlert
         /** @var stdClass $series */
         $name = $this->resolveSeriesName($series);
 
-        return $this->db->connection()->transaction(function () use ($user, $name, $seriesId): int {
-            $scenarioId = ($this->createScenario)($user, "Cancel {$name}");
-            ($this->addMutation)($scenarioId, $user, 'cancel_series', new CancelSeriesPayload(seriesId: $seriesId));
+        $scenarioName = "Cancel {$name}";
 
-            return $scenarioId;
-        });
+        try {
+            return $this->db->connection()->transaction(function () use ($user, $scenarioName, $seriesId): int {
+                $scenarioId = ($this->createScenario)($user, $scenarioName);
+                ($this->addMutation)($scenarioId, $user, 'cancel_series', new CancelSeriesPayload(seriesId: $seriesId));
+
+                return $scenarioId;
+            });
+        } catch (InvalidArgumentException $e) {
+            // A scenario with this name already exists (the user opened
+            // the launchpad once, then clicked again without deleting
+            // the prior scenario). Return the existing id so the caller
+            // redirects into it instead of surfacing a 500.
+            $existing = $this->existingScenarioIdByName($user, $scenarioName);
+            if ($existing !== null) {
+                return $existing;
+            }
+            throw $e;
+        }
+    }
+
+    private function existingScenarioIdByName(User $user, string $name): ?int
+    {
+        $value = $this->db->connection()->table('forecast_scenarios')
+            ->where('user_id', $user->id)
+            ->where('name', $name)
+            ->value('id');
+
+        return is_numeric($value) ? (int) $value : null;
     }
 
     private function resolveSeriesName(stdClass $row): string

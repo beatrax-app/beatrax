@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
+use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use stdClass;
@@ -43,17 +44,43 @@ final class CreateAmountChangeScenarioForSeries
         /** @var stdClass $series */
         $name = $this->resolveSeriesName($series);
 
-        return $this->db->connection()->transaction(function () use ($user, $name, $recurringSeriesId, $newAmountMinor): int {
-            $scenarioId = ($this->createScenario)($user, "Change {$name} amount");
-            ($this->addMutation)(
-                $scenarioId,
-                $user,
-                'change_series_amount',
-                new ChangeSeriesAmountPayload(seriesId: $recurringSeriesId, newAmountMinor: $newAmountMinor),
-            );
+        $scenarioName = "Change {$name} amount";
 
-            return $scenarioId;
-        });
+        try {
+            return $this->db->connection()->transaction(function () use ($user, $scenarioName, $recurringSeriesId, $newAmountMinor): int {
+                $scenarioId = ($this->createScenario)($user, $scenarioName);
+                ($this->addMutation)(
+                    $scenarioId,
+                    $user,
+                    'change_series_amount',
+                    new ChangeSeriesAmountPayload(seriesId: $recurringSeriesId, newAmountMinor: $newAmountMinor),
+                );
+
+                return $scenarioId;
+            });
+        } catch (InvalidArgumentException $e) {
+            // A scenario with this name already exists (user double-
+            // clicked the launchpad). Return the existing id so the
+            // caller redirects into it instead of surfacing a 500.
+            // Existing amount is NOT updated to the new amount — the
+            // user can edit the persisted mutation manually after
+            // landing on /forecast.
+            $existing = $this->existingScenarioIdByName($user, $scenarioName);
+            if ($existing !== null) {
+                return $existing;
+            }
+            throw $e;
+        }
+    }
+
+    private function existingScenarioIdByName(User $user, string $name): ?int
+    {
+        $value = $this->db->connection()->table('forecast_scenarios')
+            ->where('user_id', $user->id)
+            ->where('name', $name)
+            ->value('id');
+
+        return is_numeric($value) ? (int) $value : null;
     }
 
     private function resolveSeriesName(stdClass $row): string
