@@ -17,8 +17,8 @@ uses(RefreshDatabase::class);
  * opening-balance source-of-truth router.
  *
  * Covers each branch:
- *   - asn_bank with a statement_summaries row
- *   - asn_bank with no statement → transactions-sum fallback
+ *   - asn with a statement_summaries row
+ *   - asn with no statement → transactions-sum fallback
  *   - ics_card with a card_statements row
  *   - paypal with accounts.opening_balance_minor populated
  *   - paypal with no opening balance → transactions-sum fallback
@@ -131,8 +131,8 @@ function barInsertTransaction(DatabaseManager $db, int $userId, int $accountId, 
     ]);
 }
 
-it('routes asn_bank to the most recent statement_summaries.closing_balance_minor', function (): void {
-    $accountId = barInsertAccount($this->db, $this->user->id, 'asn_bank');
+it('routes asn to the most recent statement_summaries.closing_balance_minor', function (): void {
+    $accountId = barInsertAccount($this->db, $this->user->id, 'asn');
     barInsertStatementSummary($this->db, $this->user->id, $accountId, 123456, '2026-04-30');
     barInsertStatementSummary($this->db, $this->user->id, $accountId, 145000, '2026-05-31');
 
@@ -145,8 +145,8 @@ it('routes asn_bank to the most recent statement_summaries.closing_balance_minor
     expect($anchor->asOfDate->toDateString())->toBe('2026-05-31');
 });
 
-it('falls through to the transactions sum for an asn_bank account with no statement_summaries row', function (): void {
-    $accountId = barInsertAccount($this->db, $this->user->id, 'asn_bank');
+it('falls through to the transactions sum for an asn account with no statement_summaries row', function (): void {
+    $accountId = barInsertAccount($this->db, $this->user->id, 'asn');
     barInsertTransaction($this->db, $this->user->id, $accountId, -1000, '2026-05-10');
     barInsertTransaction($this->db, $this->user->id, $accountId, 5000, '2026-05-11');
 
@@ -210,7 +210,7 @@ it('raises ModelNotFoundException for a missing or cross-user account id', funct
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
     ]);
-    $otherAccountId = barInsertAccount($this->db, $otherUser->id, 'asn_bank');
+    $otherAccountId = barInsertAccount($this->db, $otherUser->id, 'asn');
 
     $call = fn (): BalanceAnchorDto => $this->resolver->forAccount($otherAccountId, $this->user);
 

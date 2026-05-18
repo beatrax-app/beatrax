@@ -11,7 +11,7 @@
     Variables in scope:
       - $accountId : int
       - $accountName : string
-      - $accountKind : string  ('asn_bank' | 'ics_card' | 'paypal' | other)
+      - $accountKind : string  ('asn' | 'ics_card' | 'paypal' | other)
       - $currency : string
       - $openingInput : string  (user-typed)
       - $asOfInput : string     (ISO YYYY-MM-DD)
