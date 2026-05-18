@@ -62,6 +62,12 @@ final class RecurringSeriesDtoMapper
 
         $displayNameOverride = $row->display_name_override ?? null;
 
+        $rawFxRate = $row->latest_fx_rate_used ?? null;
+        $latestFxRateUsed = null;
+        if (is_numeric($rawFxRate)) {
+            $latestFxRateUsed = (float) $rawFxRate;
+        }
+
         return new RecurringSeriesDto(
             seriesId: self::toInt($row->id),
             direction: self::toString($row->direction),
@@ -79,6 +85,7 @@ final class RecurringSeriesDtoMapper
             nextExpectedConfidenceLow: (bool) ($row->next_expected_confidence_low ?? false),
             varianceTolerancePercent: self::toInt($row->variance_tolerance_percent ?? 25),
             snoozedUntil: $snoozedUntil,
+            latestFxRateUsed: $latestFxRateUsed,
         );
     }
 

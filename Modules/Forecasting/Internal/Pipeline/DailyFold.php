@@ -85,14 +85,18 @@ final readonly class DailyFold
         }
 
         // Walk each day in the horizon range from asOf through asOf +
-        // horizonDays inclusive. Days with no contributions carry the
-        // running balance and the cumulative spread forward unchanged
-        // so the resulting series is continuous (no missing dates → no
-        // chart gaps).
+        // horizonDays inclusive. The running balance evolves
+        // monotonically as contributions fire. The per-day spread
+        // reflects the uncertainty in the latest active period's
+        // amount(s) — it combines same-day contributions via
+        // quadrature (independent series on a single billing day)
+        // but does NOT cumulate across days. Days without
+        // contributions carry the previous day's spread forward
+        // unchanged so the chart band stays continuous.
         /** @var array<string, array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}> $result */
         $result = [];
         $running = $openingBalanceMinor;
-        $cumSpreadSq = 0.0;
+        $currentSpread = 0;
         $cursor = $asOf->startOfDay();
         $end = $cursor->addDays($horizonDays);
 
@@ -100,16 +104,14 @@ final readonly class DailyFold
             $key = $cursor->toDateString();
             if (isset($buckets[$key])) {
                 $running += $buckets[$key]['point_minor'];
-                $cumSpreadSq += $buckets[$key]['spread_sq'];
+                $currentSpread = (int) round(sqrt($buckets[$key]['spread_sq']));
             }
-
-            $spread = (int) round(sqrt($cumSpreadSq));
 
             $result[$key] = [
                 'date' => $key,
-                'low_minor' => $running - $spread,
+                'low_minor' => $running - $currentSpread,
                 'point_minor' => $running,
-                'high_minor' => $running + $spread,
+                'high_minor' => $running + $currentSpread,
                 'currency' => $defaultCurrency,
             ];
 

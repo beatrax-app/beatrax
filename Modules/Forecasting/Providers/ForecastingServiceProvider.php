@@ -15,11 +15,14 @@ use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnDriftDismissed;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
+use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
 use Modules\Forecasting\Internal\Pipeline\DailyFold;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 use Modules\Forecasting\Internal\Pipeline\RangeProjector;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
+use Modules\Forecasting\Public\Services\ForecastQuery;
+use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
@@ -28,26 +31,27 @@ use Modules\Recurring\Public\Events\RecurringSeriesRejected;
 /**
  * Wires the Forecasting module.
  *
- * register() binds the in-tree event listeners as singletons so a single
- * listener instance is reused across the four upstream events the module
- * subscribes to. Heavier services (projection pipeline, jobs, Public
- * queries and actions) are bound by later waves once their classes land;
- * Wave 0 deliberately keeps the container surface minimal.
+ * register() binds the in-tree event listeners, the projection
+ * pipeline collaborators (anchor resolver, range projector, daily
+ * fold, pipeline orchestrator, state machine), and the Public read
+ * services (ForecastQuery, ScenarioQuery, ForecastDtoMapper) as
+ * singletons.
  *
- * boot() conditionally loads migrations, routes, and views (each guard
- * is necessary because subsequent waves add those directories — Wave 0
- * ships only the Routes file), wires the cross-module event listeners
- * to the Recurring (Phase 8) + DriftAlerts (Phase 9) Public events, and
- * installs the top-nav badge composer. The badge composer injects
- * `forecastShortfallCount` into `core::livewire.top-nav` through the
- * ViewFactoryContract — the global `view()` helper is forbidden by
- * project convention.
+ * boot() conditionally loads migrations, routes, and views (each
+ * guard remains for forward compatibility with module surfaces added
+ * by later phases), registers the /forecast Livewire SFC, wires the
+ * cross-module event listeners to the Recurring (Phase 8) + DriftAlerts
+ * (Phase 9) Public events, and installs the top-nav badge composer.
+ * The badge composer injects `forecastShortfallCount` into
+ * `core::livewire.top-nav` through the ViewFactoryContract — the
+ * global `view()` helper is forbidden by project convention.
  *
- * The `/forecast` Livewire SFC is registered as a placeholder so the
- * route binds and the framework boots; a later wave swaps the body in
- * with the real 30/60/90 horizon switch + per-account chart + scenario
- * CRUD panel. The dashboard highlights component lands in the same
- * later wave.
+ * The `/forecast` SFC renders the baseline-only surface: per-account
+ * tab bar, 30 / 60 / 90 horizon segmented control, and a single
+ * rangeArea chart for the user's first per-account projection.
+ * Subsequent phases extend the surface with the shortfall band
+ * overlay, the buffer editor trigger, the scenario picker and
+ * side-by-side, and the percentile-tier confidence legend.
  */
 final class ForecastingServiceProvider extends ServiceProvider
 {
@@ -65,6 +69,11 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(DailyFold::class);
         $this->app->singleton(ProjectionPipeline::class);
         $this->app->singleton(ForecastRunStateMachine::class);
+
+        // Wave 2 Public read API + DTO mapper.
+        $this->app->singleton(ForecastDtoMapper::class);
+        $this->app->singleton(ForecastQuery::class);
+        $this->app->singleton(ScenarioQuery::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void

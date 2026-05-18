@@ -59,6 +59,7 @@ function rpSeries(array $overrides = []): RecurringSeriesDto
         'nextExpectedConfidenceLow' => false,
         'varianceTolerancePercent' => 5,
         'snoozedUntil' => null,
+        'latestFxRateUsed' => null,
     ];
     $merged = array_merge($base, $overrides);
 
@@ -77,6 +78,7 @@ function rpSeries(array $overrides = []): RecurringSeriesDto
         nextExpectedConfidenceLow: $merged['nextExpectedConfidenceLow'],
         varianceTolerancePercent: $merged['varianceTolerancePercent'],
         snoozedUntil: $merged['snoozedUntil'],
+        latestFxRateUsed: $merged['latestFxRateUsed'],
     );
 }
 
@@ -194,10 +196,11 @@ it('emits no contributions when nextExpectedAt is null', function (): void {
     expect($contribs)->toBe([]);
 });
 
-it('carries the contribution currency for FX series (USD)', function (): void {
+it('carries the contribution currency + stored fxRateUsed for FX series (USD)', function (): void {
     $series = rpSeries([
         'latestAmount' => Money::ofMinor(-599, 'USD'),
         'nextExpectedAt' => CarbonImmutable::parse('2026-05-25'),
+        'latestFxRateUsed' => 0.9050,
     ]);
     $asOf = CarbonImmutable::parse('2026-05-19');
 
@@ -205,6 +208,7 @@ it('carries the contribution currency for FX series (USD)', function (): void {
 
     expect($contribs)->toHaveCount(1);
     expect($contribs[0]->currency)->toBe('USD');
+    expect($contribs[0]->fxRateUsed)->toBe(0.9050);
 });
 
 it('skips occurrences strictly before asOf even when nextExpectedAt is in the past', function (): void {
