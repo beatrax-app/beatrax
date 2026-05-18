@@ -32,7 +32,12 @@ final readonly class ForecastDtoMapper
      * Hydrate a single ForecastDto from the per-account sub-block of
      * a decoded `forecast_runs.result_json` payload.
      *
-     * @param  array<array-key, mixed>  $accountResult
+     * `$seriesConfidence` is supplied by the caller (the read service
+     * resolves it via its own query path; the mapper stays static-only
+     * and side-effect-free).
+     *
+     * @param  array<array-key, mixed>             $accountResult
+     * @param  list<\Modules\Forecasting\Public\Dto\SeriesConfidenceDto> $seriesConfidence
      */
     public function mapForecast(
         array $accountResult,
@@ -40,6 +45,7 @@ final readonly class ForecastDtoMapper
         ?int $scenarioId,
         CarbonImmutable $asOf,
         bool $isComputing,
+        array $seriesConfidence = [],
     ): ForecastDto {
         $pointsRaw = $accountResult['points'] ?? [];
         if (! is_array($pointsRaw)) {
@@ -63,7 +69,7 @@ final readonly class ForecastDtoMapper
             asOf: $asOf,
             todayBalanceMinor: self::toInt($accountResult['today_balance_minor'] ?? null),
             points: $points,
-            seriesConfidence: [], // Wave 5 deliverable
+            seriesConfidence: $seriesConfidence,
             isComputing: $isComputing,
         );
     }
