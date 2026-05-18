@@ -33,7 +33,10 @@ return new class extends Migration
     {
         $this->schema()->create('forecast_shortfall_windows', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
+            // user_id is non-nullable (chain_resolution_runs + forecast_runs
+            // precedent): every shortfall window belongs to exactly one user,
+            // and a NULL would silently escape per-user filters.
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('account_id')->constrained('accounts')->cascadeOnDelete();
             $table->foreignId('scenario_id')->nullable()->constrained('forecast_scenarios')->cascadeOnDelete();
             $table->date('starts_at');

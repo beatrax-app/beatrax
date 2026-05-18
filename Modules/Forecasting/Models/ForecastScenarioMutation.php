@@ -30,7 +30,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPaylo
  * payload subclass does not match the row's kind on set.
  *
  * @property int $id
- * @property int|null $user_id
+ * @property int $user_id
  * @property int $forecast_scenario_id
  * @property string $kind
  * @property int|null $target_series_id

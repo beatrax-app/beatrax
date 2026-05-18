@@ -22,7 +22,7 @@ use Modules\Forecasting\Database\Factories\ForecastScenarioFactory;
  * mutations table, and by convention on this table).
  *
  * @property int $id
- * @property int|null $user_id
+ * @property int $user_id
  * @property string $name
  * @property string|null $description
  * @property CarbonImmutable $created_at

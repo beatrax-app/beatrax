@@ -28,7 +28,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
  * non-NULL = scenario projection's shortfall.
  *
  * @property int $id
- * @property int|null $user_id
+ * @property int $user_id
  * @property int $account_id
  * @property int|null $scenario_id
  * @property CarbonImmutable $starts_at
