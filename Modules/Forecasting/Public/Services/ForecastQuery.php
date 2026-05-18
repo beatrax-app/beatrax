@@ -112,27 +112,15 @@ final readonly class ForecastQuery
             ? CarbonImmutable::parse($decoded['as_of'])
             : $asOf;
 
-        $dto = $this->mapper->mapForecast(
+        $confidence = $this->resolveSeriesConfidenceForAccount($accountId, $user);
+
+        return $this->mapper->mapForecast(
             accountResult: $accountResult,
             horizonDays: $horizonDays,
             scenarioId: $scenarioId,
             asOf: $runAsOf,
             isComputing: false,
-        );
-
-        $confidence = $this->resolveSeriesConfidenceForAccount($accountId, $user);
-
-        return new ForecastDto(
-            accountId: $dto->accountId,
-            accountName: $dto->accountName,
-            defaultCurrency: $dto->defaultCurrency,
-            horizonDays: $dto->horizonDays,
-            scenarioId: $dto->scenarioId,
-            asOf: $dto->asOf,
-            todayBalanceMinor: $dto->todayBalanceMinor,
-            points: $dto->points,
             seriesConfidence: $confidence,
-            isComputing: $dto->isComputing,
         );
     }
 
