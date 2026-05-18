@@ -42,6 +42,7 @@ final class RecurringSeriesDto extends Data
         public readonly bool $nextExpectedConfidenceLow,
         public readonly int $varianceTolerancePercent,
         public readonly ?CarbonImmutable $snoozedUntil,
+        public readonly ?float $latestFxRateUsed = null,
     ) {}
 
     public function displayName(): string
