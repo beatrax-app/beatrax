@@ -96,6 +96,12 @@ arch('no Laravel facade usage in module code')
         // DriftAlerts wave; the FQN is forward-declared here so the
         // carve-out is in place the moment the file is created.
         'Modules\\DriftAlerts\\Internal\\Jobs\\DetectDriftAlertsJob',
+        // Cache::driver('redis') facade carve-out: ShouldBeUniqueUntilProcessing
+        // requires the lock store at queue-push time, before constructor
+        // DI completes (mirrors DetectDriftAlertsJob). The class lands
+        // in a later Forecasting wave; the FQN is forward-declared here
+        // so the carve-out is in place the moment the file is created.
+        'Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')
@@ -756,5 +762,118 @@ it('does not allow any file other than DriftAlertStateMachine to mutate drift_al
     expect($hits)->toBe(
         [],
         "Only DriftAlertStateMachine may mutate drift_alerts.state. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+arch('Modules\\Forecasting\\Internal is only used inside Modules\\Forecasting (crossModuleAccessGoesThroughPublic)')
+    ->expect('Modules\\Forecasting\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Forecasting');
+
+arch('ProjectionPipeline is never imported by Modules\\Forecasting\\Internal\\Http (noSynchronousForecastingInRequestLifecycle)')
+    ->expect('Modules\\Forecasting\\Internal\\Pipeline\\ProjectionPipeline')
+    ->not->toBeUsedIn([
+        'Modules\\Forecasting\\Internal\\Http',
+        'Modules\\Forecasting\\Resources',
+    ]);
+
+it('does not allow any file under Modules/Forecasting/ to mutate transactions / recurring_series / card_statements / chain_links / drift_alerts tables (noTransactionWritesFromForecasting)', function (): void {
+    // Forecasting is strictly analytical: it reads the upstream
+    // substrate but never writes to it. The five forbidden tables
+    // cover the transaction surface (Phase 1/3), the recurring-series
+    // surface (Phase 8), the card-statement surface (Phase 5), the
+    // chain-routing surface (Phase 5), and the drift-alert surface
+    // (Phase 9). Reads (Transaction::query()->where(...) etc.) are
+    // permitted — only mutating verbs (update / insert / delete /
+    // truncate) and the Eloquent class-level write methods (::create,
+    // ::firstOrCreate, ::updateOrCreate) are caught. The grep strips
+    // block + line comments first so legitimate PHPDoc references
+    // stay legal, and `tests/` is excluded so test factories can
+    // populate substrate rows directly.
+    $hits = [];
+    $forecastingDir = base_path('Modules/Forecasting');
+    if (! is_dir($forecastingDir)) {
+        // Module folder lands in a later wave; until it does the rule
+        // is trivially satisfied.
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            $forecastingDir,
+            RecursiveDirectoryIterator::SKIP_DOTS,
+        ),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        if (str_contains($path, '/tests/') || str_contains($path, '/Database/Migrations/')) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (
+            preg_match('/Transaction::query|Transaction::where|Transaction::create|RecurringSeries::query|RecurringSeries::create|RecurringSeries::firstOrCreate|RecurringSeries::updateOrCreate|CardStatement::query|CardStatement::create|ChainLink::query|ChainLink::create|DriftAlert::query|DriftAlert::create/', $stripped) === 1
+            || preg_match("/->table\\(['\"](transactions|recurring_series|card_statements|chain_links|drift_alerts)['\"]\\)[^;]*->(update|insert|delete|truncate)\\s*\\(/", $stripped) === 1
+        ) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "Modules/Forecasting must not write to transactions / recurring_series / card_statements / chain_links / drift_alerts. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+it('does not allow any file to JOIN forecast_scenario_mutations onto transactions / recurring_series_occurrences / chain_links / card_statements (noScenarioMutationsJoinedToTransactionQueries)', function (): void {
+    // The single most load-bearing arch invariant of the Forecasting
+    // module: forecast_scenario_mutations rows describe hypothetical
+    // what-if changes the user has saved into a scenario; they MUST
+    // NEVER be JOINed onto the transaction substrate, because doing so
+    // would let a scenario silently bleed into a real-money read. The
+    // scan walks the ENTIRE Modules/ tree — not just Forecasting —
+    // because the failure mode is any future contributor (Forecasting
+    // or another module) reaching for a convenience JOIN. The grep
+    // strips block + line comments first so legitimate PHPDoc
+    // references stay legal, and `tests/` is excluded so test
+    // factories + contract suites can synthesise both substrates
+    // independently.
+    $hits = [];
+    $modulesDir = base_path('Modules');
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($modulesDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        $hasMutationJoin = preg_match(
+            "/->(join|leftJoin|rightJoin|crossJoin)\\(\\s*['\"]forecast_scenario_mutations['\"]/",
+            $stripped,
+        ) === 1;
+        $hasForbiddenTable = preg_match(
+            "/['\"](transactions|recurring_series_occurrences|chain_links|card_statements)['\"]/",
+            $stripped,
+        ) === 1;
+        if ($hasMutationJoin && $hasForbiddenTable) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "forecast_scenario_mutations must never be JOINed onto transaction-substrate tables. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
