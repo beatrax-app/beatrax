@@ -5,26 +5,29 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Internal\Listeners;
 
 use Illuminate\Contracts\Bus\Dispatcher;
+use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use Modules\Recurring\Public\Events\RecurringSeriesRejected;
-use RuntimeException;
 
 /**
  * Subscribes to the four Recurring-side Public events that signal a
  * change in the recurring-series substrate (approve, cadence flip,
- * reject, metric refresh). The real implementation lands in a later
- * wave: each event fans out into one queued projection job per
- * (user, scenario, horizon) tuple via the injected bus.
+ * reject, metric refresh). Each upstream event fans out into three
+ * baseline `ProjectForecastJob` dispatches — one per horizon
+ * (30 / 60 / 90 days). Wave 4 (Plan 10-05) extends this fan-out to
+ * also dispatch per saved scenario via `ScenarioQuery::forUser`.
  *
- * The constructor signature + handle() shape are the locked DI surface
- * — later waves swap only the handle() body in, so the upstream event
- * subscriptions wired in ForecastingServiceProvider stay valid.
+ * The downstream job's `ShouldBeUniqueUntilProcessing` lock collapses
+ * concurrent triggers per `(userId, baseline, horizon)` — multiple
+ * upstream events in the same window do NOT produce duplicate work,
+ * only the first dispatch survives until the worker begins
+ * processing.
  *
- * Cross-module: imports Modules\Recurring\Public\Events only — never
- * Modules\Recurring\Internal. The crossModuleAccessGoesThroughPublic
- * arch invariant enforces this contract.
+ * Cross-module: imports `Modules\Recurring\Public\Events` only — never
+ * `Modules\Recurring\Internal`. The
+ * `crossModuleAccessGoesThroughPublic` arch invariant enforces this.
  */
 final readonly class ProjectForecastOnRecurringChange
 {
@@ -33,10 +36,12 @@ final readonly class ProjectForecastOnRecurringChange
     public function handle(
         RecurringSeriesApproved|RecurringSeriesCadenceFlipped|RecurringSeriesRejected|RecurringSeriesMetricsRefreshed $event,
     ): void {
-        throw new RuntimeException(sprintf(
-            'ProjectForecastOnRecurringChange::handle is a scaffold; a later wave dispatches the per-(user, scenario, horizon) projection job via %s for event %s.',
-            $this->bus::class,
-            $event::class,
-        ));
+        foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
+            $this->bus->dispatch(new ProjectForecastJob(
+                userId: $event->userId,
+                scenarioId: null,
+                horizonDays: $horizon,
+            ));
+        }
     }
 }
