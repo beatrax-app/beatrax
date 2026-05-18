@@ -15,6 +15,7 @@ use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastHighlightsTile;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
 use Modules\Forecasting\Internal\Http\Livewire\ModelWhatIfDropdown;
+use Modules\Forecasting\Internal\Http\Livewire\OpeningBalanceEditor;
 use Modules\Forecasting\Internal\Http\Livewire\ScenarioEditorSidebar;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnDriftDismissed;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
@@ -38,6 +39,7 @@ use Modules\Forecasting\Public\Actions\EditScenarioMutation;
 use Modules\Forecasting\Public\Actions\RemoveScenarioMutation;
 use Modules\Forecasting\Public\Actions\RenameScenario;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
+use Modules\Forecasting\Public\Actions\SetAccountOpeningBalance;
 use Modules\Forecasting\Public\Events\ScenarioCreated;
 use Modules\Forecasting\Public\Events\ScenarioDeleted;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
@@ -104,6 +106,9 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(SetAccountForecastBuffer::class);
         $this->app->singleton(ForecastHighlightsQuery::class);
 
+        // Wave 5 Public Action for the opening-balance editor on /settings.
+        $this->app->singleton(SetAccountOpeningBalance::class);
+
         // Wave 4 scenario CRUD Public Actions.
         $this->app->singleton(CreateScenario::class);
         $this->app->singleton(RenameScenario::class);
@@ -145,6 +150,7 @@ final class ForecastingServiceProvider extends ServiceProvider
         $livewire->component('forecasting.forecast-highlights-tile', ForecastHighlightsTile::class);
         $livewire->component('forecasting.scenario-editor-sidebar', ScenarioEditorSidebar::class);
         $livewire->component('forecasting.model-what-if-dropdown', ModelWhatIfDropdown::class);
+        $livewire->component('forecasting.opening-balance-editor', OpeningBalanceEditor::class);
 
         $this->registerListeners($events);
         $this->registerTopNavBadgeComposer();

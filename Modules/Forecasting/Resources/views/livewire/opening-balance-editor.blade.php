@@ -1,0 +1,104 @@
+{{--
+    Per-account opening-balance editor — inline on /settings.
+
+    Renders the opening balance + opening-balance-as-of fields side by
+    side. The soft-warning banner appears below the inputs when the
+    Action raises an OpeningBalanceDivergenceWarning; the banner offers
+    two chips: "Use diederik's number" (replaces the input with the
+    computed sum-of-transactions) and "Use my number" (commits the
+    user's value with allowDivergence=true).
+
+    Variables in scope:
+      - $accountId : int
+      - $accountName : string
+      - $accountKind : string  ('asn_bank' | 'ics_card' | 'paypal' | other)
+      - $currency : string
+      - $openingInput : string  (user-typed)
+      - $asOfInput : string     (ISO YYYY-MM-DD)
+      - $errorMessage : ?string
+      - $showingDivergenceBanner : bool
+      - $divergenceDiffMinor : ?int
+      - $diederiksNumberMinor : ?int
+      - $saved : bool
+--}}
+
+@php
+    $symbol = $currency === 'EUR' ? '€' : ($currency === 'USD' ? '$' : $currency);
+    $helpText = match (true) {
+        str_contains($accountKind, 'paypal') => "PayPal exports don't carry balance lines, so set this manually.",
+        str_contains($accountKind, 'asn') => 'Auto-anchored from your latest statement. Override only if you know the live balance differs.',
+        default => 'Override only if you know the current live balance differs from what diederik computes.',
+    };
+@endphp
+
+<fieldset class="space-y-3 rounded-md border border-slate-200 bg-white p-4">
+    <legend class="sr-only">Forecast opening balance for {{ $accountName }}</legend>
+    <h3 class="text-base font-semibold text-slate-900">{{ $accountName }}</h3>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div class="space-y-1">
+            <label for="opening-input-{{ $accountId }}" class="block text-sm text-slate-900">Opening balance</label>
+            <p class="text-xs text-slate-500">{{ $helpText }}</p>
+            <div class="flex items-center gap-1">
+                <span class="text-sm text-slate-500" aria-hidden="true">{{ $symbol }}</span>
+                <input
+                    type="text"
+                    inputmode="decimal"
+                    id="opening-input-{{ $accountId }}"
+                    wire:model="openingInput"
+                    placeholder="e.g. 1.250,00"
+                    aria-describedby="opening-help-{{ $accountId }}"
+                    class="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                    style="font-variant-numeric: tabular-nums;"
+                >
+            </div>
+        </div>
+
+        <div class="space-y-1">
+            <label for="as-of-input-{{ $accountId }}" class="block text-sm text-slate-900">Opening balance as of</label>
+            <p class="text-xs text-slate-500">The date the figure above is true for.</p>
+            <input
+                type="date"
+                id="as-of-input-{{ $accountId }}"
+                wire:model="asOfInput"
+                class="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+            >
+        </div>
+    </div>
+
+    @if ($showingDivergenceBanner)
+        <div role="status" aria-live="polite" class="rounded-md border border-amber-200 bg-amber-50 p-3" data-testid="opening-balance-divergence-banner">
+            <p class="text-sm text-amber-700">
+                This is more than €500 off the balance diederik computes from your imported transactions. Are you sure?
+            </p>
+            <div class="mt-2 flex flex-wrap gap-3">
+                <button
+                    type="button"
+                    wire:click="useDiederiksNumber"
+                    class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                >Use diederik's number</button>
+                <button
+                    type="button"
+                    wire:click="useMyNumber"
+                    class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                >Use my number</button>
+            </div>
+        </div>
+    @endif
+
+    @if ($errorMessage !== null)
+        <p class="text-sm text-rose-600" role="alert">{{ $errorMessage }}</p>
+    @endif
+
+    <div class="flex items-center gap-2">
+        <button
+            type="button"
+            wire:click="save"
+            class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+        >Save opening balance</button>
+
+        @if ($saved)
+            <span wire:transition.duration.4000ms class="text-sm text-emerald-700">Saved.</span>
+        @endif
+    </div>
+</fieldset>
