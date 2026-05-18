@@ -134,7 +134,7 @@ final readonly class ProjectionPipeline
             if ($seriesAccountId === null) {
                 continue;
             }
-            $seriesContribs = $this->projector->envelope(
+            $seriesContribs = $this->projector->project(
                 series: $series,
                 accountId: $seriesAccountId,
                 asOf: $asOf,
