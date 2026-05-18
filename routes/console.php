@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Schedule;
 use Modules\DriftAlerts\Internal\Jobs\RevivedExpiredDriftSnoozesJob;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
+use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
 use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
@@ -149,3 +150,29 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
 Schedule::call(function (Dispatcher $bus): void {
     $bus->dispatch(new RevivedExpiredDriftSnoozesJob);
 })->name('drift-alerts.revive-snoozes')->hourly()->withoutOverlapping(30);
+
+// Daily forecast projection sweep: fans out three baseline
+// ProjectForecastJob dispatches (one per 30 / 60 / 90 horizon) per
+// user. The job's ShouldBeUniqueUntilProcessing lock keyed on
+// (userId, 'baseline', horizonDays) collapses any same-day duplicate
+// trigger into a single queued run; the withoutOverlapping(30) guard
+// here prevents this scheduler closure from racing with a previous
+// tick. Wave 4 (Plan 10-05) extends the inner loop to also dispatch
+// per saved scenario.
+// Closure DI mirrors the email-scan + receipts + recurring entries
+// above — DatabaseManager + Bus Dispatcher resolved through the
+// container; no facade reaches into module code. Method order
+// .name() BEFORE .daily()->withoutOverlapping(30) — CallbackEvent's
+// description-required guard fires otherwise.
+Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
+    $userIds = $db->connection()->table('users')->pluck('id');
+    foreach ($userIds as $userId) {
+        foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
+            $bus->dispatch(new ProjectForecastJob(
+                userId: (int) $userId,
+                scenarioId: null,
+                horizonDays: $horizon,
+            ));
+        }
+    }
+})->name('forecasting.daily-sweep')->daily()->withoutOverlapping(30);
