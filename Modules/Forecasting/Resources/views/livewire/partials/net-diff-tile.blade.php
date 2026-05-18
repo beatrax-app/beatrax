@@ -7,12 +7,15 @@
     positive (scenario is BETTER than baseline) tints emerald-700,
     negative (scenario is WORSE) tints rose-700, zero leaves the
     numeric in default slate-900. The locale-aware Money formatter
-    uses the project's nl_NL EUR convention (Phase 3 D-46).
+    uses the project's nl_NL EUR convention.
 
     Inputs:
-      - $netDiff: array<int, int> keyed by 30/60/90 with signed
+      - $netDiff: array<int, int> keyed by horizon day with signed
         minor-unit deltas (scenario - baseline).
       - $netDiffCurrency: ISO 4217 currency string for the formatter.
+      - $horizonDays: list<int> of horizon days to render (the constant
+        ProjectForecastJob::HORIZON_DAYS passed in from ForecastPage so
+        the template stays in lock step with the canonical horizon set).
 --}}
 @php
     $fmt = static function (int $absMinor, string $currency = 'EUR'): string {
@@ -27,7 +30,7 @@
 <section class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4" aria-label="Net diff between baseline and scenario at horizon days 30 / 60 / 90">
     <p class="text-sm text-slate-500">Net diff</p>
     <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        @foreach ([30, 60, 90] as $horizonKey)
+        @foreach (($horizonDays ?? [30, 60, 90]) as $horizonKey)
             @php
                 $delta = $netDiff[$horizonKey] ?? 0;
                 $sign = $delta > 0 ? '+' : ($delta < 0 ? '−' : '');
