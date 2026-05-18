@@ -85,14 +85,54 @@
             <section class="rounded-lg border border-slate-200 bg-white p-4">
                 <header class="mb-3 flex items-baseline justify-between gap-4">
                     <div>
-                        <h2 class="text-base font-semibold text-slate-900">Baseline</h2>
+                        <h2 class="text-base font-semibold text-slate-900">{{ $selectedAccountName }} · Baseline</h2>
                         <p class="mt-1 text-sm text-slate-500" style="font-variant-numeric: tabular-nums;">
                             {{ $eurFmt($todayBalanceMinor, $defaultCurrency) }} today
                             &nbsp;&rarr;&nbsp;
                             {{ $eurFmt($horizonLowMinor, $defaultCurrency) }} &ndash; {{ $eurFmt($horizonHighMinor, $defaultCurrency) }} on day {{ $horizon }}
                         </p>
                     </div>
+                    @if ($selectedAccountId !== null)
+                        <div x-data="{ open: false }" class="relative">
+                            <button
+                                type="button"
+                                x-on:click="open = ! open"
+                                aria-haspopup="dialog"
+                                aria-label="Edit minimum buffer for {{ $selectedAccountName }}"
+                                class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                                style="font-variant-numeric: tabular-nums;"
+                            >
+                                {{ $effectiveBufferMinor === null ? 'Buffer: not set' : 'Buffer: ' . $eurFmt($effectiveBufferMinor, $selectedAccountCurrency) }}
+                            </button>
+                            <div
+                                x-show="open"
+                                x-cloak
+                                x-on:click.outside="open = false"
+                                x-on:keydown.escape.window="open = false"
+                                x-on:buffer-editor:saved.window="open = false"
+                                class="absolute right-0 z-10 mt-1 w-64 rounded-md border border-slate-200 bg-white p-3 text-sm shadow-lg"
+                            >
+                                @livewire('forecasting.account-buffer-editor', [
+                                    'accountId' => $selectedAccountId,
+                                    'currentBufferMinor' => $effectiveBufferMinor,
+                                    'currency' => $selectedAccountCurrency,
+                                    'accountName' => $selectedAccountName,
+                                ], key('buffer-editor-' . $selectedAccountId))
+                            </div>
+                        </div>
+                    @endif
                 </header>
+
+                @foreach ($shortfallWindows as $window)
+                    <p class="mb-2 flex items-center gap-1 text-xs text-rose-700" style="font-variant-numeric: tabular-nums;">
+                        <span aria-hidden="true">↘</span>
+                        <span>
+                            Shortfall starts {{ $window->startsAt->format('d M') }} —
+                            {{ $eurFmt(abs($window->lowestBalanceMinor - $window->bufferUsedMinor), $window->currency) }}
+                            below your {{ $eurFmt($window->bufferUsedMinor, $window->currency) }} buffer
+                        </span>
+                    </p>
+                @endforeach
 
                 @include('forecasting::livewire.partials.range-area-chart', [
                     'forecast' => $baseline,
