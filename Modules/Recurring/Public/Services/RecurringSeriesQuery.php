@@ -478,8 +478,12 @@ final readonly class RecurringSeriesQuery
      * `transactions.account_id` it points at — the recurring_series
      * row itself does not carry an account column.
      *
-     * Missing series, cross-user series, and series with zero
-     * occurrences are silently absent from the result map.
+     * Series with zero occurrences fall back to the user's
+     * alphabetically-first owned account (single-account users
+     * unambiguously resolve; multi-account users get the best-effort
+     * mapping until the detector starts emitting occurrences for the
+     * series). Missing or cross-user series ids are silently absent
+     * from the result map.
      *
      * @param  array<int|string, mixed>  $seriesIds
      * @return array<int, int>
@@ -517,6 +521,40 @@ final readonly class RecurringSeriesQuery
                 continue;
             }
             $map[$seriesId] = self::toInt($row->account_id);
+        }
+
+        // Fallback for zero-occurrence series: assign them to the
+        // user's alphabetically-first account so projections still
+        // produce sensible output. Confirms each id still exists
+        // and belongs to the user before falling back.
+        $missing = array_values(array_diff($unique, array_keys($map)));
+        if ($missing !== []) {
+            $owned = $this->db->connection()->table('recurring_series')
+                ->where('user_id', $user->id)
+                ->whereIn('id', $missing)
+                ->pluck('id');
+            $ownedSet = [];
+            foreach ($owned as $id) {
+                $ownedSet[] = self::toInt($id);
+            }
+            $ownedSet = array_values(array_filter($ownedSet, static fn (int $id): bool => $id > 0));
+
+            if ($ownedSet !== []) {
+                $firstAccount = $this->db->connection()->table('accounts')
+                    ->where('user_id', $user->id)
+                    ->orderBy('name')
+                    ->orderBy('id')
+                    ->first(['id']);
+                if ($firstAccount !== null) {
+                    /** @var stdClass $firstAccount */
+                    $firstAccountId = self::toInt($firstAccount->id);
+                    if ($firstAccountId > 0) {
+                        foreach ($ownedSet as $sid) {
+                            $map[$sid] = $firstAccountId;
+                        }
+                    }
+                }
+            }
         }
 
         return $map;

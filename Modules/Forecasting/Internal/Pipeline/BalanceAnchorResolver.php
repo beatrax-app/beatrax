@@ -67,11 +67,31 @@ final readonly class BalanceAnchorResolver
             if ($anchor !== null) {
                 return $anchor;
             }
-        } else {
-            $anchor = $this->fromUserInputOpeningBalance($account);
-            if ($anchor !== null) {
-                return $anchor;
-            }
+        }
+
+        // Cross-kind fallback: when no statement-level anchor was
+        // available (or when the kind is paypal / CSV-only), honour
+        // the user-input opening_balance on the account row.
+        $anchor = $this->fromUserInputOpeningBalance($account);
+        if ($anchor !== null) {
+            return $anchor;
+        }
+
+        // For ICS card accounts with no statement AND no user-input
+        // opening balance, default to zero rather than summing every
+        // historical transaction. A card account with no statement
+        // and no anchor is treated as "starts fresh from zero" so
+        // the projection reflects only the future outflows it adds.
+        // Summing transactions would double-count the historical
+        // billing events the projection is about to re-emit forward.
+        if ($kind === 'ics_card') {
+            return new BalanceAnchorDto(
+                accountId: $accountId,
+                openingBalanceMinor: 0,
+                currency: $defaultCurrency !== '' ? $defaultCurrency : 'EUR',
+                asOfDate: $this->clock->now()->startOfDay(),
+                source: 'ics_card_zero_anchor',
+            );
         }
 
         return $this->fromTransactionsSum($accountId, $user->id, $defaultCurrency);

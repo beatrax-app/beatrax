@@ -101,7 +101,7 @@ final readonly class RangeProjector
                     lowMinor: $lowMinor,
                     highMinor: $highMinor,
                     currency: $currency,
-                    fxRateUsed: null, // Wave 2 baseline-only: fx_rate is read at the fold boundary if needed.
+                    fxRateUsed: $series->latestFxRateUsed,
                     seriesId: $series->seriesId,
                     accountId: $accountId,
                 );

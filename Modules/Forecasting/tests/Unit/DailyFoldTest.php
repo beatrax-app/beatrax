@@ -189,10 +189,11 @@ it('throws InvalidArgumentException when a cross-currency contribution lacks fxR
     expect($fold)->toThrow(InvalidArgumentException::class);
 });
 
-it('cumulates spread across multiple days via quadrature, not linearly', function (): void {
-    // One contribution per day with half-width 10. After day 1: spread =
-    // round(√100) = 10. After day 2: spread = round(√200) = 14. After
-    // day 3: spread = round(√300) = 17.
+it('does NOT cumulate spread across days for one-contribution-per-day occurrences', function (): void {
+    // The forecast band represents the uncertainty in the latest
+    // active period's amount, not uncertainty accumulated over time.
+    // One contribution per day with half-width 10 → each day's spread
+    // resets to round(√100) = 10, not the cumulative quadrature.
     $asOf = CarbonImmutable::parse('2026-05-19');
     $contributions = [];
     foreach (['2026-05-20', '2026-05-21', '2026-05-22'] as $date) {
@@ -217,6 +218,41 @@ it('cumulates spread across multiple days via quadrature, not linearly', functio
     );
 
     expect($points['2026-05-20']['high_minor'] - $points['2026-05-20']['low_minor'])->toBe(20); // 2 × 10
-    expect($points['2026-05-21']['high_minor'] - $points['2026-05-21']['low_minor'])->toBe(28); // 2 × round(√200) = 14
-    expect($points['2026-05-22']['high_minor'] - $points['2026-05-22']['low_minor'])->toBe(34); // 2 × round(√300) = 17
+    expect($points['2026-05-21']['high_minor'] - $points['2026-05-21']['low_minor'])->toBe(20); // stays at 10 (per-day spread, NOT cumulated)
+    expect($points['2026-05-22']['high_minor'] - $points['2026-05-22']['low_minor'])->toBe(20); // stays at 10
+});
+
+it('carries the latest-period spread forward on days without new contributions', function (): void {
+    // After a contribution on day 1 the spread persists until a new
+    // contribution overrides it. Confirms the carry-forward semantics
+    // chart consumers rely on (no chart gaps; band remains
+    // continuous).
+    $asOf = CarbonImmutable::parse('2026-05-19');
+    $on = CarbonImmutable::parse('2026-05-20');
+
+    $contributions = [
+        new ForecastContribution(
+            date: $on,
+            pointMinor: -100,
+            lowMinor: -110,
+            highMinor: -90,
+            currency: 'EUR',
+            fxRateUsed: null,
+            seriesId: 1,
+            accountId: 1,
+        ),
+    ];
+
+    $points = dfFold()->fold(
+        openingBalanceMinor: 0,
+        contributions: $contributions,
+        asOf: $asOf,
+        horizonDays: 3,
+        defaultCurrency: 'EUR',
+    );
+
+    expect($points['2026-05-19']['high_minor'] - $points['2026-05-19']['low_minor'])->toBe(0);
+    expect($points['2026-05-20']['high_minor'] - $points['2026-05-20']['low_minor'])->toBe(20);
+    expect($points['2026-05-21']['high_minor'] - $points['2026-05-21']['low_minor'])->toBe(20); // carry forward
+    expect($points['2026-05-22']['high_minor'] - $points['2026-05-22']['low_minor'])->toBe(20); // carry forward
 });
