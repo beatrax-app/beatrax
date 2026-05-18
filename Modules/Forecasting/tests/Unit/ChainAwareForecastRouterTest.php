@@ -274,7 +274,7 @@ it('synthesises a next ICS bulk-iDEAL settlement contribution onto the funder AS
     expect($routed[0]->date->toDateString())->toBe('2026-05-05'); // period_end + 5 days
 });
 
-it('de-duplicates a synthesised settlement against a routed Phase 8 contribution on the same (funder, date)', function (): void {
+it('de-duplicates a synthesised settlement against a chain-routed ICS series contribution on the same (funder, date)', function (): void {
     $asn = carfAccount($this->user, 'asn', 'asn');
     $ics = carfAccount($this->user, 'ics_card', 'ics');
     $run = carfImportRun($this->user, str_repeat('c', 64));
@@ -290,8 +290,55 @@ it('de-duplicates a synthesised settlement against a routed Phase 8 contribution
         'state' => 'open',
     ]);
 
-    // A phantom Phase 8 contribution already lands on the same funder
-    // account and same date the synthesised one would pick.
+    // Wire up an ICS-card series with a confirmed chain link to the ASN
+    // funder — step 1 will rewrite this contribution onto the ASN
+    // account, where the synthesised settlement also lands. Step 3 dedup
+    // drops the rewritten contribution in favour of the authoritative
+    // synthesised settlement amount.
+    $funded = carfTxn($this->user, $ics, $run, [
+        'amount_minor' => -50000,
+        'counterparty_name' => 'ICS Bulk',
+        'counterparty_normalized' => 'ics bulk',
+    ]);
+    $funder = carfTxn($this->user, $asn, $run, [
+        'amount_minor' => -50000,
+        'counterparty_name' => 'ICS Settle',
+        'counterparty_normalized' => 'ics settle',
+    ]);
+    $series = RecurringSeries::query()->create([
+        'user_id' => $this->user->id,
+        'cadence' => 'monthly',
+        'direction' => 'expense',
+        'detected_name' => 'ICS Bulk',
+        'state' => 'approved',
+        'variance_tolerance_percent' => 5,
+        'latest_amount_minor' => -50000,
+        'latest_currency' => 'EUR',
+        'cluster_key' => 'ics-bulk',
+        'next_expected_at' => '2026-05-05',
+    ]);
+    RecurringSeriesOccurrence::query()->create([
+        'user_id' => $this->user->id,
+        'recurring_series_id' => $series->id,
+        'transaction_id' => $funded->id,
+        'observed_at' => '2026-04-05',
+        'observed_amount_minor' => -50000,
+        'observed_currency' => 'EUR',
+    ]);
+    ChainLink::query()->create([
+        'user_id' => $this->user->id,
+        'from_transaction_id' => $funded->id,
+        'to_transaction_id' => $funder->id,
+        'kind' => 'ics_bulk_settle',
+        'state' => 'confirmed',
+        'confidence' => 1.0,
+        'resolver' => 'user',
+        'evidence' => json_encode(['signature_hash' => 'ics-bulk']),
+    ]);
+
+    // The contribution starts on the ICS card (step 1 will rewrite it
+    // onto the ASN funder, where step 2 also places the synthesised
+    // settlement, where step 3 then dedups).
     $overlap = new ForecastContribution(
         date: CarbonImmutable::parse('2026-05-05'),
         pointMinor: -50000,
@@ -299,8 +346,8 @@ it('de-duplicates a synthesised settlement against a routed Phase 8 contribution
         highMinor: -45000,
         currency: 'EUR',
         fxRateUsed: null,
-        seriesId: 9999,
-        accountId: $asn->id,
+        seriesId: $series->id,
+        accountId: $ics->id,
     );
 
     $routed = carfRouter()->route([$overlap], $this->user);
@@ -312,4 +359,65 @@ it('de-duplicates a synthesised settlement against a routed Phase 8 contribution
     expect($routed[0]->pointMinor)->toBe(-50000);
     expect($routed[0]->lowMinor)->toBe(-50000);
     expect($routed[0]->highMinor)->toBe(-50000);
+});
+
+it('preserves an unrelated ASN recurring series whose occurrence lands on the ICS settlement date', function (): void {
+    $asn = carfAccount($this->user, 'asn', 'asn');
+    $ics = carfAccount($this->user, 'ics_card', 'ics');
+    $run = carfImportRun($this->user, str_repeat('d', 64));
+
+    CardStatement::query()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $ics->id,
+        'import_run_id' => $run->id,
+        'period_start' => '2026-04-01 00:00:00',
+        'period_end' => '2026-04-30 23:59:59',
+        'total_amount_minor' => -50000,
+        'open_balance_minor' => 50000,
+        'state' => 'open',
+    ]);
+
+    // An UNRELATED recurring series — a salary inflow on ASN with no
+    // chain link to the ICS card. It happens to project an occurrence
+    // on 2026-05-05, the same date the synthesised settlement lands on
+    // the ASN funder. The earlier dedup bug dropped this contribution
+    // wholesale; the corrected scoped dedup must preserve it.
+    $salarySeries = RecurringSeries::query()->create([
+        'user_id' => $this->user->id,
+        'cadence' => 'monthly',
+        'direction' => 'income',
+        'detected_name' => 'Salary',
+        'state' => 'approved',
+        'variance_tolerance_percent' => 5,
+        'latest_amount_minor' => 250000,
+        'latest_currency' => 'EUR',
+        'cluster_key' => 'salary',
+        'next_expected_at' => '2026-05-05',
+    ]);
+
+    $salaryInflow = new ForecastContribution(
+        date: CarbonImmutable::parse('2026-05-05'),
+        pointMinor: 250000,
+        lowMinor: 247500,
+        highMinor: 252500,
+        currency: 'EUR',
+        fxRateUsed: null,
+        seriesId: $salarySeries->id,
+        accountId: $asn->id,
+    );
+
+    $routed = carfRouter()->route([$salaryInflow], $this->user);
+
+    // Both contributions survive: the salary inflow (untouched) AND
+    // the synthesised ICS settlement.
+    expect($routed)->toHaveCount(2);
+
+    $bySeries = [];
+    foreach ($routed as $c) {
+        $bySeries[$c->seriesId] = $c;
+    }
+    expect($bySeries)->toHaveKey($salarySeries->id);
+    expect($bySeries)->toHaveKey(0);
+    expect($bySeries[$salarySeries->id]->pointMinor)->toBe(250000);
+    expect($bySeries[0]->pointMinor)->toBe(-50000);
 });
