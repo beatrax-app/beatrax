@@ -41,6 +41,9 @@ function fpctFixtures(): array
         'multi-account-baseline' => ['multi-account-baseline'],
         'fx-only-usd-subscription' => ['fx-only-usd-subscription'],
         'zero-occurrence-edge-case' => ['zero-occurrence-edge-case'],
+        // Wave 3 additions — exercises ShortfallDetector + buffer-band
+        // semantics end-to-end via ProjectForecastJob.
+        'buffer-crossing' => ['buffer-crossing'],
     ];
 }
 
@@ -91,6 +94,7 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
             'default_currency' => (string) ($account['default_currency'] ?? 'EUR'),
             'opening_balance_minor' => $account['opening_balance_minor'] ?? null,
             'opening_balance_as_of_date' => $account['opening_balance_as_of_date'] ?? null,
+            'forecast_min_buffer_minor' => $account['forecast_min_buffer_minor'] ?? null,
             'created_at' => '2026-05-01 00:00:00',
             'updated_at' => '2026-05-01 00:00:00',
         ]);
@@ -285,6 +289,36 @@ it('projects the Wave 2 fixture corpus subset end-to-end and matches expected.pr
         expect(abs($matched->highMinor - $expectedHigh))->toBeLessThanOrEqual(
             $bandTolerance,
             "fixture '{$fixtureName}' day {$matchDate}: high {$matched->highMinor} vs expected {$expectedHigh}",
+        );
+    }
+
+    // Wave 3 shortfall assertions. The fixture's `expected.shortfalls`
+    // entries (when present) name the windows ShortfallDetector should
+    // have written into the forecast_shortfall_windows table during the
+    // 30-day baseline projection above. The check is tolerant: it only
+    // asserts that AT LEAST ONE row exists with the matching (account,
+    // buffer_used_minor, currency) tuple — the start/end dates carry
+    // their own tolerance because the daily-fold + envelope timing can
+    // shift the boundary by a day.
+    $expectedShortfalls = is_array($fixture['expected']['shortfalls'] ?? null) ? $fixture['expected']['shortfalls'] : [];
+    foreach ($expectedShortfalls as $expectedSf) {
+        if (! is_array($expectedSf)) {
+            continue;
+        }
+        $fixtureAccountId = (int) ($expectedSf['account_id'] ?? 0);
+        $dbAccountId = $accountIdMap[$fixtureAccountId] ?? null;
+        if ($dbAccountId === null) {
+            continue;
+        }
+        $row = $db->connection()->table('forecast_shortfall_windows')
+            ->where('user_id', $user->id)
+            ->where('account_id', $dbAccountId)
+            ->whereNull('scenario_id')
+            ->where('buffer_used_minor', (int) ($expectedSf['buffer_used_minor'] ?? 0))
+            ->orderByDesc('id')
+            ->first();
+        expect($row)->not->toBeNull(
+            "fixture '{$fixtureName}' expected at least one forecast_shortfall_windows row with buffer={$expectedSf['buffer_used_minor']}",
         );
     }
 

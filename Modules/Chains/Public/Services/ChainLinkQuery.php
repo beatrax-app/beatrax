@@ -10,6 +10,7 @@ use Illuminate\Database\Query\Builder;
 use Modules\Chains\Public\Dto\ChainLinkRow;
 use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
+use Modules\Chains\Public\Dto\SeriesFunderLink;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
@@ -148,6 +149,68 @@ final class ChainLinkQuery
             rootTransactionId: $rootId,
             nodes: $nodes,
         );
+    }
+
+    /**
+     * Resolve confirmed-or-deterministic chain links for the occurrences
+     * of a recurring series. Used by the Forecasting module's chain-
+     * aware router to rewrite contribution account ids onto the FUNDER
+     * accounts so the projected balance dips on the day the money
+     * actually leaves the funder.
+     *
+     * Walks `recurring_series_occurrences → transactions → chain_links`
+     * filtered to `state='confirmed' OR resolver='auto'` (deterministic).
+     * Returns one `SeriesFunderLink` per matched occurrence. Cross-user
+     * safety: every join filters on `user_id` on the `chain_links` and
+     * `transactions` rows.
+     *
+     * Returns an empty array when the series has no occurrences with
+     * chain links — the caller treats this as "no chain resolution"
+     * and leaves the contribution on the series's own account.
+     *
+     * @return list<SeriesFunderLink>
+     */
+    public function confirmedAndDeterministicForSeries(int $seriesId, User $user): array
+    {
+        $rows = $this->db->connection()->table('chain_links')
+            ->join('recurring_series_occurrences as rso', 'rso.transaction_id', '=', 'chain_links.from_transaction_id')
+            ->join('transactions as funder_tx', 'funder_tx.id', '=', 'chain_links.to_transaction_id')
+            ->where('chain_links.user_id', $user->id)
+            ->where('rso.recurring_series_id', $seriesId)
+            ->where(function ($q): void {
+                /** @var Builder $q */
+                $q->where('chain_links.state', 'confirmed')
+                    ->orWhere('chain_links.resolver', 'auto');
+            })
+            ->whereNotNull('chain_links.to_transaction_id')
+            ->select(
+                'chain_links.id as chain_link_id',
+                'chain_links.from_transaction_id as from_transaction_id',
+                'chain_links.to_transaction_id as to_transaction_id',
+                'funder_tx.account_id as funder_account_id',
+                'chain_links.kind as kind',
+                'chain_links.state as state',
+                'chain_links.resolver as resolver',
+                'chain_links.confidence as confidence',
+            )
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $result[] = new SeriesFunderLink(
+                chainLinkId: self::toInt($row->chain_link_id),
+                fromTransactionId: self::toInt($row->from_transaction_id),
+                toTransactionId: self::toInt($row->to_transaction_id),
+                funderAccountId: self::toInt($row->funder_account_id),
+                kind: self::toString($row->kind),
+                state: self::toString($row->state),
+                resolver: self::toString($row->resolver),
+                confidence: self::toFloat($row->confidence),
+            );
+        }
+
+        return $result;
     }
 
     public function openCandidateCount(User $user): int
