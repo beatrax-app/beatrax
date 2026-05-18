@@ -14,6 +14,7 @@ use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
 use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastHighlightsTile;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
+use Modules\Forecasting\Internal\Http\Livewire\ModelWhatIfDropdown;
 use Modules\Forecasting\Internal\Http\Livewire\ScenarioEditorSidebar;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnDriftDismissed;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
@@ -28,6 +29,9 @@ use Modules\Forecasting\Internal\Pipeline\ScenarioApplier;
 use Modules\Forecasting\Internal\Pipeline\ShortfallDetector;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
+use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
+use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
+use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
 use Modules\Forecasting\Public\Actions\CreateScenario;
 use Modules\Forecasting\Public\Actions\DeleteScenario;
 use Modules\Forecasting\Public\Actions\EditScenarioMutation;
@@ -108,6 +112,12 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(RemoveScenarioMutation::class);
         $this->app->singleton(EditScenarioMutation::class);
 
+        // Wave 4 launchpad Public Actions (atomic CreateScenario +
+        // AddScenarioMutation pairs wrapped in a DB transaction).
+        $this->app->singleton(CreateCancellationScenarioForAlert::class);
+        $this->app->singleton(CreateCancellationScenarioForSeries::class);
+        $this->app->singleton(CreateAmountChangeScenarioForSeries::class);
+
         // Wave 3 dashboard tile Livewire SFC (singleton-bound so it
         // resolves once per request).
         $this->app->singleton(ForecastHighlightsTile::class);
@@ -134,6 +144,7 @@ final class ForecastingServiceProvider extends ServiceProvider
         $livewire->component('forecasting.account-buffer-editor', AccountBufferEditor::class);
         $livewire->component('forecasting.forecast-highlights-tile', ForecastHighlightsTile::class);
         $livewire->component('forecasting.scenario-editor-sidebar', ScenarioEditorSidebar::class);
+        $livewire->component('forecasting.model-what-if-dropdown', ModelWhatIfDropdown::class);
 
         $this->registerListeners($events);
         $this->registerTopNavBadgeComposer();
