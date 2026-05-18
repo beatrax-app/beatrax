@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -115,40 +116,21 @@ final class AccountBufferEditor extends Component
     /**
      * Parse the user input (locale-aware "500,00" / "500.00" / "500")
      * to BIGINT minor units. Returns false on any non-numeric input.
+     *
+     * An empty string is treated as "zero buffer" (the editor's clear
+     * affordance), preserving the prior behaviour. Negative values are
+     * rejected (a buffer below zero has no meaning).
      */
     private function parseInputToMinor(string $input): int|false
     {
-        $trimmed = trim($input);
-        if ($trimmed === '') {
+        if (trim($input) === '') {
             return 0;
         }
 
-        // Strip thousands separators (Dutch locale: '.'; English: ',').
-        // We accept either as a thousands separator and treat the LAST
-        // separator as the decimal mark for forgiveness.
-        $normalised = str_replace([' '], '', $trimmed);
-        $commaPos = strrpos($normalised, ',');
-        $dotPos = strrpos($normalised, '.');
-        if ($commaPos !== false && $dotPos !== false) {
-            // Last one wins as the decimal separator.
-            if ($commaPos > $dotPos) {
-                $normalised = str_replace('.', '', $normalised);
-                $normalised = str_replace(',', '.', $normalised);
-            } else {
-                $normalised = str_replace(',', '', $normalised);
-            }
-        } elseif ($commaPos !== false) {
-            $normalised = str_replace(',', '.', $normalised);
-        }
-
-        if (! is_numeric($normalised)) {
+        try {
+            return AmountStringParser::toMinor($input, allowNegative: false);
+        } catch (InvalidArgumentException) {
             return false;
         }
-        $float = (float) $normalised;
-        if ($float < 0) {
-            return false;
-        }
-
-        return (int) round($float * 100);
     }
 }
