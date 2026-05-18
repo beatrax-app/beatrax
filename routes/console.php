@@ -162,13 +162,15 @@ Schedule::call(function (Dispatcher $bus): void {
 // tick. Wave 4 (Plan 10-05) extends the inner loop to also dispatch
 // per saved scenario.
 // Closure DI mirrors the email-scan + receipts + recurring entries
-// above — DatabaseManager + Bus Dispatcher resolved through the
-// container; no facade reaches into module code. Method order
-// .name() BEFORE .daily()->withoutOverlapping(30) — CallbackEvent's
-// description-required guard fires otherwise.
-Schedule::call(function (DatabaseManager $db, Dispatcher $bus, ScenarioQuery $scenarioQuery): void {
-    $users = User::query()->get();
-    foreach ($users as $user) {
+// above — Bus Dispatcher resolved through the container; no facade
+// reaches into module code. Method order .name() BEFORE
+// .daily()->withoutOverlapping(30) — CallbackEvent's description-
+// required guard fires otherwise.
+//
+// User iteration via ->lazyById(100) so a multi-user deployment does
+// not load every user row into memory upfront.
+Schedule::call(function (Dispatcher $bus, ScenarioQuery $scenarioQuery): void {
+    User::query()->lazyById(100)->each(function (User $user) use ($bus, $scenarioQuery): void {
         foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
             $bus->dispatch(new ProjectForecastJob(
                 userId: (int) $user->id,
@@ -185,6 +187,5 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus, ScenarioQuery $sc
                 ));
             }
         }
-    }
-    unset($db);
+    });
 })->name('forecasting.daily-sweep')->daily()->withoutOverlapping(30);
