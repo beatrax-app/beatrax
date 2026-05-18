@@ -7,7 +7,6 @@ namespace Modules\Forecasting\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Models\ForecastScenarioMutation;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
@@ -36,7 +35,6 @@ final readonly class ScenarioQuery
 {
     public function __construct(
         private DatabaseManager $db,
-        private Clock $clock,
         private ForecastDtoMapper $mapper,
     ) {}
 
@@ -119,8 +117,6 @@ final readonly class ScenarioQuery
             ->orderBy('id')
             ->pluck('id');
 
-        $now = $this->clock->now();
-
         $result = [];
         foreach ($ids as $idValue) {
             $id = is_numeric($idValue) ? (int) $idValue : 0;
@@ -131,8 +127,13 @@ final readonly class ScenarioQuery
             if ($mutation === null) {
                 continue;
             }
+            // The model casts created_at to immutable_datetime, so the
+            // attribute is always a CarbonImmutable. A guard cast keeps
+            // Larastan-level-10 happy without a runtime null branch.
             $rawCreated = $mutation->getAttribute('created_at');
-            $createdAt = $rawCreated instanceof CarbonImmutable ? $rawCreated : $now;
+            $createdAt = $rawCreated instanceof CarbonImmutable
+                ? $rawCreated
+                : CarbonImmutable::now();
             $result[] = new ScenarioMutationDto(
                 id: self::toInt($mutation->getAttribute('id')),
                 userId: self::toInt($mutation->getAttribute('user_id')),
