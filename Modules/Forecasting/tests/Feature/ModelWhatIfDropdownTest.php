@@ -1,0 +1,166 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use Modules\Core\Models\User;
+use Modules\Forecasting\Internal\Http\Livewire\ModelWhatIfDropdown;
+use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
+use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
+use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+uses(RefreshDatabase::class);
+
+/*
+ * Phase 8 `/recurring/series/{id}` "Model what-if ↗" dropdown.
+ *
+ *   - Mounts with the current series amount pre-populated.
+ *   - Model cancellation → invokes launchpad + redirects.
+ *   - Model amount change → opens inline form pre-populated;
+ *     Save invokes launchpad + redirects.
+ *   - Cross-user mount via the series query → 404.
+ *   - Invalid amount surfaces inline error and does NOT invoke the
+ *     launchpad.
+ */
+
+function mwidUser(string $email = 'mwid@diederik.test'): User
+{
+    return User::query()->create([
+        'email' => $email,
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+}
+
+function mwidSeries(DatabaseManager $db, int $userId, string $name = 'Spotify', int $amountMinor = -999): int
+{
+    return (int) $db->connection()->table('recurring_series')->insertGetId([
+        'user_id' => $userId,
+        'direction' => 'expense',
+        'detected_name' => $name,
+        'state' => 'approved',
+        'cadence' => 'monthly',
+        'latest_amount_minor' => $amountMinor,
+        'latest_currency' => 'EUR',
+        'monthly_equivalent_minor' => $amountMinor,
+        'variance_tolerance_percent' => 5,
+        'next_expected_at' => '2026-05-25',
+        'cluster_key' => 'cluster-'.$name.'-'.$userId,
+        'cluster_counterparty_key' => $name,
+        'created_at' => '2026-05-01 00:00:00',
+        'updated_at' => '2026-05-01 00:00:00',
+    ]);
+}
+
+beforeEach(function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $this->db = $db;
+    $this->user = mwidUser();
+});
+
+it('mounts with the current series amount pre-populated', function (): void {
+    $this->actingAs($this->user);
+    $seriesId = mwidSeries($this->db, $this->user->id);
+
+    Livewire::test(ModelWhatIfDropdown::class, ['seriesId' => $seriesId])
+        ->assertSet('seriesName', 'Spotify')
+        ->assertSet('currentAmountMinor', -999)
+        ->assertSet('newAmountInput', '9,99');
+});
+
+it('Model cancellation invokes CreateCancellationScenarioForSeries + redirects to /forecast', function (): void {
+    $this->actingAs($this->user);
+    $seriesId = mwidSeries($this->db, $this->user->id);
+
+    Livewire::test(ModelWhatIfDropdown::class, ['seriesId' => $seriesId])
+        ->call('openMenu')
+        ->call('modelCancellation')
+        ->assertRedirectContains('/forecast?scenarioId=');
+
+    // The scenario row was created with the cancel mutation.
+    $scenarios = $this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->get();
+    expect($scenarios->count())->toBe(1);
+    $mutations = $this->db->connection()->table('forecast_scenario_mutations')->where('forecast_scenario_id', $scenarios->first()->id)->get();
+    expect($mutations->first()->kind)->toBe('cancel_series');
+});
+
+it('Model amount change form opens with the current amount pre-populated', function (): void {
+    $this->actingAs($this->user);
+    $seriesId = mwidSeries($this->db, $this->user->id);
+
+    Livewire::test(ModelWhatIfDropdown::class, ['seriesId' => $seriesId])
+        ->call('openMenu')
+        ->call('openAmountForm')
+        ->assertSet('mode', 'amount-form')
+        ->assertSet('newAmountInput', '9,99');
+});
+
+it('Model amount change saves + invokes CreateAmountChangeScenarioForSeries + redirects', function (): void {
+    $this->actingAs($this->user);
+    $seriesId = mwidSeries($this->db, $this->user->id);
+
+    Livewire::test(ModelWhatIfDropdown::class, ['seriesId' => $seriesId])
+        ->call('openMenu')
+        ->call('openAmountForm')
+        ->set('newAmountInput', '11,49')
+        ->call('saveAmountChange')
+        ->assertRedirectContains('/forecast?scenarioId=');
+
+    $scenarios = $this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->get();
+    expect($scenarios->count())->toBe(1);
+    expect($scenarios->first()->name)->toBe('Change Spotify amount');
+    $mutations = $this->db->connection()->table('forecast_scenario_mutations')->where('forecast_scenario_id', $scenarios->first()->id)->get();
+    expect($mutations->first()->kind)->toBe('change_series_amount');
+    $payload = json_decode((string) $mutations->first()->payload, true);
+    expect($payload['newAmountMinor'])->toBe(1149);
+});
+
+it('cross-user mount via RecurringSeriesQuery::forSeries returns null', function (): void {
+    $other = mwidUser('other@diederik.test');
+    $seriesId = mwidSeries($this->db, $other->id);
+    /** @var RecurringSeriesQuery $sq */
+    $sq = $this->app->make(RecurringSeriesQuery::class);
+    expect($sq->forSeries($seriesId, $this->user))->toBeNull();
+    // The dropdown's mount() raises NotFoundHttpException whenever
+    // forSeries returns null; the cross-user contract is locked at the
+    // Public Service layer here (Livewire mount-time exceptions don't
+    // surface synchronously in Livewire::test() in this project's
+    // Livewire 4 setup — same pattern as Plan 10-04's AccountBufferEditor).
+});
+
+it('invalid amount input surfaces the inline error and does NOT invoke the launchpad', function (): void {
+    $this->actingAs($this->user);
+    $seriesId = mwidSeries($this->db, $this->user->id);
+
+    Livewire::test(ModelWhatIfDropdown::class, ['seriesId' => $seriesId])
+        ->call('openAmountForm')
+        ->set('newAmountInput', 'not-a-number')
+        ->call('saveAmountChange')
+        ->assertSet('errorMessage', 'Amount must be a positive number.');
+
+    // No scenario was created.
+    expect($this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->count())->toBe(0);
+});
+
+it('CreateCancellationScenarioForSeries returns 404 for another user\'s series', function (): void {
+    $other = mwidUser('other2@diederik.test');
+    $seriesId = mwidSeries($this->db, $other->id);
+    /** @var CreateCancellationScenarioForSeries $action */
+    $action = $this->app->make(CreateCancellationScenarioForSeries::class);
+
+    expect(fn () => ($action)($seriesId, $this->user))->toThrow(NotFoundHttpException::class);
+});
+
+it('CreateAmountChangeScenarioForSeries returns 404 for another user\'s series', function (): void {
+    $other = mwidUser('other3@diederik.test');
+    $seriesId = mwidSeries($this->db, $other->id);
+    /** @var CreateAmountChangeScenarioForSeries $action */
+    $action = $this->app->make(CreateAmountChangeScenarioForSeries::class);
+
+    expect(fn () => ($action)($seriesId, $this->user, 1499))->toThrow(NotFoundHttpException::class);
+});

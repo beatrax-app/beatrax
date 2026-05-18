@@ -1,12 +1,23 @@
 {{--
-    /forecast page — Wave 2 baseline-only surface.
+    /forecast page — Wave 4 surface.
 
-    Renders the page heading + subheading + helper link, the
-    per-account tab bar, the 30/60/90 horizon segmented control, and
-    a single per-account rangeArea chart for the baseline projection.
-    The scenario picker, side-by-side panel, buffer editor trigger,
-    shortfall band overlay, and confidence legend land in later
-    waves.
+    Page contract:
+      - Heading + subheading + "Adjust buffers" deep link.
+      - Per-account tab bar (Wave 2).
+      - 30 / 60 / 90 horizon segmented control (Wave 2).
+      - View by funder toggle (Wave 4 wires the URL state; Wave 5
+        implements the collapse semantics).
+      - Scenario picker — baseline radio + one radio per saved
+        scenario + "+ New scenario" chip with inline create form.
+      - When scenarioId !== null:
+          * Net diff tile above the panel pair (direction-aware
+            emerald-700 / rose-700 / slate-900 tints).
+          * Two-panel side-by-side rangeArea grid (baseline LEFT,
+            scenario RIGHT) sharing y-axis.
+          * Scenario sidebar in the right rail with Rename / Delete
+            scenario / mutation list + Add chooser.
+      - When scenarioId === null: baseline-only single panel (Wave 2/3
+        behaviour preserved).
 --}}
 @php
     use Modules\Forecasting\Public\Dto\ForecastDto;
@@ -15,6 +26,7 @@
         $value = $minor / 100;
         $formatter = new \NumberFormatter('nl_NL', \NumberFormatter::CURRENCY);
         $rendered = $formatter->formatCurrency($value, $currency);
+
         return $rendered === false ? number_format($value, 2, ',', '.') : $rendered;
     };
 @endphp
@@ -65,82 +77,203 @@
             </nav>
         @endif
 
-        <div class="mb-6 inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white p-1" role="radiogroup" aria-label="Forecast horizon">
-            @foreach ([30, 60, 90] as $option)
+        <div class="mb-4 flex flex-wrap items-center gap-3">
+            <div class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white p-1" role="radiogroup" aria-label="Forecast horizon">
+                @foreach ([30, 60, 90] as $option)
+                    <button
+                        type="button"
+                        role="radio"
+                        aria-checked="{{ $horizon === $option ? 'true' : 'false' }}"
+                        wire:click="setHorizon({{ $option }})"
+                        @class([
+                            'rounded px-3 py-1.5 text-sm',
+                            'bg-slate-900 text-white' => $horizon === $option,
+                            'text-slate-500 hover:text-slate-900' => $horizon !== $option,
+                        ])
+                    >{{ $option }} days</button>
+                @endforeach
+            </div>
+
+            <button
+                type="button"
+                role="switch"
+                aria-checked="{{ $viewByFunder ? 'true' : 'false' }}"
+                aria-label="View by funder. Collapse chain-resolved series onto the account that actually pays them."
+                wire:click="toggleViewByFunder"
+                @class([
+                    'inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm',
+                    'bg-slate-900 text-white' => $viewByFunder,
+                    'bg-white text-slate-700 hover:bg-slate-50' => ! $viewByFunder,
+                ])
+            >
+                <span>View by funder</span>
+            </button>
+        </div>
+
+        {{-- Scenario picker — baseline radio + one per saved scenario + "+ New scenario" chip. --}}
+        <div class="mb-6 flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Scenario">
+            <button
+                type="button"
+                role="radio"
+                aria-checked="{{ $activeScenarioId === null ? 'true' : 'false' }}"
+                wire:click="setScenario(null)"
+                @class([
+                    'rounded-md px-3 py-1 text-sm',
+                    'bg-slate-900 text-white' => $activeScenarioId === null,
+                    'bg-slate-100 text-slate-700 hover:bg-slate-200' => $activeScenarioId !== null,
+                ])
+            >Baseline</button>
+            @foreach ($scenarios as $s)
                 <button
                     type="button"
                     role="radio"
-                    aria-checked="{{ $horizon === $option ? 'true' : 'false' }}"
-                    wire:click="setHorizon({{ $option }})"
+                    aria-checked="{{ $activeScenarioId === $s->id ? 'true' : 'false' }}"
+                    wire:click="setScenario({{ $s->id }})"
                     @class([
-                        'rounded px-3 py-1.5 text-sm',
-                        'bg-slate-900 text-white' => $horizon === $option,
-                        'text-slate-500 hover:text-slate-900' => $horizon !== $option,
+                        'rounded-md px-3 py-1 text-sm',
+                        'bg-slate-900 text-white' => $activeScenarioId === $s->id,
+                        'bg-slate-100 text-slate-700 hover:bg-slate-200' => $activeScenarioId !== $s->id,
                     ])
-                >{{ $option }} days</button>
+                >{{ $s->name }}</button>
             @endforeach
+
+            @if (! $creatingScenario)
+                <button
+                    type="button"
+                    wire:click="startCreateScenario"
+                    @class([
+                        'rounded-md px-3 py-1 text-sm',
+                        'bg-emerald-600 text-white hover:bg-emerald-700' => count($scenarios) === 0,
+                        'bg-slate-100 text-slate-700 hover:bg-slate-200' => count($scenarios) > 0,
+                    ])
+                >+ New scenario</button>
+            @else
+                <div class="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white p-1">
+                    <input
+                        type="text"
+                        wire:model.live.debounce.250ms="newScenarioName"
+                        wire:keydown.enter.prevent="saveNewScenario"
+                        placeholder="Scenario name"
+                        aria-label="New scenario name"
+                        class="block w-48 rounded-md border-0 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    >
+                    <button
+                        type="button"
+                        wire:click="saveNewScenario"
+                        class="rounded-md bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-700"
+                    >Create scenario</button>
+                    <button
+                        type="button"
+                        wire:click="cancelCreateScenario"
+                        class="rounded-md bg-slate-100 px-3 py-1 text-sm text-slate-700 hover:bg-slate-200"
+                    >Cancel</button>
+                </div>
+                @if ($createScenarioError !== null)
+                    <p class="ml-2 text-xs text-rose-700" role="alert">{{ $createScenarioError }}</p>
+                @endif
+            @endif
         </div>
 
+        {{-- Net diff tile + side-by-side region. --}}
         @if ($baseline instanceof ForecastDto)
-            <section class="rounded-lg border border-slate-200 bg-white p-4">
-                <header class="mb-3 flex items-baseline justify-between gap-4">
-                    <div>
-                        <h2 class="text-base font-semibold text-slate-900">{{ $selectedAccountName }} · Baseline</h2>
-                        <p class="mt-1 text-sm text-slate-500" style="font-variant-numeric: tabular-nums;">
-                            {{ $eurFmt($todayBalanceMinor, $defaultCurrency) }} today
-                            &nbsp;&rarr;&nbsp;
-                            {{ $eurFmt($horizonLowMinor, $defaultCurrency) }} &ndash; {{ $eurFmt($horizonHighMinor, $defaultCurrency) }} on day {{ $horizon }}
-                        </p>
-                    </div>
-                    @if ($selectedAccountId !== null)
-                        <div x-data="{ open: false }" class="relative">
-                            <button
-                                type="button"
-                                x-on:click="open = ! open"
-                                aria-haspopup="dialog"
-                                aria-label="Edit minimum buffer for {{ $selectedAccountName }}"
-                                class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
-                                style="font-variant-numeric: tabular-nums;"
-                            >
-                                {{ $effectiveBufferMinor === null ? 'Buffer: not set' : 'Buffer: ' . $eurFmt($effectiveBufferMinor, $selectedAccountCurrency) }}
-                            </button>
-                            <div
-                                x-show="open"
-                                x-cloak
-                                x-on:click.outside="open = false"
-                                x-on:keydown.escape.window="open = false"
-                                x-on:buffer-editor:saved.window="open = false"
-                                class="absolute right-0 z-10 mt-1 w-64 rounded-md border border-slate-200 bg-white p-3 text-sm shadow-lg"
-                            >
-                                @livewire('forecasting.account-buffer-editor', [
-                                    'accountId' => $selectedAccountId,
-                                    'currentBufferMinor' => $effectiveBufferMinor,
-                                    'currency' => $selectedAccountCurrency,
-                                    'accountName' => $selectedAccountName,
-                                ], key('buffer-editor-' . $selectedAccountId))
-                            </div>
-                        </div>
-                    @endif
-                </header>
-
-                @foreach ($shortfallWindows as $window)
-                    <p class="mb-2 flex items-center gap-1 text-xs text-rose-700" style="font-variant-numeric: tabular-nums;">
-                        <span aria-hidden="true">↘</span>
-                        <span>
-                            Shortfall starts {{ $window->startsAt->format('d M') }} —
-                            {{ $eurFmt(abs($window->lowestBalanceMinor - $window->bufferUsedMinor), $window->currency) }}
-                            below your {{ $eurFmt($window->bufferUsedMinor, $window->currency) }} buffer
-                        </span>
-                    </p>
-                @endforeach
-
-                @include('forecasting::livewire.partials.range-area-chart', [
-                    'forecast' => $baseline,
-                    'panel' => 'baseline',
-                    'apexOptions' => $apexOptions,
-                    'chartElementId' => $chartElementId,
+            @if ($scenario instanceof ForecastDto)
+                @include('forecasting::livewire.partials.net-diff-tile', [
+                    'netDiff' => $netDiff,
+                    'netDiffCurrency' => $defaultCurrency,
                 ])
-            </section>
+            @endif
+
+            <div class="grid grid-cols-1 gap-6 @if ($scenario instanceof ForecastDto) lg:grid-cols-[1fr_18rem] @endif">
+                <div class="grid grid-cols-1 gap-4 @if ($scenario instanceof ForecastDto) lg:grid-cols-2 @endif">
+                    <section class="rounded-lg border border-slate-200 bg-white p-4">
+                        <header class="mb-3 flex items-baseline justify-between gap-4">
+                            <div>
+                                <h2 class="text-base font-semibold text-slate-900">{{ $selectedAccountName }} · Baseline</h2>
+                                <p class="mt-1 text-sm text-slate-500" style="font-variant-numeric: tabular-nums;">
+                                    {{ $eurFmt($todayBalanceMinor, $defaultCurrency) }} today
+                                    &nbsp;&rarr;&nbsp;
+                                    {{ $eurFmt($horizonLowMinor, $defaultCurrency) }} &ndash; {{ $eurFmt($horizonHighMinor, $defaultCurrency) }} on day {{ $horizon }}
+                                </p>
+                            </div>
+                            @if ($selectedAccountId !== null && ! ($scenario instanceof ForecastDto))
+                                <div x-data="{ open: false }" class="relative">
+                                    <button
+                                        type="button"
+                                        x-on:click="open = ! open"
+                                        aria-haspopup="dialog"
+                                        aria-label="Edit minimum buffer for {{ $selectedAccountName }}"
+                                        class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                                        style="font-variant-numeric: tabular-nums;"
+                                    >
+                                        {{ $effectiveBufferMinor === null ? 'Buffer: not set' : 'Buffer: ' . $eurFmt($effectiveBufferMinor, $selectedAccountCurrency) }}
+                                    </button>
+                                    <div
+                                        x-show="open"
+                                        x-cloak
+                                        x-on:click.outside="open = false"
+                                        x-on:keydown.escape.window="open = false"
+                                        x-on:buffer-editor:saved.window="open = false"
+                                        class="absolute right-0 z-10 mt-1 w-64 rounded-md border border-slate-200 bg-white p-3 text-sm shadow-lg"
+                                    >
+                                        @livewire('forecasting.account-buffer-editor', [
+                                            'accountId' => $selectedAccountId,
+                                            'currentBufferMinor' => $effectiveBufferMinor,
+                                            'currency' => $selectedAccountCurrency,
+                                            'accountName' => $selectedAccountName,
+                                        ], key('buffer-editor-' . $selectedAccountId))
+                                    </div>
+                                </div>
+                            @endif
+                        </header>
+
+                        @foreach ($shortfallWindows as $window)
+                            <p class="mb-2 flex items-center gap-1 text-xs text-rose-700" style="font-variant-numeric: tabular-nums;">
+                                <span aria-hidden="true">↘</span>
+                                <span>
+                                    Shortfall starts {{ $window->startsAt->format('d M') }} —
+                                    {{ $eurFmt(abs($window->lowestBalanceMinor - $window->bufferUsedMinor), $window->currency) }}
+                                    below your {{ $eurFmt($window->bufferUsedMinor, $window->currency) }} buffer
+                                </span>
+                            </p>
+                        @endforeach
+
+                        @include('forecasting::livewire.partials.range-area-chart', [
+                            'forecast' => $baseline,
+                            'panel' => 'baseline',
+                            'apexOptions' => $apexOptions,
+                            'chartElementId' => $chartElementId,
+                        ])
+                    </section>
+
+                    @if ($scenario instanceof ForecastDto)
+                        <section class="rounded-lg border border-slate-200 bg-white p-4">
+                            <header class="mb-3 flex items-baseline justify-between gap-4">
+                                <div>
+                                    <h2 class="text-base font-semibold text-slate-900">{{ $selectedAccountName }} · Scenario</h2>
+                                    <p class="mt-1 text-sm text-slate-500" style="font-variant-numeric: tabular-nums;">
+                                        Compared against baseline above
+                                    </p>
+                                </div>
+                            </header>
+
+                            @include('forecasting::livewire.partials.range-area-chart', [
+                                'forecast' => $scenario,
+                                'panel' => 'scenario',
+                                'apexOptions' => $scenarioApexOptions,
+                                'chartElementId' => $scenarioChartElementId,
+                            ])
+                        </section>
+                    @endif
+                </div>
+
+                @if ($scenario instanceof ForecastDto)
+                    <aside class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        @livewire('forecasting.scenario-editor-sidebar', [
+                            'scenarioId' => $activeScenarioId,
+                        ], key('scenario-sidebar-' . $activeScenarioId))
+                    </aside>
+                @endif
+            </div>
         @endif
     @endif
 </div>

@@ -52,7 +52,15 @@
     data-options="{{ $optionsJson }}"
 >
     @if ($forecast->isComputing)
-        <p class="absolute right-2 top-2 text-xs text-slate-500" style="font-variant-numeric: tabular-nums;">Updating&hellip;</p>
+        {{--
+            The wire:poll element is CONDITIONALLY rendered so that
+            when the projection status flips from pending/running to
+            complete the next Livewire diff unmounts this node and
+            polling halts automatically (RESEARCH Pitfall 3 mitigation).
+        --}}
+        <div wire:poll.2s="refreshProjectionStatus" class="absolute right-2 top-2 z-10">
+            <p class="text-xs text-slate-500" style="font-variant-numeric: tabular-nums;">Updating&hellip;</p>
+        </div>
     @endif
     <div id="{{ $chartElementId }}"></div>
     <noscript>

@@ -14,6 +14,8 @@ use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
 use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastHighlightsTile;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
+use Modules\Forecasting\Internal\Http\Livewire\ModelWhatIfDropdown;
+use Modules\Forecasting\Internal\Http\Livewire\ScenarioEditorSidebar;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnDriftDismissed;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
@@ -23,9 +25,22 @@ use Modules\Forecasting\Internal\Pipeline\ChainAwareForecastRouter;
 use Modules\Forecasting\Internal\Pipeline\DailyFold;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 use Modules\Forecasting\Internal\Pipeline\RangeProjector;
+use Modules\Forecasting\Internal\Pipeline\ScenarioApplier;
 use Modules\Forecasting\Internal\Pipeline\ShortfallDetector;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
+use Modules\Forecasting\Public\Actions\AddScenarioMutation;
+use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
+use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
+use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
+use Modules\Forecasting\Public\Actions\CreateScenario;
+use Modules\Forecasting\Public\Actions\DeleteScenario;
+use Modules\Forecasting\Public\Actions\EditScenarioMutation;
+use Modules\Forecasting\Public\Actions\RemoveScenarioMutation;
+use Modules\Forecasting\Public\Actions\RenameScenario;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
+use Modules\Forecasting\Public\Events\ScenarioCreated;
+use Modules\Forecasting\Public\Events\ScenarioDeleted;
+use Modules\Forecasting\Public\Events\ScenarioMutated;
 use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
@@ -80,10 +95,28 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(ChainAwareForecastRouter::class);
         $this->app->singleton(ShortfallDetector::class);
 
+        // Wave 4 scenario applier (in-memory transform on top of the
+        // baseline routed contributions — the FCT-03 boundary).
+        $this->app->singleton(ScenarioApplier::class);
+
         // Wave 3 Public Action + read service for the buffer editor and
         // the dashboard / top-nav surfaces.
         $this->app->singleton(SetAccountForecastBuffer::class);
         $this->app->singleton(ForecastHighlightsQuery::class);
+
+        // Wave 4 scenario CRUD Public Actions.
+        $this->app->singleton(CreateScenario::class);
+        $this->app->singleton(RenameScenario::class);
+        $this->app->singleton(DeleteScenario::class);
+        $this->app->singleton(AddScenarioMutation::class);
+        $this->app->singleton(RemoveScenarioMutation::class);
+        $this->app->singleton(EditScenarioMutation::class);
+
+        // Wave 4 launchpad Public Actions (atomic CreateScenario +
+        // AddScenarioMutation pairs wrapped in a DB transaction).
+        $this->app->singleton(CreateCancellationScenarioForAlert::class);
+        $this->app->singleton(CreateCancellationScenarioForSeries::class);
+        $this->app->singleton(CreateAmountChangeScenarioForSeries::class);
 
         // Wave 3 dashboard tile Livewire SFC (singleton-bound so it
         // resolves once per request).
@@ -110,6 +143,8 @@ final class ForecastingServiceProvider extends ServiceProvider
         $livewire->component('forecasting.forecast-page', ForecastPage::class);
         $livewire->component('forecasting.account-buffer-editor', AccountBufferEditor::class);
         $livewire->component('forecasting.forecast-highlights-tile', ForecastHighlightsTile::class);
+        $livewire->component('forecasting.scenario-editor-sidebar', ScenarioEditorSidebar::class);
+        $livewire->component('forecasting.model-what-if-dropdown', ModelWhatIfDropdown::class);
 
         $this->registerListeners($events);
         $this->registerTopNavBadgeComposer();
@@ -136,6 +171,13 @@ final class ForecastingServiceProvider extends ServiceProvider
         $events->listen(RecurringSeriesMetricsRefreshed::class, [ProjectForecastOnRecurringChange::class, 'handle']);
 
         $events->listen(DriftAlertDismissedCancelled::class, [ProjectForecastOnDriftDismissed::class, 'handle']);
+
+        // Wave 4 scenario lifecycle events. Each event fans out into
+        // baseline + affected-scenario projection horizons via the
+        // ProjectForecastOnScenarioChange listener.
+        $events->listen(ScenarioCreated::class, [ProjectForecastOnScenarioChange::class, 'handle']);
+        $events->listen(ScenarioMutated::class, [ProjectForecastOnScenarioChange::class, 'handle']);
+        $events->listen(ScenarioDeleted::class, [ProjectForecastOnScenarioChange::class, 'handle']);
     }
 
     /**
