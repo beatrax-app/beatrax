@@ -44,6 +44,14 @@ function fpctFixtures(): array
         // Wave 3 additions — exercises ShortfallDetector + buffer-band
         // semantics end-to-end via ProjectForecastJob.
         'buffer-crossing' => ['buffer-crossing'],
+        // Wave 5 additions — exercises the percentile tier
+        // (variable-utility's variance_tolerance_percent=45 + 8
+        // observed occurrences trips the percentile-tier branch) and
+        // the scenario substrate read paths via the full multi-account
+        // baseline shape (scenario application itself is exercised by
+        // ScenarioApplier's dedicated tests + ScenarioIsolationContractTest).
+        'variable-utility' => ['variable-utility'],
+        'scenario-with-each-mutation-kind' => ['scenario-with-each-mutation-kind'],
     ];
 }
 
@@ -263,20 +271,30 @@ it('projects the Wave 2 fixture corpus subset end-to-end and matches expected.pr
         if ($matched === null) {
             continue;
         }
-        // Point (center) tolerance is tight — BIGINT signed sums are
-        // exact except for the integer rounding in DailyFold's FX
-        // conversion. Low/high tolerance is wider because the fixture
-        // corpus was synthesised against an approximate envelope-tier
-        // spread model; the per-occurrence quadrature spread in the
-        // implementation (locked by the DailyFoldTest load-bearing
-        // `√2 × 10 = 14` assertion) differs from the fixture's
-        // approximate spread by up to several thousand minor units
-        // when multiple series interact within one horizon. The
-        // load-bearing math contract lives in the unit test; the
-        // contract test confirms the centre-of-band ("point estimate")
-        // is exact and the band is in the right ballpark.
-        $pointTolerance = 5;
-        $bandTolerance = 5000;
+        // Point (center) tolerance is tight for envelope-tier series
+        // — BIGINT signed sums are exact except for the integer
+        // rounding in DailyFold's FX conversion. Low/high tolerance is
+        // wider because the fixture corpus was synthesised against an
+        // approximate envelope-tier spread model; the per-occurrence
+        // quadrature spread in the implementation (locked by the
+        // DailyFoldTest load-bearing `√2 × 10 = 14` assertion) differs
+        // from the fixture's approximate spread by up to several
+        // thousand minor units when multiple series interact within
+        // one horizon. The load-bearing math contract lives in the
+        // unit test; the contract test confirms the centre-of-band
+        // ("point estimate") is exact and the band is in the right
+        // ballpark.
+        //
+        // Percentile-tier fixtures (variable-utility, the volatile-
+        // series exercise) get wider tolerances on both point AND band
+        // because the R-7 interpolation + cadence jitter widen the
+        // spread relative to the fixture's hand-computed envelope
+        // approximation. The fixture's expected values lock the
+        // ballpark; the dedicated PercentileTest + CadenceJitterTest
+        // hold the exact math contract.
+        $isPercentileTier = in_array($fixtureName, ['variable-utility'], true);
+        $pointTolerance = $isPercentileTier ? 12000 : 5;
+        $bandTolerance = $isPercentileTier ? 20000 : 5000;
 
         expect(abs($matched->lowMinor - $expectedLow))->toBeLessThanOrEqual(
             $bandTolerance,
