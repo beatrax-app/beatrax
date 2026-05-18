@@ -44,6 +44,7 @@ created: 2026-05-18
 | 10-02-01 | 02 | 1 | FCT-01, FCT-02, FCT-05 | T-10-02-06, T-10-02-07 | Five migrations apply + roll back cleanly + accounts gains three nullable columns | unit | `vendor/bin/pest Modules/Forecasting/tests/Unit/MigrationsTest.php` | ❌ W1 creates | ⬜ pending |
 | 10-02-02 | 02 | 1 | FCT-03 | T-10-02-01, T-10-02-02, T-10-02-03, T-10-02-05 | Typed JSON cast routes per kind; Larastan level 10 catches cross-kind property access | unit | `vendor/bin/pest Modules/Forecasting/tests/Unit/ScenarioMutationPayloadCastTest.php && vendor/bin/phpstan analyse Modules/Forecasting/Models Modules/Forecasting/Internal/Casts --level=max` | ❌ W1 creates | ⬜ pending |
 | 10-02-03 | 02 | 1 | FCT-01..05 | T-10-02-04 | ForecastRunStateMachine sole-mutator enforces lifecycle transitions | unit | `vendor/bin/pest Modules/Forecasting/tests/Unit/ForecastRunStateMachineTest.php` | ❌ W1 creates | ⬜ pending |
+| 10-02-04 | 02 | 1 | FCT-01, FCT-05 | T-10-02-08, T-10-02-09 | NextSettlementDto + CardStatementQuery::nextSettlementForUser with funder ASN resolution + chain_link historical lookup + ASN fallback + cross-user isolation (8 dataset cases) | feature | `vendor/bin/pest Modules/Chains/tests/Feature/CardStatementQueryNextSettlementForUserTest.php` | ❌ W1 creates | ⬜ pending |
 | 10-03-01 | 03 | 2 | FCT-01, FCT-02 | T-10-03-05, T-10-03-07, T-10-03-08 | Pipeline trio: anchor + envelope projector + quadrature daily fold; load-bearing `sqrt(2)*10 = 14` math test | unit | `vendor/bin/pest Modules/Forecasting/tests/Unit/{BalanceAnchorResolverTest,RangeProjectorTest,DailyFoldTest}.php` | ❌ W2 creates | ⬜ pending |
 | 10-03-02 | 03 | 2 | FCT-01 | T-10-03-01, T-10-03-02 | ShouldBeUniqueUntilProcessing with `baseline` sentinel; listener fan-out 3 dispatches/event | unit | `vendor/bin/pest Modules/Forecasting/tests/Unit/{ProjectForecastJobUniqueTest,EvaluateForecastListenerTest}.php` | ❌ W2 creates | ⬜ pending |
 | 10-03-03 | 03 | 2 | FCT-01, FCT-02 | T-10-03-03, T-10-03-06 | ForecastQuery cross-user 404 + ForecastPage skeleton + rangeArea chart + 6 Wave 0 fixtures end-to-end | contract + feature | `vendor/bin/pest tests/Contracts/ForecastingProjectionContractTest.php Modules/Forecasting/tests/Feature/{ForecastPageTest,ForecastCrossUser404Test}.php` | ❌ W2 creates | ⬜ pending |
@@ -88,7 +89,7 @@ created: 2026-05-18
 ## Validation Sign-Off
 
 - [x] All tasks have `<automated>` verify
-- [x] Sampling continuity: no 3 consecutive tasks without automated verify (every plan has 3 tasks, all with `<automated>`)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (Plans 10-01/03/04/05/06 have 3 tasks; Plan 10-02 has 4 tasks after revision 1; every task has `<automated>`)
 - [x] Wave 0 covers all MISSING references (Plan 10-01 lands the module skeleton + arch tests + fixtures before Waves 1+ depend on them)
 - [x] No watch-mode flags
 - [x] Feedback latency < 10s (per-task `--filter=Forecasting --parallel`)
