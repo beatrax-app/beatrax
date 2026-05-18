@@ -101,20 +101,22 @@ it('renders the per-account tab bar in alphabetical order', function (): void {
     expect($midPos)->toBeLessThan((int) $zetaPos);
 });
 
-it('renders the baseline panel heading and the rangeArea chart container', function (): void {
+it('renders the baseline panel heading and the rangeArea chart container on a per-account tab', function (): void {
     $accountId = fpgAccount($this->db, $this->user->id, 'ASN Test');
 
-    $response = $this->actingAs($this->user)->get('/forecast');
+    // Wave 5 makes "All accounts" the default landing; per-account
+    // panel renders only when an account id is in the URL.
+    $response = $this->actingAs($this->user)->get('/forecast?account='.$accountId);
 
     $content = (string) $response->getContent();
     expect($content)->toContain('Baseline');
     expect($content)->toContain('id="forecast-chart-baseline-'.$accountId.'"');
 });
 
-it('loads the Apex options JSON into data-options on the chart container', function (): void {
-    fpgAccount($this->db, $this->user->id, 'ASN Test');
+it('loads the Apex options JSON into data-options on the per-account chart container', function (): void {
+    $accountId = fpgAccount($this->db, $this->user->id, 'ASN Test');
 
-    $response = $this->actingAs($this->user)->get('/forecast');
+    $response = $this->actingAs($this->user)->get('/forecast?account='.$accountId);
 
     $content = (string) $response->getContent();
     // Find the data-options attribute on the chart wrapper. The
