@@ -1,0 +1,245 @@
+<?php
+
+declare(strict_types=1);
+
+// Scenario reference fixture: same as multi-account-baseline +
+// a `scenarios` sub-block with ONE saved scenario containing FIVE
+// mutations — one per kind: cancel_series, add_one_off, add_recurring,
+// change_series_amount, shift_series_date. The projection.scenario
+// sub-block lists the deltas per horizon. A later wave is the
+// consumer; this fixture only locks the input shape + expected
+// output structure.
+
+return [
+    'accounts' => [
+        [
+            'id' => 1,
+            'user_id' => 1,
+            'name' => 'ASN Betaalrekening',
+            'kind' => 'asn',
+            'default_currency' => 'EUR',
+            'opening_balance_minor' => 200000,
+            'opening_balance_as_of_date' => '2026-05-01',
+            'forecast_min_buffer_minor' => null,
+        ],
+        [
+            'id' => 2,
+            'user_id' => 1,
+            'name' => 'ICS World Card',
+            'kind' => 'ics_card',
+            'default_currency' => 'EUR',
+            'opening_balance_minor' => null,
+            'opening_balance_as_of_date' => null,
+            'forecast_min_buffer_minor' => null,
+        ],
+        [
+            'id' => 3,
+            'user_id' => 1,
+            'name' => 'PayPal',
+            'kind' => 'paypal',
+            'default_currency' => 'EUR',
+            'opening_balance_minor' => 5000,
+            'opening_balance_as_of_date' => '2026-05-01',
+            'forecast_min_buffer_minor' => null,
+        ],
+    ],
+    'series' => [
+        [
+            'id' => 801,
+            'user_id' => 1,
+            'name' => 'Rent',
+            'cadence' => 'monthly',
+            'direction' => 'expense',
+            'account_id' => 1,
+            'latest_amount_minor' => -90000,
+            'latest_currency' => 'EUR',
+            'variance_tolerance_percent' => 5,
+            'state' => 'approved',
+            'latest_fx_rate_used' => null,
+            'next_expected_date' => '2026-05-05',
+            'occurrences' => [
+                ['date' => '2026-03-05', 'observed_amount_minor' => -90000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-04-05', 'observed_amount_minor' => -90000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-05-05', 'observed_amount_minor' => -90000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+            ],
+        ],
+        [
+            'id' => 802,
+            'user_id' => 1,
+            'name' => 'Salary',
+            'cadence' => 'monthly',
+            'direction' => 'income',
+            'account_id' => 1,
+            'latest_amount_minor' => 300000,
+            'latest_currency' => 'EUR',
+            'variance_tolerance_percent' => 3,
+            'state' => 'approved',
+            'latest_fx_rate_used' => null,
+            'next_expected_date' => '2026-05-25',
+            'occurrences' => [
+                ['date' => '2026-03-25', 'observed_amount_minor' => 300000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-04-25', 'observed_amount_minor' => 300000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-05-25', 'observed_amount_minor' => 300000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+            ],
+        ],
+        [
+            'id' => 803,
+            'user_id' => 1,
+            'name' => 'Adobe Creative Cloud',
+            'cadence' => 'monthly',
+            'direction' => 'expense',
+            'account_id' => 2,
+            'latest_amount_minor' => -1999,
+            'latest_currency' => 'EUR',
+            'variance_tolerance_percent' => 5,
+            'state' => 'approved',
+            'latest_fx_rate_used' => null,
+            'next_expected_date' => '2026-05-20',
+            'occurrences' => [
+                ['date' => '2026-03-20', 'observed_amount_minor' => -1999, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-04-20', 'observed_amount_minor' => -1999, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-05-20', 'observed_amount_minor' => -1999, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+            ],
+        ],
+        [
+            'id' => 804,
+            'user_id' => 1,
+            'name' => 'Cloudflare',
+            'cadence' => 'monthly',
+            'direction' => 'expense',
+            'account_id' => 2,
+            'latest_amount_minor' => -2000,
+            'latest_currency' => 'EUR',
+            'variance_tolerance_percent' => 5,
+            'state' => 'approved',
+            'latest_fx_rate_used' => null,
+            'next_expected_date' => '2026-05-15',
+            'occurrences' => [
+                ['date' => '2026-03-15', 'observed_amount_minor' => -2000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-04-15', 'observed_amount_minor' => -2000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-05-15', 'observed_amount_minor' => -2000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+            ],
+        ],
+        [
+            'id' => 805,
+            'user_id' => 1,
+            'name' => 'PayPal donation',
+            'cadence' => 'monthly',
+            'direction' => 'expense',
+            'account_id' => 3,
+            'latest_amount_minor' => -500,
+            'latest_currency' => 'EUR',
+            'variance_tolerance_percent' => 5,
+            'state' => 'approved',
+            'latest_fx_rate_used' => null,
+            'next_expected_date' => '2026-05-08',
+            'occurrences' => [
+                ['date' => '2026-03-08', 'observed_amount_minor' => -500, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-04-08', 'observed_amount_minor' => -500, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-05-08', 'observed_amount_minor' => -500, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+            ],
+        ],
+        [
+            'id' => 806,
+            'user_id' => 1,
+            'name' => 'PayPal cashback',
+            'cadence' => 'monthly',
+            'direction' => 'income',
+            'account_id' => 3,
+            'latest_amount_minor' => 1200,
+            'latest_currency' => 'EUR',
+            'variance_tolerance_percent' => 10,
+            'state' => 'approved',
+            'latest_fx_rate_used' => null,
+            'next_expected_date' => '2026-05-18',
+            'occurrences' => [
+                ['date' => '2026-03-18', 'observed_amount_minor' => 1200, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-04-18', 'observed_amount_minor' => 1200, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+                ['date' => '2026-05-18', 'observed_amount_minor' => 1200, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
+            ],
+        ],
+    ],
+    'expected' => [
+        'projection' => [
+            [
+                'horizon_days' => 30,
+                'account_id' => 1,
+                'date' => '2026-05-25',
+                'low_minor' => 405000,
+                'point_minor' => 410000,
+                'high_minor' => 415000,
+                'currency' => 'EUR',
+            ],
+            [
+                'horizon_days' => 60,
+                'account_id' => 1,
+                'date' => '2026-06-25',
+                'low_minor' => 615000,
+                'point_minor' => 620000,
+                'high_minor' => 625000,
+                'currency' => 'EUR',
+            ],
+            [
+                'horizon_days' => 90,
+                'account_id' => 1,
+                'date' => '2026-07-25',
+                'low_minor' => 825000,
+                'point_minor' => 830000,
+                'high_minor' => 835000,
+                'currency' => 'EUR',
+            ],
+        ],
+        'shortfalls' => [],
+        'scenarios' => [
+            [
+                'id' => 9001,
+                'name' => 'Five-mutation reference scenario',
+                'mutations' => [
+                    [
+                        'kind' => 'cancel_series',
+                        'payload' => [
+                            'series_id' => 803,
+                        ],
+                    ],
+                    [
+                        'kind' => 'add_one_off',
+                        'payload' => [
+                            'account_id' => 1,
+                            'amount_minor' => -20000,
+                            'currency' => 'EUR',
+                            'date' => '2026-05-14',
+                            'label' => 'Planned car repair',
+                        ],
+                    ],
+                    [
+                        'kind' => 'add_recurring',
+                        'payload' => [
+                            'account_id' => 1,
+                            'amount_minor' => -1500,
+                            'currency' => 'EUR',
+                            'cadence' => 'monthly',
+                            'starts_on' => '2026-05-12',
+                            'label' => 'New gym membership',
+                        ],
+                    ],
+                    [
+                        'kind' => 'change_series_amount',
+                        'payload' => [
+                            'series_id' => 805,
+                            'new_amount_minor' => -2500,
+                            'currency' => 'EUR',
+                        ],
+                    ],
+                    [
+                        'kind' => 'shift_series_date',
+                        'payload' => [
+                            'series_id' => 801,
+                            'new_date' => '2026-05-10',
+                            'scope' => 'next',
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ],
+];

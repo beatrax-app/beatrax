@@ -49,6 +49,7 @@
     45 => 'Modules\\Receipts\\Providers\\ReceiptsServiceProvider',
     46 => 'Modules\\Recurring\\Providers\\RecurringServiceProvider',
     47 => 'Modules\\DriftAlerts\\Providers\\DriftAlertsServiceProvider',
+    48 => 'Modules\\Forecasting\\Providers\\ForecastingServiceProvider',
   ),
   'eager' => 
   array (
@@ -87,6 +88,7 @@
     32 => 'Modules\\Receipts\\Providers\\ReceiptsServiceProvider',
     33 => 'Modules\\Recurring\\Providers\\RecurringServiceProvider',
     34 => 'Modules\\DriftAlerts\\Providers\\DriftAlertsServiceProvider',
+    35 => 'Modules\\Forecasting\\Providers\\ForecastingServiceProvider',
   ),
   'deferred' => 
   array (
