@@ -63,12 +63,23 @@
         'legend' => ['show' => false],
         'tooltip' => ['shared' => true, 'intersect' => false],
     ];
+
+    // Encode the options once with JSON flags that align with the
+    // sibling range-area-chart partial. Double-quoting the attribute
+    // and printing the encoded payload through Blade's {{ }} escaping
+    // means a literal single-quote inside any future $options value
+    // (e.g. an account name with an apostrophe) cannot break out of
+    // the attribute.
+    $optionsJson = json_encode($options, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($optionsJson === false) {
+        $optionsJson = '{}';
+    }
 @endphp
 
 <div
     id="{{ $chartElementId }}"
     data-testid="all-accounts-aggregate-chart"
     data-chart-variant="line"
-    data-options='@json($options)'
+    data-options="{{ $optionsJson }}"
     class="min-h-[320px] rounded-md border border-slate-200 bg-white"
 ></div>
