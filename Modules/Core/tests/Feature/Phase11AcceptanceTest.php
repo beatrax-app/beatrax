@@ -164,8 +164,8 @@ it('phase 11 backup banner round-trip — happy → corrupt → banner → ackno
     // (4) Corrupt-path run — db:backup --force exits non-zero, writes
     //     a critical system_alerts(backup_corrupt) row organically
     //     through the command's recordCorruptAlert() helper. No
-    //     hand-seeded SystemAlert::create call — the test exercises
-    //     the production code path.
+    //     hand-seeded Eloquent insert — the test exercises the
+    //     production code path end-to-end.
     $this->artisan('db:backup', ['--force' => true])->assertFailed();
 
     // The corrupt-path alert is system-wide (`user_id IS NULL`).
