@@ -80,13 +80,16 @@ final class BackupDatabaseCommand extends Command
         try {
             $liveDataVersion = $this->readDataVersion($livePath);
         } catch (PDOException $e) {
-            // Corrupt source detected before VACUUM INTO even runs. The
-            // sidecar metadata is impossible to write because there is no
-            // valid data_version to record; surface the failure via the
-            // shared corrupt-path system_alerts row and bail.
+            // Corrupt source detected before VACUUM INTO even runs. No
+            // backup file or .suspect file exists on disk yet (VACUUM
+            // INTO never ran), so the alert intentionally carries a
+            // null suspect path — recordCorruptAlert() phrases the
+            // message around "aborted before any file was produced"
+            // rather than pointing the operator at a file they will
+            // never find.
             $basenameForAlert = 'diederik-'.$startedAt->format('Y-m-d-His').'.sqlite';
             $destinationForAlert = $backupsDir.DIRECTORY_SEPARATOR.$basenameForAlert;
-            $this->recordCorruptAlert($destinationForAlert, $destinationForAlert.'.suspect', [
+            $this->recordCorruptAlert($destinationForAlert, null, [
                 'pdo_exception' => $e->getMessage(),
                 'phase' => 'pragma_data_version',
             ]);
@@ -134,8 +137,10 @@ final class BackupDatabaseCommand extends Command
 
         if (! $this->files->exists($destination)) {
             // VACUUM INTO returned without throwing but produced no
-            // output. Treat the same as a corrupt path.
-            $this->recordCorruptAlert($destination, $destination.'.suspect', [
+            // output. No file landed on disk, so the alert carries a
+            // null suspect path — same shape as the PDOException catch
+            // arm above.
+            $this->recordCorruptAlert($destination, null, [
                 'phase' => 'vacuum_into',
                 'reason' => 'no output file produced',
             ]);
@@ -152,8 +157,14 @@ final class BackupDatabaseCommand extends Command
         // read), so compare against the explicit failure sentinel rather
         // than negating an unknown-typed value.
         if ($this->files->chmod($destination, 0o600) === false) {
+            // Chmod failure makes the file unsafe to retain (group /
+            // world readability cannot be ruled out), so it is deleted
+            // immediately. The alert intentionally carries a null
+            // suspect path — by the time recordCorruptAlert() runs the
+            // file no longer exists, and pointing the operator at a
+            // path they will never find would be misleading.
             $this->files->delete($destination);
-            $this->recordCorruptAlert($destination, $destination.'.suspect', [
+            $this->recordCorruptAlert($destination, null, [
                 'phase' => 'chmod',
                 'reason' => 'chmod 0600 failed on freshly-written backup file',
             ]);
@@ -380,19 +391,27 @@ final class BackupDatabaseCommand extends Command
      * operational banner surfaces it to whichever user reaches the
      * dashboard next.
      *
+     * `$suspectPath` is nullable: only the post-VACUUM integrity-check
+     * branch produces an on-disk `.suspect` file the operator can
+     * inspect. The other corrupt-path branches (PDOException during
+     * PRAGMA data_version, VACUUM INTO produced no output, chmod
+     * failure with immediate delete) pass `null` so the message and
+     * metadata reflect that no file exists for the operator to look at.
+     *
      * @param  array<string, mixed>  $metadata
      */
-    private function recordCorruptAlert(string $destination, string $suspectPath, array $metadata): void
+    private function recordCorruptAlert(string $destination, ?string $suspectPath, array $metadata): void
     {
+        $timestamp = $this->clock->now()->format('d M Y · H:i');
+        $message = $suspectPath !== null && $this->files->exists($suspectPath)
+            ? sprintf('Backup written at %s failed integrity check. Inspect %s.', $timestamp, basename($suspectPath))
+            : sprintf('Backup attempted at %s aborted before any file was produced — source DB failed integrity check.', $timestamp);
+
         SystemAlert::create([
             'user_id' => null,
             'kind' => 'backup_corrupt',
             'severity' => 'critical',
-            'message' => sprintf(
-                'Backup written at %s failed integrity check. Inspect %s.',
-                $this->clock->now()->format('d M Y · H:i'),
-                basename($suspectPath),
-            ),
+            'message' => $message,
             'metadata' => array_merge([
                 'suspect_path' => $suspectPath,
                 'destination' => $destination,
