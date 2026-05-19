@@ -189,3 +189,33 @@ Schedule::call(function (Dispatcher $bus, ScenarioQuery $scenarioQuery): void {
         }
     });
 })->name('forecasting.daily-sweep')->daily()->withoutOverlapping(30);
+
+// Daily SQLite backup: produces a verified VACUUM-INTO snapshot under
+// storage/app/backups/, applies the retention sweep (7 newest dailies +
+// 4 most-recent Sundays), and writes a system_alerts(backup_corrupt)
+// row on integrity failure. The Schedule facade lives at the project
+// root in routes/console.php — outside the Modules\ namespace — so the
+// BoundaryArchTest "no Laravel facade usage in module code" rule does
+// not apply here (the rule is scoped via ->not->toBeUsedIn('Modules')).
+//
+// 03:00 wall-clock window: late enough that an interactive session
+// (Herd + Livewire dev loop) has stopped writing for the day; early
+// enough that a launchd-fired schedule:work picks it up well before
+// the next morning's first dashboard load.
+//
+// Method order .name() BEFORE .dailyAt('03:00')->withoutOverlapping(60)
+// matches every other entry in this file — Laravel's CallbackEvent
+// `withoutOverlapping` reads the event's description to derive the
+// mutex name and throws LogicException when the description has not
+// been set yet.
+//
+// Lock TTL of 60 minutes (NOT the default 1440 minutes): a 5-second
+// backup that is still "running" an hour later was certainly killed
+// mid-flight, and a stuck mutex that survives 24 hours would block
+// every subsequent scheduled run silently. A 60-minute TTL recovers
+// automatically while still spanning the longest realistic backup
+// duration on a multi-gigabyte personal-finance DB.
+Schedule::command('db:backup')
+    ->name('db.backup-daily')
+    ->dailyAt('03:00')
+    ->withoutOverlapping(60);
