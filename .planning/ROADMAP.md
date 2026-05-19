@@ -249,4 +249,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 8. Recurring Detection + Fixed Payments View | 0/TBD | Not started | - |
 | 9. Subscription Drift Detection + Alerts | 0/5 | Ready to execute | - |
 | 10. Cash-Flow Forecasting + What-If Scenarios | 0/6 | Ready to execute | - |
-| 11. Operational Hardening | 5/5 | Complete   | 2026-05-19 |
+| 11. Operational Hardening | 5/5 | Complete    | 2026-05-19 |

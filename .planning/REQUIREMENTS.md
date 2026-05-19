@@ -15,7 +15,7 @@
 - [ ] **FND-02**: User can log in with a single-user credential (username + password) before viewing any data
 - [ ] **FND-03**: Every domain table includes a nullable `user_id` column wired to a `BelongsToUser` trait, so a second user can be enabled later without schema migration
 - [ ] **FND-04**: All monetary amounts are stored as signed `BIGINT` minor units (cents); no `REAL`/`FLOAT` columns are used for money
-- [ ] **FND-05**: User can run an artisan `db:backup` command that produces a consistent SQLite backup (via `VACUUM INTO` or online backup API), safe to copy while the app is running
+- [x] **FND-05**: User can run an artisan `db:backup` command that produces a consistent SQLite backup (via `VACUUM INTO` or online backup API), safe to copy while the app is running
 - [ ] **FND-06**: SQLite database runs in WAL mode with `synchronous=NORMAL` set on app startup
 - [ ] **FND-07**: Currency arithmetic uses `brick/money` value objects throughout the domain code
 
@@ -162,7 +162,7 @@ Each REQ-ID maps to exactly one phase. Roadmap: `.planning/ROADMAP.md`.
 | FND-02 | Phase 1 | Pending |
 | FND-03 | Phase 1 | Pending |
 | FND-04 | Phase 1 | Pending |
-| FND-05 | Phase 11 | Pending |
+| FND-05 | Phase 11 | Complete |
 | FND-06 | Phase 1 | Pending |
 | FND-07 | Phase 1 | Pending |
 | ING-01 | Phase 1 | Pending |
