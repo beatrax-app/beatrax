@@ -11,6 +11,7 @@
     <body class="antialiased bg-white text-slate-900" style="font-family: 'Inter', system-ui, -apple-system, sans-serif;">
         @auth
             @livewire('core.top-nav')
+            @livewire('core.system-alerts-banner')
             @livewire('categorization.rule-form-modal')
             @livewire('categorization.correction-divergence-toast')
             @livewire('receipts.receipt-conflict-toast')
