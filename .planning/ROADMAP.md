@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 8: Recurring Detection + Fixed Payments View** - Detect recurring expenses and income at any cadence, normalize to monthly equivalent, surface fixed-payments dashboard with funding-chain icons
 - [ ] **Phase 9: Subscription Drift Detection + Alerts** - Flag drifted recurring series with annualized impact, dedicated alerts view with acknowledge/snooze/what-if-cancel actions
 - [x] **Phase 10: Cash-Flow Forecasting + What-If Scenarios** - 30/60/90-day per-account projection with uncertainty ranges, surplus/shortfall windows, non-persisted what-if mutations with side-by-side comparison (completed 2026-05-18)
-- [ ] **Phase 11: Operational Hardening** - `db:backup` via `VACUUM INTO`, restore-verification, launchd polish, post-scan summaries, daily-use reliability
+- [x] **Phase 11: Operational Hardening** - `db:backup` via `VACUUM INTO`, restore-verification, launchd polish, post-scan summaries, daily-use reliability (completed 2026-05-19)
 
 ## Phase Details
 
@@ -230,7 +230,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 11-02-PLAN.md — Wave 1 vertical: BackupDatabaseCommand (db:backup VACUUM INTO + sidecar + chmod 600 + smart-skip on PRAGMA data_version + corrupt → .suspect + system_alerts) + BackupRetentionPolicy value object (7 daily + 4 Sunday weekly) + Schedule::command('db:backup')->dailyAt('03:00') entry (FND-05 SC #1)
   - [x] 11-03-PLAN.md — Wave 2 restore + diagnostics: RestoreDatabaseCommand (triple safety rail: maintenance + pre-restore snapshot + --confirm + pre/post integrity_check) + Probe contract + WalModeProbe + SynchronousModeProbe + BackupFreshnessProbe + extended DoctorCommand + HealthCheckServiceProvider (boot-time PRAGMA check, non-halting)
   - [x] 11-04-PLAN.md — Wave 3 banner + failed-jobs CLI + arch locks: SystemAlertsBanner Livewire SFC + Blade view + app.blade.php slot + DurationParser + FailedJobsCommand (diederik:failed-jobs prune --older-than --dry-run) + BoundaryArchTest::noFacadeCallsFromCoreConsoleCommands + HorizonForceFlagTest (FND-05 SC #2)
-  - [ ] 11-05-PLAN.md — Wave 4 close-out: README ## Backups + ## Operator recovery rewrite (4 new subsections; preserves Stuck Redis lock subsection) + ReadmeOperationalDocsTest content arch test + Phase11AcceptanceTest end-to-end vertical + human-verify checkpoint (FND-05 SC #3)
+  - [x] 11-05-PLAN.md — Wave 4 close-out: README ## Backups + ## Operator recovery rewrite (4 new subsections; preserves Stuck Redis lock subsection) + ReadmeOperationalDocsTest content arch test + Phase11AcceptanceTest end-to-end vertical + human-verify checkpoint (FND-05 SC #3)
 
 ## Progress
 
@@ -249,4 +249,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 8. Recurring Detection + Fixed Payments View | 0/TBD | Not started | - |
 | 9. Subscription Drift Detection + Alerts | 0/5 | Ready to execute | - |
 | 10. Cash-Flow Forecasting + What-If Scenarios | 0/6 | Ready to execute | - |
-| 11. Operational Hardening | 4/5 | In Progress|  |
+| 11. Operational Hardening | 5/5 | Complete   | 2026-05-19 |
