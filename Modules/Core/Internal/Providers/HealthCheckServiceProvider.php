@@ -82,7 +82,13 @@ final class HealthCheckServiceProvider extends ServiceProvider
 
             $clock = $app->make(Clock::class);
             $logger = $app->make(LoggerInterface::class);
-            $cutoff = $clock->now()->subHour();
+            // SQLite's `useCurrent()` / CURRENT_TIMESTAMP writes the
+            // column in UTC. Carbon's now() returns the app's
+            // configured timezone (usually Europe/Amsterdam). Convert
+            // the cutoff to UTC before serialising into the recency
+            // query so the comparison happens in the same wall-clock
+            // frame as the stored value.
+            $cutoff = $clock->now()->subHour()->setTimezone('UTC');
 
             $db = $app->make(DatabaseManager::class);
 
