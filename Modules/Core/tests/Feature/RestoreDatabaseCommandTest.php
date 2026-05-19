@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Filesystem\Filesystem;
 use Tests\Helpers\RealSqliteFixture;
 
 /*

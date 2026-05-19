@@ -11,6 +11,7 @@ use Modules\Core\Internal\Console\BackupDatabaseCommand;
 use Modules\Core\Internal\Console\DoctorCommand;
 use Modules\Core\Internal\Console\InstallCommand;
 use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
+use Modules\Core\Internal\Console\RestoreDatabaseCommand;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Internal\Http\Livewire\TopNav;
@@ -85,6 +86,7 @@ final class CoreServiceProvider extends ServiceProvider
                 InstallCommand::class,
                 DoctorCommand::class,
                 BackupDatabaseCommand::class,
+                RestoreDatabaseCommand::class,
             ]);
         }
     }
