@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use InvalidArgumentException;
 use Modules\Core\Internal\Console\Support\DurationParser;
 
 /*
@@ -21,7 +20,7 @@ use Modules\Core\Internal\Console\Support\DurationParser;
 
 it('subtracts the parsed duration from "now"', function (string $input, string $expectedShift): void {
     $now = CarbonImmutable::parse('2026-05-20 09:00:00');
-    $parser = new DurationParser();
+    $parser = new DurationParser;
 
     $result = $parser->subFromNow($input, $now);
 
@@ -38,7 +37,7 @@ it('subtracts the parsed duration from "now"', function (string $input, string $
 ]);
 
 it('rejects invalid duration strings with InvalidArgumentException naming the regex', function (string $input): void {
-    $parser = new DurationParser();
+    $parser = new DurationParser;
     $now = CarbonImmutable::parse('2026-05-20 09:00:00');
 
     expect(fn () => $parser->subFromNow($input, $now))

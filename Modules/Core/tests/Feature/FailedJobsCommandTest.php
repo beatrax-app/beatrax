@@ -49,7 +49,7 @@ beforeEach(function (): void {
 });
 
 it('--dry-run prints rows that would be deleted without writing', function (): void {
-    $this->artisan('diederik:failed-jobs prune', ['--older-than' => '30d', '--dry-run' => true])
+    $this->artisan('diederik:failed-jobs', ['action' => 'prune', '--older-than' => '30d', '--dry-run' => true])
         ->expectsOutputToContain('Would delete 3 rows')
         ->assertSuccessful();
 
@@ -58,7 +58,7 @@ it('--dry-run prints rows that would be deleted without writing', function (): v
 });
 
 it('deletes failed_jobs rows older than the cutoff on live run', function (): void {
-    $this->artisan('diederik:failed-jobs prune', ['--older-than' => '30d'])
+    $this->artisan('diederik:failed-jobs', ['action' => 'prune', '--older-than' => '30d'])
         ->expectsOutputToContain('Removed 3 rows; 2 remaining.')
         ->assertSuccessful();
 
@@ -71,8 +71,8 @@ it('deletes failed_jobs rows older than the cutoff on live run', function (): vo
 });
 
 it('rejects an invalid --older-than token with exit 1 and the regex error message', function (): void {
-    $this->artisan('diederik:failed-jobs prune', ['--older-than' => '30m'])
-        ->expectsOutputToContain("Duration must match /^\\d+[dhw]\$/")
+    $this->artisan('diederik:failed-jobs', ['action' => 'prune', '--older-than' => '30m'])
+        ->expectsOutputToContain('Duration must match /^\\d+[dhw]$/')
         ->assertFailed();
 
     $remaining = $this->db->connection()->table('failed_jobs')->count();
@@ -80,7 +80,7 @@ it('rejects an invalid --older-than token with exit 1 and the regex error messag
 });
 
 it('rejects an unknown action with exit 1', function (): void {
-    $this->artisan('diederik:failed-jobs whatever')
+    $this->artisan('diederik:failed-jobs', ['action' => 'whatever'])
         ->expectsOutputToContain('Unknown action: whatever')
         ->assertFailed();
 
