@@ -13,12 +13,27 @@ A local-only personal finance dashboard that ingests transactions from ASN Bank 
 - **Quality gates:** Larastan level 10 strict + Laravel Pint + Pest — all green; 1644 project tests green at v1.0 close.
 - **Known carry-over:** 25 human-UAT scenarios across 5 phases pending in-person walkthrough; 3 verification artifacts in `human_needed` state; 1 dormant seed (`SEED-001-public-release-milestone`). Tracked in [STATE.md → Deferred Items](STATE.md).
 
-## Next Milestone Goals
+## Current Milestone: v2.0 Public Release — Desktop Packaging, Multi-User, Developer Mode
 
-Not yet scoped. Run `/gsd-new-milestone` to gather context and produce a roadmap. Two candidate themes surfaced during v1.0:
+**Goal:** Ship diederik as code-signed desktop installers (macOS / Windows / Linux) with multi-user support, an in-app developer console exposing the full CLI, and a publicly-shippable, Hippocratic-licensed repository — so a non-technical partner can install it, and any technical user can run, debug, and contribute end-to-end.
 
-1. **Public release readiness** (per dormant `SEED-001`) — desktop packaging (Tauri / Electron / Herd-as-binary), CI/CD pipeline, deep Modules pass, screenshot-driven docs, distribution channel. Turns a developer-machine tool into something a partner could install.
-2. **Real-data hardening + UAT close-out** — work through the 25 deferred UAT scenarios end-to-end with real ASN + ICS + PayPal + Gmail data; address any divergences from the synthesised fixtures; revisit ING-09 (PayPal Reporting API) if the user upgrades to a Business account.
+**Target features:**
+
+- Desktop packaging via NativePHP (Electron under the hood) — `.dmg` (macOS), `.msi/.exe` (Windows), `.AppImage/.deb` (Linux); SQLite store moves to per-OS user-data directories; OAuth loopback continues to work inside the shell.
+- Multi-user activation — real auth (login/signup), profile selector, shared SQLite DB for partner sharing; activates the dormant `user_id` columns and `BelongsToUser` trait already in the schema.
+- In-app Developer Mode UI — whitelisted artisan runner + destructive artisan runner (gated), live debug panel (queries / queue / logs / `system_alerts` / `diederik:doctor`), embedded Horizon + log tailer + failed-jobs viewer.
+- CI/CD pipeline — GitHub Actions PR gates (Larastan L10 strict + Pint + Pest), tag-triggered build/release pipeline producing platform installers, code signing (Apple Developer ID + Windows EV cert), in-app auto-update via Electron-autoUpdater wired to GitHub Releases.
+- Public release readiness — README rewrite with the supplied SVG as hero + app icon, Hippocratic License 3.0, `SECURITY.md` + `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`, GSD-leakage redaction sweep, deep Modules code review (cross-module hygiene + DI compliance + dead code + perf).
+- v1.0 UAT close-out — work through the 25 deferred UAT scenarios + 3 `human_needed` verification artifacts with real data before public release.
+- Beta cycle — invite-only beta with the user's partner (+1–2 others), 1–2 weeks of daily use, before opening the repo publicly.
+
+**Key context:**
+
+- **Logo asset:** the user supplied an SVG to be used as README hero, in-app brand, and exported PNG icons for the macOS/Windows/Linux installer bundles. Source file is staged for ingestion in Phase 1; canonical location once committed will be `resources/brand/logo.svg`.
+- **License — Hippocratic License 3.0** (firstdonoharm.dev) — source-available ethical license; restricts use that violates human rights. Not OSI-approved; the trade-off (some adoption breadth for an ethical-use clause) is intentional.
+- **Multi-user changes the security posture** — sessions, password hashing, "logout" UI, per-user OAuth secrets isolation, partner reads from the same SQLite store. Earns its own phase.
+- **NativePHP committed** — no spike-phase comparison; pitfall risk is owned by the research dimension and the first packaging phase.
+- **ING-09 stays deferred-with-trigger** — CSV path covers the same data; revisit only if the user upgrades to PayPal Business.
 
 ## Core Value
 
@@ -49,9 +64,9 @@ Validated by v1.0: chain resolution (Phase 5) traces a Netflix charge from PayPa
 
 ### Active
 
-<!-- Scope for the next milestone. -->
+<!-- Scope for the v2.0 milestone — populated by REQUIREMENTS.md after scoping. -->
 
-Not yet scoped — run `/gsd-new-milestone` to gather requirements.
+Scoping in progress — see [REQUIREMENTS.md](REQUIREMENTS.md) once written for the full v2.0 requirement list grouped by category (PKG / MULTI / DEVUI / CI / REL / UAT / BETA).
 
 ### Deferred (carried from v1.0)
 
@@ -62,7 +77,7 @@ Not yet scoped — run `/gsd-new-milestone` to gather requirements.
 
 <!-- Explicit boundaries. Includes reasoning to prevent re-adding. -->
 
-- **Cloud hosting / multi-device sync** — Privacy-first design; validated through v1.0 that single-machine works. Revisit only if a partner-sharing use case forces it.
+- **Cloud hosting / multi-device sync** — Privacy-first design; validated through v1.0 that single-machine works. v2.0 enables partner sharing via a shared SQLite store on one machine — cloud sync remains out of scope.
 - **Bank PSD2 / open-banking API integrations** (Tink, Plaid, Nordigen, Enable Banking) — GoCardless stopped accepting new Dutch-bank accounts in July 2025; remaining options are paid. CSV + MT940 + CAMT.053 covered the same data in v1.0 without recurring cost. Reasoning still valid.
 - **ICS Cards API integration** — No buyer-side API exists. Reasoning still valid.
 - **Google Play buyer-side API** — No public API. Email receipts are the canonical path (validated in Phase 7).
@@ -71,7 +86,7 @@ Not yet scoped — run `/gsd-new-milestone` to gather requirements.
 - **Mobile native client** — Web UI on localhost served the user well through v1.0. Reasoning still valid.
 - **iCloud Mail integration** — No public API; would force IMAP back into the stack. User confirmed iCloud is not where financial receipts arrive. Reasoning still valid.
 - **Tax / VAT / bookkeeping reporting** — Visibility tool, not accounting. Reasoning still valid.
-- **Multi-user / partner sharing in v1** — Single-user first. Schema is multi-user-ready (`user_id` + `BelongsToUser` on every domain table, enforced by `UserIdColumnArchTest`); arrival deferred to the user's partner-sharing decision.
+- **Multi-user / partner sharing in v1** — Single-user first. Schema was multi-user-ready (`user_id` + `BelongsToUser` on every domain table, enforced by `UserIdColumnArchTest`). Activation is in v2.0 scope (real auth + profile selector + shared SQLite).
 - **Receipt-image OCR** — Email + CSV is the data spine. Defer to v2+.
 - **Budgeting / envelope / goals (YNAB-style)** — Different product. Reasoning still valid.
 - **Full double-entry accounting** — Adds complexity Firefly III's own creator says drives users away. Reasoning still valid.
@@ -171,4 +186,4 @@ The original PROJECT.md tracked all v1 requirements (FND / ING / EML / LED / CHN
 </details>
 
 ---
-*Last updated: 2026-05-19 after v1.0 milestone close*
+*Last updated: 2026-05-19 — v2.0 milestone started (public release + desktop packaging + multi-user + developer mode)*
