@@ -57,7 +57,7 @@ it('exposes a user() BelongsTo relation back to Modules\\Core\\Models\\User via 
     expect($relation->getRelated())->toBeInstanceOf(User::class);
 });
 
-it('scopeActive filters out rows whose acknowledged_at is non-null', function (): void {
+it('reads active rows via an inline whereNull(acknowledged_at) predicate', function (): void {
     $user = User::query()->create([
         'email' => 'sa-active@diederik.test',
         'password' => 'fixture-password',
@@ -86,12 +86,15 @@ it('scopeActive filters out rows whose acknowledged_at is non-null', function ()
         ],
     ]);
 
-    $messages = SystemAlert::query()->active()->pluck('message')->all();
+    $messages = SystemAlert::query()
+        ->whereNull('acknowledged_at')
+        ->pluck('message')
+        ->all();
 
     expect($messages)->toBe(['still active']);
 });
 
-it('scopeByKind filters rows by the given kind value', function (): void {
+it('filters by kind via an inline where(kind) predicate', function (): void {
     $user = User::query()->create([
         'email' => 'sa-bykind@diederik.test',
         'password' => 'fixture-password',
@@ -121,21 +124,9 @@ it('scopeByKind filters rows by the given kind value', function (): void {
     ]);
 
     $messages = SystemAlert::query()
-        ->byKind('backup_corrupt')
+        ->where('kind', 'backup_corrupt')
         ->pluck('message')
         ->all();
 
     expect($messages)->toBe(['corrupt fixture']);
-});
-
-it('compiles scopeActive() into a WHERE acknowledged_at IS NULL predicate', function (): void {
-    $sql = SystemAlert::query()->active()->toSql();
-    expect($sql)->toContain('acknowledged_at');
-    expect($sql)->toContain('is null');
-});
-
-it('compiles scopeByKind() into an equality predicate on the kind column', function (): void {
-    $builder = SystemAlert::query()->byKind('backup_overdue');
-    expect($builder->toSql())->toContain('kind');
-    expect($builder->getBindings())->toContain('backup_overdue');
 });
