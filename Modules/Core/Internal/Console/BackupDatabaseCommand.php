@@ -267,11 +267,20 @@ final class BackupDatabaseCommand extends Command
      * sidecar `.meta.json` carries the same `data_version` as the live
      * DB. Missing sidecars / unreadable JSON / missing data_version
      * keys all fall through to "not skippable" — the safer default.
+     *
+     * `glob()` is documented to return `array|false` — `false` on
+     * permission errors or an unreadable directory. The `(array) false`
+     * cast that previously bridged the return into the empty-check path
+     * yields `[false]`, NOT `[]`, which subtly subverted the check.
+     * The explicit `=== false` guard below is the only thing keeping
+     * an unreadable backups directory from being misread as "has a
+     * candidate sidecar" — load-bearing because a wrong skip would
+     * silently write no backup at all.
      */
     private function isSkippable(string $backupsDir, int $liveDataVersion): bool
     {
-        $candidates = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite.meta.json');
-        if ($candidates === []) {
+        $candidates = glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite.meta.json');
+        if ($candidates === false || $candidates === []) {
             return false;
         }
 
@@ -279,7 +288,7 @@ final class BackupDatabaseCommand extends Command
         // sorts lexicographically, so the lexicographically largest
         // basename is the newest backup.
         rsort($candidates);
-        $newest = (string) $candidates[0];
+        $newest = $candidates[0];
         if (! is_file($newest)) {
             return false;
         }
