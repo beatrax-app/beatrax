@@ -7,7 +7,7 @@
 
 ## v2.0 Requirements
 
-47 requirements across 8 categories. Each maps to exactly one roadmap phase (populated via the Traceability section after roadmap creation).
+48 requirements across 8 categories. Each maps to exactly one roadmap phase (see Traceability section below).
 
 ### PKG (Desktop Packaging)
 
@@ -136,64 +136,80 @@ Explicitly excluded for v2.0. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phase covers which requirement. Updated during roadmap creation.
+Which phase covers which requirement. Updated during roadmap creation (2026-05-19).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PKG-01 | TBD | Pending |
-| PKG-02 | TBD | Pending |
-| PKG-03 | TBD | Pending |
-| PKG-04 | TBD | Pending |
-| PKG-05 | TBD | Pending |
-| PKG-06 | TBD | Pending |
-| PKG-07 | TBD | Pending |
-| PKG-08 | TBD | Pending |
-| MULTI-01 | TBD | Pending |
-| MULTI-02 | TBD | Pending |
-| MULTI-03 | TBD | Pending |
-| MULTI-04 | TBD | Pending |
-| MULTI-05 | TBD | Pending |
-| MULTI-06 | TBD | Pending |
-| DEVUI-01 | TBD | Pending |
-| DEVUI-02 | TBD | Pending |
-| DEVUI-03 | TBD | Pending |
-| DEVUI-04 | TBD | Pending |
-| DEVUI-05 | TBD | Pending |
-| DEVUI-06 | TBD | Pending |
-| DEVUI-07 | TBD | Pending |
-| DEVUI-08 | TBD | Pending |
-| DEVUI-09 | TBD | Pending |
-| CI-01 | TBD | Pending |
-| CI-02 | TBD | Pending |
-| CI-03 | TBD | Pending |
-| CI-04 | TBD | Pending |
-| CI-05 | TBD | Pending |
-| CI-06 | TBD | Pending |
-| UPDATE-01 | TBD | Pending |
-| UPDATE-02 | TBD | Pending |
-| UPDATE-03 | TBD | Pending |
-| UPDATE-04 | TBD | Pending |
-| REL-01 | TBD | Pending |
-| REL-02 | TBD | Pending |
-| REL-03 | TBD | Pending |
-| REL-04 | TBD | Pending |
-| REL-05 | TBD | Pending |
-| REL-06 | TBD | Pending |
-| REL-07 | TBD | Pending |
-| REL-08 | TBD | Pending |
-| UAT-01 | TBD | Pending |
-| UAT-02 | TBD | Pending |
-| UAT-03 | TBD | Pending |
-| BETA-01 | TBD | Pending |
-| BETA-02 | TBD | Pending |
-| BETA-03 | TBD | Pending |
-| BETA-04 | TBD | Pending |
+| PKG-01 | Phase 13 | Pending |
+| PKG-02 | Phase 13 | Pending |
+| PKG-03 | Phase 14 | Pending |
+| PKG-04 | Phase 15 | Pending |
+| PKG-05 | Phase 15 | Pending |
+| PKG-06 | Phase 15 | Pending |
+| PKG-07 | Phase 15 | Pending |
+| PKG-08 | Phase 15 | Pending |
+| MULTI-01 | Phase 12 | Pending |
+| MULTI-02 | Phase 12 | Pending |
+| MULTI-03 | Phase 12 | Pending |
+| MULTI-04 | Phase 12 | Pending |
+| MULTI-05 | Phase 12 | Pending |
+| MULTI-06 | Phase 12 | Pending |
+| DEVUI-01 | Phase 16 | Pending |
+| DEVUI-02 | Phase 16 | Pending |
+| DEVUI-03 | Phase 16 | Pending |
+| DEVUI-04 | Phase 16 | Pending |
+| DEVUI-05 | Phase 16 | Pending |
+| DEVUI-06 | Phase 16 | Pending |
+| DEVUI-07 | Phase 16 | Pending |
+| DEVUI-08 | Phase 16 | Pending |
+| DEVUI-09 | Phase 16 | Pending |
+| CI-01 | Phase 17 | Pending |
+| CI-02 | Phase 17 | Pending |
+| CI-03 | Phase 17 | Pending |
+| CI-04 | Phase 17 | Pending |
+| CI-05 | Phase 17 | Pending |
+| CI-06 | Phase 17 | Pending |
+| UPDATE-01 | Phase 18 | Pending |
+| UPDATE-02 | Phase 18 | Pending |
+| UPDATE-03 | Phase 18 | Pending |
+| UPDATE-04 | Phase 18 | Pending |
+| REL-01 | Phase 19 | Pending |
+| REL-02 | Phase 19 | Pending |
+| REL-03 | Phase 19 | Pending |
+| REL-04 | Phase 19 | Pending |
+| REL-05 | Phase 19 | Pending |
+| REL-06 | Phase 19 | Pending |
+| REL-07 | Phase 19 | Pending |
+| REL-08 | Phase 19 | Pending |
+| UAT-01 | Phase 20 | Pending |
+| UAT-02 | Phase 20 | Pending |
+| UAT-03 | Phase 20 | Pending |
+| BETA-01 | Phase 21 | Pending |
+| BETA-02 | Phase 21 | Pending |
+| BETA-03 | Phase 21 | Pending |
+| BETA-04 | Phase 21 | Pending |
 
 **Coverage:**
-- v2.0 requirements: 47 total
-- Mapped to phases: 0 (roadmap not yet created)
-- Unmapped: 47 ⚠️ (populated by roadmapper)
+- v2.0 requirements: 48 total
+- Mapped to phases: 48 ✓
+- Unmapped: 0 ✓
+
+### Phase-to-requirement summary
+
+| Phase | Requirement count | Requirements |
+|-------|-------------------|--------------|
+| 12. Multi-User Activation | 6 | MULTI-01, MULTI-02, MULTI-03, MULTI-04, MULTI-05, MULTI-06 |
+| 13. AppPaths + First-Run Migration Wizard | 2 | PKG-01, PKG-02 |
+| 14. Queue Rewire + Horizon Carve-out | 1 | PKG-03 |
+| 15. Desktop Shell (NativePHP Integration) | 5 | PKG-04, PKG-05, PKG-06, PKG-07, PKG-08 |
+| 16. Developer Mode UI | 9 | DEVUI-01, DEVUI-02, DEVUI-03, DEVUI-04, DEVUI-05, DEVUI-06, DEVUI-07, DEVUI-08, DEVUI-09 |
+| 17. CI/CD Pipeline + Code Signing | 6 | CI-01, CI-02, CI-03, CI-04, CI-05, CI-06 |
+| 18. Auto-Update Plumbing | 4 | UPDATE-01, UPDATE-02, UPDATE-03, UPDATE-04 |
+| 19. Public Release Boundary | 8 | REL-01, REL-02, REL-03, REL-04, REL-05, REL-06, REL-07, REL-08 |
+| 20. v1.0 UAT Close-Out | 3 | UAT-01, UAT-02, UAT-03 |
+| 21. Invite-Only Beta Cycle | 4 | BETA-01, BETA-02, BETA-03, BETA-04 |
+| **Total** | **48** | |
 
 ---
 *Requirements defined: 2026-05-19*
-*Last updated: 2026-05-19 after initial v2.0 definition*
+*Last updated: 2026-05-19 after roadmap creation (Phases 12-21 mapped, 48/48 coverage)*
