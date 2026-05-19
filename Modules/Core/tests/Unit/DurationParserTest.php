@@ -12,10 +12,12 @@ use Modules\Core\Internal\Console\Support\DurationParser;
  * to compute the cutoff timestamp. The token grammar is `/^\d+[dhw]$/i`
  * — digits + a single unit letter (d, h, w). The `m` token is
  * intentionally rejected because it is ambiguous between "months" and
- * "minutes" in everyday SI usage; callers asking for minutes pass `0h`
- * or a more specific value, and callers asking for months use `30d` /
- * `4w`. Anything else throws InvalidArgumentException with a message
- * naming the expected grammar.
+ * "minutes" in everyday SI usage; callers asking for sub-day cutoffs
+ * pass `1h` / `12h`, and callers asking for month-scale cutoffs pass
+ * `30d` / `4w`. Zero amounts are ALSO rejected: a `0d` typo for `30d`
+ * would resolve to "now" and the prune predicate would then delete
+ * every failed_jobs row regardless of age. Anything else throws
+ * InvalidArgumentException with a message naming the expected grammar.
  */
 
 it('subtracts the parsed duration from "now"', function (string $input, string $expectedShift): void {
@@ -56,4 +58,21 @@ it('rejects invalid duration strings with InvalidArgumentException naming the re
     'leading space' => [' 30d'],
     'missing unit' => ['30'],
     'too many digits and unit chars' => ['30dd'],
+]);
+
+it('rejects a zero-amount duration with a dedicated message that mentions the catastrophic-prune risk', function (string $input): void {
+    $parser = new DurationParser;
+    $now = CarbonImmutable::parse('2026-05-20 09:00:00');
+
+    expect(fn () => $parser->subFromNow($input, $now))
+        ->toThrow(
+            InvalidArgumentException::class,
+            "Duration amount must be a positive integer (zero would delete every row). Got: '".$input."'.",
+        );
+})->with([
+    'zero days' => ['0d'],
+    'zero hours' => ['0h'],
+    'zero weeks' => ['0w'],
+    'zero days uppercase' => ['0D'],
+    'multi-digit zero' => ['00d'],
 ]);

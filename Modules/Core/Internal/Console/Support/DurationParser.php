@@ -40,6 +40,15 @@ final class DurationParser
     /**
      * Returns `$now` minus the duration named by `$input`. Throws on
      * any token that does not match the documented grammar.
+     *
+     * Zero amounts (`0d` / `0h` / `0w`) are rejected: they resolve to
+     * `now - 0 = now`, which when paired with the failed-jobs prune
+     * predicate `WHERE failed_at < $cutoff` deletes every failed_jobs
+     * row regardless of age. A typo of `0d` for `30d` would be
+     * catastrophic; the dry-run default mitigates the typo but the
+     * grammar itself should refuse the load-bearing footgun. Callers
+     * that genuinely want "delete everything" can pass `--all` (TBD)
+     * rather than abusing a zero token.
      */
     public function subFromNow(string $input, CarbonImmutable $now): CarbonImmutable
     {
@@ -51,6 +60,12 @@ final class DurationParser
         }
 
         $amount = (int) $matches[1];
+        if ($amount <= 0) {
+            throw new InvalidArgumentException(sprintf(
+                "Duration amount must be a positive integer (zero would delete every row). Got: '%s'.",
+                $input,
+            ));
+        }
         $unit = strtolower($matches[2]);
 
         // The regex character class above already guarantees `$unit` is
