@@ -152,7 +152,7 @@ it('writes exactly one wal_mode_missing alert on PRAGMA drift', function (): voi
 
     // Re-register ONLY the HealthCheckServiceProvider listener.
     (new HealthCheckServiceProvider($this->app))
-        ->boot($events, $this->app->make(BootProbeState::class));
+        ->boot($events);
 
     $db->purge('sqlite');
 
@@ -185,7 +185,7 @@ it('re-fires the listener in-process without writing duplicate rows (BootProbeSt
     $config->set('database.connections.sqlite.journal_mode', null);
 
     (new HealthCheckServiceProvider($this->app))
-        ->boot($events, $this->app->make(BootProbeState::class));
+        ->boot($events);
 
     $db->purge('sqlite');
 
@@ -217,7 +217,7 @@ it('does not write a duplicate within an hour even if BootProbeState is reset (c
     $config->set('database.connections.sqlite.journal_mode', null);
 
     (new HealthCheckServiceProvider($this->app))
-        ->boot($events, $this->app->make(BootProbeState::class));
+        ->boot($events);
 
     $db->purge('sqlite');
 
