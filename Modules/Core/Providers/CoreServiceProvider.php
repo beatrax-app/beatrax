@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Providers;
 
 use App\Models\User;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Internal\Console\BackupDatabaseCommand;
@@ -56,8 +57,13 @@ final class CoreServiceProvider extends ServiceProvider
         // string-keyed binding so tests can swap in a sys_get_temp_dir()
         // path without touching the developer's real storage/app/backups.
         // BackupDatabaseCommand picks it up through a contextual binding
-        // below.
-        $this->app->singleton('core.backups_directory', static fn (): string => base_path('storage/app/backups'));
+        // below. The closure receives the container as its sole argument
+        // so the `Application::basePath()` call goes through DI instead
+        // of the global `base_path()` helper (CLAUDE.md DI-only rule).
+        $this->app->singleton(
+            'core.backups_directory',
+            static fn (Application $app): string => $app->basePath('storage/app/backups'),
+        );
 
         $this->app->when(BackupDatabaseCommand::class)
             ->needs('$backupsPath')

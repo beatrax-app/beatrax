@@ -963,3 +963,66 @@ it('does not allow Laravel facades inside Modules/Core/Internal/Console/ (noFaca
         "Modules/Core/Internal/Console/ commands may not import Illuminate\\Support\\Facades\\*. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
+
+it('does not allow Laravel global path / container helpers inside Modules/Core/Internal/Console/ (noLaravelGlobalHelpersInCoreConsoleCommands)', function (): void {
+    // Companion to the facades grep above: catches the *_path() and
+    // container-helper family that are functionally equivalent to
+    // facade calls (they resolve through the singleton Application
+    // container) but do not import the `Illuminate\Support\Facades\…`
+    // namespace, so the facades scan misses them. CLAUDE.md
+    // `feedback_laravel_di_only.md` forbids these helpers across the
+    // entire codebase; the scope here mirrors the facade-scan above
+    // (Core console commands only) because that is the surface the
+    // Phase 11 invariant locks. Other modules carry pre-existing
+    // helper usage that is tracked as separate cleanup.
+    $bannedFunctions = [
+        'base_path',
+        'app_path',
+        'config_path',
+        'database_path',
+        'public_path',
+        'resource_path',
+        'storage_path',
+        'app',
+        'resolve',
+        'config',
+        'auth',
+        'request',
+        'now',
+        'today',
+    ];
+    // Word-boundary on the function-call surface. `\b<name>\s*\(` matches
+    // a top-level call without also matching `$obj->base_path(...)` or
+    // `MyClass::config(...)` — the negative lookbehind for `->` and `::`
+    // rules out the method-call shape.
+    $pattern = '/(?<![>:])\\b('.implode('|', array_map('preg_quote', $bannedFunctions)).')\\s*\\(/';
+
+    $hits = [];
+    $consoleDir = base_path('Modules/Core/Internal/Console');
+    if (! is_dir($consoleDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($consoleDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+            continue;
+        }
+        $path = $file->getPathname();
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (preg_match($pattern, $stripped) === 1) {
+            $hits[] = $path;
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "Modules/Core/Internal/Console/ commands may not call Laravel global helpers (base_path, app, config, etc). Inject the Application / Repository / etc. instead. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});

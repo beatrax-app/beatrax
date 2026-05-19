@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\InstallCommand;
@@ -85,6 +86,7 @@ beforeEach(function (): void {
             $app->make(Dispatcher::class),
             $app->make(DatabaseManager::class),
             $app->make(Filesystem::class),
+            $app->make(Application::class),
         ),
     );
 });
