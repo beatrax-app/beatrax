@@ -7,6 +7,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\ConnectionEstablished;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
+use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Models\SystemAlert;
 use Tests\Helpers\RealSqliteFixture;
 
@@ -69,6 +70,19 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    // Restore the framework default to sqlite_testing BEFORE removing
+    // the fixture file so RefreshDatabase's rollback inside Laravel's
+    // teardown does not try to re-open the on-disk connection (which
+    // would fire SqliteOptimizationsProvider's PRAGMA against a path
+    // that no longer exists).
+    /** @var Repository $config */
+    $config = $this->app->make(Repository::class);
+    $config->set('database.default', 'sqlite_testing');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $db->purge('sqlite');
+
     /** @var string $sourcePath */
     $sourcePath = $this->sourcePath;
     RealSqliteFixture::cleanup($sourcePath);
@@ -120,13 +134,26 @@ it('writes exactly one wal_mode_missing alert on PRAGMA drift', function (): voi
     $pdo->exec('PRAGMA synchronous = NORMAL');
     unset($pdo);
 
-    // Disable the SqliteOptimizationsProvider's PRAGMA re-application
-    // via the per-connection config keys so the listener sees the
-    // drifted value rather than the re-applied WAL.
+    // Deregister the SqliteOptimizationsProvider's ConnectionEstablished
+    // listener so the HealthCheckServiceProvider's listener observes the
+    // drifted journal_mode rather than the re-applied WAL value the
+    // optimisation provider would otherwise overwrite immediately. The
+    // re-registration after this test happens automatically on the next
+    // test's fresh app boot.
+    $events->forget(ConnectionEstablished::class);
+
+    // Also disable Laravel's own SQLiteConnector PRAGMA application
+    // (driven by the connection config keys) — otherwise the connector
+    // re-applies journal_mode = WAL on the next open even though no
+    // listener is registered.
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
     $config->set('database.connections.sqlite.journal_mode', null);
-    $config->set('database.connections.sqlite.synchronous', null);
+
+    // Re-register ONLY the HealthCheckServiceProvider listener.
+    (new HealthCheckServiceProvider($this->app))
+        ->boot($events, $this->app->make(BootProbeState::class));
+
     $db->purge('sqlite');
 
     $events->dispatch(new ConnectionEstablished($db->connection('sqlite')));
@@ -150,10 +177,16 @@ it('re-fires the listener in-process without writing duplicate rows (BootProbeSt
     $pdo->exec('PRAGMA synchronous = NORMAL');
     unset($pdo);
 
+    // Deregister both providers' listeners and disable the SQLiteConnector
+    // journal_mode auto-apply so only HealthCheck sees the drift.
+    $events->forget(ConnectionEstablished::class);
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
     $config->set('database.connections.sqlite.journal_mode', null);
-    $config->set('database.connections.sqlite.synchronous', null);
+
+    (new HealthCheckServiceProvider($this->app))
+        ->boot($events, $this->app->make(BootProbeState::class));
+
     $db->purge('sqlite');
 
     // Fire twice in the same process. The BootProbeState singleton's
@@ -176,10 +209,16 @@ it('does not write a duplicate within an hour even if BootProbeState is reset (c
     $pdo->exec('PRAGMA synchronous = NORMAL');
     unset($pdo);
 
+    // Deregister both providers' listeners, disable the SQLiteConnector
+    // journal_mode auto-apply, and re-register only HealthCheck.
+    $events->forget(ConnectionEstablished::class);
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
     $config->set('database.connections.sqlite.journal_mode', null);
-    $config->set('database.connections.sqlite.synchronous', null);
+
+    (new HealthCheckServiceProvider($this->app))
+        ->boot($events, $this->app->make(BootProbeState::class));
+
     $db->purge('sqlite');
 
     $events->dispatch(new ConnectionEstablished($db->connection('sqlite')));

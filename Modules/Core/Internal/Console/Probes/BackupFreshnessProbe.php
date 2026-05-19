@@ -144,20 +144,31 @@ final class BackupFreshnessProbe implements Probe
      * service-query layer (the banner reads unacknowledged rows only
      * and groups by kind) so this writes unconditionally — accumulating
      * a per-doctor-run audit trail.
+     *
+     * The write is wrapped in try/catch so a missing system_alerts
+     * table (e.g. probe invoked before migrations have run on a fresh
+     * checkout) does NOT make the probe throw — the Probe contract
+     * forbids that. The alert write is best-effort; the operator-
+     * visible signal is the `warning` ProbeResult the caller returns.
      */
     private function recordOverdueAlert(?int $hoursOld): void
     {
-        SystemAlert::create([
-            'user_id' => null,
-            'kind' => 'backup_overdue',
-            'severity' => 'warning',
-            'message' => $hoursOld === null
-                ? 'No verified backups found under storage/app/backups/.'
-                : sprintf('Most recent verified backup is %dh old.', $hoursOld),
-            'metadata' => [
-                'hours_old' => $hoursOld,
-                'backups_path' => $this->backupsPath,
-            ],
-        ]);
+        try {
+            SystemAlert::create([
+                'user_id' => null,
+                'kind' => 'backup_overdue',
+                'severity' => 'warning',
+                'message' => $hoursOld === null
+                    ? 'No verified backups found under storage/app/backups/.'
+                    : sprintf('Most recent verified backup is %dh old.', $hoursOld),
+                'metadata' => [
+                    'hours_old' => $hoursOld,
+                    'backups_path' => $this->backupsPath,
+                ],
+            ]);
+        } catch (Throwable) {
+            // Alert-write failure is non-fatal — the ProbeResult itself
+            // is the load-bearing signal.
+        }
     }
 }
