@@ -226,11 +226,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The latest backup is automatically verified by re-opening it and running `PRAGMA integrity_check`, with failures surfaced to the user
   3. Operator documentation explicitly forbids `cp database.sqlite` of the live WAL DB and points to `db:backup` as the supported path
 **Plans**: 5 plans
-  - [ ] 05-01-PLAN.md — Wave 0 enablement: composer (Horizon + Predis) + Chains module skeleton + synthesised fixture trio + Transfers Public promotion + BoundaryArchTest extensions + PROJECT.md/README amendment + Redis Docker setup
-  - [ ] 05-02-PLAN.md — Wave 1 schema: chain_links + card_statements + card_statement_credits migrations + back-population + Eloquent models + Public DTOs + CardStatementStateMachine (D-95)
-  - [ ] 05-03-PLAN.md — Wave 2 ICS bulk-iDEAL decomposition: IcsSettlementResolver (Pattern 4) + ResolveChainLinksJob (queued, ShouldBeUniqueUntilProcessing) + ConfirmImport post-commit dispatch + idempotency contract
-  - [ ] 05-04-PLAN.md — Wave 3 PayPal funding-chain: PaypalFundingResolver (deterministic D-106 + fuzzy CHN-02) + ChainLinkQuery + CardStatementQuery + ConfirmChainLink (auto-promotion D-87) + RejectChainLink (per-pair D-89)
-  - [ ] 05-05-PLAN.md — Wave 4 UI surfaces: /chains/review (CHN-03) + chain drawer Flux flyout (UI-02 + CHN-04) + dashboard "Next ICS settlement" tile (CHN-06) + top-nav badge + failed-job toast + wizard polling
+  - [ ] 11-01-PLAN.md — Wave 0 foundation: system_alerts migration + Eloquent model + scopes + SystemAlertQuery (per-user + system-wide) + AcknowledgeSystemAlert + BoundaryArchTest::systemAlertsTableNotJoinedToTransactions invariant + RealSqliteFixture helper (FND-05)
+  - [ ] 11-02-PLAN.md — Wave 1 vertical: BackupDatabaseCommand (db:backup VACUUM INTO + sidecar + chmod 600 + smart-skip on PRAGMA data_version + corrupt → .suspect + system_alerts) + BackupRetentionPolicy value object (7 daily + 4 Sunday weekly) + Schedule::command('db:backup')->dailyAt('03:00') entry (FND-05 SC #1)
+  - [ ] 11-03-PLAN.md — Wave 2 restore + diagnostics: RestoreDatabaseCommand (triple safety rail: maintenance + pre-restore snapshot + --confirm + pre/post integrity_check) + Probe contract + WalModeProbe + SynchronousModeProbe + BackupFreshnessProbe + extended DoctorCommand + HealthCheckServiceProvider (boot-time PRAGMA check, non-halting)
+  - [ ] 11-04-PLAN.md — Wave 3 banner + failed-jobs CLI + arch locks: SystemAlertsBanner Livewire SFC + Blade view + app.blade.php slot + DurationParser + FailedJobsCommand (diederik:failed-jobs prune --older-than --dry-run) + BoundaryArchTest::noFacadeCallsFromCoreConsoleCommands + HorizonForceFlagTest (FND-05 SC #2)
+  - [ ] 11-05-PLAN.md — Wave 4 close-out: README ## Backups + ## Operator recovery rewrite (4 new subsections; preserves Stuck Redis lock subsection) + ReadmeOperationalDocsTest content arch test + Phase11AcceptanceTest end-to-end vertical + human-verify checkpoint (FND-05 SC #3)
 
 ## Progress
 
@@ -249,4 +249,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 8. Recurring Detection + Fixed Payments View | 0/TBD | Not started | - |
 | 9. Subscription Drift Detection + Alerts | 0/5 | Ready to execute | - |
 | 10. Cash-Flow Forecasting + What-If Scenarios | 0/6 | Ready to execute | - |
-| 11. Operational Hardening | 0/TBD | Not started | - |
+| 11. Operational Hardening | 0/5 | Ready to execute | - |

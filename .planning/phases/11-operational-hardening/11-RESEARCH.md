@@ -910,34 +910,34 @@ it('does not allow system_alerts to be JOINed onto the transactions table (syste
 | A9 | The dashboard chrome (Tailwind tokens) used by Phase 9 drift-alert / Phase 5 chain-link confidence tiers exists and the planner can mirror it | Pattern 4 | [VERIFIED: Modules/DriftAlerts/Resources/views/livewire/dashboard-drift-badge.blade.php] uses `border-slate-200 bg-white text-slate-900`. Severity gradient for system-alerts banner can mirror: critical = `border-rose-500 bg-rose-50 text-rose-900`; warning = `border-amber-300 bg-amber-50 text-amber-900`; info = `border-slate-200 bg-slate-50 text-slate-700`. [ASSUMED — planner confirms exact tokens during implementation] |
 | A10 | Two consecutive fresh `PDO` instances reading `PRAGMA data_version` against the same unchanged DB return the same value | Pitfall 1 | [CITED: SQLITE_FCNTL_DATA_VERSION docs imply this; PRAGMA wraps it]. A Pest unit test should verify this empirically. [ASSUMED — planner should write a regression test] |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Where exactly does the app-boot health check live — `AppServiceProvider::boot()` or a new `Modules/Core/Internal/Providers/HealthCheckServiceProvider`?**
    - What we know: Both work mechanically. The existing module convention places module-scoped providers under `Modules/Core/Internal/Providers/` (e.g., `SqliteOptimizationsProvider`, `FortifyServiceProvider`).
-   - Recommendation: A dedicated `HealthCheckServiceProvider` registered from `CoreServiceProvider::register()` (same shape as `SqliteOptimizationsProvider` registration). Keeps boot-time PRAGMA verification colocated with the existing PRAGMA-application listener; one file owns "all things SQLite-pragma-related at boot."
+   - RESOLVED: Recommendation: A dedicated `HealthCheckServiceProvider` registered from `CoreServiceProvider::register()` (same shape as `SqliteOptimizationsProvider` registration). Keeps boot-time PRAGMA verification colocated with the existing PRAGMA-application listener; one file owns "all things SQLite-pragma-related at boot."
 
 2. **Should the failed-jobs CLI accept `m` for minutes or omit the `m` token entirely?**
    - What we know: `m` is genuinely ambiguous (minutes vs months).
-   - Recommendation: Omit `m` entirely. Accept `d` / `h` / `w` only. Document explicitly in the command's `--help` text. Minutes-granularity pruning is not a real-world use case for failed_jobs.
+   - RESOLVED: Recommendation: Omit `m` entirely. Accept `d` / `h` / `w` only. Document explicitly in the command's `--help` text. Minutes-granularity pruning is not a real-world use case for failed_jobs.
 
 3. **Should the corrupt-backup `.suspect` file include a sidecar `<suspect>.meta.json` documenting WHY it was flagged?**
    - What we know: CONTEXT doesn't specify; the user's intent is "preserve so they can inspect."
-   - Recommendation: Yes — write a tiny sidecar with `{ flagged_at, integrity_check_output: <full PRAGMA output> }`. Aids forensics. Costs ~200 bytes per .suspect file.
+   - RESOLVED: Recommendation: Yes — write a tiny sidecar with `{ flagged_at, integrity_check_output: <full PRAGMA output> }`. Aids forensics. Costs ~200 bytes per .suspect file.
 
 4. **Should the integrity_check rows on a failed check be persisted into `system_alerts.metadata` JSON?**
    - What we know: The PRAGMA returns N rows of human-readable diagnostics on failure.
-   - Recommendation: Yes — `metadata: { integrity_check: <array of rows> }`. Makes the banner click-through diagnostic clear.
+   - RESOLVED: Recommendation: Yes — `metadata: { integrity_check: <array of rows> }`. Makes the banner click-through diagnostic clear.
 
 5. **Does the existing `Modules\Core\Models\User` need a `system_alerts` `HasMany` relation?**
    - What we know: SystemAlertQuery already scopes by `user_id`.
-   - Recommendation: Not strictly needed for Phase 11 (the query lives in the Public service). Defer until a consumer requires `$user->systemAlerts()`. YAGNI.
+   - RESOLVED: Recommendation: Not strictly needed for Phase 11 (the query lives in the Public service). Defer until a consumer requires `$user->systemAlerts()`. YAGNI.
 
 6. **Should `BackupRetentionPolicy::prune()` actually delete files, or return a list of "files that would be pruned" that the command then deletes?**
-   - Recommendation: Return a list. Keeps the value object pure (no filesystem IO inside the policy); the command does the actual `Filesystem::delete()` calls. This makes the policy 100% unit-testable with `Storage::fake()` not even needed.
+   - RESOLVED: Recommendation: Return a list. Keeps the value object pure (no filesystem IO inside the policy); the command does the actual `Filesystem::delete()` calls. This makes the policy 100% unit-testable with `Storage::fake()` not even needed.
 
 7. **Does the existing test infrastructure (Pest 4 + RefreshDatabase) cleanly cover a test that writes a real SQLite file to disk (e.g., the BackupDatabaseCommandTest)?**
    - What we know: The `:memory:` testing connection (config/database.php `sqlite_testing`) does not produce a file path that `VACUUM INTO` can read. Backup tests need a file-on-disk fixture.
-   - Recommendation: Use `Storage::fake()` for the destination directory, but the SOURCE DB must be a real on-disk SQLite file. A Pest helper `withRealSqliteFixture()` that creates a temp DB, runs migrations against it, returns the path, and tears down in `afterEach` is the canonical shape. Verify Phase 5 / Phase 9 test fixtures for any similar precedent.
+   - RESOLVED: Recommendation: Use `Storage::fake()` for the destination directory, but the SOURCE DB must be a real on-disk SQLite file. A Pest helper `withRealSqliteFixture()` that creates a temp DB, runs migrations against it, returns the path, and tears down in `afterEach` is the canonical shape. Verify Phase 5 / Phase 9 test fixtures for any similar precedent.
 
 ## Environment Availability
 
