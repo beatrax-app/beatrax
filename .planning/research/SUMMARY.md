@@ -1,197 +1,236 @@
 # Project Research Summary
 
-**Project:** diederik
-**Domain:** Local-only personal finance dashboard — multi-source ingestion, cross-account chain resolution, cash-flow forecasting
-**Researched:** 2026-05-12
-**Confidence:** HIGH (stack and pitfalls verified against official sources); MEDIUM for ICS-bulk-iDEAL specifics — confirmed zero prior art
-
----
+**Project:** diederik v2.0 — Public Release (Desktop Packaging, Multi-User, Developer Mode)
+**Domain:** Personal-finance desktop app (subsequent milestone — wrapping a shipped Laravel web app)
+**Researched:** 2026-05-19
+**Confidence:** HIGH
 
 ## Executive Summary
 
-Diederik is a local-only Laravel personal finance dashboard that solves a problem no existing tool addresses: tracing the complete funding chain from a subscription charge back through PayPal's intermediary layer to the real bank account (ASN or ICS), and decomposing the ICS monthly bulk iDEAL settlement into the individual card transactions it covers. The closest comparator is Firefly III (PHP/Laravel, self-hosted, multi-currency), but Firefly III lacks both chain resolution and cash-flow forecasting — which are diederik's two headline differentiators. Every other competitor (Monarch, Lunch Money, Actual Budget) is cloud-only or US-centric. This is genuine greenfield territory for the Dutch ICS settlement case; no prior art was found in any tool.
+diederik v2.0 is a **shell, activation, and release** milestone on top of a validated v1.0 (11 modules, 1644 tests green, Larastan L10 strict, all `BoundaryArchTest` invariants holding). The work is *not* feature-extending: it wraps the existing Laravel 13 + Livewire 4 + SQLite app in a code-signed NativePHP/Electron desktop installer for macOS / Windows / Linux, activates the schema's already-built `user_id` multi-user layer with real Fortify auth, adds an in-app Developer Mode UI exposing the CLI, ships a GitHub Actions CI/CD pipeline (PR gates + tag-triggered release + code signing + auto-update), and publishes the source under Hippocratic License 3.0.
 
-The recommended approach is a **modular Laravel 12 monolith with a pluggable ingestion pipeline**, Livewire 4 + Volt + Flux UI (server-rendered, no SPA layer), SQLite in WAL mode, and the `webklex/laravel-imap` pure-PHP IMAP library. The Phase 1 vertical slice — one source end-to-end proving idempotency — is the right first move. Three foundational decisions must be locked in before any transaction data lands: integer-cents money storage (BIGINT minor units, never floats), `user_id` on every domain table from day one, and pure-PHP IMAP from day one (bypassing the `ext-imap` extension that was removed from PHP 8.4). These are effectively irreversible once data exists.
+The recommended approach is **strict-dependency build order (A→H)** with three new modules (`Modules/Auth/`, `Modules/Desktop/`, `Modules/DevMode/`) that keep NativePHP and dev-mode concerns isolated from the existing 11 domain modules. The single largest stack adaptation is **dropping Laravel Horizon + Redis from the shipped desktop bundle** (Redis cannot ship inside Electron); the `database` queue driver covers single-user-machine throughput and `Cache::lock()` against the database driver preserves `ShouldBeUniqueUntilProcessing` semantics for chain resolution.
 
-The key risks map directly to implementation order. Floating-point money and missing `user_id` columns are the highest-cost mistakes to retrofit — requiring full re-import and full schema migration respectively — so they must be treated as non-negotiable before any data is loaded. PayPal CSV is an event log, not a transaction log: its fee and currency-conversion rows must be rolled up by `Transaction ID` before persisting, or monthly totals will never reconcile. ICS bulk-settlement matching must tolerate amount differences (partial payments, overpayments, carry-forward credit) and use a tolerant date window, not exact-match logic. IMAP backfill of years of history must be a background queue job with sequential single-connection fetching and UID resume — not a synchronous HTTP request.
-
----
+Three CRITICAL pitfalls own most of v2.0's risk: (1) hard-coded paths breaking inside the NativePHP read-only bundle — mitigated by an `AppPaths` abstraction that must land Phase B day-one before any NativePHP integration; (2) first-run migration corrupting the developer's existing v1.0 SQLite — mitigated by an explicit wizard with `VACUUM INTO` + sentinel-file idempotency + opt-in OAuth re-auth; (3) the multi-user activation accidentally smuggling `Auth::user()` facade calls into 50 places — mitigated by landing the DI-friendly `CurrentUserProvider`-style contract (the v1.0 codebase already has `Modules\Core\Public\Contracts\CurrentUser`) **before** the multi-user PR opens, plus an arch-test that ratchets violations to zero.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Laravel 12 on PHP 8.3 is the correct version pair. PHP 8.4 removed `ext-imap` from core; all IMAP work must go through `webklex/laravel-imap` (pure PHP, no native extension) — this is non-negotiable for a project that will run for years. Laravel Herd (free tier) on macOS gives zero-setup PHP 8.3 + nginx + `diederik.test` HTTPS with no Homebrew dependency. Livewire 4 + Volt + Flux UI eliminates the Vite/TypeScript/Node build pipeline while delivering calm Linear/Notion aesthetics. SQLite in WAL mode handles personal-finance scale (up to ~60,000 lifetime rows) trivially.
+Three load-bearing additions; the v1.0 stack stays pinned. See [STACK.md](STACK.md) for the full version pin matrix and rejected-alternatives analysis.
 
-**Core technologies:**
-- PHP 8.3 + Laravel 12: language + framework — pins to 8.3 to avoid ext-imap PECL fallout on 8.4
-- SQLite 3.45+ WAL mode: local data store — zero setup, single file, WAL for concurrent read/write
-- Laravel Herd (free): local dev — native macOS, `diederik.test` HTTPS, PHP version switching
-- Livewire 4 + Volt + Flux UI: server-rendered reactive UI — no SPA, pure PHP, calm aesthetic
-- `webklex/laravel-imap` 6.2: IMAP — pure PHP, no ext-imap, UID-based incremental sync
-- `genkgo/camt` 2.10: CAMT.053 parser — primary ASN bank statement format, actively maintained
-- `kingsquare/php-mt940` 2.0: MT940 fallback — stable but stagnant (2020); use as fallback only
-- `league/csv` 9.28: all CSV paths — encoding-safe streaming for ASN/ICS/PayPal CSV
-- `brick/money` 0.13: multi-currency arithmetic — immutable Money objects, exact arithmetic
-- `spatie/laravel-data` 4.x: typed DTOs — immutable wrappers before Eloquent
-- Pest 3 + PHPStan level 8: testing and static analysis — dataset tests per source parser
-- `database` queue driver + launchd: background jobs — no Redis; macOS launchd for auto-start
+**Core technologies (NEW):**
+- **`nativephp/desktop` ^2.2** (2.2.0, 2026-04-29) — desktop shell; ships Electron 38 + electron-builder + electron-updater; PR #96 added Laravel 13 compatibility. Requires PHP ^8.3 + Node 22+. Replaces Laravel Herd as the runtime for shipped builds.
+- **`laravel/fortify` ^1.37** (1.37.2, 2026-05-15) — headless auth actions; already in `composer.json` at ^1.21, upgrade pin to ^1.37 for Laravel 13. Flux + Volt + Livewire handle the UI; Fortify provides the actions and the password-reset hookpoints.
+- **`nativephp/php-bin` ^1.1** — bundled PHP runtime. Ships PHP 8.1–8.4; project pin currently `^8.5`. Recommended: bundle PHP 8.4 (10-min Larastan-L10-on-8.4 spike validates) until php-bin 8.5 builds land. No package additions for queue driver, secrets store, or dev console — `database` driver + SQLite-encrypted `oauth_secrets` table + bespoke Livewire console reuse what's already there.
+
+**CI / signing:**
+- `apple-actions/import-codesign-certs v7.0.0` + Apple notarytool (via NativePHP env vars) for macOS Developer ID
+- `Azure/trusted-signing-action v2.0.0` for Windows (GitHub-hosted-runner compatible, $10/mo, beats EV USB token which requires self-hosted Windows runners)
+- `softprops/action-gh-release v2` for tag-triggered installer publishing
+- Auto-update via `electron-updater` → GitHub Releases (NativePHP first-class support)
+
+**Critical change versus v1.0 stack:**
+- **Drop Laravel Horizon + Redis from shipped desktop builds.** Keep Horizon for `DIEDERIK_RUNTIME=herd` dev mode behind a feature flag. Shipped build runs NativePHP's built-in `queue_workers` config against the `database` driver. `ShouldBeUniqueUntilProcessing` lock store moves from `redis` to `database` via `config('cache.locks_store')` — existing `BoundaryArchTest` carve-outs stay legal.
 
 ### Expected Features
 
+See [FEATURES.md](FEATURES.md) for the full 5-area decomposition with table-stakes / differentiator / anti-feature split and S/M/L complexity tags.
+
 **Must have (table stakes):**
-- CSV import per source (ASN, ICS, PayPal) — declare source on upload; no auto-detection
-- CAMT.053 import (ASN) — preferred over MT940; `EndToEndId` is the stable dedup key
-- Idempotent re-import — fingerprint on `(account_id, posted_at, amount_minor, currency, normalized_counterparty, source_ref)`; `UNIQUE(source_id, external_id)` enforced at DB layer
-- Multi-currency dual-amount from day one — `original_amount`/`original_currency` + `settled_amount`/`settled_currency`; losing FX info is irreversible
-- Transaction list with filters, per-month "this month at a glance" dashboard
-- Manual categorization with per-merchant memory (rules + learned mapping, no LLM)
-- Income vs. internal-transfer detection — ASN→ICS settlement is not income; salary is
-- Single-user auth + localhost-only binding (127.0.0.1)
+- Native desktop chrome (window, dock/taskbar icon, app menu, system tray, OS notifications, dark-mode follows OS)
+- Login / signup / logout / session lifecycle / per-user data scoping (404 not 403 on cross-user access)
+- First-run wizard (max 4 screens: welcome → create first user + recovery codes → solo-vs-shared → data dir + start fresh/restore)
+- In-app whitelisted artisan runner with live stdout/stderr streaming (SAFE / DESTRUCTIVE / FORBIDDEN tiers)
+- Log tailer, queue inspector, `diederik:doctor` runner, `system_alerts` viewer, env snapshot, read-only SQLite query panel
+- In-app version display + "Check for updates" + auto-update install
+- Hippocratic 3.0 LICENSE + SECURITY.md + CONTRIBUTING.md + CODE_OF_CONDUCT.md + README rewrite with the supplied SVG hero
+- File-association handlers (`.eml` / `.csv` double-click opens diederik)
 
-**Should have (differentiators — no prior art for the top two):**
-- **PayPal → ASN/ICS funding-chain resolution** — deterministic via `Transaction ID`; fuzzy fallback on amount + date; learning loop from user confirmations — **no competitor does this natively**
-- **ICS bulk iDEAL settlement decomposition** — match ASN lump iDEAL debit to sum of ICS statement lines; reverse-link each ICS line to parent ASN settlement — **zero prior art in any personal finance tool**
-- ICS next-settlement forecast — "what will I owe ICS this month?"
-- Cash-flow forecast 30/60/90 day — Firefly III explicitly and permanently lacks this
-- What-if scenarios — non-persisted in-memory overlay (cancel Netflix, add planned expense)
-- Recurring detection with approval queue — suggest, never auto-apply
-- Funding-chain drill-down UI — tree/flow from any charge to root funding source
-- IMAP receipt scanning — multi-inbox, app-password, 3-month backfill capability
-- Subscription drift / trend per recurring item
+**Should have (differentiators):**
+- Command palette (⌘K) — Linear/Raycast aesthetic; calm shell
+- Profile selector with quick-switch via app menu
+- Embed v1.0's Horizon dashboard via iframe in Dev Console (loopback-bound; dev-mode-only)
+- Recovery-code-printed-at-signup password reset (no SMTP — desktop context can't send mail without a relay)
+- Owner-resets-partner password flow (partner forgets password → owner clicks "reset" → partner gets a new recovery code)
+- Triple gating on destructive artisan: Dev Mode on + Advanced toggle on + typed-app-name confirm
 
-**Defer (v2+):**
-- Multi-user / partner sharing — schema supports it from v1; UI/auth deferred
-- Receipt-image OCR, PSD2/open-banking APIs, mobile native app, tax/VAT reporting, investment tracking — all explicitly out of scope per PROJECT.md
+**Defer (v2.1+):**
+- `laravel/pulse` (requires Redis cache reconfig)
+- Read/write partner-sharing modes (one-shared-DB read-everything is the v2.0 contract — partner-sharing modes is a Firefly-III-scale scope expansion)
+- OS-keychain shell-out for OAuth secrets (`security` / `secret-tool` / `wincred`) — SQLite-encrypted row keyed by `user_id` covers v2.0
+- SMTP password reset (could ship later via Modules/EmailScan's Gmail OAuth)
+- Anonymous telemetry (off by default in v2.0; opt-in screen if added)
+- Sentry crash reporting (privacy-first apps either go without, or ship dedup-by-stack-hash + no UUID — defer the decision)
+
+**Explicit anti-features:**
+- No telemetry by default
+- No auto-launching agents
+- No SMTP-dependent flows in shipped build
+- No exposing destructive artisan to non-Developer-Mode users
+- No copying OAuth secrets during first-run migration (re-auth instead)
 
 ### Architecture Approach
 
-A **modular Laravel monolith with a five-stage ingestion pipeline** (Acquire → Parse → Normalize → Fingerprint → Load) and a separate async chain-resolution engine. Each bounded domain (Ingestion, Ledger, Categorization, Chains, Recurring, Forecasting) owns its models, services, jobs, and actions under `app/Domain/`. Cross-module coordination via Laravel events (`TransactionImported`) so enrichment modules never touch the Loader. Single `transactions` table with `type` enum — not double-entry — keeps every cross-cutting query a simple `SELECT SUM`. Chain relationships in a `chain_links` table with `state` (candidate/confirmed/rejected) and `confidence` making the learning loop observable. Forecasted occurrences are transient DTOs that are never persisted.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full 8-piece architecture decomposition with new arch-test invariants, data-flow changes, and build-order dependencies.
 
 **Major components:**
-1. **IngestionPipeline** — one `SourceAdapter` per format; same pipeline for all sources; post-load jobs queued asynchronously
-2. **Ledger** (Account, Transaction, Currency, Merchant) — the only module that writes `transactions`
-3. **ChainResolver** (PayPalFundingResolver, IcsSettlementResolver) — async queued job; writes `chain_links` only; never modifies transactions
-4. **RecurrenceDetector** — async post-import job; groups by normalized merchant; creates `RecurringSeries` candidates for user approval
-5. **BalanceProjector + WhatIfEngine** — pure read-only; transient `ForecastedTransaction` DTOs; cache keyed on `max(transactions.updated_at)` for auto-invalidation
-6. **IMAPScanner + TemplateMatcher** — per-sender templates; `InboxScanState` tracks last UID per folder/inbox; UIDVALIDITY-safe
-7. **CurrentUser facade** — the multi-user seam: returns `User::find(1)` in v1; swapped to `auth()->user()` in v2 with no domain code changes
+1. **`Modules/Auth/`** (NEW) — Fortify-backed login/signup/logout, profile selector, `is_developer` flag, `CurrentUserProvider` interface binding. Becomes the only module that imports `Illuminate\Contracts\Auth\Factory`.
+2. **`Modules/Desktop/`** (NEW) — All `Native\Laravel\*` imports localized here. Owns: `SystemTrayService`, `AppMenuBuilder`, `FileOpenRouter`, `NativePhpEventListener`. Other modules consume via `Modules\Desktop\Public\Contracts\*` — keeps NativePHP off-bundle-able for headless test runs.
+3. **`Modules/DevMode/`** (NEW) — In-app developer console; gated by `User::is_developer` + `EnsureDeveloperMode` middleware. Owns: `ArtisanCommandRegistry` (SAFE/DESTRUCTIVE/FORBIDDEN allowlist), `DevConsolePage`, `LogTailer`, `QueueInspector`, `DoctorPanel`, `ConfigInspector`.
+4. **`Modules/Core/Public/Services/AppPaths`** (NEW, in existing Core module) — `UserDataPath` contract resolving per-OS paths via NativePHP's `Application::storagePath()`. Single source of truth for any code that touches the filesystem. Replaces every direct `database_path()` / `storage_path()` / `base_path()` call.
+5. **One shared SQLite per machine** (data-flow transformation) — `database/database.sqlite` → `~/Library/Application Support/diederik/data.sqlite` (macOS), `%APPDATA%\diederik\data.sqlite` (Windows), `~/.config/diederik/data.sqlite` (Linux). Backups + per-user OAuth secrets follow. Migration wizard handles v1.0 → v2.0 first-launch flow.
+6. **Queue rewire** (data-flow transformation) — `redis` driver (v1.0 dev) → `database` driver (shipped build); Horizon stays for `DIEDERIK_RUNTIME=herd` only; `ShouldBeUniqueUntilProcessing` jobs migrate their `uniqueVia()` lock store to `database`.
+7. **Per-user OAuth secrets** (data-flow transformation) — single `storage/app/secrets/imap.json` chmod-600 → SQLite-encrypted `oauth_secrets` table keyed by `user_id`, encrypted via `APP_KEY`. `OAuthSecretsRepository` swap; existing `PLT-03` invariant generalises to "secrets never leave SQLite".
+8. **GitHub Actions CI/CD + auto-update plumbing** — `.github/workflows/ci.yml` (PR gates: Larastan L10 strict + Pint + Pest on ubuntu-latest), `.github/workflows/release.yml` (tag-triggered matrix: macOS 14 + Windows 2025 + Ubuntu 24.04 + signing + notarization + electron-updater manifest publish to GitHub Releases).
+
+**~20 new `BoundaryArchTest` invariants** (enumerated in ARCHITECTURE.md), including: `noAuthFacadeOrHelper` (extends DI-only rule), `noStoragePathHardCodedOutsideUserDataPathService`, `noNativePhpImportsOutsideDesktopModule`, `noHorizonImportsInShippedBuildCode`, `noUserIdScopeBypass`, `noCurrentUserResolutionInJobConstructor` (jobs take `int $userId`, not the contract — request guard is gone post-dispatch).
 
 ### Critical Pitfalls
 
-1. **Floating-point money storage** — store all amounts as signed BIGINT minor units (cents); forbid REAL/FLOAT columns via CI grep gate; any float written to the DB produces permanently corrupted balances with no fix short of full re-import
+Top 3 from [PITFALLS.md](PITFALLS.md) (21 total: 14 critical, 7 moderate):
 
-2. **Transaction identity from free-text description** — fingerprint must use `(account_id, posted_at, amount_minor, currency, counterparty_normalized, source_ref)` and never include free-text; use CAMT.053 `EndToEndId`/`AcctSvcrRef` as primary stable source reference; description text is unstable across exports
+1. **Hard-coded `database/database.sqlite` path breaks inside NativePHP** — Symptoms: `SQLSTATE[HY000]: General error: 8 attempt to write a readonly database` on first user action because PHP is running inside a read-only `app.asar` bundle. **Prevention:** `AppPaths` / `UserDataPath` abstraction lands **Phase B day-one** before any NativePHP integration; arch test `PKG-01` forbids `database_path()` / `storage_path()` / `base_path()` outside the new service; CI grep gate enforces it.
 
-3. **PayPal CSV is an event log, not a transaction log** — group by `Transaction ID` / walk `Reference Txn ID` chains before persisting; fee rows are enrichment; "Transfer to bank" rows are funding-chain hints to ASN/ICS, not expenses; failing this produces monthly totals that never reconcile
+2. **First-run migration corrupts v1.0 production data** — Symptoms: developer opens v2.0, app silently copies a WAL-mode SQLite mid-write, partner opens app, sees a corrupt DB or empty DB; OAuth secrets leak to the new user-data dir. **Prevention:** Explicit migration wizard ("Start fresh" / "Import from v1.0" / "Quit"); `VACUUM INTO` against a read-only attached source; sentinel file prevents wizard re-runs; OAuth secrets NOT auto-copied (re-auth prompt); pre-migration rollback snapshot; v1.0 launchd plists uninstalled before import; UAT phase before public release.
 
-4. **PHP 8.4 ext-imap removal** — configure `webklex/laravel-imap` for pure-PHP socket driver explicitly; `composer.json` must not contain `"ext-imap": "*"`; CI must include PHP 8.4; cheap to do right on day one, expensive to discover after years of deployment
+3. **Horizon/Redis absent in shipped build silently kills chain resolution** — Symptoms: chain-resolver jobs dispatch to a non-existent Redis, fail in background, forecasts ignore fuzzy resolution, partner doesn't see the Netflix → ICS → ASN chain. **Prevention:** **Drop Horizon from shipped build entirely.** Use NativePHP's `queue_workers` config + SQLite `database` queue driver. `ShouldBeUniqueUntilProcessing` lock moves to `Cache::lock()` against database driver (officially supported in Laravel 11+). Replace Horizon dashboard with a bespoke job inspector inside `Modules/DevMode/` (~200-line Livewire component reading `jobs` + `failed_jobs` directly). End-to-end Pest test proves chain resolution works against the `database` driver under concurrent load.
 
-5. **Missing `user_id` on every domain table** — add `user_id` (nullable v1) to every domain table including transactions, accounts, chain_links, categorization_rules, categories, recurring_series, merchants, inbox_scan_state; wrap all queries in `BelongsToUser` trait; retrofitting this after years of data is a full schema migration with no clean backfill path
-
-6. **ICS settlement exact-match logic** — ICS statements are paid in installments with overpayments carrying forward and refunds arriving after statement close; matcher must use `amount within ±€5 / ±2%` across `±10-day window`; model a `card_statement` entity with partial settlement tracking; a boolean `is_settled` is insufficient
-
----
+**Other critical pitfalls** (full coverage in PITFALLS.md): `Auth::user()` facade leakage (Phase A — land `CurrentUserProvider` first + arch-test ratchet), missing `where('user_id', ...)` in queries (Phase A — extend `BelongsToUser` global scope + cross-user 404 test set), destructive artisan commands behind web UI (Phase E — triple-gating), unsigned auto-update bypasses signing (Phase G — signature verification + Ed25519 publisher pin), `.env` leaks into bundle (Phase F — `.env.bundled` template + per-install `APP_KEY` regen + gitleaks scan), code-signing secrets exposed to forked PRs (Phase F — `pull_request_target` semantics + environment-scoped secrets), Apple Hardened Runtime entitlements clash with bundled PHP (Phase D/F — `com.apple.security.cs.allow-unsigned-executable-memory` + JIT-disable), Hippocratic 3.0 mislabelled as OSI-approved (Phase H — README says "source-available", not "open source"; SPDX `Hippocratic-3.0`; NOTICE file explains the trade-off).
 
 ## Implications for Roadmap
 
-### Phase 1: Foundation + Vertical Slice (ASN CSV end-to-end)
-**Rationale:** Prove the entire pipeline — schema, fingerprinting, idempotency, one importer, one list view — before building any second source. Every downstream feature depends on the transaction model being correct. This is also the moment to lock in the non-negotiable decisions at near-zero cost: integer-cents, user_id everywhere, pure-PHP IMAP, WAL backup. Getting them wrong here costs the entire project.
+Based on research, the suggested phase structure follows the **strict dependency-driven 8-phase order** that ARCHITECTURE and PITFALLS converged on, with one additional phase ahead of public release for v1.0 UAT close-out and a final beta-cycle phase.
 
-**Delivers:** ASN CSV import, idempotent re-import verified by test (re-import same file twice → zero new rows), canonical transaction model, per-month dashboard in/out/remaining, manual categorization with per-merchant memory, single-user auth + localhost binding, SQLite WAL + `db:backup` via `VACUUM INTO`.
+### Phase 12 (A): Multi-User Activation
+**Rationale:** No NativePHP integration depends on it, but the desktop bundle needs auth before it ships. Landing first means every subsequent phase can rely on a real `CurrentUserProvider`. PITFALLS #4 + #5 explicitly require this be first.
+**Delivers:** `Modules/Auth/`, `CurrentUserProvider` interface, Fortify activation, login/signup/logout/recovery-code UI in Flux+Volt, `is_developer` flag, `BelongsToUser` global scope extension, cross-user 404 test set per route, password-reset-via-recovery-codes + owner-resets-partner flow.
+**Addresses:** MULTI-01…05 from FEATURES.
+**Avoids:** PITFALL #4 (`Auth::user()` smuggling), PITFALL #5 (missing `where('user_id')`), PITFALL #7 (SMTP password reset).
 
-**Non-negotiables locked in this phase:**
-- BIGINT minor units for all amount columns — grep gate in CI
-- `user_id` (nullable) + `BelongsToUser` trait on every domain table
-- `UNIQUE(source_id, external_id)` + `UNIQUE(account_id, fingerprint)` at DB layer
-- `webklex/laravel-imap` pure-PHP driver configured (no ext-imap)
-- SQLite WAL mode + `db:backup` artisan command
+### Phase 13 (B): AppPaths + First-Run Migration Wizard
+**Rationale:** AppPaths must precede NativePHP integration (Phase D); migration wizard is the highest-UX-risk piece in v2.0 (PITFALL #2) — earning its own phase. Can run in parallel with Phase A on a separate branch.
+**Delivers:** `UserDataPath` contract + service, `config/database.php` rewrite, every `base_path()` / `database_path()` / `storage_path()` call audited and rewired, `OAuthSecretsRepository` swap to SQLite-encrypted `oauth_secrets` table, `BackupDatabaseCommand` + `RestoreDatabaseCommand` + `BackupFreshnessProbe` updated, inbox drop-folder scanner updated, `MigrateUserDataCommand` + first-run wizard ("Start fresh" / "Import from v1.0" / "Quit"), arch test forbidding path helpers outside service, grep gate in CI.
+**Addresses:** PKG-01 + PKG-02 from FEATURES.
+**Avoids:** PITFALL #1 (read-only bundle paths), PITFALL #2 (migration data loss).
 
-**Avoids:** Pitfalls 1 (float money), 2 (unstable identity), 10 (WAL backup), 11 (user_id), 12 (inconsistent amount scales)
+### Phase 14 (C): Queue Rewire + Horizon Carve-out
+**Rationale:** Required before NativePHP integration so the shipped build has a working queue driver. Audit of every `ShouldBeUniqueUntilProcessing` job + lock-store migration is non-trivial.
+**Delivers:** `QUEUE_CONNECTION=database`, `cache.locks_store=database`, Horizon gated on `DIEDERIK_RUNTIME=herd`, audit of every `uniqueVia()` job, chain-resolution end-to-end Pest test against `database` driver under concurrent load, removal of `predis/predis` from prod `require` (move to `require-dev`) if no other dep needs it.
+**Addresses:** PKG-03 from FEATURES.
+**Avoids:** PITFALL #3 (silent chain-resolution death).
 
----
+### Phase 15 (D): Desktop Shell (NativePHP Integration)
+**Rationale:** Depends on A (auth) + B (paths) + C (queue). First phase where the app actually runs as a desktop binary on the developer's machine.
+**Delivers:** `Modules/Desktop/`, `nativephp/desktop ^2.2` install + config, native chrome (window/tray/menu/notifications/dark-mode follow-OS/file-association handlers for `.eml`+`.csv`), `SystemTrayService` + `AppMenuBuilder` + `FileOpenRouter` + `NativePhpEventListener`, PHP 8.4 bundling validation, NativePHP-vs-DI-rule spike, macOS Hardened Runtime entitlements file.
+**Uses:** `nativephp/desktop`, `nativephp/php-bin`.
+**Implements:** Architecture component #2 (Desktop module).
 
-### Phase 2: Full Ingestion Suite (ICS + PayPal + multi-currency)
-**Rationale:** Add the two remaining primary sources before chain resolution, which requires all three. Multi-currency dual-amount storage must be in place before any ICS or PayPal row lands — it cannot be retrofitted.
+### Phase 16 (E): Developer Mode UI
+**Rationale:** Depends on A (auth — `is_developer` flag) and D (desktop shell — the dev console is a desktop-runtime feature). The user explicitly wants this; lands before public release so partners and contributors have it.
+**Delivers:** `Modules/DevMode/`, `EnsureDeveloperMode` middleware, `ArtisanCommandRegistry` with SAFE/DESTRUCTIVE/FORBIDDEN tiers, triple-gating modal for destructive commands, live-streaming stdout/stderr `DevConsolePage`, `LogTailer` with Monolog redaction processor (no OAuth tokens in tailed logs), `QueueInspector` (replaces v1.0's Horizon dashboard for shipped builds), `DoctorPanel`, `ConfigInspector`, embedded Horizon iframe (dev mode only), optional `spatie/laravel-activitylog ^4.12` for audit of destructive runs.
+**Addresses:** DEVUI-01…05 from FEATURES.
+**Avoids:** Destructive artisan-via-web pitfall, log-tailer-leaks-secrets pitfall.
 
-**Delivers:** ICS CSV/Excel import with dual-amount FX preservation, PayPal CSV import with `Transaction ID` roll-up (fees as enrichment, not separate transactions, "Transfer to bank" tagged as funding-chain hints), income vs. internal-transfer heuristic detection, transfer-pair linking.
+### Phase 17 (F): CI/CD Pipeline + Code Signing
+**Rationale:** Depends on D (desktop shell — the build target must exist) and E (dev mode — for "internal dev build" testing). Apple notarization + Azure Trusted Signing are the longest single integration block (~2-3 days).
+**Delivers:** `.github/workflows/ci.yml` (PR gates: Larastan L10 strict + Pint + Pest, narrow matrix, TZ=Europe/Amsterdam, 3-times-green stability check), `.github/workflows/release.yml` (tag-triggered, macOS 14 + Windows 2025 + Ubuntu 24.04, electron-builder config, GitHub Encrypted Secrets for Apple Developer ID + Azure Trusted Signing, CODEOWNERS on workflows, `pull_request_target`-safe secret handling), per-install APP_KEY regen at first launch, `.env.bundled` template, gitleaks scan.
+**Avoids:** Secrets-in-workflow-logs pitfall, fork-PR secret exposure, signing on every PR (only on tag).
 
-**Avoids:** Pitfall 3 (PayPal event log), Pitfall 9 (FX divergence), "settlement counted as income" bug
+### Phase 18 (G): Auto-Update Plumbing
+**Rationale:** Depends on F (signing infrastructure must exist for signed update artifacts). Auto-update must verify signatures or it bypasses every signing investment.
+**Delivers:** `electron-updater` wired through `Modules\Core\Public\Services\ElectronUpdateChannel`, GitHub Releases as update channel, Ed25519 publisher pin, "skip this version" UX, "you're on an old version" prompt, `SystemAlertsBanner` integration, signature-verification Pest test, first-install-can't-auto-update documentation for the beta partner.
 
-**Research flag:** Needs phase research — ICS CSV column layout and PayPal event-type taxonomy need empirical validation against real exports before writing adapters.
+### Phase 19 (H): Public Release Boundary
+**Rationale:** Final pre-public scope — depends on every earlier phase. Catches anything that should be private but leaked. Big surface area, but per-item small.
+**Delivers:** Deep Modules code review across 14 modules (cross-module hygiene + DI compliance + dead code + perf smells), GSD-leakage redaction sweep across runtime code + comments + views + error messages + log lines, Hippocratic License 3.0 LICENSE file + NOTICE explainer + SPDX `Hippocratic-3.0` in composer.json, `SECURITY.md` + `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`, README rewrite with the supplied SVG as hero + install instructions per platform + screenshots of every major view (committed alongside the brand-asset import), `resources/brand/logo.svg` committed + PNG exports for installer bundles, renderer-JSON audit (no secrets table leak), "Where is my data?" docs page, export-everything UX.
 
----
+### Phase 20 (UAT): v1.0 UAT Close-Out
+**Rationale:** User explicitly chose to close out the 25 deferred UAT scenarios + 3 `human_needed` verification artifacts inside v2.0 before public release. Sits between H (release boundary) and BETA so anything found during UAT is fixed before the partner sees it.
+**Delivers:** Walk-through of all 25 UAT scenarios across Phases 03 / 04 / 06 / 08 / 11 with real data, resolution of 3 `human_needed` artifacts, divergence-from-synthesised-fixtures fixes, regression coverage for any bugs found.
 
-### Phase 3: Chain Resolution (PayPal + ICS Settlement) — the killer differentiators
-**Rationale:** The two headline differentiators. Both require all three source importers to be stable. This is the core value of the product. Chain resolution runs async (queued job) — architecture designed for this from Phase 1.
-
-**Delivers:** PayPal → ASN/ICS funding-chain resolution (deterministic via reference ID; fuzzy with confidence scoring; user confirmation queue; auto-promotion after N confirmations), ICS bulk iDEAL settlement decomposition (tolerant amount/date matching, partial-payment + overpayment + carry-forward handling, `chain_links` with sum verification invariant), ICS next-settlement forecast, funding-chain drill-down UI, fixed monthly payments view with chain icons.
-
-**Key constraints:** `ChainLink` has `state`/`confidence`/`evidence`; resolver writes `chain_links` only; ICS matcher uses ±€5/±2%/±10-day tolerance; per-user job uniqueness prevents parallel resolution.
-
-**Avoids:** Pitfall 4 (ICS settlement collapses), Pitfall 9 (cross-source merchant/FX divergence)
-
-**Research flag:** HIGH need for phase research on ICS CSV/Excel structure and ASN CAMT.053 iDEAL settlement field layout — no public documentation; empirical validation against real exports required before writing the resolver.
-
----
-
-### Phase 4: IMAP Receipt Scanning + Email Parsers
-**Rationale:** Email scanning fills gaps for transactions that only appear as receipts (Google Play, etc.). Comes after chain resolution because receipts enrich existing chains, not the core ledger. Rate-limiting pitfall is severe enough to require well-designed background queue before touching a real inbox.
-
-**Delivers:** IMAP multi-inbox scanning (Gmail/iCloud/Outlook) with app-password auth, UID-based incremental sync with UIDVALIDITY handling, rate-limit-safe sequential single-connection fetching with exponential backoff, 3-month backfill via artisan command, per-sender template matchers (PayPal, ICS, Google Play), `.eml`/`.mbox` file import, generic low-confidence fallback with user review queue, launchd plist for macOS scheduling.
-
-**Non-negotiables:** Pure-PHP IMAP driver; single connection per inbox, sequential UID fetch; `InboxScanState` with `last_uid` + `uid_validity`; "Scan now" enqueues, never blocks HTTP.
-
-**Avoids:** Pitfalls 5 (PHP 8.4 IMAP removal), 6 (Gmail rate-limiting / lockout), 7 (HTML email parsing fragility)
-
-**Research flag:** Needs phase research — Gmail and iCloud rate-limit behavior under real backfill must be tested before setting queue concurrency/backoff parameters. Per-sender templates need real anonymized email fixtures as test corpus.
-
----
-
-### Phase 5: Recurring Detection + Cash-Flow Forecasting
-**Rationale:** Recurring detection requires ≥3 months of imported history. Cannot come earlier. Order is strict: imports → categorization → recurring → income detection → forecasting → what-if.
-
-**Delivers:** Recurring series detection (group by normalized merchant, median interval, cadence snap to weekly/monthly/quarterly/yearly, ±25% amount tolerance, price-change detection), always-suggest-never-auto-apply approval queue, per-occurrence amount tracking (not fixed series amount), 30/60/90-day per-account balance projection, surplus/shortfall threshold alerts, what-if scenarios as in-memory `WhatIfScenario` value objects (never persisted, no `save()` method), comparison view baseline vs. scenario, forecast displayed with uncertainty range (not single-point precision).
-
-**Avoids:** Pitfalls 8 (recurring brittleness on price changes), 15 (what-if state leaking into persisted state), 19 (forecast false precision)
-
----
-
-### Phase 6: Polish + Operational Hardening
-**Rationale:** Makes the app reliable as a daily-use tool. Launchd automation, health monitoring, migration safety are low-risk to defer and high-distraction during feature development.
-
-**Delivers:** launchd plist files for queue worker + scheduler + inbox scanner, health-check dashboard ("last successful scan: X hours ago"), `db:backup` with nightly `VACUUM INTO` + `PRAGMA integrity_check` verification, CAMT.053 ASN import (preferred; replaces MT940 as primary), MT940 fallback, subscription drift/trend, export to CSV/JSON, per-transaction notes, empty-state UX, post-scan summary, migration-safety pre-backup hook.
-
-**Avoids:** Pitfalls 10 (WAL backup corruption), 13 (scheduler/queue silent failures), 17 (migration safety with historical data), 18 (chain viz with no actionable affordances)
-
----
+### Phase 21 (BETA): Invite-Only Beta Cycle
+**Rationale:** Last phase. Validates everything else on a real partner machine before opening the repo publicly. ING-09 stays deferred — out of scope.
+**Delivers:** Invite-only release to partner + 1-2 others, fresh-account UAT on macOS + Windows, OAuth callback validation on partner's browsers, NativePHP first-run permission prompts validated, "where is my data?" answered from a real install, 1-2 weeks of daily-use feedback collected, blocker fixes, GitHub Issues link wired into the app, decision-gate: open repo publicly or run another beta round.
 
 ### Phase Ordering Rationale
 
-The strict dependency graph enforces the above order. Idempotency must exist before the second source is added. Multi-currency must be in the schema before ICS or PayPal rows land. Chain resolution requires all three source importers. Recurring detection requires ≥3 months of history. Forecasting requires recurring detection. What-if requires forecasting.
+- **Dependencies are strict and load-bearing.** A (auth) → B (paths) — parallel-able. C (queue) depends on B (config paths) + A (per-user uniqueness). D (desktop shell) depends on A + B + C — desktop is the first phase where the app runs as a native binary. E (dev mode) depends on A (is_developer) + D (desktop runtime). F (CI/CD) depends on D + E. G (auto-update) depends on F (signed artifacts). H (release boundary) depends on every earlier phase. UAT before BETA so beta starts from a known-good baseline. BETA last.
+- **Three-new-modules pattern (Auth / Desktop / DevMode)** keeps NativePHP and dev-mode concerns isolated from the existing 11 domain modules. New `BoundaryArchTest` invariants enforce the boundary. No existing module needs more than constructor changes to consume `CurrentUserProvider`.
+- **Horizon-drop is a milestone-level decision, not per-phase** — surfaces in Phase C (the actual rewire), but assumed by D, E, F, G as a baseline.
+- **AppPaths-first** is the single most important sequencing rule. Every PITFALL-aware researcher independently flagged it.
 
-Chain resolution (Phase 3) precedes IMAP (Phase 4) because CSV sources produce the bulk of transactions. IMAP receipts are enrichment — they fill gaps in the chain, not the core ledger.
+### Research Flags
 
----
+Phases likely needing deeper research during planning:
+- **Phase 13 (B):** First-run migration UAT — the developer's real v1.0 SQLite is the worst possible test subject; needs a recoverable test environment + UAT plan
+- **Phase 15 (D):** NativePHP file-association handler behavior on Windows + Linux (docs are macOS-leaning); 2-day spike
+- **Phase 17 (F):** Apple notarization workflow on GitHub Actions runners; Azure Trusted Signing for Windows (untested with real code in this project); Linux `.AppImage` + `.deb` installer validation
+- **Phase 18 (G):** electron-updater signature verification across all three platforms; first-install-can't-auto-update UX
+- **Phase 21 (BETA):** Beta cohort >1 user concurrency on the same SQLite (file-locking behaviour under WAL)
+
+Phases with standard patterns (skip deeper research):
+- **Phase 12 (A):** Fortify integration is well-documented; CurrentUserProvider already exists in v1.0
+- **Phase 14 (C):** `database` queue driver + `Cache::lock()` pattern is canonical Laravel 11+
+- **Phase 16 (E):** Bespoke Livewire component pattern is the v1.0 default
+- **Phase 19 (H):** Cross-module review + license + docs is standard release hygiene
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Every library version verified against Packagist May 2026; PHP 8.4 ext-imap removal confirmed via official PHP docs; Laravel 12 official release notes |
-| Features | HIGH (table stakes) / MEDIUM (chain resolution) | Table stakes verified across Lunch Money, Actual, Firefly III, Monarch official docs; ICS settlement is novel inference with zero prior art |
-| Architecture | HIGH (Laravel patterns) / MEDIUM (chain-resolution specifics) | Modular monolith + pipeline + event-driven enrichment are established; ChainLink confidence model sound but untested against real ICS/PayPal data |
-| Pitfalls | HIGH (money/IMAP/SQLite/schema) / MEDIUM (recurring/chain heuristics) | Float money, IMAP removal, SQLite WAL backup verified via official sources; ICS-specific quirks require empirical confirmation |
+| Stack | HIGH | All package versions verified against Packagist + GitHub Releases 2026-05-19. Only gap: PHP 8.5 bundling (10-min Larastan-L10-on-8.4 spike validates the workaround; trivially recoverable). |
+| Features | HIGH | Desktop shell + multi-user patterns cribbed from Linear / Slack / 1Password / Tinkerwell with sources cited. Password-reset-without-SMTP required design invention; recovery-codes + CLI-fallback is the lowest-risk of three evaluated options. |
+| Architecture | HIGH | All integration points with v1.0 invariants read directly from the codebase. Build order derived from dependency analysis, not opinion. AppPaths abstraction follows v1.0's `Modules/Core/Public/Services/*` pattern. |
+| Pitfalls | HIGH (critical 3) / MEDIUM (moderate 7) | Critical pitfalls have concrete arch-testable prevention strategies. Moderate pitfalls require phase-specific spikes during v2.0 execution; none are blockers. |
 
-**Overall confidence:** HIGH for the foundation and stack. MEDIUM for the domain-novel chain resolution specifics.
+**Overall confidence:** HIGH
 
-### Gaps to Address During Phase Research
+### Gaps to Address
 
-- **ICS CSV/Excel exact column layout:** Not publicly documented. Confirm field names, FX column positions, statement-period grouping against a real ICS export before writing `IcsCsvAdapter`. Address in Phase 2 planning.
-- **PayPal event-type taxonomy:** Which `Type` values to keep vs. skip needs empirical validation against the user's actual PayPal CSV history. Address in Phase 2 planning.
-- **ASN CAMT.053 iDEAL settlement field:** The exact representation of the ICS iDEAL settlement debit in ASN CAMT.053 needs confirmation from a real export. Matching key for Phase 3.
-- **IMAP rate-limit thresholds:** Gmail/iCloud real-world throttling thresholds. Test backfill on a real inbox during Phase 4 planning.
-- **Annual recurring detection minimum history:** Detector needs ≥13 months of data to confirm yearly subscriptions.
+- **PHP 8.5-vs-8.4 in shipped bundle** — `nativephp/php-bin` 1.1.1 ships 8.1–8.4 only; project pin is `^8.5`. Run a Larastan-L10-on-8.4 spike during Phase B start; if it passes, bundle 8.4 and keep dev pin at 8.5 + add an 8.4 axis to the PR-gate matrix.
+- **Windows code-signing pricing + provider final pick** — Recommended Azure Trusted Signing ($10/mo, GitHub-hosted-runner compatible). Validate during Phase F start before committing the matrix.
+- **First-launch v1.0 → v2.0 migration UX** — Native Electron modal vs in-app Livewire splash; how to discover old install path heuristically (`$HOME/code/diederik/database/database.sqlite`? Read Herd's pinned-sites list?). Decide during Phase B planning.
+- **Anonymous install UUID for crash reporting** — Even an opaque UUID is identifying data. If Sentry ships (deferred decision), recommend dedup-by-stack-hash + no UUID. Re-evaluate at Phase 21 / BETA.
+- **Hippocratic License 3.0 dependency-bundling compatibility** — NativePHP / Electron's NPM-side dependencies have their own licenses; audit during Phase H to confirm bundling-and-redistribution is OK under HL3.
+- **macOS notarization timing in CI** — First notarization can take 5-15 minutes; CI matrix needs a generous timeout. Verify in Phase F.
+
+## Sources
+
+### Primary (HIGH confidence)
+- [NativePHP Desktop v2 — official docs](https://nativephp.com/docs/desktop/2/) — installation, configuration, files, databases, queues, building, updating, menu, application
+- [NativePHP v2 announcement](https://nativephp.com/blog/nativephp-for-desktop-v2-released)
+- [nativephp/desktop on Packagist](https://packagist.org/packages/nativephp/desktop)
+- [nativephp/php-bin on Packagist](https://packagist.org/packages/nativephp/php-bin)
+- [Laravel 13 release notes](https://laravel.com/docs/13.x/releases)
+- [Laravel 13 — Artisan, Passwords, Queues docs](https://laravel.com/docs/13.x/)
+- [laravel/fortify on Packagist](https://packagist.org/packages/laravel/fortify) — 1.37.2, 2026-05-15
+- [laravel/horizon on Packagist](https://packagist.org/packages/laravel/horizon)
+- [apple-actions/import-codesign-certs v7.0.0](https://github.com/apple-actions/import-codesign-certs)
+- [Azure/trusted-signing-action v2.0.0](https://github.com/Azure/trusted-signing-action)
+- [electron-builder Auto-Update + Code-Signing docs](https://www.electron.build/auto-update.html)
+- [Apple — Configuring the Hardened Runtime](https://developer.apple.com/documentation/xcode/configuring-the-hardened-runtime)
+- [Hippocratic License 3.0 — firstdonoharm.dev](https://firstdonoharm.dev/learn/)
+- [Hippocratic License FAQ (intentional OSI/OSD non-compliance)](https://github.com/EthicalSource/hippocratic-license/blob/main/content/faq.md)
+- [SPDX license-list-XML — Hippocratic 3.0 listing](https://github.com/spdx/license-list-XML/issues/1393)
+
+### Secondary (MEDIUM confidence)
+- [Distributing NativePHP Apps with Auto-Update Support — TheCodingDev](https://www.thecodingdev.com/2025/04/distributing-nativephp-apps-with-auto.html)
+- [Code Signing and Security Considerations for NativePHP Apps — TheCodingDev](https://www.thecodingdev.com/2025/04/code-signing-and-security.html)
+- [Doyensec ElectronSafeUpdater reference](https://github.com/doyensec/ElectronSafeUpdater)
+- [Linear — How we redesigned the Linear UI (part II)](https://linear.app/now/how-we-redesigned-the-linear-ui)
+- [Raycast Manual — Search Bar / command palette](https://manual.raycast.com/search-bar)
+- [Firefly III — Multi-User documentation + GitHub #6331 retrospective](https://docs.firefly-iii.org/how-to/firefly-iii/features/multi-user/)
+- [Slack — Switch between workspaces (profile selector pattern)](https://slack.com/help/articles/1500002200741)
+- [1Password — How to use multiple accounts + recovery codes](https://blog.1password.com/introducing-1password-recovery-codes/)
+- [Sentry Electron SDK — privacy + native crash docs](https://docs.sentry.io/platforms/javascript/guides/electron/)
+- [Signal — Debug Logs and Crash Reports policy](https://support.signal.org/hc/en-us/articles/360007318591)
+
+### Tertiary (LOW confidence)
+- `cleaniquecoders/laravel-artisan-runner` (1 GitHub star, evaluated and rejected for bespoke approach)
+- `stepanenko3/nova-command-runner` (Nova-specific reference pattern only)
+- Beekeeper Studio + TablePlus desktop dev-tooling UX (referenced as design precedent, not direct dependency)
 
 ---
-*Research completed: 2026-05-12*
+*Research completed: 2026-05-19*
+*Ready for roadmap: yes*
