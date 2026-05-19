@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Console\Support;
 
 use Carbon\CarbonImmutable;
+use Throwable;
 
 /**
  * Pure-logic policy for the `storage/app/backups/` retention sweep
@@ -109,13 +110,25 @@ final class BackupRetentionPolicy
         }
 
         // Weekly: take the 4 most-recent matched files whose date is a Sunday.
+        // The regex captures digit-shaped components but does not enforce
+        // calendar validity — a filename like diederik-2026-13-99-250000.sqlite
+        // passes the regex and would crash CarbonImmutable::parse() with
+        // an InvalidFormatException, breaking the otherwise-pure policy
+        // and aborting the retention sweep mid-flight. Treat calendar-
+        // invalid dates the same as non-Sunday entries (skipped, never
+        // promoted into the keep set) so a malformed filename never
+        // halts the sweep.
         $sundayKeepIndexes = [];
         $sundayCount = 0;
         foreach ($matched as $entry) {
             if ($sundayCount >= self::SUNDAY_KEEP_COUNT) {
                 break;
             }
-            $dow = CarbonImmutable::parse($entry['date_only'])->dayOfWeek;
+            try {
+                $dow = CarbonImmutable::parse($entry['date_only'])->dayOfWeek;
+            } catch (Throwable) {
+                continue;
+            }
             if ($dow === $sundayDow) {
                 $sundayKeepIndexes[$entry['index']] = true;
                 $sundayCount++;
