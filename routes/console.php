@@ -215,7 +215,17 @@ Schedule::call(function (Dispatcher $bus, ScenarioQuery $scenarioQuery): void {
 // every subsequent scheduled run silently. A 60-minute TTL recovers
 // automatically while still spanning the longest realistic backup
 // duration on a multi-gigabyte personal-finance DB.
-Schedule::command('db:backup')
+//
+// `--force` bypasses the data_version smart-skip so a quiet day
+// (operator never opened the dashboard, no commits to the DB) still
+// produces a fresh sidecar. Without --force, two consecutive quiet
+// days would write no .meta.json file and cross the 48h
+// BackupFreshnessProbe::STALE_AFTER_HOURS threshold, producing a
+// false-positive `backup_overdue` banner that no follow-up
+// `db:backup` would clear (still smart-skipping for the same
+// reason). The retention sweep prunes any genuine duplicates so the
+// disk footprint is bounded.
+Schedule::command('db:backup --force')
     ->name('db.backup-daily')
     ->dailyAt('03:00')
     ->withoutOverlapping(60);
