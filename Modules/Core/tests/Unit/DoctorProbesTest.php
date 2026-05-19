@@ -188,7 +188,7 @@ it('BackupFreshnessProbe returns warning AND writes a system_alerts row when no 
     $backupsDir = $this->backupsDir;
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
-    $probe = new BackupFreshnessProbe($files, $clock, $backupsDir);
+    $probe = new BackupFreshnessProbe($files, $clock, $db, $backupsDir);
     expect($probe->label())->toBe('Backup freshness');
 
     $result = $probe->run();
@@ -230,7 +230,7 @@ it('BackupFreshnessProbe returns ok and does NOT write an alert when a fresh sid
         'integrity' => 'ok',
     ]));
 
-    $probe = new BackupFreshnessProbe($files, $clock, $backupsDir);
+    $probe = new BackupFreshnessProbe($files, $clock, $db, $backupsDir);
     $result = $probe->run();
 
     expect($result->severity)->toBe('ok');
@@ -260,13 +260,40 @@ it('BackupFreshnessProbe returns warning AND writes an alert when newest sidecar
         'integrity' => 'ok',
     ]));
 
-    $probe = new BackupFreshnessProbe($files, $clock, $backupsDir);
+    $probe = new BackupFreshnessProbe($files, $clock, $db, $backupsDir);
     $result = $probe->run();
 
     expect($result->severity)->toBe('warning');
     expect($result->metadata)->toHaveKey('hours_old');
 
     expect(SystemAlert::query()->where('kind', 'backup_overdue')->count())->toBe(1);
+});
+
+it('BackupFreshnessProbe suppresses a second alert row within the 1-hour recency window', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    /** @var Filesystem $files */
+    $files = $this->app->make(Filesystem::class);
+    /** @var Clock $clock */
+    $clock = $this->app->make(Clock::class);
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
+
+    $probe = new BackupFreshnessProbe($files, $clock, $db, $backupsDir);
+
+    // First run writes the row.
+    $probe->run();
+    // Second + third invocations within the same wall-clock minute
+    // must be no-ops on the audit trail — the banner renders one
+    // card per row, so 100 doctor invocations would produce 100
+    // identical cards without this gate.
+    $probe->run();
+    $probe->run();
+
+    expect(SystemAlert::query()->where('kind', 'backup_overdue')->count())
+        ->toBe(1, 'Repeated probe runs within the recency window must not add new alert rows.');
 });
 
 it('WalModeProbe never throws — IO failure is captured as a critical ProbeResult', function (): void {

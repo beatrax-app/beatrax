@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Console\Probes;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
@@ -21,10 +22,11 @@ use Throwable;
  * row so the dashboard banner picks it up on the next page load.
  *
  * The Eloquent write happens through the framework's default model
- * connection (i.e. `SystemAlert::create([...])`). No `DatabaseManager`
- * dependency is required: the model owns its connection resolution and
- * an injected-but-unused readonly property trips
- * `larastan-strict-rules`' `property.onlyWritten` rule.
+ * connection (`SystemAlert::create([...])`). The injected
+ * `DatabaseManager` powers the duplicate-suppression recency check
+ * via the raw Query Builder — the larastan-strict-rules profile
+ * rejects chained Eloquent\Builder calls after Model::query(), so the
+ * existence probe goes through `$this->db->connection()->table(...)`.
  *
  * The directory read + sidecar JSON decode are wrapped in try/catch
  * returning a `critical` `ProbeResult` so the probe never throws.
@@ -36,6 +38,7 @@ final class BackupFreshnessProbe implements Probe
     public function __construct(
         private readonly Filesystem $files,
         private readonly Clock $clock,
+        private readonly DatabaseManager $db,
         private readonly string $backupsPath,
     ) {}
 
@@ -140,20 +143,50 @@ final class BackupFreshnessProbe implements Probe
 
     /**
      * Inserts a system-wide `system_alerts(backup_overdue)` row at
-     * `warning` severity. The duplicate-suppression gate lives at the
-     * service-query layer (the banner reads unacknowledged rows only
-     * and groups by kind) so this writes unconditionally — accumulating
-     * a per-doctor-run audit trail.
+     * `warning` severity, gated by a 1-hour recency check: if a
+     * matching unacknowledged row already exists within the last
+     * hour, this is a no-op. The gate mirrors
+     * HealthCheckServiceProvider::recordDriftAlert — running
+     * `diederik:doctor` 100 times in an hour produces at most one
+     * banner card, not 100. The banner renders one card per row
+     * (`@foreach ($alerts as $alert)`), so without this suppression
+     * an audit-trail expectation becomes operator-visible noise.
      *
-     * The write is wrapped in try/catch so a missing system_alerts
-     * table (e.g. probe invoked before migrations have run on a fresh
-     * checkout) does NOT make the probe throw — the Probe contract
-     * forbids that. The alert write is best-effort; the operator-
-     * visible signal is the `warning` ProbeResult the caller returns.
+     * The whole body is wrapped in try/catch so a missing
+     * system_alerts table (e.g. probe invoked before migrations have
+     * run on a fresh checkout) does NOT make the probe throw — the
+     * Probe contract forbids that. The alert write is best-effort;
+     * the operator-visible signal is the `warning` ProbeResult the
+     * caller returns.
      */
     private function recordOverdueAlert(?int $hoursOld): void
     {
         try {
+            // Recency check via the raw Query Builder rather than
+            // Eloquent — the project's larastan-strict-rules profile
+            // rejects chained Eloquent\Builder calls (whereNull / where
+            // / exists) after Model::query(). The write below uses
+            // Eloquent so the timestamp casts + fillable filtering
+            // apply.
+            //
+            // The cutoff is normalised to UTC before serialising into
+            // the query because SQLite's `useCurrent()` /
+            // CURRENT_TIMESTAMP default writes the column in UTC, while
+            // `CarbonImmutable::now()` returns the configured app
+            // timezone. Comparing a local-time Carbon against a UTC
+            // string would silently exclude rows whose UTC clock-time
+            // is earlier than the local-time cutoff, defeating the
+            // duplicate-suppression gate.
+            $cutoff = $this->clock->now()->subHour()->setTimezone('UTC');
+            $recentExists = $this->db->connection()->table('system_alerts')
+                ->where('kind', 'backup_overdue')
+                ->whereNull('acknowledged_at')
+                ->where('created_at', '>=', $cutoff)
+                ->exists();
+            if ($recentExists) {
+                return;
+            }
+
             SystemAlert::create([
                 'user_id' => null,
                 'kind' => 'backup_overdue',
