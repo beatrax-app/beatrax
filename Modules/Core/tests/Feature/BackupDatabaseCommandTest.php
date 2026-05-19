@@ -29,16 +29,17 @@ beforeEach(function (): void {
     // to validate.
     $this->sourcePath = RealSqliteFixture::create('backup-test-source');
 
-    // Rebind the default sqlite connection at the source file so the
-    // command's `database.connections.sqlite.database` lookup resolves
-    // here and VACUUM INTO + PRAGMA data_version read against the
-    // right database.
+    // Rebind the `sqlite` connection at the source file so the
+    // command's VACUUM INTO + PRAGMA data_version read run against
+    // a real on-disk database. Keep the test-default
+    // `sqlite_testing` (`:memory:`) connection in place so
+    // RefreshDatabase + SystemAlert::create() continue working — the
+    // command explicitly uses the named `sqlite` connection for the
+    // VACUUM INTO operation, not the framework default.
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
     $config->set('database.connections.sqlite.database', $this->sourcePath);
 
-    // Purge any cached connection so the next ->connection() call
-    // re-opens against the new path.
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $db->purge('sqlite');
