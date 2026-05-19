@@ -922,3 +922,44 @@ it('does not allow system_alerts to be JOINed onto the transactions table (syste
         "system_alerts must never be JOINed onto the transactions table. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
+
+it('does not allow Laravel facades inside Modules/Core/Internal/Console/ (noFacadeCallsFromCoreConsoleCommands)', function (): void {
+    // Phase 11 invariant: Core's console commands take their
+    // dependencies through constructor DI exclusively. Importing or
+    // calling any `Illuminate\Support\Facades\…` class breaks the
+    // testability contract — facade-rooted calls cannot be substituted
+    // with a mock from the test harness, which kills the artisan-test
+    // story for db:backup, db:restore, diederik:doctor, and
+    // diederik:failed-jobs. The scan walks Modules/Core/Internal/
+    // Console/ recursively, strips block + line comments so PHPDoc
+    // references stay legal, and any remaining facade-namespace
+    // import / FQCN reference adds the file to the failure list.
+    $hits = [];
+    $consoleDir = base_path('Modules/Core/Internal/Console');
+    if (! is_dir($consoleDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($consoleDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+            continue;
+        }
+        $path = $file->getPathname();
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (preg_match('/Illuminate\\\\Support\\\\Facades\\\\/', $stripped) === 1) {
+            $hits[] = $path;
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "Modules/Core/Internal/Console/ commands may not import Illuminate\\Support\\Facades\\*. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
