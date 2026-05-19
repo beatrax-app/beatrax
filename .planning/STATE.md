@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: milestone_complete
+status: completed
 stopped_at: Phase 11 context gathered
-last_updated: "2026-05-19T15:35:37.745Z"
-last_activity: 2026-05-19 -- Phase 11 execution started
+last_updated: "2026-05-19T19:38:48.475Z"
+last_activity: 2026-05-19
 progress:
   total_phases: 11
   completed_phases: 11
   total_plans: 66
-  completed_plans: 62
+  completed_plans: 67
   percent: 100
 ---
 
@@ -226,11 +226,19 @@ Phase-research flags carried from research/SUMMARY.md (to address during plan-ph
 
 ## Deferred Items
 
-Items acknowledged and carried forward from previous milestone close:
+Items acknowledged at v1.0 milestone close on 2026-05-19. Carried forward into the next milestone for human resolution.
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| uat_gap | 03-HUMAN-UAT.md (5 pending scenarios) | partial | 2026-05-19 |
+| uat_gap | 04-HUMAN-UAT.md (2 pending scenarios) | partial | 2026-05-19 |
+| uat_gap | 06-HUMAN-UAT.md (8 pending scenarios) | partial | 2026-05-19 |
+| uat_gap | 08-HUMAN-UAT.md (3 pending scenarios) | partial | 2026-05-19 |
+| uat_gap | 11-HUMAN-UAT.md (7 pending scenarios) | partial | 2026-05-19 |
+| verification_gap | 03-VERIFICATION.md | human_needed | 2026-05-19 |
+| verification_gap | 08-VERIFICATION.md | human_needed | 2026-05-19 |
+| verification_gap | 11-VERIFICATION.md | human_needed | 2026-05-19 |
+| seed | SEED-001-public-release-milestone | dormant | 2026-05-19 |
 
 ## Session Continuity
 
