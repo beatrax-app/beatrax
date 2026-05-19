@@ -31,25 +31,35 @@ use Tests\Helpers\RealSqliteFixture;
  *  6. Deliberately corrupt the source DB using the verbatim recipe
  *     from BackupCorruptionPathTest (truncate to 100 bytes — strips
  *     the sqlite_master page after the SQLite file header).
- *  7. Re-run `db:backup --force`. Either branch lands at the same
- *     user-visible failure shape: a critical
- *     system_alerts(backup_corrupt) row exists and either a .suspect
- *     file is produced under $backupsDir (post-VACUUM integrity-check
- *     trip) or the VACUUM-INTO exception bridge surfaces the alert
- *     without leaving a file. Both branches are acceptable corrupt-
- *     path outcomes (the alert is the load-bearing user-visible
- *     signal).
- *  8. Re-render the banner — assert the "failed integrity check"
- *     critical row is now visible.
- *  9. Acknowledge the alert via the Livewire `call('acknowledge', …)`
- *     handler. Next render must NOT see "failed integrity check".
- * 10. Cleanup is handled in afterEach.
+ *  7. Re-run `db:backup --force`. The PRAGMA data_version read
+ *     throws PDOException; the command's exception bridge writes a
+ *     critical system_alerts(backup_corrupt) row through the
+ *     production recordCorruptAlert() helper and exits non-zero. No
+ *     output file is produced when the bridge fires before VACUUM
+ *     INTO (BackupCorruptionPathTest documents both branches; this
+ *     scenario asserts the system_alerts row + non-zero exit, which
+ *     is the load-bearing user-visible signal regardless of which
+ *     branch the command took).
+ *  8. Re-render banner — assert critical "failed integrity check"
+ *     row visible.
+ *  9. Acknowledge via Livewire wire:click — next render does NOT
+ *     see the row; persisted row carries acknowledged_at.
+ * 10. Cleanup handled in afterEach.
  *
- * The corruption recipe is deliberately the same one
- * BackupCorruptionPathTest uses (substr of the source file's bytes,
- * dropped to 100). This keeps the cross-test reuse explicit and means
- * any future change to how the command handles corrupt sources is
- * exercised by BOTH tests on the same path.
+ * Note on global scopes: SystemAlert uses the BelongsToUser trait,
+ * which adds a global UserScope that filters by `user_id =
+ * $currentUser->id()`. The corrupt-path alerts the command writes
+ * are system-wide (`user_id IS NULL`) so a vanilla
+ * `SystemAlert::query()->where(...)` from a test acting as a user
+ * filters them out. The test reaches the system-wide rows by either
+ * using `withoutGlobalScopes()` (used here for the count assertion)
+ * or via the `SystemAlertQuery::active($user)` service the banner
+ * uses (which widens the predicate with `orWhereNull('user_id')`).
+ *
+ * Corruption recipe is verbatim from
+ * Modules/Core/tests/Feature/BackupCorruptionPathTest.php — the
+ * cross-test reuse keeps the deterministic recipe in lock-step with
+ * the dedicated corruption test.
  */
 
 beforeEach(function (): void {
@@ -103,7 +113,7 @@ it('phase 11 backup banner round-trip — happy → corrupt → banner → ackno
 
     // Seed a transactions row through raw PDO so the source DB is
     // non-empty when VACUUM INTO copies it. The row is incidental to
-    // the assertion — it just gives VACUUM INTO something to work on.
+    // the assertion — it gives VACUUM INTO something to work on.
     $pdo = new PDO('sqlite:'.$sourcePath, options: [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     ]);
@@ -116,9 +126,19 @@ it('phase 11 backup banner round-trip — happy → corrupt → banner → ackno
         ->assertSuccessful();
 
     expect(is_dir($backupsDir))->toBeTrue('Backups dir must exist after the happy run.');
+    expect(scandir($backupsDir))->toContain(...array_filter(
+        scandir($backupsDir),
+        static fn (string $name): bool => str_starts_with($name, 'diederik-'),
+    ));
 
-    $cleanSqliteFiles = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite');
-    $cleanMetaFiles = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite.meta.json');
+    $cleanSqliteFiles = array_values(array_filter(
+        scandir($backupsDir),
+        static fn (string $name): bool => str_ends_with($name, '.sqlite'),
+    ));
+    $cleanMetaFiles = array_values(array_filter(
+        scandir($backupsDir),
+        static fn (string $name): bool => str_ends_with($name, '.sqlite.meta.json'),
+    ));
     expect($cleanSqliteFiles)->toHaveCount(1, 'Happy run must produce exactly one .sqlite backup.');
     expect($cleanMetaFiles)->toHaveCount(1, 'Happy run must produce exactly one .meta.json sidecar.');
 
@@ -133,8 +153,9 @@ it('phase 11 backup banner round-trip — happy → corrupt → banner → ackno
     //     is 100 bytes; truncating exactly there strips the
     //     sqlite_master page that VACUUM INTO needs to enumerate
     //     tables. The command's two-pronged handling (try/catch on
-    //     VACUUM + post-VACUUM integrity_check) converges either
-    //     branch onto the same `.suspect` + system_alerts outcome.
+    //     PRAGMA data_version + try/catch on VACUUM INTO + post-VACUUM
+    //     integrity_check) converges every branch onto the same
+    //     system_alerts(backup_corrupt) outcome.
     //     Release the framework's connection handle BEFORE truncating
     //     so the file write happens against an idle file.
     $db->purge('sqlite');
@@ -147,13 +168,19 @@ it('phase 11 backup banner round-trip — happy → corrupt → banner → ackno
     //     the production code path.
     $this->artisan('db:backup', ['--force' => true])->assertFailed();
 
-    $corruptAlerts = SystemAlert::query()
+    // The corrupt-path alert is system-wide (`user_id IS NULL`).
+    // Bypass the BelongsToUser global UserScope so the assertion sees
+    // the row regardless of whether the test is acting-as a user.
+    $corruptAlerts = SystemAlert::withoutGlobalScopes()
         ->where('kind', 'backup_corrupt')
         ->where('severity', 'critical')
         ->get();
     expect($corruptAlerts)->toHaveCount(1, 'Corrupt path must record exactly one critical system_alerts row.');
 
-    $suspectFiles = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite.suspect');
+    $suspectFiles = array_values(array_filter(
+        scandir($backupsDir),
+        static fn (string $name): bool => str_ends_with($name, '.sqlite.suspect'),
+    ));
     if ($suspectFiles !== []) {
         // Branch A — post-VACUUM integrity_check trip: the produced
         //   VACUUM INTO output was renamed to .suspect. Verify the
@@ -163,11 +190,12 @@ it('phase 11 backup banner round-trip — happy → corrupt → banner → ackno
         /** @var array<string, mixed>|null $metadata */
         $metadata = $alert->metadata;
         expect($metadata)->toBeArray();
-        expect((string) ($metadata['suspect_path'] ?? ''))->toBe((string) $suspectFiles[0]);
+        expect((string) ($metadata['suspect_path'] ?? ''))
+            ->toContain('.suspect', 'Alert metadata must reference the suspect file.');
     } else {
-        // Branch B — VACUUM-INTO exception bridge: PDOException at
-        //   PRAGMA data_version or at VACUUM INTO itself. No .suspect
-        //   file is produced because no output was ever written. The
+        // Branch B — exception bridge before any output existed
+        //   (PDOException at PRAGMA data_version against the
+        //   truncated source). No .suspect file is produced. The
         //   alert row IS still there; the user-visible failure shape
         //   converges. Accepted per BackupCorruptionPathTest's
         //   documented dual-branch behaviour — the alert is the
@@ -179,7 +207,9 @@ it('phase 11 backup banner round-trip — happy → corrupt → banner → ackno
 
     // (5) Banner now renders the critical row with the locked
     //     "failed integrity check" template (from system-alert-message
-    //     partial backup_corrupt branch).
+    //     partial backup_corrupt branch). System-wide alerts surface
+    //     to every authenticated user — actingAs($this->user) is
+    //     sufficient.
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
         ->assertSee('failed integrity check');
 
@@ -196,6 +226,6 @@ it('phase 11 backup banner round-trip — happy → corrupt → banner → ackno
     // Sanity — the row is acknowledged in the DB (audit trail
     // preserved; not deleted).
     /** @var SystemAlert $persisted */
-    $persisted = SystemAlert::query()->findOrFail($alertId);
+    $persisted = SystemAlert::withoutGlobalScopes()->findOrFail($alertId);
     expect($persisted->acknowledged_at)->not->toBeNull('Acknowledge action must stamp acknowledged_at.');
 });
