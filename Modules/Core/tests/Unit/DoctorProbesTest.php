@@ -6,8 +6,12 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
+use Modules\Core\Internal\Console\Probes\ComposerVersionProbe;
+use Modules\Core\Internal\Console\Probes\NodeVersionProbe;
+use Modules\Core\Internal\Console\Probes\PhpVersionProbe;
 use Modules\Core\Internal\Console\Probes\Probe;
 use Modules\Core\Internal\Console\Probes\ProbeResult;
+use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
 use Modules\Core\Models\SystemAlert;
@@ -327,4 +331,33 @@ it('binds WalModeProbe, SynchronousModeProbe, and BackupFreshnessProbe through t
 
     // The SystemClock binding stays intact end-to-end.
     expect($this->app->make(Clock::class))->toBeInstanceOf(SystemClock::class);
+});
+
+it('binds the tool-version probes (PHP / Composer / SQLite CLI / Node) through the container', function (): void {
+    $php = $this->app->make(PhpVersionProbe::class);
+    expect($php)->toBeInstanceOf(PhpVersionProbe::class);
+    expect($php->label())->toBe('PHP');
+
+    $composer = $this->app->make(ComposerVersionProbe::class);
+    expect($composer)->toBeInstanceOf(ComposerVersionProbe::class);
+    expect($composer->label())->toBe('Composer');
+
+    $sqliteCli = $this->app->make(SqliteCliVersionProbe::class);
+    expect($sqliteCli)->toBeInstanceOf(SqliteCliVersionProbe::class);
+    expect($sqliteCli->label())->toBe('SQLite');
+
+    $node = $this->app->make(NodeVersionProbe::class);
+    expect($node)->toBeInstanceOf(NodeVersionProbe::class);
+    expect($node->label())->toBe('Node');
+});
+
+it('PhpVersionProbe reports the current interpreter version as ok when at the minimum', function (): void {
+    $probe = new PhpVersionProbe;
+    $result = $probe->run();
+
+    // PHP 8.5+ is project-mandated. The test environment is on at
+    // least the minimum, so the probe must read ok and embed the
+    // version string in the message.
+    expect($result->severity)->toBe('ok');
+    expect($result->message)->toContain(phpversion());
 });
