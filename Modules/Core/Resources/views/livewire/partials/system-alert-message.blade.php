@@ -59,5 +59,12 @@
         SQLite synchronous level is {{ $currentLevel }} (expected NORMAL/1). Durability semantics may differ from config. Run <code class="rounded bg-amber-100 px-1 text-amber-900">php artisan diederik:doctor</code> for guidance.
         @break
     @default
+        {{-- $alert->message is operator-authored text from
+             BackupDatabaseCommand::recordCorruptAlert,
+             HealthCheckServiceProvider::recordDriftAlert, and
+             BackupFreshnessProbe::recordOverdueAlert. Blade's `{{ }}`
+             expression auto-escapes HTML, so a future module writing
+             an unsanitised string into the column cannot turn into a
+             stored-XSS surface. Never swap this to `{!! !!}`. --}}
         {{ $alert->message }}
 @endswitch
