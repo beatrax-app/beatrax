@@ -15,9 +15,11 @@ use Modules\Core\Internal\Http\Livewire\TopNav;
 use Modules\Core\Internal\Providers\FortifyServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
 use Modules\Core\Models\User as CoreUser;
+use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\CurrentUserService;
+use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Services\SystemClock;
 
 /**
@@ -38,6 +40,8 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->register(FortifyServiceProvider::class);
         $this->app->singleton(Clock::class, SystemClock::class);
         $this->app->bind(CurrentUser::class, CurrentUserService::class);
+        $this->app->singleton(SystemAlertQuery::class);
+        $this->app->singleton(AcknowledgeSystemAlert::class);
 
         if (! class_exists(User::class, false)) {
             class_alias(CoreUser::class, User::class);

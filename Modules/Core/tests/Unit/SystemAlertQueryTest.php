@@ -1,0 +1,283 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Core\Models\SystemAlert;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SystemAlertQuery;
+
+uses(RefreshDatabase::class);
+
+/*
+ * SystemAlertQuery is the Public read API over the system_alerts table.
+ * Locks the per-user scope + system-wide carve-out (user_id IS NULL)
+ * and the severity-first ordering the dashboard banner depends on for
+ * a stable critical → warning → info stack.
+ */
+
+beforeEach(function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $this->db = $db;
+
+    $this->userA = User::query()->create([
+        'email' => 'saq-a@diederik.test',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+    $this->userB = User::query()->create([
+        'email' => 'saq-b@diederik.test',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+});
+
+it('scopes active() to the caller user — never returns another user\'s alerts', function (): void {
+    $this->db->connection()->table('system_alerts')->insert([
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'A1',
+            'metadata' => null,
+            'created_at' => '2026-05-20 01:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => $this->userB->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'B1',
+            'metadata' => null,
+            'created_at' => '2026-05-20 02:00:00',
+            'acknowledged_at' => null,
+        ],
+    ]);
+
+    /** @var SystemAlertQuery $query */
+    $query = $this->app->make(SystemAlertQuery::class);
+
+    $messages = $query->active($this->userA)->pluck('message')->all();
+
+    expect($messages)->toBe(['A1']);
+});
+
+it('includes system-wide (user_id IS NULL) rows alongside the caller\'s own rows in active()', function (): void {
+    $this->db->connection()->table('system_alerts')->insert([
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'A-personal',
+            'metadata' => null,
+            'created_at' => '2026-05-20 01:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => null,
+            'kind' => 'wal_mode_missing',
+            'severity' => 'warning',
+            'message' => 'system-wide',
+            'metadata' => null,
+            'created_at' => '2026-05-20 02:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => $this->userB->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'B-other',
+            'metadata' => null,
+            'created_at' => '2026-05-20 03:00:00',
+            'acknowledged_at' => null,
+        ],
+    ]);
+
+    /** @var SystemAlertQuery $query */
+    $query = $this->app->make(SystemAlertQuery::class);
+
+    $messages = $query->active($this->userA)->pluck('message')->all();
+
+    sort($messages);
+    expect($messages)->toBe(['A-personal', 'system-wide']);
+});
+
+it('sorts active() rows critical → warning → info, ordering by created_at ascending within each tier', function (): void {
+    // Insert with a deliberately-shuffled severity sequence + spread
+    // created_at so the severity-first sort cannot be confused with a
+    // chronological accident.
+    $this->db->connection()->table('system_alerts')->insert([
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'wal_mode_missing',
+            'severity' => 'warning',
+            'message' => 'W1',
+            'metadata' => null,
+            'created_at' => '2026-05-20 02:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'C1',
+            'metadata' => null,
+            'created_at' => '2026-05-20 03:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'wal_mode_missing',
+            'severity' => 'info',
+            'message' => 'I1',
+            'metadata' => null,
+            'created_at' => '2026-05-20 01:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'C0',
+            'metadata' => null,
+            'created_at' => '2026-05-20 02:30:00',
+            'acknowledged_at' => null,
+        ],
+    ]);
+
+    /** @var SystemAlertQuery $query */
+    $query = $this->app->make(SystemAlertQuery::class);
+    $messages = $query->active($this->userA)->pluck('message')->all();
+
+    // C0 (critical, earlier) before C1 (critical, later); then W1 (warning);
+    // then I1 (info).
+    expect($messages)->toBe(['C0', 'C1', 'W1', 'I1']);
+});
+
+it('omits acknowledged rows from active()', function (): void {
+    $this->db->connection()->table('system_alerts')->insert([
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'still active',
+            'metadata' => null,
+            'created_at' => '2026-05-20 01:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'already acked',
+            'metadata' => null,
+            'created_at' => '2026-05-20 02:00:00',
+            'acknowledged_at' => '2026-05-20 03:00:00',
+        ],
+    ]);
+
+    /** @var SystemAlertQuery $query */
+    $query = $this->app->make(SystemAlertQuery::class);
+    $messages = $query->active($this->userA)->pluck('message')->all();
+
+    expect($messages)->toBe(['still active']);
+});
+
+it('returns an Eloquent Collection of SystemAlert instances from active()', function (): void {
+    $this->db->connection()->table('system_alerts')->insert([
+        'user_id' => $this->userA->id,
+        'kind' => 'backup_corrupt',
+        'severity' => 'critical',
+        'message' => 'fixture',
+        'metadata' => null,
+        'created_at' => '2026-05-20 01:00:00',
+        'acknowledged_at' => null,
+    ]);
+
+    /** @var SystemAlertQuery $query */
+    $query = $this->app->make(SystemAlertQuery::class);
+    $collection = $query->active($this->userA);
+
+    expect($collection)->toBeInstanceOf(Collection::class);
+    expect($collection->first())->toBeInstanceOf(SystemAlert::class);
+});
+
+it('count() returns the per-user-or-system-wide active row count', function (): void {
+    $this->db->connection()->table('system_alerts')->insert([
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'A',
+            'metadata' => null,
+            'created_at' => '2026-05-20 01:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => null,
+            'kind' => 'wal_mode_missing',
+            'severity' => 'warning',
+            'message' => 'system',
+            'metadata' => null,
+            'created_at' => '2026-05-20 02:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => $this->userB->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'B',
+            'metadata' => null,
+            'created_at' => '2026-05-20 03:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'A-acked',
+            'metadata' => null,
+            'created_at' => '2026-05-20 04:00:00',
+            'acknowledged_at' => '2026-05-20 05:00:00',
+        ],
+    ]);
+
+    /** @var SystemAlertQuery $query */
+    $query = $this->app->make(SystemAlertQuery::class);
+
+    expect($query->count($this->userA))->toBe(2);
+});
+
+it('active(null) returns ONLY system-wide rows when no user is supplied', function (): void {
+    $this->db->connection()->table('system_alerts')->insert([
+        [
+            'user_id' => $this->userA->id,
+            'kind' => 'backup_corrupt',
+            'severity' => 'critical',
+            'message' => 'A-personal',
+            'metadata' => null,
+            'created_at' => '2026-05-20 01:00:00',
+            'acknowledged_at' => null,
+        ],
+        [
+            'user_id' => null,
+            'kind' => 'wal_mode_missing',
+            'severity' => 'warning',
+            'message' => 'system-only',
+            'metadata' => null,
+            'created_at' => '2026-05-20 02:00:00',
+            'acknowledged_at' => null,
+        ],
+    ]);
+
+    /** @var SystemAlertQuery $query */
+    $query = $this->app->make(SystemAlertQuery::class);
+    $messages = $query->active(null)->pluck('message')->all();
+
+    expect($messages)->toBe(['system-only']);
+});
