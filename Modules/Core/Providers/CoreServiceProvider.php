@@ -7,6 +7,7 @@ namespace Modules\Core\Providers;
 use App\Models\User;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Internal\Console\BackupDatabaseCommand;
 use Modules\Core\Internal\Console\DoctorCommand;
 use Modules\Core\Internal\Console\InstallCommand;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
@@ -43,6 +44,17 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(SystemAlertQuery::class);
         $this->app->singleton(AcknowledgeSystemAlert::class);
 
+        // Resolve the SQLite backups directory once and expose it under a
+        // string-keyed binding so tests can swap in a sys_get_temp_dir()
+        // path without touching the developer's real storage/app/backups.
+        // BackupDatabaseCommand picks it up through a contextual binding
+        // below.
+        $this->app->singleton('core.backups_directory', static fn (): string => base_path('storage/app/backups'));
+
+        $this->app->when(BackupDatabaseCommand::class)
+            ->needs('$backupsPath')
+            ->give(fn () => $this->app->make('core.backups_directory'));
+
         if (! class_exists(User::class, false)) {
             class_alias(CoreUser::class, User::class);
         }
@@ -63,6 +75,7 @@ final class CoreServiceProvider extends ServiceProvider
             $this->commands([
                 InstallCommand::class,
                 DoctorCommand::class,
+                BackupDatabaseCommand::class,
             ]);
         }
     }
