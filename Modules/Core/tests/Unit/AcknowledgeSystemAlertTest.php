@@ -9,6 +9,7 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SystemAlertQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
@@ -140,8 +141,8 @@ it('404s when the alertId does not exist at all', function (): void {
 });
 
 it('resolves SystemAlertQuery + AcknowledgeSystemAlert as singletons from the container', function (): void {
-    expect($this->app->make(\Modules\Core\Public\Services\SystemAlertQuery::class))
-        ->toBe($this->app->make(\Modules\Core\Public\Services\SystemAlertQuery::class));
+    expect($this->app->make(SystemAlertQuery::class))
+        ->toBe($this->app->make(SystemAlertQuery::class));
     expect($this->app->make(AcknowledgeSystemAlert::class))
         ->toBe($this->app->make(AcknowledgeSystemAlert::class));
 });
