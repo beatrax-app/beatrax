@@ -188,7 +188,24 @@ final class BackupDatabaseCommand extends Command
         }
 
         $completedAt = $this->clock->now();
-        $this->writeSidecar($destination, $liveDataVersion, $startedAt->toIso8601String(), $completedAt->toIso8601String());
+        try {
+            $this->writeSidecar($destination, $liveDataVersion, $startedAt->toIso8601String(), $completedAt->toIso8601String());
+        } catch (RuntimeException $e) {
+            // Sidecar I/O failure leaves the backup file on disk but
+            // without a .meta.json sidecar, which would cause the next
+            // db:backup to misread "no recent backup exists" via the
+            // smart-skip path and silently re-write or skip. Surface
+            // the failure as the same critical system_alerts row the
+            // other corrupt-path branches produce so the operator is
+            // notified instead of debugging a phantom backup.
+            $this->recordCorruptAlert($destination, null, [
+                'phase' => 'sidecar_write',
+                'reason' => $e->getMessage(),
+            ]);
+            $this->error('Backup written but sidecar write failed — see system_alerts.');
+
+            return self::FAILURE;
+        }
         $this->pruneRetention($backupsDir);
 
         $this->info(sprintf('Backup written: %s', $destination));
@@ -325,6 +342,15 @@ final class BackupDatabaseCommand extends Command
      * umask + tmp + rename + chmod dance mirrors
      * OAuthSecretsRepository::writeAtomic so the file is born with
      * mode 0600 and the rename is atomic on the same filesystem.
+     *
+     * Each I/O step has its return value checked: a `file_put_contents`
+     * disk-full failure, a `chmod` permission-denied, or a `rename`
+     * cross-device failure now raises a `RuntimeException` instead of
+     * silently leaving the operator with a half-written or
+     * group/world-readable sidecar. The exception travels up to the
+     * `handle()` call site, which catches it (see writeSidecar's caller)
+     * and converts it to the same corrupt-path system_alerts row the
+     * other catch arms produce.
      */
     private function writeSidecar(string $destination, int $dataVersion, string $startedAt, string $completedAt): void
     {
@@ -340,9 +366,20 @@ final class BackupDatabaseCommand extends Command
 
         $prevUmask = umask(0o077);
         try {
-            file_put_contents($tmp, $payload);
-            @chmod($tmp, 0o600);
-            @rename($tmp, $sidecar);
+            if (file_put_contents($tmp, $payload) === false) {
+                throw new RuntimeException('Failed to write backup sidecar tmp file at '.$tmp);
+            }
+            if (chmod($tmp, 0o600) === false) {
+                throw new RuntimeException('Failed to chmod sidecar tmp file at '.$tmp.' to 0600.');
+            }
+            if (rename($tmp, $sidecar) === false) {
+                throw new RuntimeException('Failed to rename sidecar tmp file to '.$sidecar.'.');
+            }
+            // Belt-and-braces chmod on the final path. rename() preserves
+            // the tmp file's mode on every common filesystem, so failure
+            // here is non-fatal — but the @-suppression keeps a spurious
+            // warning from polluting `db:backup` stdout in the rare case
+            // the underlying filesystem rejects fchmod after the rename.
             @chmod($sidecar, 0o600);
         } finally {
             umask($prevUmask);
