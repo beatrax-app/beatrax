@@ -11,11 +11,13 @@ use Modules\Core\Internal\Console\BackupDatabaseCommand;
 use Modules\Core\Internal\Console\DoctorCommand;
 use Modules\Core\Internal\Console\InstallCommand;
 use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
+use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Console\RestoreDatabaseCommand;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Internal\Http\Livewire\TopNav;
 use Modules\Core\Internal\Providers\FortifyServiceProvider;
+use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
 use Modules\Core\Models\User as CoreUser;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
@@ -40,6 +42,8 @@ final class CoreServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->register(SqliteOptimizationsProvider::class);
+        $this->app->singleton(BootProbeState::class);
+        $this->app->register(HealthCheckServiceProvider::class);
         $this->app->register(FortifyServiceProvider::class);
         $this->app->singleton(Clock::class, SystemClock::class);
         $this->app->bind(CurrentUser::class, CurrentUserService::class);
