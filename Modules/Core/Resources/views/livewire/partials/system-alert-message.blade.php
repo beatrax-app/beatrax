@@ -20,12 +20,16 @@
             $timestamp = isset($metadata['timestamp']) && is_string($metadata['timestamp'])
                 ? $metadata['timestamp']
                 : $alert->created_at->format('d M Y · H:i');
-            $suspectPath = isset($metadata['suspect_path']) && is_string($metadata['suspect_path'])
+            $suspectPath = isset($metadata['suspect_path']) && is_string($metadata['suspect_path']) && $metadata['suspect_path'] !== ''
                 ? basename($metadata['suspect_path'])
-                : '';
+                : null;
         @endphp
         <span aria-hidden="true">⚠</span>
-        The backup written at {{ $timestamp }} failed integrity check. Inspect {{ $suspectPath }}. Resolve before relying on backups.
+        @if ($suspectPath !== null)
+            The backup written at {{ $timestamp }} failed integrity check. Inspect {{ $suspectPath }}. Resolve before relying on backups.
+        @else
+            The backup attempted at {{ $timestamp }} aborted before any file was produced — source DB failed integrity check. Resolve before relying on backups.
+        @endif
         @break
     @case ('backup_overdue')
         @php
