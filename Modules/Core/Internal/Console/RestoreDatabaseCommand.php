@@ -7,6 +7,7 @@ namespace Modules\Core\Internal\Console;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
@@ -50,7 +51,9 @@ use Throwable;
  * snapshot if needed.
  *
  * No Laravel facade is imported or called; every dependency is
- * constructor-DI'd.
+ * constructor-DI'd, including the `Application` container (used for
+ * `basePath('storage/framework/down')` resolution instead of the
+ * global `base_path()` helper).
  */
 final class RestoreDatabaseCommand extends Command
 {
@@ -68,6 +71,7 @@ final class RestoreDatabaseCommand extends Command
         private readonly Filesystem $files,
         private readonly Kernel $artisan,
         private readonly Clock $clock,
+        private readonly Application $app,
     ) {
         parent::__construct();
     }
@@ -86,7 +90,7 @@ final class RestoreDatabaseCommand extends Command
 
         $broughtDown = false;
         $leaveDown = false;
-        $downMarkerPath = base_path('storage/framework/down');
+        $downMarkerPath = $this->app->basePath('storage/framework/down');
         $alreadyDown = $this->files->exists($downMarkerPath);
 
         if (! $alreadyDown && $this->option('force-maintenance') !== true) {

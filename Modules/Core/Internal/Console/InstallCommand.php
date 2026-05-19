@@ -7,6 +7,7 @@ namespace Modules\Core\Internal\Console;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\User;
@@ -83,6 +84,7 @@ class InstallCommand extends Command
         private readonly Dispatcher $events,
         private readonly DatabaseManager $db,
         private readonly Filesystem $files,
+        private readonly Application $app,
     ) {
         parent::__construct();
     }
@@ -235,7 +237,7 @@ class InstallCommand extends Command
      * For each plist:
      *  1. Read the template from `deploy/launchd/com.diederik.{name}.plist`.
      *  2. Substitute `{{ABS_PHP_BINARY}}` (PHP_BINARY) +
-     *     `{{ABS_PROJECT_ROOT}}` (base_path()) in the contents.
+     *     `{{ABS_PROJECT_ROOT}}` (Application::basePath()) in the contents.
      *  3. Ensure ~/Library/LaunchAgents/ exists (chmod 700 on first
      *     create — restricts read access to the user).
      *  4. Write the rendered plist to `~/Library/LaunchAgents/`.
@@ -271,13 +273,13 @@ class InstallCommand extends Command
 
         $substitutions = [
             '{{ABS_PHP_BINARY}}' => PHP_BINARY,
-            '{{ABS_PROJECT_ROOT}}' => base_path(),
+            '{{ABS_PROJECT_ROOT}}' => $this->app->basePath(),
         ];
 
         $uid = self::resolveCurrentUid();
 
         foreach ($plistNames as $name) {
-            $sourcePath = base_path('deploy/launchd/com.diederik.'.$name.'.plist');
+            $sourcePath = $this->app->basePath('deploy/launchd/com.diederik.'.$name.'.plist');
             if (! $this->files->exists($sourcePath)) {
                 $this->error("Source plist not found: {$sourcePath}");
 
