@@ -877,3 +877,48 @@ it('does not allow any file to JOIN forecast_scenario_mutations onto transaction
         "forecast_scenario_mutations must never be JOINed onto transaction-substrate tables. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
+
+it('does not allow system_alerts to be JOINed onto the transactions table (systemAlertsTableNotJoinedToTransactions)', function (): void {
+    // Phase 11 invariant: system_alerts is a purely operational surface.
+    // It surfaces failure events to the user via the dashboard banner
+    // and MUST NEVER be JOINed onto the transactions table. JOINing the
+    // operational substrate onto the domain substrate would let a
+    // background-job alert bleed into a real-money read, blurring the
+    // separation the project relies on for the "calm tool" promise.
+    // The scan walks the entire Modules/ tree, strips block and line
+    // comments first so PHPDoc references stay legal, and excludes
+    // tests/ so fixtures and contract suites can synthesise both
+    // substrates independently.
+    $hits = [];
+    $modulesDir = base_path('Modules');
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($modulesDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        $hasJoin = preg_match(
+            "/->(join|leftJoin|rightJoin|crossJoin)\\(\\s*['\"]system_alerts['\"]/",
+            $stripped,
+        ) === 1;
+        $hasTransactions = preg_match(
+            "/['\"]transactions['\"]/",
+            $stripped,
+        ) === 1;
+        if ($hasJoin && $hasTransactions) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "system_alerts must never be JOINed onto the transactions table. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
