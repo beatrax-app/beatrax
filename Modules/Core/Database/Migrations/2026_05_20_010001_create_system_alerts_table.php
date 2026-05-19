@@ -66,20 +66,20 @@ return new class extends Migration
         });
 
         $connection = $this->db()->connection($this->getConnection());
-        $allowedSeverities = "'info','warning','critical'";
 
-        $connection->statement(sprintf(
-            "CREATE TRIGGER system_alerts_severity_check_insert BEFORE INSERT ON system_alerts FOR EACH ROW
-             WHEN NEW.severity NOT IN (%s)
-             BEGIN SELECT RAISE(ABORT, 'Invalid system_alerts.severity value'); END",
-            $allowedSeverities,
-        ));
-        $connection->statement(sprintf(
-            "CREATE TRIGGER system_alerts_severity_check_update BEFORE UPDATE OF severity ON system_alerts FOR EACH ROW
-             WHEN NEW.severity NOT IN (%s)
-             BEGIN SELECT RAISE(ABORT, 'Invalid system_alerts.severity value'); END",
-            $allowedSeverities,
-        ));
+        // The allowed-severities tuple is hard-coded; sprintf-interpolating
+        // a static constant adds no safety, only indirection. Heredoc the
+        // trigger DDL inline so the SQL reads as plain SQL.
+        $connection->statement(<<<'SQL'
+            CREATE TRIGGER system_alerts_severity_check_insert BEFORE INSERT ON system_alerts FOR EACH ROW
+            WHEN NEW.severity NOT IN ('info','warning','critical')
+            BEGIN SELECT RAISE(ABORT, 'Invalid system_alerts.severity value'); END
+        SQL);
+        $connection->statement(<<<'SQL'
+            CREATE TRIGGER system_alerts_severity_check_update BEFORE UPDATE OF severity ON system_alerts FOR EACH ROW
+            WHEN NEW.severity NOT IN ('info','warning','critical')
+            BEGIN SELECT RAISE(ABORT, 'Invalid system_alerts.severity value'); END
+        SQL);
     }
 
     public function down(): void
