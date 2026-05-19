@@ -126,10 +126,17 @@ it('phase 11 backup banner round-trip — happy → corrupt → banner → ackno
         ->assertSuccessful();
 
     expect(is_dir($backupsDir))->toBeTrue('Backups dir must exist after the happy run.');
-    expect(scandir($backupsDir))->toContain(...array_filter(
+    // Assert at least one diederik-* artifact exists. The previous
+    // "scandir contains filter(scandir)" shape was tautological (a
+    // set always contains its own filtered subset). The follow-up
+    // $cleanSqliteFiles / $cleanMetaFiles assertions already cover
+    // the useful invariant; this row is the entry-gate that proves
+    // the happy run produced SOMETHING under the backups directory.
+    $diederikEntries = array_values(array_filter(
         scandir($backupsDir),
         static fn (string $name): bool => str_starts_with($name, 'diederik-'),
     ));
+    expect($diederikEntries)->not->toBe([], 'Happy run must produce diederik-* artifacts.');
 
     $cleanSqliteFiles = array_values(array_filter(
         scandir($backupsDir),
