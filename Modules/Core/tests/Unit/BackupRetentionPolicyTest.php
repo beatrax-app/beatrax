@@ -148,6 +148,39 @@ dataset('retention scenarios', [
         ],
     ],
 
+    'calendar-invalid digit-shaped date is treated as non-Sunday without crashing the sweep' => [
+        // 2026-13-99 passes the digit regex but is not a real calendar
+        // date. The policy must not crash on CarbonImmutable::parse():
+        // calendar-invalid entries are skipped from the Sunday-keep
+        // scan and never promoted into the keep set on their own. They
+        // ARE still subject to the 7-daily window, which sorts by the
+        // raw date_key string — so the calendar-invalid entry sorts
+        // lexicographically (2026-13-99 > 2026-05-19) and lands in the
+        // 7-daily slot. The promise the fix makes is "the sweep never
+        // throws", not "calendar-invalid entries are pruned aggressively".
+        'candidates' => [
+            'diederik-2026-13-99-250000.sqlite',
+            'diederik-2026-05-14-030000.sqlite',
+            'diederik-2026-05-15-030000.sqlite',
+            'diederik-2026-05-16-030000.sqlite',
+            'diederik-2026-05-17-030000.sqlite', // Sunday
+            'diederik-2026-05-18-030000.sqlite',
+            'diederik-2026-05-19-030000.sqlite',
+        ],
+        'now' => '2026-05-19 04:00:00',
+        // 7 newest by lexicographic date_key: 2026-13-99 wins, then
+        // 05-14 .. 05-19. All seven kept.
+        'expectedKeepers' => [
+            'diederik-2026-13-99-250000.sqlite',
+            'diederik-2026-05-14-030000.sqlite',
+            'diederik-2026-05-15-030000.sqlite',
+            'diederik-2026-05-16-030000.sqlite',
+            'diederik-2026-05-17-030000.sqlite',
+            'diederik-2026-05-18-030000.sqlite',
+            'diederik-2026-05-19-030000.sqlite',
+        ],
+    ],
+
     'suspect + pre-restore + meta.json files are always passed through unchanged' => [
         'candidates' => [
             'diederik-2026-05-09-030000.sqlite.suspect',
