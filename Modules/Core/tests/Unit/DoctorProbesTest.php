@@ -31,7 +31,33 @@ beforeEach(function (): void {
     // can read genuine PRAGMA values (the :memory: sqlite_testing
     // connection answers differently for journal_mode and cannot
     // express WAL).
-    $this->sourcePath = RealSqliteFixture::create('doctor-probe-source');
+    //
+    // The fixture is also where the freshness probe's SystemAlert::create
+    // write lands — once the framework default is pointed at the on-disk
+    // file, both probes operate against the same connection. The
+    // fixture's DEFAULT_SCHEMAS include a `system_alerts` table; we apply
+    // the schema-level `created_at` default + the severity trigger pair
+    // before any test runs so the alert insert mirrors the production
+    // migration's shape.
+    $this->sourcePath = RealSqliteFixture::create('doctor-probe-source', [
+        'CREATE TABLE transactions (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NULL,
+            amount_minor INTEGER NOT NULL,
+            currency TEXT NOT NULL,
+            booked_at TEXT NOT NULL
+        )',
+        'CREATE TABLE system_alerts (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NULL,
+            kind TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            message TEXT NOT NULL,
+            metadata TEXT NULL,
+            created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+            acknowledged_at TEXT NULL
+        )',
+    ]);
 
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
@@ -81,7 +107,7 @@ it('Probe contract declares label() and run() with the documented signatures', f
     expect((string) $label->getReturnType())->toBe('string');
 
     $run = $reflection->getMethod('run');
-    expect((string) $run->getReturnType())->toBe(Modules\Core\Internal\Console\Probes\ProbeResult::class);
+    expect((string) $run->getReturnType())->toBe(ProbeResult::class);
 });
 
 it('ProbeResult is a final readonly value object with severity/message/metadata', function (): void {
@@ -162,7 +188,7 @@ it('BackupFreshnessProbe returns warning AND writes a system_alerts row when no 
     $backupsDir = $this->backupsDir;
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
-    $probe = new BackupFreshnessProbe($db, $files, $clock, $backupsDir);
+    $probe = new BackupFreshnessProbe($files, $clock, $backupsDir);
     expect($probe->label())->toBe('Backup freshness');
 
     $result = $probe->run();
@@ -170,14 +196,10 @@ it('BackupFreshnessProbe returns warning AND writes a system_alerts row when no 
     expect($result->severity)->toBe('warning');
     expect($result->message)->toContain('backup');
 
-    // Note: this assertion needs SystemAlert::query() against the
-    // sqlite_testing :memory: connection; the framework default was
-    // pointed at the on-disk file in beforeEach. Switch the default
-    // back to read the alert row.
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.default', 'sqlite_testing');
-    $db->purge();
+    // The SystemAlert was written to the framework default — which is
+    // pointed at the on-disk fixture in beforeEach. Read directly
+    // against that connection without flipping the default back to
+    // sqlite_testing.
     $alerts = SystemAlert::query()->where('kind', 'backup_overdue')->get();
     expect($alerts)->toHaveCount(1);
 
@@ -208,15 +230,11 @@ it('BackupFreshnessProbe returns ok and does NOT write an alert when a fresh sid
         'integrity' => 'ok',
     ]));
 
-    $probe = new BackupFreshnessProbe($db, $files, $clock, $backupsDir);
+    $probe = new BackupFreshnessProbe($files, $clock, $backupsDir);
     $result = $probe->run();
 
     expect($result->severity)->toBe('ok');
 
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.default', 'sqlite_testing');
-    $db->purge();
     expect(SystemAlert::query()->where('kind', 'backup_overdue')->count())->toBe(0);
 });
 
@@ -242,16 +260,12 @@ it('BackupFreshnessProbe returns warning AND writes an alert when newest sidecar
         'integrity' => 'ok',
     ]));
 
-    $probe = new BackupFreshnessProbe($db, $files, $clock, $backupsDir);
+    $probe = new BackupFreshnessProbe($files, $clock, $backupsDir);
     $result = $probe->run();
 
     expect($result->severity)->toBe('warning');
     expect($result->metadata)->toHaveKey('hours_old');
 
-    /** @var Repository $config */
-    $config = $this->app->make(Repository::class);
-    $config->set('database.default', 'sqlite_testing');
-    $db->purge();
     expect(SystemAlert::query()->where('kind', 'backup_overdue')->count())->toBe(1);
 });
 

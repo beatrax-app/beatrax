@@ -10,6 +10,7 @@ use Livewire\LivewireManager;
 use Modules\Core\Internal\Console\BackupDatabaseCommand;
 use Modules\Core\Internal\Console\DoctorCommand;
 use Modules\Core\Internal\Console\InstallCommand;
+use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Internal\Http\Livewire\TopNav;
@@ -52,6 +53,14 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->singleton('core.backups_directory', static fn (): string => base_path('storage/app/backups'));
 
         $this->app->when(BackupDatabaseCommand::class)
+            ->needs('$backupsPath')
+            ->give(fn () => $this->app->make('core.backups_directory'));
+
+        // BackupFreshnessProbe reads the same `core.backups_directory`
+        // binding as BackupDatabaseCommand so the doctor probe inspects
+        // the directory the backup command writes to. Tests override
+        // `core.backups_directory` once and both surfaces follow.
+        $this->app->when(BackupFreshnessProbe::class)
             ->needs('$backupsPath')
             ->give(fn () => $this->app->make('core.backups_directory'));
 
