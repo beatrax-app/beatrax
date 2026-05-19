@@ -6,39 +6,39 @@ namespace Modules\Core\Internal\Console;
 
 use Illuminate\Console\Command;
 use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
+use Modules\Core\Internal\Console\Probes\ComposerVersionProbe;
+use Modules\Core\Internal\Console\Probes\NodeVersionProbe;
+use Modules\Core\Internal\Console\Probes\PhpVersionProbe;
 use Modules\Core\Internal\Console\Probes\Probe;
 use Modules\Core\Internal\Console\Probes\ProbeResult;
+use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
-use Symfony\Component\Process\Process;
-use Throwable;
 
 /**
- * Reports the versions of every external tool diederik depends on AND
- * runs the Phase 11 operational probes:
+ * Runs the diederik operational doctor: a homogeneous iteration over
+ * every registered `Probe` (tool-version checks + SQLite-substrate
+ * health + backup freshness). Each probe contributes one line to the
+ * output table and one severity bucket to the exit-code aggregator.
  *
- * - PHP runtime (must be ≥ 8.5; `ext-imap` may or may not be loaded — the
- *   project deliberately uses the pure-PHP `webklex/php-imap`).
- * - Composer.
- * - SQLite (CLI; the PHP `sqlite3` extension separately).
- * - Node (required for `npm run build`).
- * - WalModeProbe / SynchronousModeProbe / BackupFreshnessProbe — each
- *   implements the `Probe` contract under `Modules/Core/Internal/Console/Probes/`
- *   and returns a `ProbeResult` summarising one operational signal.
+ * Probes:
+ *  - PhpVersionProbe (BLOCKER if < 8.5)
+ *  - ComposerVersionProbe / SqliteCliVersionProbe / NodeVersionProbe
+ *    (warning if missing — none are runtime-fatal for the dashboard,
+ *    they matter for dev workflows: composer install, sqlite3 CLI
+ *    inspection, npm run build)
+ *  - WalModeProbe / SynchronousModeProbe / BackupFreshnessProbe (the
+ *    three Phase 11-03 SQLite-substrate probes)
+ *
+ * `ext-imap` is reported separately (info-only) because the project
+ * uses the pure-PHP `webklex/php-imap`; the extension's presence is
+ * neither required nor forbidden and folds awkwardly into the
+ * severity bucket model.
  *
  * Exit codes:
- *   0 — every check meets its minimum
- *   1 — one or more soft warnings (e.g. optional tool missing, probe warning)
- *   2 — at least one hard blocker (or probe critical)
- *
- * The legacy inline `reportTool()` PHP / Composer / SQLite / Node checks
- * deliberately stay inline rather than being migrated to the `Probe`
- * interface. The contract was introduced in Phase 11-03 for the three
- * SQLite-substrate probes; refactoring the working tool-version checks
- * onto the same interface is an aesthetic carry-cost reserved for a
- * future polish phase. The aggregation loop appends new probe results
- * after the existing inline output, preserving the current 0/1/2 exit
- * code semantics.
+ *   0 — every probe returned `ok` (or `info` for ext-imap)
+ *   1 — one or more `warning` probes
+ *   2 — at least one `critical` probe
  */
 final class DoctorCommand extends Command
 {
@@ -48,9 +48,11 @@ final class DoctorCommand extends Command
     /** @var string */
     protected $description = 'Report installed PHP / Composer / SQLite versions and verify minimums.';
 
-    private const MIN_PHP = '8.5';
-
     public function __construct(
+        private readonly PhpVersionProbe $phpProbe,
+        private readonly ComposerVersionProbe $composerProbe,
+        private readonly SqliteCliVersionProbe $sqliteCliProbe,
+        private readonly NodeVersionProbe $nodeProbe,
         private readonly WalModeProbe $walProbe,
         private readonly SynchronousModeProbe $synchronousProbe,
         private readonly BackupFreshnessProbe $backupFreshnessProbe,
@@ -68,43 +70,36 @@ final class DoctorCommand extends Command
         $this->line('diederik:doctor');
         $this->line('-----------------');
 
-        // PHP runtime — match against major.minor only so alpha / beta / RC
-        // builds of the minimum minor version still pass. `phpversion()` is
-        // used (not the PHP_VERSION constant) so the comparison is honest at
-        // runtime rather than statically pre-computed.
-        $phpVersion = phpversion();
-        if (preg_match('/^(\d+\.\d+)/', $phpVersion, $m) === 1 && version_compare($m[1], self::MIN_PHP, '>=')) {
-            $this->line(sprintf('PHP        %s   ok', $phpVersion));
-        } else {
-            $this->line(sprintf('PHP        %s   BLOCKER (min %s)', $phpVersion, self::MIN_PHP));
-            $blockers[] = 'PHP';
-        }
-
-        // The project uses the pure-PHP `webklex/php-imap` library rather
-        // than the native ext-imap module (which PHP 8.4 unbundled). The
-        // native extension may still be loaded on older builds — that is
-        // informational, not a warning, because no diederik code path
-        // consumes it.
-        $loaded = in_array('imap', get_loaded_extensions(), true);
-        $this->line(sprintf(
-            'ext-imap   %s   info (diederik uses webklex/php-imap regardless)',
-            $loaded ? 'loaded' : 'not loaded',
-        ));
-
-        $this->reportTool('Composer  ', ['composer', '--version'], 'Composer not on PATH', $warnings);
-        $this->reportTool('SQLite    ', ['sqlite3', '--version'], 'sqlite3 CLI not on PATH', $warnings);
-        $this->reportTool('Node      ', ['node', '--version'], 'node not on PATH (required for Vite asset builds)', $warnings);
-
-        $this->line('');
-
-        // Phase 11 probes: each prints `{$label}: {$severity} — {$message}`
-        // and contributes to the exit-code aggregation per the existing
-        // 0 / 1 / 2 convention.
-        $probes = [$this->walProbe, $this->synchronousProbe, $this->backupFreshnessProbe];
+        // Every check runs through the same Probe -> ProbeResult ->
+        // reportProbe pipeline so the output table is homogeneous and
+        // a new probe is one constructor argument away.
+        $probes = [
+            $this->phpProbe,
+            $this->composerProbe,
+            $this->sqliteCliProbe,
+            $this->nodeProbe,
+            $this->walProbe,
+            $this->synchronousProbe,
+            $this->backupFreshnessProbe,
+        ];
         foreach ($probes as $probe) {
             $result = $probe->run();
             $this->reportProbe($probe, $result, $blockers, $warnings);
         }
+
+        // ext-imap is reported separately as informational-only — the
+        // project uses pure-PHP webklex/php-imap so the native
+        // extension's presence is neither required nor forbidden.
+        // Folding this into the Probe severity model would invent a
+        // fourth severity ("info"); keeping it inline preserves the
+        // three-bucket Probe contract (ok / warning / critical).
+        $loaded = in_array('imap', get_loaded_extensions(), true);
+        $this->line(sprintf(
+            '%-24s %-8s %s',
+            'ext-imap',
+            'info',
+            ($loaded ? 'loaded' : 'not loaded').' (diederik uses webklex/php-imap regardless)',
+        ));
 
         $this->line('');
 
@@ -145,58 +140,5 @@ final class DoctorCommand extends Command
         if ($result->severity === 'warning') {
             $warnings[] = $probe->label();
         }
-    }
-
-    /**
-     * Runs the given command and either logs an OK line with the captured
-     * version string or records a warning.
-     *
-     * @param  list<string>  $command
-     * @param  list<string>  $warnings
-     */
-    private function reportTool(string $label, array $command, string $warningMessage, array &$warnings): void
-    {
-        [$version, $available] = $this->runVersion($command);
-
-        if ($available) {
-            $this->line(sprintf('%s %s   ok', $label, $version));
-
-            return;
-        }
-
-        $this->line(sprintf('%s %s   WARNING (%s)', $label, $version, $warningMessage));
-        $warnings[] = $label;
-    }
-
-    /**
-     * Runs the given command and returns [version-string, success]. When
-     * the command exits 0, the version is read from stdout only — chatty
-     * deprecation notices on stderr no longer leak into the displayed
-     * line. stderr is consulted only on failure to produce the user-facing
-     * error message.
-     *
-     * @param  list<string>  $command
-     * @return array{0: string, 1: bool}
-     */
-    private function runVersion(array $command): array
-    {
-        $process = new Process($command);
-        $process->setTimeout(5.0);
-
-        try {
-            $process->run();
-        } catch (Throwable) {
-            return ['(not available)', false];
-        }
-
-        if (! $process->isSuccessful()) {
-            $stderr = trim($process->getErrorOutput());
-
-            return [$stderr === '' ? '(not available)' : $stderr, false];
-        }
-
-        $stdout = trim($process->getOutput());
-
-        return [$stdout === '' ? '(empty)' : $stdout, true];
     }
 }
