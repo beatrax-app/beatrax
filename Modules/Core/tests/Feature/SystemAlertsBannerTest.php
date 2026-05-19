@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /*
@@ -135,6 +136,12 @@ it('does not surface another user\'s alerts (cross-user isolation), but shows sy
 });
 
 it('refuses cross-user acknowledge attempts via the action (NotFoundHttpException bubbles)', function (): void {
+    // The cross-user guard lives at the action layer; a tampered
+    // Livewire payload (acting as userA but passing userB's alert id)
+    // resolves to the action which raises NotFoundHttpException. The
+    // test invokes the action directly — Livewire catches Symfony HTTP
+    // exceptions during synthetic ->call() invocations, so the
+    // architectural guarantee belongs on the action surface.
     $bId = sabInsert($this->db, [
         'user_id' => $this->userB->id,
         'kind' => 'backup_corrupt',
@@ -142,14 +149,11 @@ it('refuses cross-user acknowledge attempts via the action (NotFoundHttpExceptio
         'message' => 'B-private',
     ]);
 
-    $component = Livewire::actingAs($this->userA)->test(SystemAlertsBanner::class);
-    $thrown = null;
-    try {
-        $component->call('acknowledge', $bId);
-    } catch (NotFoundHttpException $e) {
-        $thrown = $e;
-    }
-    expect($thrown)->not->toBeNull();
+    /** @var AcknowledgeSystemAlert $action */
+    $action = $this->app->make(AcknowledgeSystemAlert::class);
+
+    expect(fn () => $action($bId, $this->userA))
+        ->toThrow(NotFoundHttpException::class, 'System alert not found.');
 
     $row = $this->db->connection()->table('system_alerts')->where('id', $bId)->first();
     expect($row?->acknowledged_at)->toBeNull();

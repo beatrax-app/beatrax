@@ -16,6 +16,7 @@ use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Console\RestoreDatabaseCommand;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
+use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Internal\Http\Livewire\TopNav;
 use Modules\Core\Internal\Providers\FortifyServiceProvider;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
@@ -84,6 +85,7 @@ final class CoreServiceProvider extends ServiceProvider
 
         $livewire->component('core.dashboard', Dashboard::class);
         $livewire->component('core.settings-page', SettingsPage::class);
+        $livewire->component('core.system-alerts-banner', SystemAlertsBanner::class);
         $livewire->component('core.top-nav', TopNav::class);
 
         if ($this->app->runningInConsole()) {
