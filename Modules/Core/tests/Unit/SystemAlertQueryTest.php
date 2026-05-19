@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
@@ -202,7 +203,7 @@ it('returns an Eloquent Collection of SystemAlert instances from active()', func
     $query = $this->app->make(SystemAlertQuery::class);
     $collection = $query->active($this->userA);
 
-    expect($collection)->toBeInstanceOf(\Illuminate\Database\Eloquent\Collection::class);
+    expect($collection)->toBeInstanceOf(Collection::class);
     expect($collection->first())->toBeInstanceOf(SystemAlert::class);
 });
 
