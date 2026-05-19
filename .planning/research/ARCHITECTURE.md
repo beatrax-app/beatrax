@@ -1,1073 +1,723 @@
-# Architecture Research — diederik
+# Architecture Research — diederik v2.0 Public Release
 
-**Domain:** Local-only personal finance dashboard with multi-source ingestion, chain resolution, recurrence detection, and forecasting
-**Researched:** 2026-05-12
-**Confidence:** HIGH (Laravel patterns, Firefly III precedent, idempotent ingest patterns); MEDIUM (chain-resolution specifics — domain-novel)
+**Domain:** Local-first desktop personal-finance application (Laravel 13 + Livewire 4 + SQLite + NativePHP/Electron shell)
+**Researched:** 2026-05-19
+**Confidence:** HIGH on integration with existing v1.0 invariants (read directly from the codebase); MEDIUM-HIGH on NativePHP behaviour (verified against official v2 docs).
 
----
+This document answers: *how do the eight v2.0 architectural pieces — desktop shell, user-data dir migration, queue/Horizon-in-bundle, multi-user, Dev Mode UI, CI/CD, auto-update, public-release boundary — integrate with the 11-module, arch-test-enforced v1.0 architecture without breaking any of the 34+ `BoundaryArchTest` invariants?*
 
-## Executive Recommendation
+The v1.0 architecture has already done most of the load-bearing work for v2.0:
 
-Build diederik as a **modular Laravel monolith with a clear pipeline-and-engine seam**:
+- `Modules\Core\Public\Contracts\CurrentUser` already exists as a DI-friendly seam (interface, resolved through `Illuminate\Contracts\Auth\Factory`, NOT through facades).
+- `Modules\Core\Public\Concerns\BelongsToUser` + `Modules\Core\Public\Scopes\UserScope` already apply the per-user global scope to every domain model.
+- Every domain table already carries a nullable `user_id`, enforced by `UserIdColumnArchTest`.
+- `Modules\EmailScan\Public\Services\OAuthSecretsRepository` already isolates OAuth tokens behind a single repository class (path-injected, chmod-600 enforced, atomic-rename writes).
+- `Modules\Core\Internal\Console\InstallCommand --launchd` already proves the "ship plist templates with placeholders, materialise on install" pattern.
 
-- A **Blade + Livewire** server-rendered UI (no SPA, no Inertia — single user, localhost, calm dashboard, form-light)
-- A **pluggable Source Adapter pipeline** (per source: parser → normalizer → fingerprinter → loader) for CSV / MT940 / IMAP / `.eml`
-- A **single canonical Transaction table with typed entries** (transfer / income / expense) — *not* full double-entry; the chain-link graph captures cross-account flow without bookkeeping ceremony
-- A **Link/Chain table** separate from Transaction — links are first-class with confidence + state (candidate / confirmed / rejected) so learning is observable
-- **Synchronous import flow with optional queued chain-resolution job** — fast feedback during import, heavy work deferred
-- **Materialized-only-when-asked** forecasting (compute on-the-fly with caching; never persist predicted occurrences)
-- **Multi-user-ready schema from day one**: every domain row has `user_id` (nullable v1 → enforced v2), wrapped behind a `CurrentUser` accessor so v1 ignores it cleanly
-
-Phase 1 vertical slice: **ASN CSV → canonical Transaction → categorized list view**. One source, one transformation, one screen. Everything else (chains, forecasts, IMAP, recurring) builds on this skeleton.
-
----
+v2.0's job is to **flip the dormant pieces on, repackage the runtime, and add three new bounded modules** — not to redesign the spine.
 
 ## Standard Architecture
 
-### System Overview
+### System Overview — v2.0 Desktop Runtime
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                      PRESENTATION (Blade + Livewire)                      │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌─────────────────┐ │
-│  │  Dashboard   │ │ Transactions │ │ Fixed/Recur. │ │ Import / Review │ │
-│  │  (month at   │ │  list & drill│ │  + chains    │ │  queue          │ │
-│  │   a glance)  │ │              │ │              │ │                 │ │
-│  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └────────┬────────┘ │
-│         │                │                │                  │          │
-├─────────┼────────────────┼────────────────┼──────────────────┼──────────┤
-│                       APPLICATION (Actions + Read Models)                │
-│  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │  Actions (single-purpose, invokable):                            │   │
-│  │  ImportCsvFile · ScanInbox · ConfirmChainLink · RecategorizeRule │   │
-│  │  ForecastBalances · WhatIfScenario · DetectRecurringSeries       │   │
-│  └──────────────────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │  Read Models (query services for views):                         │   │
-│  │  MonthAtAGlanceQuery · FundingChainQuery · BalanceForecastQuery  │   │
-│  └──────────────────────────────────────────────────────────────────┘   │
-├──────────────────────────────────────────────────────────────────────────┤
-│                   DOMAIN (Bounded Modules — same DB, clear seams)        │
-│  ┌────────────────┐ ┌─────────────────┐ ┌──────────────────────────┐    │
-│  │   Ingestion    │ │ Categorization  │ │       Chains             │    │
-│  │ • SourceAdapter│ │ • RuleEngine    │ │ • LinkResolver           │    │
-│  │ • Pipeline     │ │ • RecurringDetect│ │ • PayPal→Funding         │    │
-│  │ • Fingerprint  │ │ • LearningLoop  │ │ • ASN→ICS settlement    │    │
-│  │ • RawSource    │ │                 │ │ • Confidence + Candidates│    │
-│  └────────┬───────┘ └────────┬────────┘ └──────────┬───────────────┘    │
-│           │                  │                     │                     │
-│  ┌────────┴──────────────────┴─────────────────────┴───────────────┐    │
-│  │              Ledger (the canonical transaction core)             │    │
-│  │  Account · Transaction · Money · Currency · TransactionType      │    │
-│  └──────────────────────────────────────────────────────────────────┘    │
-│  ┌──────────────────┐ ┌──────────────────┐                              │
-│  │   Forecasting    │ │   Email Scanner  │                              │
-│  │ • Projector      │ │ • IMAPState      │                              │
-│  │ • WhatIfEngine   │ │ • TemplateMatcher│                              │
-│  └──────────────────┘ └──────────────────┘                              │
-├──────────────────────────────────────────────────────────────────────────┤
-│                     INFRASTRUCTURE                                        │
-│  ┌─────────────────┐ ┌─────────────────┐ ┌───────────────────────────┐  │
-│  │ SQLite (WAL)    │ │ Laravel Queue   │ │ Filesystem                │  │
-│  │ • domain data   │ │ • database driver│ │ • uploaded CSVs (raw)    │  │
-│  │                 │ │ • for chain      │ │ • IMAP creds (config)    │  │
-│  │                 │ │   resolution &   │ │ • .eml import area       │  │
-│  │                 │ │   IMAP scans     │ │                           │  │
-│  └─────────────────┘ └─────────────────┘ └───────────────────────────┘  │
+┌────────────────────────────────────────────────────────────────────────┐
+│                          Electron Renderer Process                      │
+│                       (Chromium window — diederik UI)                   │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ Livewire 4 SFCs + Volt + Flux UI + Tailwind 4                    │  │
+│  │ ApexCharts (via livewire-charts wrapper)                          │  │
+│  └─────────────────────────────────┬────────────────────────────────┘  │
+└────────────────────────────────────┼────────────────────────────────────┘
+                                     │  HTTP(S) on 127.0.0.1:RANDOM_PORT
+                                     │  (Electron browser → bundled PHP)
+┌────────────────────────────────────┼────────────────────────────────────┐
+│                  Electron Main Process (Node, NativePHP/electron)      │
+│  ┌─────────────────────────┐  ┌────────────────────────────────────┐   │
+│  │ App lifecycle           │  │ NativePHP IPC bridge                │   │
+│  │ Window/Menu/Tray/Notif  │  │ - Window, Menu, Notification, Tray │   │
+│  │ electron-updater        │  │ - File-open handlers (.eml/.csv)   │   │
+│  │ Code-signing wrap       │  │ - Global hotkeys, clipboard         │   │
+│  └─────────────────────────┘  └─────────────────────┬──────────────┘   │
+└─────────────────────────────────────────────────────┼──────────────────┘
+                                                       │  PHP <-> JS over
+                                                       │  STDIO + named pipes
+┌─────────────────────────────────────────────────────┴──────────────────┐
+│            Bundled php-fpm-like long-running PHP runtime                │
+│  ┌────────────────────────────────────────────────────────────────┐    │
+│  │ Laravel 13 — routing, container, queue, scheduler               │    │
+│  │  ┌─────────────────────────────────────────────────────────┐    │    │
+│  │  │  Modules/  (existing 11 + 3 new — see "Module Layout")  │    │    │
+│  │  └─────────────────────────────────────────────────────────┘    │    │
+│  │  Workers: 1× scheduler, 2× queue-worker (NativePHP-managed,    │    │
+│  │           NOT Horizon; see "Queue Decision")                    │    │
+│  └────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────┬──────────────────┘
+                                                       │  All paths flow
+                                                       │  through OS appdata
+┌─────────────────────────────────────────────────────┴──────────────────┐
+│                       Per-OS user data directory                        │
+│  macOS:   ~/Library/Application Support/diederik/                       │
+│  Windows: %APPDATA%\diederik\                                           │
+│  Linux:   ~/.config/diederik/                                           │
+│                                                                          │
+│   storage/                                                               │
+│   ├── database/data.sqlite        (WAL + synchronous=NORMAL)            │
+│   ├── app/                                                               │
+│   │   ├── backups/                (VACUUM INTO targets)                 │
+│   │   ├── secrets/email-oauth.json  (chmod 600)                         │
+│   │   └── inbox/                  (.eml drop-folder)                    │
+│   ├── logs/                                                              │
+│   └── framework/cache,sessions,views                                     │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+Key shape changes vs v1.0:
 
-| Component | Responsibility | Implementation |
-|-----------|---------------|----------------|
-| **SourceAdapter** | One per source format (ASN-CSV, ASN-MT940, ICS-CSV, ICS-Excel, PayPal-CSV, Email-PayPal, Email-ICS, Email-GooglePlay). Parses raw bytes → array of `RawEntry` DTOs | Interface `SourceAdapter` with `parse(stream): Generator<RawEntry>` |
-| **Normalizer** | Maps `RawEntry` → `CanonicalTransaction` (currency, sign, dates, merchant cleanup) | One per adapter, composed via pipeline |
-| **Fingerprinter** | SHA-256 hash of `(account_id, posted_at, amount_minor, currency, normalized_counterparty, source_ref)` → `external_id` | Stateless service, one strategy per source |
-| **Loader** | Idempotent upsert against `transactions` keyed by `(source_id, external_id)` | Single DB transaction per import file |
-| **RuleEngine** | Apply user-defined merchant→category rules; learn from corrections | `categorization_rules` table + match service |
-| **RecurringDetector** | Identify N≥3 same-counterparty-similar-amount entries at regular cadence → create `recurring_series` | Async job, runs after each import |
-| **LinkResolver** | Connect PayPal lines to underlying ASN/ICS lines; explode ASN→ICS settlement lump into its ICS detail lines | Async job, produces `chain_links` with confidence |
-| **Projector (Forecasting)** | Read recurring_series + balances → predicted occurrences as transient objects | Read-only service; never persists |
-| **WhatIfEngine** | Apply hypothetical mutations (cancel sub, add expense) over Projector results | Stateless overlay on top of Projector |
-| **IMAPScanner** | Per-inbox UID-based incremental scan; route messages to template matchers | Webklex/laravel-imap, state in `inbox_scan_state` table |
-| **TemplateMatcher** | Sender-specific regex/DOM extractors that turn an email body into a `RawEntry` | One matcher per known sender; generic fallback |
-| **Ledger** | Holds canonical transactions, accounts, currencies. Nothing else writes here except Ingestion via Loader | Eloquent models + migrations |
+| Layer | v1.0 | v2.0 |
+|-------|------|------|
+| Hosting | Laravel Herd (`https://diederik.test`) | Electron shell + bundled static PHP runtime |
+| SQLite path | `database/database.sqlite` inside repo | `storagePath('database/data.sqlite')` in OS user-data dir |
+| Backups | `storage/app/backups/` inside repo | Same relative path, rooted at OS user-data dir |
+| OAuth secrets | `storage/app/secrets/email-oauth.json` inside repo | Same relative path, rooted at OS user-data dir |
+| Queue driver | `redis` (loopback Docker container) | `database` for shipped desktop; `redis` only for dev mode |
+| Background workers | `launchd` plists supervising `php artisan horizon` + scheduler | NativePHP-managed child processes (`queue_workers` + `schedule:work`) |
+| Multi-user | Single user, schema multi-user-ready | Real Fortify auth, profile selector, **one shared SQLite per machine** |
+| Auto-update | None | `electron-updater` polling GitHub Releases |
 
----
+### Component Responsibilities — v2.0 Additions
 
-## Domain Model
+| Component | Responsibility | Typical Implementation |
+|-----------|---------------|------------------------|
+| `Modules/Desktop/` (NEW) | OS-shell concerns: tray, menu, notifications, file-open registration, `nativephp.config.php` lifecycle | Provider wires NativePHP listeners; thin classes delegate to existing module Public services |
+| `Modules/DevMode/` (NEW) | In-app developer console: whitelisted/destructive artisan runner, log tailer, queue inspector, `system_alerts` viewer, embedded Horizon proxy (dev only) | Livewire SFCs gated by `User::is_developer` flag + middleware |
+| `Modules/Auth/` (NEW, **or extend `Modules/Core/`** — see decision below) | Login / signup / profile selector / logout / session lifecycle / `is_developer` flag management | Fortify actions + Livewire SFCs; binds the `Auth::id()` seam |
+| `Modules/Core/Public/Contracts/UserDataPath` (NEW contract) | Single DI seam for "where is the user-data root on this machine?" | `UserDataPathService` reads `Application::storagePath()` (NativePHP-rewritten) |
+| `Modules/Core/Public/Contracts/UpdateChannel` (NEW contract) | "Is an update available? Which version? Apply." | `ElectronUpdateChannel` IPC-calls into the NativePHP main process |
 
-### Core Entities
-
-```
-┌─────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│    User     │       │     Account     │       │    Currency    │
-│ id          │◄──┐   │ id              │       │ code (PK)       │
-│ name        │   │   │ user_id ────────┼──┐    │ name            │
-│ email       │   │   │ name            │  │    │ minor_unit (2)  │
-└─────────────┘   │   │ slug            │  │    └────────┬────────┘
-                  │   │ kind (asn|ics|  │  │             │
-                  │   │       paypal|   │  │             │
-                  │   │       gplay|    │  │             │
-                  │   │       cash)     │  │             │
-                  │   │ default_currency├──┼─────────────┘
-                  │   │ external_id     │  │
-                  │   │ opened_at       │  │
-                  │   │ metadata (JSON) │  │
-                  │   └────────┬────────┘  │
-                  │            │           │
-                  │   ┌────────┴────────────┴────────────────┐
-                  └───┤           Transaction                 │
-                      │ id                                    │
-                      │ user_id ──── (nullable v1)            │
-                      │ account_id (the "self" account)       │
-                      │ type (expense|income|transfer_out|    │
-                      │       transfer_in|fee|adjustment)     │
-                      │ posted_at (date)                      │
-                      │ booked_at (datetime, when seen)       │
-                      │ value_date (date, when economic)      │
-                      │ amount_minor (BIGINT, signed)         │
-                      │ currency (FK Currency)                │
-                      │ settled_amount_minor (BIGINT)         │
-                      │ settled_currency (FK Currency)        │
-                      │ fx_rate_used (DECIMAL 18,8 nullable)  │
-                      │ counterparty_name (text)              │
-                      │ counterparty_normalized (text)        │
-                      │ counterparty_id (FK Merchant, null)   │
-                      │ description (text)                    │
-                      │ category_id (FK, nullable)            │
-                      │ recurring_series_id (FK, nullable)    │
-                      │ source_id (FK Source)                 │
-                      │ raw_source_id (FK RawSource)          │
-                      │ external_id (per source)              │
-                      │ fingerprint (SHA-256 hex)             │
-                      │ pair_transaction_id (FK self, null)   │
-                      │ tags (JSON or pivot)                  │
-                      │ status (cleared|pending|forecasted)   │
-                      │ created_at, updated_at                │
-                      │ UNIQUE (account_id, fingerprint)      │
-                      │ UNIQUE (source_id, external_id)       │
-                      └───────────┬───────────────────────────┘
-                                  │
-              ┌───────────────────┼───────────────────┐
-              │                   │                   │
-       ┌──────┴──────┐    ┌───────┴───────┐   ┌──────┴───────┐
-       │  ChainLink  │    │ RawSource     │   │  Category    │
-       │ id          │    │ id            │   │ id           │
-       │ user_id     │    │ source_id     │   │ user_id      │
-       │ from_txn_id │    │ kind (csv|    │   │ parent_id    │
-       │ to_txn_id   │    │   mt940|eml|  │   │ name         │
-       │ kind (paypal│    │   imap)       │   │ slug         │
-       │   _funding| │    │ filename      │   │ color, icon  │
-       │   ics_bulk_ │    │ original_     │   │ kind (expense│
-       │   settle|   │    │  uploaded_at  │   │  |income|    │
-       │   transfer_ │    │ checksum      │   │  transfer)   │
-       │   pair)     │    │ payload_path  │   └──────────────┘
-       │ confidence  │    │ row_count     │
-       │ state       │    │ user_id       │
-       │  (candidate|│    └───────────────┘
-       │   confirmed│
-       │   rejected)│
-       │ resolver   │
-       │  (auto|user│
-       │   rule)    │
-       │ evidence   │
-       │  (JSON)    │
-       │ created_at │
-       └────────────┘
-
-   ┌─────────────────────────┐         ┌──────────────────────┐
-   │  RecurringSeries        │         │ CategorizationRule   │
-   │ id                      │         │ id                   │
-   │ user_id                 │         │ user_id              │
-   │ label (e.g. "Netflix")  │         │ priority             │
-   │ canonical_amount_minor  │         │ match (JSON: pattern │
-   │ canonical_currency      │         │   on counterparty,   │
-   │ cadence (monthly|       │         │   amount, account)   │
-   │   quarterly|yearly|...) │         │ category_id          │
-   │ next_expected_at        │         │ source (user|system) │
-   │ funding_account_id (FK) │         │ confidence           │
-   │ funding_chain_kind      │         │ uses_count           │
-   │ category_id (FK)        │         │ last_matched_at      │
-   │ confidence              │         └──────────────────────┘
-   │ status (active|paused|  │
-   │   cancelled)            │         ┌──────────────────────┐
-   │ first_seen_at           │         │ Merchant             │
-   │ last_seen_at            │         │ id                   │
-   │ created_at, updated_at  │         │ user_id (or global?) │
-   └─────────────────────────┘         │ canonical_name       │
-                                       │ aliases (JSON)       │
-   ┌─────────────────────────┐         │ default_category_id  │
-   │ Source                  │         │ icon                 │
-   │ id                      │         └──────────────────────┘
-   │ slug (asn|ics|paypal|   │
-   │   gplay|email-paypal|   │         ┌──────────────────────┐
-   │   email-ics|email-gplay)│         │ InboxScanState       │
-   │ display_name            │         │ id                   │
-   │ adapter_class           │         │ user_id              │
-   │ default_account_id (FK) │         │ inbox_identifier     │
-   │ config (JSON)           │         │ folder               │
-   └─────────────────────────┘         │ last_uid             │
-                                       │ last_scanned_at      │
-                                       │ scan_window_start    │
-                                       └──────────────────────┘
-```
-
-### Why a single `transactions` table, not full double-entry
-
-Firefly III models every economic event as a **journal of two paired transactions** (one credit, one debit), enforcing zero-sum at the journal level. That gives true accounting integrity but adds significant ceremony — every category change, every split, every transfer requires choreographed paired writes.
-
-For diederik, a **single signed-row model with optional pairing** is the right trade:
-
-- **Each row owns the perspective of one account.** A salary deposit into ASN is one row in `transactions` with `type=income`, `amount_minor=+250000` on `account_id=asn-main`. An ICS purchase is one row with `type=expense`, `amount_minor=-1299` on `account_id=ics-card`.
-- **Inter-account transfers create two rows** (one `transfer_out`, one `transfer_in`) joined by `pair_transaction_id`. The Loader writes both atomically; a CHECK constraint (or app-level invariant) ensures the pair's amounts sum to zero in the same currency, or are linked via an FX rate.
-- **Chain links live in `chain_links`** — they are *semantic* relationships ("this PayPal expense was funded by that ASN transfer-out"), not bookkeeping pairs. This keeps the chain graph queryable without polluting the canonical ledger.
-
-Why not double-entry:
-- The user wants *visibility*, not bookkeeping reports. The system never needs to produce a trial balance.
-- The data source is already single-sided per account (each bank statement is the bank's view). Forcing it into double-entry would mean fabricating phantom counterparty accounts for every merchant — exactly the Firefly III "expense account" complexity that the user said feels like over-engineering for personal use.
-- It keeps Phase 1 small: import a CSV, you get rows in `transactions`. No journal scaffolding.
-
-Why not pure single-entry either:
-- Without `pair_transaction_id`, a transfer between two of *your* accounts shows up twice as "income" or "expense" — exactly the bug the user explicitly called out as painful (ASN→ICS settlement being counted as expense when it's a transfer).
-
-### Money & Currency
-
-- **Store amounts as signed `BIGINT` in the minor unit** (cents for EUR/USD, etc.). Index-friendly, exact, no float drift, accepted Laravel convention. Use accessor/mutator or a custom cast to surface `Money` value objects in the application layer.
-- **Use `moneyphp/money`** (or `akaunting/laravel-money` which wraps it) for arithmetic, formatting, and FX. Built on BCMath; production-grade for financial calc.
-- **Three amounts per transaction:**
-  1. `amount_minor` + `currency` — the natural-currency amount the user actually transacted in (e.g. $9.99 USD on Google Play)
-  2. `settled_amount_minor` + `settled_currency` — what hit the account in account currency (e.g. €9.18 EUR after ICS conversion)
-  3. `fx_rate_used` — captured from the source if present; otherwise null (FX-info preservation is a stated requirement)
-- For native-currency transactions, `amount == settled_amount` and `currency == settled_currency`; both columns still populated for query simplicity.
-
-### Income / Transfer / Expense — one table with types
-
-**Decision: one `transactions` table, `type` enum column.** Not separate tables.
-
-Rationale:
-- All three share 90% of fields (account, date, amount, counterparty, source, fingerprint).
-- The differentiator is *semantic*, not structural: a transfer is an expense from one account that pairs with income to another; an income is just an expense with positive sign and no chain link to your other accounts.
-- Polymorphic income/expense tables make every cross-cutting query (e.g. "this month's net cash flow") into a UNION. With one table + a `type` enum, it's a single `SELECT SUM(amount_minor) WHERE user_id=…`.
-- The cost (a wider table) is irrelevant at personal-finance scale (years × thousands of rows = trivial for SQLite).
-- The Firefly III precedent (which scales to many users) also uses one table with a type discriminator.
-
-`type` values:
-- `expense` — money out, not to one of your own accounts
-- `income` — money in, not from one of your own accounts
-- `transfer_out` / `transfer_in` — paired across your own accounts (always come in pairs via `pair_transaction_id`)
-- `fee` — bank fees, FX fees, treated as expenses but separable for reporting
-- `adjustment` — manual correction (opening balance, dispute reversal)
-
-`status` values:
-- `cleared` — appears in an official source (CSV, statement, IMAP receipt confirmed)
-- `pending` — promised but unsettled (e.g. ICS line known from email but not yet in ASN statement)
-- `forecasted` — projector-generated for the future (NEVER persisted; in-memory only). Only included in the enum for completeness — actual forecasted rows are transient DTOs.
-
-### What makes each Account different
-
-| Account Kind | Currency | Settles To | Funded By | Notes |
-|---|---|---|---|---|
-| `asn` | EUR (native) | — (terminal) | salary, refunds | Root of most chains. Source: MT940 / CAMT.053 / CSV. |
-| `ics` | EUR (settled), but transactions can be USD/other | `asn` via monthly bulk iDEAL | direct from ICS-issued card | Bulk-settlement is the painful case. Source: CSV/Excel statement, plus email receipts for individual lines. |
-| `paypal` | EUR (default) but multi-currency | `asn` or `ics` per-transaction | linked card/account | Per-transaction funding source. Source: CSV + email receipts. |
-| `gplay` | USD often | `paypal` or `ics` | linked PayPal/card | Modeled as an account so its receipts can be linked through. Source: email receipts. Acts as a pass-through funding chain. |
-| `cash` (future) | EUR | — | manual | Optional v2+. Manual entry only. |
-
-The `kind` field drives adapter selection and chain-resolution rules. It is *not* the same as "currency" — an ICS card account is `kind=ics` but its transactions can be in many currencies.
-
----
-
-## Ingestion Pipeline Architecture
-
-### Pipeline Stages
+## Recommended Project Structure
 
 ```
-   ┌────────────┐    ┌───────────┐    ┌────────────┐    ┌────────────┐    ┌─────────┐
-   │  Acquire   │───▶│  Parse    │───▶│ Normalize  │───▶│ Fingerprint│───▶│  Load   │
-   │ (CSV file/ │    │ (per      │    │ (canonical │    │ (compute   │    │ (upsert │
-   │  IMAP msg/ │    │  adapter) │    │  shape)    │    │  hash)     │    │  + pair)│
-   │  .eml)     │    │           │    │            │    │            │    │         │
-   └────────────┘    └───────────┘    └────────────┘    └────────────┘    └────┬────┘
-                                                                                │
-                                                                                ▼
-                                                                       ┌────────────────┐
-                                                                       │ Post-Load Jobs │
-                                                                       │ (queued):      │
-                                                                       │ • Categorize   │
-                                                                       │ • Detect       │
-                                                                       │   recurring    │
-                                                                       │ • Resolve      │
-                                                                       │   chain links  │
-                                                                       └────────────────┘
-```
-
-#### Stage 1: Acquire
-- Upload form (Livewire), `.eml` drag-and-drop, IMAP polling job, mbox import command.
-- Always writes the raw bytes to `storage/imports/{user}/{source}/{date}/{hash}.{ext}` first.
-- Creates a `RawSource` row pointing to that file with `checksum` (SHA-256 of bytes) so re-uploading the same file is a no-op at this stage.
-
-#### Stage 2: Parse — `SourceAdapter` interface
-
-```php
-interface SourceAdapter
-{
-    public function supports(RawSource $raw): bool;
-    /** @return iterable<RawEntry> */
-    public function parse(RawSource $raw): iterable;
-}
-```
-
-`RawEntry` is a flat DTO — strings/dates/Money values — with whatever the source provided. No interpretation yet.
-
-Adapters in v1:
-- `AsnCsvAdapter` (League\Csv, ASN's specific column layout)
-- `AsnMt940Adapter` (jejik/mt940 — most widely used PHP MT940 parser)
-- `AsnCamt053Adapter` (genkgo/camt — for future-proofing, CAMT.053 is replacing MT940 across EU banks)
-- `IcsCsvAdapter`, `IcsExcelAdapter` (PhpSpreadsheet for .xls/.xlsx)
-- `PaypalCsvAdapter` (preserves funding-source column!)
-- `EmailPaypalAdapter`, `EmailIcsAdapter`, `EmailGooglePlayAdapter` (template matchers; one per known sender)
-
-Registration: tagged Laravel container binding so adding a new adapter = one class + one tag entry, no controller changes.
-
-#### Stage 3: Normalize — canonical shape
-
-Maps each `RawEntry` to a `CanonicalTransaction` DTO matching the `transactions` columns:
-- Sign convention enforced (negative = leaving the account)
-- Counterparty cleaned (`counterparty_normalized` = lowercase, strip locations like "AMSTERDAM NL", strip transaction IDs, collapse whitespace)
-- Currency resolved (default to account's currency if absent)
-- For PayPal: `funding_source_hint` extracted from the funding column → seeds chain resolution
-- For ICS: `original_currency` and `original_amount` preserved if statement showed both
-
-Normalization is per-adapter (each has its own quirks) but emits the same DTO type.
-
-#### Stage 4: Fingerprint — idempotent identity
-
-**Two-layer dedup** (industry-standard pattern from financial ETL):
-
-1. **File-level idempotency**: `RawSource.checksum` — re-uploading the exact same CSV is a no-op.
-
-2. **Row-level fingerprint**: SHA-256 over a *canonical tuple*:
-   - `account_id`
-   - `posted_at` (date only, normalized to ISO)
-   - `amount_minor` (signed)
-   - `currency`
-   - `counterparty_normalized` (after cleanup)
-   - `source_ref` (if the source provides a stable per-line ID — MT940 has reference IDs; PayPal has Transaction ID; emails have a Message-ID derivable hash; ICS has a posting ID)
-
-   The fingerprint is stored in `transactions.fingerprint`. Unique on `(account_id, fingerprint)`.
-
-**Why both layers** (per consensus from financial-ETL research): file-checksum catches the easy case (same file re-uploaded). Row-fingerprint catches the cross-source case (e.g. an ICS email receipt and a later ICS CSV entry for the same charge), where the file checksums differ but the underlying transaction is identical.
-
-**Versioning the hash**: store a `fingerprint_version` column. If the normalization logic ever changes (e.g. better counterparty cleanup), bump the version and re-fingerprint historical rows via a backfill command — never silently change the algorithm in place.
-
-**Tolerance for fuzziness**: the fingerprint is strict. For cross-source matches that *should* be the same row but the fingerprint differs (e.g. ICS email arrives Jan 3 with merchant "NETFLIX.COM 35314376933" but the ICS statement Jan 31 shows "Netflix Intl B.V."), the chain-resolver handles them as separate transactions with a `chain_link` of kind `same_event_different_source` (low confidence, surfaced for user merge).
-
-#### Stage 5: Load — upsert
-
-```php
-DB::transaction(function () use ($canonical) {
-    Transaction::updateOrCreate(
-        ['account_id' => $c->account_id, 'fingerprint' => $c->fingerprint],
-        $c->toAttributes(),
-    );
-});
-```
-
-One DB transaction per import file (or per batch of 500 if the file is huge). Wraps the whole import for atomicity — partial imports never leave the ledger in a torn state.
-
-For transfers between own accounts (detected by counterparty matching another `Account.external_id`), the Loader also creates the paired row in the destination account and sets `pair_transaction_id` symmetrically.
-
-#### Stage 6: Post-Load — queued enrichment
-
-After load, queue these jobs (database queue driver — no Redis needed for local use):
-1. `CategorizeNewTransactionsJob` — applies user rules, sets `category_id` where rules match. Unmatched go to review queue.
-2. `DetectRecurringSeriesJob` — looks at the last N months for new recurrence candidates; creates/updates `RecurringSeries` records.
-3. `ResolveChainLinksJob` — runs LinkResolver; creates `chain_links` rows.
-
-These run after the user sees "Imported 42 transactions" — they enrich in the background, and the dashboard shows fresh data after a brief polling refresh (Livewire `wire:poll` on the import status pane).
-
-#### Where does learning happen?
-
-**At the review queue, not in normalization.**
-
-Normalization is deterministic by design — same input always produces the same output. Putting ML/heuristics inside the normalizer would make imports non-reproducible.
-
-Learning lives in two clearly-separated places:
-1. **Categorization**: `CategorizationRule` table. When the user recategorizes a transaction, the app offers "create a rule from this?" (counterparty + amount range → category). User confirms; rule is persisted. Future imports auto-apply matching rules during the `CategorizeNewTransactionsJob`.
-2. **Chain links**: `ChainLink.state` transitions from `candidate` → `confirmed` when the user accepts. The LinkResolver records the *features* that produced the suggestion (counterparty hash, amount, date delta, funding-source-hint) in `evidence`. A simple "if this feature combination was confirmed N times, auto-confirm next time" heuristic learns the pattern. No actual ML model; just rule promotion based on confirmation count.
-
----
-
-## Chain-Resolution Engine
-
-### Where it lives: **async after import, with user-confirmation seam**
-
-- **Sync during import = too slow** for large CSVs and blocks the UI on cross-table resolution.
-- **On-demand at view time = wrong for fixed-payment dashboards** which need pre-computed chains to render.
-- **Async post-load** is the right seam: import returns fast, chain-resolver runs as a job, dashboard polls or auto-refreshes when done.
-
-### Representing uncertainty: `ChainLink.state` + `confidence`
-
-```
-ChainLink.state ∈ { candidate, confirmed, rejected }
-ChainLink.confidence ∈ [0.0, 1.0]
-ChainLink.resolver ∈ { auto, user, rule }
-ChainLink.evidence (JSON): { matched_reference_id?, counterparty_similarity?, amount_delta?, date_delta_days?, funding_source_hint? }
-```
-
-- **`confirmed` with `confidence=1.0`**: deterministic match (e.g. PayPal CSV says funding source = "Bank account ending 5678" and that matches an ASN account → link is automatic & confirmed).
-- **`candidate` with `confidence=0.7`**: fuzzy match (counterparty + amount + date within 3 days but no shared reference ID) → user must confirm.
-- **`rejected`**: user explicitly said "no, these aren't the same flow" → resolver remembers and won't suggest again.
-
-The user-facing review queue surfaces all `candidate` links with a one-click confirm/reject. Confirmation either promotes the link (`state=confirmed`) and, if the same evidence signature has been confirmed ≥3 times for this user, creates an auto-promotion rule so future similar candidates land as `confirmed` automatically.
-
-### ICS bulk-settlement: the closed-loop case
-
-The hard case: a single ASN → ICS iDEAL transfer (e.g. €847.32 on Feb 15) actually pays for **N ICS transactions** from the prior statement (Jan 10 – Feb 10 statement period).
-
-**Data model:**
-- The ASN → ICS transfer is **one transfer pair** (`transfer_out` on ASN, `transfer_in` on ICS) joined via `pair_transaction_id`.
-- The relationship "this transfer settles those N ICS lines" is **N `chain_link` rows** of `kind='ics_bulk_settle'` linking the `transfer_in` on ICS to each of the N ICS expense transactions, with `confidence=1.0` once the math checks out.
-- A constraint (app-level invariant, asserted by the resolver): `SUM(linked_transactions.amount_minor) + statement_balance_carry == transfer_in.amount_minor`. The resolver explicitly verifies this and only confirms if the sum matches (within ±€0.01 for rounding).
-
-This means:
-- The ICS bulk-settle row appears as a *transfer* in the ledger (correctly: it's not income), and the chain graph queryable from it shows the underlying purchases.
-- The dashboard can render "€847.32 paid Feb 15 → covered 23 ICS charges from Jan/Feb" by following `chain_links`.
-- If the math doesn't reconcile (because the user paid the wrong amount, or there's an outstanding balance carrying forward), the link goes to `candidate` and the review queue shows "€2.18 unaccounted for — was there a fee or balance carry?"
-
-**Forecasting "what to pay ICS next month":** sum of `cleared ICS expense transactions` since last settlement, minus any credits, minus any prior unpaid carry. The recurring-series detector also tracks the *date* of recent settlements to predict when the next payment is due.
-
-### Where the resolver reads/writes
-
-- **Reads:** `transactions` (all accounts), prior `chain_links`, `categorization_rules` (to recognize funding-source patterns).
-- **Writes:** `chain_links` only. The resolver **never modifies `transactions`**. (Exception: it may write a derived `funding_account_id` on a `RecurringSeries` when it can determine the consistent funding chain.)
-- **Concurrency**: the resolver job uses SQLite's WAL mode (readers don't block the writer). When two import jobs run back-to-back, each spawns its own resolver job; the queue serializes them via a per-user job-uniqueness key (`Job::uniqueFor()`) so chain resolution for the same user never runs in parallel — eliminating the race entirely without needing row-level locks.
-
----
-
-## Forecasting Engine
-
-### Compute on the fly, cache aggressively, never persist forecasts
-
-**Decision: forecasted occurrences are transient DTOs, not table rows.**
-
-Why:
-- Forecasts change continuously as new transactions arrive, recurrence cadence is refined, or what-if scenarios run.
-- Persisted forecasts are a tar pit of "is this row real or predicted?" branches throughout the codebase.
-- Computing 90 days × ~30 recurring series × N accounts is fast: a few thousand operations, well under 100ms on SQLite with proper indexes.
-
-**Implementation:**
-- `BalanceProjector` service: given an account + a date range, returns `Collection<ForecastedTransaction>` — DTOs with the same shape as `Transaction` but `status='forecasted'` and no DB id.
-- The Livewire view calls the projector; output is cached per-(account, date-range, ledger-mtime) using Laravel's cache with the ledger's max `updated_at` as cache key suffix. Any new transaction invalidates the cache naturally.
-
-**Recurrence materialization:**
-- `RecurringSeries.cadence` + `RecurringSeries.canonical_amount_minor` + `last_seen_at` → generate occurrences forward.
-- Cadence engine handles: `monthly`, `monthly_on_day_N`, `quarterly`, `yearly`, `weekly`, `every_4_weeks`. Recurly/Plaid-style patterns based on transaction-frequency research.
-- Variable amounts (utility bills): store last 6 occurrences' amounts on the series; project using the median.
-
-### What-if mutations: in-memory overlay
-
-```php
-$scenario = WhatIfScenario::make()
-    ->cancel($netflixSeries)
-    ->add(new ForecastedTransaction([
-        'posted_at' => '2026-06-01',
-        'amount_minor' => -50000,
-        'description' => 'planned new gym membership',
-    ]));
-
-$projection = $balanceProjector->withOverlay($scenario)->project('asn-main', $today, $today->copy()->addMonths(3));
-```
-
-The `WhatIfScenario` is a value object held in Livewire component state (or session for cross-page persistence). It is never written to disk. When the user "saves" a what-if, the system can offer to materialize it as a real `RecurringSeries` (with `status='active'`) or a single planned `Transaction` (with `status='pending'`) — but that's an explicit promotion, not a side effect.
-
----
-
-## Frontend ↔ Backend Architecture
-
-### Choice: **Blade + Livewire 4**, not Inertia, not SPA
-
-Rationale:
-- Single user, localhost, low concurrency — the network round-trip cost of Livewire's "every interaction is a request" model is essentially zero (loopback).
-- The UI is form-and-list-heavy (import upload, transaction list, category assignment, link review queue, settings) — exactly Livewire's sweet spot per current consensus comparing Livewire vs Inertia for dashboards.
-- Keeps the entire stack PHP — no Vue/React build pipeline to maintain. One Composer install, one `php artisan serve`, and you're running. Matches the user's stated preference for "working app fast, not six-month architecture exercise."
-- Livewire 4's **Islands** feature pins expensive views (e.g. the cash-flow chart) to their own update cycle, mitigating the historical "everything re-renders" complaint.
-- **Defer chart rendering to Alpine.js + a tiny chart lib** (Chart.js, or even hand-rolled SVG sparklines for the "calm" aesthetic) — Livewire passes data, Alpine renders.
-
-### Keeping it "calm" on years of transactions
-
-Personal-finance scale: 5 accounts × ~50 transactions/month × 10 years = ~30,000 rows. SQLite + WAL + good indexes handles this trivially.
-
-**Concrete steps:**
-1. **SQLite WAL mode** + `busy_timeout=5000` in the connection setup. Standard Laravel optimization; readers no longer block writers.
-2. **Indexes on:**
-   - `transactions (account_id, posted_at DESC)` — primary list view
-   - `transactions (user_id, posted_at DESC)` — cross-account month view
-   - `transactions (recurring_series_id)` — fixed-payment drill
-   - `transactions (category_id, posted_at)` — category trends
-   - `transactions (fingerprint)` UNIQUE — dedup
-   - `chain_links (from_transaction_id)` and `(to_transaction_id)`
-3. **Default view = last 90 days.** "Show full history" loads more on demand with cursor pagination. Matches the PROJECT.md requirement for "Default UI to recent (last 3–6 months); offer 'show full history' toggle."
-4. **Pre-aggregated month-roll-ups** for the dashboard:
-   - `monthly_account_summary` view or materialized table: `(user_id, account_id, year_month, income_minor, expense_minor, transfer_in_minor, transfer_out_minor, net_minor)`. Refreshed by an event listener on `Transaction` save, or rebuilt on the fly for the current month.
-   - The dashboard's "this month at a glance" reads from this rollup, not from `transactions` directly.
-
----
-
-## Email Scanning Architecture
-
-### Sync model: **manual-triggered + scheduled cron**, no IMAP IDLE
-
-Rationale:
-- A local dev machine isn't always on or always online; persistent IMAP IDLE connections are fragile in that environment.
-- The product value is "show me my finances" — there's no real-time requirement. Once-an-hour or once-a-day scanning is plenty.
-- Manual trigger ("Scan inboxes now" button) is essential for the impatient first-import case.
-
-**Implementation:**
-- Laravel scheduled task: `php artisan inbox:scan --since=last` every hour (configurable). Cron-driven via Laravel's `schedule:run`.
-- A `ScanInboxes` action queues per-inbox `ScanSingleInboxJob`s — the database queue worker processes them serially.
-- For backfill (the "3 months of history" requirement), a one-shot `inbox:backfill --since=2026-02-01` command iterates date windows.
-
-### State tracking
-
-```
-InboxScanState:
-  user_id, inbox_identifier (hash of host:port:user), folder,
-  last_uid (BIGINT, per IMAP UIDVALIDITY),
-  uid_validity (BIGINT),
-  last_scanned_at,
-  scan_window_start
-```
-
-On each scan: query `UID > last_uid` since the start window. Webklex/laravel-imap is the PHP IMAP wrapper with the largest ecosystem; it exposes UID-based queries via its `Query` API and supports the `ST_UID` mode. The package doesn't ship its own state tracking — that's `InboxScanState`'s job.
-
-**UIDVALIDITY handling**: if the server returns a different `UIDVALIDITY`, the entire UID space has been invalidated (server-side rebuild). In that case: reset `last_uid=0`, re-scan from `scan_window_start`. The two-layer fingerprint dedup catches the resulting reprocessed messages.
-
-### Parsing strategy: **per-sender templates with generic fallback**
-
-- A registry of `EmailTemplateMatcher` classes, each declaring `supports(message): bool` (matches by `From:` address or `X-Sender` pattern). Examples: `PayPalReceiptMatcher`, `IcsStatementMatcher`, `GooglePlayReceiptMatcher`.
-- Templates are ordered by specificity. First-match wins.
-- A generic fallback `HeuristicReceiptMatcher` scans for amount-looking patterns + a known merchant in the subject — flagged with low confidence, queued for user review.
-
-**Why templates over a single generic parser** (per project requirement and ML-research consensus):
-- These email formats are stable and small in number (~5 senders v1). Hand-tuned regex/DOM parsing is fast, deterministic, and easy to debug.
-- A template-per-sender keeps each parser small (~50 lines) and lets the user contribute new templates without retraining anything.
-
----
-
-## Data Flow / Boundaries
-
-### Authoritative balance for an account today
-
-**Owner: the `Ledger` module, specifically the `BalanceQuery` read service.**
-
-The balance is **derived**, not stored — to avoid drift bugs.
-
-```php
-SELECT SUM(amount_minor) FROM transactions
-WHERE account_id = ? AND user_id = ? AND status = 'cleared' AND posted_at <= ?
-```
-
-For performance with years of data, this is paired with a checkpoint pattern:
-- `account_balance_snapshots` table: `(account_id, as_of_date, balance_minor)` — written nightly for each account.
-- Today's balance = nearest snapshot + delta from snapshot date forward.
-
-This is the "calm performance" path: even with 30,000 lifetime rows, the live calculation reads at most ~50 rows (a month's worth after the most recent snapshot).
-
-### Race-condition discipline during concurrent imports
-
-- **Only the Loader writes to `transactions`.** Everything else (resolver, recurring-detector, categorizer) writes to *adjacent* tables (`chain_links`, `recurring_series`, etc.) or updates non-key columns of `transactions` (e.g. `category_id`).
-- **SQLite WAL** lets readers proceed during writes. Writers serialize.
-- **Per-user job uniqueness** for resolver/recurring jobs: `Job::unique($userId)` ensures only one chain-resolution job runs per user at a time. This is sufficient for a single-user app and remains correct when multi-user is added.
-- **Bulk-import in a single transaction** per file: either the whole file lands or none of it does.
-
-### Internal boundaries (module → module communication)
-
-| Boundary | Communication style | Notes |
-|---|---|---|
-| Presentation → Application | Direct method calls on Actions | Livewire components instantiate Actions |
-| Application → Domain | Direct service calls, value objects | Same process, no events needed |
-| Ingestion → Categorization/Chain/Recurring | **Laravel events** (`TransactionImported`) | Loose coupling so enrichment modules can be added later without touching the Loader |
-| Domain → Ledger | Direct Eloquent | Ledger is the only domain module that writes Transaction; others write their own tables |
-| Ledger → all readers | Eloquent queries + read-model services | No write access from readers |
-
----
-
-## Project Structure
-
-```
-app/
-├── Domain/
-│   ├── Ledger/                       # The canonical ledger
-│   │   ├── Models/
-│   │   │   ├── Account.php
-│   │   │   ├── Transaction.php
-│   │   │   ├── Currency.php
-│   │   │   └── Merchant.php
-│   │   ├── ValueObjects/
-│   │   │   ├── Money.php             # wraps moneyphp/money
-│   │   │   ├── Fingerprint.php
-│   │   │   └── TransactionType.php   # enum
-│   │   ├── Services/
-│   │   │   ├── BalanceQuery.php
-│   │   │   └── TransactionUpserter.php
-│   │   └── Events/
-│   │       └── TransactionImported.php
+diederik/
+├── Modules/
+│   ├── Core/                        # (existing) auth contracts, doctor, backups
+│   │   ├── Public/Contracts/
+│   │   │   ├── CurrentUser.php      # EXISTING
+│   │   │   ├── UserDataPath.php     # NEW (v2.0 user-data root seam)
+│   │   │   ├── UpdateChannel.php    # NEW (auto-update seam)
+│   │   │   └── DeveloperMode.php    # NEW (Dev Mode capability flag)
+│   │   ├── Public/Services/
+│   │   │   ├── CurrentUserService.php  # EXISTING — no changes needed
+│   │   │   └── UserDataPathService.php # NEW
+│   │   ├── Public/Concerns/
+│   │   │   └── BelongsToUser.php    # EXISTING — no changes needed
+│   │   ├── Public/Scopes/
+│   │   │   └── UserScope.php        # EXISTING — already enforces per-user
+│   │   └── Internal/Console/
+│   │       ├── InstallCommand.php   # EXISTING — gains --desktop / --first-run modes
+│   │       └── MigrateUserDataCommand.php  # NEW — v1.0 → v2.0 in-place migration
 │   │
-│   ├── Ingestion/
-│   │   ├── Contracts/
-│   │   │   ├── SourceAdapter.php
-│   │   │   └── Fingerprinter.php
-│   │   ├── Adapters/
-│   │   │   ├── Asn/
-│   │   │   │   ├── AsnCsvAdapter.php
-│   │   │   │   ├── AsnMt940Adapter.php
-│   │   │   │   └── AsnCamt053Adapter.php
-│   │   │   ├── Ics/
-│   │   │   │   ├── IcsCsvAdapter.php
-│   │   │   │   └── IcsExcelAdapter.php
-│   │   │   ├── Paypal/
-│   │   │   │   └── PaypalCsvAdapter.php
-│   │   │   └── Email/
-│   │   │       ├── PaypalReceiptMatcher.php
-│   │   │       ├── IcsStatementMatcher.php
-│   │   │       └── GooglePlayReceiptMatcher.php
-│   │   ├── Pipeline/
-│   │   │   ├── ImportPipeline.php
-│   │   │   ├── Stages/
-│   │   │   │   ├── ParseStage.php
-│   │   │   │   ├── NormalizeStage.php
-│   │   │   │   ├── FingerprintStage.php
-│   │   │   │   └── LoadStage.php
-│   │   │   └── Dto/
-│   │   │       ├── RawEntry.php
-│   │   │       └── CanonicalTransaction.php
-│   │   ├── Models/
-│   │   │   ├── Source.php
-│   │   │   ├── RawSource.php
-│   │   │   └── InboxScanState.php
-│   │   └── Actions/
-│   │       ├── ImportCsvFile.php
-│   │       ├── ImportEml.php
-│   │       └── ScanInbox.php
+│   ├── Auth/                        # NEW — owns the auth UI + actions
+│   │   ├── Public/Contracts/
+│   │   │   └── SignupGate.php       # "is signup currently allowed?"
+│   │   ├── Public/Actions/
+│   │   │   ├── CreateUser.php       # invoked by Fortify CreateNewUser action
+│   │   │   └── SwitchUser.php       # profile-selector hand-off
+│   │   ├── Internal/Http/Livewire/
+│   │   │   ├── LoginPage.php
+│   │   │   ├── SignupPage.php
+│   │   │   ├── ProfileSelectorPage.php
+│   │   │   └── LogoutControl.php
+│   │   └── Database/Migrations/
+│   │       └── *_add_is_developer_to_users.php
 │   │
-│   ├── Categorization/
-│   │   ├── Models/
-│   │   │   ├── Category.php
-│   │   │   └── CategorizationRule.php
-│   │   ├── Services/
-│   │   │   └── RuleEngine.php
-│   │   ├── Jobs/
-│   │   │   └── CategorizeNewTransactionsJob.php
-│   │   └── Actions/
-│   │       └── RecategorizeRule.php
+│   ├── Desktop/                     # NEW — owns OS-shell concerns
+│   │   ├── Public/Contracts/
+│   │   │   ├── SystemTrayService.php
+│   │   │   └── DesktopNotificationService.php
+│   │   ├── Public/Events/
+│   │   │   └── FileOpenedFromOs.php # .eml / .csv dropped onto app icon
+│   │   ├── Internal/
+│   │   │   ├── NativePhpEventListener.php
+│   │   │   ├── TrayMenuBuilder.php
+│   │   │   ├── AppMenuBuilder.php
+│   │   │   └── FileOpenRouter.php   # routes to Ingestion or Receipts public services
+│   │   └── Providers/
+│   │       └── DesktopServiceProvider.php
 │   │
-│   ├── Recurring/
-│   │   ├── Models/
-│   │   │   └── RecurringSeries.php
-│   │   ├── Services/
-│   │   │   └── RecurrenceDetector.php
-│   │   └── Jobs/
-│   │       └── DetectRecurringSeriesJob.php
+│   ├── DevMode/                     # NEW — in-app developer console
+│   │   ├── Public/Contracts/
+│   │   │   └── AllowedArtisanCommand.php  # whitelist contract
+│   │   ├── Public/Services/
+│   │   │   └── ArtisanCommandRegistry.php # SAFE / DESTRUCTIVE / FORBIDDEN tiers
+│   │   ├── Internal/
+│   │   │   ├── Http/Livewire/
+│   │   │   │   ├── DevConsolePage.php
+│   │   │   │   ├── ArtisanRunner.php
+│   │   │   │   ├── LogTailer.php
+│   │   │   │   ├── QueueInspector.php   # reads jobs table directly (no Horizon dep)
+│   │   │   │   └── DoctorPanel.php
+│   │   │   ├── Http/Middleware/
+│   │   │   │   └── EnsureDeveloperMode.php  # gate on User::is_developer
+│   │   │   └── Services/
+│   │   │       ├── ArtisanRunner.php        # uses Illuminate\Contracts\Console\Kernel
+│   │   │       └── DestructiveCommandGuard.php  # double-confirm + audit-log
+│   │   └── Providers/
+│   │       └── DevModeServiceProvider.php
 │   │
-│   ├── Chains/
-│   │   ├── Models/
-│   │   │   └── ChainLink.php
-│   │   ├── Services/
-│   │   │   ├── LinkResolver.php
-│   │   │   ├── PayPalFundingResolver.php
-│   │   │   └── IcsSettlementResolver.php
-│   │   ├── Jobs/
-│   │   │   └── ResolveChainLinksJob.php
-│   │   └── Actions/
-│   │       └── ConfirmChainLink.php
-│   │
-│   └── Forecasting/
-│       ├── Services/
-│       │   ├── BalanceProjector.php
-│       │   └── WhatIfEngine.php
-│       └── Dto/
-│           ├── ForecastedTransaction.php
-│           └── WhatIfScenario.php
+│   └── (existing 11 modules — unchanged structure)
 │
-├── Http/
-│   ├── Livewire/
-│   │   ├── Dashboard/
-│   │   │   ├── MonthAtAGlance.php
-│   │   │   └── CashflowChart.php
-│   │   ├── Transactions/
-│   │   │   ├── TransactionList.php
-│   │   │   └── TransactionDetail.php
-│   │   ├── Import/
-│   │   │   ├── UploadForm.php
-│   │   │   └── ReviewQueue.php
-│   │   └── Recurring/
-│   │       └── FixedPayments.php
-│   └── Controllers/
-│       └── (almost empty — Livewire handles most of it)
+├── app/Providers/
+│   ├── HorizonServiceProvider.php           # EXISTING — gated to dev mode only in v2
+│   ├── NativePhpServiceProvider.php         # NEW (or auto-discovered from nativephp/desktop)
+│   └── ElectronUpdateServiceProvider.php    # NEW — binds UpdateChannel contract
 │
-├── Console/Commands/
-│   ├── InboxScan.php           # php artisan inbox:scan
-│   ├── InboxBackfill.php
-│   └── FingerprintRebuild.php  # for hash-version bumps
+├── nativephp.config.php             # NEW — NativePHP main config
+├── config/
+│   ├── database.php                 # MODIFIED — database = storage_path('database/data.sqlite')
+│   ├── queue.php                    # MODIFIED — default = 'database' for desktop builds
+│   ├── horizon.php                  # MODIFIED — gated to dev mode (config('app.dev_mode'))
+│   └── nativephp.php                # NEW — queue_workers, scheduler, electron app meta
 │
-└── Support/
-    ├── Concerns/
-    │   └── BelongsToUser.php   # trait for the multi-user-ready scope
-    └── CurrentUser.php          # facade-style accessor; returns user 1 in v1
+├── deploy/
+│   ├── launchd/                     # EXISTING — dev-mode only
+│   └── electron-builder.yml         # NEW — installer/sign/update-feed config
+│
+├── .github/workflows/
+│   ├── ci.yml                       # NEW — PR gate: pint + larastan + pest
+│   └── release.yml                  # NEW — tag-triggered: build/sign/publish installers
+│
+└── resources/
+    └── brand/
+        ├── logo.svg                 # canonical brand asset
+        └── icons/
+            ├── macos.icns
+            ├── windows.ico
+            └── linux.png            # generated at build time
 ```
 
 ### Structure Rationale
 
-- **`app/Domain/<Module>/`**: Each bounded module owns its models, services, jobs, and actions. Cross-module communication via events (Ingestion → Categorization/Chains/Recurring) keeps add-ons cheap. This mirrors DDD bounded-context guidance without the ceremony of separate packages.
-- **`Ingestion/Adapters/<Source>/`**: One folder per data source — adding a new bank format means dropping one class in here, registering it in the service provider, and writing one normalizer. No other module changes.
-- **`Forecasting/Dto/`**: Forecast DTOs live separately so it's obvious they aren't persisted. Same for `WhatIfScenario`.
-- **`Http/Livewire/`** organized by feature, not by type, because Livewire components are the application's surface area in this stack.
-- **`Support/CurrentUser`**: the seam where multi-user readiness lives. In v1 it returns `User::find(1)`. In v2 it returns `auth()->user()`. The seam means zero rewrites across the domain.
+- **`Modules/Auth/` as a NEW dedicated module, NOT a `Modules/Core/` sub-namespace.** Auth is its own bounded context: login/signup/profile-selector pages, Fortify actions, the `is_developer` flag toggle. Keeping it inside `Modules/Core/` would force `Modules/Core/Internal/Http/Livewire/LoginPage.php` to live alongside `SystemAlertsBanner` and `Dashboard`, blurring "operational infrastructure" with "identity." A separate module preserves the BoundaryArchTest pattern (`Modules\Auth\Internal` only used inside `Modules\Auth`).
+- **`Modules/Desktop/` as a NEW module.** All NativePHP IPC concerns live here. The existing modules never import `Native\Laravel\*` namespaces — they only receive events (e.g. `FileOpenedFromOs`) and method calls on injected `SystemTrayService` / `DesktopNotificationService` contracts. This keeps the eleven existing modules buildable in a non-desktop test environment (Pest runs Laravel without NativePHP loaded).
+- **`Modules/DevMode/` as a NEW module.** The Dev Mode UI consumes other modules' public surfaces (e.g. `Modules\Core\Public\Services\SystemAlertQuery`, `DoctorProbe` results) but exposes none of its own to other domain modules. Quarantining it in its own module makes the `is_developer`-gated middleware enforcement straightforward and prevents leakage into normal user pages.
+- **No `App\Models\User` migration.** v1.0 already class-aliases `App\Models\User` to `Modules\Core\Models\User` inside `CoreServiceProvider::register()`. v2.0 keeps that alias; the User model stays in `Modules/Core/Models/`.
 
----
+## Architectural Patterns
 
-## Architectural Patterns Worth Using
+### Pattern 1: NativePHP-Rewritten storage_path() as the Single Source of Truth
 
-### Pattern 1: Action Pattern (single-purpose invokable classes)
+**What:** NativePHP rewrites `Application::storagePath()` (and therefore `app()->storagePath()` and `storage_path()`) to the OS's per-user `appData` directory at boot. All paths the application reads or writes derive from `Application::storagePath(...)`, never from `database_path()` or hard-coded `__DIR__` relative paths.
 
-**What:** Each user-meaningful operation is a class with one `__invoke` (or `execute`) method. Examples: `ImportCsvFile`, `ConfirmChainLink`, `RecategorizeRule`.
+**When to use:** Every file the app reads/writes that must survive an app update or uninstall-reinstall cycle. Backups, the SQLite file itself, OAuth secrets, the inbox drop-folder, logs, queue payloads (when using `database` driver), failed_jobs.
 
-**When:** All write-side operations. Read-side stays in Query/Service classes.
-
-**Trade-offs:**
-- ✅ Each action is independently testable, queueable (`ShouldQueue` trait), and invokable from CLI, Livewire, or HTTP.
-- ✅ Avoids the "service class becomes a junk drawer" anti-pattern (the well-documented failure mode of generic Laravel service classes).
-- ❌ More files. Acceptable for the modularity payoff at this scale.
+**Trade-offs:** `database_path()` continues to point at the *bundled* (read-only) path inside the app bundle — useful for migration files and seeders that ship with the binary, useless for the live data. Code must consistently choose the right helper. The new `Modules\Core\Public\Contracts\UserDataPath` contract makes this explicit and arch-testable.
 
 **Example:**
 ```php
-final class ImportCsvFile
+// Modules/Core/Public/Services/UserDataPathService.php
+final class UserDataPathService implements UserDataPath
 {
     public function __construct(
-        private ImportPipeline $pipeline,
-        private SourceRegistry $sources,
+        private readonly Application $app,
     ) {}
 
-    public function __invoke(UploadedFile $file, Source $source): ImportResult
+    public function databaseFile(): string
     {
-        $raw = RawSource::createFrom($file, $source);
-        return $this->pipeline->run($raw, $this->sources->adapterFor($source));
+        // NativePHP-rewritten storage_path()
+        return $this->app->storagePath('database/data.sqlite');
+    }
+
+    public function backupsDirectory(): string
+    {
+        return $this->app->storagePath('app/backups');
+    }
+
+    public function oauthSecretsFile(): string
+    {
+        return $this->app->storagePath('app/secrets/email-oauth.json');
+    }
+
+    public function inboxDropFolder(): string
+    {
+        return $this->app->storagePath('app/inbox');
+    }
+
+    public function logsDirectory(): string
+    {
+        return $this->app->storagePath('logs');
     }
 }
 ```
 
-### Pattern 2: Pipeline (Laravel's built-in `Pipeline` helper)
+`config/database.php` then resolves to `storage_path('database/data.sqlite')` at boot (NativePHP runs the rewrite before `config:cache`). `OAuthSecretsRepository`, `BackupDatabaseCommand`, `RestoreDatabaseCommand`, `BackupFreshnessProbe`, and the inbox drop-folder scanner all get re-wired to consume `UserDataPath` instead of base-path-rooted strings. The existing `core.backups_directory` container binding (in `CoreServiceProvider`) becomes a closure that delegates to `UserDataPath::backupsDirectory()`.
 
-**What:** Chain processing stages — `Acquire → Parse → Normalize → Fingerprint → Load`. Each stage is a class with one method that receives state, mutates/returns it, calls `$next($state)`.
+### Pattern 2: One SQLite Per Machine, NOT Per User (recommended)
 
-**When:** Ingestion (clear use case). Possibly also for chain resolution if multiple resolvers compose.
+**What:** A single `data.sqlite` lives in the OS user-data directory, shared by every diederik user (the developer, the partner, future invitees). The existing `user_id`-scoped `UserScope` global scope is the per-user data wall.
 
-**Trade-offs:** Reorderable, testable in isolation, easy to add a new stage (e.g. enrichment) without touching the others. The Laravel-Ingest and PHP-ETL communities have validated this pattern repeatedly.
-
-### Pattern 3: Repository-less Eloquent + Read Models
-
-**What:** Skip a generic repository layer. Use Eloquent models directly for writes (Ingestion's Loader, Actions). For reads, build small **Query Service** classes (`MonthAtAGlanceQuery`, `FundingChainQuery`) that encapsulate complex joins/aggregates.
-
-**When:** Always — Laravel-native consensus is that generic repository layers over Eloquent add no value.
-
-**Trade-offs:** Pragmatic; lower ceremony; same testability via in-memory SQLite.
-
-### Pattern 4: Events for Cross-Module Coordination
-
-**What:** `TransactionImported` event is dispatched by the Loader. Categorization, Chains, and Recurring modules each register listeners (which queue jobs).
-
-**When:** Whenever a write in module A should trigger work in module B without A knowing B exists.
+**When to use:** Multi-user with strong partner-sharing intent (the user has explicitly said they want to share with a partner). Single-machine. Privacy is on the **operating-system user** boundary (one macOS user account = one diederik dataset), not on the **app user** boundary.
 
 **Trade-offs:**
-- ✅ Adding a new enrichment module (e.g. anomaly detection in v3) means adding one listener; the Loader doesn't change.
-- ❌ Slight indirection. Tolerable given the small module count.
 
-### Pattern 5: Value Objects for Money & Fingerprint
+| | Per-machine (RECOMMENDED) | Per-app-user |
+|---|---|---|
+| Partner sharing | Trivial — both users log into the same app on the same machine, see only their own data via `UserScope` | Requires explicit shared-account model or a sync layer (out of scope) |
+| Backups | One `db:backup` covers everyone | One backup per user; coordination headache |
+| OAuth secrets | One JSON file, partitioned per `user_id` inside | One file per user; multiply chmod surface |
+| Cross-user reporting | Possible later if user opts in (e.g. household total) | Impossible without merging databases |
+| OS-user isolation | Preserved (macOS already isolates `~/Library/Application Support/` per OS user) | Preserved (same dir) |
+| Schema complexity | Already done in v1.0 (every domain table has `user_id`) | Same complexity, no benefit |
 
-**What:** `Money` (immutable, currency-aware arithmetic via moneyphp/money). `Fingerprint` (sha256 wrapper).
+**Decision: per-machine, one SQLite, multi-user via existing schema.** This is what v1.0's schema was designed for — see `UserIdColumnArchTest`. v2.0 just turns on real authentication, the global scope already works.
 
-**When:** Anywhere amounts or hashes are passed around.
+**Implication for OAuth secrets:** the existing `email-oauth.json` file gets a `users.{user_id}.providers` nesting:
 
-**Trade-offs:** Prevents currency-mixing bugs, enables `$tx->amount->plus($other->amount)` rather than raw integer arithmetic.
+```json
+{
+  "providers": {
+    "gmail":    { "client_id": "...", "client_secret": "..." }
+  },
+  "users": {
+    "1": { "inboxes": [ { "id": 7, "refresh_token": "...", "rotated_at": "..." } ] },
+    "2": { "inboxes": [ { "id": 12, "refresh_token": "..." } ] }
+  }
+}
+```
 
----
+`OAuthSecretsRepository` extends with `forUser(int $userId)` accessor methods; the chmod-600 single-file invariant + atomic-rename writes stay intact. Existing v1.0 users get migrated in-place by `MigrateUserDataCommand` (their inboxes move under `users.1`).
+
+**Example — multi-user-aware query (NO code change required in domain modules):**
+```php
+// Modules/Ledger/Public/Services/TransactionQuery.php — UNCHANGED from v1.0
+final class TransactionQuery
+{
+    public function recent(int $limit = 20): Collection
+    {
+        // UserScope (global scope, applied via BelongsToUser trait) already
+        // filters by $this->currentUser->id() — nothing else to do.
+        return Transaction::query()
+            ->orderByDesc('posted_at')
+            ->limit($limit)
+            ->get();
+    }
+}
+```
+
+This is the load-bearing payoff of the v1.0 design: 11 modules of domain logic continue to work unmodified.
+
+### Pattern 3: Drop Horizon for the Shipped Desktop Bundle; Keep It Only for Dev Mode
+
+**What:** Ship the desktop installer with `QUEUE_CONNECTION=database`. The `jobs`, `failed_jobs`, and `job_batches` tables already exist (Laravel 13 defaults). NativePHP's built-in `queue_workers` config supervises 2 long-running `php artisan queue:work` child processes inside the Electron app. Horizon stays installed in `composer.json` but the `/horizon` route, Horizon's Redis-backed dashboard, and the `redis` queue connection are activated **only when** `config('app.dev_mode') === true` AND a Redis instance is reachable on `127.0.0.1:6379`.
+
+**When to use:** Local-only, single-machine, partner-sharing desktop app. Job throughput is bounded by the human's inbox size (hundreds of inboxes/day at the absolute worst) — well within SQLite's capacity in WAL mode.
+
+**Trade-offs vs shipping Redis-in-bundle:**
+
+| | Database queue (RECOMMENDED) | Redis-in-bundle |
+|---|---|---|
+| Installer size | ~80 MB (Electron + PHP runtime) | ~140 MB (add `redis-server` binary per OS) |
+| Code-signing surface | Just Electron + PHP | Electron + PHP + 3 Redis binaries to sign per OS |
+| Cross-platform | Works on macOS / Windows / Linux without per-OS Redis builds | Needs 3 Redis binaries; Windows Redis is unmaintained |
+| `ShouldBeUniqueUntilProcessing` per-user locking | Works against any cache store; switch the lock store from `redis` to `file` or `database` | Works natively |
+| Horizon dashboard for end users | Not available in shipped build (Dev Mode only — see Pattern 4) | Available |
+| Failed-jobs UI for end users | Built into Dev Mode UI (`Modules/DevMode/Internal/Http/Livewire/QueueInspector.php`) | Comes free via Horizon |
+| Latency to job execution | ~3-5s (worker sleep interval) | ~100ms (Redis blpop) |
+| Resource cost on idle laptop | ~30 MB resident (queue workers) | ~60 MB resident (Redis daemon + workers) |
+
+**The single nuanced concern: `ShouldBeUniqueUntilProcessing`.** v1.0 uses Redis as the lock store (via `Cache::driver('redis')` carve-outs in `BoundaryArchTest`). For the shipped desktop bundle, the lock store needs to be `file` or `database`:
+
+```php
+// In every ShouldBeUniqueUntilProcessing job's uniqueVia():
+public function uniqueVia(): Repository
+{
+    // v1.0:  return Cache::driver('redis');
+    // v2.0:  return Cache::driver(config('cache.locks_store', 'database'));
+    return Cache::driver(config('cache.locks_store'));
+}
+```
+
+A new `config/cache.php` key `locks_store` defaults to `'database'` in the shipped build and `'redis'` in dev mode. The existing `BoundaryArchTest` carve-outs stay intact (the facade call shape is unchanged; only the resolved store rotates).
+
+**Implication for `app/Providers/HorizonServiceProvider.php`:** it stays registered, but `boot()` early-exits when `! config('app.dev_mode')` so the `/horizon` route never registers in shipped builds.
+
+**Example — `nativephp.config.php` queue worker config:**
+```php
+return [
+    'queue_workers' => [
+        'default' => [
+            'queues' => ['default'],
+            'memory_limit' => 256,
+            'timeout' => 90,
+            'sleep' => 3,
+            'max_jobs' => 1000,
+            'max_time' => 3600,
+        ],
+        'chains' => [
+            // Dedicated worker for ResolveChainLinksJob so a slow chain
+            // resolve never blocks the EmailScan pipeline.
+            'queues' => ['chains'],
+            'memory_limit' => 256,
+            'timeout' => 300,
+        ],
+    ],
+    'scheduler' => true,  // NativePHP launches `php artisan schedule:work`
+];
+```
+
+### Pattern 4: Developer Mode Gating via `User::is_developer` Boolean + Middleware
+
+**What:** A new `is_developer` boolean column on the `users` table. The Dev Mode UI is unreachable unless the authenticated user has the flag set. The `is_developer` flag is set by:
+1. The first user to sign up (automatically, so the developer always has access on their own install).
+2. Any existing developer can grant or revoke the flag on another user via the profile-selector UI.
+
+**When to use:** Anywhere in `Modules/DevMode/`. The middleware lives at `Modules/DevMode/Internal/Http/Middleware/EnsureDeveloperMode.php` and is registered against every route in `Modules/DevMode/Routes/web.php`.
+
+**Trade-offs:** Forces every dev-only feature behind a single gate. The trade-off is consistency: instead of sprinkling `if (! $currentUser->isDeveloper()) abort(403);` across 20 surfaces, the middleware handles all of them, and the arch-test `EnsureDeveloperModeAppliedToAllDevModeRoutes` makes the rule mechanically enforceable.
+
+**Example:**
+```php
+// Modules/DevMode/Internal/Http/Middleware/EnsureDeveloperMode.php
+final class EnsureDeveloperMode
+{
+    public function __construct(
+        private readonly CurrentUser $currentUser,
+    ) {}
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        if (! $this->currentUser->isAuthenticated()) {
+            return redirect()->route('login');
+        }
+        if (! $this->currentUser->user()->is_developer) {
+            abort(404);  // 404, not 403: pretend the route doesn't exist
+        }
+        return $next($request);
+    }
+}
+```
+
+The `CurrentUser::user()->is_developer` access is the only new field; the contract gains a `public function isDeveloper(): bool` convenience method.
+
+### Pattern 5: Artisan Command Whitelist (SAFE / DESTRUCTIVE / FORBIDDEN tiers)
+
+**What:** The Dev Mode UI exposes an artisan runner backed by a strict whitelist. Each command falls into one of three tiers:
+
+- **SAFE** (run with one click, no confirmation): `diederik:doctor`, `db:backup`, `diederik:failed-jobs list`, `queue:retry`, `cache:clear`, `migrate:status`.
+- **DESTRUCTIVE** (require confirmation modal + reason text + a 5-second hold-to-confirm): `db:restore`, `migrate:rollback`, `migrate:fresh`, `diederik:failed-jobs prune`, `cache:forget`.
+- **FORBIDDEN** (never exposed): anything outside the whitelist. The user can copy-paste commands into a terminal if they really need them; the in-app runner refuses.
+
+The whitelist lives in `Modules/DevMode/Public/Services/ArtisanCommandRegistry.php`. New commands added to existing modules are added explicitly to the registry — they do not auto-appear.
+
+**When to use:** Inside `Modules/DevMode/Internal/Http/Livewire/ArtisanRunner.php`. Every command execution writes an audit row to a new `dev_mode_audit` table: `user_id`, `command`, `arguments`, `started_at`, `finished_at`, `exit_code`, `stdout_preview`.
+
+**Trade-offs:** Three tiers add code complexity vs "run any artisan command." The payoff is auditable, safer, and explicit — a partner accidentally clicking through Dev Mode can't run `migrate:fresh` without explicitly confirming what they're doing.
+
+### Pattern 6: NativePHP-Rooted Module for OS-Shell Concerns
+
+**What:** A new `Modules/Desktop/` module owns all NativePHP imports. Other modules consume `Modules\Desktop\Public\Contracts\*` interfaces. The Desktop module's `NativePhpEventListener` translates `Native\Laravel\Events\App\FileOpened` → `Modules\Desktop\Public\Events\FileOpenedFromOs` (a thin in-process event), which the Ingestion and Receipts modules subscribe to.
+
+**When to use:** Whenever an existing module needs an OS capability. Example — when `Modules/Ingestion/Internal/Adapters/Asn/CsvAdapter` finishes parsing a CSV dropped via OS file-open, it dispatches a Livewire toast through `DesktopNotificationService` (NOT through a hard-coded NativePHP `Notification::send()` call).
+
+**Trade-offs:** One extra hop (Native event → Desktop event → consumer). The payoff is that all 11 existing modules continue to work in Pest tests without NativePHP loaded (the contract is bound to a no-op stub in the test container).
+
+**Example:**
+```php
+// Modules/Desktop/Internal/NativePhpEventListener.php
+final class NativePhpEventListener
+{
+    public function __construct(
+        private readonly Dispatcher $events,
+    ) {}
+
+    public function subscribe(): void
+    {
+        // Native\Laravel\Events\App\FileOpened is fired by NativePHP when
+        // the user double-clicks a .eml or .csv file on the OS.
+        $this->events->listen(NativeFileOpened::class, function (NativeFileOpened $event): void {
+            $this->events->dispatch(new FileOpenedFromOs(
+                absolutePath: $event->filePath,
+                openedAt: $event->openedAt,
+            ));
+        });
+    }
+}
+
+// Modules/Ingestion/Internal/Listeners/HandleFileOpenedFromOs.php
+final class HandleFileOpenedFromOs
+{
+    public function __construct(
+        private readonly ImportFileRouter $router,
+    ) {}
+
+    public function handle(FileOpenedFromOs $event): void
+    {
+        $this->router->route($event->absolutePath);
+    }
+}
+```
+
+## Data Flow
+
+### Request Flow — Multi-User Aware
+
+```
+1.  Electron renderer (Chromium) → HTTP GET / on 127.0.0.1:PORT
+2.  Laravel Router →  EnsureAuthenticatedMiddleware
+                       │
+                       ├─ NOT authenticated → redirect /login
+                       │                       (Modules/Auth/Internal/Http/Livewire/LoginPage)
+                       └─ authenticated → continues
+3.  Livewire SFC constructor → DI resolves CurrentUser
+4.  CurrentUser::user() → returns Modules\Core\Models\User#42
+5.  Page calls TransactionQuery::recent() → Eloquent
+6.  UserScope::apply() reads CurrentUser::id() === 42
+7.  SQL: SELECT * FROM transactions WHERE user_id = 42 ORDER BY posted_at DESC LIMIT 20
+8.  Rendered HTML → Livewire diff → Electron renderer
+```
+
+**The critical property:** steps 5–7 are **identical** to v1.0 — the existing 11 modules already query through `UserScope`. The only new piece is step 4 actually returning a meaningful `User#42` instead of the single-row `User#1` that v1.0 hard-codes via the seeder.
+
+### User-Data Migration Flow (v1.0 → v2.0 first launch)
+
+```
+1.  v2.0 first launch  →  Electron main process starts
+2.  NativePHP rewrites storage_path() to ~/Library/Application Support/diederik/
+3.  Bundled PHP boots Laravel
+4.  Modules\Core\Internal\Console\InstallCommand (auto-run if first-launch marker missing)
+    │
+    ├─ Checks: does ~/Library/Application Support/diederik/storage/database/data.sqlite exist?
+    │  │
+    │  ├─ YES → already-installed path → skip to schedule:work
+    │  │
+    │  └─ NO  → MigrateUserDataCommand
+    │           │
+    │           ├─ Looks for old v1.0 install at $HOME/code/diederik/database/database.sqlite
+    │           │  (heuristic: check Herd's pinned site list + DEV_INSTALL_PATH env var)
+    │           │
+    │           ├─ If found AND user opts in via first-run dialog:
+    │           │  ├─ Copy database.sqlite → storage/database/data.sqlite
+    │           │  ├─ Copy storage/app/secrets/email-oauth.json → storage/app/secrets/
+    │           │  ├─ Copy storage/app/backups/ → storage/app/backups/
+    │           │  ├─ Copy storage/app/inbox/ → storage/app/inbox/
+    │           │  ├─ Re-derive paths in OAuth secrets if any are absolute
+    │           │  └─ Set existing User#1.is_developer = true
+    │           │
+    │           └─ If not found OR user opts out:
+    │              ├─ php artisan migrate
+    │              ├─ Show signup page on next request
+    │              └─ First user to sign up gets is_developer = true
+    │
+    └─ Boot complete → renderer loads /
+```
+
+### Auto-Update Flow
+
+```
+1.  App startup → ElectronUpdateChannel::checkForUpdates() (debounced, once per launch + every 4h)
+2.  electron-updater fetches https://github.com/<owner>/diederik/releases/latest/latest.yml
+3.  Compares version against nativephp.config.php's `version`
+4.  If update available:
+    │
+    ├─ Dispatches UpdateAvailable event (Modules\Core\Public\Events)
+    ├─ SystemAlertsBanner shows a non-dismissable banner with "Restart to update"
+    └─ Background download starts; on completion, dispatches UpdateDownloaded
+5.  User clicks "Restart" → electron-updater.quitAndInstall()
+    │
+    ├─ Renderer is told to close (saves any in-flight Livewire form state)
+    ├─ Bundled PHP terminates via NativePHP graceful-shutdown hook
+    ├─ Electron quits, installer runs (signed; OS validates code signature)
+    ├─ New binary launches → first-launch check sees database/data.sqlite already present
+    │   → runs `php artisan migrate` (NativePHP's built-in update-time migration runner)
+    │   → resumes
+    └─ Renderer reopens to last route
+```
+
+## Module Boundaries — New v2.0 Invariants for `BoundaryArchTest`
+
+These rules extend the existing 34+ `BoundaryArchTest` invariants. Each is concrete and arch-testable (matching the v1.0 style — file-walking + comment-stripping + regex when needed).
+
+| # | Invariant name | Rule |
+|---|----------------|------|
+| 1 | `Modules\Auth\Internal is only used inside Modules\Auth` | Pest `arch()` rule, same shape as existing `Modules\Ledger\Internal` rule |
+| 2 | `Modules\Desktop\Internal is only used inside Modules\Desktop` | Same shape |
+| 3 | `Modules\DevMode\Internal is only used inside Modules\DevMode` | Same shape |
+| 4 | `noNativePhpImportsOutsideDesktopModule` | `Native\Laravel\*` namespace may only be imported from `Modules\Desktop\` (excludes `tests/`) |
+| 5 | `noAuthFacadeOrHelper` | Already covered by `noFacadeCallsFromCoreConsoleCommands` pattern — extend to **all** modules: `auth()`, `Auth::user()`, `Auth::id()`, `Auth::guard()` are forbidden anywhere outside `Modules\Core\Public\Services\CurrentUserService` |
+| 6 | `noStoragePathHardCodedOutsideUserDataPathService` | Only `Modules\Core\Public\Services\UserDataPathService` may call `$app->storagePath(...)` (or `storage_path()` if Larastan misses it). All other module code consumes `UserDataPath` contract |
+| 7 | `noDatabasePathInDomainCode` | `database_path(...)` calls are forbidden in `Modules/*/Internal/*` and `Modules/*/Public/*`. Permitted in migrations only |
+| 8 | `noArtisanRunFromRequestLifecycle` | `Illuminate\Contracts\Console\Kernel::call()` may only be imported from `Modules\DevMode\Internal\Services\ArtisanRunner` — prevents accidental "run a command on user request" leaks |
+| 9 | `everyDevModeRouteAppliesEnsureDeveloperModeMiddleware` | Walks `Modules/DevMode/Routes/web.php` and asserts every route is inside a group with `middleware([EnsureDeveloperMode::class, ...])` |
+| 10 | `noDevModeImportsFromRegularModuleHttp` | `Modules\Categorization\Internal\Http`, `Modules\Ledger\Internal\Http`, etc. — none of them import `Modules\DevMode\*` |
+| 11 | `userIsDeveloperGateOnDestructiveCommands` | `ArtisanCommandRegistry::tier(string $command): Tier` covers every command in the `DESTRUCTIVE` array — enforced via a snapshot test rather than arch, but lives alongside arch tests |
+| 12 | `noOAuthSecretsTableInDatabase` | Already exists (`noOAuthTokensInEmailScanSchema`) — extend to all modules: no migration may declare `refresh_token` / `client_secret` / `access_token` columns |
+| 13 | `noLaravelGlobalHelpersAnywhereInModules` | The `noLaravelGlobalHelpersInCoreConsoleCommands` invariant — scope expanded from `Modules/Core/Internal/Console/` to all of `Modules/*/Internal/` and `Modules/*/Public/` (excludes migrations) |
+| 14 | `noHorizonImportsInShippedBuildCode` | `Laravel\Horizon\*` namespace may only be imported from `app/Providers/HorizonServiceProvider.php` and `Modules/DevMode/Internal/Services/*` |
+| 15 | `noElectronAutoUpdaterImportsOutsideElectronUpdateChannel` | `electron-updater` and IPC bridges are wrapped by `Modules\Core\Public\Services\ElectronUpdateChannel` — no other PHP class may issue IPC calls directly |
+| 16 | `noUserIdScopeBypass` | Forbid `Model::withoutGlobalScope(UserScope::class)` outside `Modules/Core/Internal/Console/` (where backup + doctor + InstallCommand legitimately need a cross-user view) |
+| 17 | `noCurrentUserResolutionInJobConstructor` | Queued job constructors may not type-hint `CurrentUser` — the user-id must be passed as a `int` parameter, because the request-scoped guard is gone by the time the worker dequeues. Arch-tests `Modules/*/Internal/Jobs/*.php` and grep for the `CurrentUser` import |
+| 18 | `noDevModeUiInRendererJsonResponses` | Any controller / Livewire endpoint that returns JSON must not include `dev_mode_audit`, `failed_jobs`, or `system_alerts` row payloads in the response — arch-tested via a regex against route closures' return types, plus a per-Livewire-component snapshot test |
+| 19 | `everyDomainModelUsesBelongsToUser` | Already covered by `UserIdColumnArchTest` — extend to assert the model class declares `use BelongsToUser;`, not just the column |
+| 20 | `noSecretsTableRowsInRendererJson` | Snapshot-tested: any Livewire component that ever serialises `inboxes` or OAuth data filters secret columns server-side |
+
+## Scalability Considerations
+
+| Concern | At 1 user (the developer) | At 2 users (partner) | At 5 users (extended beta) |
+|---------|--------------------------|----------------------|---------------------------|
+| SQLite write concurrency | Fine (single writer; WAL allows concurrent readers) | Fine — one human types at a time | Fine; only one user is typically interactive |
+| Background job throughput | ~10 jobs/min during inbox backfill | ~20 jobs/min (parallel inboxes) | ~50 jobs/min — still inside `database` queue capacity |
+| Queue worker count | 1 default + 1 chains worker | Same — workers are per-machine, not per-user | Same |
+| Disk size (10 years of data) | ~200 MB | ~400 MB | ~1 GB — well within macOS Application Support free space |
+| OAuth secrets file size | ~5 KB | ~10 KB | ~25 KB — single chmod-600 file remains fine |
+| Auto-update bandwidth | 80 MB / release / user | Same | Same |
+
+Outside the partner-sharing scope, diederik is **never** designed for 100+ users on one machine. If that ever becomes a need (it won't — it's a personal-finance app), the migration path is SQLite → PostgreSQL 16 (Laravel makes this a one-config swap + dump/load).
+
+## Recommended Build Order
+
+Strict dependency-driven ordering across the v2.0 phases:
+
+```
+PHASE A — Multi-user activation (depends on: nothing new)
+    ├─ Fortify already installed (composer.json line 11)
+    ├─ User model already exists with hashed-password cast
+    ├─ Add Modules/Auth/ — Login / Signup / ProfileSelector / Logout Livewire SFCs
+    ├─ Add is_developer column migration
+    ├─ Update CurrentUserService — already DI-friendly, no changes
+    ├─ Activate UserScope across all queries (already wired via BelongsToUser; just remove
+    │   any v1.0 hard-coded user_id = 1 references — grep them)
+    ├─ Add new arch tests #5, #16, #17, #19
+    └─ Validates: Sign in as User A → see only User A data; sign in as User B → see only B
+       (Per-user UAT: a partner-shared install on the developer's machine works
+       end-to-end before any packaging work begins.)
+
+PHASE B — User-data dir abstraction (depends on: nothing — can land in parallel with A,
+          but A's commit hardens the multi-user path that B then carries into the desktop bundle)
+    ├─ Add Modules/Core/Public/Contracts/UserDataPath + UserDataPathService
+    ├─ Modify config/database.php — database = storage_path('database/data.sqlite')
+    ├─ Rewire OAuthSecretsRepository, BackupDatabaseCommand, RestoreDatabaseCommand,
+    │   BackupFreshnessProbe, the inbox drop-folder scanner — all consume UserDataPath
+    ├─ Add MigrateUserDataCommand (v1.0 in-place → v2.0 paths)
+    ├─ Add new arch tests #6, #7
+    └─ Validates: php artisan migrate fresh creates DB at storage/database/data.sqlite;
+       db:backup writes to storage/app/backups; OAuth secrets file at expected path
+
+PHASE C — Queue rewire (depends on: B — UserDataPath ensures `database` queue tables
+          live in the right place; depends on: A — multi-user lock-keys partition cleanly)
+    ├─ Modify config/queue.php — default = 'database' for shipped, 'redis' for dev mode
+    ├─ Modify config/cache.php — locks_store = 'database' for shipped, 'redis' for dev mode
+    ├─ Audit each ShouldBeUniqueUntilProcessing job — uniqueVia() reads config('cache.locks_store')
+    ├─ HorizonServiceProvider.boot() guards on config('app.dev_mode')
+    ├─ Add new arch test #14
+    └─ Validates: with QUEUE_CONNECTION=database, chain resolution + inbox backfill
+       + drift detection + recurring sweep + forecast all succeed; uniqueness is honoured
+
+PHASE D — Desktop shell (depends on: B + C — both must be in place before NativePHP
+          rewrites storage_path() and supervises the queue workers)
+    ├─ composer require nativephp/desktop
+    ├─ Add nativephp.config.php — queue_workers, scheduler, app meta
+    ├─ Add Modules/Desktop/ — SystemTrayService, AppMenuBuilder, FileOpenRouter,
+    │   NativePhpEventListener, DesktopNotificationService
+    ├─ Add new arch tests #2, #4, #15
+    └─ Validates: php artisan native:run launches a window; the dashboard loads;
+       chain resolution runs in a NativePHP-supervised worker; .eml drag-drop on the app icon
+       opens the receipt review screen
+
+PHASE E — Developer mode UI (depends on: A — is_developer flag; depends on: D — Dev Mode
+          UI is exposed only in the desktop shell, so the desktop bundle has to exist first)
+    ├─ Add Modules/DevMode/ — DevConsolePage, ArtisanRunner, LogTailer, QueueInspector,
+    │   DoctorPanel, EnsureDeveloperMode middleware, ArtisanCommandRegistry
+    ├─ Add dev_mode_audit migration
+    ├─ Add new arch tests #3, #8, #9, #10, #11, #18, #20
+    └─ Validates: log in as a developer → /dev visible; non-developer gets 404;
+       db:backup runs from the UI; db:restore needs the hold-to-confirm
+
+PHASE F — CI/CD pipeline (depends on: A through E — the gates need real code to gate)
+    ├─ Add .github/workflows/ci.yml — pint --test + larastan + pest, all 3 must pass
+    ├─ Add .github/workflows/release.yml — tag-triggered build matrix:
+    │   ├─ macos-13   → .dmg     (Apple Developer ID signed + notarised)
+    │   ├─ windows-2022 → .msi/.exe (EV code-signing certificate)
+    │   └─ ubuntu-22.04 → .AppImage + .deb
+    ├─ Wire electron-builder.yml — publish: github
+    ├─ GitHub Encrypted Secrets: APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID, CSC_LINK (Win),
+    │   CSC_KEY_PASSWORD, GH_TOKEN (publish to GitHub Releases)
+    └─ Validates: PR fails on pint regression; tag push produces signed installers
+       on all 3 OSes; downloaded .dmg installs and runs
+
+PHASE G — Auto-update plumbing (depends on: F — installer pipeline must exist to publish
+          the update artefacts)
+    ├─ Wire electron-updater inside Electron main process (NativePHP exposes a hook)
+    ├─ Add Modules/Core/Public/Contracts/UpdateChannel + ElectronUpdateChannel service
+    ├─ Add SystemAlertsBanner integration — "Restart to update" alert
+    ├─ Test path: tag v2.0.1 → release pipeline publishes → existing v2.0.0 install
+    │   detects + downloads + prompts → restart applies
+    └─ Validates: bump version, push tag, wait 10 minutes, open v2.0.0 client, see prompt
+
+PHASE H — Public-release boundary review (depends on: A through G — final hardening)
+    ├─ Deep Modules code review — cross-module hygiene, DI compliance, dead-code scan
+    ├─ GSD-leakage redaction sweep — `.planning/` references in code, PHPDocs, comments
+    ├─ Hippocratic License 3.0 + SECURITY.md + CONTRIBUTING.md + CODE_OF_CONDUCT.md
+    ├─ README rewrite with logo.svg as hero
+    ├─ Renderer-JSON audit — add arch test #18, #20
+    └─ Validates: clone the public repo on a fresh machine → install → first run works
+```
+
+### Why this order
+
+- **A before everything else** — multi-user must be solid on the developer's existing Herd setup before any desktop packaging work. If multi-user is wrong, the desktop bundle ships a broken auth experience.
+- **B before C** — the `database` queue tables need to live at `storage_path('database/data.sqlite')`, which means `UserDataPath` must be wired first. Otherwise switching `QUEUE_CONNECTION=database` writes to the bundled (read-only) database path inside the app bundle.
+- **C before D** — NativePHP's `queue_workers` config supervises `php artisan queue:work`. If the queue driver isn't on `database` first, the desktop bundle would need to ship Redis (rejected).
+- **D before E** — Dev Mode UI lives inside the desktop shell and renders alongside the rest of the Livewire app. It can be developed against a Herd dev environment, but its acceptance test ("open the menu bar tray, click 'Open Dev Console', see the running queue workers") needs the NativePHP shell live.
+- **F after A-E** — the CI pipeline needs the real codebase + arch tests to gate against. Building the pipeline before the code exists is theatre.
+- **G after F** — electron-updater needs a release pipeline to fetch updates from. No release pipeline → nothing to update from.
+- **H last** — the public-release boundary review is the load-bearing exit gate. It can't pass until everything else passes.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Storing floats for money
+### Anti-Pattern: Shipping Redis Inside the Electron Bundle
 
-**What people do:** `DECIMAL(10,2)` or worse `FLOAT` columns for amounts.
-**Why it's wrong:** Floating-point drift; rounding errors accumulate; FX conversions become unreliable; SUM() can return `0.30000000000000004`.
-**Do this instead:** Signed BIGINT in minor units (cents). Use a Money value object in the application layer.
+**Why:** Three OS-specific Redis binaries to code-sign per release; Windows Redis is unmaintained (Microsoft's port stopped in 2020); installer size bloats by ~60 MB; the supervisor footprint adds 60 MB resident on an idle laptop. The single justification (Horizon dashboard for end users) is satisfied better by the in-app `QueueInspector` Livewire component that reads the `jobs` and `failed_jobs` tables directly. **Use the `database` queue driver for shipped builds; keep Redis as a dev-mode-only convenience.**
 
-### Anti-Pattern 2: Full double-entry from day one
+### Anti-Pattern: Using `app/Models/User` in v2.0
 
-**What people do:** Model every transaction as a journal-of-two with credit/debit lines, expense-account/revenue-account counterparties.
-**Why it's wrong:** It's bookkeeping ceremony the user doesn't need. Doubles the row count, doubles the write paths, complicates every Livewire query.
-**Do this instead:** Single signed row per account perspective + `pair_transaction_id` for transfers. Add full double-entry *only* if the system ever needs to produce accounting reports (it won't, per scope).
+**Why:** v1.0 already establishes `Modules\Core\Models\User` as canonical, with `App\Models\User` aliased via `class_alias()` in `CoreServiceProvider::register()` for framework compatibility (Fortify, notification routing, `config/auth.php`). Reaching for `app/Models/User.php` in v2.0 would shatter the alias. **Stay with the module-namespaced User.**
 
-### Anti-Pattern 3: Polymorphic transaction tables (income/expense/transfer as separate tables)
+### Anti-Pattern: Per-User SQLite Files
 
-**What people do:** Three tables for the three concepts; queries become UNIONs.
-**Why it's wrong:** Cross-cutting queries (this month's flow, all transactions for an account, year-end summary) all become complex; ORM associations bloat.
-**Do this instead:** One `transactions` table + `type` enum + indexes. Same lesson Firefly III learned.
+**Why:** Multiplies the backup surface (5 databases means 5 backup jobs, 5 schedules, 5 retention policies), defeats partner-sharing (each user gets a private silo, no cross-user reporting ever possible), and bypasses the `UserIdColumnArchTest` work v1.0 already did. **One SQLite per machine, scoped by `user_id`. The OS user-data directory is the per-OS-user isolation boundary.**
 
-### Anti-Pattern 4: Persisting forecasted transactions
+### Anti-Pattern: Allowing `Auth::user()` Anywhere in `Modules/`
 
-**What people do:** Generate predicted future occurrences and store them, then "convert" them when the real transaction arrives.
-**Why it's wrong:** Two sources of truth for the same event; reconciliation logic everywhere; chain resolver has to decide which is real.
-**Do this instead:** Forecasts are in-memory DTOs. The `Transaction` table only holds actual events. `status='pending'` is allowed for known-but-not-cleared events (e.g. parsed from an email but not yet on a statement); `forecasted` only exists in DTO form.
+**Why:** v1.0 already built and validated the DI-friendly `CurrentUser` contract. Letting `Auth::user()` creep back in (especially in multi-user UAT phases) would lock the codebase to the request-scoped Laravel guard and break testability. **The new arch test #5 forbids `Auth::*` facade and `auth()` helper across all of `Modules/`.**
 
-### Anti-Pattern 5: Trusting the Source's "transaction ID" as a global key
+### Anti-Pattern: Calling `Application::storagePath()` Directly From Domain Code
 
-**What people do:** Assume the bank's reference ID is unique forever, use it as the only dedup key.
-**Why it's wrong:** Sources sometimes recycle IDs; emails and CSVs use different ID schemes for the same transaction; some sources don't provide IDs at all (ASN MT940 has weak per-line IDs).
-**Do this instead:** Two-layer dedup — file checksum + canonical-tuple fingerprint. Per the financial-ETL research, this is the only robust approach for multi-source ingestion.
+**Why:** NativePHP's `storage_path()` rewrite is implicit, fragile, and easy to forget in tests. The UserDataPath contract makes the dependency explicit + mockable. **Arch test #6 prevents direct `storagePath()` calls outside `UserDataPathService`.**
 
-### Anti-Pattern 6: Running chain resolution synchronously inside the import controller
+### Anti-Pattern: Letting the Dev Mode UI Expose Arbitrary Artisan Commands
 
-**What people do:** Import CSV → resolve chains → commit, all in one HTTP request.
-**Why it's wrong:** Imports of years of history take 30+ seconds; the UI hangs; transactions get rolled back on PHP timeouts.
-**Do this instead:** Synchronous parse + load (fast); queued resolver job (slow); Livewire `wire:poll` for status. SQLite WAL ensures no read-lock contention.
+**Why:** The first contributor who needs `migrate:fresh` will type it into the artisan runner, the partner using the install will accidentally click it, and the database is gone. The 3-tier whitelist (`SAFE` / `DESTRUCTIVE` / `FORBIDDEN`) is the safety belt. **Treat the artisan runner as a UI for a curated subset, not a passthrough.**
 
-### Anti-Pattern 7: Coupling IMAP scanning to the request lifecycle
+### Anti-Pattern: Auto-Update Without Signature Verification
 
-**What people do:** "Scan now" button kicks off a 5-minute IMAP fetch inside an HTTP request.
-**Why it's wrong:** Browser timeouts; partial scans; no observability.
-**Do this instead:** "Scan now" enqueues a job; UI shows progress via polling.
-
----
-
-## Scaling Considerations
-
-| Scale | Architecture | Notes |
-|---|---|---|
-| **1 user, 1 year of data** (~6k rows) | This document, untouched. | Trivial for SQLite + WAL. |
-| **1 user, 10 years** (~60k rows) | This document + `account_balance_snapshots` nightly. | Default 90-day view + indexes handles dashboards in <50ms. |
-| **2 users (partner)** | This document + enforce `user_id NOT NULL` + add `user_id` to every index. | The schema is already ready. The seam is `CurrentUser`. |
-| **Many users (hypothetical SaaS pivot)** | Move queue to Redis; move DB to Postgres; add per-tenant data isolation review. | Out of scope per PROJECT.md. Don't optimize for this. |
-
-### First bottleneck (when it happens)
-
-**The dashboard's "this month at a glance" query** scanning all transactions for the current month across all accounts. Mitigation order:
-1. Index on `(user_id, posted_at)` — sufficient up to ~100k rows.
-2. Monthly rollup table maintained by an event listener — sufficient up to millions.
-3. (Never needed for personal-finance scale) Materialized view.
-
----
-
-## Integration Points
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---|---|---|
-| **IMAP servers** | webklex/laravel-imap, per-inbox UID-tracked polling | Credentials in config file (not DB) per PROJECT.md constraint. Support OAuth in v2 if any provider deprecates app-passwords. |
-| **No banking APIs in v1** | — | Explicitly out of scope. |
-
-### Internal Module Boundaries
-
-| Boundary | Mechanism | Notes |
-|---|---|---|
-| Presentation ↔ Application | Livewire components call Action classes directly | No HTTP/JSON layer needed |
-| Ingestion ↔ Categorization/Recurring/Chains | Laravel events (`TransactionImported`) | Loose coupling for future enrichment modules |
-| Ingestion ↔ Ledger | Direct (Ingestion owns the Loader; only it writes Transactions) | Strict invariant — enforced by code review and tests, not by DB permissions |
-| Chains ↔ Ledger | Read-only direct queries; writes to `chain_links` only | Resolver never updates Transactions |
-| Forecasting ↔ all | Read-only | Forecasting is a pure function over the ledger + recurring series |
-
----
-
-## Multi-User Readiness
-
-### Schema decisions to make NOW (no v2 migration pain)
-
-- **`user_id` column on every domain table**, including: accounts, transactions, raw_sources, sources (if user-overridable), chain_links, categorization_rules, categories, recurring_series, merchants, inbox_scan_state.
-- **Nullable in v1, NOT NULL after backfill in v2.** The migration in v2 is one line: `ALTER TABLE … ALTER COLUMN user_id SET NOT NULL` after a one-shot backfill that stamps everything to user 1.
-- **Composite indexes lead with `user_id`** wherever there's a user dimension (e.g. `(user_id, posted_at DESC)`, not just `(posted_at DESC)`). Critical: changing index order later is a rebuild on production data; doing it now is free.
-- **`CurrentUser` indirection** (a tiny class or facade): `CurrentUser::id()` returns `1` in v1, `auth()->user()->id` in v2. Domain code calls `CurrentUser::id()`, never `auth()` directly.
-- **Per-user job uniqueness** is already in the architecture: queue jobs are keyed by user. Multi-user just means multiple keys.
-
-### What can be deferred without pain
-
-- **Real auth** — v1 can be `auth.basic` or even no auth (it's localhost). Adding `laravel/breeze` later doesn't migrate any data.
-- **Sharing between users** — explicit boundary in PROJECT.md ("Multi-user / partner sharing in v1" is out of scope). The `user_id` column models *ownership*, not *visibility*. Sharing is a v3+ concern and lives in a separate `account_shares` table whenever it's built.
-- **Authorization policies** — Laravel policies can be added per-model in v2 without touching data.
-
----
-
-## Data Flow Examples
-
-### Example 1: Daily ASN CSV import
-
-```
-1. User uploads asn_2026-05.csv via Livewire UploadForm.
-2. Controller-equivalent (Livewire action) calls ImportCsvFile action.
-3. ImportCsvFile creates RawSource with file checksum.
-4. If checksum already exists → returns "Already imported, 0 new transactions."
-5. ImportPipeline runs:
-   a. AsnCsvAdapter.parse() → Generator<RawEntry>
-   b. AsnNormalizer.normalize() → Generator<CanonicalTransaction>
-   c. Fingerprinter.compute() — adds fingerprint to each
-   d. Loader.upsert() — DB::transaction, INSERT...ON CONFLICT DO NOTHING by (account_id, fingerprint)
-6. For each newly-inserted row: dispatch TransactionImported event.
-7. Listeners enqueue:
-   - CategorizeNewTransactionsJob (user rules → category_id)
-   - DetectRecurringSeriesJob (updates RecurringSeries)
-   - ResolveChainLinksJob (finds PayPal funding, ICS settlement matches)
-8. Livewire returns success synchronously: "Imported 42 transactions. Enriching..."
-9. UI auto-refreshes after 2s polls until jobs complete.
-```
-
-### Example 2: Confirming a fuzzy chain link
-
-```
-1. User opens Review Queue → sees candidate ChainLink: 
-   PayPal "Netflix.com" €13.99 on May 2 ⇄ ASN "PAYPAL EUROPE" €13.99 on May 4.
-2. User clicks Confirm.
-3. ConfirmChainLink action:
-   a. Updates ChainLink.state = 'confirmed', resolver = 'user'.
-   b. Records the evidence signature.
-   c. Checks: same evidence signature confirmed ≥3 times? → if yes, create an auto-promotion rule (this kind of match becomes auto-confirmed in future).
-4. Dashboard updates: Netflix now shows funding source = ASN (via PayPal).
-```
-
-### Example 3: "What if I cancel Netflix?" 
-
-```
-1. User clicks the Netflix row → "What if cancelled?"
-2. Livewire WhatIfScenario component creates an in-memory scenario:
-   { cancellations: [recurring_series_id_Netflix] }
-3. BalanceProjector.withOverlay(scenario).project('asn-main', today, today+90d)
-   - Iterates each day from today.
-   - At each day, generates expected occurrences from active RecurringSeries, MINUS those in the scenario's cancellations.
-   - Computes running balance using current cleared balance as start.
-4. Livewire renders a comparison: original 90-day balance vs scenario.
-5. Nothing is written to disk. User closes the panel; scenario is gone.
-```
-
----
-
-## Build Order Implications — Phase 1 Vertical Slice
-
-**Phase 1 must prove the spine works**, not check every box. The right vertical slice:
-
-### Phase 1: "See my ASN month"
-
-Scope (one source, end-to-end):
-- Schema: `users`, `currencies`, `accounts`, `transactions`, `categories`, `categorization_rules`, `sources`, `raw_sources`.
-- Models, factories, seeders.
-- One adapter: `AsnCsvAdapter`.
-- ImportPipeline (Parse → Normalize → Fingerprint → Load) — fully working.
-- Idempotency: re-uploading the same file is a no-op (file checksum + row fingerprint both functional).
-- Money value object + cent-storage casts.
-- One Livewire screen: `MonthAtAGlance` showing month total income/expenses/net + a simple transaction list.
-- One Livewire screen: transaction list with manual category assignment (no rules learning yet, no automation).
-- CurrentUser indirection in place (returns user 1).
-- SQLite WAL configuration.
-
-**What's NOT in Phase 1:** chains, recurring detection, forecasting, IMAP, ICS, PayPal, what-if scenarios.
-
-**Why this slice:**
-- It proves: the ingestion pipeline works end-to-end on real user data; the canonical Transaction model fits real bank data; the Livewire stack feels good; idempotency holds under re-uploads.
-- It delivers immediate user value (the user can already see their ASN month, which they couldn't see "in one place" before — even without other sources).
-- Every Phase 2+ feature drops into a working spine: adding MT940 is one new adapter; adding ICS is one new adapter + a chain resolver; adding forecasting is a new service over existing tables.
-
-### Subsequent phase suggestions (informs roadmap, doesn't dictate it)
-
-- **Phase 2: Multi-source ingestion** — Add ICS CSV adapter, PayPal CSV adapter, AsnMt940Adapter. Now user has every account visible. No chains yet; transactions just show up per-account.
-- **Phase 3: Chain resolution v1** — PayPal-funding deterministic links (when CSV has the funding source); ASN→ICS bulk-settle math. Review queue UI. This is the "stop being a manual reconciliation puzzle" payoff.
-- **Phase 4: Recurring + fixed-payment view** — RecurringSeries detection, fixed-payments dashboard widget, "next ICS settlement amount" projection.
-- **Phase 5: IMAP scanning** — adds IMAP, .eml import, EmailPayPal/ICS/GooglePlay template matchers. Significantly increases data coverage; chains improve.
-- **Phase 6: Forecasting + what-if** — BalanceProjector, WhatIfEngine. "Show me the next 90 days."
-- **Phase 7: Multi-user readiness validation** — backfill user_id, enforce NOT NULL, add basic auth. (May be combined with a sharing pilot.)
-
----
-
-## Confidence & Open Questions
-
-| Decision | Confidence | Why |
-|---|---|---|
-| Blade + Livewire over Inertia/SPA | HIGH | Local single user + form-heavy UI is consensus Livewire territory |
-| Single transactions table with type enum | HIGH | Firefly III precedent + simpler queries; trade-off well understood |
-| Two-layer idempotent fingerprint | HIGH | Industry-standard pattern for multi-source financial ETL |
-| Money as BIGINT cents + moneyphp/money | HIGH | PHP/Laravel community consensus |
-| Async chain resolution via queue:database | HIGH | Standard Laravel pattern; SQLite WAL covers concurrency |
-| ChainLink as separate table with confidence/state | HIGH | Cleanly separates semantic graph from canonical ledger |
-| Forecasts as in-memory DTOs, not rows | HIGH | Avoids well-known dual-state bug pattern |
-| Templates over generic ML for email parsing | MEDIUM | Right for stable small sender set; revisit if sender count explodes |
-| Manual+cron IMAP vs IMAP IDLE | MEDIUM | Reasonable for local app; IMAP IDLE would require Octane or a long-running process |
-| user_id-nullable v1 strategy | HIGH | Standard "schema-ready single-user" pattern |
-
-### Open questions worth flagging for phase-specific research
-
-1. **ASN's exact CSV column format** — needs sample export to verify the adapter's mapping. (Phase 1 research)
-2. **ICS bulk-settlement math edge cases** — do credits/refunds appear inline or as separate statements? Needs sample data. (Phase 3 research)
-3. **PayPal CSV "funding source" column** — current export schema includes it but the exact label has changed over time. (Phase 2 research)
-4. **Google Play receipt template** — Google has changed their receipt HTML structure multiple times; need recent samples. (Phase 5 research)
-5. **MT940 dialect variations** — different banks add different fields in :86: tags. ASN's specific dialect must be tested. (Phase 2 research)
-
----
+**Why:** electron-updater verifies code signatures by default on macOS and Windows — but only if the build pipeline actually signed the installer. A skipped signing step means the auto-updater silently accepts any payload that reaches the `latest.yml` feed URL, which is a remote-code-execution primitive against every running install. **Phase F must complete signing on all three OSes before Phase G ships auto-update.**
 
 ## Sources
 
-### Architecture & Domain Modeling
-- [bliki: Bounded Context (Martin Fowler)](https://martinfowler.com/bliki/BoundedContext.html)
-- [How to organize transactions — Firefly III documentation](https://docs.firefly-iii.org/how-to/firefly-iii/finances/transactions/)
-- [Transactions — Firefly III documentation](https://docs.firefly-iii.org/explanation/financial-concepts/transactions/)
-- [Transaction types — Firefly III documentation](https://docs.firefly-iii.org/references/firefly-iii/transaction-types/)
-- [Architecture — Firefly III documentation](https://docs.firefly-iii.org/explanation/more-information/architecture/)
-- [An Engineer's Guide to Double-Entry Bookkeeping (Anvil)](https://anvil.works/blog/double-entry-accounting-for-engineers)
-- [Show HN: Double-entry accounting based personal finance app](https://news.ycombinator.com/item?id=42256125)
-
-### Laravel Patterns
-- [Action Pattern in Laravel: Concept, Benefits, Best Practices — Nabil Hassen](https://nabilhassen.com/action-pattern-in-laravel-concept-benefits-best-practices)
-- [Service Pattern in Laravel: Why it is meaningless — Nabil Hassen](https://nabilhassen.com/laravel-service-pattern-issues)
-- [Why I wrote Laravel Actions — Loris Leiva](https://lorisleiva.com/why-i-wrote-laravel-actions)
-- [Laravel Queues — Laravel 12.x documentation](https://laravel.com/docs/12.x/queues)
-- [Livewire 4 vs Inertia.js 3: Which Laravel Frontend Stack Should You Use in 2026? — DEV Community](https://dev.to/hafiz619/livewire-4-vs-inertiajs-3-which-laravel-frontend-stack-should-you-use-in-2026-47p4)
-- [Livewire vs Inertia — Scalable Path](https://www.scalablepath.com/php/livewire-vs-inertia)
-
-### ETL & Pipelines
-- [Laravel Ingest — Laravel News](https://laravel-news.com/laravel-ingest)
-- [How I Optimized a Data Import Process by 90% Using ETL Techniques in Laravel 11 — Medium](https://medium.com/@hafierrogarcia/how-i-optimized-a-data-import-process-by-90-using-etl-techniques-in-laravel-11-f1193f9b106a)
-
-### Idempotency & Dedup
-- [Mastering Idempotency for Secure Financial Transactions — PingCAP](https://www.pingcap.com/article/mastering-idempotency-secure-financial-transactions/)
-- [Idempotency's role in financial services — CockroachLabs](https://www.cockroachlabs.com/blog/idempotency-in-finance/)
-- [Detect duplicates across bank files — AI Accountant](https://www.aiaccountant.com/blog/detect-duplicates-across-bank-files)
-- [Eliminating duplicate project transactions across systems and re-uploads — fitgap](https://us.fitgap.com/stack-guides/eliminating-duplicate-project-transactions-across-systems-and-re-uploads)
-
-### Money & Currency
-- [Handling Money in Laravel/PHP: Essential Tips — Medium](https://medium.com/@laravelprotips/handling-money-in-laravel-php-essential-tips-014b5ee83336)
-- [Money for PHP — moneyphp.org documentation](https://www.moneyphp.org/en/stable/)
-- [akaunting/laravel-money — GitHub](https://github.com/akaunting/laravel-money)
-- [Dealing with Money in Laravel — codecourse](https://codecourse.com/articles/dealing-with-money-in-laravel)
-
-### Bank Statement Parsing
-- [jejik/mt940 on Packagist](https://packagist.org/packages/jejik/mt940)
-- [genkgo/camt — GitHub](https://github.com/genkgo/camt)
-- [php-financial-formats on Packagist](https://packagist.org/packages/dschuppelius/php-financial-formats)
-- [A Practical Guide to the Bank Statement CAMT.053 Format — SEPA for Corporates](https://www.sepaforcorporates.com/swift-for-corporates/a-practical-guide-to-the-bank-statement-camt-053-format/)
-
-### Recurring Detection
-- [How does Subaio detect recurring payments? — Subaio](https://subaio.com/subaio-explained/how-does-subaio-detect-recurring-payments)
-- [Plaid: Build deeper user connections with data driven insights](https://plaid.com/blog/recurring-transactions/)
-- [Recurrent Payments Identification and Management — Meniga](https://www.meniga.com/resources/recurring-payments/)
-
-### IMAP / Email
-- [Webklex/laravel-imap — GitHub](https://github.com/Webklex/laravel-imap)
-- [Webklex laravel-imap documentation](https://webklex.github.io/laravel-imap/)
-
-### SQLite Performance
-- [Boost Your Laravel App's Performance with SQLite's WAL Mode](https://supunnethsara.dev/boost-your-laravel-apps-performance-with-sqlites-wal-mode)
-- [Using SQLite in production with Laravel — Laravel News](https://laravel-news.com/using-sqlite-in-production-with-laravel)
-- [SQLite WAL — sqlite.org](https://sqlite.org/wal.html)
-- [SQLite performance tuning — phiresky's blog](https://phiresky.github.io/blog/2020/sqlite-performance-tuning/)
-
----
-
-*Architecture research for: diederik — local personal-finance dashboard*
-*Researched: 2026-05-12*
+- [NativePHP Desktop v2 — Files documentation](https://nativephp.com/docs/desktop/2/digging-deeper/files) — HIGH (official). Confirmed `Application::storagePath()` rewrite, per-OS appdata location mapping (macOS `~/Library/Application Support/`, Windows `%APPDATA%`, Linux `~/.config/`), the `local` filesystem disk landing at `appdata/storage/app`.
+- [NativePHP Desktop v2 — Databases documentation](https://nativephp.com/docs/desktop/2/digging-deeper/databases) — HIGH (official). Confirmed SQLite is the default; production builds detect version changes and auto-run migrations; data persists across updates in the appdata folder.
+- [NativePHP Desktop v2 — Queues documentation](https://nativephp.com/docs/desktop/2/digging-deeper/queues) — HIGH (official). Confirmed NativePHP boots its own queue worker(s) via `config/nativephp.php` → `queue_workers` array. **No Horizon support documented; no Redis dependency required.** Jobs persist in the SQLite database.
+- [NativePHP Desktop v2 — Installation](https://nativephp.com/docs/desktop/2/getting-started/installation) — HIGH (official). PHP 8.3+ / Laravel 11+ / Node 22+ / macOS 12+/Win 10+/Linux. Released as v2.x current.
+- [NativePHP Desktop v2 — Menu documentation](https://nativephp.com/docs/desktop/2/digging-deeper/menu) — HIGH (official). System tray, menus, notifications, file management, global hotkeys all available as injectable Laravel-style services.
+- [electron-builder — Auto-update](https://www.electron.build/auto-update.html) — HIGH (official). Confirmed GitHub Releases is a first-class publish target; `latest.yml` is the manifest; signature verification is automatic when builds were signed.
+- [Electron — Code Signing](https://www.electronjs.org/docs/latest/tutorial/code-signing) — HIGH (official). Confirmed `CSC_LINK` + `CSC_KEY_PASSWORD` env vars on Windows; `APPLE_ID` + `APPLE_PASSWORD` + `APPLE_TEAM_ID` for macOS notarisation.
+- [Distributing NativePHP Apps with Auto-Update Support](https://www.thecodingdev.com/2025/04/distributing-nativephp-apps-with-auto.html) — MEDIUM (third-party). End-to-end pipeline with electron-updater + GitHub Actions. Useful template; verify against current NativePHP docs.
+- [NativePHP/electron on Packagist](https://packagist.org/packages/nativephp/electron) — HIGH (official). Active maintenance; v2 currently published.
+- diederik v1.0 codebase — read directly:
+  - `Modules/Core/Public/Contracts/CurrentUser.php` — confirms DI-friendly auth seam already exists.
+  - `Modules/Core/Public/Services/CurrentUserService.php` — uses `Illuminate\Contracts\Auth\Factory`, NOT a facade.
+  - `Modules/Core/Public/Concerns/BelongsToUser.php` + `Modules/Core/Public/Scopes/UserScope.php` — already apply per-user scope.
+  - `Modules/EmailScan/Public/Services/OAuthSecretsRepository.php` — chmod-600 atomic-rename pattern proven.
+  - `Modules/Core/Internal/Console/InstallCommand.php` — `--launchd` flag proves "ship templates with placeholders" approach.
+  - `tests/Contracts/BoundaryArchTest.php` — 34+ arch invariants; v2.0 additions follow the same style.
+  - `composer.json` — Fortify already installed; Horizon already installed; NativePHP NOT yet installed.
