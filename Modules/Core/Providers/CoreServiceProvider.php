@@ -69,6 +69,15 @@ final class CoreServiceProvider extends ServiceProvider
             ->needs('$backupsPath')
             ->give(fn () => $this->app->make('core.backups_directory'));
 
+        // RestoreDatabaseCommand consumes the same contextual `$backupsPath`
+        // string as BackupDatabaseCommand so both console commands share
+        // one DI shape — preferred over reaching into the container via
+        // `getLaravel()->make()` at runtime, which is a Service Locator
+        // anti-pattern.
+        $this->app->when(RestoreDatabaseCommand::class)
+            ->needs('$backupsPath')
+            ->give(fn () => $this->app->make('core.backups_directory'));
+
         // BackupFreshnessProbe reads the same `core.backups_directory`
         // binding as BackupDatabaseCommand so the doctor probe inspects
         // the directory the backup command writes to. Tests override

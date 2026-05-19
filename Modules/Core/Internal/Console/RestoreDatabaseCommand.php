@@ -53,7 +53,10 @@ use Throwable;
  * No Laravel facade is imported or called; every dependency is
  * constructor-DI'd, including the `Application` container (used for
  * `basePath('storage/framework/down')` resolution instead of the
- * global `base_path()` helper).
+ * global `base_path()` helper) and the `$backupsPath` string
+ * resolved via the same contextual binding `BackupDatabaseCommand`
+ * consumes — both commands share one DI shape so the contract is
+ * uniform across the pair.
  */
 final class RestoreDatabaseCommand extends Command
 {
@@ -72,6 +75,7 @@ final class RestoreDatabaseCommand extends Command
         private readonly Kernel $artisan,
         private readonly Clock $clock,
         private readonly Application $app,
+        private readonly string $backupsPath,
     ) {
         parent::__construct();
     }
@@ -230,24 +234,20 @@ final class RestoreDatabaseCommand extends Command
     }
 
     /**
-     * Resolves the backups directory through the
-     * `core.backups_directory` container binding (test-overridable),
-     * creating it on first access with mode 0755.
+     * Returns the absolute path of the backups directory (resolved
+     * through the `core.backups_directory` contextual binding wired in
+     * `CoreServiceProvider::register()`), creating it with mode 0755 on
+     * first access. Shape mirrors `BackupDatabaseCommand::backupsDir()`
+     * so both commands depend on the same constructor-DI'd string
+     * rather than reaching into the container at runtime.
      */
     private function backupsDirectory(): string
     {
-        $appContainer = $this->getLaravel();
-        $resolved = $appContainer->make('core.backups_directory');
-        $path = is_string($resolved) ? $resolved : '';
-        if ($path === '') {
-            throw new RuntimeException("'core.backups_directory' container binding did not resolve to a string.");
+        if (! $this->files->isDirectory($this->backupsPath)) {
+            $this->files->makeDirectory($this->backupsPath, 0o755, recursive: true, force: true);
         }
 
-        if (! $this->files->isDirectory($path)) {
-            $this->files->makeDirectory($path, 0o755, recursive: true, force: true);
-        }
-
-        return $path;
+        return $this->backupsPath;
     }
 
     /**
