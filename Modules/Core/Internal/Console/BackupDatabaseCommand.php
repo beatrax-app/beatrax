@@ -295,10 +295,15 @@ final class BackupDatabaseCommand extends Command
             return false;
         }
 
-        // Most-recent by basename — the timestamp embedded in the name
-        // sorts lexicographically, so the lexicographically largest
-        // basename is the newest backup.
-        rsort($candidates);
+        // Most-recent by parsed-timestamp basename. Sorting the basenames
+        // (not the full paths) means a future refactor that introduces
+        // a sibling filename family or changes the parent directory
+        // shape cannot accidentally flip the "newest" winner — only the
+        // YYYY-MM-DD-HHMMSS suffix governs the order. The basename
+        // shape is fixed (`diederik-` prefix + zero-padded fixed-width
+        // timestamp + `.sqlite.meta.json` suffix), so basename strcmp
+        // descending IS chronological descending.
+        usort($candidates, static fn (string $a, string $b): int => strcmp(basename($b), basename($a)));
         $newest = $candidates[0];
         if (! is_file($newest)) {
             return false;
