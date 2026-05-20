@@ -20,10 +20,10 @@ uses(RefreshDatabase::class);
  * non-zero.
  */
 
-function tdbUser(string $email): User
+function tdbUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -144,7 +144,7 @@ function tdbPendingSeries(User $user): RecurringSeries
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-20 09:00:00');
-    $this->user = tdbUser('tdb@diederik.test');
+    $this->user = tdbUser('tdb');
 });
 
 afterEach(function (): void {

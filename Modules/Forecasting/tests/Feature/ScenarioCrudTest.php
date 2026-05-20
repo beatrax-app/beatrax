@@ -39,10 +39,10 @@ uses(RefreshDatabase::class);
  * invariant `noScenarioMutationsJoinedToTransactionQueries` stays green.
  */
 
-function scUser(string $email): User
+function scUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -73,8 +73,8 @@ beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
-    $this->user = scUser('sc-user@diederik.test');
-    $this->other = scUser('sc-other@diederik.test');
+    $this->user = scUser('sc-user');
+    $this->other = scUser('sc-other');
 });
 
 it('1. CreateScenario happy path: returns the new id + persists row + dispatches ScenarioCreated', function (): void {

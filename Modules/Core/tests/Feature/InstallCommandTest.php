@@ -11,22 +11,22 @@ it('creates User id=1 on a fresh install', function (): void {
     Event::fake([UserInstalled::class]);
 
     $this->artisan('diederik:install', [
-        '--email' => 'wessel@example.com',
+        '--username' => 'wessel',
         '--password' => 'opensesame',
         '--period-start-day' => 25,
     ])->assertSuccessful();
 
     $user = User::find(1);
     expect($user)->not->toBeNull();
-    expect($user->email)->toBe('wessel@example.com');
+    expect($user->username)->toBe('wessel');
     expect($user->period_start_day)->toBe(25);
 
     Event::assertDispatched(UserInstalled::class);
 });
 
-it('is idempotent — re-running with the same email is a no-op', function (): void {
+it('is idempotent — re-running with the same username is a no-op', function (): void {
     $this->artisan('diederik:install', [
-        '--email' => 'wessel@example.com',
+        '--username' => 'wessel',
         '--password' => 'opensesame',
         '--period-start-day' => 1,
     ])->assertSuccessful();
@@ -34,7 +34,7 @@ it('is idempotent — re-running with the same email is a no-op', function (): v
     $originalHash = User::find(1)->password;
 
     $this->artisan('diederik:install', [
-        '--email' => 'wessel@example.com',
+        '--username' => 'wessel',
         '--password' => 'differentpassword',
         '--period-start-day' => 28,
     ])->assertSuccessful();
@@ -52,7 +52,7 @@ it('refuses an iCloud-Drive database path', function (): void {
     );
 
     $this->artisan('diederik:install', [
-        '--email' => 'test@example.com',
+        '--username' => 'test',
         '--password' => 'opensesame',
         '--period-start-day' => 1,
     ])
@@ -69,7 +69,7 @@ it('refuses a Dropbox database path', function (): void {
     );
 
     $this->artisan('diederik:install', [
-        '--email' => 'test@example.com',
+        '--username' => 'test',
         '--password' => 'opensesame',
         '--period-start-day' => 1,
     ])
@@ -84,7 +84,7 @@ it('refuses a OneDrive database path', function (): void {
     );
 
     $this->artisan('diederik:install', [
-        '--email' => 'test@example.com',
+        '--username' => 'test',
         '--password' => 'opensesame',
         '--period-start-day' => 1,
     ])
@@ -94,7 +94,7 @@ it('refuses a OneDrive database path', function (): void {
 
 it('clamps period_start_day into the 1..28 window', function (): void {
     $this->artisan('diederik:install', [
-        '--email' => 'clamp@example.com',
+        '--username' => 'clamp',
         '--password' => 'opensesame',
         '--period-start-day' => 99,
     ])->assertSuccessful();

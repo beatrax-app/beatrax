@@ -95,7 +95,7 @@ it('fullHistory returns every row regardless of date', function (): void {
 it('scopes the list to the requested user only', function (): void {
     /** @var User $other */
     $other = User::create([
-        'email' => 'other@diederik.test',
+        'username' => 'other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

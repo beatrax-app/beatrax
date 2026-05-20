@@ -61,7 +61,7 @@ uses(RefreshDatabase::class);
 function sisSeedSubstrate(DatabaseManager $db): array
 {
     $user = User::query()->create([
-        'email' => 'sis-'.bin2hex(random_bytes(4)).'@diederik.test',
+        'username' => 'sis-'.bin2hex(random_bytes(4)),
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

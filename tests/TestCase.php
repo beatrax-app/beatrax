@@ -80,7 +80,7 @@ abstract class TestCase extends BaseTestCase
     public function seedFixtureUserAndAccount(): array
     {
         $this->fixtureUser = User::query()->updateOrCreate(
-            ['email' => 'fixture@diederik.test'],
+            ['username' => 'fixture'],
             ['password' => 'fixture-password', 'period_start_day' => 1],
         );
 

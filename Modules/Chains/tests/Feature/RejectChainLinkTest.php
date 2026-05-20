@@ -20,10 +20,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * cause same-signature siblings to be demoted.
  */
 
-function rclUser(string $email): User
+function rclUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -100,7 +100,7 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
 
-    $this->user = rclUser('reject-chain-link@diederik.test');
+    $this->user = rclUser('reject-chain-link');
     $this->paypal = rclAccount($this->user, 'rcl-paypal', 'paypal', 'PAYPAL');
     $this->asn = rclAccount($this->user, 'rcl-asn', 'asn', 'NL57ASNB0123456789');
     $this->run = rclImportRun($this->user, str_repeat('1', 64));
@@ -183,7 +183,7 @@ it('does NOT trigger auto-promotion via rejection (per-pair only)', function ():
 });
 
 it('raises NotFoundHttpException on cross-user invocation (404)', function (): void {
-    $other = rclUser('rcl-other@diederik.test');
+    $other = rclUser('rcl-other');
     $oAcc = rclAccount($other, 'rcl-other-acc', 'paypal', 'OTHER');
     $oRun = rclImportRun($other, str_repeat('2', 64));
     $f = rclTx($other, $oAcc, $oRun, -100, 'expense', 'rx1', 1);

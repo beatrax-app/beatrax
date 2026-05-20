@@ -23,10 +23,10 @@ use Modules\Import\Internal\Http\Livewire\PreviewWizard;
  * summary route (`imports.results`).
  */
 
-function wcrUser(string $email): User
+function wcrUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -37,8 +37,8 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
 
-    $this->user = wcrUser('wizard-chain-status@diederik.test');
-    $this->otherUser = wcrUser('wizard-chain-status-other@diederik.test');
+    $this->user = wcrUser('wizard-chain-status');
+    $this->otherUser = wcrUser('wizard-chain-status-other');
 
     // Seed an import_run for the user — the wizard's polling action
     // needs an import_run id to auto-navigate on complete.

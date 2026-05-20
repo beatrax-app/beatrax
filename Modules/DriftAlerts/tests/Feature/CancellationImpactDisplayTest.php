@@ -17,10 +17,10 @@ uses(RefreshDatabase::class);
  * row.
  */
 
-function cidUser(string $email): User
+function cidUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -135,7 +135,7 @@ function cidAlert(
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-20 09:00:00');
-    $this->user = cidUser('cid@diederik.test');
+    $this->user = cidUser('cid');
 });
 
 afterEach(function (): void {

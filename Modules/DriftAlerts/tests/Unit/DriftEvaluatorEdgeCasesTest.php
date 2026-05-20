@@ -30,7 +30,7 @@ afterEach(function (): void {
 });
 
 it('does not insert a drift alert when the prior occurrence amount is zero', function (): void {
-    $user = devecUser('prior-zero@diederik.test');
+    $user = devecUser('prior-zero');
     $seriesId = devecApprovedSeries($this->db, $user->id, 'monthly', 'EUR', 'expense');
     devecOccurrence($this->db, $user->id, $seriesId, '2026-04-15', 0, 'EUR');
     devecOccurrence($this->db, $user->id, $seriesId, '2026-05-15', -1499, 'EUR');
@@ -41,7 +41,7 @@ it('does not insert a drift alert when the prior occurrence amount is zero', fun
 });
 
 it('does not insert a drift alert when the series has fewer than two occurrences', function (): void {
-    $user = devecUser('single-occurrence@diederik.test');
+    $user = devecUser('single-occurrence');
     $seriesId = devecApprovedSeries($this->db, $user->id, 'monthly', 'EUR', 'expense');
     devecOccurrence($this->db, $user->id, $seriesId, '2026-05-15', -1499, 'EUR');
 
@@ -51,7 +51,7 @@ it('does not insert a drift alert when the series has fewer than two occurrences
 });
 
 it('does not insert a drift alert when the series cadence is irregular (multiplier=0)', function (): void {
-    $user = devecUser('irregular-cadence@diederik.test');
+    $user = devecUser('irregular-cadence');
     $seriesId = devecApprovedSeries($this->db, $user->id, 'irregular', 'EUR', 'expense');
     devecOccurrence($this->db, $user->id, $seriesId, '2026-04-15', -999, 'EUR');
     devecOccurrence($this->db, $user->id, $seriesId, '2026-05-15', -1499, 'EUR');
@@ -68,7 +68,7 @@ dataset('drift_excluded_states', [
 ]);
 
 it('does not insert a drift alert for series in excluded states', function (string $excludedState): void {
-    $user = devecUser('excluded-'.$excludedState.'@diederik.test');
+    $user = devecUser('excluded-'.$excludedState);
     $seriesId = $this->db->connection()->table('recurring_series')->insertGetId([
         'user_id' => $user->id,
         'direction' => 'expense',
@@ -91,7 +91,7 @@ it('does not insert a drift alert for series in excluded states', function (stri
 })->with('drift_excluded_states');
 
 it('returns silently when the series id is unknown / cross-user', function (): void {
-    $user = devecUser('cross-user@diederik.test');
+    $user = devecUser('cross-user');
 
     // No series with id=999999 in the database.
     $this->app->make(DriftEvaluator::class)->evaluateForSeries(999999, $user);
@@ -99,10 +99,10 @@ it('returns silently when the series id is unknown / cross-user', function (): v
     expect(DriftAlert::query()->count())->toBe(0);
 });
 
-function devecUser(string $email): User
+function devecUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

@@ -20,7 +20,7 @@ use Modules\Ledger\Models\Transaction;
 beforeEach(function (): void {
     /** @var User $user */
     $user = User::query()->updateOrCreate(
-        ['email' => 'fixture@diederik.test'],
+        ['username' => 'fixture'],
         ['password' => 'fixture-password', 'period_start_day' => 1, 'default_currency_view' => 'eur_only'],
     );
     $this->user = $user;

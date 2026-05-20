@@ -23,10 +23,10 @@ uses(RefreshDatabase::class);
  * NotFoundHttpException via the `(id, user_id)` guard.
  */
 
-function ackdaUser(string $email): User
+function ackdaUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -136,7 +136,7 @@ function ackdaAlert(User $user, string $state = 'open'): DriftAlert
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-20 09:00:00');
-    $this->user = ackdaUser('ackda@diederik.test');
+    $this->user = ackdaUser('ackda');
 });
 
 afterEach(function (): void {
@@ -197,7 +197,7 @@ it('is idempotent when the alert is already acknowledged (no second transitions 
 });
 
 it('throws NotFoundHttpException for a cross-user alert id and leaves the row untouched', function (): void {
-    $intruder = ackdaUser('ackda-intruder@diederik.test');
+    $intruder = ackdaUser('ackda-intruder');
     $alert = ackdaAlert($this->user, 'open');
 
     /** @var AcknowledgeDriftAlert $action */

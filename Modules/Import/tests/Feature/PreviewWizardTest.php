@@ -91,7 +91,7 @@ it('discards an import and redirects back to /imports/new', function (): void {
 it('cross-user import access is blocked', function (): void {
     /** @var User $otherUser */
     $otherUser = User::create([
-        'email' => 'attacker@diederik.test',
+        'username' => 'attacker',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

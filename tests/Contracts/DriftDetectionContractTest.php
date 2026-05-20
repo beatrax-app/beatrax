@@ -71,10 +71,10 @@ function ddctFixtureExpectations(): array
     ];
 }
 
-function ddctUser(string $email): User
+function ddctUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -285,7 +285,7 @@ it('runs the drift evaluator against every fixture in the 24-scenario corpus and
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
-    $user = ddctUser('ddct-'.$fixtureName.'@diederik.test');
+    $user = ddctUser('ddct-'.$fixtureName);
     $account = ddctAccount($user, 'ddct-'.substr(md5($fixtureName), 0, 8));
     $run = ddctImportRun($user, str_pad('ddct-'.$fixtureName, 64, 'g', STR_PAD_LEFT));
 

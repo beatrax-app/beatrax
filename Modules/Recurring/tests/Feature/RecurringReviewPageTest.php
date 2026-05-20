@@ -17,10 +17,10 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
  * the auth gate.
  */
 
-function rrpUser(string $email): User
+function rrpUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -44,7 +44,7 @@ function rrpSeries(User $user, string $state, string $cluster, string $name = 'r
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = rrpUser('rrp@diederik.test');
+    $this->user = rrpUser('rrp');
 });
 
 afterEach(function (): void {

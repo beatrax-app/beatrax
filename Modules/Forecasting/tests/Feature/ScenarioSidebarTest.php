@@ -25,10 +25,10 @@ uses(RefreshDatabase::class);
  *   - Kind/payload mismatch surfaces inline.
  */
 
-function ssbUser(string $email = 'ssb@diederik.test'): User
+function ssbUser(string $username = 'ssb'): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -63,7 +63,7 @@ beforeEach(function (): void {
 });
 
 it('Public Service rejects cross-user mount via ScenarioQuery::find returning null', function (): void {
-    $other = ssbUser('other@diederik.test');
+    $other = ssbUser('other');
     /** @var ForecastScenario $otherScenario */
     $otherScenario = ForecastScenario::query()->create([
         'user_id' => $other->id,
@@ -258,7 +258,7 @@ it('ScenarioEditorSidebar cross-user contract is locked at the ScenarioQuery::fi
     // Public Service `ScenarioQuery::find` — the sidebar's mount() will
     // raise NotFoundHttpException whenever `find` returns null, which
     // is exactly what `find` does for another user's scenario id.
-    $other = ssbUser('m-other@diederik.test');
+    $other = ssbUser('m-other');
     /** @var ForecastScenario $otherScenario */
     $otherScenario = ForecastScenario::query()->create([
         'user_id' => $other->id,

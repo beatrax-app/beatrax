@@ -19,10 +19,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * the transactions table.
  */
 
-function rjrsUser(string $email): User
+function rjrsUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -46,7 +46,7 @@ function rjrsSeries(User $user, string $cluster): RecurringSeries
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = rjrsUser('rjrs@diederik.test');
+    $this->user = rjrsUser('rjrs');
     /** @var RecurringSeriesStateMachine $sm */
     $sm = $this->app->make(RecurringSeriesStateMachine::class);
     $this->sm = $sm;
@@ -126,7 +126,7 @@ it('is idempotent when the series is already rejected (no second transitions row
 });
 
 it('throws NotFoundHttpException for a cross-user series id', function (): void {
-    $intruder = rjrsUser('rjrs-intruder@diederik.test');
+    $intruder = rjrsUser('rjrs-intruder');
     $series = rjrsSeries($this->user, 'rjrs::xuser');
 
     expect(fn () => (rjrsAction())($series->id, $intruder))

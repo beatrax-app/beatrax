@@ -139,7 +139,7 @@ it('evaluates drift for a single (series, occurrence) pair across cadences and c
     ?int $expectedDeltaMinor,
     ?int $expectedAnnualizedMinor,
 ): void {
-    $user = devalUser('eval-'.bin2hex(random_bytes(4)).'@diederik.test');
+    $user = devalUser('eval-'.bin2hex(random_bytes(4)));
     $txId = devalSeedTransaction($this->db, $user->id);
 
     $seriesId = $this->db->connection()->table('recurring_series')->insertGetId([
@@ -268,10 +268,10 @@ function devalSeedTransaction(DatabaseManager $db, int $userId, int $salt = 0): 
     ]);
 }
 
-function devalUser(string $email): User
+function devalUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

@@ -31,13 +31,13 @@ beforeEach(function (): void {
     $this->conn = $db->connection();
 
     $this->user = User::query()->create([
-        'email' => 'csm@diederik.test',
+        'username' => 'csm',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
 
     $this->otherUser = User::query()->create([
-        'email' => 'csm-other@diederik.test',
+        'username' => 'csm-other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

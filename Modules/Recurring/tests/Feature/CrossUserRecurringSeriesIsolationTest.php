@@ -24,10 +24,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * from each side assert the other side's row is untouched / unread.
  */
 
-function cusUser(string $email): User
+function cusUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -51,8 +51,8 @@ function cusSeries(User $user, string $state, string $cluster, string $name): Re
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->userA = cusUser('cus-a@diederik.test');
-    $this->userB = cusUser('cus-b@diederik.test');
+    $this->userA = cusUser('cus-a');
+    $this->userB = cusUser('cus-b');
     $this->seriesA = cusSeries($this->userA, 'pending', 'cus::a', 'spotify-a');
     $this->seriesB = cusSeries($this->userB, 'rejected', 'cus::b', 'netflix-b');
 });

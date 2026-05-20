@@ -16,10 +16,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * never clobbers display_name_override.
  */
 
-function ersUser(string $email): User
+function ersUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -43,7 +43,7 @@ function ersSeries(User $user, string $cluster): RecurringSeries
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = ersUser('ers@diederik.test');
+    $this->user = ersUser('ers');
 });
 
 function ersAction(): EditRecurringSeriesName
@@ -87,7 +87,7 @@ it('clears the display_name_override when passed null', function (): void {
 });
 
 it('throws NotFoundHttpException for a cross-user series id', function (): void {
-    $intruder = ersUser('ers-intruder@diederik.test');
+    $intruder = ersUser('ers-intruder');
     $series = ersSeries($this->user, 'ers::xuser');
 
     expect(fn () => (ersAction())($series->id, $intruder, 'evil'))

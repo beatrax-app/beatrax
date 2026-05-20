@@ -30,7 +30,7 @@ it('adds the nullable drift_threshold_percent column to recurring_series', funct
     expect($schema->hasColumn('recurring_series', 'drift_threshold_percent'))->toBeTrue();
 
     $user = User::query()->create([
-        'email' => 'rec-override-null@diederik.test',
+        'username' => 'rec-override-null',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -56,7 +56,7 @@ it('adds the nullable drift_threshold_percent column to recurring_series', funct
 
 it('lets a per-series drift_threshold_percent override carry an integer value', function (): void {
     $user = User::query()->create([
-        'email' => 'rec-override-set@diederik.test',
+        'username' => 'rec-override-set',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -87,7 +87,7 @@ it('adds users.drift_alert_threshold_percent with default 5 and integer cast', f
     expect($schema->hasColumn('users', 'drift_alert_threshold_percent'))->toBeTrue();
 
     $created = User::query()->create([
-        'email' => 'drift-threshold-defaults@diederik.test',
+        'username' => 'drift-threshold-defaults',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -100,7 +100,7 @@ it('adds users.drift_alert_threshold_percent with default 5 and integer cast', f
 
 it('respects an explicit drift_alert_threshold_percent override on insert', function (): void {
     $created = User::query()->create([
-        'email' => 'drift-threshold-override@diederik.test',
+        'username' => 'drift-threshold-override',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

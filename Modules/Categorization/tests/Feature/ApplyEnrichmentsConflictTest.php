@@ -205,7 +205,7 @@ it('prefer_first_write policy: keeps stored values; no event; no pending row; so
 
 it('cross-user T-07-09: pending_enrichment_conflicts for another user is NEVER touched', function (): void {
     $other = User::create([
-        'email' => 'other-conflict@example.com',
+        'username' => 'other-conflict',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -296,7 +296,7 @@ it('non-receipt sourceFormat with unset policy + conflict: keeps stored value si
 it('W6 no-instance-cache: two consecutive __invoke calls for different users honour each user\'s policy independently (singleton safety)', function (): void {
     $userA = $this->fixtureUser; // unset
     $userB = User::create([
-        'email' => 'two-user-policy@example.com',
+        'username' => 'two-user-policy',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

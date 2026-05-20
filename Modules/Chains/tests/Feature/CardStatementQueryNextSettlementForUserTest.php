@@ -30,10 +30,10 @@ use Modules\Ledger\Models\Transaction;
  *     multiple historical settlements exist.
  */
 
-function nsmUser(string $email): User
+function nsmUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -141,7 +141,7 @@ beforeEach(function (): void {
 });
 
 it('returns null when no open card_statement exists', function (): void {
-    $user = nsmUser('nsm-no-open@diederik.test');
+    $user = nsmUser('nsm-no-open');
     nsmAsnAccount($user, 'nsm-asn-no-open', 'NL00ASNB1234567001');
     $ics = nsmIcsAccount($user, 'nsm-ics-no-open');
     $run = nsmImportRun($user);
@@ -161,7 +161,7 @@ it('returns null when no open card_statement exists', function (): void {
 });
 
 it('returns a DTO with funder=ASN when an open card_statement + historical settlement exist', function (): void {
-    $user = nsmUser('nsm-funder@diederik.test');
+    $user = nsmUser('nsm-funder');
     $asn = nsmAsnAccount($user, 'nsm-asn-funder', 'NL00ASNB1234567002');
     $ics = nsmIcsAccount($user, 'nsm-ics-funder');
     $run = nsmImportRun($user);
@@ -196,7 +196,7 @@ it('returns a DTO with funder=ASN when an open card_statement + historical settl
 });
 
 it('falls back to the user\'s first ASN account when no historical settlement exists', function (): void {
-    $user = nsmUser('nsm-fallback@diederik.test');
+    $user = nsmUser('nsm-fallback');
     $asn = nsmAsnAccount($user, 'nsm-asn-fallback', 'NL00ASNB1234567003');
     $ics = nsmIcsAccount($user, 'nsm-ics-fallback');
     $run = nsmImportRun($user);
@@ -219,7 +219,7 @@ it('falls back to the user\'s first ASN account when no historical settlement ex
 });
 
 it('returns null when the user has zero ASN accounts (graceful degradation)', function (): void {
-    $user = nsmUser('nsm-no-asn@diederik.test');
+    $user = nsmUser('nsm-no-asn');
     $ics = nsmIcsAccount($user, 'nsm-ics-no-asn');
     $run = nsmImportRun($user);
 
@@ -238,8 +238,8 @@ it('returns null when the user has zero ASN accounts (graceful degradation)', fu
 });
 
 it('isolates by user — user B\'s open statement never leaks to user A', function (): void {
-    $userA = nsmUser('nsm-iso-a@diederik.test');
-    $userB = nsmUser('nsm-iso-b@diederik.test');
+    $userA = nsmUser('nsm-iso-a');
+    $userB = nsmUser('nsm-iso-b');
 
     // User B has an open card_statement + ASN; user A has nothing.
     nsmAsnAccount($userB, 'nsm-asn-iso-b', 'NL00ASNB1234567004');
@@ -260,7 +260,7 @@ it('isolates by user — user B\'s open statement never leaks to user A', functi
 });
 
 it('picks the most-recent open statement when multiple are open', function (): void {
-    $user = nsmUser('nsm-recent@diederik.test');
+    $user = nsmUser('nsm-recent');
     nsmAsnAccount($user, 'nsm-asn-recent', 'NL00ASNB1234567005');
     $ics = nsmIcsAccount($user, 'nsm-ics-recent');
     $run = nsmImportRun($user);
@@ -292,7 +292,7 @@ it('picks the most-recent open statement when multiple are open', function (): v
 });
 
 it('includes partially_settled state and surfaces it on the DTO', function (): void {
-    $user = nsmUser('nsm-partial@diederik.test');
+    $user = nsmUser('nsm-partial');
     nsmAsnAccount($user, 'nsm-asn-partial', 'NL00ASNB1234567006');
     $ics = nsmIcsAccount($user, 'nsm-ics-partial');
     $run = nsmImportRun($user);
@@ -325,7 +325,7 @@ it('includes partially_settled state and surfaces it on the DTO', function (): v
 });
 
 it('funder resolution picks the most-recent chain_link when multiple historical settlements exist', function (): void {
-    $user = nsmUser('nsm-multi-funder@diederik.test');
+    $user = nsmUser('nsm-multi-funder');
     $asnOld = nsmAsnAccount($user, 'nsm-asn-old', 'NL00ASNB1234567007');
     $asnNew = nsmAsnAccount($user, 'nsm-asn-new', 'NL00ASNB1234567008');
     $ics = nsmIcsAccount($user, 'nsm-ics-multi');
@@ -357,7 +357,7 @@ it('funder resolution picks the most-recent chain_link when multiple historical 
 });
 
 it('the new method does not modify Phase 5\'s existing openForAccount behaviour', function (): void {
-    $user = nsmUser('nsm-open-for-account@diederik.test');
+    $user = nsmUser('nsm-open-for-account');
     nsmAsnAccount($user, 'nsm-asn-ofa', 'NL00ASNB1234567009');
     $ics = nsmIcsAccount($user, 'nsm-ics-ofa');
     $run = nsmImportRun($user);

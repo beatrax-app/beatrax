@@ -21,10 +21,10 @@ uses(RefreshDatabase::class);
  * ↘-glyph pill when the user has at least one active shortfall.
  */
 
-function tnfsUser(string $email): User
+function tnfsUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -97,7 +97,7 @@ function tnfsSeedShortfall(User $user, Account $account, int $count = 1): void
 }
 
 beforeEach(function (): void {
-    $this->user = tnfsUser('topnav-forecast@diederik.test');
+    $this->user = tnfsUser('topnav-forecast');
     tnfsSeedDashboardPath($this->user);
 });
 

@@ -156,12 +156,12 @@ function makeLifecycleFakeJob(int $userId, string $jobId): Job
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
-        'email' => 'lifecycle@diederik.test',
+        'username' => 'lifecycle',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
     $this->otherUser = User::query()->create([
-        'email' => 'lifecycle-other@diederik.test',
+        'username' => 'lifecycle-other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

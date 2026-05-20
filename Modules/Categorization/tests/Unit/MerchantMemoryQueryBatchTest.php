@@ -43,12 +43,12 @@ function seedBatchMemory(User $user, Category $category, string $normalized, int
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'mem-batch@example.com',
+        'username' => 'mem-batch',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
     $this->otherUser = User::create([
-        'email' => 'mem-batch-other@example.com',
+        'username' => 'mem-batch-other',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

@@ -16,10 +16,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * the snooze target.
  */
 
-function snrsUser(string $email): User
+function snrsUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -43,7 +43,7 @@ function snrsSeries(User $user, string $cluster): RecurringSeries
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = snrsUser('snrs@diederik.test');
+    $this->user = snrsUser('snrs');
 });
 
 function snrsAction(): SnoozeRecurringSeries
@@ -91,7 +91,7 @@ it('is idempotent when re-snoozed to the same date (no second transitions row)',
 });
 
 it('throws NotFoundHttpException for a cross-user series id', function (): void {
-    $intruder = snrsUser('snrs-intruder@diederik.test');
+    $intruder = snrsUser('snrs-intruder');
     $series = snrsSeries($this->user, 'snrs::xuser');
 
     $until = CarbonImmutable::parse('2026-06-17 12:00:00');

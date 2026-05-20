@@ -140,7 +140,7 @@ it('crossUser404 — User B cannot reclassify User A\'s transaction', function (
     ]);
 
     $intruder = User::query()->create([
-        'email' => 'intruder@diederik.test',
+        'username' => 'intruder',
         'password' => 'intruder-password',
         'period_start_day' => 1,
     ]);

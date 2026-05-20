@@ -27,7 +27,7 @@ beforeEach(function (): void {
 
 it('casts metadata to array and acknowledged_at + created_at to immutable datetimes', function (): void {
     $user = User::query()->create([
-        'email' => 'sa-model@diederik.test',
+        'username' => 'sa-model',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -59,7 +59,7 @@ it('exposes a user() BelongsTo relation back to Modules\\Core\\Models\\User via 
 
 it('reads active rows via an inline whereNull(acknowledged_at) predicate', function (): void {
     $user = User::query()->create([
-        'email' => 'sa-active@diederik.test',
+        'username' => 'sa-active',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -96,7 +96,7 @@ it('reads active rows via an inline whereNull(acknowledged_at) predicate', funct
 
 it('filters by kind via an inline where(kind) predicate', function (): void {
     $user = User::query()->create([
-        'email' => 'sa-bykind@diederik.test',
+        'username' => 'sa-bykind',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
