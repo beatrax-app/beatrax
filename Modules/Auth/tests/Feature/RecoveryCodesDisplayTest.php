@@ -54,23 +54,21 @@ it('returns 404 when visited without a fresh signup', function (): void {
 it('streams the .txt download with the right filename and ten lines', function (): void {
     $result = signupFirstUser();
 
-    $response = Livewire::actingAs($result['user'])->test(RecoveryCodesDisplay::class)
+    $component = Livewire::actingAs($result['user'])->test(RecoveryCodesDisplay::class)
         ->call('download')
         ->assertSet('downloadShown', true)
-        ->effects['download'] ?? null;
+        ->assertFileDownloaded('diederik-recovery-codes-alice.txt');
 
-    $streamed = Livewire::actingAs($result['user'])->test(RecoveryCodesDisplay::class)
-        ->call('download');
-
-    $download = $streamed->effects['download'] ?? null;
+    $download = $component->effects['download'] ?? null;
     expect($download)->not->toBeNull();
+    expect($download['contentType'])->toBe('text/plain; charset=UTF-8');
 
-    $disposition = $download['headers']['Content-Disposition'] ?? '';
-    expect($disposition)->toContain('diederik-recovery-codes-alice.txt');
-
-    $body = base64_decode($download['content'], true);
+    $body = base64_decode((string) $download['content'], true);
     expect($body)->toBeString();
-    expect(explode("\n", (string) $body))->toHaveCount(10);
+
+    $lines = explode("\n", (string) $body);
+    expect($lines)->toHaveCount(10);
+    expect($lines)->toBe($result['codesPlain']);
 });
 
 it('disables Continue until the checkbox is ticked', function (): void {
