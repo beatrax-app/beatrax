@@ -9,10 +9,12 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Auth\Internal\Fortify\FortifyServiceProvider;
+use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Internal\Http\Middleware\FirstUserOnlyMiddleware;
+use Modules\Auth\Internal\Http\Middleware\ForcePasswordChangeMiddleware;
 use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Public\Actions\LoginAction;
@@ -51,8 +53,14 @@ final class AuthServiceProvider extends ServiceProvider
 
         $router->aliasMiddleware('first-user-only', FirstUserOnlyMiddleware::class);
 
+        // Enforce the forced-password-change flag on every authenticated
+        // route. The middleware exempts the change-password page and the
+        // logout route by name so a flagged user is never trapped.
+        $router->pushMiddlewareToGroup('auth', ForcePasswordChangeMiddleware::class);
+
         $livewire->component('auth.login-page', LoginPage::class);
         $livewire->component('auth.signup-page', SignupPage::class);
         $livewire->component('auth.recovery-codes-display', RecoveryCodesDisplay::class);
+        $livewire->component('auth.change-password-page', ChangePasswordPage::class);
     }
 }

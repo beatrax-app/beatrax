@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Modules\Auth\Internal\Http\Middleware\ForcePasswordChangeMiddleware;
 use Modules\Core\Models\User;
@@ -115,7 +115,7 @@ it('does not redirect when the route is the logout route', function (): void {
     expect($response->getContent())->toBe('ok');
 });
 
-it('redirects a flagged user away from the dashboard and back once the flag clears', function (): void {
+it('redirects a flagged user away from the dashboard and stops once the flag clears', function (): void {
     $user = User::query()->create([
         'username' => 'partner',
         'password' => 'whatever-password',
@@ -127,5 +127,9 @@ it('redirects a flagged user away from the dashboard and back once the flag clea
 
     User::query()->where('id', $user->id)->update(['force_password_change_at_next_login' => false]);
 
-    $this->actingAs($user->fresh())->get('/')->assertOk();
+    // With the flag cleared the change-password middleware no longer
+    // intercepts; the dashboard's own first-run redirect to /imports/new
+    // is what remains for a user with no transactions.
+    $response = $this->actingAs($user->fresh())->get('/');
+    expect($response->headers->get('Location'))->not->toBe(route('auth.change-password'));
 });
