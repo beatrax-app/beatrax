@@ -1,0 +1,17 @@
+{
+  "phase": "13",
+  "phase_name": "AppPaths + First-Run Migration Wizard",
+  "timestamp": "2026-05-20T00:00:00Z",
+  "areas_completed": ["Wizard entry point"],
+  "areas_remaining": ["v1.0 DB discovery", "Import semantics", "Failure & rollback UX"],
+  "decisions": {
+    "Wizard entry point": [
+      {"question": "How should the first-run wizard surface when no .migrated-from-v1 sentinel exists?", "answer": "Blocking Livewire route", "options_presented": ["Blocking Livewire route", "Wizard then login", "Artisan-only first run"]},
+      {"question": "What tells the blocking middleware that first-run is complete?", "answer": "Always-written sentinel — both paths write <storage>/.first-run-complete; Import additionally writes .migrated-from-v1", "options_presented": ["Always-written sentinel", "DB-existence check", "Reuse User::count()"]},
+      {"question": "How should the Quit button behave in this web-only phase?", "answer": "Goodbye screen — renders 'safe to close window', writes no sentinel; Phase 15 swaps in native quit", "options_presented": ["Goodbye screen", "Omit Quit until Phase 15", "Quit ends the session"]},
+      {"question": "How should the developer exercise the wizard manually without risking their real DB?", "answer": "Dev reset command — php artisan diederik:reset-first-run (gated to dev runtime) deletes sentinels; pair with throwaway storage dir", "options_presented": ["Dev reset command", "Forced-wizard env flag", "Tests only"]}
+    ]
+  },
+  "deferred_ideas": [],
+  "canonical_refs": [".planning/ROADMAP.md", ".planning/REQUIREMENTS.md", ".planning/STATE.md"]
+}
