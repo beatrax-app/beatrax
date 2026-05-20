@@ -2,7 +2,7 @@
     <div class="max-w-xl mx-auto px-6 space-y-6">
         <header class="space-y-1">
             <h1 class="text-3xl font-semibold text-slate-900 tracking-tight">Save these recovery codes</h1>
-            <p class="text-sm text-slate-500">Print these or save them somewhere safe. They will not be shown again — only regenerated.</p>
+            <p class="text-sm text-slate-500">Print these or save them somewhere safe. They will not be shown again.</p>
         </header>
 
         <div role="region" aria-live="polite" class="grid grid-cols-2 gap-3">

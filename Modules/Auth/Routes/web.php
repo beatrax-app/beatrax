@@ -8,13 +8,17 @@ use Illuminate\Support\Facades\Route;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
+use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
 use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
+use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Internal\Http\Middleware\FirstUserOnlyMiddleware;
 use Modules\Auth\Public\Actions\LogoutAction;
 
 Route::middleware(['web', 'guest'])->group(static function (): void {
     Route::get('/login', LoginPage::class)->name('login');
+
+    Route::get('/reset-password', ResetPasswordPage::class)->name('auth.reset-password');
 
     Route::middleware([FirstUserOnlyMiddleware::class])->group(static function (): void {
         Route::get('/signup', SignupPage::class)->name('signup');
@@ -34,5 +38,6 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
 
     Route::middleware(['developer'])->group(static function (): void {
         Route::get('/settings/users/new', AddUserPage::class)->name('auth.users.create');
+        Route::get('/settings/users/{username}', ManageUserPage::class)->name('auth.users.manage');
     });
 });

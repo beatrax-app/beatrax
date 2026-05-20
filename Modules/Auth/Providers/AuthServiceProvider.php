@@ -8,20 +8,27 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Auth\Internal\Console\ResetPasswordCommand;
 use Modules\Auth\Internal\Fortify\FortifyServiceProvider;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
+use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
 use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
+use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Internal\Http\Middleware\FirstUserOnlyMiddleware;
 use Modules\Auth\Internal\Http\Middleware\ForcePasswordChangeMiddleware;
 use Modules\Auth\Internal\Http\Middleware\RequireDeveloperMiddleware;
+use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
+use Modules\Auth\Internal\Recovery\RecoveryCodeNormalizer;
 use Modules\Auth\Public\Actions\AddUserAction;
 use Modules\Auth\Public\Actions\LoginAction;
 use Modules\Auth\Public\Actions\LogoutAction;
+use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
+use Modules\Auth\Public\Actions\ResetPasswordAction;
 use Modules\Auth\Public\Actions\SignupAction;
 
 /**
@@ -44,8 +51,12 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(LogoutAction::class);
         $this->app->singleton(SignupAction::class);
         $this->app->singleton(AddUserAction::class);
+        $this->app->singleton(ResetPasswordAction::class);
+        $this->app->singleton(RegenerateRecoveryCodesAction::class);
         $this->app->singleton(RecoveryCodeGenerator::class);
         $this->app->singleton(RecoveryCodeFormatter::class);
+        $this->app->singleton(RecoveryCodeNormalizer::class);
+        $this->app->singleton(RecoveryCodeAuthenticator::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire, Router $router): void
@@ -54,6 +65,10 @@ final class AuthServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'auth');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([ResetPasswordCommand::class]);
+        }
 
         $router->aliasMiddleware('first-user-only', FirstUserOnlyMiddleware::class);
         $router->aliasMiddleware('developer', RequireDeveloperMiddleware::class);
@@ -68,5 +83,7 @@ final class AuthServiceProvider extends ServiceProvider
         $livewire->component('auth.recovery-codes-display', RecoveryCodesDisplay::class);
         $livewire->component('auth.change-password-page', ChangePasswordPage::class);
         $livewire->component('auth.add-user-page', AddUserPage::class);
+        $livewire->component('auth.reset-password-page', ResetPasswordPage::class);
+        $livewire->component('auth.manage-user-page', ManageUserPage::class);
     }
 }
