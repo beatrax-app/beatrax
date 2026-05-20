@@ -10,6 +10,9 @@
     </head>
     <body class="antialiased bg-white text-slate-900" style="font-family: 'Inter', system-ui, -apple-system, sans-serif;">
         @auth
+            @isset($impersonatingPartnerUsername)
+                @include('auth::partials.impersonation-banner', ['username' => $impersonatingPartnerUsername])
+            @endisset
             @livewire('core.top-nav')
             @livewire('core.system-alerts-banner')
             @livewire('categorization.rule-form-modal')
