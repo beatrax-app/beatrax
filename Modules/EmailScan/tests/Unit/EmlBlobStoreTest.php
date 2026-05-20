@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 
 function ebsStore(): EmlBlobStore
 {
-    return new EmlBlobStore(new Filesystem);
+    return new EmlBlobStore(new Filesystem, new UserDataPathService);
 }
 
 it('accepts the short hex shape Gmail returns', function (): void {

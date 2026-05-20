@@ -5,14 +5,16 @@ declare(strict_types=1);
 use Illuminate\Container\Container;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Public\Services\UserDataPathService;
 
 /**
  * Renames the legacy single-file OAuth secrets store out of the way.
  *
  * OAuth client credentials and inbox refresh tokens now live in the
  * per-user oauth_secrets table. The previous installation kept them in
- * a single shared JSON file at storage/app/secrets/email-oauth.json.
- * This migration renames that file to email-oauth.json.pre-phase-12.bak
+ * a single shared JSON file named email-oauth.json inside the storage
+ * secrets directory. This migration renames that file to
+ * email-oauth.json.pre-phase-12.bak
  * (mode 0600) so the operator retains a rollback artefact, and writes a
  * README alongside it describing the rename and the recovery path. The
  * application never reads .bak files; re-authorizing Gmail and
@@ -25,17 +27,18 @@ use Illuminate\Filesystem\Filesystem;
  */
 return new class extends Migration
 {
-    private const LEGACY_RELATIVE = 'app/secrets/email-oauth.json';
+    private const LEGACY_FILENAME = 'email-oauth.json';
 
-    private const BACKUP_RELATIVE = 'app/secrets/email-oauth.json.pre-phase-12.bak';
+    private const BACKUP_FILENAME = 'email-oauth.json.pre-phase-12.bak';
 
-    private const README_RELATIVE = 'app/secrets/README.md';
+    private const README_FILENAME = 'README.md';
 
     public function up(): void
     {
         $files = $this->files();
-        $legacy = storage_path(self::LEGACY_RELATIVE);
-        $backup = storage_path(self::BACKUP_RELATIVE);
+        $secrets = $this->paths()->secrets();
+        $legacy = $secrets.DIRECTORY_SEPARATOR.self::LEGACY_FILENAME;
+        $backup = $secrets.DIRECTORY_SEPARATOR.self::BACKUP_FILENAME;
 
         if (! $files->exists($legacy) || $files->exists($backup)) {
             return;
@@ -43,7 +46,7 @@ return new class extends Migration
 
         $files->move($legacy, $backup);
         $files->chmod($backup, 0600);
-        $files->put(storage_path(self::README_RELATIVE), $this->readmeBody());
+        $files->put($secrets.DIRECTORY_SEPARATOR.self::README_FILENAME, $this->readmeBody());
     }
 
     public function down(): void
@@ -58,6 +61,14 @@ return new class extends Migration
         $files = Container::getInstance()->make(Filesystem::class);
 
         return $files;
+    }
+
+    private function paths(): UserDataPathService
+    {
+        /** @var UserDataPathService $paths */
+        $paths = Container::getInstance()->make(UserDataPathService::class);
+
+        return $paths;
     }
 
     private function readmeBody(): string

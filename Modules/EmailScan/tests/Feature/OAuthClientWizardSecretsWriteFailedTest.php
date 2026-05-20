@@ -56,7 +56,7 @@ it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling th
         ->set('publishedConfirmed', true)
         ->call('submit')
         // Inline error surfaces with actionable copy.
-        ->assertSet('errorMessage', 'Could not save your OAuth client to disk — check storage/app/secrets/ permissions and try again.')
+        ->assertSet('errorMessage', 'Could not save your OAuth client to disk — check your secrets-directory permissions and try again.')
         // No exception bubbled — the component is still mounted.
         ->assertSet('provider', 'gmail')
         // Secret was wiped per the security posture (intentional —
