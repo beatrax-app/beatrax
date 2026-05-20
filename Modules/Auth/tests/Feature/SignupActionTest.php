@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Hashing\Hasher;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Modules\Auth\Internal\Http\Middleware\FirstUserOnlyMiddleware;
@@ -119,6 +120,36 @@ it('rejects a password shorter than twelve characters', function (): void {
     }
 
     expect(User::query()->count())->toBe(0);
+});
+
+it('generates ten distinct plaintext recovery codes', function (): void {
+    /** @var SignupAction $signup */
+    $signup = $this->app->make(SignupAction::class);
+
+    $result = $signup('alice', 'a-long-password-12chars');
+
+    expect($result['codesPlain'])->toHaveCount(10);
+    expect(array_unique($result['codesPlain']))->toHaveCount(10);
+});
+
+it('rejects a second user_recovery_codes row carrying a duplicate code_hash', function (): void {
+    $user = User::query()->create([
+        'username' => 'alice',
+        'password' => 'whatever-password',
+        'period_start_day' => 1,
+    ]);
+
+    UserRecoveryCode::query()->create([
+        'user_id' => $user->id,
+        'code_hash' => 'identical-hash-value',
+        'used_at' => null,
+    ]);
+
+    expect(fn () => UserRecoveryCode::query()->create([
+        'user_id' => $user->id,
+        'code_hash' => 'identical-hash-value',
+        'used_at' => null,
+    ]))->toThrow(QueryException::class);
 });
 
 it('passes the FirstUserOnlyMiddleware through on an empty database', function (): void {

@@ -15,8 +15,9 @@ use Illuminate\Support\Carbon;
  *
  * The login identity is a `username`. `is_developer` marks a user as
  * eligible for the in-app developer console; when
- * `force_password_change_at_next_login` is set the user must replace
- * their password before any other authenticated action proceeds.
+ * `force_password_change_at_next_login` is set, a request middleware
+ * redirects the user to the change-password page on every authenticated
+ * route until they replace their password.
  *
  * @property int $id
  * @property string $username

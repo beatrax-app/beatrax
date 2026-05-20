@@ -21,10 +21,15 @@ use Modules\Core\Public\Contracts\Clock;
  *
  * Creates the first account on the device together with ten hashed
  * recovery codes inside one database transaction. The transaction body
- * re-checks that no user exists before inserting any row, so two
- * concurrent signups cannot both succeed — the second observes the first
- * user and aborts. The first account becomes the owner: its
- * `is_developer` flag is set true.
+ * first issues a no-op write statement to promote the connection to an
+ * immediate write lock, then re-checks that no user exists before
+ * inserting any row. The write-lock promotion is what makes the guard
+ * deterministic: under SQLite WAL a plain `SELECT COUNT` only takes a
+ * read snapshot, so two concurrent signups could otherwise both read
+ * zero and both insert. With the lock taken up front the second signup
+ * blocks until the first commits, then observes the created user and
+ * aborts. The first account becomes the owner: its `is_developer` flag
+ * is set true.
  *
  * On success the new user is logged in through the active guard and the
  * ten plaintext codes are stashed in the session under
@@ -64,8 +69,14 @@ final class SignupAction
             ]);
         }
 
-        /** @var array{user: User, codesPlain: list<string>} $result */
+        /** @var array{user: User, codesPlain: non-empty-list<string>} $result */
         $result = $this->db->connection()->transaction(function () use ($username, $password): array {
+            // Promote the connection to an immediate write lock before the
+            // existence check. A no-op UPDATE matches zero rows but still
+            // acquires the lock, so a concurrent signup blocks here rather
+            // than reading a stale zero-count snapshot under SQLite WAL.
+            $this->db->connection()->statement('UPDATE users SET id = id WHERE 0 = 1');
+
             // Re-check inside the transaction: the count outside it could
             // read a stale value before a concurrent signup commits.
             if ($this->db->connection()->table('users')->count() > 0) {
@@ -83,14 +94,23 @@ final class SignupAction
 
             $now = $this->clock->now();
 
+            // Generate distinct codes: a collision is astronomically rare,
+            // but the unique code_hash index would reject a duplicate
+            // insert outright, so regenerate until ten distinct values
+            // exist.
             $codesPlain = [];
-            for ($i = 0; $i < self::RECOVERY_CODE_COUNT; $i++) {
+            while (count($codesPlain) < self::RECOVERY_CODE_COUNT) {
                 $code = $this->codeGenerator->generate();
+                if (in_array($code, $codesPlain, true)) {
+                    continue;
+                }
                 $codesPlain[] = $code;
+            }
 
+            foreach ($codesPlain as $plainCode) {
                 UserRecoveryCode::query()->create([
                     'user_id' => $user->id,
-                    'code_hash' => $this->hasher->make($code),
+                    'code_hash' => $this->hasher->make($plainCode),
                     'used_at' => null,
                     'created_at' => $now,
                 ]);

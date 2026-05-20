@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
+use Modules\Auth\Internal\Http\Livewire\AddUserPage;
+use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
@@ -27,4 +29,10 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
     })->name('logout');
 
     Route::get('/recovery-codes', RecoveryCodesDisplay::class)->name('auth.recovery-codes-display');
+
+    Route::get('/change-password', ChangePasswordPage::class)->name('auth.change-password');
+
+    Route::middleware(['developer'])->group(static function (): void {
+        Route::get('/settings/users/new', AddUserPage::class)->name('auth.users.create');
+    });
 });
