@@ -31,7 +31,7 @@ return new class extends Migration
     {
         $this->schema()->create('oauth_secrets', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
             $table->string('provider', 16);
             $table->string('client_id');
             $table->text('client_secret');
