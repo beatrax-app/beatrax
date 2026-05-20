@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Providers\HorizonServiceProvider;
+use Modules\Auth\Providers\AuthServiceProvider;
 use Modules\Categorization\Providers\CategorizationServiceProvider;
 use Modules\Chains\Providers\ChainsServiceProvider;
 use Modules\Core\Providers\CoreServiceProvider;
@@ -19,6 +20,7 @@ use Modules\Transfers\Providers\TransfersServiceProvider;
 return [
     HorizonServiceProvider::class,
     CoreServiceProvider::class,
+    AuthServiceProvider::class,
     LedgerServiceProvider::class,
     IngestionServiceProvider::class,
     ImportServiceProvider::class,
