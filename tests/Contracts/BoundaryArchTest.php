@@ -1026,3 +1026,92 @@ it('does not allow Laravel global path / container helpers inside Modules/Core/I
         "Modules/Core/Internal/Console/ commands may not call Laravel global helpers (base_path, app, config, etc). Inject the Application / Repository / etc. instead. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
+
+it('does not allow the Auth facade or auth/session helpers across Modules/* outside the allow-list (noAuthFacadeOrHelper)', function (): void {
+    // The current-user identity must travel through constructor-injected
+    // collaborators (the CurrentUser contract), never through the global
+    // Auth facade, the auth() / session() helpers, or request()->user() /
+    // request()->session(). Those forms resolve through the singleton
+    // Application container, cannot be substituted from a test harness, and
+    // erode the module-boundary contract.
+    //
+    // The allow-list below is the only sanctioned exception surface: the
+    // authentication actions and the Fortify / impersonation glue genuinely
+    // need to drive the guard. It is a per-file precise list — never a glob.
+    // Adding a file to it requires editing the array AND a code-review
+    // justification; see the Auth module's service-provider docblock for the
+    // rationale behind that surface.
+    //
+    // The scan walks the entire module tree, strips block + line + Blade
+    // comments so PHPDoc references such as `@see Auth::user()` and Blade
+    // `{{-- ... --}}` notes stay legal, skips test files (test harnesses
+    // legitimately call actingAs()) and migration files (anonymous classes
+    // outside the rule), and flags any remaining banned symbol.
+    $allowList = [
+        'Modules/Auth/Public/Actions/LoginAction.php',
+        'Modules/Auth/Public/Actions/SignupAction.php',
+        'Modules/Auth/Public/Actions/LogoutAction.php',
+        'Modules/Auth/Public/Actions/ResetPasswordAction.php',
+        'Modules/Auth/Public/Actions/RegenerateRecoveryCodesAction.php',
+        'Modules/Auth/Public/Actions/ImpersonateUserAction.php',
+        'Modules/Auth/Public/Actions/EndImpersonationAction.php',
+        'Modules/Auth/Public/Actions/AddUserAction.php',
+        'Modules/Auth/Internal/Fortify/FortifyServiceProvider.php',
+        'Modules/Auth/Internal/Fortify/Authenticator.php',
+        'Modules/Auth/Internal/Http/Middleware/ImpersonationBannerMiddleware.php',
+    ];
+
+    // Banned symbols: the Auth facade import + its static lookups, the auth()
+    // / session() global helpers, and request()->user() / request()->session().
+    // The `(?<![>:])` lookbehind keeps `$this->session(...)` method calls and
+    // `SomeClass::session(...)` static calls out of the helper match.
+    $bannedPatterns = [
+        '/Illuminate\\\\Support\\\\Facades\\\\Auth\b/',
+        '/Auth::user\s*\(/',
+        '/Auth::id\s*\(/',
+        '/Auth::loginUsingId\s*\(/',
+        '/(?<![>:])\bauth\s*\(/',
+        '/request\s*\(\s*\)\s*->\s*user\s*\(/',
+        '/request\s*\(\s*\)\s*->\s*session\s*\(/',
+        '/(?<![>:])\bsession\s*\(/',
+    ];
+
+    $modulesDir = base_path('Modules');
+    if (! is_dir($modulesDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $hits = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($modulesDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (preg_match('#/tests/#', $path) === 1 || preg_match('#/Database/Migrations/#', $path) === 1) {
+            continue;
+        }
+        $relative = str_replace(base_path().'/', '', $path);
+        if (in_array($relative, $allowList, true)) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*|\{\{--.*?--\}\}#s', '', $contents) ?? $contents;
+        foreach ($bannedPatterns as $pattern) {
+            if (preg_match($pattern, $stripped) === 1) {
+                $hits[] = $relative;
+                break;
+            }
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "Modules/* may not call Auth facade / auth helper / request()->user / request()->session / session() helper / Auth::loginUsingId outside the allow-list. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
