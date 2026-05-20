@@ -19,12 +19,15 @@ use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Internal\Http\Middleware\FirstUserOnlyMiddleware;
 use Modules\Auth\Internal\Http\Middleware\ForcePasswordChangeMiddleware;
+use Modules\Auth\Internal\Http\Middleware\ImpersonationBannerMiddleware;
 use Modules\Auth\Internal\Http\Middleware\RequireDeveloperMiddleware;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeNormalizer;
 use Modules\Auth\Public\Actions\AddUserAction;
+use Modules\Auth\Public\Actions\EndImpersonationAction;
+use Modules\Auth\Public\Actions\ImpersonateUserAction;
 use Modules\Auth\Public\Actions\LoginAction;
 use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
@@ -36,10 +39,12 @@ use Modules\Auth\Public\Actions\SignupAction;
  *
  * Loads the module's migrations, web/console routes, and views, registers
  * the Fortify service provider that wires the username-based
- * authentication pipeline, binds the sign-in / sign-out actions, and
- * registers the Livewire pages of the authentication surface. Further
- * bindings — recovery-code, password-reset, and impersonation actions —
- * are registered by the relevant plan as those surfaces are built out.
+ * authentication pipeline, binds the sign-in / sign-out / recovery-code /
+ * password-reset / profile-switch actions, and registers the Livewire
+ * pages of the authentication surface.
+ *
+ * Two middleware run on every authenticated route: the forced-password-
+ * change guard and the profile-switch banner painter.
  */
 final class AuthServiceProvider extends ServiceProvider
 {
@@ -53,6 +58,8 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(AddUserAction::class);
         $this->app->singleton(ResetPasswordAction::class);
         $this->app->singleton(RegenerateRecoveryCodesAction::class);
+        $this->app->singleton(ImpersonateUserAction::class);
+        $this->app->singleton(EndImpersonationAction::class);
         $this->app->singleton(RecoveryCodeGenerator::class);
         $this->app->singleton(RecoveryCodeFormatter::class);
         $this->app->singleton(RecoveryCodeNormalizer::class);
@@ -77,6 +84,11 @@ final class AuthServiceProvider extends ServiceProvider
         // route. The middleware exempts the change-password page and the
         // logout route by name so a flagged user is never trapped.
         $router->pushMiddlewareToGroup('auth', ForcePasswordChangeMiddleware::class);
+
+        // Paint the profile-switch banner on every authenticated route
+        // while a switch is active. Runs after the `auth` middleware so
+        // the active guard is resolved before the banner reads it.
+        $router->pushMiddlewareToGroup('auth', ImpersonationBannerMiddleware::class);
 
         $livewire->component('auth.login-page', LoginPage::class);
         $livewire->component('auth.signup-page', SignupPage::class);
