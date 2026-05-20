@@ -11,7 +11,7 @@ beforeEach(function (): void {
     $this->db = $this->app->make(DatabaseManager::class)->connection();
     $now = '2026-05-16 12:00:00';
     $this->userId = $this->db->table('users')->insertGetId([
-        'email' => 'idempotent@test.local',
+        'username' => 'idempotent',
         'password' => 'hash',
         'created_at' => $now,
         'updated_at' => $now,

@@ -26,10 +26,10 @@ use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
  *    three render and the overflow count == total - 3.
  */
 
-function ehtUser(string $email): User
+function ehtUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => str_contains($username, '@') ? (string) strtok($username, '@') : $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

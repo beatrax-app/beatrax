@@ -129,7 +129,7 @@ it('does not touch rows whose userId mismatches the job target (T-07-09 cross-us
     $inboxId = (int) DB::table('inboxes')->where('user_id', $this->fixtureUser->id)->value('id');
 
     $otherUser = User::query()->create([
-        'email' => 'other@diederik.test',
+        'username' => 'other',
         'password' => 'x',
         'period_start_day' => 1,
     ]);

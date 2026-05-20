@@ -14,10 +14,10 @@ use Modules\Core\Models\User;
  * openWizard(...) Livewire action.
  */
 
-function iesUser(string $email): User
+function iesUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => str_contains($username, '@') ? (string) strtok($username, '@') : $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

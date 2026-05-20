@@ -55,7 +55,7 @@ afterEach(function (): void {
 
 it('walks Gmail + Microsoft inboxes, populates discovered_senders with NEW senders only, and never persists .eml blobs', function (): void {
     $user = User::query()->create([
-        'email' => 'discovery@example.com',
+        'username' => 'discovery',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

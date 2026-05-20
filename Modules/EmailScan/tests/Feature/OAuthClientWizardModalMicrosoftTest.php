@@ -37,10 +37,10 @@ afterEach(function (): void {
     }
 });
 
-function ocwmUser(string $email): User
+function ocwmUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => str_contains($username, '@') ? (string) strtok($username, '@') : $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

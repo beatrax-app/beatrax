@@ -63,7 +63,7 @@ it('captures the walk-start anchor before any provider call and passes it as the
     $this->app->instance(Clock::class, $clock);
 
     $user = User::query()->create([
-        'email' => 'graph-baseline@example.com',
+        'username' => 'graph-baseline',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

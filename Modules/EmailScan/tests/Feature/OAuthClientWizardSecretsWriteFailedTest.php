@@ -33,7 +33,7 @@ afterEach(function (): void {
 
 it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling the exception', function (): void {
     $user = User::query()->create([
-        'email' => 'wizard-disk-fail@example.com',
+        'username' => 'wizard-disk-fail',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -79,7 +79,7 @@ it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling th
 
 it('still bubbles non-SecretsWriteFailed exceptions (defensive — the catch is narrow)', function (): void {
     $user = User::query()->create([
-        'email' => 'wizard-other-fail@example.com',
+        'username' => 'wizard-other-fail',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

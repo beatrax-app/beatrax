@@ -50,7 +50,7 @@ afterEach(function (): void {
 
 it('walks pages, then calls deltaPage(null) EXACTLY ONCE after the walk completes, then persists last_delta_link', function (): void {
     $user = User::query()->create([
-        'email' => 'graph-two-phase@example.com',
+        'username' => 'graph-two-phase',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

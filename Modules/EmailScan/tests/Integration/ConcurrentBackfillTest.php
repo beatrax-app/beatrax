@@ -64,7 +64,7 @@ afterEach(function (): void {
 
 it('issues PRAGMA busy_timeout = 5000 inside every per-page transaction', function (): void {
     $user = User::query()->create([
-        'email' => 'concurrent@example.com',
+        'username' => 'concurrent',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

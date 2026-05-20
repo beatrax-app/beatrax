@@ -127,7 +127,7 @@ it('UNIQUE on known_senders permits (NULL, "paypal.com") to coexist with (1, "pa
 
     // The 'paypal.com' system seed is already present from the migration.
     $userId = (int) $this->db->table('users')->insertGetId([
-        'email' => 'known-unique@example.com',
+        'username' => 'known-unique',
         'password' => 'hash',
         'created_at' => $now,
         'updated_at' => $now,
@@ -154,7 +154,7 @@ it('UNIQUE on known_senders permits (NULL, "paypal.com") to coexist with (1, "pa
 it('UNIQUE on known_senders rejects a duplicate (user_id, email_pattern) within the same user', function (): void {
     $now = '2026-05-17 00:00:00';
     $userId = (int) $this->db->table('users')->insertGetId([
-        'email' => 'known-dup@example.com',
+        'username' => 'known-dup',
         'password' => 'hash',
         'created_at' => $now,
         'updated_at' => $now,

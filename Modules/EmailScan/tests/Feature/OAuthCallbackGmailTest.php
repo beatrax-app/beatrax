@@ -34,10 +34,10 @@ afterEach(function (): void {
     }
 });
 
-function ocgUser(string $email): User
+function ocgUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => str_contains($username, '@') ? (string) strtok($username, '@') : $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

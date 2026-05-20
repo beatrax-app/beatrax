@@ -23,10 +23,10 @@ use Modules\EmailScan\Public\Services\InboxesBadgeCount;
  *  - Both actions are cross-user 404 + idempotent on non-candidate state.
  */
 
-function dspUser(string $email): User
+function dspUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => str_contains($username, '@') ? (string) strtok($username, '@') : $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -40,7 +40,7 @@ function dspSeedInbox(User $owner): int
     $inboxId = (int) $db->connection()->table('inboxes')->insertGetId([
         'user_id' => $owner->id,
         'provider' => 'gmail',
-        'email' => $owner->email,
+        'email' => $owner->username.'@example.com',
         'backfill_window_months' => 3,
         'backfill_progress' => null,
         'created_at' => $now,
