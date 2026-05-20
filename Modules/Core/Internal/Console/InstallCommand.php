@@ -19,9 +19,9 @@ use Modules\Core\Public\Events\UserInstalled;
  * 1. Refuses to run when the SQLite database path is inside a cloud-sync
  *    folder (iCloud Drive / OneDrive / Dropbox / Mobile Documents).
  * 2. Runs pending migrations.
- * 3. Creates User id=1 if absent. Re-running with the same email is a no-op
- *    and never silently updates the password — a dedicated reset-password
- *    command will land in a later operational-hardening phase.
+ * 3. Creates User id=1 if absent. Re-running with the same username is a
+ *    no-op and never silently updates the password — a dedicated
+ *    reset-password command will land in a later operational-hardening phase.
  *
  * The `--launchd` mode is a separate code path: it installs three
  * macOS LaunchAgent plists from `deploy/launchd/*.plist` to
@@ -41,7 +41,7 @@ class InstallCommand extends Command
 {
     /** @var string */
     protected $signature = 'diederik:install
-        {--email= : Email for the single-user account}
+        {--username= : Username for the single-user account}
         {--password= : Password for the single-user account}
         {--period-start-day=1 : Period start day (1-28, 1 = calendar month, 25 = salary cycle)}
         {--launchd : Install macOS launchd plists for Horizon + scheduler + (optional) Redis}
@@ -137,12 +137,12 @@ class InstallCommand extends Command
             return self::SUCCESS;
         }
 
-        $email = $this->resolveStringInput('email', 'Email');
+        $username = strtolower(trim($this->resolveStringInput('username', 'Username')));
         $password = $this->resolveStringInput('password', 'Password', secret: true);
         $periodStartDay = $this->resolvePeriodStartDay();
 
-        if ($email === '') {
-            $this->error('Refusing to install: email is required.');
+        if ($username === '') {
+            $this->error('Refusing to install: username is required.');
 
             return self::FAILURE;
         }
@@ -153,7 +153,7 @@ class InstallCommand extends Command
         }
 
         $user = User::create([
-            'email' => $email,
+            'username' => $username,
             'password' => $password,
             'period_start_day' => $periodStartDay,
         ]);
@@ -161,9 +161,9 @@ class InstallCommand extends Command
         $this->events->dispatch(new UserInstalled($user->id));
 
         $this->info(sprintf(
-            'Installed User id=%d with email %s, period_start_day=%d.',
+            'Installed User id=%d with username %s, period_start_day=%d.',
             $user->id,
-            $user->email,
+            $user->username,
             $user->period_start_day,
         ));
 
