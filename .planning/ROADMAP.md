@@ -101,7 +101,7 @@ Plans:
 
 ### Phase 14: Queue Rewire + Horizon Carve-out
 
-**Goal**: The shipped desktop bundle runs Laravel's `database` queue driver + `database` cache lock store; Horizon stays installed but only boots when `DIEDERIK_RUNTIME=herd` (developer's Herd box); chain resolution + email backfill + drift detection + recurring sweep + forecast all succeed under concurrent load on the new driver.
+**Goal**: The shipped desktop bundle runs Laravel's `database` queue driver + `database` cache lock store; Horizon stays installed but only boots when `DIEDERIK_DEV_MODE=true` (developer's Herd box); chain resolution + email backfill + drift detection + recurring sweep + forecast all succeed under concurrent load on the new driver.
 **Slug:** `14-queue-rewire-horizon-carveout`
 **Mode:** mvp
 **Depends on**: Phase 13 (the `jobs` / `failed_jobs` / `job_batches` tables must live at the new `UserDataPath`-rooted SQLite location), Phase 12 (per-user lock keys partition cleanly via `CurrentUser`)
@@ -113,7 +113,21 @@ Plans:
   3. `HorizonServiceProvider::boot()` early-exits when `config('app.dev_mode') !== true` so the `/horizon` route never registers in shipped builds; `BoundaryArchTest::noHorizonImportsInShippedBuildCode` invariant green
   4. `predis/predis` moves from `require` to `require-dev` in `composer.json` (since Redis is dev-only); shipped composer.lock produces a smaller dependency tree
 
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+
+**Wave 1**
+
+- [ ] 14-01-PLAN.md — queue/cache/cache_locks framework migrations + published config/cache.php with locks_store key + config('app.dev_mode') wiring
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 14-02-PLAN.md — flip QUEUE_CONNECTION default to database + shared LockStore helper + migrate 9 jobs' uniqueVia() + SC1/SC2 tests
+
+**Wave 3** *(blocked on Wave 1 + Wave 2)*
+
+- [ ] 14-03-PLAN.md — HorizonServiceProvider dev-mode gate + class_exists() registration guard + Horizon/Predis to require-dev + noHorizonImportsInShippedBuildCode invariant + SC3/SC4 tests
 
 ### Phase 15: Desktop Shell (NativePHP Integration)
 
@@ -239,7 +253,7 @@ Plans:
 | v1.0 MVP — Phases 1–11 | 66/66 | Complete | 2026-05-19 |
 | 12. Multi-User Activation | 8/8 | Complete    | 2026-05-20 |
 | 13. AppPaths | 3/3 | Complete    | 2026-05-20 |
-| 14. Queue Rewire + Horizon Carve-out | 0/0 | Not started | - |
+| 14. Queue Rewire + Horizon Carve-out | 0/3 | Planned | - |
 | 15. Desktop Shell (NativePHP Integration) | 0/0 | Not started | - |
 | 16. Developer Mode UI | 0/0 | Not started | - |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
