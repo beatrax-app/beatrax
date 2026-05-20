@@ -1,0 +1,16 @@
+{
+    "name": "diederik/auth",
+    "description": "Auth module — username-based authentication identity, single-use recovery codes, and the multi-user activation schema.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Auth\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Auth\\Tests\\": "tests/"
+        }
+    }
+}
