@@ -67,7 +67,7 @@ it('persists the income / expense / transfer kind on every row', function (): vo
 it('never demotes a per-user category that shares a slug with a global default', function (): void {
     /** @var User $user */
     $user = User::create([
-        'email' => 'partner@diederik.test',
+        'username' => 'partner',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
@@ -101,7 +101,7 @@ it('runs from the diederik:install command via the UserInstalled listener', func
     // Drive the install command end-to-end (NOT Event::fake — we want the
     // SeedDefaultCategoryTree listener to actually fire on UserInstalled).
     $exit = $this->app->make(ConsoleKernel::class)->call('diederik:install', [
-        '--email' => 'wessel@example.com',
+        '--username' => 'wessel',
         '--password' => 'opensesame',
         '--period-start-day' => 1,
     ]);

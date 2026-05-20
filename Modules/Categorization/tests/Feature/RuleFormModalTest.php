@@ -14,7 +14,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'rule-form@example.com',
+        'username' => 'rule-form',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -79,7 +79,7 @@ it('hydrates fields in edit mode when rule-form:open carries a ruleId', function
 
 it('falls back to create mode when rule-form:open carries a foreign ruleId', function (): void {
     $other = User::create([
-        'email' => 'foreign-rule-form@example.com',
+        'username' => 'foreign-rule-form',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -157,7 +157,7 @@ it('translates a duplicate-rule UNIQUE violation into the locked error copy', fu
 
 it('refuses to update a foreign user rule', function (): void {
     $other = User::create([
-        'email' => 'cross-user-update@example.com',
+        'username' => 'cross-user-update',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -194,7 +194,7 @@ it('refuses to CREATE a rule with a foreign-user category id (cross-user authori
     // picker funnel would never surface this id, a Livewire-DevTools
     // payload tamper or a direct Tinker call could.
     $other = User::create([
-        'email' => 'foreign-category-owner@example.com',
+        'username' => 'foreign-category-owner',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -225,7 +225,7 @@ it('refuses to UPDATE a rule to point at a foreign-user category id', function (
     $ruleId = seedFormRule($this->user->id, 'merchant', 'contains', 'SPOTIFY', $this->streaming->id);
 
     $other = User::create([
-        'email' => 'foreign-category-owner-2@example.com',
+        'username' => 'foreign-category-owner-2',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -270,7 +270,7 @@ it('save() catches InvalidArgumentException from a tampered foreign category id 
     // which throws InvalidArgumentException. The component must
     // catch it and render a calm errorValue instead of a 500.
     $other = User::create([
-        'email' => 'tamper-foreign-cat@example.com',
+        'username' => 'tamper-foreign-cat',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -305,7 +305,7 @@ it('save() catches NotFoundHttpException from a foreign editingRuleId and hides 
     // NotFoundHttpException. The component must catch it, surface a
     // calm message, and dispatch modal-hide instead of a 500.
     $other = User::create([
-        'email' => 'tamper-foreign-rule@example.com',
+        'username' => 'tamper-foreign-rule',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

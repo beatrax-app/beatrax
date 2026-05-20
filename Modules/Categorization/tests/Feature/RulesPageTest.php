@@ -14,7 +14,7 @@ use Modules\Ledger\Models\Category;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'rules-page@example.com',
+        'username' => 'rules-page',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -118,7 +118,7 @@ it('deletes the rule when Yes, delete is invoked and flashes Rule deleted.', fun
 
 it('refuses to delete a foreign user rule and surfaces a calm flash (not a 500)', function (): void {
     $other = User::create([
-        'email' => 'other-rule@example.com',
+        'username' => 'other-rule',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

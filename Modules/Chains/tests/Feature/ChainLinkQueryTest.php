@@ -31,10 +31,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *   - state=candidate → Candidate
  */
 
-function clqUser(string $email): User
+function clqUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -133,7 +133,7 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
 
-    $this->user = clqUser('chainlink-query@diederik.test');
+    $this->user = clqUser('chainlink-query');
     $this->paypal = clqAccount($this->user, 'clq-paypal', 'paypal', 'PAYPAL');
     $this->asn = clqAccount($this->user, 'clq-asn', 'asn', 'NL57ASNB0123456789');
     $this->ics = clqAccount($this->user, 'clq-ics', 'ics_card', 'ICS-CARD');
@@ -220,7 +220,7 @@ it('forTransaction handles NULL to_transaction_id gracefully (issue #10 — exce
 });
 
 it('forTransaction raises NotFoundHttpException on cross-user access', function (): void {
-    $other = clqUser('clq-other@diederik.test');
+    $other = clqUser('clq-other');
     $otherAccount = clqAccount($other, 'clq-other-asn', 'asn', 'NL10OTHER1234567890');
     $otherRun = clqImportRun($other, str_repeat('2', 64));
     $tx = clqTx($other, $otherAccount, $otherRun, 1000, 'expense', 'X', 'x', '2026-05-10', 'f1', 1);
@@ -333,7 +333,7 @@ it('candidatesForReview is cursor-paginated', function (): void {
 });
 
 it('openCandidateCount isolates by user', function (): void {
-    $other = clqUser('clq-other-count@diederik.test');
+    $other = clqUser('clq-other-count');
     $otherAccount = clqAccount($other, 'clq-other-cnt', 'paypal', 'OTHER-IBAN');
     $otherRun = clqImportRun($other, str_repeat('3', 64));
     $f = clqTx($other, $otherAccount, $otherRun, -1000, 'expense', 'A', 'a', '2026-05-10', 'oo1', 1);

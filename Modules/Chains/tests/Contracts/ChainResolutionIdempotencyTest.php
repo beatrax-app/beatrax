@@ -35,7 +35,7 @@ use Modules\Ledger\Models\Transaction;
 function seedIdempotencyFixture(): array
 {
     $user = User::query()->create([
-        'email' => 'idempotency@diederik.test',
+        'username' => 'idempotency',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

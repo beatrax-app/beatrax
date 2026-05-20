@@ -25,7 +25,7 @@ uses(RefreshDatabase::class);
 function aatUser(): User
 {
     return User::query()->create([
-        'email' => 'aat-'.bin2hex(random_bytes(4)).'@diederik.test',
+        'username' => 'aat-'.bin2hex(random_bytes(4)),
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

@@ -16,10 +16,10 @@ uses(RefreshDatabase::class);
  * returns null on cross-user / missing series invocations.
  */
 
-function ciqUser(string $email): User
+function ciqUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -56,7 +56,7 @@ function ciqSeries(User $user, array $overrides = []): int
 }
 
 it('returns a DTO whose monthlySavings absolute amount equals the series monthly_equivalent_minor in latest_currency', function (): void {
-    $user = ciqUser('ciq-eur@diederik.test');
+    $user = ciqUser('ciq-eur');
     $seriesId = ciqSeries($user, [
         'monthly_equivalent_minor' => -1149,
         'latest_currency' => 'EUR',
@@ -76,7 +76,7 @@ it('returns a DTO whose monthlySavings absolute amount equals the series monthly
 });
 
 it('preserves USD currency on USD series (Pitfall 1: monthly_equivalent_minor is NOT hard-EUR)', function (): void {
-    $user = ciqUser('ciq-usd@diederik.test');
+    $user = ciqUser('ciq-usd');
     $seriesId = ciqSeries($user, [
         'monthly_equivalent_minor' => -1199,
         'latest_currency' => 'USD',
@@ -96,8 +96,8 @@ it('preserves USD currency on USD series (Pitfall 1: monthly_equivalent_minor is
 });
 
 it('returns null on cross-user invocation', function (): void {
-    $owner = ciqUser('ciq-owner@diederik.test');
-    $intruder = ciqUser('ciq-intruder@diederik.test');
+    $owner = ciqUser('ciq-owner');
+    $intruder = ciqUser('ciq-intruder');
     $seriesId = ciqSeries($owner);
 
     /** @var CancellationImpactQuery $query */
@@ -107,7 +107,7 @@ it('returns null on cross-user invocation', function (): void {
 });
 
 it('returns null when the series id does not exist', function (): void {
-    $user = ciqUser('ciq-missing@diederik.test');
+    $user = ciqUser('ciq-missing');
 
     /** @var CancellationImpactQuery $query */
     $query = app(CancellationImpactQuery::class);

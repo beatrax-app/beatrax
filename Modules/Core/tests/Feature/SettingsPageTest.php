@@ -15,7 +15,7 @@ use Modules\Core\Models\User;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'wessel@example.com',
+        'username' => 'wessel',
         'password' => 'opensesame',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

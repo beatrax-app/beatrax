@@ -14,7 +14,7 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
-        'email' => 'recorder@diederik.test',
+        'username' => 'recorder',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

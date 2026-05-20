@@ -23,7 +23,7 @@ beforeEach(function (): void {
     $this->db = $db;
 
     $this->user = User::create([
-        'email' => 'rederive@example.com',
+        'username' => 'rederive',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

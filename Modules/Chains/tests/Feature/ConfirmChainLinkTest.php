@@ -24,10 +24,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * firstOrFail() — the same pattern UpdateTransactionCategory uses.
  */
 
-function cclUser(string $email): User
+function cclUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -114,7 +114,7 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
 
-    $this->user = cclUser('confirm-chain-link@diederik.test');
+    $this->user = cclUser('confirm-chain-link');
     $this->paypal = cclAccount($this->user, 'ccl-paypal', 'paypal', 'PAYPAL');
     $this->asn = cclAccount($this->user, 'ccl-asn', 'asn', 'NL57ASNB0123456789');
     $this->run = cclImportRun($this->user, str_repeat('1', 64));
@@ -212,7 +212,7 @@ it('does NOT auto-promote when same-signature confirmed count is below 3', funct
 });
 
 it('raises NotFoundHttpException on cross-user invocation (404)', function (): void {
-    $other = cclUser('ccl-other@diederik.test');
+    $other = cclUser('ccl-other');
     $otherAcc = cclAccount($other, 'ccl-other-acc', 'paypal', 'OTHER');
     $otherRun = cclImportRun($other, str_repeat('2', 64));
     $f = cclTx($other, $otherAcc, $otherRun, -100, 'expense', 'oz1', 1);

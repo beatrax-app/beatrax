@@ -28,7 +28,7 @@ beforeEach(function (): void {
     $this->projector = $projector;
 
     $this->user = User::query()->create([
-        'email' => 'projector@diederik.test',
+        'username' => 'projector',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

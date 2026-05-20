@@ -31,7 +31,7 @@ afterEach(function (): void {
 });
 
 it('the per-series threshold override beats the user global setting', function (): void {
-    $user = devetUser('series-override-wins@diederik.test');
+    $user = devetUser('series-override-wins');
     $user->drift_alert_threshold_percent = 10;
     $user->save();
 
@@ -46,7 +46,7 @@ it('the per-series threshold override beats the user global setting', function (
 });
 
 it('falls back to the user-global setting when no per-series override exists', function (): void {
-    $user = devetUser('user-global-fallback@diederik.test');
+    $user = devetUser('user-global-fallback');
     $user->drift_alert_threshold_percent = 10;
     $user->save();
 
@@ -65,7 +65,7 @@ it('falls back to the user-global setting when no per-series override exists', f
 });
 
 it('falls back to the hard 5 default when neither series override nor user global apply', function (): void {
-    $user = devetUser('hard-default@diederik.test');
+    $user = devetUser('hard-default');
     // User model attribute default is already 5, but we set it to 0 here
     // so the evaluator must specifically rely on the hard floor.
     $user->drift_alert_threshold_percent = 0;
@@ -87,10 +87,10 @@ it('falls back to the hard 5 default when neither series override nor user globa
     expect($row->threshold_source)->toBe('default');
 });
 
-function devetUser(string $email): User
+function devetUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

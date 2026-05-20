@@ -26,10 +26,10 @@ use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
  * transfers themselves are not detected as series here.
  */
 
-function fpvUser(string $email): User
+function fpvUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -86,7 +86,7 @@ beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
-    $this->user = fpvUser('fpv@diederik.test');
+    $this->user = fpvUser('fpv');
 });
 
 afterEach(function (): void {
@@ -125,7 +125,7 @@ it('returns grouped sections (expenses + income + transfers) for an approved ser
 })->group('view-for-user-returns-grouped-sections');
 
 it('returns empty sections for a user with no approved series (cross-user empty)', function (): void {
-    $other = fpvUser('other@diederik.test');
+    $other = fpvUser('other');
     fpvSeries($other, 'expense', 'spotify');
 
     /** @var FixedPaymentsViewQuery $query */

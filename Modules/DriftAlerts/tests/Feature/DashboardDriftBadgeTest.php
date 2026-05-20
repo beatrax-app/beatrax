@@ -19,10 +19,10 @@ uses(RefreshDatabase::class);
  * link to /drift when count > 0.
  */
 
-function ddbUser(string $email): User
+function ddbUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -131,7 +131,7 @@ function ddbAlert(User $user, array $alertOverrides = []): DriftAlert
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-20 09:00:00');
-    $this->user = ddbUser('ddb@diederik.test');
+    $this->user = ddbUser('ddb');
 });
 
 afterEach(function (): void {
@@ -182,7 +182,7 @@ it('sums annualized impact across open alerts and renders an EUR-roll-up helper 
 });
 
 it('does not surface another user\'s open alerts (cross-user isolation)', function (): void {
-    $other = ddbUser('ddb-other@diederik.test');
+    $other = ddbUser('ddb-other');
     ddbAlert($other);
 
     $component = Livewire::actingAs($this->user)->test(DashboardDriftBadge::class);

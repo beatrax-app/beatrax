@@ -35,7 +35,7 @@ afterEach(function (): void {
 });
 
 it('produces zero drift alerts for a stable USD series despite hypothetical EUR shadow drift', function (): void {
-    $user = devfxUser('fx-invariant@diederik.test');
+    $user = devfxUser('fx-invariant');
 
     $seriesId = $this->db->connection()->table('recurring_series')->insertGetId([
         'user_id' => $user->id,
@@ -68,7 +68,7 @@ it('produces zero drift alerts for a stable USD series despite hypothetical EUR 
 });
 
 it('compares original currency only — a real USD drift fires while settled EUR stays unchanged', function (): void {
-    $user = devfxUser('fx-real-usd-drift@diederik.test');
+    $user = devfxUser('fx-real-usd-drift');
 
     $seriesId = $this->db->connection()->table('recurring_series')->insertGetId([
         'user_id' => $user->id,
@@ -99,10 +99,10 @@ it('compares original currency only — a real USD drift fires while settled EUR
     expect($row->annualized_impact_minor)->toBe(-3600);
 });
 
-function devfxUser(string $email): User
+function devfxUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

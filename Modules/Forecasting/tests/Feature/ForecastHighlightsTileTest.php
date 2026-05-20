@@ -38,10 +38,10 @@ uses(RefreshDatabase::class);
  * renders from Dashboard.php's render() path, exercised by other tests.
  */
 
-function fhtUser(string $email): User
+function fhtUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -84,8 +84,8 @@ function fhtAsnAccount(User $user, string $slug): Account
 }
 
 beforeEach(function (): void {
-    $this->user = fhtUser('forecast-tile@diederik.test');
-    $this->otherUser = fhtUser('forecast-tile-other@diederik.test');
+    $this->user = fhtUser('forecast-tile');
+    $this->otherUser = fhtUser('forecast-tile-other');
     $this->asn = fhtAsnAccount($this->user, 'asn');
     $this->ics = fhtIcsAccount($this->user, 'ics');
     $this->run = fhtImportRun($this->user, str_repeat('f', 64));

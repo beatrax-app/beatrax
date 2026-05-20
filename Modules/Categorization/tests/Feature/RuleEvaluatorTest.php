@@ -12,7 +12,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'rules-test@example.com',
+        'username' => 'rules-test',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -234,7 +234,7 @@ it('SQL-injection-shaped rule value is matched as literal substring (T-07-05)', 
 
 it('does NOT fire a foreign-user rule for the current user (T-07-09)', function (): void {
     $other = User::create([
-        'email' => 'other-rules@example.com',
+        'username' => 'other-rules',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -252,7 +252,7 @@ it('does NOT fire a foreign-user rule for the current user (T-07-09)', function 
 
 it('does NOT fire a foreign-user memory for the current user', function (): void {
     $other = User::create([
-        'email' => 'other-memory@example.com',
+        'username' => 'other-memory',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

@@ -20,10 +20,10 @@ uses(RefreshDatabase::class);
  * green.
  */
 
-function dteUser(string $email): User
+function dteUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -66,7 +66,7 @@ function dteCurrentThreshold(int $seriesId): ?int
 }
 
 it('mounts with current value of NULL and renders the "global" indicator', function (): void {
-    $user = dteUser('dte-null@diederik.test');
+    $user = dteUser('dte-null');
     $seriesId = dteSeries($user, ['drift_threshold_percent' => null]);
 
     $component = Livewire::actingAs($user)
@@ -77,7 +77,7 @@ it('mounts with current value of NULL and renders the "global" indicator', funct
 });
 
 it('mounts with current value of 50 and renders the override label', function (): void {
-    $user = dteUser('dte-50@diederik.test');
+    $user = dteUser('dte-50');
     $seriesId = dteSeries($user, ['drift_threshold_percent' => 50]);
 
     $component = Livewire::actingAs($user)
@@ -88,7 +88,7 @@ it('mounts with current value of 50 and renders the override label', function ()
 });
 
 it('saves a new override value via the Public Action and reads back the new state', function (): void {
-    $user = dteUser('dte-save@diederik.test');
+    $user = dteUser('dte-save');
     $seriesId = dteSeries($user, ['drift_threshold_percent' => null]);
 
     Livewire::actingAs($user)
@@ -101,7 +101,7 @@ it('saves a new override value via the Public Action and reads back the new stat
 });
 
 it('saves NULL when "global" is chosen, clearing any prior override', function (): void {
-    $user = dteUser('dte-global@diederik.test');
+    $user = dteUser('dte-global');
     $seriesId = dteSeries($user, ['drift_threshold_percent' => 50]);
 
     Livewire::actingAs($user)
@@ -113,7 +113,7 @@ it('saves NULL when "global" is chosen, clearing any prior override', function (
 });
 
 it('silently rejects invalid threshold values and leaves the DB row untouched', function (): void {
-    $user = dteUser('dte-invalid@diederik.test');
+    $user = dteUser('dte-invalid');
     $seriesId = dteSeries($user, ['drift_threshold_percent' => 10]);
 
     // 7 is not one of the popover's allowed values
@@ -130,7 +130,7 @@ it('silently rejects invalid threshold values and leaves the DB row untouched', 
 });
 
 it('silently rejects non-numeric strings on save and leaves the DB row untouched', function (): void {
-    $user = dteUser('dte-non-numeric@diederik.test');
+    $user = dteUser('dte-non-numeric');
     $seriesId = dteSeries($user, ['drift_threshold_percent' => 10]);
 
     // A tampered Livewire payload could pass the string "abc". Before
@@ -147,8 +147,8 @@ it('silently rejects non-numeric strings on save and leaves the DB row untouched
 });
 
 it('Public Action raises NotFoundHttpException for a cross-user series id (cross-user-404)', function (): void {
-    $owner = dteUser('dte-owner@diederik.test');
-    $intruder = dteUser('dte-intruder@diederik.test');
+    $owner = dteUser('dte-owner');
+    $intruder = dteUser('dte-intruder');
     $seriesId = dteSeries($owner, ['drift_threshold_percent' => 5]);
 
     /** @var SetDriftThresholdForSeries $action */

@@ -39,10 +39,10 @@ function vbftClock(): Clock
     };
 }
 
-function vbftUser(string $email): User
+function vbftUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -62,7 +62,7 @@ function vbftAccount(User $user, string $kind, string $slug): Account
 }
 
 beforeEach(function (): void {
-    $this->user = vbftUser('vbft@diederik.test');
+    $this->user = vbftUser('vbft');
     $this->router = app(ChainAwareForecastRouter::class);
 });
 

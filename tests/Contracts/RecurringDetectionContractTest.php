@@ -44,10 +44,10 @@ function rdctExpenseFixtureExpectations(): array
     ];
 }
 
-function rdctUser(string $email): User
+function rdctUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -126,7 +126,7 @@ it('asserts the expected expense + income series counts for each synthesised fix
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
-    $user = rdctUser('rdct-'.$fixtureName.'@diederik.test');
+    $user = rdctUser('rdct-'.$fixtureName);
     // Widen the detection window so a fixture that places its earliest
     // occurrence beyond the 18-month default (e.g. yearly-domain at
     // 2024-06-12) still produces every documented occurrence inside
@@ -169,7 +169,7 @@ it('produces no duplicate series rows when the full fixture corpus runs twice th
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
-    $user = rdctUser('rdct-full-corpus@diederik.test');
+    $user = rdctUser('rdct-full-corpus');
     $user->recurring_detection_window_months = 36;
     $user->save();
 

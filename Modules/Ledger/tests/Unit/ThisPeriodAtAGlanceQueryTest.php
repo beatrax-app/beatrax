@@ -99,7 +99,7 @@ it('ignores transactions outside the current period window', function (): void {
 it('scopes totals to the queried user only (no cross-user leakage)', function (): void {
     /** @var User $other */
     $other = User::create([
-        'email' => 'other@diederik.test',
+        'username' => 'other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
@@ -246,7 +246,7 @@ it('does not surface a foreign user\'s parent name in the breadcrumb', function 
     // Foreign user owns a parent category named "Foreign Parent".
     /** @var User $foreignUser */
     $foreignUser = User::create([
-        'email' => 'foreign@diederik.test',
+        'username' => 'foreign',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
@@ -290,7 +290,7 @@ it('does not surface a foreign user\'s parent name in the breadcrumb', function 
 it('does not probe categories beyond a filtered-out parent in the walk', function (): void {
     /** @var User $foreignUser */
     $foreignUser = User::create([
-        'email' => 'foreign-walk@diederik.test',
+        'username' => 'foreign-walk',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

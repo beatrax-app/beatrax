@@ -35,7 +35,7 @@ beforeEach(function (): void {
     $this->resolver = $resolver;
 
     $this->user = User::query()->create([
-        'email' => 'anchor@diederik.test',
+        'username' => 'anchor',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -205,7 +205,7 @@ it('falls through to the transactions sum for a paypal account with no opening b
 
 it('raises ModelNotFoundException for a missing or cross-user account id', function (): void {
     $otherUser = User::query()->create([
-        'email' => 'anchor-other@diederik.test',
+        'username' => 'anchor-other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

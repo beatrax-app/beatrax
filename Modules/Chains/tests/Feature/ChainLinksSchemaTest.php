@@ -28,13 +28,13 @@ beforeEach(function (): void {
     $this->conn = $db->connection();
 
     $this->user = User::query()->create([
-        'email' => 'chain-schema@diederik.test',
+        'username' => 'chain-schema',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
 
     $this->otherUser = User::query()->create([
-        'email' => 'chain-schema-other@diederik.test',
+        'username' => 'chain-schema-other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

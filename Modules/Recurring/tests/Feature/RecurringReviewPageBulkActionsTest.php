@@ -20,10 +20,10 @@ use Modules\Recurring\Models\RecurringSeriesTransition;
  * single Undo toast naming the applied count.
  */
 
-function rrbUser(string $email): User
+function rrbUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -47,7 +47,7 @@ function rrbSeries(User $user, string $state, string $cluster, string $name = 'r
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = rrbUser('rrb@diederik.test');
+    $this->user = rrbUser('rrb');
 });
 
 afterEach(function (): void {
@@ -104,7 +104,7 @@ it('skips foreign-user ids silently — only the caller`s rows flip (bulk-approv
     for ($i = 0; $i < 10; $i++) {
         $mine[] = rrbSeries($this->user, 'pending', 'rrb::mine::'.$i, 'mine-'.$i)->id;
     }
-    $other = rrbUser('rrb-other@diederik.test');
+    $other = rrbUser('rrb-other');
     $foreign = [];
     for ($i = 0; $i < 5; $i++) {
         $foreign[] = rrbSeries($other, 'pending', 'rrb::other::'.$i, 'other-'.$i)->id;

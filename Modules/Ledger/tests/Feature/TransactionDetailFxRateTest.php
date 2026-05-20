@@ -120,7 +120,7 @@ it('returns 404 when the transaction belongs to a different user', function (): 
     // transaction. The detail page must return 404 — never 200, never
     // a redirect.
     $intruder = User::query()->create([
-        'email' => 'intruder@diederik.test',
+        'username' => 'intruder',
         'password' => 'intruder-password',
         'period_start_day' => 1,
     ]);

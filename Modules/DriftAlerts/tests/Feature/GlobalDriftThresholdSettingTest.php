@@ -20,10 +20,10 @@ uses(RefreshDatabase::class);
  * detection sweeps.
  */
 
-function gdtUser(string $email, int $threshold = 5): User
+function gdtUser(string $username, int $threshold = 5): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -32,7 +32,7 @@ function gdtUser(string $email, int $threshold = 5): User
 }
 
 it('renders /settings with the current threshold pre-selected from users.drift_alert_threshold_percent', function (): void {
-    $user = gdtUser('gdt-10@diederik.test', threshold: 10);
+    $user = gdtUser('gdt-10', threshold: 10);
 
     Livewire::actingAs($user)
         ->test(SettingsPage::class)
@@ -41,7 +41,7 @@ it('renders /settings with the current threshold pre-selected from users.drift_a
 });
 
 it('saves a new threshold via Livewire and persists to the users row', function (): void {
-    $user = gdtUser('gdt-save@diederik.test', threshold: 5);
+    $user = gdtUser('gdt-save', threshold: 5);
 
     Livewire::actingAs($user)
         ->test(SettingsPage::class)
@@ -54,7 +54,7 @@ it('saves a new threshold via Livewire and persists to the users row', function 
 });
 
 it('rejects an out-of-whitelist threshold value with a validation error and leaves the DB row untouched', function (): void {
-    $user = gdtUser('gdt-invalid@diederik.test', threshold: 5);
+    $user = gdtUser('gdt-invalid', threshold: 5);
 
     Livewire::actingAs($user)
         ->test(SettingsPage::class)
@@ -67,7 +67,7 @@ it('rejects an out-of-whitelist threshold value with a validation error and leav
 });
 
 it('persists 1 as the lowest valid threshold', function (): void {
-    $user = gdtUser('gdt-low@diederik.test', threshold: 5);
+    $user = gdtUser('gdt-low', threshold: 5);
 
     Livewire::actingAs($user)
         ->test(SettingsPage::class)
@@ -80,7 +80,7 @@ it('persists 1 as the lowest valid threshold', function (): void {
 });
 
 it('persists 50 as the highest valid threshold', function (): void {
-    $user = gdtUser('gdt-high@diederik.test', threshold: 5);
+    $user = gdtUser('gdt-high', threshold: 5);
 
     Livewire::actingAs($user)
         ->test(SettingsPage::class)
@@ -100,7 +100,7 @@ it('changing the global threshold without a per-series override changes subseque
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    $user = gdtUser('gdt-integration@diederik.test', threshold: 10);
+    $user = gdtUser('gdt-integration', threshold: 10);
     $suffix = bin2hex(random_bytes(4));
 
     // Seed an approved series with NULL per-series override + 7% drift

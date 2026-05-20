@@ -50,7 +50,7 @@ function makeTriageTx(User $user, Account $account, ImportRun $run, int $day, ?i
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'wessel@example.com',
+        'username' => 'wessel',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -142,7 +142,7 @@ it('scopes results to the requested user only', function (): void {
     makeTriageTx($this->user, $this->account, $this->run, day: 2, categoryId: null);
 
     $other = User::create([
-        'email' => 'other@example.com',
+        'username' => 'other',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

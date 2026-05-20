@@ -29,7 +29,7 @@ afterEach(function (): void {
 });
 
 it('fires a drift alert for a series in state cadence_changed with a +10% drift', function (): void {
-    $user = devccUser('cadence-changed@diederik.test');
+    $user = devccUser('cadence-changed');
 
     $seriesId = $this->db->connection()->table('recurring_series')->insertGetId([
         'user_id' => $user->id,
@@ -61,10 +61,10 @@ it('fires a drift alert for a series in state cadence_changed with a +10% drift'
     expect($row->annualized_impact_minor)->toBe(-1200);
 });
 
-function devccUser(string $email): User
+function devccUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

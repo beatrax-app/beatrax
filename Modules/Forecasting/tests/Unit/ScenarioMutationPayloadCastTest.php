@@ -34,7 +34,7 @@ beforeEach(function (): void {
     $this->db = $db;
 
     $this->user = User::query()->create([
-        'email' => 'forecast-cast@diederik.test',
+        'username' => 'forecast-cast',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

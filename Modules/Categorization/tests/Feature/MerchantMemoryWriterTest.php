@@ -13,7 +13,7 @@ use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'mem-writer@example.com',
+        'username' => 'mem-writer',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -216,7 +216,7 @@ it("does not write a memory row when the event's userId does not match the trans
     $tx = makeMemoryTransaction($this->user, $this->account, $this->run, 'Spotify Premium', 'spotify premium');
 
     $foreign = User::create([
-        'email' => 'foreign-writer@example.com',
+        'username' => 'foreign-writer',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

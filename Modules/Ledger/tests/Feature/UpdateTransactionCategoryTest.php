@@ -13,7 +13,7 @@ use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'wessel@example.com',
+        'username' => 'wessel',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -74,7 +74,7 @@ it('unsets a category when passed null', function (): void {
 
 it('refuses to update a transaction owned by a different user', function (): void {
     $other = User::create([
-        'email' => 'other@example.com',
+        'username' => 'other',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -88,7 +88,7 @@ it('refuses to update a transaction owned by a different user', function (): voi
 it('refuses to assign a category owned by a different user', function (): void {
     /** @var User $other */
     $other = User::create([
-        'email' => 'other@example.com',
+        'username' => 'other',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

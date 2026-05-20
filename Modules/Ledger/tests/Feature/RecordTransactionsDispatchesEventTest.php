@@ -22,7 +22,7 @@ beforeEach(function () use (&$recorded): void {
     $recorded = [];
 
     $this->user = User::query()->create([
-        'email' => 'paypal-importer@diederik.test',
+        'username' => 'paypal-importer',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

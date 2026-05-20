@@ -25,7 +25,7 @@ beforeEach(function (): void {
     $this->conn = $db->connection();
 
     $this->user = User::query()->create([
-        'email' => 'chain-runs-schema@diederik.test',
+        'username' => 'chain-runs-schema',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

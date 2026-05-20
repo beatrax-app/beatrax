@@ -29,10 +29,10 @@ uses(RefreshDatabase::class);
  *   - Cross-user safety — writes use the passed User->id.
  */
 
-function sdUser(string $email): User
+function sdUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -88,7 +88,7 @@ function sdPoints(array $balanceByDate): array
 }
 
 beforeEach(function (): void {
-    $this->user = sdUser('shortfall@diederik.test');
+    $this->user = sdUser('shortfall');
     $this->account = sdAccount($this->user, 'asn');
 });
 
@@ -272,7 +272,7 @@ it('writes rows scoped to the passed user — never another user (cross-user saf
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    $other = sdUser('other-shortfall@diederik.test');
+    $other = sdUser('other-shortfall');
     $otherAccount = sdAccount($other, 'other-asn');
 
     // Seed a stale row on user A.

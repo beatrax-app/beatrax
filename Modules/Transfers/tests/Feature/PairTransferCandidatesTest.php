@@ -35,7 +35,7 @@ use Modules\Transfers\Internal\Listeners\PairTransferCandidates;
 
 beforeEach(function (): void {
     $this->primaryUser = User::query()->create([
-        'email' => 'pair-primary@diederik.test',
+        'username' => 'pair-primary',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
@@ -299,7 +299,7 @@ it('does not self-pair (the id-not-equal filter blocks degenerate matches)', fun
 
 it('never pairs across users (cross-user safety invariant)', function (): void {
     $userB = User::query()->create([
-        'email' => 'pair-other@diederik.test',
+        'username' => 'pair-other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
@@ -380,7 +380,7 @@ it('writes both sides symmetrically and the Eloquent pair() relation walks both 
 
 it('refuses to pair when the event payload\'s user does not match the transaction\'s user_id (cross-user safety)', function (): void {
     $userB = User::query()->create([
-        'email' => 'pair-tamper@diederik.test',
+        'username' => 'pair-tamper',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

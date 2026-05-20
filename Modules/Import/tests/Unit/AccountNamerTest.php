@@ -12,7 +12,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'namer@diederik.test',
+        'username' => 'namer',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

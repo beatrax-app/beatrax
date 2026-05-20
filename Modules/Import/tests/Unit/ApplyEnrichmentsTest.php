@@ -175,7 +175,7 @@ it('race-condition no-op: if existing source_ref already equals incoming, no UPD
 it('cross-user safety: a PendingEnrichment for another user\'s row returns 0', function (): void {
     /** @var User $other */
     $other = User::create([
-        'email' => 'attacker-enrich@diederik.test',
+        'username' => 'attacker-enrich',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

@@ -24,13 +24,13 @@ beforeEach(function (): void {
     $this->db = $db;
 
     $this->userA = User::query()->create([
-        'email' => 'saq-a@diederik.test',
+        'username' => 'saq-a',
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
     ]);
     $this->userB = User::query()->create([
-        'email' => 'saq-b@diederik.test',
+        'username' => 'saq-b',
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

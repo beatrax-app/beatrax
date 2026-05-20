@@ -16,10 +16,10 @@ use Modules\Recurring\Models\RecurringSeriesOccurrence;
  * transfers" sections with a net-flow summary header.
  */
 
-function rpUser(string $email): User
+function rpUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -73,7 +73,7 @@ function rpSeries(User $user, string $direction, string $detectedName, array $ov
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = rpUser('rp@diederik.test');
+    $this->user = rpUser('rp');
 });
 
 afterEach(function (): void {
@@ -133,7 +133,7 @@ it('renders the transfers section collapsed by default', function (): void {
 })->group('transfers-section-collapsed-by-default');
 
 it('renders no series rows for user A when authenticated as user B (cross-user empty)', function (): void {
-    $other = rpUser('rp-other@diederik.test');
+    $other = rpUser('rp-other');
     rpSeries($other, 'expense', 'other-spotify');
 
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
