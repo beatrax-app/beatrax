@@ -38,7 +38,7 @@ beforeEach(function (): void {
     $db->purge('sqlite');
 
     $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-restore-success-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
-    $this->app->instance('core.backups_directory', $this->backupsDir);
+    putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
 
     /** @var Kernel $artisan */
     $artisan = $this->app->make(Kernel::class);
@@ -46,6 +46,8 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    putenv('NATIVEPHP_STORAGE_PATH');
+
     /** @var string $livePath */
     $livePath = $this->livePath;
     RealSqliteFixture::cleanup($livePath);

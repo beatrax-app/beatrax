@@ -7,11 +7,11 @@ namespace Modules\Core\Internal\Console;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Console\Kernel;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\UserDataPathService;
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -33,11 +33,11 @@ use Throwable;
  *     user in a half-broken state.
  *
  * Before the file copy, the command automatically writes a `VACUUM
- * INTO`-driven snapshot of the CURRENT live DB to
- * `storage/app/backups/pre-restore-YYYY-MM-DD-HHMMSS.sqlite` at chmod
- * 0600. This pre-restore snapshot is exempt from the regular retention
- * pruner (the BackupRetentionPolicy passes the `pre-restore-*` prefix
- * through unchanged).
+ * INTO`-driven snapshot of the CURRENT live DB to a
+ * `pre-restore-YYYY-MM-DD-HHMMSS.sqlite` file inside the backups
+ * directory at chmod 0600. This pre-restore snapshot is exempt from the
+ * regular retention pruner (the BackupRetentionPolicy passes the
+ * `pre-restore-*` prefix through unchanged).
  *
  * After the swap, `PRAGMA integrity_check` runs once more on the now-
  * live DB via the framework's `DatabaseManager::connection()` (NOT a
@@ -51,12 +51,10 @@ use Throwable;
  * snapshot if needed.
  *
  * No Laravel facade is imported or called; every dependency is
- * constructor-DI'd, including the `Application` container (used for
- * `basePath('storage/framework/down')` resolution instead of the
- * global `base_path()` helper) and the `$backupsPath` string
- * resolved via the same contextual binding `BackupDatabaseCommand`
- * consumes — both commands share one DI shape so the contract is
- * uniform across the pair.
+ * constructor-DI'd, including `UserDataPathService`, which resolves the
+ * maintenance-mode down marker under the framework directory and the
+ * backups directory. `BackupDatabaseCommand` injects the same service,
+ * so the contract is uniform across the pair.
  */
 final class RestoreDatabaseCommand extends Command
 {
@@ -74,8 +72,7 @@ final class RestoreDatabaseCommand extends Command
         private readonly Filesystem $files,
         private readonly Kernel $artisan,
         private readonly Clock $clock,
-        private readonly Application $app,
-        private readonly string $backupsPath,
+        private readonly UserDataPathService $paths,
     ) {
         parent::__construct();
     }
@@ -94,7 +91,7 @@ final class RestoreDatabaseCommand extends Command
 
         $broughtDown = false;
         $leaveDown = false;
-        $downMarkerPath = $this->app->basePath('storage/framework/down');
+        $downMarkerPath = $this->paths->framework('down');
         $alreadyDown = $this->files->exists($downMarkerPath);
 
         if (! $alreadyDown && $this->option('force-maintenance') !== true) {
@@ -235,19 +232,19 @@ final class RestoreDatabaseCommand extends Command
 
     /**
      * Returns the absolute path of the backups directory (resolved
-     * through the `core.backups_directory` contextual binding wired in
-     * `CoreServiceProvider::register()`), creating it with mode 0755 on
+     * through `UserDataPathService`), creating it with mode 0755 on
      * first access. Shape mirrors `BackupDatabaseCommand::backupsDir()`
-     * so both commands depend on the same constructor-DI'd string
-     * rather than reaching into the container at runtime.
+     * so both commands depend on the same injected service.
      */
     private function backupsDirectory(): string
     {
-        if (! $this->files->isDirectory($this->backupsPath)) {
-            $this->files->makeDirectory($this->backupsPath, 0o755, recursive: true, force: true);
+        $backupsPath = $this->paths->backups();
+
+        if (! $this->files->isDirectory($backupsPath)) {
+            $this->files->makeDirectory($backupsPath, 0o755, recursive: true, force: true);
         }
 
-        return $this->backupsPath;
+        return $backupsPath;
     }
 
     /**

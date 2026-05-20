@@ -46,14 +46,18 @@ beforeEach(function (): void {
 
     // Per-test backups directory under sys_get_temp_dir() so multiple
     // tests do not collide. The command resolves the directory through
-    // the `core.backups_directory` container binding; the override
-    // here keeps tests deterministic without touching the real
-    // storage/app/backups path on the developer machine.
-    $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-test-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
-    $this->app->instance('core.backups_directory', $this->backupsDir);
+    // UserDataPathService, which roots every path at
+    // NATIVEPHP_STORAGE_PATH when that env var is set — pointing it at
+    // the temp storage root keeps tests deterministic without touching
+    // the real backups path on the developer machine.
+    $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-test-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage';
+    $this->backupsDir = $this->storageRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
+    putenv('NATIVEPHP_STORAGE_PATH='.$this->storageRoot);
 });
 
 afterEach(function (): void {
+    putenv('NATIVEPHP_STORAGE_PATH');
+
     /** @var string $sourcePath */
     $sourcePath = $this->sourcePath;
     RealSqliteFixture::cleanup($sourcePath);
