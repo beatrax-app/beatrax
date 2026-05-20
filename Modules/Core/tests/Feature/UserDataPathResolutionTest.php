@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Config\Repository;
+use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Services\UserDataPathService;
 
 /*
@@ -10,11 +12,15 @@ use Modules\Core\Public\Services\UserDataPathService;
  * UserDataPathService and the artisan commands that consume it must land
  * every file under that root instead of the project tree.
  *
- * Wave-0 scaffold: this file currently carries only the beforeEach /
- * afterEach harness (per-test temp dir, env set/clear, directory creation
- * SQLite needs, teardown cascade) plus one placeholder it() body. Plan 03
- * fills in the real migrate:fresh / db:backup / OAuth-secrets assertions
- * once every call site has been migrated through UserDataPathService.
+ * Coverage:
+ *  - migrate:fresh against an sqlite connection pointed at
+ *    UserDataPathService::databaseFile() creates a real SQLite file under
+ *    <tmp>/database/database.sqlite.
+ *  - db:backup writes its backup artifact under <tmp>/app/backups/
+ *    (NATIVEPHP_STORAGE_PATH is itself the storage root).
+ *  - UserDataPathService::secretsPath() resolves to <tmp>/app/secrets.
+ *  - With NATIVEPHP_STORAGE_PATH cleared, every accessor resolves to the
+ *    project-rooted paths used in Herd development (A2 regression guard).
  */
 
 beforeEach(function (): void {
@@ -27,12 +33,14 @@ beforeEach(function (): void {
     $this->tmpRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-test-'.bin2hex(random_bytes(8));
 
     // SQLite will not create the parent directory of the database file,
-    // and db:backup writes into storage/app/backups (Pitfall 5) — create
-    // the directory tree the simulated build expects before any command
-    // runs against the root.
+    // and db:backup writes into the storage app/backups directory
+    // (Pitfall 5) — create the directory tree the simulated build expects
+    // before any command runs against the root. NATIVEPHP_STORAGE_PATH IS
+    // the storage root, so the app/ tree sits directly under <tmp> (no
+    // extra `storage/` segment) — matching UserDataPathService::appPath().
     mkdir($this->tmpRoot.DIRECTORY_SEPARATOR.'database', 0o755, true);
-    mkdir($this->tmpRoot.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups', 0o755, true);
-    mkdir($this->tmpRoot.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'secrets', 0o755, true);
+    mkdir($this->tmpRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups', 0o755, true);
+    mkdir($this->tmpRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'secrets', 0o755, true);
 
     // UserDataPathService reads getenv() directly, so putenv() is the only
     // mechanism that influences it (Pitfall 3). Clear with no `=` value.
@@ -63,12 +71,94 @@ afterEach(function (): void {
     @rmdir($tmpRoot);
 });
 
-it('resolves paths under a simulated NativePHP storage root', function (): void {
-    // Wave-0 placeholder: proves the harness boots and the env var takes
-    // effect. Plan 03 replaces this with the real migrate:fresh / db:backup
-    // / OAuth-secrets assertions once all call sites are migrated.
+it('creates the SQLite file under the simulated storage root when migrate:fresh runs', function (): void {
+    // Pitfall 4 guard — a stray bootstrap/cache/config.php would freeze a
+    // stale path and produce a false green/red.
+    expect($this->app->configurationIsCached())->toBeFalse();
+
     /** @var string $tmpRoot */
     $tmpRoot = $this->tmpRoot;
 
-    expect(UserDataPathService::storageBase())->toBe($tmpRoot);
-})->todo('Plan 03 fills the migrate:fresh / db:backup / OAuth-secrets assertions');
+    $databaseFile = UserDataPathService::databaseFile();
+    expect($databaseFile)->toBe(
+        $tmpRoot.DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'database.sqlite',
+    );
+
+    // Point the `sqlite` connection at the env-resolved database file so
+    // migrate:fresh writes into <tmp>/database (BackupDatabaseCommandTest
+    // lines 39-45 rebind pattern). The <tmp>/database directory already
+    // exists from beforeEach (Pitfall 5 — SQLite will not create it).
+    /** @var Repository $config */
+    $config = $this->app->make(Repository::class);
+    $config->set('database.connections.sqlite.database', $databaseFile);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $db->purge('sqlite');
+
+    $this->artisan('migrate:fresh', ['--database' => 'sqlite'])->assertSuccessful();
+
+    expect(file_exists($databaseFile))->toBeTrue(
+        'migrate:fresh must create the SQLite file under the simulated storage root.',
+    );
+});
+
+it('writes a db:backup artifact under the simulated storage root backups directory', function (): void {
+    expect($this->app->configurationIsCached())->toBeFalse();
+
+    /** @var string $tmpRoot */
+    $tmpRoot = $this->tmpRoot;
+
+    // Stand up a real on-disk source database under the simulated root so
+    // db:backup's VACUUM INTO has a valid file to copy.
+    $databaseFile = UserDataPathService::databaseFile();
+
+    /** @var Repository $config */
+    $config = $this->app->make(Repository::class);
+    $config->set('database.connections.sqlite.database', $databaseFile);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $db->purge('sqlite');
+
+    $this->artisan('migrate:fresh', ['--database' => 'sqlite'])->assertSuccessful();
+    $db->purge('sqlite');
+
+    $backupsDir = UserDataPathService::backupsPath();
+    expect($backupsDir)->toBe(
+        $tmpRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups',
+    );
+
+    // db:backup resolves UserDataPathService via DI and writes under
+    // backupsPath() = <tmp>/storage/app/backups.
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    $artifacts = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'*');
+    expect($artifacts)->not->toBeEmpty(
+        'db:backup must write at least one artifact under the simulated backups directory.',
+    );
+});
+
+it('resolves the OAuth secrets path under the simulated storage root', function (): void {
+    expect($this->app->configurationIsCached())->toBeFalse();
+
+    /** @var string $tmpRoot */
+    $tmpRoot = $this->tmpRoot;
+
+    expect(UserDataPathService::secretsPath())->toBe(
+        $tmpRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'secrets',
+    );
+});
+
+it('resolves to today\'s project-rooted paths when no NativePHP storage env is set', function (): void {
+    // A2 / Herd-parity regression guard: clear the env var and assert the
+    // accessors stay byte-identical to today's project-rooted helpers, so
+    // a future refactor cannot silently shift the dev-mode paths.
+    putenv('NATIVEPHP_STORAGE_PATH');
+
+    expect($this->app->configurationIsCached())->toBeFalse();
+
+    expect(UserDataPathService::databaseFile())->toBe(database_path('database.sqlite'));
+    expect(UserDataPathService::backupsPath())->toBe(storage_path('app/backups'));
+    expect(UserDataPathService::secretsPath())->toBe(storage_path('app/secrets'));
+});
