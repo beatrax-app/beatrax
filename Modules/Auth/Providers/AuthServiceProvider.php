@@ -10,6 +10,8 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Auth\Internal\Fortify\FortifyServiceProvider;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
+use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
+use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Internal\Http\Middleware\FirstUserOnlyMiddleware;
 use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
@@ -50,5 +52,7 @@ final class AuthServiceProvider extends ServiceProvider
         $router->aliasMiddleware('first-user-only', FirstUserOnlyMiddleware::class);
 
         $livewire->component('auth.login-page', LoginPage::class);
+        $livewire->component('auth.signup-page', SignupPage::class);
+        $livewire->component('auth.recovery-codes-display', RecoveryCodesDisplay::class);
     }
 }
