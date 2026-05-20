@@ -55,7 +55,17 @@ v2.0 takes the validated v1.0 core value to a non-technical partner via a code-s
   3. Per-user OAuth secrets live in a SQLite-encrypted `oauth_secrets` table keyed by `user_id` (encrypted via `APP_KEY`); the legacy single-file `storage/app/secrets/imap.json` is migrated in-place; `OAuthSecretsRepository` swap is transparent to every existing EmailScan consumer
   4. `BoundaryArchTest::noAuthFacadeOrHelper` extends the DI-only rule — forbids `Auth::user()` / `auth()` / `request()->user()` / `request()->session()` across every module except `Modules\Core\Public\Services\CurrentUserService`
   5. The owner can switch profile to act as the partner (during debugging) via the app menu without a full logout/login dance — session lifecycle handled by Laravel session driver compatible with the upcoming NativePHP bundle
-**Plans**: TBD
+**Plans:** 8 plans
+
+Plans:
+- [x] 12-01-PLAN.md — Auth module skeleton + noAuthFacadeOrHelper arch invariant
+- [x] 12-02-PLAN.md — users-schema reshape (email->username) + user_recovery_codes + oauth_secrets tables
+- [x] 12-03-PLAN.md — username-based Fortify login/logout surface
+- [x] 12-04-PLAN.md — first-user signup ceremony + recovery-code generation
+- [ ] 12-05-PLAN.md — signup race fix (CR-01) + force-password-change enforcement (CR-02) + owner-adds-partner
+- [ ] 12-06-PLAN.md — recovery-code redemption: /reset-password + CLI fallback + owner-resets-partner (CR-03)
+- [ ] 12-07-PLAN.md — OAuth secrets repository swap to per-user SQLite (MULTI-05)
+- [ ] 12-08-PLAN.md — profile switching/impersonation (MULTI-06) + cross-user 404-not-403 test set (MULTI-03)
 
 ### Phase 13: AppPaths + First-Run Migration Wizard
 **Goal**: Every filesystem path the app reads or writes flows through a single injectable `UserDataPath` contract whose implementation defers to NativePHP's `Application::storagePath()` in shipped builds and the existing project-rooted paths in Herd dev mode; first-run desktop launches present a three-button wizard (Start fresh / Import from v1.0 / Quit) that uses `VACUUM INTO` against a read-only attached source so the developer's live v1.0 SQLite cannot corrupt during import.
