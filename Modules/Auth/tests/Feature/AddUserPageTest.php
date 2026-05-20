@@ -132,8 +132,11 @@ it('returns 404 from the add-user route for a non-developer', function (): void 
     $this->actingAs($nonDeveloper)->get('/settings/users/new')->assertNotFound();
 });
 
-it('redirects an unauthenticated visitor to login', function (): void {
-    $this->get('/settings/users/new')->assertRedirect(route('login'));
+it('does not expose the add-user page to an unauthenticated visitor', function (): void {
+    // The developer gate raises a 404 for any non-developer caller — an
+    // unauthenticated visitor included — so the route never reveals it
+    // exists to someone who is not the owner.
+    $this->get('/settings/users/new')->assertNotFound();
 });
 
 it('creates the partner and flashes the success copy on submit', function (): void {
