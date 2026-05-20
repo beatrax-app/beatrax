@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-use Illuminate\Filesystem\Filesystem;
+use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
@@ -18,19 +19,6 @@ use Modules\EmailScan\Public\Services\SecretsWriteFailed;
  * of why their submission failed.
  */
 
-beforeEach(function (): void {
-    $this->path = storage_path('app/secrets/email-oauth.json');
-    if (is_file($this->path)) {
-        @unlink($this->path);
-    }
-});
-
-afterEach(function (): void {
-    if (is_file($this->path)) {
-        @unlink($this->path);
-    }
-});
-
 it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling the exception', function (): void {
     $user = User::query()->create([
         'username' => 'wizard-disk-fail',
@@ -39,13 +27,14 @@ it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling th
     ]);
 
     // Stub the repository to throw on saveProviderClient. Mirrors
-    // the disk-full / EACCES production failure mode.
-    $files = $this->app->make(Filesystem::class);
-    $throwingRepo = new class($files) extends OAuthSecretsRepository
+    // the EACCES / QueryException production failure mode.
+    $db = $this->app->make(DatabaseManager::class);
+    $currentUser = $this->app->make(CurrentUser::class);
+    $throwingRepo = new class($db, $currentUser) extends OAuthSecretsRepository
     {
-        public function __construct(Filesystem $files)
+        public function __construct(DatabaseManager $db, CurrentUser $currentUser)
         {
-            parent::__construct($files);
+            parent::__construct($db, $currentUser);
         }
 
         public function saveProviderClient(
@@ -54,7 +43,7 @@ it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling th
             string $clientSecret,
             string $redirectUri,
         ): void {
-            throw new SecretsWriteFailed('fixture: disk full');
+            throw new SecretsWriteFailed('fixture: write failed');
         }
     };
     $this->app->instance(OAuthSecretsRepository::class, $throwingRepo);
@@ -84,12 +73,13 @@ it('still bubbles non-SecretsWriteFailed exceptions (defensive — the catch is 
         'period_start_day' => 1,
     ]);
 
-    $files = $this->app->make(Filesystem::class);
-    $throwingRepo = new class($files) extends OAuthSecretsRepository
+    $db = $this->app->make(DatabaseManager::class);
+    $currentUser = $this->app->make(CurrentUser::class);
+    $throwingRepo = new class($db, $currentUser) extends OAuthSecretsRepository
     {
-        public function __construct(Filesystem $files)
+        public function __construct(DatabaseManager $db, CurrentUser $currentUser)
         {
-            parent::__construct($files);
+            parent::__construct($db, $currentUser);
         }
 
         public function saveProviderClient(
