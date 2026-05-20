@@ -7,14 +7,16 @@ namespace Modules\EmailScan\Public\Services;
 use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
 use InvalidArgumentException;
+use Modules\Core\Public\Services\UserDataPathService;
 use RuntimeException;
 use Throwable;
 
 /**
  * Filesystem repository for per-message raw .eml blobs.
  *
- * Each blob lives at
- * `storage/app/inbox/{user_id}/{inbox_id}/{YYYY}/{MM}/{slug}.eml`.
+ * Each blob lives under the storage `app/` directory at
+ * `inbox/{user_id}/{inbox_id}/{YYYY}/{MM}/{slug}.eml`, resolved through
+ * UserDataPathService so a packaged build can retarget the storage root.
  * Partitioning by user + inbox + year + month keeps any one directory
  * tree from accumulating thousands of files (which slows directory
  * listings on the underlying APFS / ext4 host) and lets a future
@@ -65,7 +67,10 @@ final class EmlBlobStore
     /** Blob file mode — owner-only read/write. */
     private const FILE_MODE = 0600;
 
-    public function __construct(private readonly Filesystem $files) {}
+    public function __construct(
+        private readonly Filesystem $files,
+        private readonly UserDataPathService $paths,
+    ) {}
 
     /**
      * Compute the absolute on-disk path for a raw .eml blob without
@@ -92,8 +97,8 @@ final class EmlBlobStore
 
         $slug = $this->slugFor($providerMessageId);
 
-        return storage_path(sprintf(
-            'app/inbox/%d/%d/%04d/%02d/%s.eml',
+        return $this->paths->appRelative(sprintf(
+            'inbox/%d/%d/%04d/%02d/%s.eml',
             $userId,
             $inboxId,
             (int) $internalDate->format('Y'),
@@ -225,7 +230,7 @@ final class EmlBlobStore
         // hypothetical sibling like storage/app/inbox-staging/ cannot satisfy
         // the prefix match — only true descendants of storage/app/inbox/ are
         // walked.
-        $root = storage_path('app/inbox').DIRECTORY_SEPARATOR;
+        $root = $this->paths->appRelative('inbox').DIRECTORY_SEPARATOR;
         $current = rtrim($leafDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
         $iters = 0;
         // Walk upward while we remain strictly within the inbox root and
