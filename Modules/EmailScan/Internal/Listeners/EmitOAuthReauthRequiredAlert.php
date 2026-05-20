@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserDataPathService;
 
 /**
  * Writes a one-time "re-authorize Gmail and Microsoft" warning to the
@@ -27,7 +28,8 @@ final class EmitOAuthReauthRequiredAlert
 {
     private const REAUTH_KIND = 'oauth.reauth_required';
 
-    private const BACKUP_RELATIVE = 'app/secrets/email-oauth.json.pre-phase-12.bak';
+    /** Bare filename of the rollback artefact inside the secrets directory. */
+    private const BACKUP_FILENAME = 'email-oauth.json.pre-phase-12.bak';
 
     private const MESSAGE = 'OAuth secrets moved to per-user storage. Re-authorize Gmail and Microsoft to resume email scanning. The old secrets file was renamed to email-oauth.json.pre-phase-12.bak for rollback.';
 
@@ -35,6 +37,7 @@ final class EmitOAuthReauthRequiredAlert
         private readonly Filesystem $files,
         private readonly CurrentUser $currentUser,
         private readonly DatabaseManager $db,
+        private readonly UserDataPathService $paths,
     ) {}
 
     public function handle(): void
@@ -44,7 +47,8 @@ final class EmitOAuthReauthRequiredAlert
         }
 
         // Cheap pre-check: no rollback artefact means no move happened.
-        if (! $this->files->exists(storage_path(self::BACKUP_RELATIVE))) {
+        $backupPath = $this->paths->secrets().DIRECTORY_SEPARATOR.self::BACKUP_FILENAME;
+        if (! $this->files->exists($backupPath)) {
             return;
         }
 

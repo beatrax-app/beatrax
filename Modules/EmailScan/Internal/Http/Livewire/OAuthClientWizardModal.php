@@ -138,7 +138,7 @@ final class OAuthClientWizardModal extends Component
             // partial wizard state — the user still has to re-paste
             // the secret (the wipe above is the intentional security
             // posture) but at least they know why and can act on it.
-            $this->errorMessage = 'Could not save your OAuth client to disk — check storage/app/secrets/ permissions and try again.';
+            $this->errorMessage = 'Could not save your OAuth client to disk — check your secrets-directory permissions and try again.';
 
             return null;
         }
