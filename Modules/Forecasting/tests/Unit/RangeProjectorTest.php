@@ -42,7 +42,7 @@ afterEach(function (): void {
 /**
  * @param  array<string, mixed>  $overrides
  */
-function rpSeries(array $overrides = []): RecurringSeriesDto
+function rpDtoSeries(array $overrides = []): RecurringSeriesDto
 {
     $base = [
         'seriesId' => 101,
@@ -83,7 +83,7 @@ function rpSeries(array $overrides = []): RecurringSeriesDto
 }
 
 it('emits one monthly expense contribution inside a 30-day horizon with sign-aware low/high', function (): void {
-    $series = rpSeries([
+    $series = rpDtoSeries([
         'latestAmount' => Money::ofMinor(-1199, 'EUR'),
         'monthlyEquivalent' => Money::ofMinor(-1199, 'EUR'),
         'varianceTolerancePercent' => 5,
@@ -110,7 +110,7 @@ it('emits one monthly expense contribution inside a 30-day horizon with sign-awa
 });
 
 it('emits sign-aware low < point < high for an income series', function (): void {
-    $series = rpSeries([
+    $series = rpDtoSeries([
         'direction' => 'income',
         'latestAmount' => Money::ofMinor(250000, 'EUR'),
         'monthlyEquivalent' => Money::ofMinor(250000, 'EUR'),
@@ -132,7 +132,7 @@ it('emits sign-aware low < point < high for an income series', function (): void
 });
 
 it('walks weekly cadence to emit ~4 contributions in 30 days', function (): void {
-    $series = rpSeries([
+    $series = rpDtoSeries([
         'cadence' => 'weekly',
         'nextExpectedAt' => CarbonImmutable::parse('2026-05-22'),
     ]);
@@ -149,7 +149,7 @@ it('walks weekly cadence to emit ~4 contributions in 30 days', function (): void
 });
 
 it('walks quarterly cadence to emit 1 contribution in 90 days', function (): void {
-    $series = rpSeries([
+    $series = rpDtoSeries([
         'cadence' => 'quarterly',
         'nextExpectedAt' => CarbonImmutable::parse('2026-06-15'),
     ]);
@@ -162,7 +162,7 @@ it('walks quarterly cadence to emit 1 contribution in 90 days', function (): voi
 });
 
 it('walks yearly cadence to emit 0 contributions in a 30-day window', function (): void {
-    $series = rpSeries([
+    $series = rpDtoSeries([
         'cadence' => 'yearly',
         'nextExpectedAt' => CarbonImmutable::parse('2027-01-15'),
     ]);
@@ -174,7 +174,7 @@ it('walks yearly cadence to emit 0 contributions in a 30-day window', function (
 });
 
 it('emits no contributions for an irregular cadence series', function (): void {
-    $series = rpSeries([
+    $series = rpDtoSeries([
         'cadence' => 'irregular',
         'nextExpectedAt' => CarbonImmutable::parse('2026-05-22'),
     ]);
@@ -186,7 +186,7 @@ it('emits no contributions for an irregular cadence series', function (): void {
 });
 
 it('emits no contributions when nextExpectedAt is null', function (): void {
-    $series = rpSeries([
+    $series = rpDtoSeries([
         'nextExpectedAt' => null,
     ]);
     $asOf = CarbonImmutable::parse('2026-05-19');
@@ -197,7 +197,7 @@ it('emits no contributions when nextExpectedAt is null', function (): void {
 });
 
 it('carries the contribution currency + stored fxRateUsed for FX series (USD)', function (): void {
-    $series = rpSeries([
+    $series = rpDtoSeries([
         'latestAmount' => Money::ofMinor(-599, 'USD'),
         'nextExpectedAt' => CarbonImmutable::parse('2026-05-25'),
         'latestFxRateUsed' => 0.9050,
@@ -212,7 +212,7 @@ it('carries the contribution currency + stored fxRateUsed for FX series (USD)', 
 });
 
 it('skips occurrences strictly before asOf even when nextExpectedAt is in the past', function (): void {
-    $series = rpSeries([
+    $series = rpDtoSeries([
         'cadence' => 'monthly',
         'nextExpectedAt' => CarbonImmutable::parse('2026-03-15'),
     ]);
