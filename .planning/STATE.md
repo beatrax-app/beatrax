@@ -71,10 +71,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Major v2.0 architectural
 
 Recent decisions affecting current work:
 
-- v2.0 ROADMAP.md created 2026-05-19 with 10 phases (Phase 12–21); 48 requirements mapped 100% to phases (no orphans, no duplicates)
-- Phase-name slug convention matches v1.0 brevity: `12-multi-user-activation`, `13-app-paths-and-first-run-migration`, `14-queue-rewire-horizon-carveout`, `15-desktop-shell-nativephp-integration`, `16-developer-mode-ui`, `17-cicd-pipeline-code-signing`, `18-auto-update-plumbing`, `19-public-release-boundary`, `20-v1-uat-close-out`, `21-invite-only-beta-cycle`
+- v2.0 ROADMAP.md created 2026-05-19 with 10 phases (Phase 12–21); 47 requirements mapped 100% to phases (no orphans, no duplicates)
+- Phase-name slug convention matches v1.0 brevity: `12-multi-user-activation`, `13-app-paths`, `14-queue-rewire-horizon-carveout`, `15-desktop-shell-nativephp-integration`, `16-developer-mode-ui`, `17-cicd-pipeline-code-signing`, `18-auto-update-plumbing`, `19-public-release-boundary`, `20-v1-uat-close-out`, `21-invite-only-beta-cycle`
 - `DEVUI-01` (`is_developer` flag + `EnsureDeveloperMode` middleware + Settings toggle) lives entirely in Phase 16 since its three deliverables — column migration, Settings UI, middleware — all belong to the DevMode module's surface; Phase 12's signup-creates-developer behavior consumes the column but does not own it
-- All 48 requirements have explicit phase assignments in REQUIREMENTS.md Traceability table (note: the original REQUIREMENTS.md header said "47 requirements" — actual count is 48; corrected at roadmap creation)
+- All 47 requirements have explicit phase assignments in REQUIREMENTS.md Traceability table
 
 ### Pending Todos
 
@@ -86,7 +86,6 @@ None yet for v2.0.
 
 Phase-research flags carried from research/SUMMARY.md (to address during `/gsd:plan-phase` for each):
 
-- **Phase 13 (B):** First-run migration UAT — the developer's real v1.0 SQLite is the worst possible test subject; needs a recoverable test environment + UAT plan
 - **Phase 15 (D):** NativePHP file-association handler behavior on Windows + Linux (docs are macOS-leaning); 2-day spike likely needed during planning
 - **Phase 17 (F):** Apple notarization workflow on GitHub Actions runners; Azure Trusted Signing for Windows (untested in this project); Linux `.AppImage` + `.deb` installer validation
 - **Phase 18 (G):** electron-updater signature verification across all three platforms; first-install-can't-auto-update UX
@@ -103,7 +102,6 @@ Gaps to address during phase planning (from research/SUMMARY.md):
 
 - **PHP 8.5-vs-8.4 in shipped bundle** — `nativephp/php-bin` ships 8.1–8.4 only; project pin is `^8.5`. Run a Larastan-L10-on-8.4 spike during Phase 13 start; if it passes, bundle 8.4 and keep dev pin at 8.5 + add an 8.4 axis to the PR-gate matrix (Phase 17)
 - **Windows code-signing pricing + provider final pick** — Recommended Azure Trusted Signing ($10/mo, GitHub-hosted-runner compatible). Validate during Phase 17 start before committing the matrix
-- **First-launch v1.0 → v2.0 migration UX** — Native Electron modal vs in-app Livewire splash; how to discover old install path heuristically. Decide during Phase 13 planning
 - **macOS notarization timing in CI** — First notarization can take 5-15 minutes; CI matrix needs a generous timeout. Verify in Phase 17
 
 ## Deferred Items

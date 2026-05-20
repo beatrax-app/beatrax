@@ -31,7 +31,7 @@ Full phase details, success criteria, and plan breakdowns are preserved in [mile
 v2.0 takes the validated v1.0 core value to a non-technical partner via a code-signed desktop installer, with an in-app developer console so power users (and contributors) keep full CLI access, under a Hippocratic-3.0 source-available license. The work is shell, activation, and release — not feature extension. The build order is dictated by research's strict dependency chain: multi-user activation must precede everything because the auth contract is load-bearing for every later phase; the `AppPaths` abstraction must precede NativePHP integration because hard-coded paths break the moment Electron boots; queue rewire must precede desktop shell because the shipped bundle cannot ship Redis; and the public-release boundary phase must run last because it depends on every earlier deliverable being in place to redact, license, and document.
 
 - [x] **Phase 12: Multi-User Activation** — Real Fortify auth + per-user data isolation built on the dormant `user_id` schema; new `Modules/Auth/`; profile selector + recovery-codes + owner-resets-partner flow (completed 2026-05-20)
-- [ ] **Phase 13: AppPaths + First-Run Migration Wizard** — `UserDataPath` contract replaces every hard-coded `database_path()` / `storage_path()` / `base_path()` call; v1.0 → v2.0 first-run wizard (Start fresh / Import / Quit) with `VACUUM INTO` against read-only source + sentinel-file idempotency
+- [ ] **Phase 13: AppPaths** — `UserDataPath` contract replaces every hard-coded `database_path()` / `storage_path()` / `base_path()` call so paths resolve under NativePHP's `Application::storagePath()` in shipped builds and project-rooted paths in Herd dev mode; arch test + CI grep gate forbid the raw helpers outside the service
 - [ ] **Phase 14: Queue Rewire + Horizon Carve-out** — Shipped bundle moves to `database` queue driver + `database` cache locks; Horizon gated to `DIEDERIK_RUNTIME=herd` dev mode only; chain-resolution proven end-to-end on the new driver under concurrent load
 - [ ] **Phase 15: Desktop Shell (NativePHP Integration)** — `nativephp/desktop ^2.2` integration producing signed-ready `.dmg` / `.msi` / `.AppImage` / `.deb` installers; native chrome (window/menu/tray/notifications/dark-mode); file-association handlers for `.eml` + `.csv`; new `Modules/Desktop/` quarantines every `Native\Laravel\*` import
 - [ ] **Phase 16: Developer Mode UI** — New `Modules/DevMode/`; `is_developer` flag + `EnsureDeveloperMode` middleware; SAFE / DESTRUCTIVE artisan runner with live stdout streaming; log tailer with secret-redaction; bespoke queue inspector replaces Horizon dashboard for shipped builds; embedded Horizon iframe behind dev-runtime flag; ⌘K command palette
@@ -71,20 +71,17 @@ Plans:
 - [x] 12-07-PLAN.md — OAuth secrets repository swap to per-user SQLite (MULTI-05)
 - [x] 12-08-PLAN.md — profile switching/impersonation (MULTI-06) + cross-user 404-not-403 test set (MULTI-03)
 
-### Phase 13: AppPaths + First-Run Migration Wizard
+### Phase 13: AppPaths
 
-**Goal**: Every filesystem path the app reads or writes flows through a single injectable `UserDataPath` contract whose implementation defers to NativePHP's `Application::storagePath()` in shipped builds and the existing project-rooted paths in Herd dev mode; first-run desktop launches present a three-button wizard (Start fresh / Import from v1.0 / Quit) that uses `VACUUM INTO` against a read-only attached source so the developer's live v1.0 SQLite cannot corrupt during import.
-**Slug:** `13-app-paths-and-first-run-migration`
+**Goal**: Every filesystem path the app reads or writes flows through a single injectable `UserDataPath` contract whose implementation defers to NativePHP's `Application::storagePath()` in shipped builds and the existing project-rooted paths in Herd dev mode; an arch test plus a CI grep gate guarantee no raw `database_path()` / `storage_path()` / `base_path()` call — or equivalent hard-coded string literal — survives outside that service.
+**Slug:** `13-app-paths`
 **Mode:** mvp
-**Depends on**: Phase 12 (per-user OAuth secrets table must exist before the wizard migrates them)
-**Requirements**: PKG-01, PKG-02
+**Depends on**: Nothing new (a path-abstraction refactor over the existing v1.0 + Phase 12 codebase)
+**Requirements**: PKG-01
 **Success Criteria** (what must be TRUE):
 
   1. `BoundaryArchTest::noStoragePathHardCodedOutsideUserDataPathService` is green — no `database_path()` / `storage_path()` / `base_path()` call appears anywhere outside `Modules\Core\Public\Services\UserDataPathService`; CI grep gate enforces the same rule against string literals (`database.sqlite`, `storage/app/`)
   2. Running `php artisan migrate:fresh` under a simulated NativePHP env (`NATIVEPHP_STORAGE_PATH=<tmp>`) creates the SQLite file under the temp dir; `php artisan db:backup` writes to `<tmp>/storage/app/backups/`; OAuth secrets land at `<tmp>/storage/app/secrets/`; all proven by Pest feature test
-  3. The first-run wizard offers exactly three paths — Start fresh / Import from v1.0 / Quit — and the Import path uses `VACUUM INTO` against a `mode=ro` URI-attached source so the live v1.0 DB cannot corrupt mid-import; sentinel file at `<storage>/.migrated-from-v1` (recording source path + sha256) prevents re-runs
-  4. OAuth secrets are NOT auto-copied during import — the wizard explicitly prompts "Re-authorize Gmail / Microsoft" and the user re-runs the OAuth dance per provider; pre-migration `VACUUM INTO` rollback snapshot is captured at `<storage>/migration-rollback/`
-  5. v1.0 launchd plists are uninstalled by the wizard before import begins (via existing `php artisan diederik:install --launchd --uninstall`) so the v1.0 scheduler cannot write to the source DB while the desktop reads it
 
 **Plans**: TBD
 
@@ -229,7 +226,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | v1.0 MVP — Phases 1–11 | 66/66 | Complete | 2026-05-19 |
 | 12. Multi-User Activation | 8/8 | Complete    | 2026-05-20 |
-| 13. AppPaths + First-Run Migration Wizard | 0/0 | Not started | - |
+| 13. AppPaths | 0/0 | Not started | - |
 | 14. Queue Rewire + Horizon Carve-out | 0/0 | Not started | - |
 | 15. Desktop Shell (NativePHP Integration) | 0/0 | Not started | - |
 | 16. Developer Mode UI | 0/0 | Not started | - |

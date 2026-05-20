@@ -7,12 +7,11 @@
 
 ## v2.0 Requirements
 
-48 requirements across 8 categories. Each maps to exactly one roadmap phase (see Traceability section below).
+47 requirements across 8 categories. Each maps to exactly one roadmap phase (see Traceability section below).
 
 ### PKG (Desktop Packaging)
 
 - [ ] **PKG-01**: AppPaths / UserDataPath abstraction service replacing every `database_path()` / `storage_path()` / `base_path()` call, with an arch-test forbidding their use outside the service
-- [ ] **PKG-02**: First-run migration wizard ("Start fresh" / "Import from v1.0" / "Quit") using `VACUUM INTO` against a read-only attached source, sentinel file prevents re-runs, OAuth secrets are NOT auto-copied (re-auth prompt instead)
 - [ ] **PKG-03**: Queue rewire — `database` queue driver + `cache.locks_store=database` + `ShouldBeUniqueUntilProcessing` jobs' `uniqueVia()` lock store migrated; Horizon gated on `DIEDERIK_RUNTIME=herd` dev-mode only; chain-resolution end-to-end Pest test against `database` driver under concurrent load
 - [ ] **PKG-04**: `nativephp/desktop ^2.2` integration producing `.dmg` (macOS), `.msi/.exe` (Windows), and `.AppImage/.deb` (Linux) installers via `php artisan native:build`
 - [ ] **PKG-05**: Native chrome — window, dock/taskbar icon, app menu (File / Edit / View / Window / Help with standard items), system tray, OS notifications, dark-mode follows OS
@@ -141,7 +140,6 @@ Which phase covers which requirement. Updated during roadmap creation (2026-05-1
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PKG-01 | Phase 13 | Pending |
-| PKG-02 | Phase 13 | Pending |
 | PKG-03 | Phase 14 | Pending |
 | PKG-04 | Phase 15 | Pending |
 | PKG-05 | Phase 15 | Pending |
@@ -191,8 +189,8 @@ Which phase covers which requirement. Updated during roadmap creation (2026-05-1
 
 **Coverage:**
 
-- v2.0 requirements: 48 total
-- Mapped to phases: 48 ✓
+- v2.0 requirements: 47 total
+- Mapped to phases: 47 ✓
 - Unmapped: 0 ✓
 
 ### Phase-to-requirement summary
@@ -200,7 +198,7 @@ Which phase covers which requirement. Updated during roadmap creation (2026-05-1
 | Phase | Requirement count | Requirements |
 |-------|-------------------|--------------|
 | 12. Multi-User Activation | 6 | MULTI-01, MULTI-02, MULTI-03, MULTI-04, MULTI-05, MULTI-06 |
-| 13. AppPaths + First-Run Migration Wizard | 2 | PKG-01, PKG-02 |
+| 13. AppPaths | 1 | PKG-01 |
 | 14. Queue Rewire + Horizon Carve-out | 1 | PKG-03 |
 | 15. Desktop Shell (NativePHP Integration) | 5 | PKG-04, PKG-05, PKG-06, PKG-07, PKG-08 |
 | 16. Developer Mode UI | 9 | DEVUI-01, DEVUI-02, DEVUI-03, DEVUI-04, DEVUI-05, DEVUI-06, DEVUI-07, DEVUI-08, DEVUI-09 |
@@ -209,8 +207,8 @@ Which phase covers which requirement. Updated during roadmap creation (2026-05-1
 | 19. Public Release Boundary | 8 | REL-01, REL-02, REL-03, REL-04, REL-05, REL-06, REL-07, REL-08 |
 | 20. v1.0 UAT Close-Out | 3 | UAT-01, UAT-02, UAT-03 |
 | 21. Invite-Only Beta Cycle | 4 | BETA-01, BETA-02, BETA-03, BETA-04 |
-| **Total** | **48** | |
+| **Total** | **47** | |
 
 ---
 *Requirements defined: 2026-05-19*
-*Last updated: 2026-05-19 after roadmap creation (Phases 12-21 mapped, 48/48 coverage)*
+*Last updated: 2026-05-20 — PKG-02 (first-run migration wizard) dropped; Phase 13 narrowed to AppPaths-only. 47/47 coverage.*
