@@ -25,10 +25,10 @@ use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
  *    leaks the existence of a foreign row.
  */
 
-function bwmUser(string $email): User
+function bwmUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => str_contains($username, '@') ? (string) strtok($username, '@') : $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -42,7 +42,7 @@ function bwmSeedInbox(User $owner, int $window = 3): int
     $inboxId = (int) $db->connection()->table('inboxes')->insertGetId([
         'user_id' => $owner->id,
         'provider' => 'gmail',
-        'email' => $owner->email,
+        'email' => $owner->username.'@example.com',
         'backfill_window_months' => $window,
         'backfill_progress' => null,
         'created_at' => $now,

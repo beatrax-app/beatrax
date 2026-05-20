@@ -24,10 +24,10 @@ use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
  * including the leading `~` on the estimate.
  */
 
-function bppUser(string $email): User
+function bppUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => str_contains($username, '@') ? (string) strtok($username, '@') : $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

@@ -62,7 +62,7 @@ it('passes the user-selected window (3 months) into the Gmail listSenderMessages
     $this->app->instance(Clock::class, $clock);
 
     $user = User::query()->create([
-        'email' => 'gmail-window@example.com',
+        'username' => 'gmail-window',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -135,7 +135,7 @@ it('plumbs a 12-month window correctly', function (): void {
     $this->app->instance(Clock::class, $clock);
 
     $user = User::query()->create([
-        'email' => 'gmail-window-12@example.com',
+        'username' => 'gmail-window-12',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

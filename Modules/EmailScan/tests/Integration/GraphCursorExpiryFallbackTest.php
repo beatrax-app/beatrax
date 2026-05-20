@@ -54,7 +54,7 @@ afterEach(function (): void {
 
 it('catches CursorExpiredException on deltaPage, falls back to listSenderMessagesPaged, re-baselines via deltaPage(null), and persists the messages', function (): void {
     $user = User::query()->create([
-        'email' => 'graph-expired@example.com',
+        'username' => 'graph-expired',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

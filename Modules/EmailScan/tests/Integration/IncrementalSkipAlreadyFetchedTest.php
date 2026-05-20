@@ -42,7 +42,7 @@ afterEach(function (): void {
 
 it('Gmail incremental: does not call getRawMessage for ids already present in inbox_messages', function (): void {
     $user = User::query()->create([
-        'email' => 'wr06@example.com',
+        'username' => 'wr06',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

@@ -19,10 +19,10 @@ use Modules\Core\Models\User;
  *     status='backfilling' or 'scanning'; otherwise enabled.
  */
 
-function ihbrUser(string $email): User
+function ihbrUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => str_contains($username, '@') ? (string) strtok($username, '@') : $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

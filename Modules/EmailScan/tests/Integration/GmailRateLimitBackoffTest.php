@@ -56,7 +56,7 @@ afterEach(function (): void {
 
 it('catches RateLimitedException, transitions to rate_limited, bumps retry_attempts, rethrows; recovers on next run', function (): void {
     $user = User::query()->create([
-        'email' => 'gmail-throttle@example.com',
+        'username' => 'gmail-throttle',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

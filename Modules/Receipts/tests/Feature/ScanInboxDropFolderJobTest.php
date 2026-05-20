@@ -14,7 +14,7 @@ beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 5, 17, 12, 0, 0));
 
     $this->user = User::create([
-        'email' => 'drop@example.com',
+        'username' => 'drop',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -147,7 +147,7 @@ it('is idempotent: re-running on the same processed folder is a no-op', function
 
 it('does NOT touch files under another user\'s inbox-drop folder (T-07-04)', function (): void {
     $other = User::create([
-        'email' => 'other-drop@example.com',
+        'username' => 'other-drop',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

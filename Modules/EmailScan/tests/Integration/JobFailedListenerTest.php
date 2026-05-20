@@ -37,7 +37,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
-        'email' => 'failed-hook@example.com',
+        'username' => 'failed-hook',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

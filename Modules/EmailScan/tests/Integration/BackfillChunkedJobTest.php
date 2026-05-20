@@ -43,7 +43,7 @@ afterEach(function (): void {
 
 it('walks pages, persists .eml + inbox_messages rows, and flips status to idle', function (): void {
     $user = User::query()->create([
-        'email' => 'backfill-happy@example.com',
+        'username' => 'backfill-happy',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

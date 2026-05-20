@@ -163,7 +163,7 @@ it('prefer_first_write: keeps stored value + DELETEs pending row + persists user
 
 it('cross-user T-07-09: a foreign pending row is NEVER touched by ApplyReceiptConflictResolution', function (): void {
     $other = User::create([
-        'email' => 'other-rcr@example.com',
+        'username' => 'other-rcr',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -283,7 +283,7 @@ it('Blade view has NO auto-dismiss (UI-SPEC: persists until user acts)', functio
 
 it('SFC ignores a receipt-conflict-detected event whose userId does NOT match the current user', function (): void {
     $foreign = User::create([
-        'email' => 'foreign-rcr@example.com',
+        'username' => 'foreign-rcr',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
