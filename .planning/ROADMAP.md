@@ -83,7 +83,13 @@ Plans:
   1. `BoundaryArchTest::noStoragePathHardCodedOutsideUserDataPathService` is green — no `database_path()` / `storage_path()` / `base_path()` call appears anywhere outside `Modules\Core\Public\Services\UserDataPathService`; CI grep gate enforces the same rule against string literals (`database.sqlite`, `storage/app/`)
   2. Running `php artisan migrate:fresh` under a simulated NativePHP env (`NATIVEPHP_STORAGE_PATH=<tmp>`) creates the SQLite file under the temp dir; `php artisan db:backup` writes to `<tmp>/storage/app/backups/`; OAuth secrets land at `<tmp>/storage/app/secrets/`; all proven by Pest feature test
 
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+
+- [ ] 13-01-PLAN.md — UserDataPathService (static-core + instance-delegate) + singleton binding + Wave-0 test scaffolding (arch invariant stub, simulated-env feature-test stub, `composer check:paths` gate)
+- [ ] 13-02-PLAN.md — migrate every production call site: 3 config files, Core backup/restore D-04 binding cleanup, EmailScan + Auth migration, OAuthClientWizardModal error-string de-hardcode
+- [ ] 13-03-PLAN.md — fill the simulated-NativePHP-env feature test (migrate:fresh / db:backup / OAuth secrets) + verify arch invariant + CI grep gate green
 
 ### Phase 14: Queue Rewire + Horizon Carve-out
 
@@ -218,15 +224,13 @@ Plans:
   3. Every beta tester has an in-app "Send feedback" link wired to a GitHub Issues template; 1-2 weeks of daily-use feedback is collected per tester and triaged into blocker / non-blocker queues
   4. A `BETA-GO-NOGO.md` artifact records the decision-gate review: blocker fixes shipped + remaining-known-issues list + the explicit decision to either open the repo publicly OR run another beta round
 
-**Plans**: TBD
-
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | v1.0 MVP — Phases 1–11 | 66/66 | Complete | 2026-05-19 |
 | 12. Multi-User Activation | 8/8 | Complete    | 2026-05-20 |
-| 13. AppPaths | 0/0 | Not started | - |
+| 13. AppPaths | 0/3 | Planned | - |
 | 14. Queue Rewire + Horizon Carve-out | 0/0 | Not started | - |
 | 15. Desktop Shell (NativePHP Integration) | 0/0 | Not started | - |
 | 16. Developer Mode UI | 0/0 | Not started | - |
