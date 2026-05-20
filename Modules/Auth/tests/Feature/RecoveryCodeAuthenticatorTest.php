@@ -28,7 +28,7 @@ use Modules\Core\Models\User;
 function signUpWithCodes(string $username = 'owner'): array
 {
     /** @var SignupAction $signup */
-    $signup = test()->app->make(SignupAction::class);
+    $signup = app(SignupAction::class);
 
     $result = $signup($username, 'owner-password-123');
 
