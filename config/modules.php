@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Services\UserDataPathService;
 use Nwidart\Modules\Activators\FileActivator;
 use Nwidart\Modules\Providers\ConsoleServiceProvider;
 
@@ -32,9 +33,9 @@ return [
     */
 
     'paths' => [
-        'modules' => base_path('Modules'),
-        'assets' => public_path('modules'),
-        'migration' => base_path('database/migrations'),
+        'modules' => UserDataPathService::modulesPath(),
+        'assets' => UserDataPathService::publicPath('modules'),
+        'migration' => UserDataPathService::migrationsPath(),
         'app_folder' => '',
         'generator' => [
             'public' => ['path' => 'Public', 'generate' => true],
@@ -74,7 +75,7 @@ return [
     'scan' => [
         'enabled' => false,
         'paths' => [
-            base_path('vendor/*/*'),
+            UserDataPathService::projectPath('vendor/*/*'),
         ],
     ],
 
@@ -126,7 +127,7 @@ return [
     'activators' => [
         'file' => [
             'class' => FileActivator::class,
-            'statuses-file' => base_path('modules_statuses.json'),
+            'statuses-file' => UserDataPathService::projectPath('modules_statuses.json'),
             'cache-key' => 'diederik-activator',
             'cache-lifetime' => 604800,
         ],
