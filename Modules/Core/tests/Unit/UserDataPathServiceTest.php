@@ -102,3 +102,20 @@ it('exposes instance accessors that delegate to the static surface', function ()
     expect($svc->framework('down'))->toBe(UserDataPathService::frameworkPath('down'));
     expect($svc->appRelative('inbox'))->toBe(UserDataPathService::appPath('inbox'));
 });
+
+it('resolves UserDataPathService as the same singleton instance through the container', function (): void {
+    $first = $this->app->make(UserDataPathService::class);
+    $second = $this->app->make(UserDataPathService::class);
+
+    expect($first)->toBeInstanceOf(UserDataPathService::class);
+    expect($first)->toBe($second);
+});
+
+it('keeps backupsPath byte-identical to the previously container-bound storage path when the env var is unset', function (): void {
+    // A2 Herd-parity guard: before Phase 13, BackupDatabaseCommand resolved
+    // its directory from `$app->basePath('storage/app/backups')`. With the
+    // NativePHP env var unset the service must produce that exact string so
+    // a future refactor cannot silently shift the dev-mode path.
+    expect(UserDataPathService::backupsPath())
+        ->toBe($this->app->basePath('storage/app/backups'));
+});
