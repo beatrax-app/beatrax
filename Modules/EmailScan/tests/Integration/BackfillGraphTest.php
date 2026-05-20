@@ -53,7 +53,7 @@ afterEach(function (): void {
 
 it('walks Graph pages, persists .eml + inbox_messages rows, establishes the deltaLink baseline, and flips status to idle', function (): void {
     $user = User::query()->create([
-        'email' => 'graph-backfill@example.com',
+        'username' => 'graph-backfill',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -169,7 +169,7 @@ it('walks Graph pages, persists .eml + inbox_messages rows, establishes the delt
 
 it('catches RateLimitedException, transitions to rate_limited, and re-throws so the worker retries', function (): void {
     $user = User::query()->create([
-        'email' => 'graph-throttle@example.com',
+        'username' => 'graph-throttle',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

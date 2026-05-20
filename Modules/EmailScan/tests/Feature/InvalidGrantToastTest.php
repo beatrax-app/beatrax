@@ -20,10 +20,10 @@ use Modules\EmailScan\Internal\InboxScanStateMachine;
  *    (the @if guard short-circuits on reauthInboxCount = 0).
  */
 
-function igtUser(string $email): User
+function igtUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => str_contains($username, '@') ? (string) strtok($username, '@') : $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -37,7 +37,7 @@ function igtSeedReauthInbox(User $owner): int
     $inboxId = (int) $db->connection()->table('inboxes')->insertGetId([
         'user_id' => $owner->id,
         'provider' => 'gmail',
-        'email' => $owner->email,
+        'email' => $owner->username.'@example.com',
         'backfill_window_months' => 3,
         'backfill_progress' => null,
         'created_at' => $now,

@@ -42,7 +42,7 @@ afterEach(function (): void {
 
 it('catches RateLimitedException on Graph deltaPage, transitions to rate_limited, honours retry-after, recovers', function (): void {
     $user = User::query()->create([
-        'email' => 'graph-throttle@example.com',
+        'username' => 'graph-throttle',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

@@ -55,7 +55,7 @@ afterEach(function (): void {
 
 it('catches CursorExpiredException on listHistory, falls back to listSenderMessages, and persists the messages', function (): void {
     $user = User::query()->create([
-        'email' => 'gmail-expired@example.com',
+        'username' => 'gmail-expired',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

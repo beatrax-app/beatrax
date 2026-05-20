@@ -23,10 +23,10 @@ use Modules\Core\Models\User;
  *    for the chain-review badge).
  */
 
-function tnbcUser(string $email): User
+function tnbcUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => str_contains($username, '@') ? (string) strtok($username, '@') : $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

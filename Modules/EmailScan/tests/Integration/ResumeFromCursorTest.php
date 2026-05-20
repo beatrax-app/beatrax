@@ -57,7 +57,7 @@ afterEach(function (): void {
 
 it('walks the gmail historyId cursor, persists new messages, and resumes idempotently on a second run', function (): void {
     $user = User::query()->create([
-        'email' => 'resume@example.com',
+        'username' => 'resume',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

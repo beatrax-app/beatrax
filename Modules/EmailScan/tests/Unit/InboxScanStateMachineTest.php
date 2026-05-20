@@ -34,8 +34,9 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->seedInbox = function (string $provider = 'gmail', string $status = 'idle', int $retryAttempts = 0): int {
+        $username = $provider.'-'.uniqid();
         $user = User::query()->create([
-            'email' => $provider.'-'.uniqid().'@example.com',
+            'username' => $username,
             'password' => 'fixture',
             'period_start_day' => 1,
         ]);
@@ -47,7 +48,7 @@ beforeEach(function (): void {
         $inboxId = (int) $db->connection()->table('inboxes')->insertGetId([
             'user_id' => $user->id,
             'provider' => $provider,
-            'email' => $user->email,
+            'email' => $username.'@example.com',
             'backfill_window_months' => 3,
             'backfill_progress' => null,
             'created_at' => $now,

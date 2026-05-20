@@ -47,7 +47,7 @@ afterEach(function (): void {
 
 it('walks multiple Gmail discovery pages, capturing senders past the first 100', function (): void {
     $user = User::query()->create([
-        'email' => 'gmail-discovery-pagination@example.com',
+        'username' => 'gmail-discovery-pagination',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -134,7 +134,7 @@ it('walks multiple Gmail discovery pages, capturing senders past the first 100',
 
 it('walks multiple Microsoft Graph discovery pages, capturing senders past the first 100', function (): void {
     $user = User::query()->create([
-        'email' => 'graph-discovery-pagination@example.com',
+        'username' => 'graph-discovery-pagination',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -207,7 +207,7 @@ it('walks multiple Microsoft Graph discovery pages, capturing senders past the f
 
 it('caps Gmail discovery at DISCOVERY_MAX_PAGES (10) when the provider hands back an infinite cursor', function (): void {
     $user = User::query()->create([
-        'email' => 'gmail-discovery-cap@example.com',
+        'username' => 'gmail-discovery-cap',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);

@@ -320,7 +320,7 @@ function seedFileImportUser(DatabaseManager $db): void
     }
     $db->connection()->table('users')->insert([
         'id' => 1,
-        'email' => 'kaarthouder@example.test',
+        'username' => 'kaarthouder',
         'password' => password_hash('synthetic', PASSWORD_BCRYPT),
         'period_start_day' => 1,
         'remember_token' => null,

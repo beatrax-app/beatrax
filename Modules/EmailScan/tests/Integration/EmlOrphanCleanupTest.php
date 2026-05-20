@@ -56,7 +56,7 @@ afterEach(function (): void {
 
 it('unlinks the .eml when the following DB transaction throws, then succeeds on retry', function (): void {
     $user = User::query()->create([
-        'email' => 'orphan@example.com',
+        'username' => 'orphan',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
