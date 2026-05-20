@@ -43,7 +43,7 @@ Last activity: 2026-05-20
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 12. Multi-User Activation | — | — | — |
-| 13. AppPaths + First-Run Migration Wizard | — | — | — |
+| 13. AppPaths | — | — | — |
 | 14. Queue Rewire + Horizon Carve-out | — | — | — |
 | 15. Desktop Shell (NativePHP Integration) | — | — | — |
 | 16. Developer Mode UI | — | — | — |
