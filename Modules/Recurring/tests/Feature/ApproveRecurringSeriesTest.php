@@ -18,10 +18,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * RecurringSeriesApproved. Idempotent when already approved.
  */
 
-function arsUser(string $email): User
+function arsUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -45,7 +45,7 @@ function arsSeries(User $user, string $state, string $cluster): RecurringSeries
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = arsUser('ars@diederik.test');
+    $this->user = arsUser('ars');
 });
 
 afterEach(function (): void {
@@ -116,7 +116,7 @@ it('is idempotent when the series is already approved (no second transitions row
 });
 
 it('throws NotFoundHttpException for a cross-user series id', function (): void {
-    $intruder = arsUser('ars-intruder@diederik.test');
+    $intruder = arsUser('ars-intruder');
     $series = arsSeries($this->user, 'pending', 'ars::xuser');
 
     /** @var ApproveRecurringSeries $action */

@@ -27,7 +27,7 @@ beforeEach(function (): void {
     $this->db = $db;
 
     $this->user = User::query()->create([
-        'email' => 'drift-sm@diederik.test',
+        'username' => 'drift-sm',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

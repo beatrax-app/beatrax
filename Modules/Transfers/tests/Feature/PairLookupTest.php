@@ -26,13 +26,13 @@ use Modules\Transfers\Public\Services\PairLookup;
 
 beforeEach(function (): void {
     $this->primaryUser = User::query()->create([
-        'email' => 'pair-lookup-primary@diederik.test',
+        'username' => 'pair-lookup-primary',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
 
     $this->otherUser = User::query()->create([
-        'email' => 'pair-lookup-other@diederik.test',
+        'username' => 'pair-lookup-other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

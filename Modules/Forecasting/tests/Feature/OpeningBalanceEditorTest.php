@@ -33,10 +33,10 @@ uses(RefreshDatabase::class);
  *   - ProjectForecastJob dispatched per horizon after save.
  */
 
-function obeUser(string $email): User
+function obeUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -99,7 +99,7 @@ function obeTxn(User $user, Account $account, ImportRun $run, int $amountMinor, 
 }
 
 beforeEach(function (): void {
-    $this->user = obeUser('obe@diederik.test');
+    $this->user = obeUser('obe');
     $this->actingAs($this->user);
 });
 
@@ -235,7 +235,7 @@ it('refuses a cross-user account at the Public Action layer (cross-user 404 cont
     // The runtime guard inside the SFC still raises the exception when
     // invoked via a real HTTP request, so the canonical assertion locks
     // the SetAccountOpeningBalance Public Action's cross-user 404.
-    $other = obeUser('other@diederik.test');
+    $other = obeUser('other');
     $foreign = obeAccount($other, 'paypal', 'foreign-paypal');
 
     $action = app(SetAccountOpeningBalance::class);

@@ -18,7 +18,7 @@ use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'divergence@example.com',
+        'username' => 'divergence',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -316,7 +316,7 @@ it('CorrectionDivergenceToast.update() catches NotFoundHttpException for a tampe
     // the SFC must catch it, surface a calm flash, hide the toast,
     // and leave the foreign rule untouched.
     $other = User::create([
-        'email' => 'tamper-toast-rule@example.com',
+        'username' => 'tamper-toast-rule',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -343,7 +343,7 @@ it('CorrectionDivergenceToast.update() catches InvalidArgumentException for a fo
     // InvalidArgumentException. The SFC must catch it and surface a
     // calm flash.
     $other = User::create([
-        'email' => 'tamper-toast-cat@example.com',
+        'username' => 'tamper-toast-cat',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

@@ -13,7 +13,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'auto-cat-test@example.com',
+        'username' => 'auto-cat-test',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

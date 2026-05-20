@@ -30,10 +30,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * tolerance does not fragment a previously-approved cluster.
  */
 
-function ervtUser(string $email): User
+function ervtUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -93,7 +93,7 @@ function ervtAction(): EditRecurringSeriesVarianceTolerance
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = ervtUser('ervt@diederik.test');
+    $this->user = ervtUser('ervt');
 });
 
 afterEach(function (): void {
@@ -132,7 +132,7 @@ it('skips the UPDATE when the new tolerance equals the current value (idempotent
 })->group('idempotent-no-op');
 
 it('raises NotFoundHttpException on a cross-user lookup (cross-user-404)', function (): void {
-    $other = ervtUser('ervt-other@diederik.test');
+    $other = ervtUser('ervt-other');
     $series = ervtSeries($other);
 
     ervtAction()->__invoke($series->id, $this->user, 50);

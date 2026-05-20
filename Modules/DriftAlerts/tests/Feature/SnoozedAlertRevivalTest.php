@@ -22,10 +22,10 @@ uses(RefreshDatabase::class);
  * expired rows immediately between sweeps.
  */
 
-function sarUser(string $email): User
+function sarUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -142,7 +142,7 @@ afterEach(function (): void {
 });
 
 it('flips snoozed -> open when snoozed_until is in the past and writes the audit transition', function (): void {
-    $user = sarUser('sar-flip@diederik.test');
+    $user = sarUser('sar-flip');
     $alert = sarAlert($user, state: 'snoozed', snoozedUntil: CarbonImmutable::parse('2026-05-20 08:00:00'));
 
     /** @var RevivedExpiredDriftSnoozesJob $job */
@@ -170,7 +170,7 @@ it('flips snoozed -> open when snoozed_until is in the past and writes the audit
 });
 
 it('does NOT flip snoozed alerts whose snoozed_until is in the future', function (): void {
-    $user = sarUser('sar-future@diederik.test');
+    $user = sarUser('sar-future');
     $alert = sarAlert($user, state: 'snoozed', snoozedUntil: CarbonImmutable::parse('2026-05-21 12:00:00'));
 
     /** @var RevivedExpiredDriftSnoozesJob $job */
@@ -192,7 +192,7 @@ it('does NOT flip snoozed alerts whose snoozed_until is in the future', function
 });
 
 it('is a no-op on already-open alerts', function (): void {
-    $user = sarUser('sar-open@diederik.test');
+    $user = sarUser('sar-open');
     $alert = sarAlert($user, state: 'open');
 
     /** @var RevivedExpiredDriftSnoozesJob $job */
@@ -210,7 +210,7 @@ it('is a no-op on already-open alerts', function (): void {
 });
 
 it('DriftAlertQuery::openForUser query-time conditional returns snoozed-but-expired rows even without the sweep', function (): void {
-    $user = sarUser('sar-querytime@diederik.test');
+    $user = sarUser('sar-querytime');
     $alert = sarAlert($user, state: 'snoozed', snoozedUntil: CarbonImmutable::parse('2026-05-20 08:00:00'));
 
     /** @var DriftAlertQuery $query */
@@ -223,7 +223,7 @@ it('DriftAlertQuery::openForUser query-time conditional returns snoozed-but-expi
 });
 
 it('DriftAlertQuery::openCountForUser counts open + snoozed-but-expired', function (): void {
-    $user = sarUser('sar-count@diederik.test');
+    $user = sarUser('sar-count');
     sarAlert($user, state: 'open');
     sarAlert($user, state: 'snoozed', snoozedUntil: CarbonImmutable::parse('2026-05-20 08:00:00'));
 
@@ -234,7 +234,7 @@ it('DriftAlertQuery::openCountForUser counts open + snoozed-but-expired', functi
 });
 
 it('DriftAlertQuery::openCountForUser excludes snoozed alerts whose snoozed_until is still in the future', function (): void {
-    $user = sarUser('sar-future-count@diederik.test');
+    $user = sarUser('sar-future-count');
     sarAlert($user, state: 'open');
     sarAlert($user, state: 'snoozed', snoozedUntil: CarbonImmutable::parse('2026-05-21 12:00:00'));
 
@@ -249,7 +249,7 @@ it('exercises the snooze-expiry-revival corpus fixture: detected then snoozed in
     /** @var array{transactions: array<int, array<string, mixed>>, expected: array<string, mixed>} $fixture */
     expect($fixture['expected']['transitions'][0]['transition_reason'] ?? null)->toBe('detector_revived_snooze');
 
-    $user = sarUser('sar-corpus@diederik.test');
+    $user = sarUser('sar-corpus');
     // Manually seed the post-detect / mid-snooze state described by the
     // fixture: an alert previously in 'snoozed' state whose
     // snoozed_until lies in the past. The fixture's expected.alerts

@@ -34,7 +34,7 @@ beforeEach(function (): void {
     $this->conn = $db->connection();
 
     $this->user = User::query()->create([
-        'email' => 'card-backpop@diederik.test',
+        'username' => 'card-backpop',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

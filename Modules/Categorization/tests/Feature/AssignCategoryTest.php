@@ -17,7 +17,7 @@ use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'wessel@example.com',
+        'username' => 'wessel',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -143,7 +143,7 @@ it("refuses to update another user's transaction and does not fire the event", f
     Event::fake([TransactionCategorized::class]);
 
     $other = User::create([
-        'email' => 'other@example.com',
+        'username' => 'other',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

@@ -22,18 +22,18 @@ uses(RefreshDatabase::class);
  * guard).
  */
 
-function fcrtUser(string $email): User
+function fcrtUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
 }
 
 beforeEach(function (): void {
-    $this->user = fcrtUser('failed-chain@diederik.test');
-    $this->otherUser = fcrtUser('failed-chain-other@diederik.test');
+    $this->user = fcrtUser('failed-chain');
+    $this->otherUser = fcrtUser('failed-chain-other');
 
     $run = ImportRun::query()->create([
         'user_id' => $this->user->id,

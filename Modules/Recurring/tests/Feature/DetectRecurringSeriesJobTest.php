@@ -29,10 +29,10 @@ use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
  * here.
  */
 
-function drsjUser(string $email): User
+function drsjUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -150,7 +150,7 @@ beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
-    $this->user = drsjUser('detect-recurring@diederik.test');
+    $this->user = drsjUser('detect-recurring');
     $this->account = drsjAccount($this->user, 'drsj-asn');
     $this->run = drsjImportRun($this->user, str_repeat('e', 64));
 });

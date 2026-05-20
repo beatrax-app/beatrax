@@ -23,10 +23,10 @@ uses(RefreshDatabase::class);
  * Does NOT mutate recurring_series.state.
  */
 
-function ddacUser(string $email): User
+function ddacUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -132,7 +132,7 @@ function ddacAlert(User $user, string $state = 'open'): DriftAlert
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-20 09:00:00');
-    $this->user = ddacUser('ddac@diederik.test');
+    $this->user = ddacUser('ddac');
 });
 
 afterEach(function (): void {
@@ -211,7 +211,7 @@ it('is idempotent when already dismissed (no second transitions row, no event)',
 });
 
 it('throws NotFoundHttpException for a cross-user alert id', function (): void {
-    $intruder = ddacUser('ddac-intruder@diederik.test');
+    $intruder = ddacUser('ddac-intruder');
     $alert = ddacAlert($this->user, 'open');
 
     /** @var DismissDriftAlertAsCancelled $action */

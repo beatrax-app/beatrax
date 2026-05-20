@@ -33,7 +33,7 @@ beforeEach(function (): void {
     $this->stage = $stage;
 
     $this->primaryUser = User::query()->create([
-        'email' => 'classify-primary@diederik.test',
+        'username' => 'classify-primary',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
@@ -253,7 +253,7 @@ it('preserves an already-classified refund on a paypal-csv row', function (): vo
 
 it('does not flip across users — counterparty matches a different user\'s account', function (): void {
     $otherUser = User::query()->create([
-        'email' => 'classify-other@diederik.test',
+        'username' => 'classify-other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

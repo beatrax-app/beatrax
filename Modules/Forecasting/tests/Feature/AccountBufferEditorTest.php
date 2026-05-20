@@ -27,10 +27,10 @@ uses(RefreshDatabase::class);
  *   - Successful save dispatches three ProjectForecastJobs (one per horizon).
  */
 
-function abeUser(string $email): User
+function abeUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -54,7 +54,7 @@ function abeAccount(User $user, ?int $bufferMinor = null): Account
 }
 
 beforeEach(function (): void {
-    $this->user = abeUser('abe@diederik.test');
+    $this->user = abeUser('abe');
 });
 
 it('pre-populates the input from the account current buffer', function (): void {
@@ -129,7 +129,7 @@ it('clears the buffer when Clear is clicked', function (): void {
 });
 
 it('rejects cross-user buffer save via SetAccountForecastBuffer Public Action (404)', function (): void {
-    $other = abeUser('abe-other@diederik.test');
+    $other = abeUser('abe-other');
     $otherAccount = abeAccount($other, 50000);
 
     /** @var SetAccountForecastBuffer $action */

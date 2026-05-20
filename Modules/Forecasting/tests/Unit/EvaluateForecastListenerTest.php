@@ -36,10 +36,10 @@ uses(RefreshDatabase::class);
  * end-to-end isolation contract.
  */
 
-function elUser(string $email = 'el-user@diederik.test'): User
+function elUser(string $username = 'el-user'): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

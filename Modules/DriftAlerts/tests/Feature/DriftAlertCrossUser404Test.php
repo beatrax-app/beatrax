@@ -24,10 +24,10 @@ uses(RefreshDatabase::class);
  * Mirrors the analog `CrossUserRecurringSeriesIsolationTest` shape.
  */
 
-function xduUser(string $email): User
+function xduUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -133,8 +133,8 @@ function xduAlert(User $user, string $state = 'open'): DriftAlert
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-20 09:00:00');
-    $this->userA = xduUser('xdu-a@diederik.test');
-    $this->userB = xduUser('xdu-b@diederik.test');
+    $this->userA = xduUser('xdu-a');
+    $this->userB = xduUser('xdu-b');
     $this->alertA = xduAlert($this->userA, 'open');
 });
 

@@ -21,10 +21,10 @@ uses(RefreshDatabase::class);
  * cadence-flipped cross-reference hint, and the auth gate.
  */
 
-function dpUser(string $email): User
+function dpUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -138,7 +138,7 @@ function dpAlert(
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-20 09:00:00');
-    $this->user = dpUser('dp@diederik.test');
+    $this->user = dpUser('dp');
 });
 
 afterEach(function (): void {

@@ -16,10 +16,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * starting state is a silent no-op (matches the chains-side analog).
  */
 
-function urrUser(string $email): User
+function urrUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -43,7 +43,7 @@ function urrSeries(User $user, string $cluster): RecurringSeries
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = urrUser('urr@diederik.test');
+    $this->user = urrUser('urr');
     /** @var RejectRecurringSeries $reject */
     $reject = $this->app->make(RejectRecurringSeries::class);
     $this->reject = $reject;
@@ -96,7 +96,7 @@ it('is a silent no-op when the series is not currently rejected', function (): v
 });
 
 it('throws NotFoundHttpException for a cross-user series id', function (): void {
-    $intruder = urrUser('urr-intruder@diederik.test');
+    $intruder = urrUser('urr-intruder');
     $series = urrSeries($this->user, 'urr::xuser');
     ($this->reject)($series->id, $this->user);
 

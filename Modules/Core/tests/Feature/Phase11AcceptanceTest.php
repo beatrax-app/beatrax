@@ -77,7 +77,7 @@ beforeEach(function (): void {
     $this->app->instance('core.backups_directory', $this->backupsDir);
 
     $this->user = User::query()->create([
-        'email' => 'p11-acceptance@diederik.test',
+        'username' => 'p11-acceptance',
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

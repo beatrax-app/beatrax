@@ -17,10 +17,10 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
  * id-window.
  */
 
-function rsqcUser(string $email): User
+function rsqcUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -52,7 +52,7 @@ beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
-    $this->user = rsqcUser('rsqc@diederik.test');
+    $this->user = rsqcUser('rsqc');
 });
 
 afterEach(function (): void {

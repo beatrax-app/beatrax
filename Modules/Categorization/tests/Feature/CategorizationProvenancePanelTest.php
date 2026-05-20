@@ -14,7 +14,7 @@ use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'prov@example.com',
+        'username' => 'prov',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -222,7 +222,7 @@ it('removeRule catches NotFoundHttpException when the panel carries a foreign-us
     // user-scoped lookup rejects it with NotFoundHttpException. The
     // component must catch it; the foreign row MUST remain untouched.
     $other = User::create([
-        'email' => 'prov-tamper@example.com',
+        'username' => 'prov-tamper',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);

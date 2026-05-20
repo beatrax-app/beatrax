@@ -22,10 +22,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * candidates or open candidate count.
  */
 
-function cucUser(string $email): User
+function cucUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -123,8 +123,8 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
 
-    $this->userA = cucUser('cuc-user-a@diederik.test');
-    $this->userB = cucUser('cuc-user-b@diederik.test');
+    $this->userA = cucUser('cuc-user-a');
+    $this->userB = cucUser('cuc-user-b');
 
     $aPaypal = cucAccount($this->userA, 'cuc-a-pp', 'paypal', 'PAYPAL');
     $aAsn = cucAccount($this->userA, 'cuc-a-asn', 'asn', 'NL57ASNB0000000001');
@@ -235,8 +235,8 @@ it('substring-attack guard — user_id="1" vs user_id="11" in chain_links lookup
     // and 11 directly. Instead we exercise the predicate by force:
     // create a 3rd user whose db id starts with the same digit as one
     // of our existing users; assert they see only their own candidates.
-    $tinyId = cucUser('cuc-tiny@diederik.test');
-    $bigId = cucUser('cuc-big@diederik.test');
+    $tinyId = cucUser('cuc-tiny');
+    $bigId = cucUser('cuc-big');
 
     $bigPp = cucAccount($bigId, 'big-pp', 'paypal', 'BIG-PP');
     $bigAsn = cucAccount($bigId, 'big-asn', 'asn', 'NL11BIG00000');

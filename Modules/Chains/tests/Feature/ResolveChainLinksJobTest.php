@@ -38,7 +38,7 @@ use Modules\Ledger\Models\Transaction;
 function seedJobUserAndFixtures(int $userIndex = 1): array
 {
     $user = User::query()->create([
-        'email' => "job-user-{$userIndex}@diederik.test",
+        'username' => "job-user-{$userIndex}",
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

@@ -9,7 +9,7 @@ use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 use Modules\Core\Public\Services\CurrentUserService;
 
 it('returns the authenticated user via the configured guard', function (): void {
-    $user = new User(['email' => 'x@x', 'period_start_day' => 7]);
+    $user = new User(['username' => 'x', 'period_start_day' => 7]);
     $user->id = 42;
     $user->exists = true;
 
@@ -42,7 +42,7 @@ it('throws NotAuthenticatedException when the guard has no user', function (): v
 });
 
 it('defaults period_start_day to 1 when the user has not set one', function (): void {
-    $user = new User(['email' => 'x@x']);
+    $user = new User(['username' => 'x']);
     $user->id = 1;
     $user->exists = true;
 

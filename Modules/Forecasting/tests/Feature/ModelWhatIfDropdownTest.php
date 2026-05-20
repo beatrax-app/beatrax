@@ -26,10 +26,10 @@ uses(RefreshDatabase::class);
  *     launchpad.
  */
 
-function mwidUser(string $email = 'mwid@diederik.test'): User
+function mwidUser(string $username = 'mwid'): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -121,7 +121,7 @@ it('Model amount change saves + invokes CreateAmountChangeScenarioForSeries + re
 });
 
 it('cross-user mount via RecurringSeriesQuery::forSeries returns null', function (): void {
-    $other = mwidUser('other@diederik.test');
+    $other = mwidUser('other');
     $seriesId = mwidSeries($this->db, $other->id);
     /** @var RecurringSeriesQuery $sq */
     $sq = $this->app->make(RecurringSeriesQuery::class);
@@ -148,7 +148,7 @@ it('invalid amount input surfaces the inline error and does NOT invoke the launc
 });
 
 it('CreateCancellationScenarioForSeries returns 404 for another user\'s series', function (): void {
-    $other = mwidUser('other2@diederik.test');
+    $other = mwidUser('other2');
     $seriesId = mwidSeries($this->db, $other->id);
     /** @var CreateCancellationScenarioForSeries $action */
     $action = $this->app->make(CreateCancellationScenarioForSeries::class);
@@ -157,7 +157,7 @@ it('CreateCancellationScenarioForSeries returns 404 for another user\'s series',
 });
 
 it('CreateAmountChangeScenarioForSeries returns 404 for another user\'s series', function (): void {
-    $other = mwidUser('other3@diederik.test');
+    $other = mwidUser('other3');
     $seriesId = mwidSeries($this->db, $other->id);
     /** @var CreateAmountChangeScenarioForSeries $action */
     $action = $this->app->make(CreateAmountChangeScenarioForSeries::class);

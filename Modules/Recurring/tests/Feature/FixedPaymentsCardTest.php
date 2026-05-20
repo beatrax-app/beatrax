@@ -15,10 +15,10 @@ use Modules\Recurring\Models\RecurringSeries;
  * always renders a "View all →" anchor to the /recurring index.
  */
 
-function fpcUser(string $email): User
+function fpcUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -48,7 +48,7 @@ function fpcSeries(User $user, string $detectedName, int $monthlyEur, array $ove
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
-    $this->user = fpcUser('fpc@diederik.test');
+    $this->user = fpcUser('fpc');
 });
 
 afterEach(function (): void {
@@ -74,7 +74,7 @@ it('renders the top six approved series sorted DESC by absolute monthly equivale
 })->group('renders-top-six');
 
 it('hides series from other users (cross-user-empty)', function (): void {
-    $other = fpcUser('fpc-other@diederik.test');
+    $other = fpcUser('fpc-other');
     fpcSeries($other, 'other-thing', -50000);
 
     $component = Livewire::actingAs($this->user)->test(FixedPaymentsCard::class);

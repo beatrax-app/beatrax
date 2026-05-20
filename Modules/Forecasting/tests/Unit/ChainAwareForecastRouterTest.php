@@ -38,10 +38,10 @@ uses(RefreshDatabase::class);
  *     contribution list unchanged.
  */
 
-function carfUser(string $email): User
+function carfUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -123,7 +123,7 @@ function carfRouter(?Clock $clock = null): ChainAwareForecastRouter
 }
 
 beforeEach(function (): void {
-    $this->user = carfUser('router@diederik.test');
+    $this->user = carfUser('router');
 });
 
 it('passes contributions through unchanged when no chain links + no next settlement exist', function (): void {

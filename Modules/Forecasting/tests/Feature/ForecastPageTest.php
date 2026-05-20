@@ -18,10 +18,10 @@ uses(RefreshDatabase::class);
  * user has no accounts.
  */
 
-function fpgUser(string $email = 'fpg@diederik.test'): User
+function fpgUser(string $username = 'fpg'): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',

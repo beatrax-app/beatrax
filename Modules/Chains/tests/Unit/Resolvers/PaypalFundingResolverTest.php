@@ -178,7 +178,7 @@ beforeEach(function (): void {
     $this->db = $db;
 
     $this->user = User::query()->create([
-        'email' => 'paypal-resolver@diederik.test',
+        'username' => 'paypal-resolver',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
@@ -353,7 +353,7 @@ it('does NOT mutate transactions rows (D-84 invariant)', function (): void {
 
 it('isolates resolver by user — other users untouched', function (): void {
     $other = User::query()->create([
-        'email' => 'paypal-resolver-other@diederik.test',
+        'username' => 'paypal-resolver-other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

@@ -40,10 +40,10 @@ use Modules\Ledger\Models\Transaction;
  *    declaration trips the test immediately).
  */
 
-function cdrUser(string $email): User
+function cdrUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -141,7 +141,7 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
 
-    $this->user = cdrUser('chain-drawer@diederik.test');
+    $this->user = cdrUser('chain-drawer');
     $this->paypal = cdrAccount($this->user, 'cdr-paypal', 'paypal', 'PAYPAL');
     $this->asn = cdrAccount($this->user, 'cdr-asn', 'asn', 'NL57ASNB0123456789');
     $this->ics = cdrAccount($this->user, 'cdr-ics', 'ics_card', 'ICS-CARD');

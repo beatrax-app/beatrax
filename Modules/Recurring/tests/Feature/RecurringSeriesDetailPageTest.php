@@ -18,10 +18,10 @@ use Modules\Recurring\Models\RecurringSeriesOccurrence;
  * "view all points" toggle.
  */
 
-function rsdUser(string $email): User
+function rsdUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -149,7 +149,7 @@ beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
-    $this->user = rsdUser('rsd@diederik.test');
+    $this->user = rsdUser('rsd');
     $this->account = rsdAccount($this->user, 'rsd-acc');
     $this->run = rsdImportRun($this->user, str_repeat('a', 64));
 });
@@ -171,7 +171,7 @@ it('renders the drill-in page for an authenticated owner', function (): void {
 })->group('renders-for-owner');
 
 it('returns 404 when the series belongs to a different user (cross-user-404)', function (): void {
-    $other = rsdUser('rsd-other@diederik.test');
+    $other = rsdUser('rsd-other');
     $otherAccount = rsdAccount($other, 'rsd-other-acc');
     $otherRun = rsdImportRun($other, str_repeat('b', 64));
     $seeded = rsdSeedSeriesWithOccurrences($this->db, $other, $otherAccount, $otherRun, 3);

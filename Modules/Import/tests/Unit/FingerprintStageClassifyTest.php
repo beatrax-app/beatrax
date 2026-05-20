@@ -195,7 +195,7 @@ it('returns duplicate when incoming rank equals existing AND ref values differ',
 it('scopes the existing-row lookup by user_id', function (): void {
     /** @var User $otherUser */
     $otherUser = User::create([
-        'email' => 'other-fingerprint-test@diederik.test',
+        'username' => 'other-fingerprint-test',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

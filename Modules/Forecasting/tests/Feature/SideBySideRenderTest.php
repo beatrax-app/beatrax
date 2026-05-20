@@ -25,10 +25,10 @@ uses(RefreshDatabase::class);
  *   - Cross-user 404 on scenarioId belonging to another user.
  */
 
-function sbsUser(string $email = 'sbs-user@diederik.test'): User
+function sbsUser(string $username = 'sbs-user'): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -203,7 +203,7 @@ it('does NOT render the wire:poll.2s element when both runs are complete', funct
 });
 
 it('returns 404 when scenarioId belongs to another user', function (): void {
-    $other = sbsUser('other@diederik.test');
+    $other = sbsUser('other');
     /** @var ForecastScenario $scenario */
     $scenario = ForecastScenario::query()->create([
         'user_id' => $other->id,

@@ -17,10 +17,10 @@ uses(RefreshDatabase::class);
  * cross-user 404 contract.
  */
 
-function fc404User(string $email): User
+function fc404User(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -50,8 +50,8 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
 
-    $this->userA = fc404User('user-a@diederik.test');
-    $this->userB = fc404User('user-b@diederik.test');
+    $this->userA = fc404User('user-a');
+    $this->userB = fc404User('user-b');
 
     $this->accountA = fc404Account($this->db, $this->userA->id);
     $this->accountB = fc404Account($this->db, $this->userB->id);

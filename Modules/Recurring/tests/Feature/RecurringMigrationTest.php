@@ -31,7 +31,7 @@ beforeEach(function (): void {
     $this->db = $db;
 
     $this->user = User::query()->create([
-        'email' => 'rec-mig@diederik.test',
+        'username' => 'rec-mig',
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -53,7 +53,7 @@ it('adds recurring_detection_window_months and recurring_income_min_amount_minor
     expect($schema->hasColumn('users', 'recurring_income_min_amount_minor'))->toBeTrue();
 
     $created = User::query()->create([
-        'email' => 'rec-defaults@diederik.test',
+        'username' => 'rec-defaults',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

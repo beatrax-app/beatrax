@@ -110,7 +110,7 @@ beforeEach(function (): void {
     $this->conn = $db->connection();
 
     $this->user = User::query()->create([
-        'email' => 'ics-resolver@diederik.test',
+        'username' => 'ics-resolver',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
@@ -278,7 +278,7 @@ it('does NOT mutate transactions rows (D-84 invariant)', function (): void {
 
 it('isolates the resolver by user — other users are untouched', function (): void {
     $otherUser = User::query()->create([
-        'email' => 'ics-other@diederik.test',
+        'username' => 'ics-other',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

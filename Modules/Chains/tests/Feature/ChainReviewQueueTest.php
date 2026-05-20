@@ -23,10 +23,10 @@ use Modules\Ledger\Models\Transaction;
  * (D-87). Cross-user 404 verified at HTTP layer.
  */
 
-function crqUser(string $email): User
+function crqUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -124,7 +124,7 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
 
-    $this->user = crqUser('chain-review-queue@diederik.test');
+    $this->user = crqUser('chain-review-queue');
     $this->paypal = crqAccount($this->user, 'crq-paypal', 'paypal', 'PAYPAL');
     $this->asn = crqAccount($this->user, 'crq-asn', 'asn', 'NL57ASNB1111111111');
     $this->run = crqImportRun($this->user, str_repeat('a', 64));
@@ -237,7 +237,7 @@ it('sorts candidates by confidence DESC (highest confidence first)', function ()
 });
 
 it('isolates by user — userA cannot see userB candidates', function (): void {
-    $otherUser = crqUser('crq-other@diederik.test');
+    $otherUser = crqUser('crq-other');
     $otherPaypal = crqAccount($otherUser, 'crq-other-pp', 'paypal', 'PAYPAL-OTHER');
     $otherRun = crqImportRun($otherUser, str_repeat('b', 64));
 

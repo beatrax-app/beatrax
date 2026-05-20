@@ -12,7 +12,7 @@ use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
     $this->user = User::create([
-        'email' => 'wessel@example.com',
+        'username' => 'wessel',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
@@ -154,7 +154,7 @@ it('writes through AssignsCategory when the inline picker fires updatedCategoryI
 it("silently ignores a foreign user's category id when set on the inline picker", function (): void {
     /** @var User $foreignUser */
     $foreignUser = User::create([
-        'email' => 'foreign-picker@diederik.test',
+        'username' => 'foreign-picker',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);

@@ -28,10 +28,10 @@ uses(RefreshDatabase::class);
  *     prior CreateScenario insert.
  */
 
-function mclUser(string $email = 'mcl@diederik.test'): User
+function mclUser(string $username = 'mcl'): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture-password',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -166,7 +166,7 @@ it('CreateCancellationScenarioForAlert happy path: persists scenario + one cance
 });
 
 it('CreateCancellationScenarioForAlert returns 404 for another user\'s alert', function (): void {
-    $other = mclUser('other@diederik.test');
+    $other = mclUser('other');
     $seriesId = mclSeries($this->db, $other->id);
     $alertId = mclAlert($this->db, $other->id, $seriesId);
 

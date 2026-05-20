@@ -24,10 +24,10 @@ use Modules\Recurring\Models\RecurringSeriesOccurrence;
  * threshold (default 200000 minor units = €2000).
  */
 
-function idtUser(string $email): User
+function idtUser(string $username): User
 {
     return User::query()->create([
-        'email' => $email,
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
@@ -150,7 +150,7 @@ beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
-    $this->user = idtUser('income-detector@diederik.test');
+    $this->user = idtUser('income-detector');
     // Widen the detection window so the monthly-salary fixture's earliest
     // 2025-04-25 occurrence sits inside the look-back window relative to
     // the 2026-05-17 frozen clock.

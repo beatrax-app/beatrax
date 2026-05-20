@@ -17,7 +17,7 @@ use Modules\Ledger\Models\ImportRun;
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
-        'email' => 'card-statement-query@diederik.test',
+        'username' => 'card-statement-query',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
@@ -90,7 +90,7 @@ it('openForAccount returns the most recent open statement', function (): void {
 
 it('openForAccount isolates by user — other users do not leak through', function (): void {
     $other = User::query()->create([
-        'email' => 'csq-other@diederik.test',
+        'username' => 'csq-other',
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
