@@ -11,10 +11,17 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 
 /**
- * Single-user authentication entity.
+ * Authentication entity.
+ *
+ * The login identity is a `username`. `is_developer` marks a user as
+ * eligible for the in-app developer console; when
+ * `force_password_change_at_next_login` is set the user must replace
+ * their password before any other authenticated action proceeds.
  *
  * @property int $id
- * @property string $email
+ * @property string $username
+ * @property bool $is_developer
+ * @property bool $force_password_change_at_next_login
  * @property string $password
  * @property int $period_start_day
  * @property string $default_currency_view
@@ -36,7 +43,9 @@ final class User extends Authenticatable
 
     /** @var list<string> */
     protected $fillable = [
-        'email',
+        'username',
+        'is_developer',
+        'force_password_change_at_next_login',
         'password',
         'period_start_day',
         'default_currency_view',
@@ -69,6 +78,8 @@ final class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'is_developer' => 'boolean',
+            'force_password_change_at_next_login' => 'boolean',
             'period_start_day' => 'integer',
             'default_currency_view' => 'string',
             'auto_import_drop_folder' => 'boolean',
