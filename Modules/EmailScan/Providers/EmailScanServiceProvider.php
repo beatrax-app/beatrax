@@ -19,6 +19,7 @@ use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
+use Modules\EmailScan\Internal\Listeners\EmitOAuthReauthRequiredAlert;
 use Modules\EmailScan\Internal\LoopbackRedirectUri;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
@@ -103,6 +104,7 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(InboxScanStateMachine::class);
         $this->app->singleton(IncrementalScanJob::class);
         $this->app->singleton(DiscoveryScanJob::class);
+        $this->app->singleton(EmitOAuthReauthRequiredAlert::class);
     }
 
     public function boot(LivewireManager $livewire): void
@@ -143,6 +145,11 @@ final class EmailScanServiceProvider extends ServiceProvider
      * caches across requests) and runs a single InboxesBadgeCount query
      * (one COUNT on discovered_senders + one COUNT on inbox_scan_state,
      * both filtered by user_id).
+     *
+     * The same composer runs the EmitOAuthReauthRequiredAlert listener:
+     * it is the per-request hook closest to "the user is looking at the
+     * app", and the listener's own .bak-file pre-check plus de-dup guard
+     * keep it a no-op on every request after the first.
      */
     private function registerTopNavBadgeComposer(): void
     {
@@ -158,6 +165,8 @@ final class EmailScanServiceProvider extends ServiceProvider
             }
             $query = $app->make(InboxesBadgeCount::class);
             $compose->with('inboxesBadgeCount', $query->forCurrentUser($currentUser->user()));
+
+            $app->make(EmitOAuthReauthRequiredAlert::class)->handle();
         });
     }
 }
