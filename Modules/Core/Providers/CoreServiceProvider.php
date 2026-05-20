@@ -28,6 +28,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\CurrentUserService;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Services\SystemClock;
+use Modules\Core\Public\Services\UserDataPathService;
 
 /**
  * Wires the Core module: registers the SQLite pragma listener, binds the
@@ -50,6 +51,12 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->bind(CurrentUser::class, CurrentUserService::class);
         $this->app->singleton(SystemAlertQuery::class);
         $this->app->singleton(AcknowledgeSystemAlert::class);
+
+        // Single source of truth for every filesystem path the app reads or
+        // writes. Dependency-free and stateless, so a plain singleton (no
+        // closure, no contextual binding) is the correct shape; DI consumers
+        // resolve it through ordinary constructor injection.
+        $this->app->singleton(UserDataPathService::class);
 
         // Resolve the SQLite backups directory once and expose it under a
         // string-keyed binding so tests can swap in a sys_get_temp_dir()

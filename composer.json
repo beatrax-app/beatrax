@@ -75,7 +75,8 @@
         "test": "pest --parallel",
         "analyse": "phpstan analyse --memory-limit=1G",
         "format": "pint",
-        "format:check": "pint --test"
+        "format:check": "pint --test",
+        "check:paths": "bash bin/check-paths.sh"
     },
     "extra": {
         "laravel": {

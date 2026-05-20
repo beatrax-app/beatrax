@@ -1,0 +1,171 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Core\Public\Services;
+
+use InvalidArgumentException;
+
+/**
+ * Single source of truth for every filesystem path the app reads or writes.
+ *
+ * This class is the sole sanctioned caller of the `base_path()` helper in
+ * production code — every other filesystem path resolves through one of the
+ * accessors below, never through the raw `database_path()` / `storage_path()`
+ * / `base_path()` helpers, so a packaged build can retarget the storage root.
+ *
+ * When the `NATIVEPHP_STORAGE_PATH` environment variable is set it becomes
+ * the storage root (a packaged desktop build); when it is absent every
+ * accessor falls back to the project-rooted paths used in Herd development.
+ * The environment variable is read with `getenv()` — not Laravel's `env()`
+ * helper — because `getenv()` is unconditional at every boot stage, which is
+ * what makes the static accessors safe to call from `config/*.php` files
+ * that are evaluated before the container exists.
+ */
+final class UserDataPathService
+{
+    /**
+     * Project root used as the Herd-development fallback. `base_path()` is
+     * the one sanctioned raw helper call in the whole codebase — this class
+     * is the arch-test allow-list of size one.
+     */
+    private static function projectRoot(): string
+    {
+        return base_path();
+    }
+
+    /**
+     * Storage root. When `NATIVEPHP_STORAGE_PATH` is set it IS the root (a
+     * packaged build); absent → project-rooted `storage/` (Herd dev).
+     */
+    private static function storageRoot(): string
+    {
+        $native = getenv('NATIVEPHP_STORAGE_PATH');
+
+        return is_string($native) && $native !== ''
+            ? rtrim($native, '/\\')
+            : self::projectRoot().DIRECTORY_SEPARATOR.'storage';
+    }
+
+    public static function databaseFile(): string
+    {
+        $native = getenv('NATIVEPHP_STORAGE_PATH');
+        $databaseDir = is_string($native) && $native !== ''
+            ? rtrim($native, '/\\').DIRECTORY_SEPARATOR.'database'
+            : self::projectRoot().DIRECTORY_SEPARATOR.'database';
+
+        return $databaseDir.DIRECTORY_SEPARATOR.'database.sqlite';
+    }
+
+    public static function storageBase(): string
+    {
+        return self::storageRoot();
+    }
+
+    /**
+     * Join a trusted relative sub-path onto the storage `app/` directory.
+     *
+     * @throws InvalidArgumentException when `$relative` contains a `..`
+     *                                  path-traversal segment
+     */
+    public static function appPath(string $relative = ''): string
+    {
+        $base = self::storageRoot().DIRECTORY_SEPARATOR.'app';
+
+        if ($relative === '') {
+            return $base;
+        }
+
+        $normalised = ltrim($relative, '/\\');
+        $segments = preg_split('#[/\\\\]#', $normalised);
+        if ($segments !== false && in_array('..', $segments, true)) {
+            throw new InvalidArgumentException(
+                "Path-traversal segment '..' is not allowed in an appPath() argument: {$relative}",
+            );
+        }
+
+        return $base.DIRECTORY_SEPARATOR.$normalised;
+    }
+
+    public static function backupsPath(): string
+    {
+        return self::appPath('backups');
+    }
+
+    public static function secretsPath(): string
+    {
+        return self::appPath('secrets');
+    }
+
+    public static function frameworkPath(string $sub = ''): string
+    {
+        $base = self::storageRoot().DIRECTORY_SEPARATOR.'framework';
+
+        return $sub === ''
+            ? $base
+            : $base.DIRECTORY_SEPARATOR.ltrim($sub, '/\\');
+    }
+
+    /**
+     * Module code root. Always project-rooted — module code ships inside the
+     * application bundle, never under the user-data storage root.
+     */
+    public static function modulesPath(): string
+    {
+        return self::projectRoot().DIRECTORY_SEPARATOR.'Modules';
+    }
+
+    /**
+     * Framework migration directory. Always project-rooted — migrations are
+     * code, not user data.
+     */
+    public static function migrationsPath(): string
+    {
+        return self::projectRoot().DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'migrations';
+    }
+
+    /**
+     * Public asset directory. Always project-rooted — `public/` serves
+     * assets shipped with the bundle, not user data.
+     */
+    public static function publicPath(string $relative = ''): string
+    {
+        $base = self::projectRoot().DIRECTORY_SEPARATOR.'public';
+
+        return $relative === ''
+            ? $base
+            : $base.DIRECTORY_SEPARATOR.ltrim($relative, '/\\');
+    }
+
+    // --- Instance surface for DI consumers ---------------------------------
+
+    public function databasePath(): string
+    {
+        return self::databaseFile();
+    }
+
+    public function storagePath(): string
+    {
+        return self::storageBase();
+    }
+
+    public function backups(): string
+    {
+        return self::backupsPath();
+    }
+
+    public function secrets(): string
+    {
+        return self::secretsPath();
+    }
+
+    public function framework(string $sub = ''): string
+    {
+        return self::frameworkPath($sub);
+    }
+
+    public function appRelative(string $relative): string
+    {
+        return self::appPath($relative);
+    }
+}
