@@ -11,6 +11,7 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\Support\BackupRetentionPolicy;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\UserDataPathService;
 use PDO;
 use PDOException;
 use RuntimeException;
@@ -26,10 +27,8 @@ use Throwable;
  * last backup.
  *
  * The command is constructor-DI'd with `DatabaseManager`, `Filesystem`,
- * `Clock`, `Repository`, the retention policy, and the backups
- * directory path (resolved through the `core.backups_directory`
- * container binding so tests can override it without touching the
- * real `storage/app/backups/` path). No Laravel facade is imported or
+ * `Clock`, `Repository`, the retention policy, and `UserDataPathService`,
+ * which resolves the backups directory. No Laravel facade is imported or
  * called.
  *
  * Critical mechanics worth calling out:
@@ -65,7 +64,7 @@ final class BackupDatabaseCommand extends Command
         private readonly Filesystem $files,
         private readonly Clock $clock,
         private readonly BackupRetentionPolicy $retention,
-        private readonly string $backupsPath,
+        private readonly UserDataPathService $paths,
     ) {
         parent::__construct();
     }
@@ -238,11 +237,13 @@ final class BackupDatabaseCommand extends Command
      */
     private function backupsDir(): string
     {
-        if (! $this->files->isDirectory($this->backupsPath)) {
-            $this->files->makeDirectory($this->backupsPath, 0o755, recursive: true, force: true);
+        $backupsPath = $this->paths->backups();
+
+        if (! $this->files->isDirectory($backupsPath)) {
+            $this->files->makeDirectory($backupsPath, 0o755, recursive: true, force: true);
         }
 
-        return $this->backupsPath;
+        return $backupsPath;
     }
 
     /**

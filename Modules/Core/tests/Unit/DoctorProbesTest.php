@@ -17,6 +17,7 @@ use Modules\Core\Internal\Console\Probes\WalModeProbe;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SystemClock;
+use Modules\Core\Public\Services\UserDataPathService;
 use Tests\Helpers\RealSqliteFixture;
 
 /*
@@ -79,10 +80,12 @@ beforeEach(function (): void {
     $config->set('database.default', 'sqlite');
 
     $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-probe-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
-    $this->app->instance('core.backups_directory', $this->backupsDir);
+    putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
 });
 
 afterEach(function (): void {
+    putenv('NATIVEPHP_STORAGE_PATH');
+
     /** @var string $sourcePath */
     $sourcePath = $this->sourcePath;
     RealSqliteFixture::cleanup($sourcePath);
@@ -192,7 +195,7 @@ it('BackupFreshnessProbe returns warning AND writes a system_alerts row when no 
     $backupsDir = $this->backupsDir;
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
-    $probe = new BackupFreshnessProbe($files, $clock, $db, $backupsDir);
+    $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService);
     expect($probe->label())->toBe('Backup freshness');
 
     $result = $probe->run();
@@ -234,7 +237,7 @@ it('BackupFreshnessProbe returns ok and does NOT write an alert when a fresh sid
         'integrity' => 'ok',
     ]));
 
-    $probe = new BackupFreshnessProbe($files, $clock, $db, $backupsDir);
+    $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService);
     $result = $probe->run();
 
     expect($result->severity)->toBe('ok');
@@ -264,7 +267,7 @@ it('BackupFreshnessProbe returns warning AND writes an alert when newest sidecar
         'integrity' => 'ok',
     ]));
 
-    $probe = new BackupFreshnessProbe($files, $clock, $db, $backupsDir);
+    $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService);
     $result = $probe->run();
 
     expect($result->severity)->toBe('warning');
@@ -285,7 +288,7 @@ it('BackupFreshnessProbe suppresses a second alert row within the 1-hour recency
     $backupsDir = $this->backupsDir;
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
-    $probe = new BackupFreshnessProbe($files, $clock, $db, $backupsDir);
+    $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService);
 
     // First run writes the row.
     $probe->run();
@@ -319,7 +322,7 @@ it('WalModeProbe never throws — IO failure is captured as a critical ProbeResu
     expect($result->message)->not->toBe('');
 });
 
-it('binds WalModeProbe, SynchronousModeProbe, and BackupFreshnessProbe through the container with the contextual backupsPath wiring', function (): void {
+it('binds WalModeProbe, SynchronousModeProbe, and BackupFreshnessProbe through the container with plain constructor injection', function (): void {
     $wal = $this->app->make(WalModeProbe::class);
     expect($wal)->toBeInstanceOf(WalModeProbe::class);
 

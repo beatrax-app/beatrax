@@ -21,9 +21,9 @@ use Tests\Helpers\RealSqliteFixture;
  *  2. Rebind the sqlite connection at the source so the command's
  *     VACUUM INTO targets the fixture rather than the test
  *     :memory: database.
- *  3. Override 'core.backups_directory' to a fresh sys_get_temp_dir()
+ *  3. Point NATIVEPHP_STORAGE_PATH at a fresh sys_get_temp_dir()
  *     subtree so the test does not touch the developer's real
- *     storage/app/backups path.
+ *     backups path.
  *  4. Run `db:backup --force` — assert the .sqlite + .meta.json pair
  *     are produced.
  *  5. Render the SystemAlertsBanner as an authenticated user and
@@ -74,7 +74,7 @@ beforeEach(function (): void {
     $db->purge('sqlite');
 
     $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-phase11-acceptance-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
-    $this->app->instance('core.backups_directory', $this->backupsDir);
+    putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
 
     $this->user = User::query()->create([
         'username' => 'p11-acceptance',
@@ -85,6 +85,8 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    putenv('NATIVEPHP_STORAGE_PATH');
+
     /** @var string $sourcePath */
     $sourcePath = $this->sourcePath;
     RealSqliteFixture::cleanup($sourcePath);
