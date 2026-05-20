@@ -87,8 +87,16 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 13-01-PLAN.md — UserDataPathService (static-core + instance-delegate) + singleton binding + Wave-0 test scaffolding (arch invariant stub, simulated-env feature-test stub, `composer check:paths` gate)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 13-02-PLAN.md — migrate every production call site: 3 config files, Core backup/restore D-04 binding cleanup, EmailScan + Auth migration, OAuthClientWizardModal error-string de-hardcode
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 13-03-PLAN.md — fill the simulated-NativePHP-env feature test (migrate:fresh / db:backup / OAuth secrets) + verify arch invariant + CI grep gate green
 
 ### Phase 14: Queue Rewire + Horizon Carve-out
