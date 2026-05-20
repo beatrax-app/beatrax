@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Providers;
 
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
@@ -86,9 +87,14 @@ final class AuthServiceProvider extends ServiceProvider
         $router->pushMiddlewareToGroup('auth', ForcePasswordChangeMiddleware::class);
 
         // Paint the profile-switch banner on every authenticated route
-        // while a switch is active. Runs after the `auth` middleware so
-        // the active guard is resolved before the banner reads it.
+        // while a switch is active.
         $router->pushMiddlewareToGroup('auth', ImpersonationBannerMiddleware::class);
+
+        // Defining an `auth` middleware group above shadows the framework's
+        // `auth` middleware alias on every `->middleware('auth')` route.
+        // Prepend the framework authentication middleware so the group still
+        // rejects guests before the two module middleware run.
+        $router->prependMiddlewareToGroup('auth', Authenticate::class);
 
         $livewire->component('auth.login-page', LoginPage::class);
         $livewire->component('auth.signup-page', SignupPage::class);
