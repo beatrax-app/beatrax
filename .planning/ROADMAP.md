@@ -58,7 +58,7 @@ v2.0 takes the validated v1.0 core value to a non-technical partner via a code-s
   4. `BoundaryArchTest::noAuthFacadeOrHelper` extends the DI-only rule — forbids `Auth::user()` / `auth()` / `request()->user()` / `request()->session()` across every module except `Modules\Core\Public\Services\CurrentUserService`
   5. The owner can switch profile to act as the partner (during debugging) via the app menu without a full logout/login dance — session lifecycle handled by Laravel session driver compatible with the upcoming NativePHP bundle
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans complete
 
 Plans:
 
@@ -69,7 +69,7 @@ Plans:
 - [x] 12-05-PLAN.md — signup race fix (CR-01) + force-password-change enforcement (CR-02) + owner-adds-partner
 - [x] 12-06-PLAN.md — recovery-code redemption: /reset-password + CLI fallback + owner-resets-partner (CR-03)
 - [x] 12-07-PLAN.md — OAuth secrets repository swap to per-user SQLite (MULTI-05)
-- [ ] 12-08-PLAN.md — profile switching/impersonation (MULTI-06) + cross-user 404-not-403 test set (MULTI-03)
+- [x] 12-08-PLAN.md — profile switching/impersonation (MULTI-06) + cross-user 404-not-403 test set (MULTI-03)
 
 ### Phase 13: AppPaths + First-Run Migration Wizard
 
@@ -228,7 +228,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | v1.0 MVP — Phases 1–11 | 66/66 | Complete | 2026-05-19 |
-| 12. Multi-User Activation | 7/8 | In Progress|  |
+| 12. Multi-User Activation | 8/8 | Complete   | 2026-05-20 |
 | 13. AppPaths + First-Run Migration Wizard | 0/0 | Not started | - |
 | 14. Queue Rewire + Horizon Carve-out | 0/0 | Not started | - |
 | 15. Desktop Shell (NativePHP Integration) | 0/0 | Not started | - |
