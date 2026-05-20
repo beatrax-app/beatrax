@@ -187,7 +187,7 @@ v2.0 takes the validated v1.0 core value to a non-technical partner via a code-s
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | v1.0 MVP — Phases 1–11 | 66/66 | Complete | 2026-05-19 |
-| 12. Multi-User Activation | 0/0 | Not started | - |
+| 12. Multi-User Activation | 2/4 | In Progress|  |
 | 13. AppPaths + First-Run Migration Wizard | 0/0 | Not started | - |
 | 14. Queue Rewire + Horizon Carve-out | 0/0 | Not started | - |
 | 15. Desktop Shell (NativePHP Integration) | 0/0 | Not started | - |
