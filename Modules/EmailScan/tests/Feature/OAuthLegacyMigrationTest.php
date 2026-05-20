@@ -10,9 +10,10 @@ use Modules\EmailScan\Models\OAuthSecret;
 
 /*
  * Covers the legacy-JSON rename migration and the first-boot
- * re-authorize alert. The migration resolves paths via storage_path();
- * each test points the storage path at a throwaway temp directory so
- * the developer's real storage/app/secrets/ is never touched.
+ * re-authorize alert. The migration and listener resolve paths via
+ * UserDataPathService; each test points NATIVEPHP_STORAGE_PATH at a
+ * throwaway temp directory so the developer's real secrets directory
+ * is never touched.
  */
 
 function oauthLegacyMigration(): object
@@ -26,7 +27,7 @@ beforeEach(function (): void {
     $this->tmpStorage = sys_get_temp_dir().'/oauth-legacy-'.bin2hex(random_bytes(6));
     $this->files = new Filesystem;
     $this->files->makeDirectory($this->tmpStorage.'/app/secrets', 0700, recursive: true);
-    $this->app->useStoragePath($this->tmpStorage);
+    putenv('NATIVEPHP_STORAGE_PATH='.$this->tmpStorage);
 
     $this->legacy = $this->tmpStorage.'/app/secrets/email-oauth.json';
     $this->backup = $this->tmpStorage.'/app/secrets/email-oauth.json.pre-phase-12.bak';
@@ -34,6 +35,8 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    putenv('NATIVEPHP_STORAGE_PATH');
+
     if ($this->files->isDirectory($this->tmpStorage)) {
         $this->files->deleteDirectory($this->tmpStorage);
     }

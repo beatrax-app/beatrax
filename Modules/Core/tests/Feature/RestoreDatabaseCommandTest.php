@@ -3,8 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Config\Repository;
-use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Public\Services\UserDataPathService;
 use Tests\Helpers\RealSqliteFixture;
 
 /*
@@ -35,13 +36,33 @@ beforeEach(function (): void {
     $db->purge('sqlite');
 
     $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-restore-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
-    $this->app->instance('core.backups_directory', $this->backupsDir);
+    putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
 
-    // Ensure the app is up before each test so we can deterministically
+    // The command resolves the maintenance-mode down marker through
+    // UserDataPathService::framework('down'), so the test drives
+    // maintenance state by writing/removing that exact file rather
+    // than `php artisan down`, which targets the framework's own
+    // (un-redirected) storage path.
+    $this->downMarker = (new UserDataPathService)->framework('down');
+
+    /** @var Filesystem $files */
+    $files = $this->app->make(Filesystem::class);
+    $files->ensureDirectoryExists(dirname($this->downMarker));
+
+    // markDown / markUp give each test deterministic control over the
+    // maintenance marker the command inspects.
+    $this->markDown = function () use ($files): void {
+        $files->put($this->downMarker, '');
+    };
+    $this->markUp = function () use ($files): void {
+        if ($files->exists($this->downMarker)) {
+            $files->delete($this->downMarker);
+        }
+    };
+
+    // Ensure the app is "up" before each test so we can deterministically
     // assert refusal in (c).
-    /** @var Kernel $artisan */
-    $artisan = $this->app->make(Kernel::class);
-    $artisan->call('up');
+    ($this->markUp)();
 });
 
 afterEach(function (): void {
@@ -62,18 +83,11 @@ afterEach(function (): void {
         @rmdir(dirname($backupsDir, 2));
     }
 
-    // Always bring the app back up after a test that may have brought
-    // it down — so the next test does not inherit a stuck maintenance
-    // mode.
-    /** @var Kernel $artisan */
-    $artisan = $this->app->make(Kernel::class);
-    $artisan->call('up');
+    putenv('NATIVEPHP_STORAGE_PATH');
 });
 
 it('refuses with exit 1 when the source file does not exist', function (): void {
-    /** @var Kernel $artisan */
-    $artisan = $this->app->make(Kernel::class);
-    $artisan->call('down');
+    ($this->markDown)();
 
     $this->artisan('db:restore', [
         'path' => '/nonexistent/path/to/missing.sqlite',
@@ -84,9 +98,7 @@ it('refuses with exit 1 when the source file does not exist', function (): void 
 });
 
 it('refuses with exit 1 when the source file fails PRAGMA integrity_check', function (): void {
-    /** @var Kernel $artisan */
-    $artisan = $this->app->make(Kernel::class);
-    $artisan->call('down');
+    ($this->markDown)();
 
     // Build a source fixture, then truncate it to 100 bytes so the
     // SQLite header is incomplete and PRAGMA integrity_check refuses.
@@ -135,9 +147,7 @@ it('refuses with exit 1 when the app is NOT in maintenance mode and --force-main
 });
 
 it('refuses with exit 1 in a non-TTY context when --confirm is absent', function (): void {
-    /** @var Kernel $artisan */
-    $artisan = $this->app->make(Kernel::class);
-    $artisan->call('down');
+    ($this->markDown)();
 
     $sourcePath = RealSqliteFixture::create('restore-noconfirm-source');
 

@@ -11,7 +11,7 @@ it('reports installed versions and probe rows on a healthy environment', functio
     // connection per the SqliteOptimizationsProvider. With all three
     // probes ok the existing inline tool checks decide the exit code.
     $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
-    $this->app->instance('core.backups_directory', $backupsDir);
+    putenv('NATIVEPHP_STORAGE_PATH='.dirname($backupsDir, 2));
 
     /** @var Filesystem $files */
     $files = $this->app->make(Filesystem::class);
@@ -43,6 +43,7 @@ it('reports installed versions and probe rows on a healthy environment', functio
         @rmdir($backupsDir);
         @rmdir(dirname($backupsDir));
         @rmdir(dirname($backupsDir, 2));
+        putenv('NATIVEPHP_STORAGE_PATH');
     }
 });
 
@@ -53,7 +54,7 @@ it('prints lines for each Phase 11 probe (WAL / synchronous / backup freshness)'
     // but still useful for proving the labels are printed. The freshness
     // probe is the one we drive with a real sidecar so the row reads ok.
     $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
-    $this->app->instance('core.backups_directory', $backupsDir);
+    putenv('NATIVEPHP_STORAGE_PATH='.dirname($backupsDir, 2));
 
     /** @var Filesystem $files */
     $files = $this->app->make(Filesystem::class);
@@ -85,6 +86,7 @@ it('prints lines for each Phase 11 probe (WAL / synchronous / backup freshness)'
         @rmdir($backupsDir);
         @rmdir(dirname($backupsDir));
         @rmdir(dirname($backupsDir, 2));
+        putenv('NATIVEPHP_STORAGE_PATH');
     }
 });
 
@@ -99,7 +101,7 @@ it('exits non-zero when the BackupFreshnessProbe warns (DoctorCommand probe aggr
     // is covered exhaustively by DoctorProbesTest in isolation; this
     // feature test only verifies the command-level aggregation logic.
     $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
-    $this->app->instance('core.backups_directory', $backupsDir);
+    putenv('NATIVEPHP_STORAGE_PATH='.dirname($backupsDir, 2));
 
     /** @var Filesystem $files */
     $files = $this->app->make(Filesystem::class);
@@ -117,5 +119,6 @@ it('exits non-zero when the BackupFreshnessProbe warns (DoctorCommand probe aggr
         @rmdir($backupsDir);
         @rmdir(dirname($backupsDir));
         @rmdir(dirname($backupsDir, 2));
+        putenv('NATIVEPHP_STORAGE_PATH');
     }
 });
