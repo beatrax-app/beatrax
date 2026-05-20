@@ -146,7 +146,10 @@ it('regenerates the partner codes from the manage page and displays them inline'
     $codes = $component->get('regeneratedCodes');
     expect($codes)->toHaveCount(10);
 
-    $unused = UserRecoveryCode::query()
+    // The acting user is the owner; the partner's codes fall outside the
+    // BelongsToUser global scope, so the assertion drops the scope to
+    // read the partner's rows directly.
+    $unused = UserRecoveryCode::withoutGlobalScopes()
         ->where('user_id', $partner->id)
         ->whereNull('used_at')
         ->count();
