@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Services\UserDataPathService;
+
 return [
 
     /*
@@ -43,7 +45,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'files' => storage_path('framework/sessions'),
+    'files' => UserDataPathService::frameworkPath('sessions'),
 
     /*
     |--------------------------------------------------------------------------

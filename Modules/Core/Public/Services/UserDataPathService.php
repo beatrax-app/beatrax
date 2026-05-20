@@ -137,6 +137,21 @@ final class UserDataPathService
             : $base.DIRECTORY_SEPARATOR.ltrim($relative, '/\\');
     }
 
+    /**
+     * Join a relative path onto the project root. For project-rooted code and
+     * configuration paths (vendor scan globs, the module-statuses file) that
+     * have no dedicated accessor — these ship inside the bundle, never under
+     * the user-data storage root.
+     */
+    public static function projectPath(string $relative = ''): string
+    {
+        $base = self::projectRoot();
+
+        return $relative === ''
+            ? $base
+            : $base.DIRECTORY_SEPARATOR.ltrim($relative, '/\\');
+    }
+
     // --- Instance surface for DI consumers ---------------------------------
 
     public function databasePath(): string
