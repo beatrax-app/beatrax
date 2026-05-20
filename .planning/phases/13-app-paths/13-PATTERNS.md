@@ -174,7 +174,7 @@ Direct unit test of both `getenv()` branches. Critical assertion (RESEARCH A2 re
 **Analog:** itself — removal of retired bindings.
 
 **Remove** (RESEARCH § State of the Art):
-- The `$this->app->singleton('core.backups_directory', ...)` block (lines 61-64).
+- The `$this->app->singleton('core.backups_directory', ...)` block (lines 61-64). Its closure (line 63) holds the quoted string literal `'storage/app/backups'` — removing the block must also remove that literal; do not leave it behind in any rewritten binding or replacement comment, or the arch test + `composer check:paths` stay RED.
 - All three `$this->app->when(...)->needs('$backupsPath')->give(...)` blocks (lines 66-85) for `BackupDatabaseCommand`, `RestoreDatabaseCommand`, `BackupFreshnessProbe`.
 
 **Keep the existing binding style** for `UserDataPathService` itself — mirror line 49/51 (`$this->app->singleton(...)`). Since `UserDataPathService` is dependency-free and stateless, a `singleton` binding (like `SystemClock`/`SystemAlertQuery`) is appropriate; the three consumers then resolve it through plain constructor DI (no contextual binding needed).
@@ -187,7 +187,7 @@ Direct unit test of both `getenv()` branches. Critical assertion (RESEARCH A2 re
 
 **Current:** `storage_path('app/inbox/...')` at line ~95 (deep dynamic path) and `storage_path('app/inbox')` at line ~228 (chmod-walk root).
 
-**Change:** inject `private readonly UserDataPathService $paths` (constructor — class currently has no `__construct`, add one following `CurrentUserService` style). Replace line ~95 with `$this->paths->appPath(sprintf('inbox/%d/%d/...', ...))` and line ~228 with `$this->paths->appPath('inbox')`. This is exactly why the service needs a generic `appPath(string)` accessor — no fixed named accessor expresses the per-message tree (RESEARCH Open Question 1).
+**Change:** the class ALREADY has a constructor — line 68 is `public function __construct(private readonly Filesystem $files) {}`. Do NOT overwrite it or replace the `Filesystem $files` dependency. Add `private readonly UserDataPathService $paths` as a SECOND promoted constructor parameter, preserving the existing `Filesystem $files` parameter. Replace line ~95 with `$this->paths->appPath(sprintf('inbox/%d/%d/...', ...))` and line ~228 with `$this->paths->appPath('inbox')`. This is exactly why the service needs a generic `appPath(string)` accessor — no fixed named accessor expresses the per-message tree (RESEARCH Open Question 1).
 
 **Preserve** the `MESSAGE_ID_PATTERN` validation (lines 60, 86-91) — `appPath()` joins only the already-validated slug; do NOT loosen this (Security Domain V5).
 
@@ -200,6 +200,16 @@ Direct unit test of both `getenv()` branches. Critical assertion (RESEARCH A2 re
 **Current:** `storage_path(self::BACKUP_RELATIVE)` at line 47, where `BACKUP_RELATIVE = 'app/secrets/email-oauth.json.pre-phase-12.bak'`.
 
 **Change:** add `private readonly UserDataPathService $paths` to the existing constructor (lines 34-38 — already constructor-DI'd with `Filesystem`, `CurrentUser`, `DatabaseManager`, so this is a clean 4th param). Replace `storage_path(self::BACKUP_RELATIVE)` with `$this->paths->secrets().DIRECTORY_SEPARATOR.'email-oauth.json.pre-phase-12.bak'` (or an `appPath('secrets/...')` call). The `BACKUP_RELATIVE` constant's `app/secrets/` prefix would otherwise trip the literal regex.
+
+---
+
+### `Modules/EmailScan/Internal/Http/Livewire/OAuthClientWizardModal.php` (Livewire component, MODIFIED)
+
+**Analog:** itself.
+
+**Path note:** the file lives at `Modules/EmailScan/Internal/Http/Livewire/OAuthClientWizardModal.php` (not under `Public/Livewire/`). The `storage/app/secrets/` literal is confirmed on line 141 inside the `$this->errorMessage` assignment.
+
+**Change:** reword the `$this->errorMessage` string (~line 141) so it contains no `storage/app/secrets/` literal — it is a real PHP string and would trip the literal regex. Replace it with user-facing copy that does not name a hard-coded path (e.g. "Could not save your OAuth client to disk — check your secrets-directory permissions and try again."). Do not inject `UserDataPathService` purely to interpolate the path into the message — the simplest correct fix is to not name the literal path in user copy (RESEARCH line 608).
 
 ---
 
@@ -269,7 +279,7 @@ public function __construct(
     // ...other deps...
 ) {}
 ```
-All params `private readonly`, fully typed. MEMORY.md `feedback_laravel_di_only.md`: constructor DI only, no facades, no global helpers. Eloquent models direct is OK.
+All params `private readonly`, fully typed. MEMORY.md `feedback_laravel_di_only.md`: constructor DI only, no facades, no global helpers. Eloquent models direct is OK. When a consumer already has a constructor (e.g. `EmlBlobStore` already declares `Filesystem $files`), add `UserDataPathService $paths` as an additional promoted parameter — never replace an existing dependency.
 
 ### Grep-style arch invariant (`it()` block)
 **Source:** `tests/Contracts/BoundaryArchTest.php` lines 967-1028 (`noLaravelGlobalHelpersInCoreConsoleCommands`) and 1030-1117 (`noAuthFacadeOrHelper`)
@@ -299,3 +309,4 @@ No production file is left without a pattern source. The closest thing to a gap:
 **Analog search scope:** `Modules/Core/Public/Services/`, `Modules/Core/Internal/Console/`, `Modules/Core/Providers/`, `Modules/Core/tests/`, `Modules/EmailScan/`, `Modules/Auth/Database/Migrations/`, `tests/Contracts/`, `config/`
 **Files scanned:** ~12 read directly + grep inventory inherited from RESEARCH.md (verified call-site list, exhaustive)
 **Pattern extraction date:** 2026-05-20
+</content>

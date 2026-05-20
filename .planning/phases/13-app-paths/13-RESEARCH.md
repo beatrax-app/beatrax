@@ -472,22 +472,22 @@ echo "OK: no raw path helpers or storage literals outside UserDataPathService."
 | A4 | `pest-plugin-arch` fluent API cannot match string literals | Pitfall 1 | LOW — confirmed by the plugin's symbol-graph design; the project already works around this with grep-style `it()` tests for every literal-sensitive rule. |
 | A5 | The grep-style `it()` test (not fluent `arch()`) is the right enforcement tool | Architecture, Code Examples | LOW — 12+ existing tests in `BoundaryArchTest.php` use exactly this pattern; it is the established project convention. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Exact `UserDataPathService` accessor surface (granular vs generic).**
+1. **RESOLVED — Exact `UserDataPathService` accessor surface (granular vs generic).**
    - What we know: D-02 explicitly leaves this to planner/researcher. `EmlBlobStore` needs deep dynamic paths; `BackupDatabaseCommand` needs one fixed dir.
    - What's unclear: whether to expose ~6 named methods, one generic `appPath(string)`, or both.
-   - Recommendation: **both** — named accessors for the fixed paths (`databaseFile`, `backupsPath`, `secretsPath`, `frameworkPath`) plus a generic `appPath(string $relative)` for `EmlBlobStore`'s `app/inbox/...` trees. Documented in Pattern 1.
+   - Recommendation (ENACTED by the plans): **both** — named accessors for the fixed paths (`databaseFile`, `backupsPath`, `secretsPath`, `frameworkPath`) plus a generic `appPath(string $relative)` / `appRelative()` for `EmlBlobStore`'s `app/inbox/...` trees. Documented in Pattern 1; Plan 01 builds the surface and Plan 02 Task 3 consumes the generic accessor in `EmlBlobStore`.
 
-2. **Should `config/` be in the grep scope or allow-listed?**
+2. **RESOLVED — Should `config/` be in the grep scope or allow-listed?**
    - What we know: config files will reference `UserDataPathService::` which the helper regex does not match.
    - What's unclear: nothing — analysed.
-   - Recommendation: **Keep `config/` in scope, no allow-list entry needed.** The `(?<![>:])` lookbehind makes `::databaseFile(` invisible to the helper regex, and `UserDataPathService::frameworkPath('sessions')` contains no banned literal. The gate naturally permits the correct pattern and still catches a regressing `storage_path()` in any future config file.
+   - Recommendation (ENACTED by the plans): **Keep `config/` in scope, no allow-list entry needed.** The `(?<![>:])` lookbehind makes `::databaseFile(` invisible to the helper regex, and `UserDataPathService::frameworkPath('sessions')` contains no banned literal. The gate naturally permits the correct pattern and still catches a regressing `storage_path()` in any future config file. Plan 01 builds the arch test with `['Modules', 'app', 'config']` scope and no `config/` allow-list entry.
 
-3. **PHP 8.5-vs-8.4 Larastan spike (carried from STATE.md blockers).**
+3. **RESOLVED — PHP 8.5-vs-8.4 Larastan spike (carried from STATE.md blockers).**
    - What we know: STATE.md flags "Run a Larastan-L10-on-8.4 spike during Phase 13 start." Project dev pin is `^8.5`; `nativephp/php-bin` ships 8.1–8.4.
    - What's unclear: whether this spike belongs in Phase 13 or is purely a Phase 17 matrix concern.
-   - Recommendation: **Out of Phase 13's PKG-01 scope** — it touches no path code. The planner should note it but not plan tasks for it here; it is a Phase 17 CI-matrix item. (Flagging because STATE.md attached it loosely to "Phase 13 start.")
+   - Recommendation (ENACTED by the plans): **Out of Phase 13's PKG-01 scope** — it touches no path code. No Phase 13 plan task addresses it; it is recorded as a Phase 17 CI-matrix item. (Flagged because STATE.md attached it loosely to "Phase 13 start.")
 
 ## Environment Availability
 
@@ -563,7 +563,7 @@ echo "OK: no raw path helpers or storage literals outside UserDataPathService."
 ## Sources
 
 ### Primary (HIGH confidence)
-- Codebase files read directly: `tests/Contracts/BoundaryArchTest.php`, `Modules/Core/Providers/CoreServiceProvider.php`, `Modules/Core/Internal/Console/BackupDatabaseCommand.php`, `Modules/Core/Internal/Console/RestoreDatabaseCommand.php`, `Modules/EmailScan/Internal/Listeners/EmitOAuthReauthRequiredAlert.php`, `Modules/EmailScan/Public/Services/EmlBlobStore.php`, `Modules/Auth/Database/Migrations/2026_05_20_000002_rename_legacy_email_oauth_json.php`, `config/database.php`, `config/session.php`, `config/modules.php`, `composer.json`, `phpstan.neon`, `bootstrap/app.php`, `bootstrap/providers.php`, `tests/Pest.php`, `Modules/Core/Public/Services/SystemClock.php` — verified 2026-05-20
+- Codebase files read directly: `tests/Contracts/BoundaryArchTest.php`, `Modules/Core/Providers/CoreServiceProvider.php`, `Modules/Core/Internal/Console/BackupDatabaseCommand.php`, `Modules/Core/Internal/Console/RestoreDatabaseCommand.php`, `Modules/EmailScan/Internal/Listeners/EmitOAuthReauthRequiredAlert.php`, `Modules/EmailScan/Public/Services/EmlBlobStore.php`, `Modules/EmailScan/Internal/Http/Livewire/OAuthClientWizardModal.php`, `Modules/Auth/Database/Migrations/2026_05_20_000002_rename_legacy_email_oauth_json.php`, `config/database.php`, `config/session.php`, `config/modules.php`, `composer.json`, `phpstan.neon`, `bootstrap/app.php`, `bootstrap/providers.php`, `tests/Pest.php`, `Modules/Core/Public/Services/SystemClock.php` — verified 2026-05-20
 - Full production grep for `database_path(`/`storage_path(`/`base_path(`/`database.sqlite`/`storage/app` — verified call-site inventory below
 - `.planning/phases/13-app-paths/13-CONTEXT.md`, `.planning/REQUIREMENTS.md`, `.planning/STATE.md`, `.planning/ROADMAP.md`, `.planning/phases/12-multi-user-activation/12-CONTEXT.md`
 
@@ -597,7 +597,7 @@ echo "OK: no raw path helpers or storage literals outside UserDataPathService."
 | `config/modules.php` | 36 | `public_path('modules')` | **NOT in CONTEXT scope** — `public_path` is a 4th helper; planner decides whether to abstract it (recommend: yes, for completeness, add `publicPath()` to the service or leave as a documented exception since `public/` is asset-serving not user-data) |
 
 **Important corrections to the CONTEXT.md integration-point list:**
-- `Modules/Core/Providers/CoreServiceProvider.php` — CONTEXT says it calls `base_path`. **It does NOT** — line 60 is a *comment*, and line 63 calls `$app->basePath('storage/app/backups')` which is the *DI-correct* `Application` method, not the global helper. The real Phase 13 work here is **removing the `core.backups_directory` binding + 3 `->when()->needs('$backupsPath')` blocks** (D-04), not fixing a raw helper.
+- `Modules/Core/Providers/CoreServiceProvider.php` — CONTEXT says it calls `base_path`. **It does NOT** — line 56 is a *comment*, and line 63 calls `$app->basePath('storage/app/backups')` which is the *DI-correct* `Application` method, not the global helper. The real Phase 13 work here is **removing the `core.backups_directory` binding + 3 `->when()->needs('$backupsPath')` blocks** (D-04), not fixing a raw helper. NOTE: the quoted string `'storage/app/backups'` inside the line-63 closure IS a hard-coded storage literal — removing the binding block must also remove that literal so the arch test + `composer check:paths` go GREEN.
 - `Modules/Core/Internal/Console/RestoreDatabaseCommand.php` — CONTEXT lists it as calling a raw helper. **It does NOT** — line 97 uses `$this->app->basePath('storage/framework/down')` (DI-correct). Its real Phase 13 change is the `$backupsPath` string → `UserDataPathService` swap (D-04). The `storage/framework/down` path should still move to the service for NativePHP-correctness.
 - `config/modules.php` has **5** banned-helper calls (lines 35, 37, 77, 129 = `base_path`; line 36 = `public_path`), not the implied few.
 - `public_path('modules')` in `config/modules.php` line 36 is a helper the CONTEXT list omits — planner must decide its disposition.
@@ -605,7 +605,7 @@ echo "OK: no raw path helpers or storage literals outside UserDataPathService."
 **String-literal-only occurrences (comments / docblocks / Blade — mostly NOT violations after comment-strip):**
 - `EmlBlobStore.php`, `RestoreDatabaseCommand.php`, `BackupDatabaseCommand.php`, `BackupFreshnessProbe.php`, `BackupRetentionPolicy.php`, `InstallCommand.php`, `RunImport.php`, `ScanInboxDropFolderJob.php`, `FileDropEmlBlobStore.php`, `SettingsPage.php` — all reference `storage/app/...` only in **comments/docblocks**, stripped by the grep, so NOT flagged.
 - `Modules/Core/Resources/views/livewire/settings-page.blade.php` lines 157/175/177 — `storage/app/inbox-drop/` inside `<code>` tags as **user-facing displayed text**. This is the one genuine false-positive risk for the literal regex (see Code Examples judgement call (2)): **exclude `.blade.php` from the literal check.**
-- `OAuthClientWizardModal.php` line 141 — `storage/app/secrets/` in a user-facing **error message string**. This IS a real PHP string literal and WOULD be flagged. Planner decision: either (a) treat user-facing copy as exempt and refine the regex to ignore strings inside obvious message contexts (hard), or (b) accept that this error string should not name a hard-coded path and reword it to not contain `storage/app/` (recommended — the message can say "check your secrets-directory permissions" without the literal path). This is a genuine Phase 13 task the CONTEXT.md list missed.
+- `OAuthClientWizardModal.php` line 141 (at `Modules/EmailScan/Internal/Http/Livewire/OAuthClientWizardModal.php`) — `storage/app/secrets/` in a user-facing **error message string**. This IS a real PHP string literal and WOULD be flagged. Planner decision: either (a) treat user-facing copy as exempt and refine the regex to ignore strings inside obvious message contexts (hard), or (b) accept that this error string should not name a hard-coded path and reword it to not contain `storage/app/` (recommended — the message can say "check your secrets-directory permissions" without the literal path). This is a genuine Phase 13 task the CONTEXT.md list missed.
 
 ## Metadata
 
@@ -618,3 +618,4 @@ echo "OK: no raw path helpers or storage literals outside UserDataPathService."
 
 **Research date:** 2026-05-20
 **Valid until:** 2026-06-20 (stable — Laravel 13 + Pest 4 internals are not fast-moving; the one volatile item is NativePHP v2 path semantics, re-verify at Phase 15 start)
+</content>
