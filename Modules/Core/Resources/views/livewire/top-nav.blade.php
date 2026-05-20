@@ -164,7 +164,7 @@
 
         <span class="flex-1"></span>
 
-        <span class="text-sm text-slate-500">{{ $userEmail }}</span>
+        <span class="text-sm text-slate-500">{{ $username }}</span>
 
         <form method="POST" action="{{ route('logout') }}" class="ml-2">
             @csrf
