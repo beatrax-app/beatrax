@@ -18,7 +18,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
  *
  * Layout:
  *
- *   Dashboard · Transactions · Uncategorized {count?} ─── {email} · Sign out
+ *   Dashboard · Transactions · Uncategorized {count?} ─── {username} · Sign out
  *
  * The Uncategorized item carries a count badge when the user has any
  * uncategorized transactions; the badge falls away once "inbox zero" is
@@ -44,7 +44,7 @@ final class TopNav extends Component
 
         return $views->make('core::livewire.top-nav', [
             'uncategorizedCount' => $uncategorized,
-            'userEmail' => $user->email,
+            'username' => $user->username,
             'currentPath' => '/'.ltrim($request->path(), '/'),
         ]);
     }
