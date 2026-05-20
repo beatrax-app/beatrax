@@ -1,0 +1,11 @@
+{
+    "name": "Auth",
+    "alias": "auth",
+    "description": "Authentication, recovery codes, password reset, and impersonation — DI-only auth surface.",
+    "keywords": ["auth", "recovery-codes", "impersonation"],
+    "priority": 1,
+    "providers": [
+        "Modules\\Auth\\Providers\\AuthServiceProvider"
+    ],
+    "files": []
+}
