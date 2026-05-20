@@ -9,12 +9,17 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Auth\Internal\Fortify\FortifyServiceProvider;
+use Modules\Auth\Internal\Http\Livewire\AddUserPage;
+use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Internal\Http\Middleware\FirstUserOnlyMiddleware;
+use Modules\Auth\Internal\Http\Middleware\ForcePasswordChangeMiddleware;
+use Modules\Auth\Internal\Http\Middleware\RequireDeveloperMiddleware;
 use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
+use Modules\Auth\Public\Actions\AddUserAction;
 use Modules\Auth\Public\Actions\LoginAction;
 use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Auth\Public\Actions\SignupAction;
@@ -38,6 +43,7 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(LoginAction::class);
         $this->app->singleton(LogoutAction::class);
         $this->app->singleton(SignupAction::class);
+        $this->app->singleton(AddUserAction::class);
         $this->app->singleton(RecoveryCodeGenerator::class);
         $this->app->singleton(RecoveryCodeFormatter::class);
     }
@@ -50,9 +56,17 @@ final class AuthServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'auth');
 
         $router->aliasMiddleware('first-user-only', FirstUserOnlyMiddleware::class);
+        $router->aliasMiddleware('developer', RequireDeveloperMiddleware::class);
+
+        // Enforce the forced-password-change flag on every authenticated
+        // route. The middleware exempts the change-password page and the
+        // logout route by name so a flagged user is never trapped.
+        $router->pushMiddlewareToGroup('auth', ForcePasswordChangeMiddleware::class);
 
         $livewire->component('auth.login-page', LoginPage::class);
         $livewire->component('auth.signup-page', SignupPage::class);
         $livewire->component('auth.recovery-codes-display', RecoveryCodesDisplay::class);
+        $livewire->component('auth.change-password-page', ChangePasswordPage::class);
+        $livewire->component('auth.add-user-page', AddUserPage::class);
     }
 }
