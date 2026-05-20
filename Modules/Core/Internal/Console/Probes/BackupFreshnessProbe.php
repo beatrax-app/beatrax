@@ -9,13 +9,13 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\UserDataPathService;
 use Throwable;
 
 /**
  * Reads the newest `*.meta.json` sidecar under the backups directory
- * (resolved via the `core.backups_directory` container binding, wired
- * by `CoreServiceProvider` as a contextual `string $backupsPath`
- * argument). The sidecar's `completed_at` timestamp is compared to
+ * (resolved via the injected `UserDataPathService`). The sidecar's
+ * `completed_at` timestamp is compared to
  * `$clock->now()`; if no sidecar exists OR the newest is older than
  * 48 hours, the probe returns a `warning` result AND writes a
  * system-wide `system_alerts(kind=backup_overdue, severity=warning)`
@@ -39,7 +39,7 @@ final class BackupFreshnessProbe implements Probe
         private readonly Filesystem $files,
         private readonly Clock $clock,
         private readonly DatabaseManager $db,
-        private readonly string $backupsPath,
+        private readonly UserDataPathService $paths,
     ) {}
 
     public function label(): string
@@ -100,11 +100,13 @@ final class BackupFreshnessProbe implements Probe
      */
     private function findNewestSidecarCompletedAt(): ?CarbonImmutable
     {
-        if (! $this->files->isDirectory($this->backupsPath)) {
+        $backupsPath = $this->paths->backups();
+
+        if (! $this->files->isDirectory($backupsPath)) {
             return null;
         }
 
-        $entries = $this->files->files($this->backupsPath);
+        $entries = $this->files->files($backupsPath);
 
         $newest = null;
         foreach ($entries as $entry) {
@@ -192,11 +194,11 @@ final class BackupFreshnessProbe implements Probe
                 'kind' => 'backup_overdue',
                 'severity' => 'warning',
                 'message' => $hoursOld === null
-                    ? 'No verified backups found under storage/app/backups/.'
+                    ? 'No verified backups found under the backups directory.'
                     : sprintf('Most recent verified backup is %dh old.', $hoursOld),
                 'metadata' => [
                     'hours_old' => $hoursOld,
-                    'backups_path' => $this->backupsPath,
+                    'backups_path' => $this->paths->backups(),
                 ],
             ]);
         } catch (Throwable) {
