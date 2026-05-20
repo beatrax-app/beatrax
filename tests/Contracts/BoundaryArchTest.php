@@ -1115,3 +1115,73 @@ it('does not allow the Auth facade or auth/session helpers across Modules/* outs
         "Modules/* may not call Auth facade / auth helper / request()->user / request()->session / session() helper / Auth::loginUsingId outside the allow-list. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
+
+it('does not allow raw path helpers or hard-coded storage literals outside UserDataPathService (noStoragePathHardCodedOutsideUserDataPathService)', function (): void {
+    // PKG-01 / Phase 13 invariant: every filesystem path flows through
+    // Modules\Core\Public\Services\UserDataPathService so a NativePHP
+    // build can retarget the storage root. The service is the sole
+    // sanctioned caller of base_path(); no other production file may
+    // call database_path() / storage_path() / base_path() or embed the
+    // literals 'database.sqlite' / 'storage/app/'.
+    //
+    // Scope is three roots — Modules, app, config — because config files
+    // call the static accessors directly (the (?<![>:]) lookbehind keeps
+    // UserDataPathService::databaseFile( legal). Test files keep the raw
+    // helpers: they run in a known Herd environment and never ship.
+    // Migration directories are skipped, consistent with
+    // noAuthFacadeOrHelper and phpstan.neon — anonymous-class migrations
+    // resolve the service through the container separately. The grep
+    // strips block + line + Blade comments first so PHPDoc references
+    // stay legal, and .blade.php files are exempt from the literal check
+    // because user-facing <code> tags legitimately display storage paths.
+    //
+    // NOTE: this test stays RED until Plan 02 migrates every call site —
+    // that is expected and correct; it must not be weakened to pass early.
+    $allowList = [
+        'Modules/Core/Public/Services/UserDataPathService.php',
+    ];
+
+    // Bare function-call shape only — `(?<![>:])` rules out
+    // `$obj->storage_path()` / `Class::base_path()` method calls.
+    $bannedHelpers = '/(?<![>:])\b(database_path|storage_path|base_path)\s*\(/';
+    // Literal strings that hard-code the dev-mode storage layout.
+    $bannedLiterals = "/['\"](database\\.sqlite|storage\\/app\\/)/";
+
+    $hits = [];
+    foreach (['Modules', 'app', 'config'] as $root) {
+        $abs = base_path($root);
+        if (! is_dir($abs)) {
+            continue;
+        }
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($abs, RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+                continue;
+            }
+            $path = $file->getPathname();
+            if (preg_match('#/tests/#', $path) === 1
+                || preg_match('#/Database/Migrations/#', $path) === 1) {
+                continue;
+            }
+            $relative = str_replace(base_path().'/', '', $path);
+            if (in_array($relative, $allowList, true)) {
+                continue;
+            }
+            $isBlade = str_ends_with($path, '.blade.php');
+            $contents = (string) file_get_contents($path);
+            $stripped = preg_replace('#/\*.*?\*/|//[^\n]*|\{\{--.*?--\}\}#s', '', $contents) ?? $contents;
+            if (preg_match($bannedHelpers, $stripped) === 1
+                || (! $isBlade && preg_match($bannedLiterals, $stripped) === 1)) {
+                $hits[] = $relative;
+            }
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "Raw path helpers / storage literals are forbidden outside UserDataPathService. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
