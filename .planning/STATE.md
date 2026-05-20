@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
 stopped_at: Phase 13 context gathered
-last_updated: "2026-05-20T20:22:16.310Z"
-last_activity: 2026-05-20 -- Phase 13 planning complete
+last_updated: "2026-05-20T20:25:12.203Z"
+last_activity: 2026-05-20 -- Phase 13 execution started
 progress:
   total_phases: 10
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-**Current focus:** Phase 12 — multi-user-activation
+**Current focus:** Phase 13 — app-paths
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-20 -- Phase 13 planning complete
+Phase: 13 (app-paths) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 13
+Last activity: 2026-05-20 -- Phase 13 execution started
 
 ## Performance Metrics
 
