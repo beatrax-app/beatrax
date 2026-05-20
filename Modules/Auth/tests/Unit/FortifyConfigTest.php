@@ -2,10 +2,17 @@
 
 declare(strict_types=1);
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Laravel\Fortify\Actions\AttemptToAuthenticate;
+use Laravel\Fortify\Actions\EnsureLoginIsNotThrottled;
+use Laravel\Fortify\Actions\PrepareAuthenticatedSession;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Modules\Auth\Internal\Fortify\FortifyServiceProvider;
 use Modules\Core\Models\User;
+
+uses(RefreshDatabase::class);
 
 /*
  * Locks the Fortify wiring for the username-based, localhost-only
@@ -15,8 +22,10 @@ use Modules\Core\Models\User;
  */
 
 it('relocates the Fortify provider into the Auth module', function (): void {
-    expect(class_exists(\Modules\Auth\Internal\Fortify\FortifyServiceProvider::class))->toBeTrue();
-    expect(class_exists(\Modules\Core\Internal\Providers\FortifyServiceProvider::class, false))->toBeFalse();
+    expect(class_exists(FortifyServiceProvider::class))->toBeTrue();
+    // The legacy Core provider has been removed; reference it by string so
+    // the assertion does not pull a non-existent class through the loader.
+    expect(class_exists('Modules\\Core\\Internal\\Providers\\FortifyServiceProvider', false))->toBeFalse();
 });
 
 it('registers an authenticator closure that resolves a user by username', function (): void {
@@ -65,9 +74,9 @@ it('omits the throttle middleware from the authentication pipeline', function ()
 
     $pipeline = $through(Request::create('/login', 'POST'));
 
-    expect($pipeline)->toContain(\Laravel\Fortify\Actions\AttemptToAuthenticate::class);
-    expect($pipeline)->toContain(\Laravel\Fortify\Actions\PrepareAuthenticatedSession::class);
-    expect($pipeline)->not->toContain(\Laravel\Fortify\Actions\EnsureLoginIsNotThrottled::class);
+    expect($pipeline)->toContain(AttemptToAuthenticate::class);
+    expect($pipeline)->toContain(PrepareAuthenticatedSession::class);
+    expect($pipeline)->not->toContain(EnsureLoginIsNotThrottled::class);
 });
 
 it('disables every email-related Fortify feature', function (): void {
