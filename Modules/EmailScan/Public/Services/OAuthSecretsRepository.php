@@ -5,61 +5,51 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Public\Services;
 
 use DateTimeImmutable;
-use Illuminate\Filesystem\Filesystem;
+use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
-use JsonException;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\EmailScan\Models\OAuthSecret;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use RuntimeException;
 use Throwable;
 
 /**
- * The single dependency-injected touchpoint to the chmod-600 JSON
- * file that carries per-provider OAuth client credentials and the
- * per-inbox rotation tokens.
+ * The single dependency-injected touchpoint to the per-user OAuth
+ * credentials store backed by the oauth_secrets SQLite table.
  *
- * The file lives at storage/app/secrets/email-oauth.json. The parent
- * directory is created on first write with mode 0700; the file
- * itself is always chmod 0600 before the atomic rename so callers
- * cannot accidentally publish credentials by inheriting umask.
+ * Each authenticated user owns at most one row per provider ('gmail'
+ * or 'microsoft'). A row carries the provider client credentials
+ * (client_id, client_secret, redirect_uri) plus a tokens_blob holding
+ * the rotation tokens for every inbox connected through that provider,
+ * keyed by inbox id. The client_secret and tokens_blob columns are
+ * AES-256-CBC encrypted at rest via the OAuthSecret model's `encrypted`
+ * cast keyed on APP_KEY — a raw column read returns ciphertext only.
  *
- * Writes are atomic via the tmp+fsync+rename sequence: open a
- * sibling `.tmp` file, write the encoded payload, fflush, fsync
- * (where available), chmod to 0600, then rename over the canonical
- * path. A POSIX rename is atomic, so a crash mid-write leaves the
- * prior file content intact and never produces a half-written JSON
- * the next reader would choke on. The performRename hook is
- * extracted so tests can simulate a failed rename without touching
- * the filesystem in destructive ways.
+ * Every read filters by the current user's id and every write stamps
+ * it, so two users sharing the SQLite file never see each other's
+ * credentials. The current user's id is resolved fresh on every call
+ * (never cached) so a guard swap — such as developer impersonation —
+ * is honoured immediately.
  *
- * Failures emit a typed SecretsWriteFailed exception whose message
- * never contains the JSON payload — only the absolute path and a
- * generic description — so any logging surface above this class can
- * never accidentally leak credential material.
+ * Writes go through Eloquent saves, which are transactional and replace
+ * the encrypted blob in a single statement.
  */
 class OAuthSecretsRepository
 {
-    private const PATH_RELATIVE = 'app/secrets/email-oauth.json';
-
-    private const DIR_MODE = 0700;
-
-    private const FILE_MODE = 0600;
-
     private const ALLOWED_PROVIDERS = ['gmail', 'microsoft'];
 
-    public function __construct(private readonly Filesystem $files) {}
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly CurrentUser $currentUser,
+    ) {}
 
     public function hasProviderClient(string $provider): bool
     {
-        $data = $this->readAll();
-        if (! isset($data['providers']) || ! is_array($data['providers'])) {
-            return false;
-        }
-        $entry = $data['providers'][$provider] ?? null;
-        if (! is_array($entry)) {
-            return false;
-        }
+        $row = $this->providerRow($provider);
 
-        return isset($entry['client_id']) && isset($entry['client_secret']);
+        return $row !== null
+            && $row->client_id !== ''
+            && $row->client_secret !== '';
     }
 
     public function saveProviderClient(
@@ -70,16 +60,11 @@ class OAuthSecretsRepository
     ): void {
         $this->assertProvider($provider);
 
-        $data = $this->readAll();
-        if (! isset($data['providers']) || ! is_array($data['providers'])) {
-            $data['providers'] = [];
-        }
-        $data['providers'][$provider] = [
-            'client_id' => $clientId,
-            'client_secret' => $clientSecret,
-            'redirect_uri' => $redirectUri,
-        ];
-        $this->writeAtomic($data);
+        $row = $this->providerRow($provider) ?? $this->newProviderRow($provider);
+        $row->client_id = $clientId;
+        $row->client_secret = $clientSecret;
+        $row->redirect_uri = $redirectUri;
+        $this->persist($row);
     }
 
     /**
@@ -87,22 +72,15 @@ class OAuthSecretsRepository
      */
     public function loadProviderClient(string $provider): ?array
     {
-        $data = $this->readAll();
-        if (! isset($data['providers']) || ! is_array($data['providers'])) {
-            return null;
-        }
-        $entry = $data['providers'][$provider] ?? null;
-        if (! is_array($entry)) {
-            return null;
-        }
-        if (! isset($entry['client_id'], $entry['client_secret'], $entry['redirect_uri'])) {
+        $row = $this->providerRow($provider);
+        if ($row === null || $row->client_id === '' || $row->client_secret === '') {
             return null;
         }
 
         return [
-            'client_id' => self::toString($entry['client_id']),
-            'client_secret' => self::toString($entry['client_secret']),
-            'redirect_uri' => self::toString($entry['redirect_uri']),
+            'client_id' => $row->client_id,
+            'client_secret' => $row->client_secret,
+            'redirect_uri' => $row->redirect_uri,
         ];
     }
 
@@ -133,31 +111,34 @@ class OAuthSecretsRepository
     ): void {
         $this->assertProvider($provider);
 
-        $data = $this->readAll();
-        $inboxes = self::asInboxList($data['inboxes'] ?? null);
+        // The inbox token list lives in the tokens_blob of its
+        // provider's row. Removing any stale copy under a different
+        // provider and writing the fresh entry happen inside one
+        // transaction so a re-provider'd inbox can never momentarily
+        // exist under two providers or vanish entirely.
+        $this->db->connection()->transaction(function () use (
+            $inboxId,
+            $provider,
+            $email,
+            $refreshToken,
+            $scope,
+            $expiresAt,
+        ): void {
+            $this->removeInbox($inboxId);
 
-        $newEntry = [
-            'id' => $inboxId,
-            'provider' => $provider,
-            'email' => $email,
-            'refresh_token' => $refreshToken,
-            'scope' => $scope,
-            'expires_at' => $expiresAt?->format(\DateTimeInterface::ATOM),
-        ];
-
-        $found = false;
-        foreach ($inboxes as $i => $entry) {
-            if (self::toInt($entry['id'] ?? 0) === $inboxId) {
-                $inboxes[$i] = $newEntry;
-                $found = true;
-                break;
-            }
-        }
-        if (! $found) {
-            $inboxes[] = $newEntry;
-        }
-        $data['inboxes'] = $inboxes;
-        $this->writeAtomic($data);
+            $row = $this->providerRow($provider) ?? $this->newProviderRow($provider);
+            $inboxes = $this->decodeInboxes($row->tokens_blob);
+            $inboxes[(string) $inboxId] = [
+                'id' => $inboxId,
+                'provider' => $provider,
+                'email' => $email,
+                'refresh_token' => $refreshToken,
+                'scope' => $scope,
+                'expires_at' => $expiresAt?->format(\DateTimeInterface::ATOM),
+            ];
+            $row->tokens_blob = $this->encodeInboxes($inboxes);
+            $this->persist($row);
+        });
     }
 
     public function rotateRefreshToken(
@@ -166,197 +147,94 @@ class OAuthSecretsRepository
         ?string $newAccessToken,
         ?DateTimeImmutable $expiresAt,
     ): void {
-        $data = $this->readAll();
-        $inboxes = self::asInboxList($data['inboxes'] ?? null);
-
-        $found = false;
-        foreach ($inboxes as $i => $entry) {
-            if (self::toInt($entry['id'] ?? 0) === $inboxId) {
-                $entry['refresh_token'] = $newRefreshToken;
-                if ($newAccessToken !== null) {
-                    $entry['access_token'] = $newAccessToken;
-                } else {
-                    unset($entry['access_token']);
-                }
-                $entry['expires_at'] = $expiresAt?->format(\DateTimeInterface::ATOM);
-                $inboxes[$i] = $entry;
-                $found = true;
-                break;
+        foreach ($this->providerRows() as $row) {
+            $inboxes = $this->decodeInboxes($row->tokens_blob);
+            $key = (string) $inboxId;
+            if (! isset($inboxes[$key])) {
+                continue;
             }
+            $entry = $inboxes[$key];
+            $entry['refresh_token'] = $newRefreshToken;
+            if ($newAccessToken !== null) {
+                $entry['access_token'] = $newAccessToken;
+            } else {
+                unset($entry['access_token']);
+            }
+            $entry['expires_at'] = $expiresAt?->format(\DateTimeInterface::ATOM);
+            $inboxes[$key] = $entry;
+            $row->tokens_blob = $this->encodeInboxes($inboxes);
+            $this->persist($row);
+
+            return;
         }
-        if (! $found) {
-            throw new RuntimeException(
-                "OAuthSecretsRepository::rotateRefreshToken inbox id {$inboxId} not found."
-            );
-        }
-        $data['inboxes'] = $inboxes;
-        $this->writeAtomic($data);
+
+        throw new RuntimeException(
+            "OAuthSecretsRepository::rotateRefreshToken inbox id {$inboxId} not found."
+        );
     }
 
     public function removeInbox(int $inboxId): void
     {
-        $data = $this->readAll();
-        $inboxes = self::asInboxList($data['inboxes'] ?? null);
-        $filtered = array_values(array_filter(
-            $inboxes,
-            static fn (array $entry): bool => self::toInt($entry['id'] ?? 0) !== $inboxId,
-        ));
-        $data['inboxes'] = $filtered;
-        $this->writeAtomic($data);
+        foreach ($this->providerRows() as $row) {
+            $inboxes = $this->decodeInboxes($row->tokens_blob);
+            $key = (string) $inboxId;
+            if (! isset($inboxes[$key])) {
+                continue;
+            }
+            unset($inboxes[$key]);
+            $row->tokens_blob = $inboxes === [] ? null : $this->encodeInboxes($inboxes);
+            $this->persist($row);
+        }
     }
 
     /**
-     * Hook extracted so tests can simulate a rename failure without
-     * touching the filesystem in destructive ways. Override in a test
-     * subclass to return false; the caller treats the failure
-     * identically to a native rename() returning false.
+     * Persist a row through Eloquent. A DB-layer failure surfaces as a
+     * SecretsWriteFailed so callers keep a single typed write-failure
+     * contract; the message never carries the credential payload.
      */
-    protected function performRename(string $tmp, string $final): bool
+    private function persist(OAuthSecret $row): void
     {
-        return @rename($tmp, $final);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function readAll(): array
-    {
-        $absolute = $this->absolutePath();
-        if (! $this->files->exists($absolute)) {
-            return ['providers' => [], 'inboxes' => []];
-        }
-        $raw = $this->files->get($absolute);
-        if ($raw === '') {
-            return ['providers' => [], 'inboxes' => []];
-        }
         try {
-            $decoded = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            // Never include $raw in the message — it would leak
-            // credential material into any logging surface above.
-            throw new RuntimeException(
-                "OAuthSecretsRepository: failed to parse {$absolute} ({$e->getMessage()})."
-            );
-        }
-        if (! is_array($decoded)) {
-            return ['providers' => [], 'inboxes' => []];
-        }
-        // Narrow array<mixed, mixed> -> array<string, mixed>: the
-        // top-level shape is a JSON object so every key is a string,
-        // but PHPStan's strict mode can't infer that from json_decode.
-        $out = [];
-        foreach ($decoded as $key => $value) {
-            $out[(string) $key] = $value;
-        }
-
-        return $out;
-    }
-
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    private function writeAtomic(array $data): void
-    {
-        $absolute = $this->absolutePath();
-        $dir = dirname($absolute);
-        // chmod 0700 is applied ONLY on first create. Subsequent
-        // writes do NOT re-chmod the directory because that would
-        // silently narrow back any permissions an admin widened on
-        // purpose (e.g. for a backup tool that needs read access).
-        if (! is_dir($dir)) {
-            if (! @mkdir($dir, self::DIR_MODE, recursive: true) && ! is_dir($dir)) {
-                throw new SecretsWriteFailed(
-                    "OAuthSecretsRepository: could not create parent directory {$dir}."
-                );
-            }
-            if (! @chmod($dir, self::DIR_MODE)) {
-                throw new SecretsWriteFailed(
-                    "OAuthSecretsRepository: failed to chmod 0700 on newly-created secrets directory {$dir}."
-                );
-            }
-        }
-
-        try {
-            $bytes = json_encode(
-                $data,
-                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
-            );
-        } catch (JsonException $e) {
-            throw new SecretsWriteFailed(
-                "OAuthSecretsRepository: failed to encode payload for {$absolute} ({$e->getMessage()})."
-            );
-        }
-
-        $tmp = $absolute.'.tmp';
-
-        // Narrow umask BEFORE opening the temp file so the file is
-        // born with mode 0600 (0666 & ~0077 = 0600). Without this,
-        // fopen's default 0666 & ~0022 = 0644 leaves the temp file
-        // world-readable for the brief window between fwrite and the
-        // explicit chmod below — a cohabiting OS user racing a `cat`
-        // could observe the cleartext refresh tokens. The explicit
-        // chmod is kept as belt-and-braces against umask churn from
-        // other libs running in the same request.
-        $prevUmask = umask(0077);
-
-        $fp = @fopen($tmp, 'wb');
-        if ($fp === false) {
-            umask($prevUmask);
-            throw new SecretsWriteFailed(
-                "OAuthSecretsRepository: could not open temp file at {$tmp}."
-            );
-        }
-
-        try {
-            @flock($fp, LOCK_EX);
-            $written = @fwrite($fp, $bytes);
-            if ($written === false || $written !== strlen($bytes)) {
-                throw new SecretsWriteFailed(
-                    "OAuthSecretsRepository: short write to temp file at {$tmp}."
-                );
-            }
-            @fflush($fp);
-            if (function_exists('fsync')) {
-                @fsync($fp);
-            }
-            @flock($fp, LOCK_UN);
-            @fclose($fp);
-            $fp = null;
-
-            if (! @chmod($tmp, self::FILE_MODE)) {
-                throw new SecretsWriteFailed(
-                    "OAuthSecretsRepository: failed to chmod temp file at {$tmp}."
-                );
-            }
-
-            if (! $this->performRename($tmp, $absolute)) {
-                throw new SecretsWriteFailed(
-                    "OAuthSecretsRepository: atomic rename failed from {$tmp} to {$absolute}."
-                );
-            }
+            $row->save();
         } catch (Throwable $e) {
-            if (is_resource($fp)) {
-                @flock($fp, LOCK_UN);
-                @fclose($fp);
-            }
-            @unlink($tmp);
-            if ($e instanceof SecretsWriteFailed) {
-                throw $e;
-            }
             throw new SecretsWriteFailed(
-                "OAuthSecretsRepository: unexpected failure writing {$absolute}."
+                "OAuthSecretsRepository: failed to persist the {$row->provider} credential row ({$e->getMessage()})."
             );
-        } finally {
-            // Always restore the prior umask so the narrowed value
-            // does not leak into subsequent writes elsewhere in the
-            // request lifecycle.
-            umask($prevUmask);
         }
     }
 
-    private function absolutePath(): string
+    private function providerRow(string $provider): ?OAuthSecret
     {
-        return storage_path(self::PATH_RELATIVE);
+        return OAuthSecret::query()
+            ->where('user_id', $this->currentUser->id())
+            ->where('provider', $provider)
+            ->first();
+    }
+
+    /**
+     * @return list<OAuthSecret>
+     */
+    private function providerRows(): array
+    {
+        return array_values(
+            OAuthSecret::query()
+                ->where('user_id', $this->currentUser->id())
+                ->get()
+                ->all()
+        );
+    }
+
+    private function newProviderRow(string $provider): OAuthSecret
+    {
+        $row = new OAuthSecret;
+        $row->user_id = $this->currentUser->id();
+        $row->provider = $provider;
+        $row->client_id = '';
+        $row->client_secret = '';
+        $row->redirect_uri = '';
+        $row->tokens_blob = null;
+
+        return $row;
     }
 
     /**
@@ -364,15 +242,60 @@ class OAuthSecretsRepository
      */
     private function findInboxEntry(int $inboxId): ?array
     {
-        $data = $this->readAll();
-        $inboxes = self::asInboxList($data['inboxes'] ?? null);
-        foreach ($inboxes as $entry) {
-            if (self::toInt($entry['id'] ?? 0) === $inboxId) {
+        foreach ($this->providerRows() as $row) {
+            $inboxes = $this->decodeInboxes($row->tokens_blob);
+            $entry = $inboxes[(string) $inboxId] ?? null;
+            if ($entry !== null) {
                 return $entry;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Decode the per-inbox token map from a row's decrypted
+     * tokens_blob. The blob is a JSON object keyed by inbox id.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function decodeInboxes(?string $blob): array
+    {
+        if ($blob === null || $blob === '') {
+            return [];
+        }
+        $decoded = json_decode($blob, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+        $out = [];
+        foreach ($decoded as $key => $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+            $narrowed = [];
+            foreach ($entry as $k => $v) {
+                $narrowed[(string) $k] = $v;
+            }
+            $out[(string) $key] = $narrowed;
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<int|string, array<string, mixed>>  $inboxes
+     */
+    private function encodeInboxes(array $inboxes): string
+    {
+        $encoded = json_encode($inboxes, JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            throw new SecretsWriteFailed(
+                'OAuthSecretsRepository: failed to encode the inbox token map.'
+            );
+        }
+
+        return $encoded;
     }
 
     private function assertProvider(string $provider): void
@@ -382,34 +305,6 @@ class OAuthSecretsRepository
                 "OAuthSecretsRepository: provider must be 'gmail' or 'microsoft', got '{$provider}'."
             );
         }
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private static function asInboxList(mixed $value): array
-    {
-        if (! is_array($value)) {
-            return [];
-        }
-        $out = [];
-        foreach ($value as $entry) {
-            if (! is_array($entry)) {
-                continue;
-            }
-            $narrowed = [];
-            foreach ($entry as $k => $v) {
-                $narrowed[(string) $k] = $v;
-            }
-            $out[] = $narrowed;
-        }
-
-        return $out;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private static function toString(mixed $value): string
