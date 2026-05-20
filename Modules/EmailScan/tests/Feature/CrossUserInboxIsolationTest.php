@@ -43,6 +43,10 @@ it('cross-user reconnect attempt returns 404 — never leaks the foreign inbox',
     $userA = cuiUser('user-a@example.com');
     $userB = cuiUser('user-b@example.com');
 
+    // User B is the acting user. The per-user OAuth secrets store
+    // requires an authenticated user before a provider client is saved.
+    $this->actingAs($userB);
+
     /** @var OAuthSecretsRepository $secrets */
     $secrets = $this->app->make(OAuthSecretsRepository::class);
     $secrets->saveProviderClient(
@@ -75,8 +79,7 @@ it('cross-user reconnect attempt returns 404 — never leaks the foreign inbox',
         'updated_at' => $now,
     ]);
 
-    // User B authenticates and tries to reconnect user A's inbox.
-    $this->actingAs($userB);
+    // User B tries to reconnect user A's inbox.
     $this->withoutExceptionHandling();
 
     expect(function () use ($inboxAId): void {

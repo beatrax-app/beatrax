@@ -184,6 +184,9 @@ it("returns 404 when reconnect targets another user's inbox", function (): void 
     $user = occUser('owner@example.com');
     $other = occUser('other@example.com');
 
+    // The per-user OAuth secrets store requires an authenticated user
+    // before a provider client is saved.
+    $this->actingAs($user);
     $secrets = $this->app->make(OAuthSecretsRepository::class);
     occSeedBothProviderClients($secrets);
     [$gmailMock, $microsoftMock] = occMakeOAuthMocks();
@@ -194,8 +197,6 @@ it("returns 404 when reconnect targets another user's inbox", function (): void 
     $db = $this->app->make(DatabaseManager::class);
     $otherInboxId = occSeedInbox($db, $other, 'microsoft');
 
-    // Authenticated as user, asking to reconnect other's inbox.
-    $this->actingAs($user);
     $response = $this->get('/oauth/connect/microsoft?inbox_id='.$otherInboxId);
     $response->assertNotFound();
 });
