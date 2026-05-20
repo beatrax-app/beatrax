@@ -22,12 +22,12 @@
 
 ### MULTI (Multi-User Activation)
 
-- [ ] **MULTI-01**: `CurrentUserProvider` DI contract (extending existing `Modules\Core\Public\Contracts\CurrentUser`) bound in `Modules/Auth/`, with arch-test forbidding `Auth::user()` / `auth()` / `request()->user()` / `request()->session()` calls across every module
-- [ ] **MULTI-02**: Fortify login / signup / logout / session lifecycle in Flux + Volt UI; sessions stored via Laravel session driver compatible with NativePHP bundle; "remember me" cookie
-- [ ] **MULTI-03**: `BelongsToUser` global scope extension + cross-user 404-not-403 test set on every route (no cross-user data leak; partner cannot probe IDs to discover owner's data)
-- [ ] **MULTI-04**: Recovery-codes password reset — printed at signup, 10 single-use codes; owner-resets-partner flow; `diederik:reset-password` CLI fallback; NO SMTP-based reset flow in v2.0
-- [ ] **MULTI-05**: Per-user OAuth secrets migration — single `storage/app/secrets/imap.json` (chmod 600) replaced by SQLite-encrypted `oauth_secrets` table keyed by `user_id`, encrypted via `APP_KEY`; `OAuthSecretsRepository` swap; existing `PLT-03` invariant generalizes
-- [ ] **MULTI-06**: Profile selector + quick-switch via app menu (owner can act as partner during debugging without full logout/login dance)
+- [x] **MULTI-01**: `CurrentUserProvider` DI contract (extending existing `Modules\Core\Public\Contracts\CurrentUser`) bound in `Modules/Auth/`, with arch-test forbidding `Auth::user()` / `auth()` / `request()->user()` / `request()->session()` calls across every module
+- [x] **MULTI-02**: Fortify login / signup / logout / session lifecycle in Flux + Volt UI; sessions stored via Laravel session driver compatible with NativePHP bundle; "remember me" cookie
+- [x] **MULTI-03**: `BelongsToUser` global scope extension + cross-user 404-not-403 test set on every route (no cross-user data leak; partner cannot probe IDs to discover owner's data)
+- [x] **MULTI-04**: Recovery-codes password reset — printed at signup, 10 single-use codes; owner-resets-partner flow; `diederik:reset-password` CLI fallback; NO SMTP-based reset flow in v2.0
+- [x] **MULTI-05**: Per-user OAuth secrets migration — single `storage/app/secrets/imap.json` (chmod 600) replaced by SQLite-encrypted `oauth_secrets` table keyed by `user_id`, encrypted via `APP_KEY`; `OAuthSecretsRepository` swap; existing `PLT-03` invariant generalizes
+- [x] **MULTI-06**: Profile selector + quick-switch via app menu (owner can act as partner during debugging without full logout/login dance)
 
 ### DEVUI (In-App Developer Mode)
 
@@ -148,12 +148,12 @@ Which phase covers which requirement. Updated during roadmap creation (2026-05-1
 | PKG-06 | Phase 15 | Pending |
 | PKG-07 | Phase 15 | Pending |
 | PKG-08 | Phase 15 | Pending |
-| MULTI-01 | Phase 12 | Pending |
-| MULTI-02 | Phase 12 | Pending |
-| MULTI-03 | Phase 12 | Pending |
-| MULTI-04 | Phase 12 | Pending |
-| MULTI-05 | Phase 12 | Pending |
-| MULTI-06 | Phase 12 | Pending |
+| MULTI-01 | Phase 12 | Complete |
+| MULTI-02 | Phase 12 | Complete |
+| MULTI-03 | Phase 12 | Complete |
+| MULTI-04 | Phase 12 | Complete |
+| MULTI-05 | Phase 12 | Complete |
+| MULTI-06 | Phase 12 | Complete |
 | DEVUI-01 | Phase 16 | Pending |
 | DEVUI-02 | Phase 16 | Pending |
 | DEVUI-03 | Phase 16 | Pending |
@@ -190,6 +190,7 @@ Which phase covers which requirement. Updated during roadmap creation (2026-05-1
 | BETA-04 | Phase 21 | Pending |
 
 **Coverage:**
+
 - v2.0 requirements: 48 total
 - Mapped to phases: 48 ✓
 - Unmapped: 0 ✓
