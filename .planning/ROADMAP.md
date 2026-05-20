@@ -31,7 +31,7 @@ Full phase details, success criteria, and plan breakdowns are preserved in [mile
 v2.0 takes the validated v1.0 core value to a non-technical partner via a code-signed desktop installer, with an in-app developer console so power users (and contributors) keep full CLI access, under a Hippocratic-3.0 source-available license. The work is shell, activation, and release — not feature extension. The build order is dictated by research's strict dependency chain: multi-user activation must precede everything because the auth contract is load-bearing for every later phase; the `AppPaths` abstraction must precede NativePHP integration because hard-coded paths break the moment Electron boots; queue rewire must precede desktop shell because the shipped bundle cannot ship Redis; and the public-release boundary phase must run last because it depends on every earlier deliverable being in place to redact, license, and document.
 
 - [x] **Phase 12: Multi-User Activation** — Real Fortify auth + per-user data isolation built on the dormant `user_id` schema; new `Modules/Auth/`; profile selector + recovery-codes + owner-resets-partner flow (completed 2026-05-20)
-- [ ] **Phase 13: AppPaths** — `UserDataPath` contract replaces every hard-coded `database_path()` / `storage_path()` / `base_path()` call so paths resolve under NativePHP's `Application::storagePath()` in shipped builds and project-rooted paths in Herd dev mode; arch test + CI grep gate forbid the raw helpers outside the service
+- [x] **Phase 13: AppPaths** — `UserDataPath` contract replaces every hard-coded `database_path()` / `storage_path()` / `base_path()` call so paths resolve under NativePHP's `Application::storagePath()` in shipped builds and project-rooted paths in Herd dev mode; arch test + CI grep gate forbid the raw helpers outside the service (completed 2026-05-20)
 - [ ] **Phase 14: Queue Rewire + Horizon Carve-out** — Shipped bundle moves to `database` queue driver + `database` cache locks; Horizon gated to `DIEDERIK_RUNTIME=herd` dev mode only; chain-resolution proven end-to-end on the new driver under concurrent load
 - [ ] **Phase 15: Desktop Shell (NativePHP Integration)** — `nativephp/desktop ^2.2` integration producing signed-ready `.dmg` / `.msi` / `.AppImage` / `.deb` installers; native chrome (window/menu/tray/notifications/dark-mode); file-association handlers for `.eml` + `.csv`; new `Modules/Desktop/` quarantines every `Native\Laravel\*` import
 - [ ] **Phase 16: Developer Mode UI** — New `Modules/DevMode/`; `is_developer` flag + `EnsureDeveloperMode` middleware; SAFE / DESTRUCTIVE artisan runner with live stdout streaming; log tailer with secret-redaction; bespoke queue inspector replaces Horizon dashboard for shipped builds; embedded Horizon iframe behind dev-runtime flag; ⌘K command palette
@@ -83,7 +83,7 @@ Plans:
   1. `BoundaryArchTest::noStoragePathHardCodedOutsideUserDataPathService` is green — no `database_path()` / `storage_path()` / `base_path()` call appears anywhere outside `Modules\Core\Public\Services\UserDataPathService`; CI grep gate enforces the same rule against string literals (`database.sqlite`, `storage/app/`)
   2. Running `php artisan migrate:fresh` under a simulated NativePHP env (`NATIVEPHP_STORAGE_PATH=<tmp>`) creates the SQLite file under the temp dir; `php artisan db:backup` writes to `<tmp>/storage/app/backups/`; OAuth secrets land at `<tmp>/storage/app/secrets/`; all proven by Pest feature test
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 
@@ -97,7 +97,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 13-03-PLAN.md — fill the simulated-NativePHP-env feature test (migrate:fresh / db:backup / OAuth secrets) + verify arch invariant + CI grep gate green
+- [x] 13-03-PLAN.md — fill the simulated-NativePHP-env feature test (migrate:fresh / db:backup / OAuth secrets) + verify arch invariant + CI grep gate green
 
 ### Phase 14: Queue Rewire + Horizon Carve-out
 
@@ -238,7 +238,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | v1.0 MVP — Phases 1–11 | 66/66 | Complete | 2026-05-19 |
 | 12. Multi-User Activation | 8/8 | Complete    | 2026-05-20 |
-| 13. AppPaths | 2/3 | In Progress|  |
+| 13. AppPaths | 3/3 | Complete   | 2026-05-20 |
 | 14. Queue Rewire + Horizon Carve-out | 0/0 | Not started | - |
 | 15. Desktop Shell (NativePHP Integration) | 0/0 | Not started | - |
 | 16. Developer Mode UI | 0/0 | Not started | - |
