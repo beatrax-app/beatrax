@@ -34,7 +34,7 @@ it('renders the ten codes after signup', function (): void {
     $component = Livewire::actingAs($result['user'])->test(RecoveryCodesDisplay::class)
         ->assertOk()
         ->assertSeeText('Save these recovery codes')
-        ->assertSeeText('Print these or save them somewhere safe. They will not be shown again — only regenerated.');
+        ->assertSeeText('Print these or save them somewhere safe. They will not be shown again.');
 
     foreach ($result['codesPlain'] as $code) {
         $component->assertSee($code, false);
