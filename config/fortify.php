@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use Laravel\Fortify\Features;
-
 return [
 
     /*
@@ -23,7 +21,7 @@ return [
 
     'passwords' => 'users',
 
-    'username' => 'email',
+    'username' => 'username',
 
     'email' => 'email',
 
@@ -38,7 +36,7 @@ return [
     'lowercase_usernames' => true,
 
     'limiters' => [
-        'login' => 'login',
+        'login' => null,
         'passkeys' => null,
     ],
 
@@ -99,14 +97,12 @@ return [
     | Features Enabled
     |--------------------------------------------------------------------------
     |
-    | Single-user app: registration / password reset / email verification /
-    | 2FA / passkeys are all out of scope for now. The only enabled feature
-    | is `updatePasswords` so a future operational-hardening phase can ship
-    | a settings-page password change without a config change here.
+    | Features intentionally empty: signup uses a custom route gate;
+    | password reset uses recovery codes; there is no email verification
+    | or two-factor authentication. The login and logout routes are wired
+    | directly by the Auth module rather than by a Fortify feature flag.
     */
 
-    'features' => [
-        Features::updatePasswords(),
-    ],
+    'features' => [],
 
 ];
