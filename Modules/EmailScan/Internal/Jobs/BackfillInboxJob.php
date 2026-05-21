@@ -15,10 +15,10 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Sleep;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
@@ -44,9 +44,8 @@ use Throwable;
  *    state machine's reject for the duplicate 'idle → backfilling'
  *    re-entry. ShouldBeUnique keeps the lock until handle() returns
  *    (success or throw) so concurrent dispatches collapse cleanly to
- *    one. The unique-lock store is Redis (the project's only permitted
- *    facade exception — Laravel calls `uniqueVia()` at push-time
- *    before constructor DI resolves).
+ *    one. The unique-lock store is resolved by the shared LockStore
+ *    helper from `config('cache.locks_store')`.
  *  - `tries = 3` + `backoff = [60, 300, 900]` matches the
  *    project-wide retry envelope so the per-inbox state machine's
  *    rate-limited / error transitions ride the same back-off curve.
@@ -111,12 +110,10 @@ use Throwable;
  *    500 chars of the exception message) and rethrow so the
  *    JobFailed listener can surface the failure.
  *
- * Single permitted facade exception: the `Cache::driver('redis')`
- * call inside `uniqueVia()`. The Laravel queue infrastructure
- * invokes `uniqueVia()` at push-time before constructor DI
- * completes; a constructor-injected `Repository` is not an option.
- * The `tests/Contracts/BoundaryArchTest.php` allow-list grants
- * this file FQN the "no Laravel facades in module code" exemption.
+ * Queue-uniqueness lock resolution is delegated to the shared
+ * `Modules\Core\Public\Support\LockStore` helper: `uniqueVia()`
+ * returns `LockStore::forUniqueJobs()`, which resolves the cache store
+ * named by `config('cache.locks_store')`.
  */
 final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 {
@@ -151,11 +148,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 
     public function uniqueVia(): Repository
     {
-        // The Cache facade is the single permitted facade use in
-        // module code (BoundaryArchTest carve-out). Laravel calls
-        // uniqueVia() before constructor DI completes — there is
-        // no path to inject a Repository at this point.
-        return Cache::driver('redis');
+        return LockStore::forUniqueJobs();
     }
 
     public function handle(
