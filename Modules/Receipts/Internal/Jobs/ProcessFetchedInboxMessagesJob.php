@@ -13,9 +13,9 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\InboxMessageQuery;
 use Modules\Import\Public\Pipeline\NormalizeStage;
@@ -51,12 +51,10 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
  * defence-in-depth comparison prevents a future query-side refactor
  * from silently widening the per-user surface.
  *
- * Single permitted facade exception: `Cache::driver('redis')` inside
- * `uniqueVia()`. The Laravel queue infrastructure invokes
- * `uniqueVia()` at queue-push time before constructor DI completes;
- * a constructor-injected `Repository` is not an option. The
- * `tests/Contracts/BoundaryArchTest.php` allow-list grants this file
- * FQN the "no Laravel facades in module code" exemption.
+ * Queue-uniqueness lock resolution is delegated to the shared
+ * `Modules\Core\Public\Support\LockStore` helper: `uniqueVia()`
+ * returns `LockStore::forUniqueJobs()`, which resolves the cache store
+ * named by `config('cache.locks_store')`.
  *
  * The matcher dispatch flow inside handle() is synchronous and pure
  * — the queue layer is just a per-user backlog walker on a known
@@ -94,11 +92,7 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
 
     public function uniqueVia(): Repository
     {
-        // The Cache facade is the single permitted facade use in
-        // module code (BoundaryArchTest carve-out). Reason: Laravel
-        // calls uniqueVia() before constructor DI completes — there
-        // is no path to inject a Repository at this point.
-        return Cache::driver('redis');
+        return LockStore::forUniqueJobs();
     }
 
     public function handle(

@@ -13,9 +13,9 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\LockStore;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Pipeline\MboxIterator;
 use Psr\Log\LoggerInterface;
@@ -55,13 +55,10 @@ use Throwable;
  * path-traversal attempt via a crafted filename cannot escape this
  * subtree because the file rename targets `basename($path)` only.
  *
- * Single permitted facade exception: `Cache::driver('redis')` inside
- * `uniqueVia()`. Laravel's queue infrastructure invokes uniqueVia()
- * at push-time before constructor DI completes — a constructor-
- * injected Repository is not an option. The
- * `tests/Contracts/BoundaryArchTest.php` allow-list grants this file
- * FQN the "no Laravel facades in module code" exemption alongside
- * the other receipts/email-scan jobs.
+ * Queue-uniqueness lock resolution is delegated to the shared
+ * `Modules\Core\Public\Support\LockStore` helper: `uniqueVia()`
+ * returns `LockStore::forUniqueJobs()`, which resolves the cache store
+ * named by `config('cache.locks_store')`.
  *
  * Idempotency: re-running the job on the same root folder never
  * re-touches the `processed/` or `failed/` subtrees — the top-level
@@ -102,11 +99,7 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
 
     public function uniqueVia(): Repository
     {
-        // The Cache facade is the single permitted facade use in
-        // module code (BoundaryArchTest carve-out). Reason: Laravel
-        // calls uniqueVia() before constructor DI completes — there
-        // is no path to inject a Repository at this point.
-        return Cache::driver('redis');
+        return LockStore::forUniqueJobs();
     }
 
     public function handle(
