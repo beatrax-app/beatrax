@@ -11,8 +11,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\LockStore;
 use Modules\DriftAlerts\Internal\DriftEvaluator;
 
 /**
@@ -28,11 +28,10 @@ use Modules\DriftAlerts\Internal\DriftEvaluator;
  *  - tries = 3 + backoff = [60, 300, 900] keeps a transient queue or
  *    DB hiccup from final-failing the evaluation without two retries.
  *
- * Single permitted facade exception: the Cache::driver('redis') call
- * inside uniqueVia(). Laravel resolves the lock store at queue-push
- * time before constructor DI completes — a constructor-injected
- * Repository is not an option. The BoundaryArchTest facade-ignore
- * carve-out names this FQN explicitly.
+ * Queue-uniqueness lock resolution is delegated to the shared
+ * Modules\Core\Public\Support\LockStore helper: uniqueVia() returns
+ * LockStore::forUniqueJobs(), which resolves the cache store named by
+ * config('cache.locks_store').
  *
  * handle() resolves the User via firstOrFail (mirrors
  * DetectRecurringSeriesJob) and hands off to DriftEvaluator which
@@ -67,7 +66,7 @@ final class DetectDriftAlertsJob implements ShouldBeUniqueUntilProcessing, Shoul
 
     public function uniqueVia(): Repository
     {
-        return Cache::driver('redis');
+        return LockStore::forUniqueJobs();
     }
 
     public function handle(DriftEvaluator $evaluator): void

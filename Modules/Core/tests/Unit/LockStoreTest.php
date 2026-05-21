@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\DatabaseStore;
-use Illuminate\Cache\RedisStore;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Support\Facades\Cache;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Core\Public\Support\LockStore;
 use Modules\DriftAlerts\Internal\Jobs\DetectDriftAlertsJob;
@@ -19,32 +18,44 @@ use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 
 uses()->group('Phase14');
 
+// The test harness (tests/TestCase.php::setUp) deliberately remaps the
+// `redis` cache store onto the `array` driver so no test opens a TCP
+// socket to a Redis daemon. The assertions below therefore prove that
+// forUniqueJobs() resolves the store NAMED by config('cache.locks_store')
+// — they compare against Cache::store($name) directly rather than
+// asserting a concrete driver class for the `redis` name.
+
 it('resolves the database store when cache.locks_store is database', function (): void {
     config(['cache.locks_store' => 'database']);
 
     $repository = LockStore::forUniqueJobs();
 
     expect($repository)->toBeInstanceOf(Repository::class)
-        ->and($repository->getStore())->toBeInstanceOf(DatabaseStore::class);
+        ->and($repository->getStore())->toBeInstanceOf(DatabaseStore::class)
+        ->and($repository->getStore())->toBe(Cache::store('database')->getStore());
 });
 
-it('resolves the redis store when cache.locks_store is redis', function (): void {
+it('resolves the redis-named store when cache.locks_store is redis', function (): void {
     config(['cache.locks_store' => 'redis']);
 
     $repository = LockStore::forUniqueJobs();
 
     expect($repository)->toBeInstanceOf(Repository::class)
-        ->and($repository->getStore())->toBeInstanceOf(RedisStore::class);
+        ->and($repository->getStore())->toBe(Cache::store('redis')->getStore());
 });
 
 it('resolves the configured store rather than a hard-coded one', function (): void {
-    config(['cache.locks_store' => 'array']);
-
-    expect(LockStore::forUniqueJobs()->getStore())->toBeInstanceOf(ArrayStore::class);
+    config(['cache.locks_store' => 'redis']);
+    $redisStore = LockStore::forUniqueJobs()->getStore();
 
     config(['cache.locks_store' => 'database']);
+    $databaseStore = LockStore::forUniqueJobs()->getStore();
 
-    expect(LockStore::forUniqueJobs()->getStore())->toBeInstanceOf(DatabaseStore::class);
+    // Switching the config key switches the resolved store — proof the
+    // helper reads config('cache.locks_store') rather than hard-coding.
+    expect($databaseStore)->toBeInstanceOf(DatabaseStore::class)
+        ->and($databaseStore)->not->toBe($redisStore)
+        ->and($redisStore)->toBe(Cache::store('redis')->getStore());
 });
 
 it('routes ResolveChainLinksJob uniqueVia to the same store the helper resolves', function (): void {
@@ -53,7 +64,7 @@ it('routes ResolveChainLinksJob uniqueVia to the same store the helper resolves'
     $job = new ResolveChainLinksJob(1);
 
     expect($job->uniqueVia()->getStore())
-        ->toBeInstanceOf(LockStore::forUniqueJobs()->getStore()::class);
+        ->toBe(LockStore::forUniqueJobs()->getStore());
 });
 
 it('routes every ShouldBeUnique job uniqueVia to the configured lock store', function (string $jobClass): void {
@@ -66,7 +77,8 @@ it('routes every ShouldBeUnique job uniqueVia to the configured lock store', fun
     $resolved = $job->uniqueVia();
 
     expect($resolved)->toBeInstanceOf(Repository::class)
-        ->and($resolved->getStore())->toBeInstanceOf(DatabaseStore::class);
+        ->and($resolved->getStore())->toBeInstanceOf(DatabaseStore::class)
+        ->and($resolved->getStore())->toBe(LockStore::forUniqueJobs()->getStore());
 })->with([
     ResolveChainLinksJob::class,
     ScanInboxDropFolderJob::class,
