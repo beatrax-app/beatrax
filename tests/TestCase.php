@@ -45,6 +45,16 @@ abstract class TestCase extends BaseTestCase
      * when Redis is not reachable; this override does not interfere
      * with those because they ignore the cache store and talk to
      * Redis directly via the predis client.
+     *
+     * The shipped `cache.locks_store` default is `database`, whose lock
+     * repository writes to the `cache_locks` table. Unit tests do not run
+     * migrations, so dispatching a `ShouldBeUniqueUntilProcessing` job —
+     * which makes Laravel's `UniqueLock` machinery acquire a lock via
+     * `uniqueVia()` — would fail with `no such table: cache_locks`. The
+     * override below routes queue-uniqueness locks to the in-memory
+     * `array` store. Tests that exercise the real database lock store
+     * (e.g. `DatabaseQueueConcurrencyTest`) set `cache.locks_store` back
+     * to `database` in their own `beforeEach()`.
      */
     protected function setUp(): void
     {
@@ -54,6 +64,7 @@ abstract class TestCase extends BaseTestCase
             'driver' => 'array',
             'serialize' => false,
         ]);
+        $this->app['config']->set('cache.locks_store', 'array');
     }
 
     /**

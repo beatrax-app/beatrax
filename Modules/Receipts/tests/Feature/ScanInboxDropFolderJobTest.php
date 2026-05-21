@@ -207,7 +207,11 @@ it('registers the routes/console.php Schedule entry under the receipts.scan-drop
     expect($contents)->toContain(ScanInboxDropFolderJob::class);
 });
 
-it('lists Modules\\Receipts\\Internal\\Jobs\\ScanInboxDropFolderJob in the Cache facade carve-out', function (): void {
-    $contents = (string) file_get_contents(base_path('tests/Contracts/BoundaryArchTest.php'));
-    expect($contents)->toContain('Modules\\\\Receipts\\\\Internal\\\\Jobs\\\\ScanInboxDropFolderJob');
+it('routes ScanInboxDropFolderJob unique lock through the LockStore carve-out helper', function (): void {
+    $job = (string) file_get_contents(base_path('Modules/Receipts/Internal/Jobs/ScanInboxDropFolderJob.php'));
+    expect($job)->toContain('LockStore::forUniqueJobs()')
+        ->and($job)->not->toContain("Cache::driver('redis')");
+
+    $archTest = (string) file_get_contents(base_path('tests/Contracts/BoundaryArchTest.php'));
+    expect($archTest)->toContain('Modules\\\\Core\\\\Public\\\\Support\\\\LockStore');
 });

@@ -65,7 +65,7 @@ it('uniqueFor returns 600 seconds', function (): void {
     expect($job->uniqueFor())->toBe(600);
 });
 
-it('uniqueVia returns a Cache Repository (driver resolved via the redis carve-out)', function (): void {
+it('uniqueVia returns a Cache Repository resolved through the LockStore helper', function (): void {
     $job = new ProjectForecastJob(userId: 1, scenarioId: null, horizonDays: 30);
     expect($job->uniqueVia())->toBeInstanceOf(Repository::class);
 });
