@@ -85,7 +85,7 @@ it('returns the userId as the unique id and 600 as the unique window', function 
     expect($job->uniqueFor())->toBe(600);
 });
 
-it('uniqueVia returns a Cache Repository (resolved as the redis driver alias)', function (): void {
+it('uniqueVia returns a Cache Repository resolved through the LockStore helper', function (): void {
     $job = new ResolveChainLinksJob($this->user->id);
 
     expect($job->uniqueVia())->toBeInstanceOf(CacheRepository::class);
