@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
 stopped_at: Phase 14 context gathered
-last_updated: "2026-05-20T22:14:25.811Z"
-last_activity: 2026-05-20 -- Phase 14 planning complete
+last_updated: "2026-05-20T22:16:34.420Z"
+last_activity: 2026-05-20 -- Phase 14 execution started
 progress:
   total_phases: 10
   completed_phases: 2
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-**Current focus:** Phase 13 — app-paths
+**Current focus:** Phase 14 — queue-rewire-horizon-carve-out
 
 ## Current Position
 
-Phase: 14
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-20 -- Phase 14 planning complete
+Phase: 14 (queue-rewire-horizon-carve-out) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 14
+Last activity: 2026-05-20 -- Phase 14 execution started
 
 ## Performance Metrics
 

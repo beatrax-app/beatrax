@@ -113,13 +113,13 @@ Plans:
   3. `HorizonServiceProvider::boot()` early-exits when `config('app.dev_mode') !== true` so the `/horizon` route never registers in shipped builds; `BoundaryArchTest::noHorizonImportsInShippedBuildCode` invariant green
   4. `predis/predis` moves from `require` to `require-dev` in `composer.json` (since Redis is dev-only); shipped composer.lock produces a smaller dependency tree
 
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 14-01-PLAN.md — queue/cache/cache_locks framework migrations + published config/cache.php with locks_store key + config('app.dev_mode') wiring
+- [x] 14-01-PLAN.md — queue/cache/cache_locks framework migrations + published config/cache.php with locks_store key + config('app.dev_mode') wiring
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -253,7 +253,7 @@ Plans:
 | v1.0 MVP — Phases 1–11 | 66/66 | Complete | 2026-05-19 |
 | 12. Multi-User Activation | 8/8 | Complete    | 2026-05-20 |
 | 13. AppPaths | 3/3 | Complete    | 2026-05-20 |
-| 14. Queue Rewire + Horizon Carve-out | 0/3 | Planned | - |
+| 14. Queue Rewire + Horizon Carve-out | 1/3 | In Progress|  |
 | 15. Desktop Shell (NativePHP Integration) | 0/0 | Not started | - |
 | 16. Developer Mode UI | 0/0 | Not started | - |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
