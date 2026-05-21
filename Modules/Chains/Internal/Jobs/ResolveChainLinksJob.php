@@ -12,11 +12,11 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\LockStore;
 
 /**
  * The first queued job in the project. Runs both Phase 5 resolvers
@@ -41,18 +41,16 @@ use Modules\Core\Public\Contracts\Clock;
  *    `ChainsServiceProvider::boot()` catches a final-retry exhaustion
  *    and flips the row to `failed` with a truncated `last_error` line.
  *
- * Single permitted facade exception: the `Cache::driver('redis')`
- * call inside `uniqueVia()`. The Laravel queue infrastructure invokes
- * `uniqueVia()` at queue-push time before constructor DI completes;
- * a constructor-injected `Repository` is not an option. The
- * `tests/Contracts/BoundaryArchTest.php` allow-list grants this file
- * FQN the "no Laravel facades in module code" exemption.
+ * Queue-uniqueness lock resolution is delegated to the shared
+ * `Modules\Core\Public\Support\LockStore` helper: `uniqueVia()`
+ * returns `LockStore::forUniqueJobs()`, which resolves the cache store
+ * named by `config('cache.locks_store')`.
  *
  * Dispatched from `Modules\Import\Public\Actions\ConfirmImport` AFTER
  * the import's outer DB transaction commits — never inside the
- * transaction closure (RESEARCH Pitfall 3). The Redis queue driver
- * does not share the SQLite transaction frame, so an in-transaction
- * dispatch would let the worker see stale state.
+ * transaction closure. The queue driver does not share the SQLite
+ * transaction frame, so an in-transaction dispatch would let the
+ * worker see stale state.
  */
 final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -88,11 +86,7 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
 
     public function uniqueVia(): Repository
     {
-        // The Cache facade is the single permitted facade use in
-        // module code (BoundaryArchTest carve-out). Reason: Laravel
-        // calls uniqueVia() before constructor DI completes — there
-        // is no path to inject a Repository at this point.
-        return Cache::driver('redis');
+        return LockStore::forUniqueJobs();
     }
 
     public function handle(
