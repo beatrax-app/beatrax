@@ -53,55 +53,17 @@ arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules')
     ->ignoring([
-        // Carve-out: Laravel's queue infrastructure calls uniqueVia() at
-        // queue-push time before the chain-resolution job's constructor
-        // DI completes, so a constructor-injected Cache repository is
-        // not an option. The Cache facade is the only permitted facade
-        // use in module code; ResolveChainLinksJob documents this on
-        // its class-level docblock when it ships.
-        'Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
-        // Same carve-out applies to the three EmailScan queued jobs:
-        // backfill, incremental scan, and discovery scan all call
-        // Cache::driver('redis') from uniqueVia() so the per-inbox /
-        // per-user single-flight lock fires before the constructor DI
-        // completes. The job class docblocks repeat this rationale
-        // when each lands in later plans.
-        'Modules\\EmailScan\\Internal\\Jobs\\BackfillInboxJob',
-        'Modules\\EmailScan\\Internal\\Jobs\\IncrementalScanJob',
-        'Modules\\EmailScan\\Internal\\Jobs\\DiscoveryScanJob',
-        // Same carve-out applies to the Receipts matcher consumer:
-        // ProcessFetchedInboxMessagesJob.uniqueVia() returns
-        // Cache::driver('redis') so the per-user single-flight lock
-        // fires before constructor DI completes (the queue worker
-        // builds the lock store from the job's uniqueVia() return,
-        // not from container resolution).
-        'Modules\\Receipts\\Internal\\Jobs\\ProcessFetchedInboxMessagesJob',
-        // Same carve-out for the watched-folder secondary path
-        // scanner (D-704 secondary / D-718). Same uniqueVia() →
-        // Cache::driver('redis') shape as the other queued jobs above.
-        'Modules\\Receipts\\Internal\\Jobs\\ScanInboxDropFolderJob',
-        // Same carve-out for the Recurring sweep job. Laravel calls
-        // DetectRecurringSeriesJob::uniqueVia() at queue-push time to
-        // resolve the per-user single-flight lock before constructor
-        // DI completes, so a constructor-injected Cache repository is
-        // not an option. The class lands in a later Recurring wave; the
-        // FQN is forward-declared here so the carve-out is in place
-        // the moment the file is created.
-        'Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
-        // Same carve-out for the DriftAlerts detector job. Laravel calls
-        // DetectDriftAlertsJob::uniqueVia() at queue-push time to
-        // resolve the per-(user, series) single-flight lock before
-        // constructor DI completes, so a constructor-injected Cache
-        // repository is not an option. The class lands in a later
-        // DriftAlerts wave; the FQN is forward-declared here so the
-        // carve-out is in place the moment the file is created.
-        'Modules\\DriftAlerts\\Internal\\Jobs\\DetectDriftAlertsJob',
-        // Cache::driver('redis') facade carve-out: ShouldBeUniqueUntilProcessing
-        // requires the lock store at queue-push time, before constructor
-        // DI completes (mirrors DetectDriftAlertsJob). The class lands
-        // in a later Forecasting wave; the FQN is forward-declared here
-        // so the carve-out is in place the moment the file is created.
-        'Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
+        // Single carve-out: the shared LockStore helper is the only
+        // module file permitted to use the Cache facade (and the
+        // config() helper). Laravel's queue infrastructure invokes
+        // ShouldBeUniqueUntilProcessing::uniqueVia() at queue-push time,
+        // before the job's constructor DI completes, so a constructor-
+        // injected Cache repository is not reachable from a uniqueVia()
+        // body. Every ShouldBeUnique* job's uniqueVia() returns
+        // LockStore::forUniqueJobs(), so the facade crossing is confined
+        // to this one file. The phpstan.neon ignoreErrors list mirrors
+        // this allow-list.
+        'Modules\\Core\\Public\\Support\\LockStore',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')

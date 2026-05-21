@@ -12,9 +12,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\LockStore;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
@@ -36,12 +36,10 @@ use Psr\Log\LoggerInterface;
  *    or DB hiccup from final-failing the sweep without the prior two
  *    retries.
  *
- * Single permitted facade exception: the `Cache::driver('redis')`
- * call inside `uniqueVia()`. Laravel resolves the lock store at
- * queue-push time before constructor DI completes — a constructor-
- * injected `Repository` is not an option. The
- * `tests/Contracts/BoundaryArchTest.php` `noFacadeCallsFromRecurring`
- * carve-out array names this FQN explicitly.
+ * Queue-uniqueness lock resolution is delegated to the shared
+ * `Modules\Core\Public\Support\LockStore` helper: `uniqueVia()`
+ * returns `LockStore::forUniqueJobs()`, which resolves the cache store
+ * named by `config('cache.locks_store')`.
  *
  * Dispatched daily from `routes/console.php` via the
  * `recurring.detect` scheduler entry, and on demand from the
@@ -76,7 +74,7 @@ final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, S
 
     public function uniqueVia(): Repository
     {
-        return Cache::driver('redis');
+        return LockStore::forUniqueJobs();
     }
 
     /**
