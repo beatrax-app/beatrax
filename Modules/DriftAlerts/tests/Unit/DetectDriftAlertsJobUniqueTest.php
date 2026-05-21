@@ -33,7 +33,7 @@ it('uniqueFor returns 600 seconds (the documented lock window)', function (): vo
     expect($job->uniqueFor())->toBe(600);
 });
 
-it('uniqueVia returns a Cache Repository (driver resolved via the redis carve-out)', function (): void {
+it('uniqueVia returns a Cache Repository resolved through the LockStore helper', function (): void {
     $job = new DetectDriftAlertsJob(userId: 1, recurringSeriesId: 1);
     expect($job->uniqueVia())->toBeInstanceOf(Repository::class);
 });

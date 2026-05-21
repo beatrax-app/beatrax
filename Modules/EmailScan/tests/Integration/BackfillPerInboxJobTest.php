@@ -65,12 +65,11 @@ it('uses the project-wide retry envelope (tries=3, backoff=60/300/900)', functio
 });
 
 it('routes the unique lock through a Cache Repository', function (): void {
-    // uniqueVia() returns Cache::driver('redis') in production.
-    // The Cache facade's array store satisfies the Repository
-    // contract; calling it directly in the test would hit Redis,
-    // so the assertion is on the method shape instead — Laravel
-    // queue infrastructure invokes uniqueVia at push-time before
-    // any cache writes happen.
+    // uniqueVia() returns LockStore::forUniqueJobs() in production,
+    // resolving the cache store named by config('cache.locks_store').
+    // The assertion is on the method shape rather than the resolved
+    // store — Laravel queue infrastructure invokes uniqueVia at
+    // push-time before any cache writes happen.
     $reflection = new ReflectionClass(BackfillInboxJob::class);
 
     expect($reflection->hasMethod('uniqueVia'))->toBeTrue();

@@ -538,8 +538,8 @@ it('does not detect income-type transactions when only the expense detector is w
     expect($incomeSeries)->toBe(0);
 })->group('income-not-yet');
 
-it('DetectRecurringSeriesJob has the ShouldBeUniqueUntilProcessing + redis cache carve-out', function (): void {
+it('DetectRecurringSeriesJob is ShouldBeUniqueUntilProcessing and locks via the LockStore helper', function (): void {
     $contents = file_get_contents(base_path('Modules/Recurring/Internal/Jobs/DetectRecurringSeriesJob.php'));
     expect($contents)->toContain('ShouldBeUniqueUntilProcessing');
-    expect($contents)->toContain("Cache::driver('redis')");
+    expect($contents)->toContain('LockStore::forUniqueJobs()');
 })->group('job-shape');
