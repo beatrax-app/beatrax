@@ -11,9 +11,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\LockStore;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 
 /**
@@ -39,11 +39,10 @@ use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
  * worker. The set is fixed for Phase 10; expansion (14, 180 days)
  * requires a deliberate code change.
  *
- * Single permitted facade exception: the `Cache::driver('redis')` call
- * inside `uniqueVia()`. Laravel resolves the lock store at queue-push
- * time before constructor DI completes — a constructor-injected
- * Repository is not an option. The BoundaryArchTest facade-ignore
- * carve-out names this FQN explicitly (Plan 10-01 forward-declared it).
+ * Queue-uniqueness lock resolution is delegated to the shared
+ * `Modules\Core\Public\Support\LockStore` helper: `uniqueVia()`
+ * returns `LockStore::forUniqueJobs()`, which resolves the cache store
+ * named by `config('cache.locks_store')`.
  *
  * `handle()` resolves the User via `firstOrFail` and hands off to
  * `ProjectionPipeline` which owns the math, the per-account fold, the
@@ -93,7 +92,7 @@ final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQ
 
     public function uniqueVia(): Repository
     {
-        return Cache::driver('redis');
+        return LockStore::forUniqueJobs();
     }
 
     public function handle(ProjectionPipeline $pipeline): void

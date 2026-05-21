@@ -7,17 +7,18 @@ declare(strict_types=1);
 | Queue Configuration
 |--------------------------------------------------------------------------
 |
-| The redis driver is the project default. Local-only, single-user, single
-| supervisor, fed by `php artisan horizon`. The database driver remains
-| configured for tests and fallback environments only.
+| The database driver is the shipped default. It is SQLite-backed and needs
+| no Redis daemon, so the desktop installer ships with zero external service
+| dependencies. The `jobs`, `job_batches`, and `cache_locks` tables back this
+| driver alongside `failed_jobs`.
 |
-| The `failed_jobs` table is provisioned by the create_failed_jobs_table
-| migration so Horizon retry semantics never throw at the storage layer.
+| The redis connection remains defined for the developer's Herd box, where
+| `QUEUE_CONNECTION=redis` selects it.
 */
 
 return [
 
-    'default' => env('QUEUE_CONNECTION', 'redis'),
+    'default' => env('QUEUE_CONNECTION', 'database'),
 
     'connections' => [
 
