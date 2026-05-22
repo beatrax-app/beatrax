@@ -93,21 +93,15 @@ return [
         'content',
         'node_modules',
         '*/tests',
-        // Laravel's compiled bootstrap caches are environment-specific:
-        // they are generated against whatever vendor tree is installed at
-        // the time. The desktop build runs `composer install --no-dev`
-        // inside the bundle, so any cache copied from the developer's
-        // full (dev) vendor tree references provider classes that the
-        // shipped bundle does not have (e.g. Laravel\Sentinel — a
-        // transitive require-dev dependency of laravel/horizon). Shipping
-        // those stale caches makes the bundle fatal on boot. Excluding
-        // them lets Laravel regenerate package/service discovery lazily
-        // against the bundle's own --no-dev vendor tree on first launch.
-        // The bootstrap/cache/.gitkeep is kept so the directory still
-        // exists in the bundle.
-        'bootstrap/cache/packages.php',
-        'bootstrap/cache/services.php',
-        'bootstrap/cache/modules.php',
+        // NOTE: `bootstrap/cache/*.php` are intentionally NOT excluded here.
+        // Laravel's PackageManifest requires `bootstrap/cache/` to already
+        // exist and be writable -- it does not create the directory. The
+        // desktop build copies the working tree, then runs `composer
+        // install --no-dev` (with scripts enabled). The `post-autoload-dump`
+        // script in composer.json runs `package:discover`, which OVERWRITES
+        // the copied caches with manifests built against the bundle's own
+        // --no-dev vendor tree. Letting the (stale) caches copy in normally
+        // guarantees the directory exists for that regeneration step.
     ],
 
     /**
