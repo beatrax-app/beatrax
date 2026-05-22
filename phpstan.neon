@@ -35,6 +35,15 @@ parameters:
         -
             message: "#Global helper function 'config' should not be used\\.#"
             path: Modules/Core/Public/Support/LockStore.php
+        # HorizonServiceProvider::boot() gates the /horizon dashboard on
+        # config('app.dev_mode'). A service provider's boot() is the
+        # canonical Laravel idiom for reading config — the laravel/horizon
+        # package provider it extends reads config the same way — and a
+        # constructor-injected Repository is not the established pattern
+        # for the framework's published HorizonServiceProvider stub.
+        -
+            message: "#Global helper function 'config' should not be used\\.#"
+            path: app/Providers/HorizonServiceProvider.php
     allowedGlobalFunctions:
         - 'app_path'
         - 'base_path'
