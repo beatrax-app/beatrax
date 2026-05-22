@@ -9,28 +9,25 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
 /*
  * Per-job failed() hook invariant.
  *
- * BackfillInboxJob + IncrementalScanJob each define a public
- * failed(Throwable, InboxScanStateMachine) method that Laravel calls
- * on the resolved job instance after the worker exhausts its retry
- * budget. The method flips inbox_scan_state.status to 'error' with
- * the truncated exception message and swallows invalid transitions
- * (e.g. an already-needs_reauth row failing again).
- *
- * This replaces the earlier ServiceProvider-level JobFailed listener
- * that extracted inboxId from the serialised payload via a regex —
- * brittle against Laravel-version serialiser-format changes and a
- * future job class whose property name shared an 'inboxId' prefix.
+ * BackfillInboxJob + IncrementalScanJob each define a public failed()
+ * method that Laravel calls on the resolved job instance after the
+ * worker exhausts its retry budget. The method flips
+ * inbox_scan_state.status to 'error' with the truncated exception
+ * message and does not escalate an invalid transition (e.g. an
+ * already-needs_reauth row failing again) into a queue-worker error.
  *
  * Test flow per job:
  *  1. Seed user + inbox + inbox_scan_state with status='idle'.
  *  2. Instantiate the job with the seeded inboxId.
- *  3. Invoke failed(new RuntimeException('...'), $stateMachine).
+ *  3. Invoke failed() with a RuntimeException and the resolved
+ *     collaborators.
  *  4. Assert the row's status flipped to 'error' and the error_message
  *     carries the exception's truncated text.
  */
@@ -71,7 +68,11 @@ it('BackfillInboxJob::failed() flips inbox_scan_state.status to error with trunc
     /** @var InboxScanStateMachine $sm */
     $sm = $this->app->make(InboxScanStateMachine::class);
 
-    $job->failed(new RuntimeException('Synthetic backfill failure.'), $sm);
+    $job->failed(
+        new RuntimeException('Synthetic backfill failure.'),
+        $sm,
+        $this->app->make(LoggerInterface::class),
+    );
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -148,7 +149,11 @@ it('BackfillInboxJob::failed() on a non-existent inbox swallows the RuntimeExcep
     $sm = $this->app->make(InboxScanStateMachine::class);
 
     // Must not throw.
-    $job->failed(new RuntimeException('vanished mid-flight.'), $sm);
+    $job->failed(
+        new RuntimeException('vanished mid-flight.'),
+        $sm,
+        $this->app->make(LoggerInterface::class),
+    );
 
     expect(true)->toBeTrue(); // side-effect: no throw
 });
