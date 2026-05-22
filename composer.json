@@ -2,7 +2,11 @@
     "name": "diederik/diederik",
     "type": "project",
     "description": "Local-only personal finance dashboard.",
-    "keywords": ["laravel", "personal-finance", "localhost"],
+    "keywords": [
+        "laravel",
+        "personal-finance",
+        "localhost"
+    ],
     "license": "proprietary",
     "require": {
         "php": "^8.5",
@@ -17,6 +21,7 @@
         "livewire/flux": "^2.0",
         "livewire/livewire": "^4.0",
         "microsoft/microsoft-graph": "^3.1",
+        "nativephp/desktop": "^2.2",
         "nwidart/laravel-modules": "^13.0",
         "spatie/laravel-data": "^4.0",
         "spatie/pdf-to-text": "^1.0",
@@ -58,6 +63,7 @@
             "Tests\\": "tests/",
             "Modules\\Auth\\Tests\\": "Modules/Auth/tests/",
             "Modules\\Core\\Tests\\": "Modules/Core/tests/",
+            "Modules\\Desktop\\Tests\\": "Modules/Desktop/tests/",
             "Modules\\Ledger\\Tests\\": "Modules/Ledger/tests/",
             "Modules\\Ingestion\\Tests\\": "Modules/Ingestion/tests/",
             "Modules\\Import\\Tests\\": "Modules/Import/tests/",
@@ -76,7 +82,14 @@
         "analyse": "phpstan analyse --memory-limit=1G",
         "format": "pint",
         "format:check": "pint --test",
-        "check:paths": "bash bin/check-paths.sh"
+        "check:paths": "bash bin/check-paths.sh",
+        "native:dev": [
+            "Composer\\Config::disableProcessTimeout",
+            "npx concurrently -k -c \"#93c5fd,#c4b5fd\" \"php artisan native:run --no-interaction\" \"npm run dev\" --names=app,vite"
+        ],
+        "post-update-cmd": [
+            "@php artisan native:install --force --quiet "
+        ]
     },
     "extra": {
         "laravel": {
