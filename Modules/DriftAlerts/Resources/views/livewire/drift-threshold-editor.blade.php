@@ -20,9 +20,9 @@
         x-on:click="open = ! open"
         aria-haspopup="listbox"
         aria-label="Drift threshold for series"
-        class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+        class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
     >
-        <span class="text-slate-500">Threshold</span>
+        <span class="text-slate-500 dark:text-slate-400">Threshold</span>
         <span style="font-variant-numeric: tabular-nums;">
             @if ($currentValue === null)
                 global
@@ -36,7 +36,7 @@
         x-cloak
         x-on:click.outside="open = false"
         role="listbox"
-        class="absolute right-0 z-10 mt-1 w-56 rounded-md border border-slate-200 bg-white p-2 text-xs shadow-lg"
+        class="absolute right-0 z-10 mt-1 w-56 rounded-md border border-slate-200 bg-white p-2 text-xs shadow-lg dark:bg-slate-950 dark:border-slate-700"
     >
         @foreach ($options as $opt)
             <button
@@ -44,21 +44,21 @@
                 wire:click="save({{ $opt }})"
                 x-on:click="open = false"
                 @class([
-                    'block w-full rounded-md px-2 py-1 text-left hover:bg-slate-50',
-                    'font-medium text-slate-900' => $currentValue === $opt,
-                    'text-slate-500' => $currentValue !== $opt,
+                    'block w-full rounded-md px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900',
+                    'font-medium text-slate-900 dark:text-slate-100' => $currentValue === $opt,
+                    'text-slate-500 dark:text-slate-400' => $currentValue !== $opt,
                 ])
             >±{{ $opt }}%</button>
         @endforeach
-        <div class="my-1 border-t border-slate-200"></div>
+        <div class="my-1 border-t border-slate-200 dark:border-slate-700"></div>
         <button
             type="button"
             wire:click="save('global')"
             x-on:click="open = false"
             @class([
-                'block w-full rounded-md px-2 py-1 text-left hover:bg-slate-50',
-                'font-medium text-slate-900' => $currentValue === null,
-                'text-slate-500' => $currentValue !== null,
+                'block w-full rounded-md px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900',
+                'font-medium text-slate-900 dark:text-slate-100' => $currentValue === null,
+                'text-slate-500 dark:text-slate-400' => $currentValue !== null,
             ])
         >Use global default</button>
     </div>

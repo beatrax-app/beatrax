@@ -28,16 +28,16 @@
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8 flex items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
-            <h1 class="truncate text-2xl font-semibold tracking-tight text-slate-900">{{ $series->displayName() }}</h1>
-            <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-slate-500">
+            <h1 class="truncate text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $series->displayName() }}</h1>
+            <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
                 <span
-                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700"
+                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 >{{ ucfirst($series->state) }}</span>
                 <span
-                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700"
+                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 >{{ ucfirst($series->cadence) }}</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($series->latestAmount) }}</span>
-                <span class="text-slate-400" aria-hidden="true">·</span>
+                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">·</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($series->monthlyEquivalent->toMinor()) }}/mo</span>
             </p>
         </div>
@@ -50,9 +50,9 @@
                     x-on:click="open = ! open"
                     aria-haspopup="listbox"
                     aria-label="Variance tolerance"
-                    class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                    class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
                 >
-                    <span class="text-slate-500">Tolerance</span>
+                    <span class="text-slate-500 dark:text-slate-400">Tolerance</span>
                     <span style="font-variant-numeric: tabular-nums;">{{ $series->varianceTolerancePercent }}%</span>
                 </button>
                 <div
@@ -60,7 +60,7 @@
                     x-cloak
                     x-on:click.outside="open = false"
                     role="listbox"
-                    class="absolute right-0 z-10 mt-1 w-32 rounded-md border border-slate-200 bg-white p-1 text-xs shadow-lg"
+                    class="absolute right-0 z-10 mt-1 w-32 rounded-md border border-slate-200 bg-white p-1 text-xs shadow-lg dark:bg-slate-950 dark:border-slate-700"
                 >
                     @foreach ([10, 25, 50] as $percent)
                         <button
@@ -68,9 +68,9 @@
                             wire:click="editVarianceTolerance({{ $percent }})"
                             x-on:click="open = false"
                             @class([
-                                'block w-full rounded-md px-2 py-1 text-left hover:bg-slate-50',
-                                'font-medium text-slate-900' => $series->varianceTolerancePercent === $percent,
-                                'text-slate-500' => $series->varianceTolerancePercent !== $percent,
+                                'block w-full rounded-md px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900',
+                                'font-medium text-slate-900 dark:text-slate-100' => $series->varianceTolerancePercent === $percent,
+                                'text-slate-500 dark:text-slate-400' => $series->varianceTolerancePercent !== $percent,
                             ])
                         >{{ $percent }}%</button>
                     @endforeach
@@ -78,18 +78,18 @@
             </div>
             <a
                 href="{{ route('recurring.index') }}"
-                class="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                class="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
             >Back to Recurring</a>
         </div>
     </header>
 
-    <section class="mb-8 rounded-lg border border-slate-200 bg-white p-6">
+    <section class="mb-8 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
         <div class="mb-4 flex items-baseline justify-between">
-            <h2 class="text-base font-semibold text-slate-900">Amount over time</h2>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Amount over time</h2>
             <button
                 type="button"
                 wire:click="toggleAllPoints"
-                class="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                class="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
             >{{ $showAllPoints ? 'Show recent 24' : 'View all points' }}</button>
         </div>
 
@@ -107,7 +107,7 @@
         >
             <div id="{{ $chartElementId }}"></div>
             <noscript>
-                <p class="text-xs text-slate-500">
+                <p class="text-xs text-slate-500 dark:text-slate-400">
                     Chart requires JavaScript. {{ $occurrenceCount }} observation{{ $occurrenceCount === 1 ? '' : 's' }} below.
                 </p>
             </noscript>
@@ -115,30 +115,30 @@
     </section>
 
     <section>
-        <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500">Occurrences</h2>
+        <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Occurrences</h2>
         @if ($occurrenceCount === 0)
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
-                <p class="text-sm text-slate-500">No occurrences recorded for this series yet.</p>
+            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                <p class="text-sm text-slate-500 dark:text-slate-400">No occurrences recorded for this series yet.</p>
             </div>
         @else
-            <div class="overflow-hidden rounded-lg border border-slate-200">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="bg-slate-50">
+            <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                    <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Date</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500">Amount</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500">Transaction</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Date</th>
+                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
+                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Transaction</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-200 bg-white">
+                    <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
                         @foreach ($occurrences as $occ)
                             <tr>
-                                <td class="px-4 py-2 text-slate-900" style="font-variant-numeric: tabular-nums;">{{ $occ->observedAt->format('d M Y') }}</td>
-                                <td class="px-4 py-2 text-right text-slate-900" style="font-variant-numeric: tabular-nums;">{{ $fmt($occ->observedAmount) }}</td>
+                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $occ->observedAt->format('d M Y') }}</td>
+                                <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($occ->observedAmount) }}</td>
                                 <td class="px-4 py-2 text-right text-sm">
                                     <a
                                         href="{{ route('transactions.show', ['transactionId' => $occ->transactionId]) }}"
-                                        class="text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                                        class="text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
                                     >#{{ $occ->transactionId }}</a>
                                 </td>
                             </tr>
