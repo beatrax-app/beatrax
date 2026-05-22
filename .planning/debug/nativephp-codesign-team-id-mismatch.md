@@ -7,6 +7,20 @@ updated: 2026-05-22T22:10:00Z
 
 ## Current Focus
 
+### Cycle 3 (2026-05-22T22:30:00Z) — signing fixed, but no window opens
+
+reasoning_checkpoint:
+  hypothesis: "The code-signing crash is resolved (user confirmed the rebuilt .dmg shows `injected identity: null`, installs, and the process now stays alive). The remaining 'no window' symptom is a SEPARATE, real defect: NativeAppServiceProvider::boot() is empty. NativePHP v2 does NOT open any default window — the app author must explicitly call WindowManager::open(). With an empty boot() the Electron shell runs (dock/menu-bar icon present) but never creates a BrowserWindow, so nothing renders. The Cycle-1/2 Eliminated note that dismissed 'empty boot()' was correct only WHILE the dyld abort masked it; now that the abort is gone, the empty boot() is exposed as the active bug."
+  confirming_evidence:
+    - "User observation: app stays open, shows in dock/menu bar, quits normally — but displays no window. A running process with no window is exactly an Electron app that never called BrowserWindow."
+    - "Modules/Desktop/Internal/NativeAppServiceProvider::boot() body was `//` — no Window open call of any kind."
+    - "vendor/nativephp/desktop NativeAppBootedController does `app(config('nativephp.provider'))->boot()` — NativePHP's only window trigger is whatever the app's provider boot() calls. No framework-default window exists."
+    - "15-01-PLAN.md Task 4 acceptance criterion explicitly requires 'Launching the app opens a native window that renders the diederik web UI' — a visible window IS in 15-01 scope."
+    - "config/nativephp.php has no window/url block; the Window object defaults `url` to `url('/')` and `title` to `config('app.name')` (= 'diederik') in its constructor — so a bare open('main') already renders the app root."
+  falsification_test: "If NativePHP v2 opened a default window itself, an empty boot() would still show a window — it does not (user sees none). If the window code were present-but-broken, native:serve would also fail to show a window."
+  fix_rationale: "Add a single WindowManager::open('main') call in boot(). The window's constructor already defaults url -> url('/') and title -> config('app.name'), so a bare open() renders the diederik web UI with the correct title. This is the MINIMAL change that satisfies the 15-01 Task 4 gate; geometry persistence, app menu, and tray remain deferred to 15-02."
+  blind_spots: "Cannot launch a packaged build headlessly here — the user must re-verify via native:build or native:serve. The WindowManager contract's open() has no declared return type (returns mixed), so chaining ->title() would trip Larastan level 10; relying on the constructor default title sidesteps that and is also genuinely sufficient since APP_NAME is already 'diederik'."
+
 ### Cycle 2 (2026-05-22T22:00:00Z) — "silent exit" is the SAME crash
 
 reasoning_checkpoint:
@@ -61,6 +75,16 @@ started: Phase 15 — first NativePHP build (nativephp/desktop 2.2.0, nativephp/
 
 ## Evidence
 
+- timestamp: 2026-05-22T22:30:00Z
+  checked: Modules/Desktop/Internal/NativeAppServiceProvider::boot(); vendor/nativephp/desktop Http/Controllers/NativeAppBootedController; Windows/WindowManager + Windows/Window + Contracts/WindowManager
+  found: boot() was empty (`//`). NativePHP boots the app then calls `app(config('nativephp.provider'))->boot()` — that provider call is the ONLY window trigger; there is no framework default window. The container-bound `Native\Desktop\Contracts\WindowManager` is injectable (bound in NativeServiceProvider:77 to the concrete `Windows\WindowManager`). `WindowManager::open('main')` returns a `PendingOpenWindow` whose constructor defaults `url` to `url('/')` and `title` to `config('app.name')`.
+  implication: ROOT CAUSE of the no-window symptom — boot() never opened a window. Because the provider is resolved via `app()` (through the container), constructor injection of the `WindowManager` contract works — no facade needed, DI-only rule honoured.
+
+- timestamp: 2026-05-22T22:32:00Z
+  checked: Larastan level 10 on Modules/Desktop after adding `->title('diederik')` chained on open()
+  found: `method.nonObject — Cannot call method title() on mixed` — the `WindowManager` contract's `open()` has no declared return type.
+  implication: Dropped the redundant `->title()` chain. The Window constructor already defaults the title to `config('app.name')` = 'diederik' (APP_NAME=diederik), so a bare `open('main')` renders the app root with the correct title and stays Larastan-clean.
+
 - timestamp: 2026-05-22T22:00:00Z
   checked: ~/Library/Logs/DiagnosticReports/diederik-2026-05-22-2151{42,43}.ips
   found: EXC_CRASH / SIGABRT, termination namespace DYLD, "Library missing", "Electron Framework ... code signature ... not valid for use in process: mapping process and mapped file (non-platform) have different Team IDs". codeSigningMonitor=1. Backtrace = __abort_with_payload → dyld4::halt → dyld4::prepare → dyld4::start.
@@ -99,15 +123,53 @@ started: Phase 15 — first NativePHP build (nativephp/desktop 2.2.0, nativephp/
 ## Resolution
 
 root_cause: |
+  Cycle 3 — no-window root cause:
+  `Modules/Desktop/Internal/NativeAppServiceProvider::boot()` was empty. NativePHP v2
+  does not open any default window — the app's provider boot() must explicitly call
+  `WindowManager::open()`. The dyld code-signing abort (below) masked this in cycles
+  1-2 because the process died before boot() ran; once signing was fixed the empty
+  boot() surfaced as a live process with no rendered window.
+
+  Cycles 1-2 — code-signing crash (resolved):
   Two-layer root cause.
   (1) Underlying defect: NativePHP's bundled electron-builder config omits `mac.identity`, so electron-builder auto-discovers a keychain code-signing identity at build time. When an identity is present the bundle is partially signed — the app shell stays ad-hoc (empty Team ID) while the nested Electron Framework keeps a non-empty Team ID — and on Apple Silicon dyld aborts at launch with mismatched Team IDs. This abort happens in dyld4::prepare BEFORE any window, so macOS shows no crash dialog — it looks like a "silent exit".
   (2) Why the cycle-1 fix did not work: the cycle-1 prebuild hook patched `$projectRoot/nativephp/electron/electron-builder.mjs`. But `ElectronServiceProvider::electronPath()` only uses that project-local directory when it contains `package.json`; otherwise it falls back to the package default at `vendor/nativephp/desktop/resources/electron/`. The project has no `nativephp/electron/` directory, so the build read the VENDOR electron-builder.mjs — which the hook never touched. The hook found nothing at its hard-coded path, printed "skipping", and exited 0: a silent no-op. The build target stayed unpatched and kept crashing.
 fix: |
+  Cycle 3 — open the application window:
+  Added a constructor-injected `Native\Desktop\Contracts\WindowManager` to
+  `NativeAppServiceProvider` and made `boot()` call `$this->windows->open('main')`.
+  Because NativePHP resolves the provider via `app(config('nativephp.provider'))`,
+  the constructor is autowired — true constructor DI, no `Native\Desktop\Facades\Window`
+  facade, so the project's DI-only rule and the `noNativePhpImportsOutsideDesktopModule`
+  arch invariant both still hold. The opened window inherits its constructor defaults:
+  `url` -> `url('/')` (renders the diederik web UI — login or dashboard per DB state)
+  and `title` -> `config('app.name')` ('diederik'). No window/menu/tray chrome beyond
+  the bare window — that is plan 15-02. Added `Modules/Desktop` to the `tests/Pest.php`
+  module bootstrap loop so module Unit tests get a booted Laravel app, and implemented
+  the previously-`->todo()` `it('configures the application window')` test using
+  `Window::fake()` + `assertOpened('main')`.
+
+  Cycles 1-2 — code-signing fix (resolved, confirmed by user):
   Rewrote scripts/nativephp_force_adhoc_signing.php to resolve the electron-builder.mjs the SAME way NativePHP's build does: prefer `nativephp/electron/electron-builder.mjs` when `nativephp/electron/package.json` exists, otherwise patch the vendor fallback `vendor/nativephp/desktop/resources/electron/electron-builder.mjs`. It injects `identity: null` as the first `mac` block key, forcing deterministic `--deep` ad-hoc signing regardless of keychain contents. The hook now exits 1 (fails loudly) if no electron-builder.mjs can be found at all, instead of silently no-opping. Still wired into config/nativephp.php `prebuild`, still idempotent, still runs in Builder::preProcess() before electron-builder is invoked. No paid Apple Developer ID required.
 verification: |
   - Hook run against the real vendor electron-builder.mjs: injects `identity: null` as the first `mac` key (line 108). Second run reports "identity already configured" and is a no-op (idempotent).
   - `node --check` confirms the patched electron-builder.mjs is valid JavaScript.
   - Laravel Pint: passed. Larastan level 10 (--memory-limit=512M): "No errors".
   - Could not re-run native:build headlessly — the user must re-run `php artisan native:build mac arm64`, reinstall the .dmg, and confirm the app launches a window. End-to-end verification is the human checkpoint below.
+verification (cycle 3): |
+  - Larastan level 10 (--memory-limit=512M) on Modules/Desktop: "No errors".
+  - Laravel Pint on the changed files: passed.
+  - `php artisan test --filter="configures the application window"`: 1 passed (asserts
+    boot() opens the 'main' window via Window::fake()).
+  - `php artisan test --filter="noNativePhpImportsOutsideDesktopModule"`: passed —
+    the NativePHP containment boundary still holds (the new import is inside
+    Modules/Desktop/Internal).
+  - Could not launch a packaged build headlessly — the user must re-verify: run
+    `php artisan native:serve` (dev) OR `php artisan native:build mac arm64`, install,
+    and launch /Applications/diederik.app — a window rendering the diederik web UI
+    (login or dashboard) must now appear.
 files_changed:
-  - scripts/nativephp_force_adhoc_signing.php (rewritten — resolves the real build target path)
+  - scripts/nativephp_force_adhoc_signing.php (cycle 2 — rewritten, resolves the real build target path)
+  - Modules/Desktop/Internal/NativeAppServiceProvider.php (cycle 3 — constructor-injected WindowManager, boot() opens the main window)
+  - Modules/Desktop/tests/Unit/NativeAppServiceProviderTest.php (cycle 3 — implemented the window-open test)
+  - tests/Pest.php (cycle 3 — registered Modules/Desktop in the module test bootstrap loop)
