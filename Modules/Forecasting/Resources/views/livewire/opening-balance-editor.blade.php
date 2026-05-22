@@ -31,16 +31,16 @@
     };
 @endphp
 
-<fieldset class="space-y-3 rounded-md border border-slate-200 bg-white p-4">
+<fieldset class="space-y-3 rounded-md border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
     <legend class="sr-only">Forecast opening balance for {{ $accountName }}</legend>
-    <h3 class="text-base font-semibold text-slate-900">{{ $accountName }}</h3>
+    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $accountName }}</h3>
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="space-y-1">
-            <label for="opening-input-{{ $accountId }}" class="block text-sm text-slate-900">Opening balance</label>
-            <p class="text-xs text-slate-500">{{ $helpText }}</p>
+            <label for="opening-input-{{ $accountId }}" class="block text-sm text-slate-900 dark:text-slate-100">Opening balance</label>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ $helpText }}</p>
             <div class="flex items-center gap-1">
-                <span class="text-sm text-slate-500" aria-hidden="true">{{ $symbol }}</span>
+                <span class="text-sm text-slate-500 dark:text-slate-400" aria-hidden="true">{{ $symbol }}</span>
                 <input
                     type="text"
                     inputmode="decimal"
@@ -48,26 +48,26 @@
                     wire:model="openingInput"
                     placeholder="e.g. 1.250,00"
                     aria-describedby="opening-help-{{ $accountId }}"
-                    class="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                    class="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                     style="font-variant-numeric: tabular-nums;"
                 >
             </div>
         </div>
 
         <div class="space-y-1">
-            <label for="as-of-input-{{ $accountId }}" class="block text-sm text-slate-900">Opening balance as of</label>
-            <p class="text-xs text-slate-500">The date the figure above is true for.</p>
+            <label for="as-of-input-{{ $accountId }}" class="block text-sm text-slate-900 dark:text-slate-100">Opening balance as of</label>
+            <p class="text-xs text-slate-500 dark:text-slate-400">The date the figure above is true for.</p>
             <input
                 type="date"
                 id="as-of-input-{{ $accountId }}"
                 wire:model="asOfInput"
-                class="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                class="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
             >
         </div>
     </div>
 
     @if ($showingDivergenceBanner)
-        <div role="status" aria-live="polite" class="rounded-md border border-amber-200 bg-amber-50 p-3" data-testid="opening-balance-divergence-banner">
+        <div role="status" aria-live="polite" class="rounded-md border border-amber-200 bg-amber-50 p-3 dark:bg-amber-950" data-testid="opening-balance-divergence-banner">
             <p class="text-sm text-amber-700">
                 This is more than €500 off the balance diederik computes from your imported transactions. Are you sure?
             </p>
@@ -75,30 +75,30 @@
                 <button
                     type="button"
                     wire:click="useDiederiksNumber"
-                    class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                    class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-100"
                 >Use diederik's number</button>
                 <button
                     type="button"
                     wire:click="useMyNumber"
-                    class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                    class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-100"
                 >Use my number</button>
             </div>
         </div>
     @endif
 
     @if ($errorMessage !== null)
-        <p class="text-sm text-rose-600" role="alert">{{ $errorMessage }}</p>
+        <p class="text-sm text-rose-600 dark:text-rose-500" role="alert">{{ $errorMessage }}</p>
     @endif
 
     <div class="flex items-center gap-2">
         <button
             type="button"
             wire:click="save"
-            class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+            class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
         >Save opening balance</button>
 
         @if ($saved)
-            <span wire:transition.duration.4000ms class="text-sm text-emerald-700">Saved.</span>
+            <span wire:transition.duration.4000ms class="text-sm text-emerald-700 dark:text-emerald-400">Saved.</span>
         @endif
     </div>
 </fieldset>

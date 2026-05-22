@@ -13,31 +13,31 @@
         <button
             type="button"
             wire:click="openMenu"
-            class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+            class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
         >Model what-if ↗</button>
     @elseif ($mode === 'menu')
         <div
             role="menu"
             aria-label="Model what-if for {{ $seriesName }}"
-            class="absolute right-0 z-10 mt-1 w-56 rounded-md border border-slate-200 bg-white p-2 text-sm shadow-lg"
+            class="absolute right-0 z-10 mt-1 w-56 rounded-md border border-slate-200 bg-white p-2 text-sm shadow-lg dark:bg-slate-950 dark:border-slate-700"
         >
             <button
                 type="button"
                 role="menuitem"
                 wire:click="modelCancellation"
-                class="block w-full rounded-md px-2 py-1.5 text-left text-slate-900 hover:bg-slate-50"
+                class="block w-full rounded-md px-2 py-1.5 text-left text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 dark:text-slate-100"
             >Model cancellation</button>
             <button
                 type="button"
                 role="menuitem"
                 wire:click="openAmountForm"
-                class="block w-full rounded-md px-2 py-1.5 text-left text-slate-900 hover:bg-slate-50"
+                class="block w-full rounded-md px-2 py-1.5 text-left text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 dark:text-slate-100"
             >Model amount change…</button>
             <div class="mt-1 border-t border-slate-100 pt-1">
                 <button
                     type="button"
                     wire:click="closeMenu"
-                    class="block w-full rounded-md px-2 py-1.5 text-left text-xs text-slate-500 hover:bg-slate-50"
+                    class="block w-full rounded-md px-2 py-1.5 text-left text-xs text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900 dark:text-slate-400"
                 >Cancel</button>
             </div>
         </div>
@@ -45,34 +45,34 @@
         <div
             role="dialog"
             aria-label="Model amount change for {{ $seriesName }}"
-            class="absolute right-0 z-10 mt-1 w-72 rounded-md border border-slate-200 bg-white p-3 text-sm shadow-lg"
+            class="absolute right-0 z-10 mt-1 w-72 rounded-md border border-slate-200 bg-white p-3 text-sm shadow-lg dark:bg-slate-950 dark:border-slate-700"
         >
-            <p class="text-xs text-slate-500">Current amount</p>
-            <p class="mb-2 text-sm font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
+            <p class="text-xs text-slate-500 dark:text-slate-400">Current amount</p>
+            <p class="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                 {{ number_format(abs($currentAmountMinor) / 100, 2, ',', '.') }} {{ $currency }}
             </p>
-            <label class="block text-xs text-slate-500">New amount
+            <label class="block text-xs text-slate-500 dark:text-slate-400">New amount
                 <input
                     type="text"
                     wire:model.live="newAmountInput"
                     wire:keydown.enter.prevent="saveAmountChange"
                     placeholder="11,49"
-                    class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700"
                 >
             </label>
             @if ($errorMessage !== null)
-                <p class="mt-1 text-xs text-rose-700" role="alert">{{ $errorMessage }}</p>
+                <p class="mt-1 text-xs text-rose-700 dark:text-rose-500" role="alert">{{ $errorMessage }}</p>
             @endif
             <div class="mt-3 flex items-center gap-2">
                 <button
                     type="button"
                     wire:click="saveAmountChange"
-                    class="rounded-md bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-700"
+                    class="rounded-md bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-700 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                 >Save</button>
                 <button
                     type="button"
                     wire:click="closeMenu"
-                    class="rounded-md bg-slate-100 px-3 py-1 text-sm text-slate-700 hover:bg-slate-200"
+                    class="rounded-md bg-slate-100 px-3 py-1 text-sm text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 >Cancel</button>
             </div>
         </div>

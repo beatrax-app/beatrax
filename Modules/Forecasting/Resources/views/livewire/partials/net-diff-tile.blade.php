@@ -27,14 +27,16 @@
     };
 @endphp
 
-<section class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4" aria-label="Net diff between baseline and scenario at horizon days 30 / 60 / 90">
-    <p class="text-sm text-slate-500">Net diff</p>
+<section class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700" aria-label="Net diff between baseline and scenario at horizon days 30 / 60 / 90">
+    <p class="text-sm text-slate-500 dark:text-slate-400">Net diff</p>
     <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-3">
         @foreach (($horizonDays ?? [30, 60, 90]) as $horizonKey)
             @php
                 $delta = $netDiff[$horizonKey] ?? 0;
                 $sign = $delta > 0 ? '+' : ($delta < 0 ? '−' : '');
-                $tint = $delta > 0 ? 'text-emerald-700' : ($delta < 0 ? 'text-rose-700' : 'text-slate-900');
+                $tint = $delta > 0
+                    ? 'text-emerald-700 dark:text-emerald-500'
+                    : ($delta < 0 ? 'text-rose-700 dark:text-rose-500' : 'text-slate-900 dark:text-slate-100');
                 $aria = $delta > 0 ? 'better than baseline' : ($delta < 0 ? 'worse than baseline' : 'equal to baseline');
                 $formatted = $fmt(abs($delta), $netDiffCurrency ?? 'EUR');
             @endphp
@@ -44,7 +46,7 @@
                     style="font-variant-numeric: tabular-nums;"
                     aria-label="Net difference at day {{ $horizonKey }}: {{ $sign }}{{ $formatted }}, scenario is {{ $aria }}"
                 >{{ $sign }}{{ $formatted }}</p>
-                <p class="mt-1 text-xs text-slate-500" style="font-variant-numeric: tabular-nums;">at day {{ $horizonKey }}</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">at day {{ $horizonKey }}</p>
             </div>
         @endforeach
     </div>
