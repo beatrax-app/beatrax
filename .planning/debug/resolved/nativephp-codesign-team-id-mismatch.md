@@ -1,8 +1,9 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "macOS code-signing failure: NativePHP-packaged diederik.app crashes on launch with DYLD Library missing / Team ID mismatch on Electron Framework"
 created: 2026-05-22T21:30:00Z
-updated: 2026-05-22T23:30:00Z
+updated: 2026-05-23T00:30:00Z
+resolution: "Resolved across 6 debug cycles. Four distinct root causes: (1) macOS code-signing Team ID mismatch from electron-builder keychain auto-discovery — fixed by a prebuild hook forcing ad-hoc signing (c0f4ef1, 89c0340); (2) NativeAppServiceProvider never opened a window — fixed by constructor-injecting WindowManager and opening 'main' in boot() (37f5dd0); (3) stale committed bootstrap/cache/*.php referencing dev-only Laravel\\Sentinel\\SentinelServiceProvider — removed from git and gitignored (2229728); (4) missing post-autoload-dump composer script (true underlying cause) — added so the NativePHP bundle's composer install --no-dev regenerates the package manifest (cd2f113, which also reverted interim exclusion 18af83d). User verified the rebuilt .dmg launches a native window rendering the diederik UI — PKG-04 / plan 15-01 Task 4 gate satisfied."
 ---
 
 ## Current Focus
