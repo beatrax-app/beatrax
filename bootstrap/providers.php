@@ -22,7 +22,7 @@ use Modules\Transfers\Providers\TransfersServiceProvider;
 // class is absent and referencing the provider would fatal at autoload;
 // the class_exists() guard drops the entry in that case.
 return array_values(array_filter([
-    class_exists(\Laravel\Horizon\HorizonServiceProvider::class) ? HorizonServiceProvider::class : null,
+    class_exists(Laravel\Horizon\HorizonServiceProvider::class) ? HorizonServiceProvider::class : null,
     CoreServiceProvider::class,
     AuthServiceProvider::class,
     LedgerServiceProvider::class,
