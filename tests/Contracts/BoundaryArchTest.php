@@ -1271,3 +1271,120 @@ it('does not allow Native\\Desktop imports outside Modules/Desktop (noNativePhpI
         "Native\\Desktop\\* symbols may only be referenced inside Modules/Desktop. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
+
+it('does not allow a bg-white / text-slate-900 utility without a dark: companion in a themed module view (darkCompanionUtilitiesOnThemedViews)', function (): void {
+    // Phase 15 D-15 invariant: the dark theme is delivered with the
+    // Tailwind v4 class strategy — every element carrying a hard-coded
+    // light surface utility (`bg-white`, `text-slate-900`) must also
+    // carry the matching `dark:` companion so the element renders
+    // correctly when the `dark` class is on `<html>`.
+    //
+    // The guard scans `resources/views` AND every
+    // `Modules/*/Resources/views` directory. Its allow-list excludes
+    // ONLY the seven module view directories Plan 07 themes — those are
+    // not yet retrofitted while Plan 06 runs. Every Plan-06 module
+    // (Core, Auth, Ledger, Import, Forecasting) and `resources/views`
+    // is IN SCOPE from the moment this guard lands, so a missing
+    // companion in those surfaces fails CI. Plan 07 Task 3 empties the
+    // allow-list for full coverage.
+    //
+    // The check is per class-attribute string (the `class="..."` and
+    // `@class([...])` shapes a single element carries): when a string
+    // contains the `bg-white` token it must also contain a `dark:bg-`
+    // utility, and when it contains `text-slate-900` it must also
+    // contain a `dark:text-` utility. Tokens are matched on word
+    // boundaries so `bg-white/50` and `bg-whitesmoke` are handled
+    // correctly and `dark:bg-white` is not mistaken for a violation.
+    $allowListedModules = [
+        'Categorization',
+        'Chains',
+        'EmailScan',
+        'Receipts',
+        'Recurring',
+        'DriftAlerts',
+        'Desktop',
+    ];
+
+    // Roots to scan: the app-level views, plus each module's views.
+    $roots = [];
+    $appViews = base_path('resources/views');
+    if (is_dir($appViews)) {
+        $roots[] = $appViews;
+    }
+    $modulesDir = base_path('Modules');
+    if (is_dir($modulesDir)) {
+        foreach (new DirectoryIterator($modulesDir) as $moduleDir) {
+            if (! $moduleDir->isDir() || $moduleDir->isDot()) {
+                continue;
+            }
+            $moduleName = $moduleDir->getFilename();
+            if (in_array($moduleName, $allowListedModules, true)) {
+                continue;
+            }
+            $viewsDir = $moduleDir->getPathname().'/Resources/views';
+            if (is_dir($viewsDir)) {
+                $roots[] = $viewsDir;
+            }
+        }
+    }
+
+    // Extracts every class-attribute string a Blade file declares —
+    // both `class="..."` / `class='...'` attributes and `@class([...])`
+    // arrays — so the companion check runs per element.
+    $classStringsOf = static function (string $contents): array {
+        $strings = [];
+        if (preg_match_all('/class\s*=\s*"([^"]*)"/', $contents, $m) > 0) {
+            foreach ($m[1] as $s) {
+                $strings[] = $s;
+            }
+        }
+        if (preg_match_all("/class\s*=\s*'([^']*)'/", $contents, $m) > 0) {
+            foreach ($m[1] as $s) {
+                $strings[] = $s;
+            }
+        }
+        if (preg_match_all('/@class\s*\(\s*\[(.*?)\]\s*\)/s', $contents, $m) > 0) {
+            foreach ($m[1] as $s) {
+                $strings[] = $s;
+            }
+        }
+
+        return $strings;
+    };
+
+    $hits = [];
+    foreach ($roots as $root) {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            if (! $file->isFile() || ! str_ends_with($file->getPathname(), '.blade.php')) {
+                continue;
+            }
+            $path = $file->getPathname();
+            $contents = (string) file_get_contents($path);
+            // Strip Blade comments so {{-- ... --}} examples stay legal.
+            $stripped = preg_replace('/\{\{--.*?--\}\}/s', '', $contents) ?? $contents;
+            $relative = str_replace(base_path().'/', '', $path);
+
+            foreach ($classStringsOf($stripped) as $classString) {
+                // `bg-white` token (not `dark:bg-white`, not `bg-whitesmoke`).
+                $hasBgWhite = preg_match('/(?<![:\w-])bg-white(?![\w])/', $classString) === 1;
+                if ($hasBgWhite && preg_match('/dark:bg-/', $classString) !== 1) {
+                    $hits[] = $relative.' — bg-white without dark:bg- companion';
+                }
+                // `text-slate-900` token (not `dark:text-slate-900`).
+                $hasInkText = preg_match('/(?<![:\w-])text-slate-900(?![\w])/', $classString) === 1;
+                if ($hasInkText && preg_match('/dark:text-/', $classString) !== 1) {
+                    $hits[] = $relative.' — text-slate-900 without dark:text- companion';
+                }
+            }
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "Every themed-module view element with a bg-white / text-slate-900 utility needs a dark: companion. Offenders:\n  ".implode("\n  ", array_unique($hits)),
+    );
+});

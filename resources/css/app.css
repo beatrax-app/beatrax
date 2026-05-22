@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/*
+ * Class-strategy dark variant (Tailwind v4 is CSS-first). The `dark`
+ * class is toggled on `<html>` server-side from the user's `theme`
+ * preference; `dark:` utilities apply to any element under it.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
     /*
      * `Inter` is preferred when locally installed; otherwise the chain falls

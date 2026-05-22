@@ -87,6 +87,15 @@ final class SettingsPage extends Component
     public int $driftAlertThresholdPercent = 5;
 
     /**
+     * Appearance preference governing the dark-mode class on `<html>`.
+     * One of `light` / `dark` / `system`; `system` follows the operating
+     * system. Persisted instant-apply via setTheme() — the Appearance
+     * section has no Save button, mirroring the auto-import toggle.
+     */
+    #[Validate('required|in:light,dark,system')]
+    public string $theme = 'system';
+
+    /**
      * Inline "Saved." confirmation flag flipped by save() and consumed by
      * the Blade view via `@if ($saved)` + `wire:transition.duration.4000ms`
      * so the confirmation auto-dismisses after four seconds.
@@ -102,6 +111,31 @@ final class SettingsPage extends Component
         $this->recurringDetectionWindowMonths = $user->recurring_detection_window_months;
         $this->recurringIncomeMinAmountMinor = $user->recurring_income_min_amount_minor;
         $this->driftAlertThresholdPercent = $user->drift_alert_threshold_percent;
+        $this->theme = $user->theme;
+    }
+
+    /**
+     * Instant-apply theme control — mirrors the watched-folder toggle's
+     * "no Save button" posture (the segmented control is its own
+     * commit). The Blade view calls `setTheme('light'|'dark'|'system')`
+     * directly; the handler validates the chosen value against the
+     * `light,dark,system` allow-list before the raw query-builder write
+     * so an out-of-enum value can never reach the users row or the
+     * layout's class attribute.
+     */
+    public function setTheme(string $theme, CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
+    {
+        $this->theme = $theme;
+        $this->validateOnly('theme');
+
+        $user = $currentUser->user();
+        $db->connection()
+            ->table('users')
+            ->where('id', $user->id)
+            ->update([
+                'theme' => $this->theme,
+                'updated_at' => $clock->now()->toDateTimeString(),
+            ]);
     }
 
     /**
