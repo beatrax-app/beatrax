@@ -54,10 +54,10 @@ use Modules\Receipts\Public\Events\ChainHintDetected;
  * replaces the failed_jobs LIKE substring match earlier drafts
  * proposed). Subscribing through the injected Dispatcher rather than
  * the `Queue::failing` facade keeps the CLAUDE.md "DI-only" posture
- * intact — the Queue / Cache facade pair is reserved for
- * `Cache::driver('redis')` inside ResolveChainLinksJob::uniqueVia(),
- * which is the ONLY permitted facade call in module code
- * (BoundaryArchTest carve-out).
+ * intact — `ResolveChainLinksJob::uniqueVia()` resolves its lock
+ * store through `Modules\Core\Public\Support\LockStore::forUniqueJobs()`,
+ * the single sanctioned `Cache` facade caller (BoundaryArchTest
+ * carve-out).
  *
  * Wave 3 (plan 05-04) extends register() with the Public read APIs
  * (`ChainLinkQuery`, `CardStatementQuery`) and the Public action

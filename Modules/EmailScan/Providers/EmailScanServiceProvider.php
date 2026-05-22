@@ -58,9 +58,10 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
  * failed() hooks supersede an earlier serialised-payload regex
  * approach that was fragile against serialiser format changes.
  *
- * The only permitted facade call in module code is
- * `Cache::driver('redis')` inside the queued jobs' uniqueVia()
- * (BoundaryArchTest carve-out).
+ * The queued jobs' `uniqueVia()` callbacks resolve their lock store
+ * through `Modules\Core\Public\Support\LockStore::forUniqueJobs()`,
+ * the single sanctioned `Cache` facade caller (BoundaryArchTest
+ * carve-out).
  */
 final class EmailScanServiceProvider extends ServiceProvider
 {
