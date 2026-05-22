@@ -1147,3 +1147,66 @@ it('does not allow raw path helpers or hard-coded storage literals outside UserD
         "Raw path helpers / storage literals are forbidden outside UserDataPathService. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
+
+it('does not allow Horizon imports outside the allow-listed provider (noHorizonImportsInShippedBuildCode)', function (): void {
+    // PKG-03 invariant: laravel/horizon is a require-dev package and the
+    // /horizon dashboard serialises transaction data, so no shipped-build
+    // file may reference a `Laravel\Horizon\` namespaced symbol. The sole
+    // allow-listed file is App\Providers\HorizonServiceProvider, which
+    // extends the package provider and gates the dashboard on dev mode.
+    //
+    // bootstrap/providers.php legitimately names the Horizon base class
+    // inside a class_exists() autoload guard — that guard is the mandated
+    // mechanism that keeps a `composer install --no-dev` tree from
+    // fataling. The grep strips `class_exists(\Laravel\Horizon\...)`
+    // arguments before scanning so the guard does not count as an import,
+    // keeping the allow-list at exactly one file. Block + line comments
+    // are stripped first so PHPDoc references stay legal, and `/tests/`
+    // paths are skipped.
+    $allowList = [
+        'app/Providers/HorizonServiceProvider.php',
+    ];
+
+    $hits = [];
+    foreach (['app', 'Modules', 'bootstrap', 'routes'] as $root) {
+        $abs = base_path($root);
+        if (! is_dir($abs)) {
+            continue;
+        }
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($abs, RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+                continue;
+            }
+            $path = $file->getPathname();
+            if (str_contains($path, '/tests/')) {
+                continue;
+            }
+            $relative = str_replace(base_path().'/', '', $path);
+            if (in_array($relative, $allowList, true)) {
+                continue;
+            }
+            $contents = (string) file_get_contents($path);
+            $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+            // Drop the class_exists() autoload guard argument: a defensive
+            // class_exists(\Laravel\Horizon\...) reference does not load
+            // Horizon code and is the sanctioned --no-dev guard.
+            $stripped = preg_replace(
+                '/class_exists\s*\(\s*\\\\?Laravel\\\\Horizon\\\\[^)]*\)/',
+                '',
+                $stripped,
+            ) ?? $stripped;
+            if (preg_match('/Laravel\\\\Horizon\\\\/', $stripped) === 1) {
+                $hits[] = $relative;
+            }
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "Only app/Providers/HorizonServiceProvider.php may reference Laravel\\Horizon\\* symbols. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
