@@ -20,12 +20,12 @@
         <div
             role="alert"
             aria-live="assertive"
-            class="fixed bottom-md right-md z-50 max-w-sm rounded-lg border border-slate-200 bg-white shadow-lg p-md"
+            class="fixed bottom-md right-md z-50 max-w-sm rounded-lg border border-slate-200 bg-white shadow-lg p-md dark:bg-slate-950 dark:border-slate-700"
         >
-            <div class="text-sm font-semibold text-slate-900">
+            <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 Receipt and statement disagree.
             </div>
-            <p class="mt-1 text-sm text-slate-700">
+            <p class="mt-1 text-sm text-slate-700 dark:text-slate-300">
                 {{ $heading }} (&ldquo;{{ $receiptValue ?? '' }}&rdquo;)
                 than the statement (&ldquo;{{ $csvValue ?? '' }}&rdquo;).
                 Should diederik prefer receipts for future conflicts?
@@ -34,14 +34,14 @@
                 <button
                     type="button"
                     wire:click="useReceipt"
-                    class="text-sm font-medium text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-md"
+                    class="text-sm font-medium text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-md dark:text-emerald-200 dark:hover:bg-emerald-950"
                 >
                     Use receipt
                 </button>
                 <button
                     type="button"
                     wire:click="keepStatement"
-                    class="text-sm font-medium text-slate-700 hover:bg-slate-50 px-2 py-1 rounded-md"
+                    class="text-sm font-medium text-slate-700 hover:bg-slate-50 px-2 py-1 rounded-md dark:text-slate-300 dark:hover:bg-slate-900"
                 >
                     Keep statement
                 </button>

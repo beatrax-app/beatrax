@@ -20,7 +20,7 @@
 
 <div>
     <flux:modal name="chain-drawer-{{ $tree?->rootTransactionId ?? 0 }}" flyout position="right" class="md:w-2xl">
-        <flux:heading size="lg" class="sticky top-0 bg-white z-10 pb-3 -mx-6 px-6">
+        <flux:heading size="lg" class="sticky top-0 bg-white z-10 pb-3 -mx-6 px-6 dark:bg-slate-950">
             @if ($tree !== null && count($tree->nodes) > 0 && $tree->nodes[0]->counterpartyName !== '')
                 Chain for {{ $tree->nodes[0]->counterpartyName }}
             @elseif ($tree !== null && count($tree->nodes) > 0 && $tree->nodes[0]->accountName !== '')
@@ -32,15 +32,15 @@
 
         @if ($tree === null)
             <div class="px-6 pt-md">
-                <h3 class="text-base font-semibold text-slate-900">Chain not yet resolved</h3>
-                <p class="mt-2 text-sm text-slate-500">
+                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Chain not yet resolved</h3>
+                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                     The chain resolver is still running. Open the review queue or refresh in a moment.
                 </p>
             </div>
         @elseif (count($tree->nodes) === 0)
             <div class="px-6 pt-md">
-                <h3 class="text-base font-semibold text-slate-900">No funding chain found</h3>
-                <p class="mt-2 text-sm text-slate-500">
+                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">No funding chain found</h3>
+                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                     This transaction has no detected funding chain. If you expected one, file a candidate from the review queue.
                 </p>
             </div>
@@ -48,8 +48,8 @@
             {{-- Only the root node walked back — no funder leg followed. --}}
             <div class="px-6 py-md space-y-md">
                 @include('chains::livewire.partials.chain-node', ['node' => $tree->nodes[0], 'fanoutPage' => $fanoutPage])
-                <div class="rounded-md border border-slate-200 bg-slate-50 p-3">
-                    <p class="text-xs text-slate-500">No funding chain found beyond this leg.</p>
+                <div class="rounded-md border border-slate-200 bg-slate-50 p-3 dark:bg-slate-900 dark:border-slate-700">
+                    <p class="text-xs text-slate-500 dark:text-slate-400">No funding chain found beyond this leg.</p>
                 </div>
             </div>
         @else

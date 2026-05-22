@@ -1296,10 +1296,7 @@ it('does not allow a bg-white / text-slate-900 utility without a dark: companion
     // boundaries so `bg-white/50` and `bg-whitesmoke` are handled
     // correctly and `dark:bg-white` is not mistaken for a violation.
     $allowListedModules = [
-        'Categorization',
-        'Chains',
         'EmailScan',
-        'Receipts',
         'Recurring',
         'DriftAlerts',
         'Desktop',

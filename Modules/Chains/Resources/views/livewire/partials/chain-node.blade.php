@@ -19,12 +19,14 @@
     // D-91 confidence-tier mapping → chip text + chip chrome.
     // No hue encoding — UI-SPEC § Color forbids semantic-colour-by-
     // confidence. The Candidate parent card also carries `opacity-60`
-    // for the calm "dimmed" treatment.
+    // for the calm "dimmed" treatment. Dark companions track the
+    // Phase 15 D-15 token table: page-surface chip on `slate-950`,
+    // card-surface chip on `slate-900`, slate-400 caption on dark.
     $tierClasses = match ($node->confidenceTier) {
-        'Deterministic' => 'bg-white text-slate-900 ring-1 ring-slate-200',
-        'Confirmed'     => 'bg-slate-50 text-slate-900 ring-1 ring-slate-200',
-        'Candidate'     => 'bg-slate-50 text-slate-500 ring-1 ring-slate-200',
-        default         => 'bg-slate-50 text-slate-500 ring-1 ring-slate-200',
+        'Deterministic' => 'bg-white text-slate-900 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700',
+        'Confirmed'     => 'bg-slate-50 text-slate-900 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700',
+        'Candidate'     => 'bg-slate-50 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-700',
+        default         => 'bg-slate-50 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-700',
     };
 
     $tierAria = match ($node->confidenceTier) {
@@ -34,7 +36,7 @@
         default         => 'Confidence: candidate; needs review',
     };
 
-    $cardClasses = 'rounded-lg border border-slate-200 bg-white p-4 space-y-1';
+    $cardClasses = 'rounded-lg border border-slate-200 bg-white p-4 space-y-1 dark:bg-slate-950 dark:border-slate-700';
     if ($node->confidenceTier === 'Candidate') {
         $cardClasses .= ' opacity-60';
     }
@@ -49,9 +51,9 @@
 
 <div class="{{ $cardClasses }}">
     <div class="flex items-center justify-between gap-md">
-        <p class="text-sm text-slate-900">{{ $node->counterpartyName !== '' ? $node->counterpartyName : '—' }}</p>
+        <p class="text-sm text-slate-900 dark:text-slate-100">{{ $node->counterpartyName !== '' ? $node->counterpartyName : '—' }}</p>
         <div class="flex items-center gap-sm">
-            <p class="text-sm text-slate-900" style="font-variant-numeric: tabular-nums;">
+            <p class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                 {{ $fmt($node->amount) }}
             </p>
             <span
@@ -60,7 +62,7 @@
             >{{ $node->confidenceTier }}</span>
         </div>
     </div>
-    <p class="text-xs text-slate-500">
+    <p class="text-xs text-slate-500 dark:text-slate-400">
         {{ $node->bookedAt->format('d M Y') }} · {{ $node->accountName !== '' ? $node->accountName : '—' }}
     </p>
 
@@ -69,13 +71,13 @@
             <button
                 type="button"
                 wire:click="confirm({{ $node->chainLinkId }})"
-                class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                 aria-label="Confirm chain link {{ $node->chainLinkId }}"
             >Confirm</button>
             <button
                 type="button"
                 wire:click="reject({{ $node->chainLinkId }})"
-                class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
+                class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
                 aria-label="Reject chain link {{ $node->chainLinkId }}"
             >Reject</button>
         </div>
@@ -86,12 +88,12 @@
              charges paginated at 10 per click. Pagination is forward-
              only — clicking the "Show 10 more · X of N" button
              increments the drawer's $fanoutPage cursor. --}}
-        <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
-            <p class="text-xs text-slate-500">Covers {{ $childTotal }} ICS charges</p>
+        <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2 dark:bg-slate-900 dark:border-slate-700">
+            <p class="text-xs text-slate-500 dark:text-slate-400">Covers {{ $childTotal }} ICS charges</p>
             @foreach ($visibleChildren as $child)
                 <div class="flex items-center justify-between">
-                    <p class="text-sm text-slate-900">{{ $child->counterpartyName !== '' ? $child->counterpartyName : '—' }}</p>
-                    <p class="text-sm text-slate-900" style="font-variant-numeric: tabular-nums;">
+                    <p class="text-sm text-slate-900 dark:text-slate-100">{{ $child->counterpartyName !== '' ? $child->counterpartyName : '—' }}</p>
+                    <p class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                         {{ $fmt($child->amount) }}
                     </p>
                 </div>
@@ -100,15 +102,15 @@
                 <button
                     type="button"
                     wire:click="showMoreFanout"
-                    class="mt-2 text-xs text-slate-500 hover:text-slate-900"
+                    class="mt-2 text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
                 >Show {{ $nextChunk }} more · {{ count($visibleChildren) }} of {{ $childTotal }}</button>
             @endif
         </div>
     @elseif ($node->kind === 'ics_bulk_settle')
         {{-- Empty fan-out edge case (D-93 discretion) — a refund-only
              month leaves a bulk-settle node covering zero ICS charges. --}}
-        <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3">
-            <p class="text-xs text-slate-500">No ICS charges in this settlement</p>
+        <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3 dark:bg-slate-900 dark:border-slate-700">
+            <p class="text-xs text-slate-500 dark:text-slate-400">No ICS charges in this settlement</p>
         </div>
     @endif
 </div>
