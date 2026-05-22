@@ -18,6 +18,7 @@
             <directory>Modules/Transfers/tests/Unit</directory>
             <directory>Modules/Receipts/tests/Unit</directory>
             <directory>Modules/Recurring/tests/Unit</directory>
+            <directory>Modules/Desktop/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
@@ -30,6 +31,7 @@
             <directory>Modules/Transfers/tests/Feature</directory>
             <directory>Modules/Receipts/tests/Feature</directory>
             <directory>Modules/Recurring/tests/Feature</directory>
+            <directory>Modules/Desktop/tests/Feature</directory>
         </testsuite>
         <testsuite name="Contracts">
             <directory>tests/Contracts</directory>
