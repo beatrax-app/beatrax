@@ -1295,12 +1295,7 @@ it('does not allow a bg-white / text-slate-900 utility without a dark: companion
     // contain a `dark:text-` utility. Tokens are matched on word
     // boundaries so `bg-white/50` and `bg-whitesmoke` are handled
     // correctly and `dark:bg-white` is not mistaken for a violation.
-    $allowListedModules = [
-        'EmailScan',
-        'Recurring',
-        'DriftAlerts',
-        'Desktop',
-    ];
+    $allowListedModules = [];
 
     // Roots to scan: the app-level views, plus each module's views.
     $roots = [];

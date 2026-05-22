@@ -31,15 +31,16 @@
     /**
      * Direction-aware tint for a single drift alert. Expense up and
      * income down read as rose; expense down and income up read as
-     * emerald.
+     * emerald. Dark companions step into rose-300 / emerald-300 for
+     * the inline pill text on a slate-950 surface (UI-SPEC D-15).
      */
     $tintFor = static function (object $row): string {
         $isNegative = $row->delta->isNegative();
         if ($row->direction === 'expense') {
-            return $isNegative ? 'text-emerald-700' : 'text-rose-700';
+            return $isNegative ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300';
         }
         // income
-        return $isNegative ? 'text-rose-700' : 'text-emerald-700';
+        return $isNegative ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300';
     };
 
     $signedFmt = static function (object $row) use ($fmt): string {
@@ -69,18 +70,18 @@
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8 flex items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Drift alerts</h1>
-            <p class="mt-2 max-w-prose text-sm text-slate-500">
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Drift alerts</h1>
+            <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 Approved recurring series whose latest charge moved outside your threshold.
             </p>
         </div>
         <a
             href="{{ route('settings') }}#drift-threshold"
-            class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+            class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
         >Adjust threshold →</a>
     </header>
 
-    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200" role="tablist">
+    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist">
         @foreach ($tabs as $key => $label)
             <button
                 type="button"
@@ -89,8 +90,8 @@
                 wire:click="setTab('{{ $key }}')"
                 @class([
                     'px-3 py-2 text-sm',
-                    'border-b-2 border-slate-900 font-medium text-slate-900' => $tab === $key,
-                    'border-b-2 border-transparent text-slate-500 hover:text-slate-900' => $tab !== $key,
+                    'border-b-2 border-slate-900 font-medium text-slate-900 dark:border-slate-100 dark:text-slate-100' => $tab === $key,
+                    'border-b-2 border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $tab !== $key,
                 ])
             >{{ $label }}</button>
         @endforeach
@@ -98,14 +99,14 @@
 
     @if ($tab === 'open')
         @if (count($grouped) === 0)
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
-                <h2 class="text-base font-semibold text-slate-900">No open drift alerts</h2>
-                <p class="mt-2 max-w-prose text-sm text-slate-500">
+            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No open drift alerts</h2>
+                <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                     diederik watches your approved recurring series and flags any whose latest charge differs from the prior amount by more than your threshold.
                     Adjust threshold on
                     <a
                         href="{{ route('settings') }}#drift-threshold"
-                        class="text-slate-900 underline underline-offset-2 hover:text-slate-700"
+                        class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
                     >Settings → Default drift alert</a>.
                 </p>
             </div>
@@ -119,7 +120,7 @@
                     @if ($alertCount >= 2)
                         <flux:card
                             x-data="{ open: false }"
-                            class="rounded-lg border border-slate-200 bg-slate-50 p-4"
+                            class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700"
                         >
                             <div class="flex items-center justify-between gap-4">
                                 <button
@@ -128,7 +129,7 @@
                                     aria-expanded="false"
                                     x-bind:aria-expanded="open ? 'true' : 'false'"
                                     aria-controls="drift-group-body-{{ $seriesId }}"
-                                    class="flex min-w-0 flex-1 items-center gap-2 text-left text-sm font-medium text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                                    class="flex min-w-0 flex-1 items-center gap-2 text-left text-sm font-medium text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4 transition-transform" x-bind:class="open ? 'rotate-0' : '-rotate-90'" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
@@ -144,7 +145,7 @@
                                 x-show="open"
                                 x-cloak
                                 id="drift-group-body-{{ $seriesId }}"
-                                class="mt-3 space-y-2 border-t border-slate-200 pt-3"
+                                class="mt-3 space-y-2 border-t border-slate-200 pt-3 dark:border-slate-700"
                             >
                                 @foreach ($groupAlerts as $alert)
                                     @include('drift-alerts::livewire.partials.drift-alert-row', [
@@ -182,15 +183,15 @@
         @endif
     @else
         @if (count($rows) === 0)
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
+            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
                 @if ($tab === 'history')
-                    <h2 class="text-base font-semibold text-slate-900">No acknowledged drifts yet</h2>
-                    <p class="mt-2 max-w-prose text-sm text-slate-500">
+                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No acknowledged drifts yet</h2>
+                    <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                         Acknowledged drift alerts will appear here so you can see what you've already reviewed.
                     </p>
                 @else
-                    <h2 class="text-base font-semibold text-slate-900">Nothing dismissed yet</h2>
-                    <p class="mt-2 max-w-prose text-sm text-slate-500">
+                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Nothing dismissed yet</h2>
+                    <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                         When you tell diederik you've cancelled a series, that decision lands here with a timestamp.
                     </p>
                 @endif
@@ -219,7 +220,7 @@
                     <button
                         type="button"
                         wire:click="$set('cursorId', {{ $rows[count($rows) - 1]->driftAlertId }})"
-                        class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                        class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
                     >Load more</button>
                 </div>
             @endif
