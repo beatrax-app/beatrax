@@ -178,10 +178,9 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
     }
 
     /**
-     * Enumerate the top-level .eml / .mbox / other files inside
-     * inbox-drop/{userId}/. Skips any path that lives under the
-     * `processed/` or `failed/` subdirectories so re-runs never
-     * touch quarantined or completed files.
+     * Returns the top-level files in `inbox-drop/{userId}/`.
+     * `Filesystem::files()` is non-recursive, so the `processed/` and
+     * `failed/` subdirectories are not descended into.
      *
      * @return list<string>
      */
