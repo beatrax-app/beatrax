@@ -186,4 +186,4 @@ The original PROJECT.md tracked all v1 requirements (FND / ING / EML / LED / CHN
 </details>
 
 ---
-*Last updated: 2026-05-19 — v2.0 milestone started (public release + desktop packaging + multi-user + developer mode)*
+*Last updated: 2026-05-22 — v2.0 in progress; Phases 12–14 complete (multi-user activation, NativePHP-ready storage paths, database-driven queue + Horizon carve-out)*
