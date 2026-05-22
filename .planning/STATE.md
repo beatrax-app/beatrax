@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
 stopped_at: Phase 14 context gathered
-last_updated: "2026-05-20T22:16:34.420Z"
-last_activity: 2026-05-20 -- Phase 14 execution started
+last_updated: "2026-05-22T16:40:46.307Z"
+last_activity: 2026-05-22
 progress:
   total_phases: 10
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 14
-  completed_plans: 11
-  percent: 20
+  completed_plans: 14
+  percent: 30
 ---
 
 # Project State
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 14 (queue-rewire-horizon-carve-out) — EXECUTING
-Plan: 1 of 3
+Phase: 15
+Plan: Not started
 Status: Executing Phase 14
-Last activity: 2026-05-20 -- Phase 14 execution started
+Last activity: 2026-05-22
 
 ## Performance Metrics
 
 **Velocity (v1.0 baseline):**
 
-- Total plans completed: 77 (v1.0 close)
+- Total plans completed: 80 (v1.0 close)
 - v2.0 plans completed: 0
 - Total execution time: —
 
@@ -54,6 +54,7 @@ Last activity: 2026-05-20 -- Phase 14 execution started
 | 21. Invite-Only Beta Cycle | — | — | — |
 | 12 | 8 | - | - |
 | 13 | 3 | - | - |
+| 14 | 3 | - | - |
 
 *Updated after each plan completion*
 

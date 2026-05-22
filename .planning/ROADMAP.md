@@ -253,7 +253,7 @@ Plans:
 | v1.0 MVP — Phases 1–11 | 66/66 | Complete | 2026-05-19 |
 | 12. Multi-User Activation | 8/8 | Complete    | 2026-05-20 |
 | 13. AppPaths | 3/3 | Complete    | 2026-05-20 |
-| 14. Queue Rewire + Horizon Carve-out | 3/3 | Complete   | 2026-05-22 |
+| 14. Queue Rewire + Horizon Carve-out | 3/3 | Complete    | 2026-05-22 |
 | 15. Desktop Shell (NativePHP Integration) | 0/0 | Not started | - |
 | 16. Developer Mode UI | 0/0 | Not started | - |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |

@@ -12,7 +12,7 @@
 ### PKG (Desktop Packaging)
 
 - [x] **PKG-01**: AppPaths / UserDataPath abstraction service replacing every `database_path()` / `storage_path()` / `base_path()` call, with an arch-test forbidding their use outside the service
-- [ ] **PKG-03**: Queue rewire — `database` queue driver + `cache.locks_store=database` + `ShouldBeUniqueUntilProcessing` jobs' `uniqueVia()` lock store migrated; Horizon gated on `DIEDERIK_RUNTIME=herd` dev-mode only; chain-resolution end-to-end Pest test against `database` driver under concurrent load
+- [x] **PKG-03**: Queue rewire — `database` queue driver + `cache.locks_store=database` + `ShouldBeUniqueUntilProcessing` jobs' `uniqueVia()` lock store migrated; Horizon gated on `DIEDERIK_RUNTIME=herd` dev-mode only; chain-resolution end-to-end Pest test against `database` driver under concurrent load
 - [ ] **PKG-04**: `nativephp/desktop ^2.2` integration producing `.dmg` (macOS), `.msi/.exe` (Windows), and `.AppImage/.deb` (Linux) installers via `php artisan native:build`
 - [ ] **PKG-05**: Native chrome — window, dock/taskbar icon, app menu (File / Edit / View / Window / Help with standard items), system tray, OS notifications, dark-mode follows OS
 - [ ] **PKG-06**: File-association handlers — double-clicking a `.eml` or `.csv` file on macOS / Windows / Linux opens diederik with ingestion intent
@@ -140,7 +140,7 @@ Which phase covers which requirement. Updated during roadmap creation (2026-05-1
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PKG-01 | Phase 13 | Complete |
-| PKG-03 | Phase 14 | Pending |
+| PKG-03 | Phase 14 | Complete |
 | PKG-04 | Phase 15 | Pending |
 | PKG-05 | Phase 15 | Pending |
 | PKG-06 | Phase 15 | Pending |
