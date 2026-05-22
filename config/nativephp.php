@@ -179,6 +179,14 @@ return [
      * Define your own scripts to run before and after the build process.
      */
     'prebuild' => [
+        // Stage committed brand icons + the macOS Hardened Runtime
+        // entitlements file into the electron-builder `buildResources`
+        // directory. The `nativephp/` working dir is gitignored, so the
+        // canonical icons (`public/icon.*`) and the entitlements file
+        // (`build/entitlements.mac.plist`) must be copied in on every
+        // build for electron-builder to discover them.
+        'php scripts/nativephp_stage_build_resources.php',
+
         // Force deterministic ad-hoc macOS code signing. Without an explicit
         // `mac.identity`, electron-builder auto-discovers a keychain identity
         // and can partially sign the bundle, producing a Team ID mismatch
