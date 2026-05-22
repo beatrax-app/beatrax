@@ -70,3 +70,11 @@ yarn-error.log
 # NativePHP build + dist output — `native:build` stages the bundled app
 # and electron-builder writes the packaged installers under base_path('build').
 /build
+
+# NativePHP Electron working directory — `native:build` populates this with
+# the Electron scaffold and writes `electron/dist/` build artefacts. It is
+# regenerated on every build and must never be committed.
+/nativephp
+
+# macOS Finder metadata
+.DS_Store
