@@ -78,6 +78,10 @@
         }
     },
     "scripts": {
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ],
         "test": "pest --parallel",
         "analyse": "phpstan analyse --memory-limit=1G",
         "format": "pint",
