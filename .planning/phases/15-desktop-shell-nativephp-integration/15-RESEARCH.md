@@ -393,21 +393,24 @@ Notification::title('Import finished')
 
 **These assumptions need confirmation before becoming locked decisions** — especially A1 (8.4 vs 8.5) and A2 (arch-test namespace).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact `FileOpenedFromOs` cross-OS plumbing**
    - What we know: macOS `open-file` event; Windows/Linux `argv` / `second-instance`; needs the published Electron project.
    - What's unclear: the cleanest PHP-side surface NativePHP gives for a file path passed at launch (is there an `OpenedFile`-style event in v2, or must the Electron `main.js` POST to a Laravel route?).
    - Recommendation: Make this the explicit spike sub-task STATE.md flagged. Budget 1–2 days; plan it as a self-contained wave so a slip doesn't block the rest.
+   - **RESOLVED: deferred to spike task in plan 15-04 Task 1.**
 
 2. **macOS entitlements file location in the published Electron project**
    - What we know: two entitlements are required (PKG-08); the build consumes a `.plist`.
    - What's unclear: the exact path NativePHP 2.2's electron-builder config expects (`build/entitlements.mac.plist` is the electron-builder convention).
    - Recommendation: Run `native:install --publish`, inspect the generated `electron-builder` config, place the entitlements `.plist` where it points. Verify against the electron-builder `mac.entitlements` convention.
+   - **RESOLVED: electron-builder convention `build/entitlements.mac.plist`; verify after `native:install --publish`.**
 
 3. **`.eml` staging-page UX (D-02 — Claude's discretion)**
    - What we know: D-02 leaves it to discretion; CONTEXT.md expects a staging page mirroring `.csv` (D-01); the UI-SPEC already specifies "File received: `<name>`" + "Start import" for both.
    - Recommendation: Mirror the `.csv` pattern — the UI-SPEC has already locked the copy. Route `.eml` into the existing `FileDropEmlBlobStore` pipeline after the staging click.
+   - **RESOLVED: mirror the `.csv` staging-page pattern per 15-UI-SPEC.md.**
 
 ## Environment Availability
 
@@ -464,7 +467,7 @@ Notification::title('Import finished')
 - [ ] `Modules/Desktop/tests/Feature/FileOpenedFromOsTest.php` — covers PKG-06 routing + D-03/D-04.
 - [ ] `Modules/Desktop/tests/Unit/` — `NativeAppServiceProvider`, tray/menu builders, worker-health listener, focus-state notification gating.
 - [ ] CI 8.4 axis skeleton — a minimal matrix entry running phpstan + pint + pest on PHP 8.4 (full matrix is Phase 17).
-- [ ] NativePHP facade testing: NativePHP 2.x facades are fakeable (`Shell` fake confirmed in v2 release notes — verify `Window`/`Menu`/`Notification`/`ChildProcess` fakes exist) so chrome configuration is unit-testable without a real Electron process.
+- [ ] NativePHP facade testing: NativePHP 2.x facades are fakeable (`Shell` fake confirmed in v2 release notes — verify `Window`/`Menu`/`MenuBar`/`Notification`/`ChildProcess` fakes exist) so chrome configuration is unit-testable without a real Electron process. The availability of the `Window`/`Menu`/`MenuBar`/`Notification` fakes is UNVERIFIED — plan 15-01 Task 2 includes a verification step that inspects the installed package and records the result so plan 15-02's TDD tasks know whether to assert against fakes or defer to manual UAT.
 - [ ] HUMAN-UAT artifact for the `.dmg` build + launch smoke test (PKG-04 SC1) — not CI-automatable.
 
 ## Security Domain
