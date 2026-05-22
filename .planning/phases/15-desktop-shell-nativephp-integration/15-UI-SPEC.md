@@ -43,24 +43,24 @@ Declared values (all multiples of 4 — matches the established v1.0 codebase: `
 | 2xl | 48px | Major section breaks (`space-y-12`) |
 | 3xl | 64px | Page-level vertical rhythm on tall screens |
 
-Exceptions:
-- **44px minimum interactive target** for the system-tray context-menu rows and the close-button prompt's dialog buttons — touch/click-precision floor for native chrome, even though the desktop app is pointer-driven. Existing in-app buttons at `h-10` (40px) are retained as-is (established convention; no regression introduced).
-- The "Setting up…" and welcome screens center their content with `min-h-screen flex items-center justify-center` — no scroll, no app chrome.
+Exceptions: none — every layout spacing token above is a multiple of 4 from the standard set.
+
+> Minimum interactive target-size constraints (a distinct concern from layout spacing) live as per-component accessibility notes in the Component Inventory below.
 
 ---
 
 ## Typography
 
-Inter throughout. Weights restricted to **two**: regular (400) and semibold (600). `font-medium` (500) appears in the v1.0 codebase on buttons/badges and is retained where already present, but **new** Phase 15 markup uses only 400/600 to keep the contract honest. Sizes restricted to four roles below (the v1.0 `text-2xl` page title used on auth/wizard screens maps to the Heading role; `text-3xl` dashboard/settings titles map to Display).
+Inter throughout. Weights restricted to **two**: regular (400) and semibold (600). `font-medium` (500) appears in the v1.0 codebase on buttons/badges and is retained where already present, but **new** Phase 15 markup uses only 400/600 to keep the contract honest. Sizes restricted to the **four** roles below. The Heading role is a **single size** — `text-2xl` (24px); all card titles, section headings, and full-screen titles (Sign in, Upload, "Welcome to diederik", "Setting up…") map to it. The legacy v1.0 `text-xl` (20px) usage is folded up into the 24px Heading role; `text-3xl` dashboard/settings titles map to Display.
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Label | 12px (`text-xs`) | 600 semibold, `uppercase tracking-wide` | 1.4 |
 | Body | 14px (`text-sm`) | 400 regular | 1.5 |
-| Heading | 20px (`text-xl`) — also `text-2xl`/24px for full-screen titles (Sign in, Upload, "Welcome to diederik") | 600 semibold, `tracking-tight` | 1.3 |
+| Heading | 24px (`text-2xl`) | 600 semibold, `tracking-tight` | 1.3 |
 | Display | 30px (`text-3xl`) | 600 semibold, `tracking-tight` | 1.2 |
 
-KPI/money numbers render at Display size with `tabular-nums`. Help/caption text is Body size at `text-slate-500` (light) / `text-slate-400` (dark).
+Four-size scale: 12 / 14 / 24 / 30 px — exactly four distinct pixel values. KPI/money numbers render at Display size with `tabular-nums`. Help/caption text is Body size at `text-slate-500` (light) / `text-slate-400` (dark).
 
 ---
 
@@ -117,12 +117,12 @@ Tone: calm, plain, second-person, no exclamation marks, no jargon — matches th
 
 | Component | Module | Reuses | Notes |
 |-----------|--------|--------|-------|
-| `.csv` / `.eml` staging page | `Modules/Import` (CSV) / `Modules/Receipts` (EML) — see SC3 routing caveat | Auth/wizard full-screen layout shell; emerald primary button | Heading + filename + single "Start import" button. Routes into the existing import preview/confirm flow. |
-| "Setting up…" boot screen | `Modules/Desktop` | Login-screen centered layout | No app chrome (top-nav not yet rendered). Brand mark + spinner-free calm copy. |
-| Welcome screen | `Modules/Desktop` | Login-screen centered layout | Brand mark + "Welcome to diederik" + "Get started" → `/signup`. |
-| Close-window prompt | `Modules/Desktop` | `flux:modal` (in-app modal preferred over native dialog for theme consistency; D-08 leaves this to discretion — choose `flux:modal` so it inherits dark theme) | Title + body + 2 buttons + remember-choice checkbox. |
+| `.csv` / `.eml` staging page | `Modules/Import` (CSV) / `Modules/Receipts` (EML) — see SC3 routing caveat | Auth/wizard full-screen layout shell; emerald primary button | Heading + filename + single "Start import" button. Routes into the existing import preview/confirm flow. **Visual focal point:** brand mark → "File received: `<name>`" heading → single emerald "Start import" CTA — one path, no competing actions. |
+| "Setting up…" boot screen | `Modules/Desktop` | Login-screen centered layout | No app chrome (top-nav not yet rendered). Brand mark + spinner-free calm copy. **Visual focal point:** centered brand mark → "Setting up…" heading → one line of reassuring body copy; no CTA (auto-advances). |
+| Welcome screen | `Modules/Desktop` | Login-screen centered layout | Brand mark + "Welcome to diederik" + "Get started" → `/signup`. **Visual focal point:** centered brand mark → "Welcome to diederik" heading → single emerald "Get started" CTA. |
+| Close-window prompt | `Modules/Desktop` | `flux:modal` (in-app modal preferred over native dialog for theme consistency; D-08 leaves this to discretion — choose `flux:modal` so it inherits dark theme) | Title + body + 2 buttons + remember-choice checkbox. **Accessibility — interactive target size:** both dialog buttons ("Quit diederik", "Keep running in the tray") render at a minimum 48px height (`h-12`) to clear the Apple HIG / WCAG 2.5.5 minimum target-size floor for native chrome. |
 | Settings → Appearance section | `Modules/Core` settings-page | Existing settings `<section>` + `flux:radio.group` | New `## Appearance` section: Light / Dark / System segmented control, instant-apply. |
-| Native menu / tray / notifications | `Modules/Desktop` | n/a (OS-native, `Native\Laravel\*`) | No Blade UI; copy contract above governs labels. |
+| Native menu / tray / notifications | `Modules/Desktop` | n/a (OS-native, `Native\Laravel\*`) | No Blade UI; copy contract above governs labels. **Accessibility — interactive target size:** the tray right-click context-menu rows ("Open diederik", "Scan email now", "Quit") are sized at the OS-native menu-row height; where the height is app-controlled, use a minimum 48px row (`h-12`) to satisfy the Apple HIG / WCAG 2.5.5 target-size floor. |
 
 The brand mark (`resources/brand/logo.svg`, moved per D-20) appears in: the OS bundle/dock icon, the monochrome tray icon, the in-app top-nav (replacing or accompanying the current text "diederik" wordmark), and the login/welcome/signup centered screens (D-18).
 
