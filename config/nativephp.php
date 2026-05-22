@@ -1,5 +1,7 @@
 <?php
 
+use Modules\Desktop\Internal\NativeAppServiceProvider;
+
 return [
     /**
      * The version of your app.
@@ -51,7 +53,7 @@ return [
      * takes care of bootstrapping your application and configuring
      * any global hotkeys, menus, windows, etc.
      */
-    'provider' => \Modules\Desktop\Internal\NativeAppServiceProvider::class,
+    'provider' => NativeAppServiceProvider::class,
 
     /**
      * A list of environment keys that should be removed from the
@@ -168,7 +170,12 @@ return [
      * Define your own scripts to run before and after the build process.
      */
     'prebuild' => [
-        // 'npm run build',
+        // Force deterministic ad-hoc macOS code signing. Without an explicit
+        // `mac.identity`, electron-builder auto-discovers a keychain identity
+        // and can partially sign the bundle, producing a Team ID mismatch
+        // between the app shell and the nested Electron Framework that aborts
+        // launch on Apple Silicon.
+        'php scripts/nativephp_force_adhoc_signing.php',
     ],
 
     'postbuild' => [
