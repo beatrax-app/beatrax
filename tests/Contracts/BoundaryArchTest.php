@@ -49,6 +49,10 @@ arch('Modules\\DriftAlerts\\Internal is only used inside Modules\\DriftAlerts')
     ->expect('Modules\\DriftAlerts\\Internal')
     ->toOnlyBeUsedIn('Modules\\DriftAlerts');
 
+arch('Modules\\Desktop\\Internal is only used inside Modules\\Desktop')
+    ->expect('Modules\\Desktop\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Desktop');
+
 arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules')
@@ -64,6 +68,17 @@ arch('no Laravel facade usage in module code')
         // to this one file. The phpstan.neon ignoreErrors list mirrors
         // this allow-list.
         'Modules\\Core\\Public\\Support\\LockStore',
+        // Native-chrome carve-out: NativePHP's window, app-menu and
+        // system-tray API is only reachable through its facades, which
+        // NativePHP invokes outside the container lifecycle — there is
+        // no constructor-injection seam for them. The crossing is
+        // confined to the desktop module's native-chrome classes: the
+        // NativeAppServiceProvider NativePHP boots, and the two builders
+        // it delegates window/menu/tray construction to. The phpstan.neon
+        // ignoreErrors list mirrors this allow-list.
+        'Modules\\Desktop\\Internal\\NativeAppServiceProvider',
+        'Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
+        'Modules\\Desktop\\Internal\\Native\\TrayMenuBuilder',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')
@@ -1208,5 +1223,51 @@ it('does not allow Horizon imports outside the allow-listed provider (noHorizonI
     expect($hits)->toBe(
         [],
         "Only app/Providers/HorizonServiceProvider.php may reference Laravel\\Horizon\\* symbols. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+it('does not allow Native\\Desktop imports outside Modules/Desktop (noNativePhpImportsOutsideDesktopModule)', function (): void {
+    // Phase 15 containment invariant: nativephp/desktop's API lives under
+    // the `Native\Desktop\` namespace, and the desktop shell is quarantined
+    // inside the Modules/Desktop module so no other module reaches into
+    // NativePHP directly. No shipped-build file outside Modules/Desktop may
+    // reference a `Native\Desktop\` namespaced symbol.
+    //
+    // Block + line comments are stripped first so PHPDoc references stay
+    // legal, and `/tests/` paths are skipped. The Modules/Desktop subtree
+    // is the sanctioned home and is excluded wholesale.
+    $hits = [];
+    foreach (['app', 'Modules', 'bootstrap', 'routes'] as $root) {
+        $abs = base_path($root);
+        if (! is_dir($abs)) {
+            continue;
+        }
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($abs, RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+                continue;
+            }
+            $path = $file->getPathname();
+            if (str_contains($path, '/tests/')) {
+                continue;
+            }
+            if (str_contains($path, '/Modules/Desktop/')) {
+                continue;
+            }
+            $relative = str_replace(base_path().'/', '', $path);
+            $contents = (string) file_get_contents($path);
+            $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+            if (preg_match('/Native\\\\Desktop\\\\/', $stripped) === 1) {
+                $hits[] = $relative;
+            }
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "Native\\Desktop\\* symbols may only be referenced inside Modules/Desktop. Offenders:\n  ".implode("\n  ", $hits),
     );
 });

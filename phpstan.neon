@@ -44,6 +44,29 @@ parameters:
         -
             message: "#Global helper function 'config' should not be used\\.#"
             path: app/Providers/HorizonServiceProvider.php
+        # Native-chrome carve-out: NativePHP's window, app-menu and
+        # system-tray API is only reachable through its facades, which
+        # NativePHP invokes outside the container lifecycle — there is no
+        # constructor-injection seam for them. The crossing is confined to
+        # the desktop module's native-chrome classes (the NativePHP-booted
+        # provider and the two builders it delegates to). The BoundaryArchTest
+        # "no Laravel facade usage in module code" test mirrors this allow-list.
+        # The builder path is a glob: the two builder classes are introduced
+        # by a later plan, so an fnmatch pattern keeps the entry valid before
+        # they exist. reportUnmatched is disabled because the provider's facade
+        # calls also land in that later plan (its boot() is empty for now).
+        -
+            message: '#Static call to instance method Native\\Desktop\\Facades\\.*#'
+            paths:
+                - Modules/Desktop/Internal/NativeAppServiceProvider.php
+                - Modules/Desktop/Internal/Native/*Builder.php
+            reportUnmatched: false
+        -
+            message: '#Call to an undefined static method Native\\Desktop\\Facades\\.*#'
+            paths:
+                - Modules/Desktop/Internal/NativeAppServiceProvider.php
+                - Modules/Desktop/Internal/Native/*Builder.php
+            reportUnmatched: false
     allowedGlobalFunctions:
         - 'app_path'
         - 'base_path'
