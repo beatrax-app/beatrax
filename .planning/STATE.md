@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
 stopped_at: Phase 15 UI-SPEC approved
-last_updated: "2026-05-22T18:20:15.671Z"
-last_activity: 2026-05-22 -- Phase 15 planning complete
+last_updated: "2026-05-22T22:20:23.608Z"
+last_activity: 2026-05-23 -- Plan 15-01 complete (NativePHP installed, Modules/Desktop scaffolded, .dmg builds + launches)
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 21
-  completed_plans: 14
-  percent: 30
+  completed_plans: 15
+  percent: 71
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-**Current focus:** Phase 14 — queue-rewire-horizon-carve-out
+**Current focus:** Phase 15 — desktop-shell-nativephp-integration
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
+Phase: 15 (desktop-shell-nativephp-integration) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-05-22 -- Phase 15 planning complete
+Last activity: 2026-05-23 -- Plan 15-01 complete (NativePHP installed, Modules/Desktop scaffolded, .dmg builds + launches)
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Last activity: 2026-05-22 -- Phase 15 planning complete
 | 14 | 3 | - | - |
 
 *Updated after each plan completion*
+| Phase 15 P01 | 205 | 4 tasks | 30 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Recent decisions affecting current work:
 - Phase-name slug convention matches v1.0 brevity: `12-multi-user-activation`, `13-app-paths`, `14-queue-rewire-horizon-carveout`, `15-desktop-shell-nativephp-integration`, `16-developer-mode-ui`, `17-cicd-pipeline-code-signing`, `18-auto-update-plumbing`, `19-public-release-boundary`, `20-v1-uat-close-out`, `21-invite-only-beta-cycle`
 - `DEVUI-01` (`is_developer` flag + `EnsureDeveloperMode` middleware + Settings toggle) lives entirely in Phase 16 since its three deliverables — column migration, Settings UI, middleware — all belong to the DevMode module's surface; Phase 12's signup-creates-developer behavior consumes the column but does not own it
 - All 47 requirements have explicit phase assignments in REQUIREMENTS.md Traceability table
+- [Phase 15-01]: NativePHP desktop `^2.2` installed; `Modules/Desktop/` bounded module registered; `noNativePhpImportsOutsideDesktopModule` arch invariant green; a launchable macOS `.dmg` builds and opens a native window rendering the diederik web UI (PKG-04 verified)
+- [Phase 15-01]: NativePHP builds use deterministic ad-hoc macOS signing via a `mac.identity:null` prebuild hook (no paid Apple Developer ID for dev builds) — real Developer ID notarization deferred to Phase 17; `bootstrap/cache/*.php` gitignored as per-environment artifacts; standard Laravel `post-autoload-dump` composer script added so the in-bundle `composer install --no-dev` regenerates package discovery against the `--no-dev` vendor tree
 
 ### Pending Todos
 
@@ -125,7 +128,7 @@ Items acknowledged at v1.0 milestone close on 2026-05-19. Carried forward into v
 
 ## Session Continuity
 
-Last session: 2026-05-22T17:16:59.705Z
+Last session: 2026-05-22T22:19:30.463Z
 Stopped at: Phase 15 UI-SPEC approved
 Resume: Run `/gsd:plan-phase 12` to begin planning multi-user activation
 
