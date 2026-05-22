@@ -1,14 +1,14 @@
 @php
     $isActive = static fn (string $path): string => $currentPath === $path
-        ? 'text-slate-900 font-semibold bg-slate-100'
-        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100';
+        ? 'text-slate-900 dark:text-slate-100 font-semibold bg-slate-100 dark:bg-slate-800'
+        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800';
 @endphp
 
-<nav class="border-b border-slate-200 bg-white" aria-label="Primary">
+<nav class="border-b border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700" aria-label="Primary">
     <div class="mx-auto flex max-w-5xl items-center gap-1 px-8 py-3">
         <a
             href="{{ route('dashboard') }}"
-            class="mr-4 text-sm font-semibold tracking-tight text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+            class="mr-4 text-sm font-semibold tracking-tight text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
         >diederik</a>
 
         <a
@@ -42,7 +42,7 @@
             Inboxes
             @if (($inboxesBadgeCount ?? 0) > 0)
                 <span
-                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white"
+                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white dark:bg-slate-100 dark:text-slate-900"
                     style="font-variant-numeric: tabular-nums;"
                 >{{ $inboxesBadgeCount > 99 ? '99+' : $inboxesBadgeCount }}</span>
             @endif
@@ -55,7 +55,7 @@
             Uncategorized
             @if ($uncategorizedCount > 0)
                 <span
-                    class="inline-flex items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-900"
+                    class="inline-flex items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-900 dark:bg-slate-800 dark:text-slate-100"
                     style="font-variant-numeric: tabular-nums;"
                 >{{ $uncategorizedCount }}</span>
             @endif
@@ -81,7 +81,7 @@
             Review chains
             @if (($chainOpenCandidateCount ?? 0) > 0)
                 <span
-                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white"
+                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white dark:bg-slate-100 dark:text-slate-900"
                     style="font-variant-numeric: tabular-nums;"
                 >{{ $chainOpenCandidateCount > 99 ? '99+' : $chainOpenCandidateCount }}</span>
             @endif
@@ -115,13 +115,13 @@
                 <span class="inline-flex items-center gap-1">
                     @if ($pendingCount > 0)
                         <span
-                            class="inline-flex items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white"
+                            class="inline-flex items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white dark:bg-slate-100 dark:text-slate-900"
                             style="font-variant-numeric: tabular-nums;"
                         >{{ $pendingLabel }}</span>
                     @endif
                     @if ($driftCount > 0)
                         <span
-                            class="inline-flex items-center justify-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700"
+                            class="inline-flex items-center justify-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-500"
                             style="font-variant-numeric: tabular-nums;"
                         >{{ $driftLabel }}<span class="ml-0.5" aria-hidden="true">↗</span></span>
                     @endif
@@ -151,7 +151,7 @@
             Forecast
             @if ($forecastShortfallCount > 0)
                 <span
-                    class="inline-flex items-center justify-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700"
+                    class="inline-flex items-center justify-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-500"
                     style="font-variant-numeric: tabular-nums;"
                 >{{ $shortfallLabel }}<span class="ml-0.5" aria-hidden="true">↘</span></span>
             @endif
@@ -164,13 +164,13 @@
 
         <span class="flex-1"></span>
 
-        <span class="text-sm text-slate-500">{{ $username }}</span>
+        <span class="text-sm text-slate-500 dark:text-slate-400">{{ $username }}</span>
 
         <form method="POST" action="{{ route('logout') }}" class="ml-2">
             @csrf
             <button
                 type="submit"
-                class="inline-flex items-center rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                class="inline-flex items-center rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:text-slate-400"
             >Sign out</button>
         </form>
     </div>
