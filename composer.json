@@ -9,7 +9,7 @@
     ],
     "license": "proprietary",
     "require": {
-        "php": "^8.5",
+        "php": "^8.4",
         "brick/money": "^0.11",
         "genkgo/camt": "^2.10",
         "google/apiclient": "^2.19",

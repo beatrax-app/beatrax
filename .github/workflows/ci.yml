@@ -1,0 +1,82 @@
+# Diederik PR gate — quality-check workflow.
+#
+# SKELETON. The full multi-axis CI matrix (PHP 8.4 + 8.5, all gates, plus
+# code-signing + release jobs) is the scope of Phase 17 (CI-01). This file
+# is the Phase 15 PKG-07 deliverable: prove that Larastan L10 strict +
+# Laravel Pint + Pest all pass on PHP 8.4 — the version `nativephp/php-bin`
+# ships inside the desktop bundle.
+#
+# Phase 17 will extend the `php` axis below to `['8.4', '8.5']` and add
+# the build / release / signing jobs. The single-axis shape here is
+# chosen so Phase 17 needs only to append entries to the matrix, never
+# to rewrite the workflow.
+
+name: ci
+
+on:
+    pull_request:
+    push:
+        branches:
+            - main
+
+permissions:
+    contents: read
+
+jobs:
+    quality:
+        name: quality (PHP ${{ matrix.php }})
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        # PHP 8.4 is the version `nativephp/php-bin` bundles into the
+        # desktop build, so the gates must be honest on that exact
+        # runtime. Phase 17 widens this matrix to include 8.5.
+        strategy:
+            fail-fast: false
+            matrix:
+                php: ['8.4']
+        env:
+            # The app is timezone-pinned to Europe/Amsterdam across every
+            # module (recurring detection, drift alerts, forecasting all
+            # assume it); the CI runner must match so date-bucketing
+            # behaviour is identical to the developer machine.
+            TZ: Europe/Amsterdam
+        steps:
+            - name: Check out the source
+              uses: actions/checkout@v4
+
+            - name: Set up PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  # Extensions the framework + project use. `ext-imap` is
+                  # deliberately omitted — the project hard-conflicts with
+                  # any IMAP package that requires it (composer.json
+                  # `conflict` block) since PHP 8.4 unbundled it.
+                  extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Cache Composer packages
+              uses: actions/cache@v4
+              with:
+                  path: ~/.composer/cache
+                  key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
+                  restore-keys: |
+                      composer-${{ runner.os }}-${{ matrix.php }}-
+
+            - name: Install Composer dependencies
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            - name: Pint (code-style)
+              run: vendor/bin/pint --test
+
+            - name: Larastan level 10 strict
+              # The default 128M memory limit crashes Larastan on this
+              # project — `composer analyse` already pins 1G locally; the
+              # CI step pins the same limit explicitly.
+              run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+            - name: Pest (full suite)
+              env:
+                  APP_ENV: testing
+              run: php artisan test --parallel
