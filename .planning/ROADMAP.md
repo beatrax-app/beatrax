@@ -145,7 +145,31 @@ Plans:
   5. macOS Hardened Runtime entitlements file is configured with `com.apple.security.cs.allow-unsigned-executable-memory` + `com.apple.security.cs.disable-library-validation` so the bundled PHP runtime can execute under notarization
 
 **UI hint**: yes
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+
+**Wave 1**
+
+- [ ] 15-01-PLAN.md — NativePHP install + Modules/Desktop/ skeleton + arch invariant + Wave 0 scaffolding + launchable .dmg
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 15-05-PLAN.md — first-launch DB bootstrap + welcome/setup screens + brand icons + macOS entitlements + CI 8.4 axis
+- [ ] 15-06-PLAN.md — dark-theme infrastructure + Settings control + shell/Auth/Ledger/Import/Forecasting dark variants
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 15-02-PLAN.md — native chrome: window/menu/tray + context-aware OS notifications
+- [ ] 15-07-PLAN.md — dark variants for remaining modules + full-coverage arch guard
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 15-03-PLAN.md — bundled worker/scheduler supervision + worker-health alert + close-window prompt
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 15-04-PLAN.md — file-association spike + FileOpenedFromOs event + staging pages + single-instance/pending-intent
 
 ### Phase 16: Developer Mode UI
 

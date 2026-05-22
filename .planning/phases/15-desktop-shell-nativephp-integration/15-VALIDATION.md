@@ -2,7 +2,7 @@
 phase: 15
 slug: desktop-shell-nativephp-integration
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-05-22
 ---
@@ -40,7 +40,29 @@ created: 2026-05-22
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 15-XX-XX | XX | X | PKG-XX | — | N/A | arch/feature | `php artisan test --parallel` | ❌ W0 | ⬜ pending |
+| 15-01-T1 | 01 | 1 | PKG-04 | T-15-01/SC | supply-chain pkg verify | checkpoint | human-verify (Packagist/GitHub) | n/a | ⬜ |
+| 15-01-T2 | 01 | 1 | PKG-04/05 | T-15-02 | cleanup_env_keys strips secrets | feature | php artisan about | grep nativephp | ❌ W0 | ⬜ |
+| 15-01-T3 | 01 | 1 | PKG-05 | — | arch containment | arch | pest --filter=noNativePhpImportsOutsideDesktopModule | ❌ W0 | ⬜ |
+| 15-01-T4 | 01 | 1 | PKG-04 | — | N/A | checkpoint | human-verify (.dmg build+launch) | n/a | ⬜ |
+| 15-05-T1 | 05 | 2 | PKG-04 | T-15-17 | published Electron project review | file | test -f resources/brand/logo.svg + icons | ❌ W0 | ⬜ |
+| 15-05-T2 | 05 | 2 | PKG-04 | T-15-16 | idempotent migration, no raw path helper | feature | pest --filter=FirstLaunchBootstrap | ❌ W0 | ⬜ |
+| 15-05-T3 | 05 | 2 | PKG-08 | T-15-14/15 | entitlements keys present | unit | pest --filter='hardened runtime entitlements' | ❌ W0 | ⬜ |
+| 15-05-T4 | 05 | 2 | PKG-07 | — | gates pass on PHP 8.4 | static+suite | pint --test + phpstan + pest on 8.4 | ❌ W0 | ⬜ |
+| 15-06-T1 | 06 | 2 | PKG-05 | T-15-18 | theme value validated, not echoed raw | feature | pest --filter=ThemePreference | ❌ W0 | ⬜ |
+| 15-06-T2 | 06 | 2 | PKG-05 | T-15-19 | N/A | build | npm run build | existing | ⬜ |
+| 15-06-T3 | 06 | 2 | PKG-05 | — | N/A | build | npm run build | existing | ⬜ |
+| 15-02-T1 | 02 | 3 | PKG-05 | — | facade quarantine | unit/arch | pest --filter=NativeAppServiceProvider | ❌ W0 | ⬜ |
+| 15-02-T2 | 02 | 3 | PKG-05 | T-15-03/04/05 | deep-link to named routes only | unit | pest --filter=DispatchOsNotification | ❌ W0 | ⬜ |
+| 15-07-T1 | 07 | 3 | PKG-05 | T-15-20 | N/A | build | npm run build | existing | ⬜ |
+| 15-07-T2 | 07 | 3 | PKG-05 | T-15-21 | N/A | build | npm run build | existing | ⬜ |
+| 15-07-T3 | 07 | 3 | PKG-05 | — | full-coverage dark guard | arch | pest --filter=dark | ❌ W0 | ⬜ |
+| 15-03-T1 | 03 | 4 | PKG-04 | T-15-07 | worker cmd not input-built | feature | schedule:list | grep desktop.email-scan.timer | existing | ⬜ |
+| 15-03-T2 | 03 | 4 | PKG-04 | T-15-06 | crash-loop escalation + de-dup | feature | pest --filter=WorkerCrashAlert | ❌ W0 | ⬜ |
+| 15-03-T3 | 03 | 4 | PKG-05 | T-15-22 | close_behavior value allow-listed | feature | pest --filter=CloseWindowPrompt | ❌ W0 | ⬜ |
+| 15-04-T1 | 04 | 5 | PKG-06 | T-15-12/13 | no nodeIntegration, loopback-only | manual | spike — macOS double-click | n/a | ⬜ |
+| 15-04-T2 | 04 | 5 | PKG-06 | T-15-09/11 | path allow-list + canonicalize, no exec | feature | pest --filter=FileOpenedFromOs | ❌ W0 | ⬜ |
+| 15-04-T3 | 04 | 5 | PKG-06 | — | staging behind auth, SC3 routing | feature | pest --filter=FileStagingPage | ❌ W0 | ⬜ |
+| 15-04-T4 | 04 | 5 | PKG-06 | T-15-10 | session-scoped intent, cross-user check | feature | pest --filter='pending intent' | ❌ W0 | ⬜ |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -75,4 +97,4 @@ created: 2026-05-22
 - [ ] Feedback latency < 120s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** planner-populated 2026-05-22
