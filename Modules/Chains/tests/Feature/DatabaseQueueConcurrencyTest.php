@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\UniqueLock;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
@@ -33,7 +34,7 @@ use Modules\Ledger\Models\Transaction;
  * cross-source data to fold into a chain_resolution_runs row.
  */
 
-uses()->group('Phase14');
+uses(RefreshDatabase::class)->group('Phase14');
 
 /**
  * Seed a user + ICS account + import run + the scenario-1 multi-month
