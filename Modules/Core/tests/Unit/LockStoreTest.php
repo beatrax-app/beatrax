@@ -35,7 +35,7 @@ it('resolves the database store when cache.locks_store is database', function ()
         ->and($repository->getStore())->toBe(Cache::store('database')->getStore());
 });
 
-it('resolves the redis-named store when cache.locks_store is redis', function (): void {
+it('resolves the store named redis (remapped to array under test) when cache.locks_store is redis', function (): void {
     config(['cache.locks_store' => 'redis']);
 
     $repository = LockStore::forUniqueJobs();
