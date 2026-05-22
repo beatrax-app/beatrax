@@ -29,6 +29,7 @@ use Modules\EmailScan\Public\Dto\ScanCursor;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -94,11 +95,8 @@ use Throwable;
  * stack frame of handle()).
  *
  * Window clamp (defensive): the slider clamps client-side, but a
- * crafted POST could carry windowMonths=999. The handler re-clamps
- * to [1, 12] before any further work — the constructor is too
- * early to read the property in a deserialised job, and constructor
- * argument validation would invalidate the inbox-id-keyed unique
- * lock if it threw mid-push.
+ * crafted POST could carry windowMonths=999. The handler clamps
+ * `windowMonths` to [1, 12] before use.
  *
  * Error envelope (both branches):
  *  - RateLimitedException → transition to `rate_limited`, rethrow
@@ -646,26 +644,36 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
      * the in-flight pipeline uses also handles the terminal error
      * transition.
      *
-     * Replaces the previous JobFailed listener + regex extraction over
-     * the serialised job payload (which was fragile against
-     * serialiser-format changes and a future job class whose
-     * property name shared a prefix with 'inboxId').
-     *
-     * Invalid transitions (e.g. an already-needs_reauth inbox failing
-     * again) are swallowed so the failed-hook surface never escalates
-     * a recovery scenario into a hard queue-worker error.
+     * An invalid transition (e.g. an already-needs_reauth inbox failing
+     * again) does not escalate into a hard queue-worker error; a state-
+     * write failure is logged as a warning so a stranded inbox stays
+     * discoverable.
      */
-    public function failed(Throwable $exception, InboxScanStateMachine $sm): void
-    {
+    public function failed(
+        Throwable $exception,
+        InboxScanStateMachine $sm,
+        LoggerInterface $logger,
+    ): void {
         try {
             $sm->applyStatus(
                 $this->inboxId,
                 'error',
                 substr($exception->getMessage(), 0, 500),
             );
-        } catch (Throwable) {
-            // Swallow — invalid transitions are acceptable on the
-            // failed-hook surface.
+        } catch (Throwable $stateWriteFailure) {
+            // An invalid transition (e.g. an already-needs_reauth inbox
+            // failing again) is acceptable here, but a genuine write
+            // failure (e.g. SQLITE_BUSY) leaves the inbox in a non-
+            // terminal state with no UI signal — log a warning so the
+            // stranded inbox is discoverable.
+            $logger->warning(
+                'BackfillInboxJob::failed could not apply the terminal error state.',
+                [
+                    'inbox_id' => $this->inboxId,
+                    'original_failure' => $exception->getMessage(),
+                    'state_write_failure' => $stateWriteFailure->getMessage(),
+                ],
+            );
         }
     }
 
