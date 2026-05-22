@@ -59,12 +59,12 @@
             polling halts automatically (RESEARCH Pitfall 3 mitigation).
         --}}
         <div wire:poll.2s="refreshProjectionStatus" class="absolute right-2 top-2 z-10">
-            <p class="text-xs text-slate-500" style="font-variant-numeric: tabular-nums;">Updating&hellip;</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">Updating&hellip;</p>
         </div>
     @endif
     <div id="{{ $chartElementId }}"></div>
     <noscript>
-        <p class="text-xs text-slate-500">
+        <p class="text-xs text-slate-500 dark:text-slate-400">
             Chart requires JavaScript. Range covers {{ $forecast->horizonDays }} days.
         </p>
     </noscript>

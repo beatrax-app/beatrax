@@ -81,5 +81,5 @@
     data-testid="all-accounts-aggregate-chart"
     data-chart-variant="line"
     data-options="{{ $optionsJson }}"
-    class="min-h-[320px] rounded-md border border-slate-200 bg-white"
+    class="min-h-[320px] rounded-md border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700"
 ></div>
