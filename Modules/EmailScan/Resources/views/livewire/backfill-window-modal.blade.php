@@ -19,7 +19,7 @@
         <div class="space-y-6">
             <flux:heading size="lg">How far back should we look?</flux:heading>
 
-            <p class="text-sm text-slate-500">
+            <p class="text-sm text-slate-500 dark:text-slate-400">
                 Importing further back fetches more receipts but uses more provider quota. Pick a window between 1 and 12 months. You can change this later.
             </p>
 
@@ -30,10 +30,10 @@
                     max="12"
                     step="1"
                     wire:model.live="months"
-                    class="w-full accent-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                    class="w-full accent-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:accent-emerald-500"
                     aria-label="Backfill window in months"
                 />
-                <div class="flex justify-between text-xs text-slate-500 px-1 mt-2">
+                <div class="flex justify-between text-xs text-slate-500 px-1 mt-2 dark:text-slate-400">
                     <span>1</span>
                     <span>3</span>
                     <span>6</span>
@@ -42,24 +42,24 @@
                 </div>
             </div>
 
-            <div class="text-sm font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
+            <div class="text-sm font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                 {{ $months === 1 ? '1 month' : $months . ' months' }}
             </div>
 
             @if ($errorMessage !== '')
-                <div class="text-xs text-rose-600">{{ $errorMessage }}</div>
+                <div class="text-xs text-rose-600 dark:text-rose-500">{{ $errorMessage }}</div>
             @endif
 
             <div class="flex justify-end gap-2">
                 <button
                     type="button"
                     wire:click="$dispatch('modal-hide', { name: 'backfill-window-{{ $inboxId ?? 0 }}' })"
-                    class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                    class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
                 >Cancel</button>
                 <button
                     type="button"
                     wire:click="submit"
-                    class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                    class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                 >Start backfill</button>
             </div>
         </div>
