@@ -32,7 +32,7 @@ v2.0 takes the validated v1.0 core value to a non-technical partner via a code-s
 
 - [x] **Phase 12: Multi-User Activation** — Real Fortify auth + per-user data isolation built on the dormant `user_id` schema; new `Modules/Auth/`; profile selector + recovery-codes + owner-resets-partner flow (completed 2026-05-20)
 - [x] **Phase 13: AppPaths** — `UserDataPath` contract replaces every hard-coded `database_path()` / `storage_path()` / `base_path()` call so paths resolve under NativePHP's `Application::storagePath()` in shipped builds and project-rooted paths in Herd dev mode; arch test + CI grep gate forbid the raw helpers outside the service (completed 2026-05-20)
-- [ ] **Phase 14: Queue Rewire + Horizon Carve-out** — Shipped bundle moves to `database` queue driver + `database` cache locks; Horizon gated to `DIEDERIK_RUNTIME=herd` dev mode only; chain-resolution proven end-to-end on the new driver under concurrent load
+- [x] **Phase 14: Queue Rewire + Horizon Carve-out** — Shipped bundle moves to `database` queue driver + `database` cache locks; Horizon gated to `DIEDERIK_RUNTIME=herd` dev mode only; chain-resolution proven end-to-end on the new driver under concurrent load (completed 2026-05-22)
 - [ ] **Phase 15: Desktop Shell (NativePHP Integration)** — `nativephp/desktop ^2.2` integration producing signed-ready `.dmg` / `.msi` / `.AppImage` / `.deb` installers; native chrome (window/menu/tray/notifications/dark-mode); file-association handlers for `.eml` + `.csv`; new `Modules/Desktop/` quarantines every `Native\Laravel\*` import
 - [ ] **Phase 16: Developer Mode UI** — New `Modules/DevMode/`; `is_developer` flag + `EnsureDeveloperMode` middleware; SAFE / DESTRUCTIVE artisan runner with live stdout streaming; log tailer with secret-redaction; bespoke queue inspector replaces Horizon dashboard for shipped builds; embedded Horizon iframe behind dev-runtime flag; ⌘K command palette
 - [ ] **Phase 17: CI/CD Pipeline + Code Signing** — `.github/workflows/ci.yml` PR gate (Larastan L10 strict + Pint + Pest on PHP 8.4 + 8.5 axes); `.github/workflows/release.yml` tag-triggered installer matrix; macOS Developer ID + Apple notarytool; Windows Azure Trusted Signing; encrypted secrets with environment scoping + gitleaks
@@ -113,7 +113,7 @@ Plans:
   3. `HorizonServiceProvider::boot()` early-exits when `config('app.dev_mode') !== true` so the `/horizon` route never registers in shipped builds; `BoundaryArchTest::noHorizonImportsInShippedBuildCode` invariant green
   4. `predis/predis` moves from `require` to `require-dev` in `composer.json` (since Redis is dev-only); shipped composer.lock produces a smaller dependency tree
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 
@@ -127,7 +127,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 1 + Wave 2)*
 
-- [ ] 14-03-PLAN.md — HorizonServiceProvider dev-mode gate + class_exists() registration guard + Horizon/Predis to require-dev + noHorizonImportsInShippedBuildCode invariant + SC3/SC4 tests
+- [x] 14-03-PLAN.md — HorizonServiceProvider dev-mode gate + class_exists() registration guard + Horizon/Predis to require-dev + noHorizonImportsInShippedBuildCode invariant + SC3/SC4 tests
 
 ### Phase 15: Desktop Shell (NativePHP Integration)
 
@@ -253,7 +253,7 @@ Plans:
 | v1.0 MVP — Phases 1–11 | 66/66 | Complete | 2026-05-19 |
 | 12. Multi-User Activation | 8/8 | Complete    | 2026-05-20 |
 | 13. AppPaths | 3/3 | Complete    | 2026-05-20 |
-| 14. Queue Rewire + Horizon Carve-out | 2/3 | In Progress|  |
+| 14. Queue Rewire + Horizon Carve-out | 3/3 | Complete   | 2026-05-22 |
 | 15. Desktop Shell (NativePHP Integration) | 0/0 | Not started | - |
 | 16. Developer Mode UI | 0/0 | Not started | - |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
