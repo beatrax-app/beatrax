@@ -22,7 +22,7 @@
     @foreach ($alerts as $alert)
         @switch ($alert->severity)
             @case ('critical')
-                <div role="alert" class="rounded-lg border border-rose-500 bg-rose-50 text-rose-900 p-4">
+                <div role="alert" class="rounded-lg border border-rose-500 bg-rose-50 text-rose-900 p-4 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800">
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
@@ -39,14 +39,14 @@
                                 wire:loading.attr="disabled"
                                 wire:target="acknowledge({{ $alert->id }})"
                                 aria-label="Mark system alert #{{ $alert->id }} as resolved"
-                                class="rounded bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-600 px-3 py-1.5 text-sm font-medium"
+                                class="rounded bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-600 px-3 py-1.5 text-sm font-medium dark:hover:bg-rose-400 dark:bg-rose-500"
                             >Mark as resolved</button>
                         </div>
                     </div>
                 </div>
                 @break
             @case ('warning')
-                <div role="status" class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-4">
+                <div role="status" class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-4 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
@@ -63,14 +63,14 @@
                                 wire:loading.attr="disabled"
                                 wire:target="acknowledge({{ $alert->id }})"
                                 aria-label="Mark system alert #{{ $alert->id }} as resolved"
-                                class="rounded bg-slate-100 text-slate-700 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium"
+                                class="rounded bg-slate-100 text-slate-700 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-300"
                             >Mark as resolved</button>
                         </div>
                     </div>
                 </div>
                 @break
             @default
-                <div role="status" class="rounded-lg border border-slate-200 bg-slate-50 text-slate-700 p-4">
+                <div role="status" class="rounded-lg border border-slate-200 bg-slate-50 text-slate-700 p-4 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700">
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
@@ -87,7 +87,7 @@
                                 wire:loading.attr="disabled"
                                 wire:target="acknowledge({{ $alert->id }})"
                                 aria-label="Mark system alert #{{ $alert->id }} as resolved"
-                                class="rounded bg-slate-100 text-slate-700 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium"
+                                class="rounded bg-slate-100 text-slate-700 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-300"
                             >Mark as resolved</button>
                         </div>
                     </div>

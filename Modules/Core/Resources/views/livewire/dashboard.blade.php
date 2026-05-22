@@ -24,26 +24,26 @@
 >
     <header class="flex items-start justify-between gap-6">
         <div class="space-y-1">
-            <h1 class="text-3xl font-semibold tracking-tight text-slate-900">{{ $summary->period->label }}</h1>
-            <p class="text-sm text-slate-500">This period at a glance.</p>
+            <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $summary->period->label }}</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">This period at a glance.</p>
         </div>
         <div class="flex items-center gap-1">
             <button
                 type="button"
                 wire:click="previousPeriod"
                 aria-label="Previous period"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:text-slate-400"
             >&lsaquo;</button>
             <button
                 type="button"
                 wire:click="today"
-                class="inline-flex h-10 items-center rounded-md px-3 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                class="inline-flex h-10 items-center rounded-md px-3 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:text-slate-400"
             >Today</button>
             <button
                 type="button"
                 wire:click="nextPeriod"
                 aria-label="Next period"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:text-slate-400"
             >&rsaquo;</button>
         </div>
     </header>
@@ -80,22 +80,22 @@
          EUR-only layout. --}}
     @if ($tiles === null)
         <section class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="This period totals">
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
-                <p class="text-xs uppercase tracking-wide text-slate-500">In</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
+            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">In</p>
+                <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                     {{ $fmt($summary->inflow) }}
                 </p>
             </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
-                <p class="text-xs uppercase tracking-wide text-slate-500">Out</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
+            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Out</p>
+                <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                     {{ $fmt($summary->outflow) }}
                 </p>
             </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
-                <p class="text-xs uppercase tracking-wide text-slate-500">Net</p>
+            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Net</p>
                 <p
-                    class="mt-2 text-3xl font-semibold {{ $summary->net->isNegative() ? 'text-slate-900' : 'text-emerald-600' }}"
+                    class="mt-2 text-3xl font-semibold {{ $summary->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-500' }}"
                     style="font-variant-numeric: tabular-nums;"
                 >
                     {{ $fmt($summary->net) }}
@@ -106,24 +106,24 @@
         <div class="space-y-12">
             @foreach ($tiles as $tile)
                 <section aria-label="This period totals — {{ $tile->currency }}" class="space-y-2">
-                    <h2 class="text-xs uppercase tracking-wide text-slate-500">{{ $tile->currency }}</h2>
+                    <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $tile->currency }}</h2>
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div class="rounded-lg border border-slate-200 bg-white p-6">
-                            <p class="text-xs uppercase tracking-wide text-slate-500">In</p>
-                            <p class="mt-2 text-3xl font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
+                        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">In</p>
+                            <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                 {{ $fmt($tile->inflow) }}
                             </p>
                         </div>
-                        <div class="rounded-lg border border-slate-200 bg-white p-6">
-                            <p class="text-xs uppercase tracking-wide text-slate-500">Out</p>
-                            <p class="mt-2 text-3xl font-semibold text-slate-900" style="font-variant-numeric: tabular-nums;">
+                        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Out</p>
+                            <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                 {{ $fmt($tile->outflow) }}
                             </p>
                         </div>
-                        <div class="rounded-lg border border-slate-200 bg-white p-6">
-                            <p class="text-xs uppercase tracking-wide text-slate-500">Net</p>
+                        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Net</p>
                             <p
-                                class="mt-2 text-3xl font-semibold {{ $tile->net->isNegative() ? 'text-slate-900' : 'text-emerald-600' }}"
+                                class="mt-2 text-3xl font-semibold {{ $tile->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-500' }}"
                                 style="font-variant-numeric: tabular-nums;"
                             >
                                 {{ $fmt($tile->net) }}
@@ -150,26 +150,26 @@
 
     {{-- Top spending categories --}}
     <section class="space-y-4">
-        <h2 class="text-xl font-semibold text-slate-900">Top spending</h2>
+        <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Top spending</h2>
         @if (count($summary->topCategories) === 0)
-            <p class="text-sm text-slate-500">No categorized expenses yet.</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">No categorized expenses yet.</p>
         @else
             <ul class="space-y-3">
                 @foreach ($summary->topCategories as $cat)
                     <li class="space-y-1">
                         <div class="flex items-baseline justify-between text-sm">
-                            <span class="text-slate-900">{{ $cat->name }}</span>
-                            <span class="text-slate-900" style="font-variant-numeric: tabular-nums;">
+                            <span class="text-slate-900 dark:text-slate-100">{{ $cat->name }}</span>
+                            <span class="text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                 {{ $fmt($cat->spend) }}
                             </span>
                         </div>
-                        <div class="h-1 w-full overflow-hidden rounded-full bg-slate-200">
+                        <div class="h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                             @php
                                 $rawPct = (int) round($cat->percentageOfTotal * 100);
                                 $barWidth = $rawPct === 0 ? 0 : max(2, min(100, $rawPct));
                             @endphp
                             <div
-                                class="h-1 bg-slate-900"
+                                class="h-1 bg-slate-900 dark:bg-slate-100"
                                 style="width: {{ $barWidth }}%;"
                             ></div>
                         </div>
@@ -182,33 +182,33 @@
     {{-- Recent transactions --}}
     <section class="space-y-4">
         <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold text-slate-900">Recent transactions</h2>
+            <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Recent transactions</h2>
             <a
                 href="{{ route('transactions.index') }}"
-                class="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                class="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
             >View all</a>
         </div>
 
         @if (count($summary->recentTransactions) === 0)
-            <p class="text-sm text-slate-500">Nothing here for this period.</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Nothing here for this period.</p>
         @else
-            <div class="overflow-hidden rounded-lg border border-slate-200">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="bg-slate-50">
+            <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                    <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Date</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Counterparty</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Category</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500">Amount</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Date</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Counterparty</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Category</th>
+                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-200 bg-white">
+                    <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
                         @foreach ($summary->recentTransactions as $row)
                             <tr>
-                                <td class="px-4 py-2 text-slate-900" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
-                                <td class="px-4 py-2 text-slate-900">{{ $row->counterpartyName ?? '—' }}</td>
-                                <td class="px-4 py-2 text-slate-500">{{ $row->categoryName ?? 'Uncategorized' }}</td>
-                                <td class="px-4 py-2 text-right text-slate-900" style="font-variant-numeric: tabular-nums;">
+                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
+                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
+                                <td class="px-4 py-2 text-slate-500 dark:text-slate-400">{{ $row->categoryName ?? 'Uncategorized' }}</td>
+                                <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                     {{ $fmt($row->amount) }}
                                 </td>
                             </tr>
@@ -232,22 +232,22 @@
         <div
             role="status"
             aria-live="polite"
-            class="fixed bottom-24 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md"
+            class="fixed bottom-24 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
         >
             <div class="flex items-start justify-between gap-3">
                 <div class="space-y-1">
-                    <p class="text-sm font-medium text-slate-900">An inbox needs reconnecting.</p>
-                    <p class="text-xs text-slate-500">One or more inboxes were signed out — diederik can't scan them until you reconnect.</p>
+                    <p class="text-sm font-medium text-slate-900 dark:text-slate-100">An inbox needs reconnecting.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">One or more inboxes were signed out — diederik can't scan them until you reconnect.</p>
                     <a
                         href="{{ route('inboxes.index') }}"
-                        class="text-xs text-slate-900 underline-offset-2 hover:underline"
+                        class="text-xs text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"
                     >Go to Inboxes</a>
                 </div>
                 <button
                     type="button"
                     aria-label="Dismiss"
                     wire:click="dismissReauthToast"
-                    class="rounded text-slate-500 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                    class="rounded text-slate-500 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
                 >
                     {{-- Inline Heroicons-outline x-mark 16×16. No
                          blade-heroicons package is installed in the
@@ -270,15 +270,15 @@
         <div
             role="status"
             aria-live="polite"
-            class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md"
+            class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
         >
-            <p class="text-sm font-semibold text-slate-900">Chain resolution failed.</p>
-            <p class="mt-1 text-xs text-slate-500">
+            <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Chain resolution failed.</p>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 One or more chain-resolution jobs hit an error. Open Horizon to retry or inspect.
             </p>
             <a
                 href="/horizon/failed"
-                class="mt-2 inline-block text-xs font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700"
+                class="mt-2 inline-block text-xs font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100"
             >Open Horizon</a>
         </div>
     @endif
