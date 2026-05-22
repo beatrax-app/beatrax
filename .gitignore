@@ -58,3 +58,7 @@ yarn-error.log
 
 # PHPStan cache
 /.phpstan-cache
+
+# NativePHP build + dist output — `native:build` stages the bundled app
+# and electron-builder writes the packaged installers under base_path('build').
+/build
