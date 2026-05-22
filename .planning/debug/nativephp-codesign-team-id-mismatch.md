@@ -1,5 +1,5 @@
 ---
-status: fixing
+status: awaiting_human_verify
 trigger: "macOS code-signing failure: NativePHP-packaged diederik.app crashes on launch with DYLD Library missing / Team ID mismatch on Electron Framework"
 created: 2026-05-22T21:30:00Z
 updated: 2026-05-22T22:10:00Z
