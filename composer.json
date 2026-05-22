@@ -92,7 +92,7 @@
             "npx concurrently -k -c \"#93c5fd,#c4b5fd\" \"php artisan native:run --no-interaction\" \"npm run dev\" --names=app,vite"
         ],
         "post-update-cmd": [
-            "@php artisan native:install --force --quiet "
+            "@php artisan native:install --force --quiet --publish"
         ]
     },
     "extra": {
