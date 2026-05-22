@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\ConnectionResolverInterface;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Migrations\MigrationRepositoryInterface;
 use Illuminate\Database\Migrations\Migrator;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 
 /*
@@ -22,7 +26,11 @@ use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 
 it('reports pending migrations when at least one is not yet run', function (): void {
     $migrator = $this->app->make(Migrator::class);
-    $bootstrap = new FirstLaunchBootstrap($migrator, $this->app->make(UserDataPathService::class));
+    $bootstrap = new FirstLaunchBootstrap(
+        $migrator,
+        $this->app->make(UserDataPathService::class),
+        $this->app->make(DatabaseManager::class),
+    );
 
     // Drop the migrations repository so every migration on disk counts as
     // pending — the cleanest way to drive the "pending" branch under Pest's
@@ -32,23 +40,73 @@ it('reports pending migrations when at least one is not yet run', function (): v
     expect($bootstrap->hasPendingMigrations())->toBeTrue();
 });
 
-it('runs pending migrations when invoked', function (): void {
-    $migrator = $this->app->make(Migrator::class);
-    $bootstrap = new FirstLaunchBootstrap($migrator, $this->app->make(UserDataPathService::class));
+it('runs pending migrations by delegating to the framework Migrator', function (): void {
+    // Verify the bootstrap drives `Migrator::run()` with the registered
+    // migration paths — the core behavioural claim. A spy migrator
+    // captures the call without needing a writable DDL surface inside
+    // the RefreshDatabase transaction (where DROP TABLE / VACUUM are
+    // either constrained or refused).
+    //
+    // The spy reuses the real container-bound migrator's collaborators
+    // (repository, resolver, filesystem, events) so its behaviour is
+    // indistinguishable from the framework's apart from the recorded
+    // `run()` call.
+    /** @var Migrator $real */
+    $real = $this->app->make(Migrator::class);
+    $real->path(base_path('database/migrations'));
 
-    // Drop the migrations repository → every migration is pending.
-    $migrator->getRepository()->deleteRepository();
-    expect($migrator->repositoryExists())->toBeFalse();
+    $spy = new class($real->getRepository(), $this->app->make(ConnectionResolverInterface::class), $real->getFilesystem(), $this->app->make(Dispatcher::class), $real) extends Migrator
+    {
+        public int $runCalls = 0;
 
+        /** @var array<int, array<int, string>> */
+        public array $runWith = [];
+
+        public function __construct(
+            MigrationRepositoryInterface $repository,
+            ConnectionResolverInterface $resolver,
+            Filesystem $files,
+            Dispatcher $events,
+            private readonly Migrator $delegate,
+        ) {
+            parent::__construct($repository, $resolver, $files, $events);
+        }
+
+        public function paths()
+        {
+            return $this->delegate->paths();
+        }
+
+        public function run($paths = [], array $options = [])
+        {
+            $this->runCalls++;
+            $this->runWith[] = is_array($paths) ? $paths : [$paths];
+
+            return [];
+        }
+    };
+
+    $bootstrap = new FirstLaunchBootstrap(
+        $spy,
+        $this->app->make(UserDataPathService::class),
+        $this->app->make(DatabaseManager::class),
+    );
     $bootstrap->runPendingMigrations();
 
-    expect($migrator->repositoryExists())->toBeTrue();
-    expect($bootstrap->hasPendingMigrations())->toBeFalse();
+    expect($spy->runCalls)->toBe(1);
+    // The spy received the registered migration paths — every module path
+    // plus the canonical `database/migrations` default.
+    expect($spy->runWith[0])->toContain(base_path('database/migrations'));
+    expect(count($spy->runWith[0]))->toBeGreaterThan(1); // at least default + a module path
 });
 
 it('is a no-op when no migrations are pending (idempotent)', function (): void {
     $migrator = $this->app->make(Migrator::class);
-    $bootstrap = new FirstLaunchBootstrap($migrator, $this->app->make(UserDataPathService::class));
+    $bootstrap = new FirstLaunchBootstrap(
+        $migrator,
+        $this->app->make(UserDataPathService::class),
+        $this->app->make(DatabaseManager::class),
+    );
 
     // RefreshDatabase has already migrated, so this is the post-bootstrap state.
     expect($bootstrap->hasPendingMigrations())->toBeFalse();
@@ -66,6 +124,7 @@ it('detects a fresh install when no users exist', function (): void {
     $bootstrap = new FirstLaunchBootstrap(
         $this->app->make(Migrator::class),
         $this->app->make(UserDataPathService::class),
+        $this->app->make(DatabaseManager::class),
     );
 
     // RefreshDatabase leaves the schema in place with zero users.
@@ -78,6 +137,7 @@ it('does not detect a fresh install when at least one user exists', function ():
     $bootstrap = new FirstLaunchBootstrap(
         $this->app->make(Migrator::class),
         $this->app->make(UserDataPathService::class),
+        $this->app->make(DatabaseManager::class),
     );
 
     User::query()->create([
@@ -85,7 +145,7 @@ it('does not detect a fresh install when at least one user exists', function ():
         'password' => bcrypt('not-the-real-password'),
         'period_start_day' => 1,
         'default_currency_view' => 'EUR',
-        'receipt_conflict_resolution' => 'manual_review',
+        'receipt_conflict_resolution' => 'unset',
     ]);
 
     expect($bootstrap->isFreshInstall())->toBeFalse();
@@ -95,6 +155,7 @@ it('resolves the SQLite database path via UserDataPathService', function (): voi
     $bootstrap = new FirstLaunchBootstrap(
         $this->app->make(Migrator::class),
         $this->app->make(UserDataPathService::class),
+        $this->app->make(DatabaseManager::class),
     );
 
     // The bootstrap must report the same canonical path UserDataPathService
@@ -106,7 +167,7 @@ it('resolves the SQLite database path via UserDataPathService', function (): voi
 it('redirects to the setup route when migrations are pending', function (): void {
     // Register a stub gated route under the EnsureDatabaseReady middleware.
     $this->app['router']
-        ->middleware(['web', \Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady::class])
+        ->middleware(['web', EnsureDatabaseReady::class])
         ->get('/__test/gated', static fn () => 'GATED');
 
     // Drop the migrations repository so the middleware sees a pending state.
@@ -118,7 +179,7 @@ it('redirects to the setup route when migrations are pending', function (): void
 
 it('lets requests through when no migrations are pending', function (): void {
     $this->app['router']
-        ->middleware(['web', \Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady::class])
+        ->middleware(['web', EnsureDatabaseReady::class])
         ->get('/__test/gated-ok', static fn () => 'GATED-OK');
 
     // RefreshDatabase has already migrated.
