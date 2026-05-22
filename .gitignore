@@ -3,6 +3,14 @@
 /public/build
 /public/hot
 /public/storage
+
+# Laravel-generated bootstrap caches — package discovery, compiled
+# services, config, routes and module manifests. These are regenerated
+# per environment and must never be committed: a cache generated with
+# the full (dev) dependency tree references provider classes (e.g.
+# Horizon's transitive laravel/sentinel) that are absent from a
+# `--no-dev` packaged build, which fatals the app at boot.
+/bootstrap/cache/*.php
 /storage/*.key
 /storage/app/private
 /storage/app/public
