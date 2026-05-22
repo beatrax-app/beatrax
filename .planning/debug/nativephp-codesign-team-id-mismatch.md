@@ -2,10 +2,24 @@
 status: awaiting_human_verify
 trigger: "macOS code-signing failure: NativePHP-packaged diederik.app crashes on launch with DYLD Library missing / Team ID mismatch on Electron Framework"
 created: 2026-05-22T21:30:00Z
-updated: 2026-05-22T22:10:00Z
+updated: 2026-05-22T23:30:00Z
 ---
 
 ## Current Focus
+
+### Cycle 4 (2026-05-22T23:30:00Z) — packaged-only no-window: stale committed bootstrap/cache poisons boot
+
+reasoning_checkpoint:
+  hypothesis: "The packaged build crashes every HTTP request because `bootstrap/cache/packages.php` and `bootstrap/cache/services.php` were committed to git (commit 6243038) while the FULL dependency tree was installed. They hardcode `Laravel\\Sentinel\\SentinelServiceProvider` — a TRANSITIVE dependency of the require-dev-only `laravel/horizon`. NativePHP's build runs `composer install --no-dev`, so `horizon` and its transitive `sentinel` are absent from the bundled `vendor/`. The build copies the stale committed `packages.php` into the bundle; at boot `ProviderRepository` instantiates the listed providers, hits `SentinelServiceProvider`, throws a fatal `Class not found`, the boot aborts before the `view` binding registers, and every request to NativePHP's embedded PHP server returns HTTP 500. The window's loadURL therefore renders nothing. `native:serve` works because it runs from the project's FULL `vendor/` tree (sentinel present), so the identical stale cache is harmless in dev."
+  confirming_evidence:
+    - "Packaged app log ~/Library/Application Support/diederik/storage/logs/laravel-2026-05-22.log: `ERROR: Class \"Laravel\\Sentinel\\SentinelServiceProvider\" not found at .../ProviderRepository.php:205`, cascading into `BindingResolutionException: Target class [view] does not exist` on every request."
+    - "`composer why laravel/sentinel` → `laravel/horizon v5.47.0 requires laravel/sentinel (^1.0)`. Horizon is in composer.json `require-dev`, NOT `require`."
+    - "Bundled `vendor/laravel/` contains fortify, framework, passkeys, prompts, serializable-closure — but NO `sentinel` and NO `horizon` (stripped by `composer install --no-dev`)."
+    - "`git show 6243038 -- bootstrap/cache/` shows packages.php + services.php were committed; both list Sentinel/Horizon providers. The bundled `.../build/app/bootstrap/cache/packages.php` still contains `Sentinel`."
+    - "vendor/nativephp/desktop/src/Builder/Concerns/PrunesVendorDirectory.php runs `composer install --no-dev`; that composer run's post-autoload hook regenerates package discovery against the --no-dev tree — so a build with NO committed cache files produces a CORRECT cache with no phantom providers."
+  falsification_test: "If the committed cache were NOT the cause, deleting it would not change the bundled `packages.php` contents — but the build regenerates package discovery during `composer install --no-dev`, so a clean (uncommitted) `bootstrap/cache/` yields a Sentinel-free manifest. Conversely, if it were a route/config cache problem, the packaged app would have a `config.php`/`routes-v7.php` in its bundle bootstrap/cache — it does not (NativePHP writes those to userData at first launch)."
+  fix_rationale: "Laravel-generated `bootstrap/cache/*.php` are per-environment artifacts and must never be committed. Removing them from git + gitignoring `/bootstrap/cache/*.php` (keeping `.gitkeep`) means the bundle ships with an empty cache directory; NativePHP's `composer install --no-dev` and first-launch `artisan optimize` regenerate package/service/config/route caches against the bundle's ACTUAL vendor tree — no phantom `SentinelServiceProvider`. This is the standard Laravel convention (the framework's own `.gitignore` ignores these)."
+  blind_spots: "Cannot run native:build headlessly — the user must rebuild the .dmg to confirm. The c0f4ef1/89c0340 code-signing fix and the 37f5dd0 window-open code are both correct and untouched; this cycle fixes a third, independent defect. If a future build still fails, the next suspect is route:cache choking on the closure-based `/` route in Modules/Core/Routes/web.php — but `artisan optimize` tolerates uncacheable closure routes by skipping the route cache, so this is unlikely."
 
 ### Cycle 3 (2026-05-22T22:30:00Z) — signing fixed, but no window opens
 
@@ -75,6 +89,29 @@ started: Phase 15 — first NativePHP build (nativephp/desktop 2.2.0, nativephp/
 
 ## Evidence
 
+- timestamp: 2026-05-22T23:30:00Z
+  checked: Packaged app Laravel log at ~/Library/Application Support/diederik/storage/logs/laravel-2026-05-22.log; bundled vendor/laravel/ directory; `composer why laravel/sentinel`; git show 6243038 -- bootstrap/cache/
+  found: |
+    The packaged app logs `ERROR: Class "Laravel\Sentinel\SentinelServiceProvider"
+    not found` at ProviderRepository.php:205, cascading into
+    `BindingResolutionException: Target class [view] does not exist` on every
+    request. `laravel/sentinel` is a TRANSITIVE dependency of `laravel/horizon`,
+    which is in composer.json `require-dev` only. The build runs
+    `composer install --no-dev`, so the bundled `vendor/laravel/` has fortify,
+    framework, passkeys, prompts, serializable-closure — but NOT sentinel/horizon.
+    Commit 6243038 committed `bootstrap/cache/packages.php` + `services.php`,
+    generated locally with the full dev tree; both hardcode the Sentinel/Horizon
+    providers. The build copies these stale files into the bundle.
+  implication: |
+    ROOT CAUSE of the packaged-only no-window symptom. The bundle boots with a
+    stale package-discovery cache referencing a provider class that does not
+    exist in the --no-dev vendor tree. The fatal aborts Laravel boot before the
+    `view` binding registers, so every request to NativePHP's embedded PHP
+    server 500s and the window renders nothing. `native:serve` is unaffected
+    because dev runs from the full `vendor/` tree where sentinel exists.
+    `bootstrap/cache/*.php` must never be committed — they are per-environment
+    artifacts the build regenerates against its own vendor tree.
+
 - timestamp: 2026-05-22T22:30:00Z
   checked: Modules/Desktop/Internal/NativeAppServiceProvider::boot(); vendor/nativephp/desktop Http/Controllers/NativeAppBootedController; Windows/WindowManager + Windows/Window + Contracts/WindowManager
   found: boot() was empty (`//`). NativePHP boots the app then calls `app(config('nativephp.provider'))->boot()` — that provider call is the ONLY window trigger; there is no framework default window. The container-bound `Native\Desktop\Contracts\WindowManager` is injectable (bound in NativeServiceProvider:77 to the concrete `Windows\WindowManager`). `WindowManager::open('main')` returns a `PendingOpenWindow` whose constructor defaults `url` to `url('/')` and `title` to `config('app.name')`.
@@ -123,6 +160,23 @@ started: Phase 15 — first NativePHP build (nativephp/desktop 2.2.0, nativephp/
 ## Resolution
 
 root_cause: |
+  Cycle 4 — packaged-only no-window root cause (THE active defect):
+  `bootstrap/cache/packages.php` and `bootstrap/cache/services.php` were
+  committed to git in commit 6243038, generated locally while the full
+  (dev) dependency tree was installed. They hardcode
+  `Laravel\Sentinel\SentinelServiceProvider` — a transitive dependency of
+  `laravel/horizon`, which lives in composer.json `require-dev` only.
+  NativePHP's build runs `composer install --no-dev`, stripping horizon and
+  its transitive sentinel from the bundled `vendor/`. The build then copies
+  the stale committed `packages.php` into the bundle. At boot,
+  `ProviderRepository` instantiates the cached provider list, hits the
+  absent `SentinelServiceProvider`, throws a fatal `Class not found`, and
+  Laravel boot aborts before the `view` binding is registered — so every
+  HTTP request to NativePHP's embedded PHP server returns a 500 and the
+  window renders nothing. `php artisan native:serve` is unaffected: dev
+  runs from the project's full `vendor/` tree where sentinel is present, so
+  the identical stale cache is harmless.
+
   Cycle 3 — no-window root cause:
   `Modules/Desktop/Internal/NativeAppServiceProvider::boot()` was empty. NativePHP v2
   does not open any default window — the app's provider boot() must explicitly call
@@ -135,6 +189,20 @@ root_cause: |
   (1) Underlying defect: NativePHP's bundled electron-builder config omits `mac.identity`, so electron-builder auto-discovers a keychain code-signing identity at build time. When an identity is present the bundle is partially signed — the app shell stays ad-hoc (empty Team ID) while the nested Electron Framework keeps a non-empty Team ID — and on Apple Silicon dyld aborts at launch with mismatched Team IDs. This abort happens in dyld4::prepare BEFORE any window, so macOS shows no crash dialog — it looks like a "silent exit".
   (2) Why the cycle-1 fix did not work: the cycle-1 prebuild hook patched `$projectRoot/nativephp/electron/electron-builder.mjs`. But `ElectronServiceProvider::electronPath()` only uses that project-local directory when it contains `package.json`; otherwise it falls back to the package default at `vendor/nativephp/desktop/resources/electron/`. The project has no `nativephp/electron/` directory, so the build read the VENDOR electron-builder.mjs — which the hook never touched. The hook found nothing at its hard-coded path, printed "skipping", and exited 0: a silent no-op. The build target stayed unpatched and kept crashing.
 fix: |
+  Cycle 4 — stop committing Laravel bootstrap caches:
+  Removed `bootstrap/cache/packages.php`, `bootstrap/cache/services.php`, and
+  `bootstrap/cache/modules.php` from git (`git rm --cached`) and added
+  `/bootstrap/cache/*.php` to `.gitignore` (the `.gitkeep` is retained so the
+  directory still exists for the build). The bundle now ships with an empty
+  `bootstrap/cache/` directory; NativePHP's `composer install --no-dev`
+  post-autoload hook and the first-launch `artisan optimize` regenerate the
+  package, service, config, route, and event caches against the bundle's
+  ACTUAL `--no-dev` vendor tree — so no phantom `SentinelServiceProvider` is
+  ever referenced. This matches the standard Laravel convention (the
+  framework's own `.gitignore` ignores `bootstrap/cache/*.php`). No PHP code
+  changed; the c0f4ef1/89c0340 signing fix and the 37f5dd0 window-open code
+  are correct and untouched.
+
   Cycle 3 — open the application window:
   Added a constructor-injected `Native\Desktop\Contracts\WindowManager` to
   `NativeAppServiceProvider` and made `boot()` call `$this->windows->open('main')`.
@@ -168,8 +236,23 @@ verification (cycle 3): |
     `php artisan native:serve` (dev) OR `php artisan native:build mac arm64`, install,
     and launch /Applications/diederik.app — a window rendering the diederik web UI
     (login or dashboard) must now appear.
+verification (cycle 4): |
+  - Packaged app log inspected: confirmed `Class "Laravel\Sentinel\SentinelServiceProvider"
+    not found` is the boot-time fatal that 500s every request.
+  - `git rm --cached` removed the three cache files; `git check-ignore` confirms
+    `/bootstrap/cache/*.php` now ignores all three; `bootstrap/cache/.gitkeep`
+    remains tracked so the directory exists in a fresh checkout and in the bundle.
+  - `php artisan package:discover` regenerates the local cache cleanly (it lists
+    Sentinel locally — expected, the dev tree has horizon; the BUILD's --no-dev
+    regeneration will not).
+  - Could not run native:build headlessly — the user must rebuild the .dmg and
+    relaunch to confirm a window now renders (human checkpoint below).
 files_changed:
   - scripts/nativephp_force_adhoc_signing.php (cycle 2 — rewritten, resolves the real build target path)
   - Modules/Desktop/Internal/NativeAppServiceProvider.php (cycle 3 — constructor-injected WindowManager, boot() opens the main window)
   - Modules/Desktop/tests/Unit/NativeAppServiceProviderTest.php (cycle 3 — implemented the window-open test)
   - tests/Pest.php (cycle 3 — registered Modules/Desktop in the module test bootstrap loop)
+  - bootstrap/cache/packages.php (cycle 4 — removed from git, now gitignored)
+  - bootstrap/cache/services.php (cycle 4 — removed from git, now gitignored)
+  - bootstrap/cache/modules.php (cycle 4 — removed from git, now gitignored)
+  - .gitignore (cycle 4 — added /bootstrap/cache/*.php)
