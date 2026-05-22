@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
-stopped_at: Phase 15 UI-SPEC approved
-last_updated: "2026-05-22T22:35:34.345Z"
-last_activity: 2026-05-22
+stopped_at: Phase 15 plan 05 complete (first-launch DB bootstrap + brand icons + entitlements + CI 8.4 skeleton)
+last_updated: "2026-05-23T01:00:00Z"
+last_activity: 2026-05-23
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 21
-  completed_plans: 16
-  percent: 30
+  completed_plans: 17
+  percent: 81
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 ## Current Position
 
 Phase: 15 (desktop-shell-nativephp-integration) — EXECUTING
-Plan: 3 of 7
-Status: Ready to execute
-Last activity: 2026-05-22
+Plan: 4 of 7 (plans 01, 05, 06 complete; next is one of 02, 03, 04, 07)
+Status: Ready to execute next plan
+Last activity: 2026-05-23
 
 ## Performance Metrics
 
@@ -57,8 +57,9 @@ Last activity: 2026-05-22
 | 14 | 3 | - | - |
 
 *Updated after each plan completion*
-| Phase 15 P01 | 205 | 4 tasks | 30 files |
+| Phase 15 P01 | 205m | 4 tasks | 30 files |
 | Phase 15 P06 | 32m | 3 tasks | 37 files |
+| Phase 15 P05 | 50m | 4 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ Recent decisions affecting current work:
 - [Phase 15-01]: NativePHP desktop `^2.2` installed; `Modules/Desktop/` bounded module registered; `noNativePhpImportsOutsideDesktopModule` arch invariant green; a launchable macOS `.dmg` builds and opens a native window rendering the diederik web UI (PKG-04 verified)
 - [Phase 15-01]: NativePHP builds use deterministic ad-hoc macOS signing via a `mac.identity:null` prebuild hook (no paid Apple Developer ID for dev builds) — real Developer ID notarization deferred to Phase 17; `bootstrap/cache/*.php` gitignored as per-environment artifacts; standard Laravel `post-autoload-dump` composer script added so the in-bundle `composer install --no-dev` regenerates package discovery against the `--no-dev` vendor tree
 - [Phase ?]: [Phase 15-06]: dark theme delivered via Tailwind v4 class strategy — users.theme column (light/dark/system) drives a server-side dark class on <html> with a pre-paint prefers-color-scheme script (D-15/D-16); dark-companion arch guard enforces the plan-06 modules
+- [Phase 15-05]: Plan 15-05: brand assets + entitlements stay tracked while nativephp/electron + /build output stay gitignored; a prebuild hook stages tracked files into the working dir on every native:build
+- [Phase 15-05]: Plan 15-05: composer.json php constraint relaxed from ^8.5 to ^8.4 — shipped bundle uses nativephp/php-bin 8.4, dev box runs 8.5; CI runs 8.4 on a single-axis matrix that Phase 17 will extend to 8.4+8.5
+- [Phase 15-05]: Plan 15-05: FirstLaunchBootstrap — every-launch idempotent migration via Migrator + UserDataPathService-routed SQLite path; absorbs Phase 18 auto-update migrations on the next boot (D-23)
 
 ### Pending Todos
 
@@ -130,8 +134,8 @@ Items acknowledged at v1.0 milestone close on 2026-05-19. Carried forward into v
 
 ## Session Continuity
 
-Last session: 2026-05-22T22:35:24.844Z
-Stopped at: Phase 15 UI-SPEC approved
-Resume: Run `/gsd:plan-phase 12` to begin planning multi-user activation
+Last session: 2026-05-23T01:00:00Z
+Stopped at: Phase 15 plan 05 complete — first-launch DB bootstrap + brand icons + entitlements + CI 8.4 skeleton (commits 042acbc, fcdbe2c, 8fabd53, 4cde9b0, dada476, dc71ccc)
+Resume: Run `/gsd:execute-phase 15` to pick up the next Phase 15 plan (02, 03, 04, or 07)
 
-Next action: `/gsd:plan-phase 12` — Multi-User Activation
+Next action: `/gsd:execute-phase 15` — continue with one of plans 02 (native chrome), 03 (worker daemon), 04 (file associations), or 07 (dark-theme retrofit closure)
