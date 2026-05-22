@@ -17,8 +17,12 @@ use Modules\Receipts\Providers\ReceiptsServiceProvider;
 use Modules\Recurring\Providers\RecurringServiceProvider;
 use Modules\Transfers\Providers\TransfersServiceProvider;
 
-return [
-    HorizonServiceProvider::class,
+// HorizonServiceProvider extends the laravel/horizon package provider. A
+// composer install --no-dev tree carries no Horizon package, so the base
+// class is absent and referencing the provider would fatal at autoload;
+// the class_exists() guard drops the entry in that case.
+return array_values(array_filter([
+    class_exists(\Laravel\Horizon\HorizonServiceProvider::class) ? HorizonServiceProvider::class : null,
     CoreServiceProvider::class,
     AuthServiceProvider::class,
     LedgerServiceProvider::class,
@@ -32,4 +36,4 @@ return [
     RecurringServiceProvider::class,
     DriftAlertsServiceProvider::class,
     ForecastingServiceProvider::class,
-];
+]));
