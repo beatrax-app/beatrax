@@ -69,7 +69,12 @@ yarn-error.log
 
 # NativePHP build + dist output — `native:build` stages the bundled app
 # and electron-builder writes the packaged installers under base_path('build').
-/build
+# `entitlements.mac.plist` is the lone committed exception: it is a static
+# build input (the macOS Hardened Runtime entitlements file electron-builder
+# references at signing / notarization time), not a build artefact, so it is
+# explicitly negated below to stay tracked.
+/build/*
+!/build/entitlements.mac.plist
 
 # NativePHP Electron working directory — `native:build` populates this with
 # the Electron scaffold and writes `electron/dist/` build artefacts. It is

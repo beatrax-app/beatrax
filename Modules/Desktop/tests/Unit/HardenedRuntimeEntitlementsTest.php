@@ -24,7 +24,7 @@ it('parses as a valid XML plist', function (): void {
     $contents = file_get_contents(base_path('build/entitlements.mac.plist'));
     expect($contents)->toBeString()->not->toBe('');
 
-    /** @var \SimpleXMLElement|false $xml */
+    /** @var SimpleXMLElement|false $xml */
     $xml = @simplexml_load_string($contents);
     expect($xml)->not->toBeFalse();
 
@@ -59,7 +59,7 @@ function loadHardenedRuntimeEntitlements(): array
         return [];
     }
     $contents = (string) file_get_contents($path);
-    /** @var \SimpleXMLElement|false $xml */
+    /** @var SimpleXMLElement|false $xml */
     $xml = @simplexml_load_string($contents);
     if ($xml === false || ! isset($xml->dict)) {
         return [];
