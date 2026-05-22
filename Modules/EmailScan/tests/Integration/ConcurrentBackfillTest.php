@@ -19,7 +19,6 @@ use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
-use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 uses(RefreshDatabase::class);
 
@@ -111,7 +110,6 @@ it('issues PRAGMA busy_timeout = 5000 inside every per-page transaction', functi
         $graphFake,
         $this->app->make(EmlBlobStore::class),
         $this->app->make(MimeHeaderParser::class),
-        $this->app->make(OAuthSecretsRepository::class),
         new InboxScanStateMachine($realDb, $this->app->make(Clock::class)),
         $this->app->make(KnownSenderQuery::class),
     );

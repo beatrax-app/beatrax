@@ -21,7 +21,6 @@ use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
-use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Throwable;
 
 /**
@@ -148,17 +147,8 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         Clock $clock,
         GmailApiClientContract $gmail,
         GraphApiClientContract $graph,
-        OAuthSecretsRepository $secrets,
         KnownSenderQuery $senderQuery,
     ): void {
-        // Touch $secrets so the static analyser does not flag the
-        // unused argument. The OAuth clients (Gmail / Graph) load
-        // credentials transparently via the repository; the contract
-        // pins secrets to this job's DI surface so any future
-        // re-baselining flow has it available without changing the
-        // handle() signature.
-        unset($secrets);
-
         $connection = $db->connection();
 
         // SQLite default behaviour is to raise SQLITE_BUSY immediately

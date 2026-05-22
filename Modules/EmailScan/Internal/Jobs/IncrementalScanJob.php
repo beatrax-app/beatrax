@@ -28,7 +28,6 @@ use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Public\Dto\ScanCursor;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
-use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Throwable;
 
 /**
@@ -148,18 +147,9 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         GraphApiClientContract $graph,
         EmlBlobStore $blobStore,
         MimeHeaderParser $mime,
-        OAuthSecretsRepository $secrets,
         InboxScanStateMachine $sm,
         KnownSenderQuery $senderQuery,
     ): void {
-        // Touch $secrets so the static analyser does not flag the
-        // unused argument. The OAuth clients (Gmail / Graph) load
-        // credentials transparently via the repository; the contract
-        // pins secrets to this job's DI surface so any future
-        // re-baselining flow has it available without changing the
-        // handle() signature.
-        unset($secrets);
-
         $connection = $db->connection();
 
         $inboxRow = $connection->table('inboxes')->where('id', $this->inboxId)->first();

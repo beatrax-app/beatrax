@@ -28,7 +28,6 @@ use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Public\Dto\ScanCursor;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
-use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -156,17 +155,9 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         GraphApiClientContract $graph,
         EmlBlobStore $blobStore,
         MimeHeaderParser $mime,
-        OAuthSecretsRepository $secrets,
         InboxScanStateMachine $sm,
         KnownSenderQuery $senderQuery,
     ): void {
-        // Touch $secrets so the static analyser does not flag the
-        // unused argument. The OAuth client (Gmail / Graph) loads
-        // credentials transparently; the contract still pins
-        // secrets to this job's DI surface because future
-        // re-baselining flows in later plans use it directly.
-        unset($secrets);
-
         $connection = $db->connection();
 
         $inboxRow = $connection->table('inboxes')->where('id', $this->inboxId)->first();
