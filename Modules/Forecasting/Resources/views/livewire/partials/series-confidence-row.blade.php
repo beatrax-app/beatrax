@@ -10,9 +10,9 @@
 
 @php
     $tint = match ($confidence->confidence) {
-        'high' => 'bg-emerald-50 text-emerald-700',
-        'low' => 'bg-amber-50 text-amber-700',
-        default => 'bg-slate-100 text-slate-700',
+        'high' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400',
+        'low' => 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-200',
+        default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     };
     $symbol = $confidence->currency === 'EUR' ? '€' : ($confidence->currency === 'USD' ? '$' : $confidence->currency.' ');
     $point = abs($confidence->pointMinor) / 100;
@@ -24,8 +24,8 @@
 
 <li class="flex items-center justify-between gap-3 py-1 text-sm">
     <div class="min-w-0 flex-1">
-        <p class="truncate text-slate-900">{{ $confidence->seriesName }}</p>
-        <p class="text-xs text-slate-500" style="font-variant-numeric: tabular-nums;">{{ $formattedPoint }}/mo</p>
+        <p class="truncate text-slate-900 dark:text-slate-100">{{ $confidence->seriesName }}</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $formattedPoint }}/mo</p>
     </div>
     <span
         class="rounded-full px-2 py-0.5 text-xs font-medium {{ $tint }}"
