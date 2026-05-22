@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    macOS Hardened Runtime entitlements (Phase 15 / PKG-08).
+
+    The two entitlements below are the documented minimum required for an
+    Electron app that bundles an embedded static PHP interpreter — without
+    them dyld refuses to map the PHP binary into the notarized process
+    and the app fails to launch on a notarized release build (see
+    .planning/phases/15-desktop-shell-nativephp-integration/15-RESEARCH.md
+    Pitfall 6).
+
+    Phase 15 only CONFIGURES this file. The actual code-signing and
+    notarization run arrive in Phase 17 (CI-01 / CI-02).
+
+    Threat-register coverage: T-15-14 (Hardened Runtime blocks bundled
+    PHP runtime → app won't launch) is mitigated by these keys; T-15-15
+    (entitlements relax code-signing protections) is accepted because
+    they are scoped to the app bundle and are the documented minimum
+    for the embedded-interpreter pattern.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>
