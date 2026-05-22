@@ -7,6 +7,20 @@ updated: 2026-05-22T23:30:00Z
 
 ## Current Focus
 
+### Cycle 5 (2026-05-22T23:40:00Z) — cycle-4 fix insufficient: stale bootstrap/cache is COPIED into the bundle, never regenerated
+
+reasoning_checkpoint:
+  hypothesis: "Cycle 4 wrongly assumed (a) `git rm --cached` removes the files from disk — it does not, the physical files stay in the working tree — and (b) the desktop build regenerates package discovery against the --no-dev tree. Inspecting `nativephp/desktop 2.2.0` source: this project has no `BIFROST_*` env and no `build/__nativephp_app_bundle`, so `Builder::hasBundled()` is false and `native:build` runs the UNSECURE path `buildUnsecure()`. That path calls `copyToBuildDirectory()` which copies PHYSICAL working-tree files (filtered only by `cleanup_exclude_files` fnmatch globs), then `pruneVendorDirectory()` runs `composer install --no-dev` inside `build/app`. Crucially, this project's `composer.json` has NO `post-autoload-dump` script — so `composer install --no-dev` does NOT run `package:discover` and NEVER regenerates `bootstrap/cache/packages.php`. The stale physical `packages.php` (which the dev tree continuously regenerates WITH `Laravel\\Sentinel\\SentinelServiceProvider`, a require-dev transitive of laravel/horizon) is copied verbatim into the bundle and stays. At boot the --no-dev vendor lacks Sentinel → `ProviderRepository` fatals → every request 500s → blank window."
+  confirming_evidence:
+    - "`git ls-files bootstrap/cache/` → only `.gitkeep`; `ls -la bootstrap/cache/` → packages.php/services.php/modules.php physically present, mtime 23:13 today. `git rm --cached` (cycle 4) untracked them but left them on disk."
+    - "No `BIFROST_*` keys in `.env`; no `build/__nativephp_app_bundle` file → `Builder::hasBundled()` false → `BuildCommand::buildUnsecure()` is the active path (vendor/nativephp/desktop/src/Drivers/Electron/Commands/BuildCommand.php:94-125)."
+    - "`buildUnsecure()` order: preProcess() → copyToBuildDirectory() → ... → pruneVendorDirectory(). `CopiesToBuildDirectory::copyToBuildDirectory()` filters copied files via `fnmatch($pattern, $relativePath)` against `cleanup_exclude_files` (lines 31-60)."
+    - "`composer.json` `scripts` block has test/analyse/format/native:dev/post-update-cmd — but NO `post-autoload-dump`. So `PrunesVendorDirectory`'s `composer install --no-dev` runs no `package:discover`; the stale `bootstrap/cache/packages.php` is never regenerated inside the bundle."
+    - "`php -r 'fnmatch(\"bootstrap/cache/*.php\", \"bootstrap/cache/packages.php\")'` → true; `...\"bootstrap/cache/.gitkeep\"` → false — the exclude glob hits the three caches and spares `.gitkeep`."
+  falsification_test: "If `composer install --no-dev` regenerated the cache (cycle-4 assumption), adding the exclude would be cosmetic and the bundle would already be Sentinel-free. It is not — proving nothing regenerates it. If the secure Bifrost path were active, `cleanup_exclude_files` would not apply (copyBundleToBuildDirectory ignores it) — but `hasBundled()` is false, so the unsecure path that DOES honour the glob is the one running."
+  fix_rationale: "Add `bootstrap/cache/{packages,services,modules}.php` to `config/nativephp.php` `cleanup_exclude_files`. `copyToBuildDirectory()` then skips them at copy time via fnmatch — they NEVER enter the bundle regardless of how often the dev tree regenerates them. The bundle ships an empty `bootstrap/cache/` (just `.gitkeep`); Laravel regenerates package/service discovery lazily against the bundle's own `--no-dev` vendor on first boot, so no phantom `SentinelServiceProvider`. This is durable (a config glob, re-evaluated every build) — not a one-time deletion. The three stale physical files are also deleted now to clean immediate state; they will harmlessly reappear on the dev side and be excluded by the glob on the next build."
+  blind_spots: "Cannot run native:build headlessly — user must rebuild + relaunch. If the user later adopts the secure Bifrost build (sets BIFROST_PROJECT, runs bifrost:download-bundle), `copyBundleToBuildDirectory()` ignores `cleanup_exclude_files` — the Bifrost remote builder works from the git tree, where the caches are already untracked (cycle 4), so it stays correct there too. If a future build still fails the next suspect is config/route caching, but Laravel skips uncacheable closure routes gracefully."
+
 ### Cycle 4 (2026-05-22T23:30:00Z) — packaged-only no-window: stale committed bootstrap/cache poisons boot
 
 reasoning_checkpoint:
@@ -88,6 +102,29 @@ started: Phase 15 — first NativePHP build (nativephp/desktop 2.2.0, nativephp/
   timestamp: 2026-05-22T22:06:00Z
 
 ## Evidence
+
+- timestamp: 2026-05-22T23:40:00Z
+  checked: nativephp/desktop 2.2.0 Builder source — BuildCommand (buildBundle vs buildUnsecure), CopiesToBuildDirectory, CopiesBundleToBuildDirectory, PrunesVendorDirectory, HasPreAndPostProcessing; project .env BIFROST keys; composer.json scripts; physical state of bootstrap/cache/
+  found: |
+    The project runs the UNSECURE build path: no `BIFROST_*` env, no
+    `build/__nativephp_app_bundle`, so `Builder::hasBundled()` is false and
+    `BuildCommand::buildUnsecure()` runs. That path = preProcess() →
+    copyToBuildDirectory() → cleanEnvFile() → pruneVendorDirectory().
+    `copyToBuildDirectory()` copies physical working-tree files, skipping any
+    whose relative path matches a `cleanup_exclude_files` fnmatch glob.
+    `pruneVendorDirectory()` runs `composer install --no-dev` inside build/app
+    — but composer.json has NO `post-autoload-dump` script, so no
+    `package:discover` runs and `bootstrap/cache/packages.php` is NEVER
+    regenerated in the bundle. Cycle 4's `git rm --cached` left the three
+    cache files physically on disk (mtime 23:13), and the dev tree keeps
+    regenerating packages.php WITH the Sentinel provider.
+  implication: |
+    Cycle 4's fix was insufficient on two counts: `git rm --cached` does not
+    delete files from disk, and nothing in the build regenerates the cache.
+    The durable fix is `cleanup_exclude_files` — the build's own copy filter
+    — which excludes the three caches at copy time on every build regardless
+    of dev-side regeneration. The stale files are also deleted now for a
+    clean immediate state.
 
 - timestamp: 2026-05-22T23:30:00Z
   checked: Packaged app Laravel log at ~/Library/Application Support/diederik/storage/logs/laravel-2026-05-22.log; bundled vendor/laravel/ directory; `composer why laravel/sentinel`; git show 6243038 -- bootstrap/cache/
@@ -252,7 +289,29 @@ files_changed:
   - Modules/Desktop/Internal/NativeAppServiceProvider.php (cycle 3 — constructor-injected WindowManager, boot() opens the main window)
   - Modules/Desktop/tests/Unit/NativeAppServiceProviderTest.php (cycle 3 — implemented the window-open test)
   - tests/Pest.php (cycle 3 — registered Modules/Desktop in the module test bootstrap loop)
-  - bootstrap/cache/packages.php (cycle 4 — removed from git, now gitignored)
-  - bootstrap/cache/services.php (cycle 4 — removed from git, now gitignored)
-  - bootstrap/cache/modules.php (cycle 4 — removed from git, now gitignored)
+  - bootstrap/cache/packages.php (cycle 4 — removed from git, now gitignored; cycle 5 — deleted from disk)
+  - bootstrap/cache/services.php (cycle 4 — removed from git, now gitignored; cycle 5 — deleted from disk)
+  - bootstrap/cache/modules.php (cycle 4 — removed from git, now gitignored; cycle 5 — deleted from disk)
   - .gitignore (cycle 4 — added /bootstrap/cache/*.php)
+  - config/nativephp.php (cycle 5 — added bootstrap/cache/{packages,services,modules}.php to cleanup_exclude_files so the unsecure build never copies the stale dev-tree caches into the bundle)
+
+fix (cycle 5): |
+  Cycle 4's fix was necessary (the caches should not be in git) but not
+  sufficient: `git rm --cached` leaves the files on disk, and the dev tree
+  continuously regenerates `bootstrap/cache/packages.php` WITH the Sentinel
+  provider on every artisan call. NativePHP 2.2.0's UNSECURE build path
+  (`buildUnsecure()`, the active path here — no Bifrost bundle) copies
+  PHYSICAL working-tree files into `build/app`, and its `composer install
+  --no-dev` step does NOT regenerate the cache (no `post-autoload-dump`
+  script). So the stale Sentinel-referencing cache was bundled and fatalled
+  boot. Cycle 5 adds `bootstrap/cache/packages.php`, `services.php`, and
+  `modules.php` to `config/nativephp.php` `cleanup_exclude_files`. The
+  build's own copy filter (`CopiesToBuildDirectory::copyToBuildDirectory()`)
+  fnmatch-excludes those paths at copy time on EVERY build — they never
+  enter the bundle no matter how often the dev side regenerates them. The
+  bundle ships an empty `bootstrap/cache/` (`.gitkeep` only); Laravel
+  regenerates package/service discovery lazily against the bundle's own
+  `--no-dev` vendor on first boot. The three stale physical files were
+  also deleted to clean the immediate working-tree state. Cycle 4's
+  gitignore stays correct — these caches are environment-specific
+  generated artifacts and must not be committed.
