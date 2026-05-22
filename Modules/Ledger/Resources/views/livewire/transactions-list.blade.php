@@ -13,8 +13,8 @@
 <div class="space-y-6">
     <header class="flex items-end justify-between gap-4">
         <div class="space-y-1">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Transactions</h1>
-            <p class="text-sm text-slate-500">
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Transactions</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
                 {{ $fullHistory ? 'Full history.' : 'Recent transactions (last 90 days).' }}
             </p>
         </div>
@@ -26,7 +26,7 @@
             <button
                 type="button"
                 wire:click="toggleFullHistory"
-                class="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                class="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
             >
                 {{ $fullHistory ? 'Show recent only' : 'Show full history' }}
             </button>
@@ -34,26 +34,26 @@
     </header>
 
     @if (count($page->rows) === 0)
-        <p class="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
+        <p class="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500 dark:bg-slate-950 dark:text-slate-400 dark:border-slate-700">
             Nothing here for this period.
         </p>
     @else
-        <div class="overflow-hidden rounded-lg border border-slate-200">
-            <table class="min-w-full divide-y divide-slate-200 text-sm">
-                <thead class="bg-slate-50">
+        <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+            <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                <thead class="bg-slate-50 dark:bg-slate-900">
                     <tr>
-                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Date</th>
-                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Counterparty</th>
-                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Category</th>
-                        <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500">Amount</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Date</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Counterparty</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Category</th>
+                        <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200 bg-white">
+                <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
                     @foreach ($page->rows as $row)
                         <tr>
-                            <td class="px-4 py-2 text-slate-900" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
-                            <td class="px-4 py-2 text-slate-900">{{ $row->counterpartyName ?? '—' }}</td>
-                            <td class="px-4 py-2 text-slate-500">
+                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
+                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
+                            <td class="px-4 py-2 text-slate-500 dark:text-slate-400">
                                 @livewire(
                                     'categorization.inline-category-picker',
                                     ['transactionId' => $row->id, 'categoryId' => $row->categoryId],
@@ -61,9 +61,9 @@
                                 )
                             </td>
                             <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
-                                <span class="block text-sm text-slate-900">{{ $fmt($row->amount) }}</span>
+                                <span class="block text-sm text-slate-900 dark:text-slate-100">{{ $fmt($row->amount) }}</span>
                                 @if ($currency === 'original' && $row->secondaryAmount !== null)
-                                    <span class="mt-1 block text-xs text-slate-500">{{ $fmt($row->secondaryAmount) }}</span>
+                                    <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">{{ $fmt($row->secondaryAmount) }}</span>
                                 @endif
                             </td>
                         </tr>
@@ -77,7 +77,7 @@
                 <button
                     type="button"
                     wire:click="loadMore({{ $page->nextCursorId }}, @js($page->nextCursorPostedAt))"
-                    class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                    class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                 >Load more</button>
             </div>
         @endif

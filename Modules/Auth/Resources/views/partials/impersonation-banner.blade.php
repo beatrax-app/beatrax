@@ -1,5 +1,5 @@
 <div role="alert"
-     class="border-b border-amber-300 bg-amber-50 px-6 py-2 text-sm text-amber-900">
+     class="border-b border-amber-300 bg-amber-50 px-6 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
     <div class="mx-auto flex max-w-5xl items-center justify-between">
         <p>
             Acting as <strong>{{ $username }}</strong> &mdash;
