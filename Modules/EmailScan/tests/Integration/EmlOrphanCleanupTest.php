@@ -19,7 +19,6 @@ use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
-use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 uses(RefreshDatabase::class);
 
@@ -104,7 +103,6 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
             $graphFake,
             $this->app->make(EmlBlobStore::class),
             $this->app->make(MimeHeaderParser::class),
-            $this->app->make(OAuthSecretsRepository::class),
             new InboxScanStateMachine($realDb, $this->app->make(Clock::class)),
             $this->app->make(KnownSenderQuery::class),
         );
