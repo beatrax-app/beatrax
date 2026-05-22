@@ -186,14 +186,13 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
                         // string (which would conflate with corrupt
                         // / never-attached values in future audit
                         // queries).
-                        $rawPathSentinel = '__INBOX_HANDOFF__/user-'.$this->userId.'/'.$clock->now()->format('Y-m-d');
+                        $rawPathSentinel = '__INBOX_HANDOFF__/user-'.$this->userId.'/'.$clock->now()->format('Y-m-d-H');
                         // sha256 must remain deterministic per import
                         // run (the column is otherwise the content
                         // hash); we mix in a stable per-run anchor
-                        // (the wall-clock day plus userId) so two
-                        // hourly runs on the same day collapse to one
-                        // ImportRun rather than diverging on the
-                        // sub-second clock.
+                        // (the wall-clock hour plus userId) so two runs
+                        // in the same hour collapse to one ImportRun
+                        // rather than diverging on the sub-second clock.
                         $runAnchor = sprintf(
                             'inbox-handoff:%d:%s',
                             $this->userId,
