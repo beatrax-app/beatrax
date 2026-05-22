@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
 stopped_at: Phase 15 UI-SPEC approved
-last_updated: "2026-05-22T22:20:23.608Z"
-last_activity: 2026-05-23 -- Plan 15-01 complete (NativePHP installed, Modules/Desktop scaffolded, .dmg builds + launches)
+last_updated: "2026-05-22T22:35:34.345Z"
+last_activity: 2026-05-22
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 21
-  completed_plans: 15
-  percent: 71
+  completed_plans: 16
+  percent: 30
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 ## Current Position
 
 Phase: 15 (desktop-shell-nativephp-integration) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
-Last activity: 2026-05-23 -- Plan 15-01 complete (NativePHP installed, Modules/Desktop scaffolded, .dmg builds + launches)
+Last activity: 2026-05-22
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Last activity: 2026-05-23 -- Plan 15-01 complete (NativePHP installed, Modules/D
 
 *Updated after each plan completion*
 | Phase 15 P01 | 205 | 4 tasks | 30 files |
+| Phase 15 P06 | 32m | 3 tasks | 37 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,7 @@ Recent decisions affecting current work:
 - All 47 requirements have explicit phase assignments in REQUIREMENTS.md Traceability table
 - [Phase 15-01]: NativePHP desktop `^2.2` installed; `Modules/Desktop/` bounded module registered; `noNativePhpImportsOutsideDesktopModule` arch invariant green; a launchable macOS `.dmg` builds and opens a native window rendering the diederik web UI (PKG-04 verified)
 - [Phase 15-01]: NativePHP builds use deterministic ad-hoc macOS signing via a `mac.identity:null` prebuild hook (no paid Apple Developer ID for dev builds) — real Developer ID notarization deferred to Phase 17; `bootstrap/cache/*.php` gitignored as per-environment artifacts; standard Laravel `post-autoload-dump` composer script added so the in-bundle `composer install --no-dev` regenerates package discovery against the `--no-dev` vendor tree
+- [Phase ?]: [Phase 15-06]: dark theme delivered via Tailwind v4 class strategy — users.theme column (light/dark/system) drives a server-side dark class on <html> with a pre-paint prefers-color-scheme script (D-15/D-16); dark-companion arch guard enforces the plan-06 modules
 
 ### Pending Todos
 
@@ -128,7 +130,7 @@ Items acknowledged at v1.0 milestone close on 2026-05-19. Carried forward into v
 
 ## Session Continuity
 
-Last session: 2026-05-22T22:19:30.463Z
+Last session: 2026-05-22T22:35:24.844Z
 Stopped at: Phase 15 UI-SPEC approved
 Resume: Run `/gsd:plan-phase 12` to begin planning multi-user activation
 
