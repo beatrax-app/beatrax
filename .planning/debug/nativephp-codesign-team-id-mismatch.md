@@ -7,6 +7,21 @@ updated: 2026-05-22T23:30:00Z
 
 ## Current Focus
 
+### Cycle 6 (2026-05-23T10:00:00Z) — cycle-5 fix broke the bundle: missing `bootstrap/cache/` dir; no `post-autoload-dump` was the true root cause
+
+reasoning_checkpoint:
+  hypothesis: "Cycle 5's `cleanup_exclude_files` exclusion of the three `bootstrap/cache/*.php` files was a workaround that fixed the stale-Sentinel symptom but introduced a worse defect: the bundle's `bootstrap/cache/` SUBDIRECTORY is now entirely absent. `CopiesToBuildDirectory::copyToBuildDirectory()` only materialises a target directory when its RecursiveIteratorIterator encounters a non-excluded entry inside it. With cycle 5 excluding all three `.php` files, the only remaining entry was `.gitkeep` — which did not result in the directory being created in the bundle. Laravel's `PackageManifest::write()` (vendor/laravel/framework/.../PackageManifest.php:178) throws `\"The {dirname} directory must be present and writable\"` and does NOT mkdir — so the absent dir fatals boot, cascading to `Target class [view] does not exist`. The TRUE underlying root cause of the whole bootstrap/cache saga is that this project's `composer.json` lacks the standard Laravel `post-autoload-dump` script. NativePHP's unsecure build runs `composer install --no-dev` WITH scripts enabled (no `--no-scripts` flag — PrunesVendorDirectory.php:16). With the script absent, that in-bundle install never runs `package:discover` and never regenerates the package manifest against the `--no-dev` tree — which is why the stale dev-tree cache (with Sentinel) survived into the bundle in the first place."
+  confirming_evidence:
+    - "Packaged app log: `The .../build/app/bootstrap/cache directory must be present and writable.` → cascades to `Target class [view] does not exist` → blank window. (Orchestrator-confirmed.)"
+    - "Bundle's `bootstrap/` exists with `app.php`+`providers.php` but `bootstrap/cache/` subdirectory is absent. (Orchestrator-confirmed.)"
+    - "`vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php:178` — `if (! is_writable($dirname = dirname($this->manifestPath))) throw new Exception(\"The {$dirname} directory must be present and writable.\")`. PackageManifest never mkdirs the cache dir."
+    - "`vendor/nativephp/desktop/src/Builder/Concerns/PrunesVendorDirectory.php:16` runs `composer install --no-dev` — NO `--no-scripts` flag. Scripts (incl. post-autoload-dump) DO fire in-bundle."
+    - "`BuildCommand::buildUnsecure()` order: copyToBuildDirectory() → cleanEnvFile() → installIcon() → pruneVendorDirectory(). Files copied FIRST, then `composer install --no-dev` runs — so a `post-autoload-dump` → `package:discover` fires AFTER the (stale) caches are in place and OVERWRITES them."
+    - "Project `composer.json` `scripts` had test/analyse/format/check:paths/native:dev/post-update-cmd — NO `post-autoload-dump`."
+  falsification_test: "If NativePHP ran `composer install --no-dev --no-scripts`, adding `post-autoload-dump` would not fire in-bundle and step 1 alone would be insufficient — but PrunesVendorDirectory.php:16 has no `--no-scripts`, so the script fires. If PackageManifest mkdir'd its cache dir, the absent-directory fatal could not occur — but line 178 only checks `is_writable`, never creates."
+  fix_rationale: "Two coordinated changes. (1) Add the standard Laravel `post-autoload-dump` script (`Illuminate\\Foundation\\ComposerScripts::postAutoloadDump` + `@php artisan package:discover --ansi`) to `composer.json`. NativePHP's in-bundle `composer install --no-dev` then runs `package:discover`, regenerating `bootstrap/cache/packages.php`/`services.php` against the bundle's ACTUAL `--no-dev` vendor — no phantom `SentinelServiceProvider`. (2) REVERT cycle 5's `cleanup_exclude_files` exclusion. Letting the (stale) dev-tree caches copy into the bundle normally guarantees `bootstrap/cache/` physically EXISTS — and then the build-order (copy → composer install → post-autoload-dump → package:discover) OVERWRITES the stale manifest with the correct one. One mechanism solves BOTH the directory-presence problem AND the stale-Sentinel problem. Cycle 4's gitignore of `bootstrap/cache/*.php` STAYS — these are generated artifacts, never committed — but the working tree still has them on disk so they copy into the bundle."
+  blind_spots: "Cannot run native:build headlessly — the user must rebuild + relaunch. Relies on `package:discover` running successfully inside the bundle's `composer install`; if that artisan call itself fails (e.g. a missing extension in nativephp/php-bin) the manifest would not regenerate — but php-bin ships a full Laravel-capable runtime, so this is unlikely. If a future build still fails, next suspect is config/route caching at first-launch `artisan optimize`, but Laravel skips uncacheable closure routes gracefully."
+
 ### Cycle 5 (2026-05-22T23:40:00Z) — cycle-4 fix insufficient: stale bootstrap/cache is COPIED into the bundle, never regenerated
 
 reasoning_checkpoint:
@@ -293,7 +308,55 @@ files_changed:
   - bootstrap/cache/services.php (cycle 4 — removed from git, now gitignored; cycle 5 — deleted from disk)
   - bootstrap/cache/modules.php (cycle 4 — removed from git, now gitignored; cycle 5 — deleted from disk)
   - .gitignore (cycle 4 — added /bootstrap/cache/*.php)
-  - config/nativephp.php (cycle 5 — added bootstrap/cache/{packages,services,modules}.php to cleanup_exclude_files so the unsecure build never copies the stale dev-tree caches into the bundle)
+  - config/nativephp.php (cycle 5 — added bootstrap/cache/{packages,services,modules}.php to cleanup_exclude_files; cycle 6 — REVERTED that exclusion so the bundle's bootstrap/cache/ directory physically exists)
+  - composer.json (cycle 6 — added standard Laravel post-autoload-dump script so the in-bundle composer install --no-dev regenerates the package manifest against the --no-dev vendor tree)
+
+fix (cycle 6): |
+  Cycle 5's `cleanup_exclude_files` exclusion fixed the stale-Sentinel
+  symptom but broke the bundle a different way: with all three
+  `bootstrap/cache/*.php` files excluded, the build's copy iterator never
+  materialised the `bootstrap/cache/` subdirectory in the bundle (the lone
+  `.gitkeep` did not create it). Laravel's `PackageManifest::write()`
+  requires that directory to already exist and be writable — it does not
+  mkdir — so the bundle fatalled with "the bootstrap/cache directory must
+  be present and writable", cascading to "Target class [view] does not
+  exist" and a blank window.
+
+  The TRUE underlying root cause was a missing `post-autoload-dump` script
+  in `composer.json`. NativePHP's unsecure build runs `composer install
+  --no-dev` WITH scripts enabled (no `--no-scripts` flag). Without that
+  script, the in-bundle install never ran `package:discover`, so the stale
+  dev-tree manifest (with `Laravel\Sentinel\SentinelServiceProvider`) was
+  never regenerated against the `--no-dev` vendor tree — the original
+  cycle-4/5 saga.
+
+  Cycle 6 fixes both with two coordinated changes:
+  (1) Added the standard Laravel `post-autoload-dump` script
+  (`Illuminate\Foundation\ComposerScripts::postAutoloadDump` +
+  `@php artisan package:discover --ansi`) to `composer.json`.
+  (2) Reverted cycle 5's `cleanup_exclude_files` exclusion. The (stale)
+  caches now copy into the bundle normally, guaranteeing `bootstrap/cache/`
+  exists; then the build order (copy files → `composer install --no-dev` →
+  `post-autoload-dump` → `package:discover`) OVERWRITES the stale manifest
+  with one built against the bundle's own `--no-dev` vendor — no phantom
+  Sentinel provider. One mechanism solves both the directory-presence and
+  the stale-cache problems. Cycle 4's gitignore of `bootstrap/cache/*.php`
+  stays correct — they are generated artifacts, untracked but still on
+  disk so they copy into the bundle.
+
+verification (cycle 6): |
+  - `vendor/nativephp/desktop/src/Builder/Concerns/PrunesVendorDirectory.php:16`
+    confirmed to run `composer install --no-dev` with NO `--no-scripts` flag —
+    so `post-autoload-dump` fires in-bundle.
+  - `vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php:178`
+    confirmed to throw "directory must be present and writable" without mkdir.
+  - `composer dump-autoload` re-run: `post-autoload-dump` fires and runs
+    `package:discover` (full discovery output emitted) — script is wired correctly.
+  - `composer validate` passes; Pint passes on the changed files.
+  - `git check-ignore` confirms the three `bootstrap/cache/*.php` remain
+    gitignored; all three are present on disk so they copy into the bundle.
+  - Could not run native:build headlessly — the user must rebuild the .dmg
+    and relaunch to confirm a window renders (human checkpoint below).
 
 fix (cycle 5): |
   Cycle 4's fix was necessary (the caches should not be in git) but not
