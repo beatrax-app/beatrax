@@ -68,22 +68,28 @@ arch('no Laravel facade usage in module code')
         // to this one file. The phpstan.neon ignoreErrors list mirrors
         // this allow-list.
         'Modules\\Core\\Public\\Support\\LockStore',
-        // Native-chrome carve-out: NativePHP's window, app-menu and
-        // system-tray API is only reachable through its facades, which
-        // NativePHP invokes outside the container lifecycle — there is
-        // no constructor-injection seam for them. The crossing is
+        // Native-chrome carve-out: NativePHP's window, app-menu,
+        // system-tray, OS-theme, and notification API is only
+        // reachable through its facades, which NativePHP invokes
+        // outside the container lifecycle — there is no
+        // constructor-injection seam for them. The crossing is
         // confined to the desktop module's native-chrome classes: the
         // NativeAppServiceProvider NativePHP boots, the two builders
-        // it delegates window/menu/tray construction to, and the
+        // it delegates window/menu/tray construction to, the
         // OsThemeProbe that wraps `System::theme()` behind the
-        // `OsThemeSignal` Public contract (the only place the OS
-        // theme signal is read; the dark-theme layout consumes the
-        // contract, never the facade). The phpstan.neon ignoreErrors
-        // list mirrors this allow-list.
+        // `OsThemeSignal` Public contract, and the
+        // `DispatchOsNotification` listener that calls
+        // `Notification::title()->message()->event()->reference()
+        // ->show()` (the D-12 / D-13 / D-14 dispatcher — the
+        // `WindowFocusState` collaborator and the `UrlGenerator`
+        // come through constructor DI; only the facade chain itself
+        // is unavoidable). The phpstan.neon ignoreErrors list
+        // mirrors this allow-list.
         'Modules\\Desktop\\Internal\\NativeAppServiceProvider',
         'Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
         'Modules\\Desktop\\Internal\\Native\\TrayMenuBuilder',
         'Modules\\Desktop\\Internal\\Native\\OsThemeProbe',
+        'Modules\\Desktop\\Internal\\Listeners\\DispatchOsNotification',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')

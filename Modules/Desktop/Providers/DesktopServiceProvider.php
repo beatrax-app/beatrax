@@ -5,14 +5,22 @@ declare(strict_types=1);
 namespace Modules\Desktop\Providers;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
+use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
 use Modules\Desktop\Internal\Native\TrayMenuBuilder;
+use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
+use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
+use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
+use Modules\Import\Public\Events\TransactionImported;
+use Native\Desktop\Events\Windows\WindowBlurred;
+use Native\Desktop\Events\Windows\WindowFocused;
 
 /**
  * Wires the Desktop module.
@@ -21,23 +29,27 @@ use Modules\Desktop\Public\Contracts\OsThemeSignal;
  *
  *   - `AppMenuBuilder` (D-11 application-menu composition)
  *   - `TrayMenuBuilder` (D-09 system-tray context-menu composition)
+ *   - `WindowFocusState` (D-13 focus-state tracker — the OS
+ *     notification dispatcher consults this to decide whether to
+ *     fire or stay quiet)
+ *   - `DispatchOsNotification` (D-12 / D-13 / D-14 OS notification
+ *     dispatcher; the only place the `Notification` facade is
+ *     called in the module)
  *   - `OsThemeProbe` (D-16 OS-theme read, exposed via the
  *     `OsThemeSignal` Public contract — the dark-theme layout
  *     resolves the contract, never the concrete probe, so the
  *     `noNativePhpImportsOutsideDesktopModule` arch invariant stays
  *     intact)
  *
- * The bindings are singletons because each is stateless and the
- * provider may resolve them more than once per request (e.g. the
- * layout reads `OsThemeSignal` and the boot path resolves the menu
- * builders).
+ * The bindings are singletons because each is stateless (or holds
+ * the single shared focus flag) and the provider may resolve them
+ * more than once per request (e.g. the layout reads
+ * `OsThemeSignal` and the boot path resolves the menu builders).
  *
  * `boot()` loads migrations from `Database/Migrations`, web routes
- * from `Routes/web.php`, and views under the `desktop` namespace,
- * each gated on an existence guard so an absent directory or file
- * does not abort provider boot. Plan 15-05 additionally registers
- * the two first-launch Livewire screens (`desktop.setup-screen`,
- * `desktop.welcome-screen`).
+ * from `Routes/web.php`, views under the `desktop` namespace, the
+ * two first-launch Livewire screens (plan 15-05), and subscribes the
+ * D-13 focus-state flippers + the four D-12 OS-notification handlers.
  */
 final class DesktopServiceProvider extends ServiceProvider
 {
@@ -48,6 +60,14 @@ final class DesktopServiceProvider extends ServiceProvider
         // stateless and the boot path resolves them once per launch.
         $this->app->singleton(AppMenuBuilder::class);
         $this->app->singleton(TrayMenuBuilder::class);
+
+        // D-13 focus state — single shared instance so the focus /
+        // blur subscribers and the OS-notification dispatcher see
+        // the same flag.
+        $this->app->singleton(WindowFocusState::class);
+
+        // D-12 / D-13 / D-14 OS-notification dispatcher.
+        $this->app->singleton(DispatchOsNotification::class);
 
         // OsThemeProbe is bound to the OsThemeSignal contract ONLY
         // when the app is running inside the NativePHP bundle. Under
@@ -68,7 +88,7 @@ final class DesktopServiceProvider extends ServiceProvider
         }
     }
 
-    public function boot(LivewireManager $livewire): void
+    public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
         if (is_dir(__DIR__.'/../Database/Migrations')) {
             $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
@@ -82,5 +102,44 @@ final class DesktopServiceProvider extends ServiceProvider
 
         $livewire->component('desktop.setup-screen', SetupScreen::class);
         $livewire->component('desktop.welcome-screen', WelcomeScreen::class);
+
+        // Focus-state + OS-notification wiring is bundle-only. Under
+        // Herd / in tests / before the Electron shell is ready,
+        // there is no native shell to push OS notifications into —
+        // the in-app `SystemAlertsBanner` handles every event. The
+        // gate mirrors the `OsThemeProbe` contract-binding gate in
+        // `register()`: the bundle sets `NATIVEPHP_RUNNING=true`
+        // (see `config/nativephp-internal.php`), and the listener
+        // wiring lights up only then. CI / test runs that fire
+        // `TransactionImported` / `DriftAlertOpened` /
+        // `ForecastShortfallDetected` therefore never reach the
+        // NativePHP HTTP client.
+        $config = $this->app->make(ConfigRepository::class);
+        if ($config->get('nativephp-internal.running') !== true) {
+            return;
+        }
+
+        // D-13 focus-state flippers. NativePHP dispatches the
+        // `WindowFocused` / `WindowBlurred` events into the Laravel
+        // event bus; the closures here flip the shared
+        // `WindowFocusState` singleton so `DispatchOsNotification`
+        // sees the current state at firing time. The singleton is
+        // resolved once at boot time and captured by the closures
+        // so the runtime path holds no `app()` global helper.
+        $focusState = $this->app->make(WindowFocusState::class);
+        $events->listen(WindowFocused::class, static function () use ($focusState): void {
+            $focusState->markFocused();
+        });
+        $events->listen(WindowBlurred::class, static function () use ($focusState): void {
+            $focusState->markBlurred();
+        });
+
+        // D-12 OS-notification subscriptions. Each in-app domain
+        // event the UI-SPEC names routes through one handler method
+        // on the dispatcher; the dispatcher itself owns the D-13
+        // focus-gate.
+        $events->listen(TransactionImported::class, [DispatchOsNotification::class, 'handleTransactionImported']);
+        $events->listen(DriftAlertOpened::class, [DispatchOsNotification::class, 'handleDriftAlert']);
+        $events->listen(ForecastShortfallDetected::class, [DispatchOsNotification::class, 'handleForecastShortfall']);
     }
 }

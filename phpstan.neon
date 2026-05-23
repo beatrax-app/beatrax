@@ -45,28 +45,44 @@ parameters:
             message: "#Global helper function 'config' should not be used\\.#"
             path: app/Providers/HorizonServiceProvider.php
         # Native-chrome carve-out: NativePHP's window, app-menu,
-        # system-tray and OS-theme API is only reachable through its
-        # facades, which NativePHP invokes outside the container
-        # lifecycle — there is no constructor-injection seam for them.
-        # The crossing is confined to the desktop module's native-chrome
-        # classes (the NativePHP-booted provider, the two menu builders
-        # it delegates to, and the OsThemeProbe that wraps
-        # `System::theme()` behind the `OsThemeSignal` Public contract).
-        # The BoundaryArchTest "no Laravel facade usage in module code"
-        # test mirrors this allow-list. The builder path is a glob
-        # covering AppMenuBuilder / TrayMenuBuilder.
+        # system-tray, OS-theme, and notification API is only
+        # reachable through its facades, which NativePHP invokes
+        # outside the container lifecycle — there is no
+        # constructor-injection seam for them. The crossing is
+        # confined to the desktop module's native-chrome classes
+        # (the NativePHP-booted provider, the two menu builders, the
+        # OsThemeProbe that wraps `System::theme()` behind the
+        # `OsThemeSignal` Public contract, and the
+        # `DispatchOsNotification` listener that fires the D-12 OS
+        # notifications via `Notification::title()->message()
+        # ->event()->reference()->show()`). The BoundaryArchTest "no
+        # Laravel facade usage in module code" test mirrors this
+        # allow-list. The builder path is a glob covering
+        # AppMenuBuilder / TrayMenuBuilder.
         #
         # The larastan-strict-rules `noFacadeRule` flags every
         # `Native\Desktop\Facades\X::y()` call individually; the message
         # shape is `Native\Desktop\Facades\<Facade> facade should not be
-        # used.` — a single regex covers all four facades the carve-out
-        # admits (Menu, MenuBar, Window, System).
+        # used.` — a single regex covers all five facades the carve-out
+        # admits (Menu, MenuBar, Window, System, Notification).
         -
-            message: '#Native\\Desktop\\Facades\\(Menu|MenuBar|Window|System) facade should not be used\.#'
+            message: '#Native\\Desktop\\Facades\\(Menu|MenuBar|Window|System|Notification) facade should not be used\.#'
             paths:
                 - Modules/Desktop/Internal/NativeAppServiceProvider.php
                 - Modules/Desktop/Internal/Native/*Builder.php
                 - Modules/Desktop/Internal/Native/OsThemeProbe.php
+                - Modules/Desktop/Internal/Listeners/DispatchOsNotification.php
+            reportUnmatched: false
+        # The `Notification` facade docblock declares its chained
+        # builder methods (`title`, `message`, `event`, `reference`,
+        # `show`) as `@method static static …`, so the fluent chain
+        # `Notification::title(…)->message(…)->event(…)->reference(…)
+        # ->show()` triggers `staticMethod.dynamicCall` on every link
+        # after the first. The chain matches NativePHP's documented
+        # API verbatim — we cannot refactor it.
+        -
+            message: '#Dynamic call to static method Native\\Desktop\\Facades\\Notification::(message|event|reference|show)\(\)\.#'
+            path: Modules/Desktop/Internal/Listeners/DispatchOsNotification.php
             reportUnmatched: false
         # `Window::open()` returns `PendingOpenWindow|void` per the
         # facade docblock (the contract method has no return type), so
