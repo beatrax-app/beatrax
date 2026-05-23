@@ -153,6 +153,19 @@ final class SurfaceWorkerCrashAlert
      * Writes the system_alerts row (with de-dup against an existing
      * un-acknowledged alert) and fires the OS notification when the
      * window is unfocused.
+     *
+     * The OS notification is suppressed in two cases:
+     *
+     *   - Focused window (D-13): the in-app SystemAlertsBanner shows
+     *     the row, so no double-notification.
+     *   - De-duped row (`$alreadyAlerted === true`): a prior crash-loop
+     *     already wrote a system_alerts row that has NOT been
+     *     acknowledged. The partner is already aware via the banner
+     *     (or — when re-blurring — by the previous OS notification);
+     *     surfacing another OS toast for the same un-acknowledged
+     *     incident is just noise. Once the row is acknowledged a new
+     *     crash-loop will re-insert and re-notify, which is the
+     *     correct steady-state behaviour.
      */
     private function escalate(): void
     {
@@ -172,12 +185,12 @@ final class SurfaceWorkerCrashAlert
             ]);
         }
 
-        // Focus-gate (D-13). When the user has the window in front, the
-        // in-app SystemAlertsBanner already shows the row — no
-        // double-notification. When unfocused, fire the OS notification
-        // with a deep-link back to the dashboard so a single click
-        // brings the app forward.
-        if ($this->focus->isFocused()) {
+        // Suppress when the window is focused (D-13 in-app banner
+        // handles the same row) OR when the row was already
+        // un-acknowledged (the partner is already aware; the prior
+        // OS notification has already fired). Both branches collapse
+        // into the same "stay quiet" outcome.
+        if ($alreadyAlerted || $this->focus->isFocused()) {
             return;
         }
 
