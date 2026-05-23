@@ -66,13 +66,15 @@ parameters:
         # used.` — a single regex covers all five facades the carve-out
         # admits (Menu, MenuBar, Window, System, Notification).
         -
-            message: '#Native\\Desktop\\Facades\\(Menu|MenuBar|Window|System|Notification) facade should not be used\.#'
+            message: '#Native\\Desktop\\Facades\\(Menu|MenuBar|Window|System|Notification|App) facade should not be used\.#'
             paths:
                 - Modules/Desktop/Internal/NativeAppServiceProvider.php
                 - Modules/Desktop/Internal/Native/*Builder.php
                 - Modules/Desktop/Internal/Native/OsThemeProbe.php
                 - Modules/Desktop/Internal/Listeners/DispatchOsNotification.php
                 - Modules/Desktop/Internal/Listeners/SurfaceWorkerCrashAlert.php
+                - Modules/Desktop/Internal/Listeners/NavigateOnNotificationDeepLink.php
+                - Modules/Desktop/Internal/Listeners/ApplyCloseWindowChoice.php
             reportUnmatched: false
         # The `Notification` facade docblock declares its chained
         # builder methods (`title`, `message`, `event`, `reference`,
@@ -97,6 +99,19 @@ parameters:
         -
             message: '#Cannot call method (width|height|rememberState)\(\) on mixed\.#'
             path: Modules/Desktop/Internal/NativeAppServiceProvider.php
+            reportUnmatched: false
+        # `Window::current()` is typed as returning `object` by the
+        # facade docblock (NativePHP's WindowManager facade signature
+        # — we do not own it). The notification deep-link listener
+        # navigates the focused window via `Window::current()->url($route)`;
+        # the close-action listener hides it via `->hide()`. Both are
+        # the canonical NativePHP API shapes; no constructor-injection
+        # seam exists.
+        -
+            message: '#Call to an undefined method object::(url|hide)\(\)\.#'
+            paths:
+                - Modules/Desktop/Internal/Listeners/NavigateOnNotificationDeepLink.php
+                - Modules/Desktop/Internal/Listeners/ApplyCloseWindowChoice.php
             reportUnmatched: false
     allowedGlobalFunctions:
         - 'app_path'

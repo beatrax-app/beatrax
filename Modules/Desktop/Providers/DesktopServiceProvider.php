@@ -13,9 +13,11 @@ use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\FileStagingPage;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
+use Modules\Desktop\Internal\Listeners\ApplyCloseWindowChoice;
 use Modules\Desktop\Internal\Listeners\ContinuePendingFileIntentAfterLogin;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Listeners\HandleNativeOpenFile;
+use Modules\Desktop\Internal\Listeners\NavigateOnNotificationDeepLink;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
@@ -25,6 +27,7 @@ use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
 use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
+use Modules\Desktop\Public\Events\NotificationDeepLink;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Import\Public\Events\TransactionImported;
@@ -116,6 +119,17 @@ final class DesktopServiceProvider extends ServiceProvider
         // FileOpenIntake — the security boundary for the OS-supplied
         // path. Singleton because the listener is stateless.
         $this->app->singleton(HandleNativeOpenFile::class);
+
+        // D-14 notification deep-link listener. Plan 15-02 deferred
+        // this to 15-04; it consumes NotificationDeepLink and
+        // navigates the focused window via `Window::current()->url(...)`.
+        $this->app->singleton(NavigateOnNotificationDeepLink::class);
+
+        // D-08 close-action applicator (JS glue deferred from 15-03).
+        // The in-layout `close-window-choice` JS hook POSTs to
+        // /desktop/close-action; the controller calls into this
+        // listener which applies App::quit() / Window::current()->hide().
+        $this->app->singleton(ApplyCloseWindowChoice::class);
 
         // OsThemeProbe is bound to the OsThemeSignal contract ONLY
         // when the app is running inside the NativePHP bundle. Under
@@ -218,5 +232,11 @@ final class DesktopServiceProvider extends ServiceProvider
         // absent and FileOpenIntake is invoked directly by feature
         // tests instead.
         $events->listen(OpenFile::class, [HandleNativeOpenFile::class, 'handle']);
+
+        // D-14 notification-click deep-link. The listener calls
+        // Window::current()->url(...) — only meaningful inside the
+        // NativePHP bundle, so the subscription gates on the same
+        // signal as the OS-notification dispatcher itself.
+        $events->listen(NotificationDeepLink::class, [NavigateOnNotificationDeepLink::class, 'handle']);
     }
 }

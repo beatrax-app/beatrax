@@ -67,5 +67,48 @@
         @endauth
         @yield('content')
         @livewireScripts
+        @auth
+            {{--
+                D-08 close-window JS glue (plan 15-04). The
+                CloseWindowPrompt Livewire component dispatches
+                `close-window-choice` (`choice: 'quit' | 'tray'`) after
+                the user picks an action. This hook listens for the
+                Livewire-emitted browser event and POSTs the choice
+                to the `desktop.close-action` endpoint, which calls
+                `App::quit()` / `Window::current()->hide()` inside the
+                bundle. Outside the bundle the POST is harmless — the
+                facades only have any effect when NativePHP is
+                running.
+            --}}
+            <script>
+                (function () {
+                    if (typeof window === 'undefined' || typeof document === 'undefined') {
+                        return;
+                    }
+                    var token = document.querySelector('meta[name="csrf-token"]')?.content;
+                    if (! token) {
+                        return;
+                    }
+                    window.addEventListener('close-window-choice', function (event) {
+                        try {
+                            var choice = event?.detail?.choice;
+                            if (choice !== 'quit' && choice !== 'tray') {
+                                return;
+                            }
+                            fetch('{{ route('desktop.close-action') }}', {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': token,
+                                },
+                                body: JSON.stringify({ choice: choice }),
+                            });
+                        } catch (e) {}
+                    });
+                })();
+            </script>
+        @endauth
     </body>
 </html>
