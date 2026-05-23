@@ -32,7 +32,7 @@ use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
  * shape for all four.
  */
 
-it('does not fire an OS notification when the window is focused (D-13 suppression)', function (): void {
+it('notification suppressed when focused (D-13 — does not fire when the window is focused)', function (): void {
     Http::fake();
 
     /** @var WindowFocusState $focus */
