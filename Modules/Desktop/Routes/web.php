@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Desktop\Internal\Http\FileOpenController;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
@@ -23,6 +24,16 @@ use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
 Route::middleware(['web'])->group(static function (): void {
     Route::get('/setup', SetupScreen::class)->name('desktop.setup');
     Route::get('/welcome', WelcomeScreen::class)->name('desktop.welcome');
+
+    /*
+     * File-open intake (PKG-06 / D-04). The Electron main process POSTs
+     * here when it sees a `.csv` / `.eml` file path from argv or a
+     * second-instance launch. Behind `['web']` only — a logged-out
+     * file-open must still be accepted so PendingFileIntent can save
+     * it across the login round-trip.
+     */
+    Route::post('/desktop/file-open', FileOpenController::class)
+        ->name('desktop.file-open');
 });
 
 Route::middleware(['web', 'auth'])->group(static function (): void {
