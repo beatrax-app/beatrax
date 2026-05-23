@@ -40,12 +40,19 @@ Route::middleware(['web'])->group(static function (): void {
 
 Route::middleware(['web', 'auth'])->group(static function (): void {
     // D-08 first-close prompt — Quit vs Keep-in-tray. The route exists
-    // so the NativePHP close-intercept hook can navigate the focused
-    // window here on a first close (when users.close_behavior IS NULL);
-    // the in-bundle hook lives in NativeAppServiceProvider and decides
-    // whether to navigate-and-prompt (NULL) or apply the recorded
-    // choice directly (non-NULL) without ever surfacing this route to
-    // the user.
+    // so the NativePHP-bundle close-intercept hook (Electron-side, in
+    // the published `nativephp/electron/src/main/index.js`) can navigate
+    // the focused window here on a first close — when
+    // `users.close_behavior IS NULL`. NativePHP/PHP has no pre-close
+    // intercept facade (the only `WindowClosed` PHP event fires AFTER
+    // the close completes), so the navigation trigger lives in the
+    // Electron main process: it reads the user's close_behavior via the
+    // bundled HTTP endpoint, navigates to this route on NULL, and POSTs
+    // directly to `desktop.close-action` on quit/tray.
+    //
+    // On arrival, `CloseWindowPrompt::mount()` dispatches `modal-show`
+    // so the flux:modal surfaces immediately — without that dispatch
+    // the page would render an invisible modal element.
     Route::get('/desktop/close-prompt', CloseWindowPrompt::class)
         ->name('desktop.close-prompt');
 
