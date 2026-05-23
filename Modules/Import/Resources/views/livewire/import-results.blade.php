@@ -4,7 +4,7 @@
     </header>
 
     <p class="text-sm text-slate-900 dark:text-slate-100">
-        Imported {{ $importRun->inserted_count }} transactions · skipped {{ $importRun->duplicate_count }} duplicates@if ($importRun->enriched_count > 0) · {{ $importRun->enriched_count }} enriched@endif@if ($importRun->error_count > 0) · {{ $importRun->error_count }} errors@endif.
+        Imported {{ $importRun->inserted_count }} transactions · skipped {{ $importRun->duplicate_count }} duplicates{{ $importRun->enriched_count > 0 ? ' · '.$importRun->enriched_count.' enriched' : '' }}{{ $importRun->error_count > 0 ? ' · '.$importRun->error_count.' errors' : '' }}.
     </p>
 
     @if ($importRun->duplicate_count > 0)
