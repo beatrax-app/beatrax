@@ -73,12 +73,17 @@ arch('no Laravel facade usage in module code')
         // NativePHP invokes outside the container lifecycle — there is
         // no constructor-injection seam for them. The crossing is
         // confined to the desktop module's native-chrome classes: the
-        // NativeAppServiceProvider NativePHP boots, and the two builders
-        // it delegates window/menu/tray construction to. The phpstan.neon
-        // ignoreErrors list mirrors this allow-list.
+        // NativeAppServiceProvider NativePHP boots, the two builders
+        // it delegates window/menu/tray construction to, and the
+        // OsThemeProbe that wraps `System::theme()` behind the
+        // `OsThemeSignal` Public contract (the only place the OS
+        // theme signal is read; the dark-theme layout consumes the
+        // contract, never the facade). The phpstan.neon ignoreErrors
+        // list mirrors this allow-list.
         'Modules\\Desktop\\Internal\\NativeAppServiceProvider',
         'Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
         'Modules\\Desktop\\Internal\\Native\\TrayMenuBuilder',
+        'Modules\\Desktop\\Internal\\Native\\OsThemeProbe',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')
