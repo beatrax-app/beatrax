@@ -30,8 +30,12 @@ use Native\Desktop\Events\ChildProcess\ProcessExited;
 
 /**
  * Builds a Clock whose `time` property the test mutates between exits.
+ * The returned anonymous class implements Clock and exposes the mutable
+ * `$time` public property; PHP cannot express that as a return type
+ * without naming the anonymous class, so we return `Clock` and rely on
+ * dynamic property access at the call sites.
  */
-function freezableClockAt(string $iso): Clock&\stdClass
+function freezableClockAt(string $iso): Clock
 {
     return new class(CarbonImmutable::parse($iso)) implements Clock
     {

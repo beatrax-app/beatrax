@@ -11,6 +11,7 @@ use Livewire\LivewireManager;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
+use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
 use Modules\Desktop\Internal\Native\TrayMenuBuilder;
@@ -19,6 +20,7 @@ use Modules\Desktop\Public\Contracts\OsThemeSignal;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Import\Public\Events\TransactionImported;
+use Native\Desktop\Events\ChildProcess\ProcessExited;
 use Native\Desktop\Events\Windows\WindowBlurred;
 use Native\Desktop\Events\Windows\WindowFocused;
 
@@ -68,6 +70,12 @@ final class DesktopServiceProvider extends ServiceProvider
 
         // D-12 / D-13 / D-14 OS-notification dispatcher.
         $this->app->singleton(DispatchOsNotification::class);
+
+        // D-07 worker crash-loop alert listener. Singleton because the
+        // rolling crash-counter state lives on the listener — it must
+        // survive across multiple `ProcessExited` events the NativePHP
+        // shell fires throughout the app's lifetime.
+        $this->app->singleton(SurfaceWorkerCrashAlert::class);
 
         // OsThemeProbe is bound to the OsThemeSignal contract ONLY
         // when the app is running inside the NativePHP bundle. Under
@@ -141,5 +149,14 @@ final class DesktopServiceProvider extends ServiceProvider
         $events->listen(TransactionImported::class, [DispatchOsNotification::class, 'handleTransactionImported']);
         $events->listen(DriftAlertOpened::class, [DispatchOsNotification::class, 'handleDriftAlert']);
         $events->listen(ForecastShortfallDetected::class, [DispatchOsNotification::class, 'handleForecastShortfall']);
+
+        // D-07 worker crash-loop subscription. NativePHP fires
+        // `ProcessExited` for every supervised child-process exit; the
+        // listener accumulates exits in a rolling window and only
+        // escalates once the threshold is crossed. The subscription is
+        // bundle-only because the listener calls the `Notification`
+        // facade when the window is unfocused — under Herd / in tests
+        // there is no NativePHP HTTP client to push to.
+        $events->listen(ProcessExited::class, [SurfaceWorkerCrashAlert::class, 'handle']);
     }
 }

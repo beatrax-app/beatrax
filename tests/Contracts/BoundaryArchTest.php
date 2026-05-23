@@ -90,6 +90,12 @@ arch('no Laravel facade usage in module code')
         'Modules\\Desktop\\Internal\\Native\\TrayMenuBuilder',
         'Modules\\Desktop\\Internal\\Native\\OsThemeProbe',
         'Modules\\Desktop\\Internal\\Listeners\\DispatchOsNotification',
+        // SurfaceWorkerCrashAlert calls Notification::title()->...->show()
+        // for the D-07 OS notification when the window is unfocused.
+        // The other four collaborators (Clock, DatabaseManager,
+        // WindowFocusState, UrlGenerator) come through constructor DI;
+        // only the Notification facade chain itself is unavoidable.
+        'Modules\\Desktop\\Internal\\Listeners\\SurfaceWorkerCrashAlert',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')
