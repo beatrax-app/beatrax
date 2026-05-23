@@ -208,6 +208,12 @@ return [
         // between the app shell and the nested Electron Framework that aborts
         // launch on Apple Silicon.
         'php scripts/nativephp_force_adhoc_signing.php',
+
+        // Expose `#plugin/*` in the electron package.json `imports` map so
+        // subpath imports like `#plugin/server/state.js` resolve under Node
+        // subpath imports. The NativePHP-published template only declares the
+        // bare `#plugin` entry, which makes the Vite / Rollup build abort.
+        'php scripts/nativephp_patch_electron_imports.php',
     ],
 
     'postbuild' => [
