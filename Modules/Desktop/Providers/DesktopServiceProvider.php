@@ -8,6 +8,7 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
@@ -15,6 +16,7 @@ use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
 use Modules\Desktop\Internal\Native\TrayMenuBuilder;
+use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
@@ -77,6 +79,11 @@ final class DesktopServiceProvider extends ServiceProvider
         // shell fires throughout the app's lifetime.
         $this->app->singleton(SurfaceWorkerCrashAlert::class);
 
+        // D-08 window-close decision service. Singleton because it is
+        // stateless and resolved by both the Livewire prompt and the
+        // NativePHP close-intercept hook (in NativeAppServiceProvider).
+        $this->app->singleton(WindowCloseBehavior::class);
+
         // OsThemeProbe is bound to the OsThemeSignal contract ONLY
         // when the app is running inside the NativePHP bundle. Under
         // Herd / in tests / before the Electron shell is ready, no
@@ -110,6 +117,7 @@ final class DesktopServiceProvider extends ServiceProvider
 
         $livewire->component('desktop.setup-screen', SetupScreen::class);
         $livewire->component('desktop.welcome-screen', WelcomeScreen::class);
+        $livewire->component('desktop.close-window-prompt', CloseWindowPrompt::class);
 
         // Focus-state + OS-notification wiring is bundle-only. Under
         // Herd / in tests / before the Electron shell is ready,
