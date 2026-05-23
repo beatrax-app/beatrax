@@ -348,6 +348,62 @@ it('exempts the signup route so the welcome → signup chain does not loop back'
         ->assertOk();
 });
 
+it('exempts the Livewire AJAX update endpoint so the signup submit POST is not bounced (UAT-4 regression)', function (): void {
+    // The signup form is a Livewire component: hitting "Create the first
+    // account" posts to the Livewire AJAX endpoint (`*livewire.update`),
+    // not to /signup directly. The Livewire route is registered on the
+    // `web` middleware group, so EnsureDatabaseReady runs against it.
+    // Without an exemption, a fresh-install POST is short-circuited to
+    // /welcome with a 302 BEFORE SignupAction ever runs — the user is
+    // returned to the welcome screen and no account is created. The
+    // exemption matches the `livewire.update` suffix the framework uses
+    // for both the default and any custom Livewire update route.
+    expect(User::query()->count())->toBe(0);
+
+    // Register a stub route ending with `livewire.update` on the bare
+    // `web` group to drive the production middleware stack symmetrically
+    // with how Livewire registers its own AJAX endpoint.
+    $this->app['router']
+        ->middleware(['web'])
+        ->post('/__test/fake-livewire/update', static fn () => 'LW-UPDATE')
+        ->name('test-livewire.update');
+
+    $this->post('/__test/fake-livewire/update')
+        ->assertOk()
+        ->assertSee('LW-UPDATE');
+});
+
+it('exempts the default-livewire.update route name specifically (Livewire 4 default)', function (): void {
+    // Livewire 4's HandleRequests mechanism names its default update
+    // route `default-livewire.update`. The exemption suffix-matches on
+    // `livewire.update`, so the default name resolves through the gate
+    // even on a fresh install.
+    expect(User::query()->count())->toBe(0);
+
+    $this->app['router']
+        ->middleware(['web'])
+        ->post('/__test/default-lw/update', static fn () => 'DEFAULT-LW')
+        ->name('default-livewire.update-test-stub');
+
+    // The stub above is named with a non-suffix-matching name so it
+    // would NOT be exempt — used as a control to prove the suffix
+    // matcher is doing the work. Now register the real-name variant:
+    $this->app['router']
+        ->middleware(['web'])
+        ->post('/__test/real-default-lw/update', static fn () => 'REAL-LW-UPDATE')
+        ->name('default-livewire.update');
+
+    // Control: a route that merely contains the substring but does not
+    // end with `livewire.update` is still gated.
+    $this->post('/__test/default-lw/update')
+        ->assertRedirect(route('desktop.welcome'));
+
+    // Real-shaped Livewire endpoint name: exempt.
+    $this->post('/__test/real-default-lw/update')
+        ->assertOk()
+        ->assertSee('REAL-LW-UPDATE');
+});
+
 it('redirects a fresh-install production-wired request to welcome (end-to-end gate)', function (): void {
     // Drive the production middleware stack — register a stub route on
     // the bare `web` group (no explicit EnsureDatabaseReady), so the
