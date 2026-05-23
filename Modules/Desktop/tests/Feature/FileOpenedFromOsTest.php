@@ -113,6 +113,55 @@ it('FileOpenIntake canonicalizes a traversal path and rejects it when the realpa
     Event::assertNotDispatched(FileOpenedFromOs::class);
 })->group('phase-15');
 
+it('FileOpenIntake accepts a small .eml file under the per-extension cap (IN-05)', function (): void {
+    Event::fake([FileOpenedFromOs::class]);
+
+    $path = $this->fixturesDir.'/small.eml';
+    file_put_contents($path, "From: a@b\nSubject: x\n\nhello");
+
+    /** @var FileOpenIntake $intake */
+    $intake = app(FileOpenIntake::class);
+    $intake->receive($path);
+
+    Event::assertDispatched(FileOpenedFromOs::class);
+})->group('phase-15');
+
+it('FileOpenIntake rejects a .eml file above the tighter per-extension eml cap (IN-05)', function (): void {
+    // The phase-15 fix tightens the .eml cap from the old single
+    // 50 MB constant to a 5 MB per-extension override. A 6 MB
+    // synthetic .eml must now be rejected; the previous behaviour
+    // would have accepted it.
+    Event::fake([FileOpenedFromOs::class]);
+
+    $path = $this->fixturesDir.'/oversize.eml';
+    $sixMb = str_repeat('a', 6 * 1024 * 1024);
+    file_put_contents($path, "From: a@b\nSubject: big\n\n".$sixMb);
+
+    /** @var FileOpenIntake $intake */
+    $intake = app(FileOpenIntake::class);
+    $intake->receive($path);
+
+    Event::assertNotDispatched(FileOpenedFromOs::class);
+})->group('phase-15');
+
+it('FileOpenIntake accepts a .csv file up to the broader 50 MB cap (IN-05 regression guard)', function (): void {
+    // The .csv cap stays at 50 MB. A 6 MB CSV — rejected as an .eml
+    // above — must still be accepted as a .csv. The assertion guards
+    // against an accidental over-tightening of the per-extension
+    // override that would break legitimate bank-export imports.
+    Event::fake([FileOpenedFromOs::class]);
+
+    $path = $this->fixturesDir.'/big-export.csv';
+    $sixMb = str_repeat('a', 6 * 1024 * 1024);
+    file_put_contents($path, "date,amount\n".$sixMb);
+
+    /** @var FileOpenIntake $intake */
+    $intake = app(FileOpenIntake::class);
+    $intake->receive($path);
+
+    Event::assertDispatched(FileOpenedFromOs::class);
+})->group('phase-15');
+
 it('FileStagingPage routes .csv FileOpenedFromOs to the import staging flow', function (): void {
     $user = User::query()->create([
         'username' => 'csv-routing-fixture',
