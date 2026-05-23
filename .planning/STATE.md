@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
-status: executing
-stopped_at: Phase 15 plan 03 complete — bundled worker daemon + timer scheduler + worker-crash alert + first-close prompt (commits 98cb8f2, 5753ff6, 65eccb8, b66fdd8, 9b392db)
-last_updated: "2026-05-23T14:04:00.950Z"
+status: verifying
+stopped_at: Phase 15 complete (last plan 04) — file associations end-to-end, pending intent round-trip, deferred-items consolidated; ready for phase-level verification
+last_updated: "2026-05-23T14:32:45.956Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 10
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 21
-  completed_plans: 20
-  percent: 30
+  completed_plans: 21
+  percent: 40
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 
 Phase: 15 (desktop-shell-nativephp-integration) — EXECUTING
 Plan: 7 of 7 (plans 01, 05, 06, 07 complete; next is one of 02, 03, 04)
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-23
 
 ## Performance Metrics
@@ -63,6 +63,7 @@ Last activity: 2026-05-23
 | Phase 15 P07 | 105m | 3 tasks | 27 files |
 | Phase 15 P02 | 92m | 2 tasks | 11 files |
 | Phase 15 P03 | 11min | 3 tasks tasks | 8 created, 7 modified files |
+| Phase 15 P04 | 24 | - tasks | - files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 15-02]: native chrome wired — D-09 tray, D-10 stateful window, D-11 app menu with verbatim diederik-specific entries; OsThemeSignal contract implemented by OsThemeProbe (bundle-gated binding); D-12 OS notifications via DispatchOsNotification with D-13 focus-gate via WindowFocusState; D-14 deep-link via NotificationDeepLink Public event (listener lands in 15-04)
 - [Phase ?]: [Phase 15-02]: bundle-gated subscriptions pattern — every native-shell-side-effect (contract bindings, event subscriptions, OS notifications) gates on nativephp-internal.running=true; under Herd / CI / tests, the in-app SystemAlertsBanner handles the case and the binding/subscription is absent
 - [Phase ?]: Phase 15 P03: D-05/D-06 worker+scheduler config, D-07 SurfaceWorkerCrashAlert (rolling-window detector + focus-gated OS notification), D-08 CloseWindowPrompt + WindowCloseBehavior (users.close_behavior + allow-list guard)
+- [Phase ?]: [Phase 15-04]: PKG-06 file associations shipped — FileOpenIntake security boundary, FileStagingPage with read-and-clear at mount, PendingFileIntent session-store with stale-path realpath check, ContinuePendingFileIntentAfterLogin for the D-04 round-trip; .csv routes to Modules/Import (SC3 caveat), .eml routes to Modules/Receipts via the Public FileOpenedFromOs event
+- [Phase ?]: [Phase 15-04]: 15-02 NotificationDeepLink click listener + 15-03 close-window-choice JS glue consolidated here as deferred items — NavigateOnNotificationDeepLink + ApplyCloseWindowChoice + in-layout JS hook + /desktop/close-action route. Full Electron-side closable(false) pre-prompt intercept remains a Phase 21 beta HUMAN-UAT item
 
 ### Pending Todos
 
@@ -141,8 +144,8 @@ Items acknowledged at v1.0 milestone close on 2026-05-19. Carried forward into v
 
 ## Session Continuity
 
-Last session: 2026-05-23T14:04:00.946Z
-Stopped at: Phase 15 plan 03 complete — bundled worker daemon + timer scheduler + worker-crash alert + first-close prompt (commits 98cb8f2, 5753ff6, 65eccb8, b66fdd8, 9b392db)
+Last session: 2026-05-23T14:32:45.952Z
+Stopped at: Phase 15 complete (last plan 04) — file associations end-to-end, pending intent round-trip, deferred-items consolidated; ready for phase-level verification
 Resume: Run `/gsd:execute-phase 15` to pick up the next Phase 15 plan (02, 03, or 04)
 
 Next action: `/gsd:execute-phase 15` — continue with one of plans 02 (native chrome), 03 (worker daemon), or 04 (file associations)

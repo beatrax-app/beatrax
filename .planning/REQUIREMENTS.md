@@ -15,7 +15,7 @@
 - [x] **PKG-03**: Queue rewire — `database` queue driver + `cache.locks_store=database` + `ShouldBeUniqueUntilProcessing` jobs' `uniqueVia()` lock store migrated; Horizon gated on `DIEDERIK_RUNTIME=herd` dev-mode only; chain-resolution end-to-end Pest test against `database` driver under concurrent load
 - [x] **PKG-04**: `nativephp/desktop ^2.2` integration producing `.dmg` (macOS), `.msi/.exe` (Windows), and `.AppImage/.deb` (Linux) installers via `php artisan native:build`
 - [x] **PKG-05**: Native chrome — window, dock/taskbar icon, app menu (File / Edit / View / Window / Help with standard items), system tray, OS notifications, dark-mode follows OS
-- [ ] **PKG-06**: File-association handlers — double-clicking a `.eml` or `.csv` file on macOS / Windows / Linux opens diederik with ingestion intent
+- [x] **PKG-06**: File-association handlers — double-clicking a `.eml` or `.csv` file on macOS / Windows / Linux opens diederik with ingestion intent
 - [x] **PKG-07**: PHP 8.4 bundle validation — Larastan L10 strict + Pint + Pest all pass on PHP 8.4 (project dev pin stays 8.5; bundle ships 8.4 until `nativephp/php-bin` 8.5 builds land)
 - [x] **PKG-08**: macOS Hardened Runtime entitlements file (`com.apple.security.cs.allow-unsigned-executable-memory`, `com.apple.security.cs.disable-library-validation`) configured so bundled PHP runs under notarization
 
@@ -143,7 +143,7 @@ Which phase covers which requirement. Updated during roadmap creation (2026-05-1
 | PKG-03 | Phase 14 | Complete |
 | PKG-04 | Phase 15 | Complete |
 | PKG-05 | Phase 15 | Complete |
-| PKG-06 | Phase 15 | Pending |
+| PKG-06 | Phase 15 | Complete |
 | PKG-07 | Phase 15 | Complete |
 | PKG-08 | Phase 15 | Complete |
 | MULTI-01 | Phase 12 | Complete |
