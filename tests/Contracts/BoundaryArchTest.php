@@ -96,6 +96,16 @@ arch('no Laravel facade usage in module code')
         // WindowFocusState, UrlGenerator) come through constructor DI;
         // only the Notification facade chain itself is unavoidable.
         'Modules\\Desktop\\Internal\\Listeners\\SurfaceWorkerCrashAlert',
+        // NavigateOnNotificationDeepLink calls Window::current()->url($route)
+        // for the D-14 notification-click deep-link. The Window facade
+        // is the only path NativePHP exposes for navigating a focused
+        // window; no constructor-injection seam exists.
+        'Modules\\Desktop\\Internal\\Listeners\\NavigateOnNotificationDeepLink',
+        // ApplyCloseWindowChoice calls App::quit() and
+        // Window::current()->hide() for the D-08 close-action JS glue
+        // (deferred from plan 15-03). Both facades are canonical
+        // NativePHP API shapes with no constructor-injection seam.
+        'Modules\\Desktop\\Internal\\Listeners\\ApplyCloseWindowChoice',
     ]);
 
 arch('Money\\Money types stay inside the ASN adapter folder')
