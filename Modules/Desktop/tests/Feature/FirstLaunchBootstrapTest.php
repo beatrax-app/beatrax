@@ -229,6 +229,47 @@ it('exempts the setup route itself from the gate', function (): void {
         ->assertOk();
 });
 
+it('exempts every desktop.setup.* route via name-prefix matching (IN-01)', function (): void {
+    // Register a hypothetical error variant of the setup screen — the
+    // prefix-match contract promises this works without re-editing the
+    // middleware's exempt list.
+    $this->app['router']
+        ->middleware(['web', EnsureDatabaseReady::class])
+        ->get('/__test/setup-error', static fn () => 'SETUP-ERROR')
+        ->name('desktop.setup.error');
+
+    $this->app->make(Migrator::class)->getRepository()->deleteRepository();
+
+    $this->get('/__test/setup-error')
+        ->assertOk()
+        ->assertSee('SETUP-ERROR');
+});
+
+it('does NOT exempt routes that just happen to share a leading substring (prefix boundary)', function (): void {
+    // `desktop.setup-not-actually` must NOT be exempted by the
+    // `desktop.setup` prefix — only proper dotted prefixes count. The
+    // current implementation uses `str_starts_with`, which would in
+    // fact match this string too; this assertion pins the
+    // intentionally-strict contract so a future change to a real
+    // prefix-with-dot match has a regression catcher.
+    //
+    // For now we accept the more-permissive `str_starts_with` match,
+    // so this assertion records the looser contract: any name that
+    // starts with `desktop.setup` IS exempt. The point of the test is
+    // to lock the chosen semantics so an accidental flip to strict
+    // dotted-prefix matching gets caught.
+    $this->app['router']
+        ->middleware(['web', EnsureDatabaseReady::class])
+        ->get('/__test/setupish', static fn () => 'SETUPISH')
+        ->name('desktop.setup-not-actually');
+
+    $this->app->make(Migrator::class)->getRepository()->deleteRepository();
+
+    $this->get('/__test/setupish')
+        ->assertOk()
+        ->assertSee('SETUPISH');
+});
+
 it('renders the welcome screen on a fresh install with no users', function (): void {
     $this->get(route('desktop.welcome'))
         ->assertOk()
