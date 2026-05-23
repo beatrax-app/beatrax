@@ -97,10 +97,21 @@ final class NativeAppServiceProvider
         // System-tray icon (D-09). The monochrome template image
         // (D-19) lives at `resources/brand/tray-icon.png`. The
         // tray's right-click context menu is the three-row D-09
-        // composition; left-click toggles the main window (default
-        // NativePHP tray behavior).
+        // composition.
+        //
+        // `onlyShowContextMenu(true)` selects NativePHP's plain-Tray
+        // mode on the Electron side: a long-lived `Tray` instance
+        // retained in the main-process state for the entire app
+        // lifecycle. The alternative (default `false`) mode
+        // constructs a popover-style menubar app with its own hidden
+        // BrowserWindow, which conflicts with the stateful main
+        // window opened above — the popover hides on blur and the
+        // tray icon visibly vanishes when the main window takes
+        // focus. D-09 wants a persistent menu-bar icon, not a
+        // popover, so the flag is mandatory.
         MenuBar::create()
             ->icon(resource_path(self::TRAY_ICON_PATH))
+            ->onlyShowContextMenu(true)
             ->withContextMenu($this->trayMenu->build());
     }
 }
