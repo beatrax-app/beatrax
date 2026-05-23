@@ -4,7 +4,7 @@ milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: verifying
 stopped_at: Phase 15 complete (last plan 04) — file associations end-to-end, pending intent round-trip, deferred-items consolidated; ready for phase-level verification
-last_updated: "2026-05-23T14:32:45.956Z"
+last_updated: "2026-05-23T21:42:42.950Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 10
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 15 (desktop-shell-nativephp-integration) — EXECUTING
-Plan: 7 of 7 (plans 01, 05, 06, 07 complete; next is one of 02, 03, 04)
+Phase: 16
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-05-23
 
@@ -34,7 +34,7 @@ Last activity: 2026-05-23
 
 **Velocity (v1.0 baseline):**
 
-- Total plans completed: 80 (v1.0 close)
+- Total plans completed: 87 (v1.0 close)
 - v2.0 plans completed: 0
 - Total execution time: —
 
@@ -55,6 +55,7 @@ Last activity: 2026-05-23
 | 12 | 8 | - | - |
 | 13 | 3 | - | - |
 | 14 | 3 | - | - |
+| 15 | 7 | - | - |
 
 *Updated after each plan completion*
 | Phase 15 P01 | 205m | 4 tasks | 30 files |
