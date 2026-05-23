@@ -25,9 +25,24 @@ final class AsnCsvHeaderProfile
     public const EXPECTED_COLUMN_COUNT = 20;
 
     /**
+     * Column counts the sniffer accepts. ASN exports the trailing
+     * `Categorie` column inconsistently — some accounts ship 20 columns
+     * (the documented layout) while others ship only 19, omitting
+     * `Categorie`. Both are valid ASN CSVs; the adapter never reads
+     * `Categorie` or `Afschriftnummer` (indices 18 and 19) so accepting
+     * either shape is safe. Older 17/18-column variants are intentionally
+     * rejected — those predate `Afschriftnummer` and the adapter cannot
+     * resolve `Volgnummer` (column 15) deterministically against them.
+     *
+     * @var list<int>
+     */
+    public const ACCEPTED_COLUMN_COUNTS = [19, 20];
+
+    /**
      * The first two header cells. Used by HeaderSniffer to distinguish the
-     * ASN CSV from any other 20-column comma file. Locked to the empirical
-     * NL header text; if ASN renames either column the sniffer fails loudly.
+     * ASN CSV from any other comma-delimited file in the accepted column
+     * range. Locked to the empirical NL header text; if ASN renames either
+     * column the sniffer fails loudly.
      */
     public const HEADER_SIGNATURE = ['Datum', 'Je rekening'];
 

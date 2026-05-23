@@ -60,7 +60,39 @@ it('rejects a CSV with the wrong column count', function (): void {
 
     try {
         expect(fn () => $this->sniffer->sniff($tmp, AsnCsvHeaderProfile::FORMAT))
-            ->toThrow(SniffMismatchException::class, 'Expected '.AsnCsvHeaderProfile::EXPECTED_COLUMN_COUNT);
+            ->toThrow(SniffMismatchException::class, 'Expected 19 or 20 columns');
+    } finally {
+        @unlink($tmp);
+    }
+});
+
+it('accepts the 19-column ASN variant (no trailing Categorie column)', function (): void {
+    // Real ASN exports ship a 19-col shape (header ends at
+    // `Afschriftnummer`, no `Categorie`). Drop the trailing
+    // `,Categorie` column from the gold fixture's header + every row
+    // and confirm the sniffer accepts it.
+    $body = file_get_contents(base_path('tests/fixtures/asn-sample-1.csv'));
+    expect($body)->toBeString();
+    /** @var string $body */
+    $lines = explode("\n", $body);
+    foreach ($lines as $i => $line) {
+        if ($line === '') {
+            continue;
+        }
+        // Strip the LAST CSV column. Quoted-field aware enough for the
+        // fixture: drop everything after the final unquoted comma.
+        $lastComma = strrpos($line, ',');
+        if ($lastComma !== false) {
+            $lines[$i] = substr($line, 0, $lastComma);
+        }
+    }
+    $tmp = tempnam(sys_get_temp_dir(), 'sniff-asn-19col-').'.csv';
+    file_put_contents($tmp, implode("\n", $lines));
+
+    try {
+        $result = $this->sniffer->sniff($tmp, AsnCsvHeaderProfile::FORMAT);
+        expect($result->format)->toBe(AsnCsvHeaderProfile::FORMAT);
+        expect($result->columnCount)->toBe(19);
     } finally {
         @unlink($tmp);
     }
