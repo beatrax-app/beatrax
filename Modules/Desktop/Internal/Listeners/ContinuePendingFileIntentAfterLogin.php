@@ -55,20 +55,21 @@ final class ContinuePendingFileIntentAfterLogin
 
     public function handle(Login $event): void
     {
-        // Reading `pending()` triggers the stale-path realpath check
-        // inside the store. A null return means either (a) no intent
-        // was set on this session, or (b) the intent's recorded path
-        // no longer resolves. Both cases let login proceed normally —
-        // the staging page would simply render its empty state.
-        $pending = $this->intent->pending();
-        if ($pending === null) {
-            return;
-        }
-
-        // No-op beyond surfacing the intent's presence. The
-        // session-scoped store keeps the intent alive across this
-        // request boundary so the next /desktop/file-staging request
-        // — driven by the focused window navigating there — renders
-        // the PRESENT state.
+        // The whole listener exists to invoke `pending()` for its
+        // side-effect: the store's `pending()` accessor runs a
+        // realpath() / is_file() recheck on the recorded path and
+        // discards a stale entry (e.g. a flash drive that was
+        // unmounted between the double-click and the login).
+        // Calling it here on Login guarantees that the next
+        // /desktop/file-staging navigation either finds a still-valid
+        // intent (and renders the PRESENT state bound to it) or
+        // finds nothing (and renders the empty state) — never a
+        // stale row pointing at a vanished file.
+        //
+        // The return value is intentionally discarded; the staging
+        // page reads the same store on its next render and consumes
+        // the intent there. Removing this call would silently
+        // re-introduce stale-intent renders.
+        $this->intent->pending();
     }
 }
