@@ -76,8 +76,17 @@ if ($source === false) {
     exit(1);
 }
 
-if (preg_match('/\bidentity\s*:/', $source) === 1) {
-    fwrite(STDOUT, "nativephp_force_adhoc_signing: identity already configured, leaving as-is.\n");
+// Scope the idempotency check to the `mac: { ... }` block — an
+// `identity:` key anywhere else in the electron-builder config
+// (`appx: { identity: ... }`, `publish: { identity: ... }`, an
+// unrelated future block) must NOT cause the patch to be skipped or
+// the next macOS build will silently re-acquire the partial-signing
+// bug this script exists to prevent. The `[^{}]*` body restricts the
+// `\bidentity\s*:` match to the innermost `mac:` block; the `/s`
+// flag lets the body span newlines so the multi-line config layout
+// electron-builder ships matches.
+if (preg_match('/\bmac\s*:\s*\{[^{}]*\bidentity\s*:/s', $source) === 1) {
+    fwrite(STDOUT, "nativephp_force_adhoc_signing: mac.identity already configured, leaving as-is.\n");
 
     exit(0);
 }
