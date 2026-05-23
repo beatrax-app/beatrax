@@ -182,12 +182,23 @@ it('redirects to the setup route when migrations are pending', function (): void
         ->assertRedirect(route('desktop.setup'));
 });
 
-it('lets requests through when no migrations are pending', function (): void {
+it('lets requests through when no migrations are pending and at least one user exists', function (): void {
     $this->app['router']
         ->middleware(['web', EnsureDatabaseReady::class])
         ->get('/__test/gated-ok', static fn () => 'GATED-OK');
 
-    // RefreshDatabase has already migrated.
+    // RefreshDatabase has already migrated; seed a user so the
+    // fresh-install branch does not bounce us to /welcome — the
+    // pass-through case is "migrations done AND at least one account
+    // exists", i.e. a normal post-signup runtime.
+    User::query()->create([
+        'username' => 'existing',
+        'password' => bcrypt('not-the-real-password'),
+        'period_start_day' => 1,
+        'default_currency_view' => 'EUR',
+        'receipt_conflict_resolution' => 'unset',
+    ]);
+
     $this->get('/__test/gated-ok')
         ->assertOk()
         ->assertSee('GATED-OK');
@@ -276,6 +287,80 @@ it('renders the welcome screen on a fresh install with no users', function (): v
         ->assertOk()
         ->assertSee('Welcome to diederik')
         ->assertSee('Get started');
+});
+
+it('redirects a fresh-install gated request to the welcome screen when migrations are done but no user exists (UAT-1 regression)', function (): void {
+    // The cold-start path NativePHP::boot() leaves behind: migrations
+    // already ran (so hasPendingMigrations() is false), but no user has
+    // ever been created on this device. Before the UAT-1 fix the gate
+    // middleware was a pass-through here and the user landed on /login;
+    // the welcome screen was effectively unreachable. The fix funnels
+    // the fresh-install signal through the gate so the first-launch UX
+    // actually fires.
+    $this->app['router']
+        ->middleware(['web', EnsureDatabaseReady::class])
+        ->get('/__test/cold-start', static fn () => 'COLD-START');
+
+    // RefreshDatabase leaves the schema migrated with zero users —
+    // mirrors the post-boot() / pre-signup state on a fresh install.
+    expect(User::query()->count())->toBe(0);
+
+    $this->get('/__test/cold-start')
+        ->assertRedirect(route('desktop.welcome'));
+});
+
+it('does not redirect to welcome once at least one user exists (post-signup runtime)', function (): void {
+    $this->app['router']
+        ->middleware(['web', EnsureDatabaseReady::class])
+        ->get('/__test/post-signup', static fn () => 'POST-SIGNUP');
+
+    User::query()->create([
+        'username' => 'partner',
+        'password' => bcrypt('not-the-real-password'),
+        'period_start_day' => 1,
+        'default_currency_view' => 'EUR',
+        'receipt_conflict_resolution' => 'unset',
+    ]);
+
+    $this->get('/__test/post-signup')
+        ->assertOk()
+        ->assertSee('POST-SIGNUP');
+});
+
+it('exempts the welcome route itself from the fresh-install gate', function (): void {
+    // RefreshDatabase + zero users == fresh-install state. The welcome
+    // route must render its own page rather than redirecting onto itself.
+    expect(User::query()->count())->toBe(0);
+
+    $this->get(route('desktop.welcome'))
+        ->assertOk()
+        ->assertSee('Welcome to diederik');
+});
+
+it('exempts the signup route so the welcome → signup chain does not loop back', function (): void {
+    // The "Get started" button on the welcome screen links to /signup.
+    // Because the fresh-install state still holds (no users yet), the
+    // gate would loop the user back to /welcome without an explicit
+    // exemption for the signup route name.
+    expect(User::query()->count())->toBe(0);
+
+    $this->get(route('signup'))
+        ->assertOk();
+});
+
+it('redirects a fresh-install production-wired request to welcome (end-to-end gate)', function (): void {
+    // Drive the production middleware stack — register a stub route on
+    // the bare `web` group (no explicit EnsureDatabaseReady), so the
+    // assertion proves the middleware is wired via bootstrap/app.php
+    // and that the welcome branch fires through the production wiring.
+    $this->app['router']
+        ->middleware(['web'])
+        ->get('/__test/production-cold-start', static fn () => 'PRODUCTION-COLD-START');
+
+    expect(User::query()->count())->toBe(0);
+
+    $this->get('/__test/production-cold-start')
+        ->assertRedirect(route('desktop.welcome'));
 });
 
 it('NativeAppServiceProvider::boot() runs pending migrations before opening the main window', function (): void {
