@@ -192,6 +192,35 @@ it('lets requests through when no migrations are pending', function (): void {
         ->assertSee('GATED-OK');
 });
 
+it('registers EnsureDatabaseReady globally on the web middleware group', function (): void {
+    // The middleware must be appended to the `web` group in
+    // bootstrap/app.php so production routes (not just the ad-hoc
+    // /__test/gated stubs above) get the redirect on pending state.
+    // Driving the assertion through the framework's web group lets us
+    // catch a regression if the bootstrap-level registration is ever
+    // removed.
+    /** @var \Illuminate\Routing\Router $router */
+    $router = $this->app['router'];
+    $webGroup = $router->getMiddlewareGroups()['web'] ?? [];
+    expect($webGroup)->toContain(EnsureDatabaseReady::class);
+});
+
+it('redirects a real web-group request to setup when migrations are pending (production wiring)', function (): void {
+    // Drive the production middleware stack: register a stub route on
+    // the bare `web` group (no explicit EnsureDatabaseReady) so the
+    // assertion proves the middleware is wired via bootstrap/app.php's
+    // `web(append: [...])` call rather than the route-level decoration
+    // the earlier /__test/gated assertion relies on.
+    $this->app['router']
+        ->middleware(['web'])
+        ->get('/__test/production-gated', static fn () => 'PRODUCTION-GATED');
+
+    $this->app->make(Migrator::class)->getRepository()->deleteRepository();
+
+    $this->get('/__test/production-gated')
+        ->assertRedirect(route('desktop.setup'));
+});
+
 it('exempts the setup route itself from the gate', function (): void {
     // Drop the migrations repository so the gate is "pending".
     $this->app->make(Migrator::class)->getRepository()->deleteRepository();
