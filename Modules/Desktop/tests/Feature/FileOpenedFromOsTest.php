@@ -113,7 +113,7 @@ it('FileOpenIntake canonicalizes a traversal path and rejects it when the realpa
     Event::assertNotDispatched(FileOpenedFromOs::class);
 })->group('phase-15');
 
-it('routes .csv FileOpenedFromOs to the import staging flow', function (): void {
+it('FileStagingPage routes .csv FileOpenedFromOs to the import staging flow', function (): void {
     $user = User::query()->create([
         'username' => 'csv-routing-fixture',
         'password' => 'opensesame',
@@ -139,7 +139,7 @@ it('routes .csv FileOpenedFromOs to the import staging flow', function (): void 
     $response->assertSee('Start import');
 })->group('phase-15');
 
-it('routes .eml FileOpenedFromOs to the receipts staging flow', function (): void {
+it('FileStagingPage routes .eml FileOpenedFromOs to the receipts staging flow', function (): void {
     $user = User::query()->create([
         'username' => 'eml-routing-fixture',
         'password' => 'opensesame',
@@ -162,7 +162,7 @@ it('routes .eml FileOpenedFromOs to the receipts staging flow', function (): voi
     $response->assertSee('Start import');
 })->group('phase-15');
 
-it('staging page shows the empty state when no file resolves', function (): void {
+it('FileStagingPage shows the empty state when no file resolves', function (): void {
     $user = User::query()->create([
         'username' => 'empty-state-fixture',
         'password' => 'opensesame',
@@ -176,7 +176,7 @@ it('staging page shows the empty state when no file resolves', function (): void
     $response->assertSee("We couldn't open that file");
 })->group('phase-15');
 
-it('pending file intent survives the login round-trip', function (): void {
+it('pending intent survives login: file held across login round-trip', function (): void {
     // Step 1: while logged OUT, the OS hands diederik a file. The intake
     // route stores the validated intent in PendingFileIntent.
     $user = User::query()->create([
@@ -291,7 +291,7 @@ it('stale pending intent is discarded; login proceeds normally', function (): vo
     $response->assertSee("We couldn't open that file");
 })->group('phase-15');
 
-it('single-instance file open focuses the existing window', function (): void {
+it('single instance file open focuses the existing window', function (): void {
     // Cross-OS contract: a running-instance file open feeds the SAME
     // FileOpenIntake pathway as a cold start. Both produce a
     // FileOpenedFromOs emission with the validated path + extension.
