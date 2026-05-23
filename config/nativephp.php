@@ -214,6 +214,17 @@ return [
         // subpath imports. The NativePHP-published template only declares the
         // bare `#plugin` entry, which makes the Vite / Rollup build abort.
         'php scripts/nativephp_patch_electron_imports.php',
+
+        // Mark the macOS menu-bar tray icon as a NativeImage template image
+        // so macOS auto-tints it for the active menu-bar appearance (white
+        // in dark menu bar, black in light). NativePHP's PHP `MenuBar` API
+        // does not surface a template-image flag and the Electron-side
+        // `/create` handler constructs `new Tray(<path>)` without ever
+        // calling `setTemplateImage(true)`, which leaves the tray icon
+        // rendering full-color. This hook patches the built
+        // `electron-plugin/dist/server/api/menuBar.js` to construct a
+        // NativeImage, flag it as a template, and hand it to `new Tray`.
+        'php scripts/nativephp_patch_tray_template_image.php',
     ],
 
     'postbuild' => [
