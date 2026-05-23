@@ -22,7 +22,6 @@ use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
 use Modules\Desktop\Internal\Native\PendingFileIntent;
-use Modules\Desktop\Internal\Native\TrayMenuBuilder;
 use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
@@ -42,7 +41,6 @@ use Native\Desktop\Events\Windows\WindowFocused;
  * `register()` binds the native-chrome singletons:
  *
  *   - `AppMenuBuilder` (D-11 application-menu composition)
- *   - `TrayMenuBuilder` (D-09 system-tray context-menu composition)
  *   - `WindowFocusState` (D-13 focus-state tracker — the OS
  *     notification dispatcher consults this to decide whether to
  *     fire or stay quiet)
@@ -69,11 +67,18 @@ final class DesktopServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Native-chrome builders — composed by NativeAppServiceProvider
-        // at NativePHP boot. Singleton because each builder is
-        // stateless and the boot path resolves them once per launch.
+        // Native-chrome application-menu builder — composed by
+        // NativeAppServiceProvider at NativePHP boot. Singleton
+        // because the builder is stateless and the boot path resolves
+        // it once per launch.
+        //
+        // The macOS menu-bar tray (D-09) is no longer composed via a
+        // PHP-side builder; the persistent tray is created directly in
+        // the Electron main process by
+        // `scripts/nativephp_inject_persistent_tray.php` (see the
+        // `NativeAppServiceProvider` class docblock for the
+        // architectural rationale).
         $this->app->singleton(AppMenuBuilder::class);
-        $this->app->singleton(TrayMenuBuilder::class);
 
         // D-13 focus state — single shared instance so the focus /
         // blur subscribers and the OS-notification dispatcher see

@@ -6,10 +6,8 @@ namespace Modules\Desktop\Internal;
 
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
-use Modules\Desktop\Internal\Native\TrayMenuBuilder;
 use Native\Desktop\Contracts\WindowManager;
 use Native\Desktop\Facades\Menu;
-use Native\Desktop\Facades\MenuBar;
 
 /**
  * The NativePHP-booted application provider.
@@ -18,28 +16,43 @@ use Native\Desktop\Facades\MenuBar;
  * `config/nativephp.php` (via `app(config('nativephp.provider'))`) and
  * calls `boot()` once the native shell has started. Because the class is
  * resolved through the container, its constructor dependencies are
- * autowired — the WindowManager contract + the two menu builders ride
+ * autowired — the WindowManager contract + the AppMenuBuilder ride
  * through constructor DI so the project's "no facade calls in module
  * code" rule stays intact for the builder construction itself.
  *
  * The provider IS on the facade allow-list (BoundaryArchTest +
- * phpstan.neon) because the `Menu::create()` and `MenuBar::create()`
- * facade calls cannot be re-routed: NativePHP wires the menu / tray
- * via those facades alone, and there is no container-bound
- * alternative path. The crossing stays confined to this one file plus
- * the two builders.
+ * phpstan.neon) because the `Menu::create()` facade call cannot be
+ * re-routed: NativePHP wires the application menu via that facade alone,
+ * and there is no container-bound alternative path. The crossing stays
+ * confined to this one file plus the AppMenuBuilder.
  *
  * `boot()` runs the first-launch DB bootstrap (D-21 / D-22 / D-23)
  * before any window opens so the schema is in place for the very
  * first request the just-opened window makes, then opens the single
  * application window that renders the diederik web UI (D-10: size +
- * position persist via `WindowManager::open()`'s `rememberState()`),
+ * position persist via `WindowManager::open()`'s `rememberState()`) and
  * installs the app menu (D-11 — File/Edit/View/Window/Help + the
- * diederik-specific File and Help entries), and the system-tray icon
- * (D-09 — left-click toggles window show/hide, right-click shows the
- * three-row context menu). The tray icon is the monochrome/template
- * image at `resources/brand/tray-icon.png` so the OS tints it
- * natively for the active menu-bar theme (D-19).
+ * diederik-specific File and Help entries).
+ *
+ * The macOS menu-bar tray icon (D-09) is intentionally NOT installed
+ * through NativePHP's `MenuBar` facade. That facade is a wrapper around
+ * the npm `menubar` library which produces a popover-style menubar app
+ * whose context-menu items couple to the focused BrowserWindow (the
+ * `link`-type items in the Electron `compileMenu` helper early-return
+ * when no window is focused), so once the user closes the main window
+ * via the X button the tray's "Open diederik" item silently does
+ * nothing — the wrong paradigm for D-09 (the tray must outlive any
+ * single window so it can re-open the main window from any state).
+ *
+ * Instead, the persistent tray is created directly in the Electron
+ * main process via a durable prebuild patch
+ * (`scripts/nativephp_inject_persistent_tray.php`) that wires a native
+ * Electron `Tray` instance with a template-flagged icon and a context
+ * menu whose handlers show + focus the main window, or re-construct it
+ * via the NativePHP `/api/window/open` endpoint if it was closed. The
+ * tray asset (monochrome black-on-transparent silhouette) lives at
+ * `resources/brand/tray-icon.png` (with a `@2x` sibling) and is staged
+ * into the build by `scripts/nativephp_stage_build_resources.php`.
  */
 final class NativeAppServiceProvider
 {
@@ -47,24 +60,17 @@ final class NativeAppServiceProvider
      * Default window dimensions. Pulled into named constants so the
      * sizing decision is reviewable in one place and `rememberState()`
      * uses these as the first-launch fallback before the persisted
-     * geometry takes over.
+     * geometry takes over. The Electron-side persistent tray's
+     * `TRAY_MAIN_WINDOW_PAYLOAD` mirrors these dimensions so a re-opened
+     * window matches the originally-opened one.
      */
     private const WINDOW_WIDTH = 1100;
 
     private const WINDOW_HEIGHT = 800;
 
-    /**
-     * Relative path under `resources/` for the monochrome system-tray
-     * icon. The actual icon is committed by plan 15-05 — the
-     * `resource_path()` resolution happens at provider boot, after
-     * the brand-assets prebuild hook has staged the file.
-     */
-    private const TRAY_ICON_PATH = 'brand/tray-icon.png';
-
     public function __construct(
         private readonly WindowManager $windows,
         private readonly AppMenuBuilder $appMenu,
-        private readonly TrayMenuBuilder $trayMenu,
         private readonly FirstLaunchBootstrap $bootstrap,
     ) {}
 
@@ -93,25 +99,5 @@ final class NativeAppServiceProvider
         // Help entries; `Menu::create()` installs them as the
         // application menu via Electron's `Menu.setApplicationMenu()`.
         Menu::create(...$this->appMenu->build());
-
-        // System-tray icon (D-09). The monochrome template image
-        // (D-19) lives at `resources/brand/tray-icon.png`. The
-        // tray's right-click context menu is the three-row D-09
-        // composition.
-        //
-        // `onlyShowContextMenu(true)` selects NativePHP's plain-Tray
-        // mode on the Electron side: a long-lived `Tray` instance
-        // retained in the main-process state for the entire app
-        // lifecycle. The alternative (default `false`) mode
-        // constructs a popover-style menubar app with its own hidden
-        // BrowserWindow, which conflicts with the stateful main
-        // window opened above — the popover hides on blur and the
-        // tray icon visibly vanishes when the main window takes
-        // focus. D-09 wants a persistent menu-bar icon, not a
-        // popover, so the flag is mandatory.
-        MenuBar::create()
-            ->icon(resource_path(self::TRAY_ICON_PATH))
-            ->onlyShowContextMenu(true)
-            ->withContextMenu($this->trayMenu->build());
     }
 }

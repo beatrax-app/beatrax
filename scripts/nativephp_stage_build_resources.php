@@ -23,10 +23,17 @@ declare(strict_types=1);
  *
  * The hook copies:
  *
- *   public/icon.png             → nativephp/electron/build/icon.png
- *   public/icon.icns            → nativephp/electron/build/icon.icns
- *   public/icon.ico             → nativephp/electron/build/icon.ico
- *   build/entitlements.mac.plist → nativephp/electron/build/entitlements.mac.plist
+ *   public/icon.png                       → nativephp/electron/build/icon.png
+ *   public/icon.icns                      → nativephp/electron/build/icon.icns
+ *   public/icon.ico                       → nativephp/electron/build/icon.ico
+ *   build/entitlements.mac.plist          → nativephp/electron/build/entitlements.mac.plist
+ *   resources/brand/tray-icon.png         → nativephp/electron/build/tray-icon.png
+ *   resources/brand/tray-icon@2x.png      → nativephp/electron/build/tray-icon@2x.png
+ *
+ * The tray-icon assets are the monochrome black-on-transparent silhouettes
+ * macOS uses as a template image in the menu bar (D-09 / D-19). The Electron
+ * main process — patched in via `scripts/nativephp_inject_persistent_tray.php`
+ * — loads them from the staged build directory at app launch.
  *
  * The hook is idempotent: it overwrites the staged copies on every run.
  * Files absent from the project root are skipped with a warning so a
@@ -59,6 +66,8 @@ $copies = [
     $projectRoot.'/public/icon.icns' => $buildDir.'/icon.icns',
     $projectRoot.'/public/icon.ico' => $buildDir.'/icon.ico',
     $projectRoot.'/build/entitlements.mac.plist' => $buildDir.'/entitlements.mac.plist',
+    $projectRoot.'/resources/brand/tray-icon.png' => $buildDir.'/tray-icon.png',
+    $projectRoot.'/resources/brand/tray-icon@2x.png' => $buildDir.'/tray-icon@2x.png',
 ];
 
 foreach ($copies as $from => $to) {
