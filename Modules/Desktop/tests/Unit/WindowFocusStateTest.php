@@ -16,25 +16,32 @@ use Modules\Desktop\Internal\Native\WindowFocusState;
  * needed.
  */
 
-it('defaults to unfocused on construction', function (): void {
+it('defaults to focused on construction (D-13 conservative default)', function (): void {
+    // The freshly-launched diederik window opens directly in front of
+    // the user, so the conservative assumption is "focused" until the
+    // first WindowBlurred event arrives. Defaulting the other way
+    // (unfocused) would let every notification fired during the boot-
+    // up race pop an OS toast on top of the in-app banner the user
+    // is already looking at — exactly the noise the D-13 focus-gate
+    // exists to prevent.
     $state = new WindowFocusState;
-
-    expect($state->isFocused())->toBeFalse();
-});
-
-it('flips to focused when markFocused() is called', function (): void {
-    $state = new WindowFocusState;
-    $state->markFocused();
 
     expect($state->isFocused())->toBeTrue();
 });
 
-it('flips back to unfocused when markBlurred() is called', function (): void {
+it('flips to unfocused when markBlurred() is called', function (): void {
     $state = new WindowFocusState;
-    $state->markFocused();
     $state->markBlurred();
 
     expect($state->isFocused())->toBeFalse();
+});
+
+it('flips back to focused when markFocused() is called after a blur', function (): void {
+    $state = new WindowFocusState;
+    $state->markBlurred();
+    $state->markFocused();
+
+    expect($state->isFocused())->toBeTrue();
 });
 
 it('is bound as a singleton so focus/blur subscribers + listeners share one instance', function (): void {
