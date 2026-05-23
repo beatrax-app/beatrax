@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\MigrationRepositoryInterface;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -199,7 +200,7 @@ it('registers EnsureDatabaseReady globally on the web middleware group', functio
     // Driving the assertion through the framework's web group lets us
     // catch a regression if the bootstrap-level registration is ever
     // removed.
-    /** @var \Illuminate\Routing\Router $router */
+    /** @var Router $router */
     $router = $this->app['router'];
     $webGroup = $router->getMiddlewareGroups()['web'] ?? [];
     expect($webGroup)->toContain(EnsureDatabaseReady::class);
@@ -296,14 +297,7 @@ it('NativeAppServiceProvider::boot() runs pending migrations before opening the 
     /** @var Migrator $real */
     $real = $this->app->make(Migrator::class);
 
-    $spy = new class(
-        $real->getRepository(),
-        $this->app->make(ConnectionResolverInterface::class),
-        $real->getFilesystem(),
-        $this->app->make(Dispatcher::class),
-        $real,
-        $fake,
-    ) extends Migrator
+    $spy = new class($real->getRepository(), $this->app->make(ConnectionResolverInterface::class), $real->getFilesystem(), $this->app->make(Dispatcher::class), $real, $fake) extends Migrator
     {
         public int $runCalls = 0;
 
