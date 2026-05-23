@@ -37,6 +37,8 @@ it('configures the application window', function (): void {
     $fake->assertOpened('main');
 });
 
+it('runs the first-launch DB bootstrap before opening the main window — see FirstLaunchBootstrapTest for the post-boot assertion (Unit suite has no DB)')->todo();
+
 it('configures the app menu via Native\\Desktop\\Facades\\Menu — deferred to manual UAT (no v2 fake for Menu)')->todo();
 
 it('configures the system tray via Native\\Desktop\\Facades\\MenuBar — deferred to manual UAT (no v2 fake for MenuBar)')->todo();
