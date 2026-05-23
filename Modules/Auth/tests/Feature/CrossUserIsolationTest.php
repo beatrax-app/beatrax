@@ -49,6 +49,18 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     'auth.users.manage',
     'auth.impersonate',
     'auth.impersonate.end',
+    // Phase 15 desktop chrome — neither surface lists foreign data.
+    // `desktop.close-prompt` is the D-08 modal: it renders the acting
+    // user's own close-behavior preference (`users.close_behavior`)
+    // and dispatches a Livewire choice event; it never reads another
+    // user's rows. `desktop.file-staging` consumes the
+    // session-scoped PendingFileIntent (cross-user isolation is
+    // proven by the dedicated test in FileOpenedFromOsTest "pending
+    // intent does not leak across users") and emits one of two
+    // copy-only states — file received vs empty — neither of which
+    // surfaces a foreign data row.
+    'desktop.close-prompt',
+    'desktop.file-staging',
 ];
 
 /**
