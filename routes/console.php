@@ -61,6 +61,42 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
     }
 })->name('email-scan.incremental')->hourly()->withoutOverlapping(30);
 
+// Desktop-shell timer-based email auto-scan (D-06). The shipped
+// NativePHP bundle has no always-on IMAP-idle daemon (that stays a
+// dev-box launchd concern); instead the scheduler — which runs
+// automatically inside a NativePHP app per the bundle scheduler
+// pattern — fires this entry every ~15 minutes so the non-technical
+// partner sees fresh receipts within a quarter-hour without manual
+// action. Cadence is shorter than the hourly `email-scan.incremental`
+// entry above on purpose: the bundle's only background-work signal
+// is this timer, and the partner has no Horizon / no dev console to
+// confirm activity. The job's ShouldBeUniqueUntilProcessing lock
+// (uniqueId=inboxId, uniqueFor=600) collapses any same-window
+// duplicate so a 15-min cadence racing the 60-min cadence is
+// harmless. Method order .name() BEFORE .everyFifteenMinutes()
+// BEFORE .withoutOverlapping(10) matches every other entry in this
+// file so Laravel CallbackEvent::withoutOverlapping reads the
+// description before throwing LogicException.
+Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
+    // Skip inboxes currently in needs_reauth so the timer tick does
+    // not queue jobs that will only early-exit. Mirrors the hourly
+    // entry above.
+    $inboxIds = $db->connection()
+        ->table('inboxes')
+        ->leftJoin('inbox_scan_state', function (JoinClause $join): void {
+            $join->on('inbox_scan_state.inbox_id', '=', 'inboxes.id')
+                ->where('inbox_scan_state.folder', '=', 'INBOX');
+        })
+        ->where(function (Builder $q): void {
+            $q->whereNull('inbox_scan_state.status')
+                ->orWhere('inbox_scan_state.status', '!=', 'needs_reauth');
+        })
+        ->pluck('inboxes.id');
+    foreach ($inboxIds as $id) {
+        $bus->dispatch(new IncrementalScanJob((int) $id));
+    }
+})->name('desktop.email-scan.timer')->everyFifteenMinutes()->withoutOverlapping(10);
+
 // Daily discovery scan: dispatch DiscoveryScanJob once per user per
 // day. The job walks every connected inbox with a broad keyword
 // query, populates discovered_senders, and never persists .eml blobs

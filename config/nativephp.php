@@ -164,7 +164,22 @@ return [
     ],
 
     /**
-     * The queue workers that get auto-started on your application start.
+     * Queue workers auto-started by the NativePHP shell (D-05).
+     *
+     * Each entry under `queue_workers` is spawned by the Electron main
+     * process as a persistent child process running `queue:work`. The
+     * NativePHP supervisor restarts the worker automatically on a
+     * single ProcessExited; a sustained crash-loop is escalated via the
+     * `SurfaceWorkerCrashAlert` listener (D-07) into a critical
+     * `system_alerts` row + OS notification.
+     *
+     * The single `default` worker drains every queued job dispatched
+     * through the `database` queue driver — the shipped bundle does
+     * NOT ship Redis (Phase 14 carve-out). Sizing matches the dev-box
+     * defaults: memory cap 128 MB, single-job timeout 60 s, 3 s sleep
+     * between empty-queue polls. The Laravel scheduler runs
+     * automatically inside a NativePHP app per RESEARCH.md Pattern 2
+     * — no extra ChildProcess and no `schedule:work` entry is needed.
      */
     'queue_workers' => [
         'default' => [
