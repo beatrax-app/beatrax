@@ -26,6 +26,14 @@ declare(strict_types=1);
 const SUPERELLIPSE_EXPONENT = 5.0;
 const ICONSET_SIZES = [16, 32, 64, 128, 256, 512];
 
+/**
+ * Fraction of the canvas the squircle silhouette fills. macOS Big Sur+
+ * leaves a transparent margin around the icon so it sits inside the
+ * Dock and Launchpad grid the same way every other native app does.
+ * Apple's template (~824/1024) lands the squircle at ~80% of the canvas.
+ */
+const SQUIRCLE_FILL = 0.8;
+
 $projectRoot = dirname(__DIR__);
 $source = $projectRoot.'/public/icon.png';
 $iconset = $projectRoot.'/.icon-build.iconset';
@@ -76,14 +84,35 @@ if ($transparent === false) {
 }
 imagefilledrectangle($out, 0, 0, $w - 1, $h - 1, $transparent);
 
-$r = ($w - 1) / 2.0;
-$cx = $w / 2.0;
-$cy = $h / 2.0;
+/*
+ * The squircle silhouette sits inside the canvas at SQUIRCLE_FILL of
+ * its width — the source artwork is downscaled into that inner area
+ * so the bundled icon matches the Dock/Launchpad sizing every other
+ * macOS app uses.
+ */
+$inner = max(1, (int) round($w * SQUIRCLE_FILL));
+$offset = (int) round(($w - $inner) / 2);
+
+$scaled = imagecreatetruecolor($inner, $inner);
+imagealphablending($scaled, false);
+imagesavealpha($scaled, true);
+$scaledTransparent = imagecolorallocatealpha($scaled, 0, 0, 0, 127);
+if ($scaledTransparent === false) {
+    fwrite(STDERR, "regenerate_app_icon: could not allocate transparent base for scaled artwork\n");
+
+    exit(1);
+}
+imagefilledrectangle($scaled, 0, 0, $inner - 1, $inner - 1, $scaledTransparent);
+imagecopyresampled($scaled, $src, 0, 0, 0, 0, $inner, $inner, $w, $h);
+
+$r = ($inner - 1) / 2.0;
+$cx = $inner / 2.0;
+$cy = $inner / 2.0;
 $n = SUPERELLIPSE_EXPONENT;
 $soft = 1.0;
 
-for ($y = 0; $y < $h; $y++) {
-    for ($x = 0; $x < $w; $x++) {
+for ($y = 0; $y < $inner; $y++) {
+    for ($x = 0; $x < $inner; $x++) {
         $dx = abs($x + 0.5 - $cx);
         $dy = abs($y + 0.5 - $cy);
         $value = (($dx / $r) ** $n) + (($dy / $r) ** $n);
@@ -98,7 +127,7 @@ for ($y = 0; $y < $h; $y++) {
             $coverage = 1.0 - ($excess / $soft);
         }
 
-        $rgba = imagecolorat($src, $x, $y);
+        $rgba = imagecolorat($scaled, $x, $y);
         $srcAlpha = ($rgba >> 24) & 0x7F;
         $srcOpacity = (127 - $srcAlpha) / 127.0;
         $outOpacity = $srcOpacity * $coverage;
@@ -115,11 +144,12 @@ for ($y = 0; $y < $h; $y++) {
         if ($color === false) {
             continue;
         }
-        imagesetpixel($out, $x, $y, $color);
+        imagesetpixel($out, $offset + $x, $offset + $y, $color);
     }
 }
 
 imagedestroy($src);
+imagedestroy($scaled);
 
 if (! imagepng($out, $source)) {
     fwrite(STDERR, "regenerate_app_icon: could not write masked {$source}\n");
