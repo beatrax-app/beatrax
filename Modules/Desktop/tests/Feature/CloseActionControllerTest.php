@@ -48,48 +48,48 @@ function inMemoryLoggerSink(array &$sink): LoggerInterface
         /** @param array<int, array{level: string, message: string, context: array<string, mixed>}> $log */
         public function __construct(public array &$log) {}
 
-        public function emergency(string|\Stringable $message, array $context = []): void
+        public function emergency(string|Stringable $message, array $context = []): void
         {
             $this->log[] = ['level' => 'emergency', 'message' => (string) $message, 'context' => $context];
         }
 
-        public function alert(string|\Stringable $message, array $context = []): void
+        public function alert(string|Stringable $message, array $context = []): void
         {
             $this->log[] = ['level' => 'alert', 'message' => (string) $message, 'context' => $context];
         }
 
-        public function critical(string|\Stringable $message, array $context = []): void
+        public function critical(string|Stringable $message, array $context = []): void
         {
             $this->log[] = ['level' => 'critical', 'message' => (string) $message, 'context' => $context];
         }
 
-        public function error(string|\Stringable $message, array $context = []): void
+        public function error(string|Stringable $message, array $context = []): void
         {
             $this->log[] = ['level' => 'error', 'message' => (string) $message, 'context' => $context];
         }
 
-        public function warning(string|\Stringable $message, array $context = []): void
+        public function warning(string|Stringable $message, array $context = []): void
         {
             $this->log[] = ['level' => 'warning', 'message' => (string) $message, 'context' => $context];
         }
 
-        public function notice(string|\Stringable $message, array $context = []): void
+        public function notice(string|Stringable $message, array $context = []): void
         {
             $this->log[] = ['level' => 'notice', 'message' => (string) $message, 'context' => $context];
         }
 
-        public function info(string|\Stringable $message, array $context = []): void
+        public function info(string|Stringable $message, array $context = []): void
         {
             $this->log[] = ['level' => 'info', 'message' => (string) $message, 'context' => $context];
         }
 
-        public function debug(string|\Stringable $message, array $context = []): void
+        public function debug(string|Stringable $message, array $context = []): void
         {
             $this->log[] = ['level' => 'debug', 'message' => (string) $message, 'context' => $context];
         }
 
         /** @param array<string, mixed> $context */
-        public function log($level, string|\Stringable $message, array $context = []): void
+        public function log($level, string|Stringable $message, array $context = []): void
         {
             $this->log[] = ['level' => (string) $level, 'message' => (string) $message, 'context' => $context];
         }
