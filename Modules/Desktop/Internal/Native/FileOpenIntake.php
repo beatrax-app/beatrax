@@ -95,9 +95,13 @@ final class FileOpenIntake
             return;
         }
 
+        // `$extension` is already constrained to SUPPORTED_EXTENSIONS
+        // by the in_array() guard above, and every supported extension
+        // has a matching MAX_BYTES entry — Larastan can prove the
+        // direct lookup is total, so no `??` fallback is needed.
         $size = @filesize($canonical);
-        $cap = self::MAX_BYTES[$extension] ?? null;
-        if ($cap === null || $size === false || $size > $cap) {
+        $cap = self::MAX_BYTES[$extension];
+        if ($size === false || $size > $cap) {
             return;
         }
 
