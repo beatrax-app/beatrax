@@ -8,10 +8,14 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\MigrationRepositoryInterface;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Http;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
+use Modules\Desktop\Internal\NativeAppServiceProvider;
+use Native\Desktop\Facades\Window;
+use Native\Desktop\Windows\Window as NativeWindow;
 
 /*
  * Drives the four behaviours of the first-launch DB bootstrap (D-21/D-22/D-23):
@@ -201,4 +205,71 @@ it('renders the welcome screen on a fresh install with no users', function (): v
         ->assertOk()
         ->assertSee('Welcome to diederik')
         ->assertSee('Get started');
+});
+
+it('NativeAppServiceProvider::boot() runs pending migrations before opening the main window', function (): void {
+    // The provider boot path must run the framework migrator BEFORE
+    // the main window opens so the just-opened window's first request
+    // sees a fully migrated schema.
+    //
+    // The real `FirstLaunchBootstrap` is `final`; we route the assertion
+    // through a Migrator spy bound on the container so the production
+    // bootstrap class is exercised end-to-end while still capturing the
+    // sequencing snapshot. The spy records the window-fake's `opened`
+    // array at each `run()` call; an empty array proves the bootstrap
+    // path executed before the provider opened the window.
+    Http::fake();
+
+    $fake = Window::fake();
+    $fake->alwaysReturnWindows([new NativeWindow('main')]);
+
+    /** @var Migrator $real */
+    $real = $this->app->make(Migrator::class);
+
+    $spy = new class(
+        $real->getRepository(),
+        $this->app->make(ConnectionResolverInterface::class),
+        $real->getFilesystem(),
+        $this->app->make(Dispatcher::class),
+        $real,
+        $fake,
+    ) extends Migrator
+    {
+        public int $runCalls = 0;
+
+        /** @var array<int, array<int, string>> */
+        public array $openedSnapshotAtRun = [];
+
+        public function __construct(
+            MigrationRepositoryInterface $repository,
+            ConnectionResolverInterface $resolver,
+            Filesystem $files,
+            Dispatcher $events,
+            private readonly Migrator $delegate,
+            private readonly object $windowFake,
+        ) {
+            parent::__construct($repository, $resolver, $files, $events);
+        }
+
+        public function paths()
+        {
+            return $this->delegate->paths();
+        }
+
+        public function run($paths = [], array $options = [])
+        {
+            $this->runCalls++;
+            /** @phpstan-ignore-next-line property.notFound — opened is a public array on WindowManagerFake */
+            $this->openedSnapshotAtRun[] = $this->windowFake->opened;
+
+            return [];
+        }
+    };
+    $this->app->instance(Migrator::class, $spy);
+
+    app(NativeAppServiceProvider::class)->boot();
+
+    expect($spy->runCalls)->toBe(1);
+    expect($spy->openedSnapshotAtRun[0] ?? null)->toBe([]);
+    $fake->assertOpened('main');
 });

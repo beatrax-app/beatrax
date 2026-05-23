@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Desktop\Internal;
 
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
+use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Modules\Desktop\Internal\Native\TrayMenuBuilder;
 use Native\Desktop\Contracts\WindowManager;
 use Native\Desktop\Facades\Menu;
@@ -28,15 +29,17 @@ use Native\Desktop\Facades\MenuBar;
  * alternative path. The crossing stays confined to this one file plus
  * the two builders.
  *
- * `boot()` opens the single application window that renders the
- * diederik web UI (D-10: size + position persist via
- * `WindowManager::open()`'s `rememberState()`), installs the app menu
- * (D-11 — File/Edit/View/Window/Help + the diederik-specific File and
- * Help entries), and the system-tray icon (D-09 — left-click toggles
- * window show/hide, right-click shows the three-row context menu).
- * The tray icon is the monochrome/template image at
- * `resources/brand/tray-icon.png` so the OS tints it natively for the
- * active menu-bar theme (D-19).
+ * `boot()` runs the first-launch DB bootstrap (D-21 / D-22 / D-23)
+ * before any window opens so the schema is in place for the very
+ * first request the just-opened window makes, then opens the single
+ * application window that renders the diederik web UI (D-10: size +
+ * position persist via `WindowManager::open()`'s `rememberState()`),
+ * installs the app menu (D-11 — File/Edit/View/Window/Help + the
+ * diederik-specific File and Help entries), and the system-tray icon
+ * (D-09 — left-click toggles window show/hide, right-click shows the
+ * three-row context menu). The tray icon is the monochrome/template
+ * image at `resources/brand/tray-icon.png` so the OS tints it
+ * natively for the active menu-bar theme (D-19).
  */
 final class NativeAppServiceProvider
 {
@@ -62,10 +65,20 @@ final class NativeAppServiceProvider
         private readonly WindowManager $windows,
         private readonly AppMenuBuilder $appMenu,
         private readonly TrayMenuBuilder $trayMenu,
+        private readonly FirstLaunchBootstrap $bootstrap,
     ) {}
 
     public function boot(): void
     {
+        // First-launch DB bootstrap (D-21 / D-22 / D-23). Runs the
+        // framework migration runner BEFORE the main window opens so
+        // every subsequent request — including the very first one
+        // resolved by the just-opened window — sees a fully migrated
+        // schema. Idempotent: when nothing is pending the migrator's
+        // own `run()` is a no-op, so re-launches after a clean install
+        // stay quiet.
+        $this->bootstrap->runPendingMigrations();
+
         // Stateful native window (D-10) — width/height are the
         // first-launch defaults; `rememberState()` persists the
         // user's resize/reposition across launches via NativePHP's
