@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
-stopped_at: Phase 15 plan 07 complete — dark-theme retrofit closure + full-coverage arch guard (commits fa9618a, 0a48be2, 37648c5)
-last_updated: "2026-05-23T13:45:51.905Z"
+stopped_at: Phase 15 plan 03 complete — bundled worker daemon + timer scheduler + worker-crash alert + first-close prompt (commits 98cb8f2, 5753ff6, 65eccb8, b66fdd8, 9b392db)
+last_updated: "2026-05-23T14:04:00.950Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
   percent: 30
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 ## Current Position
 
 Phase: 15 (desktop-shell-nativephp-integration) — EXECUTING
-Plan: 6 of 7 (plans 01, 05, 06, 07 complete; next is one of 02, 03, 04)
+Plan: 7 of 7 (plans 01, 05, 06, 07 complete; next is one of 02, 03, 04)
 Status: Ready to execute
 Last activity: 2026-05-23
 
@@ -62,6 +62,7 @@ Last activity: 2026-05-23
 | Phase 15 P05 | 50m | 4 tasks | 22 files |
 | Phase 15 P07 | 105m | 3 tasks | 27 files |
 | Phase 15 P02 | 92m | 2 tasks | 11 files |
+| Phase 15 P03 | 11min | 3 tasks tasks | 8 created, 7 modified files |
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Recent decisions affecting current work:
 - [Phase 15-07]: dark-theme retrofit complete — every remaining module's Blade views (Categorization, Chains, EmailScan, Receipts, Recurring, DriftAlerts) themed; arch-guard allow-list deleted, full-coverage regression lock active
 - [Phase ?]: [Phase 15-02]: native chrome wired — D-09 tray, D-10 stateful window, D-11 app menu with verbatim diederik-specific entries; OsThemeSignal contract implemented by OsThemeProbe (bundle-gated binding); D-12 OS notifications via DispatchOsNotification with D-13 focus-gate via WindowFocusState; D-14 deep-link via NotificationDeepLink Public event (listener lands in 15-04)
 - [Phase ?]: [Phase 15-02]: bundle-gated subscriptions pattern — every native-shell-side-effect (contract bindings, event subscriptions, OS notifications) gates on nativephp-internal.running=true; under Herd / CI / tests, the in-app SystemAlertsBanner handles the case and the binding/subscription is absent
+- [Phase ?]: Phase 15 P03: D-05/D-06 worker+scheduler config, D-07 SurfaceWorkerCrashAlert (rolling-window detector + focus-gated OS notification), D-08 CloseWindowPrompt + WindowCloseBehavior (users.close_behavior + allow-list guard)
 
 ### Pending Todos
 
@@ -139,8 +141,8 @@ Items acknowledged at v1.0 milestone close on 2026-05-19. Carried forward into v
 
 ## Session Continuity
 
-Last session: 2026-05-23T13:45:51.901Z
-Stopped at: Phase 15 plan 07 complete — dark-theme retrofit closure + full-coverage arch guard (commits fa9618a, 0a48be2, 37648c5)
+Last session: 2026-05-23T14:04:00.946Z
+Stopped at: Phase 15 plan 03 complete — bundled worker daemon + timer scheduler + worker-crash alert + first-close prompt (commits 98cb8f2, 5753ff6, 65eccb8, b66fdd8, 9b392db)
 Resume: Run `/gsd:execute-phase 15` to pick up the next Phase 15 plan (02, 03, or 04)
 
 Next action: `/gsd:execute-phase 15` — continue with one of plans 02 (native chrome), 03 (worker daemon), or 04 (file associations)
