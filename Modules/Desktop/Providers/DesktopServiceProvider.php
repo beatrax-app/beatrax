@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Providers;
 
+use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Auth\Events\Login;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
-use Native\Desktop\Events\App\OpenFile;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\FileStagingPage;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
@@ -29,6 +28,7 @@ use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Import\Public\Events\TransactionImported;
+use Native\Desktop\Events\App\OpenFile;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
 use Native\Desktop\Events\Windows\WindowBlurred;
 use Native\Desktop\Events\Windows\WindowFocused;
