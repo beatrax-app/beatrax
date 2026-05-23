@@ -53,6 +53,21 @@ final class HandleNativeOpenFile
      * NativePHP's event delivers `path` as an untyped property; defensive
      * normalization keeps the bridge tolerant of payload-shape drift
      * between NativePHP versions without weakening downstream validation.
+     *
+     * The path resolution order is intentional:
+     *
+     *   1. A string payload is returned verbatim — the canonical shape.
+     *   2. An array payload is searched for a `path` key first. macOS
+     *      open-file payloads and a future structured Electron payload
+     *      (e.g. `{'type': 'open-file', 'path': '/Users/.../x.csv'}`)
+     *      both carry the path on a named field. Iterating the array
+     *      without a key-aware lookup would pick the first non-empty
+     *      string — `'open-file'` in the example above — and downstream
+     *      `realpath()` would fail closed, silently dropping a
+     *      legitimate file-open.
+     *   3. A list-shaped payload (e.g. `[0 => '/Users/.../x.csv']`) is
+     *      handled by the iteration fallback so single-element-array
+     *      shapes some older NativePHP versions emit still resolve.
      */
     private function normalize(mixed $raw): ?string
     {
@@ -60,7 +75,26 @@ final class HandleNativeOpenFile
             return $raw;
         }
         if (is_array($raw)) {
-            foreach ($raw as $value) {
+            $pathField = $raw['path'] ?? null;
+            if (is_string($pathField) && $pathField !== '') {
+                return $pathField;
+            }
+
+            foreach ($raw as $key => $value) {
+                if ($key === 'path') {
+                    // Already inspected above; a non-string / empty
+                    // value here means the field exists but is unusable
+                    // — skip so the iteration does not pick a sibling
+                    // string off the same payload.
+                    continue;
+                }
+                if (! is_int($key)) {
+                    // Reject other named fields — they carry NativePHP
+                    // event metadata (event type, timestamp, etc.),
+                    // not the file path. The iteration fallback exists
+                    // for list-shaped payloads only.
+                    continue;
+                }
                 if (is_string($value) && $value !== '') {
                     return $value;
                 }
