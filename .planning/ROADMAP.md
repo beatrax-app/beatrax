@@ -161,7 +161,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2)*
 
 - [ ] 15-02-PLAN.md — native chrome: window/menu/tray + context-aware OS notifications
-- [ ] 15-07-PLAN.md — dark variants for remaining modules + full-coverage arch guard
+- [x] 15-07-PLAN.md — dark variants for remaining modules + full-coverage arch guard
 
 **Wave 4** *(blocked on Wave 3)*
 
@@ -278,7 +278,7 @@ Plans:
 | 12. Multi-User Activation | 8/8 | Complete    | 2026-05-20 |
 | 13. AppPaths | 3/3 | Complete    | 2026-05-20 |
 | 14. Queue Rewire + Horizon Carve-out | 3/3 | Complete    | 2026-05-22 |
-| 15. Desktop Shell (NativePHP Integration) | 3/7 | In Progress|  |
+| 15. Desktop Shell (NativePHP Integration) | 4/7 | In Progress|  |
 | 16. Developer Mode UI | 0/0 | Not started | - |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |

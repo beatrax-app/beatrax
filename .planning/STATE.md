@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
-stopped_at: Phase 15 plan 05 complete (first-launch DB bootstrap + brand icons + entitlements + CI 8.4 skeleton)
-last_updated: "2026-05-23T01:00:00Z"
+stopped_at: Phase 15 plan 07 complete — dark-theme retrofit closure + full-coverage arch guard (commits fa9618a, 0a48be2, 37648c5)
+last_updated: "2026-05-23T13:22:09.627Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 21
-  completed_plans: 17
-  percent: 81
+  completed_plans: 18
+  percent: 86
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 ## Current Position
 
 Phase: 15 (desktop-shell-nativephp-integration) — EXECUTING
-Plan: 4 of 7 (plans 01, 05, 06 complete; next is one of 02, 03, 04, 07)
-Status: Ready to execute next plan
+Plan: 5 of 7 (plans 01, 05, 06, 07 complete; next is one of 02, 03, 04)
+Status: Ready to execute
 Last activity: 2026-05-23
 
 ## Performance Metrics
@@ -60,6 +60,7 @@ Last activity: 2026-05-23
 | Phase 15 P01 | 205m | 4 tasks | 30 files |
 | Phase 15 P06 | 32m | 3 tasks | 37 files |
 | Phase 15 P05 | 50m | 4 tasks | 22 files |
+| Phase 15 P07 | 105m | 3 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,7 @@ Recent decisions affecting current work:
 - [Phase 15-05]: Plan 15-05: brand assets + entitlements stay tracked while nativephp/electron + /build output stay gitignored; a prebuild hook stages tracked files into the working dir on every native:build
 - [Phase 15-05]: Plan 15-05: composer.json php constraint relaxed from ^8.5 to ^8.4 — shipped bundle uses nativephp/php-bin 8.4, dev box runs 8.5; CI runs 8.4 on a single-axis matrix that Phase 17 will extend to 8.4+8.5
 - [Phase 15-05]: Plan 15-05: FirstLaunchBootstrap — every-launch idempotent migration via Migrator + UserDataPathService-routed SQLite path; absorbs Phase 18 auto-update migrations on the next boot (D-23)
+- [Phase 15-07]: dark-theme retrofit complete — every remaining module's Blade views (Categorization, Chains, EmailScan, Receipts, Recurring, DriftAlerts) themed; arch-guard allow-list deleted, full-coverage regression lock active
 
 ### Pending Todos
 
@@ -134,8 +136,8 @@ Items acknowledged at v1.0 milestone close on 2026-05-19. Carried forward into v
 
 ## Session Continuity
 
-Last session: 2026-05-23T01:00:00Z
-Stopped at: Phase 15 plan 05 complete — first-launch DB bootstrap + brand icons + entitlements + CI 8.4 skeleton (commits 042acbc, fcdbe2c, 8fabd53, 4cde9b0, dada476, dc71ccc)
-Resume: Run `/gsd:execute-phase 15` to pick up the next Phase 15 plan (02, 03, 04, or 07)
+Last session: 2026-05-23T13:22:06.200Z
+Stopped at: Phase 15 plan 07 complete — dark-theme retrofit closure + full-coverage arch guard (commits fa9618a, 0a48be2, 37648c5)
+Resume: Run `/gsd:execute-phase 15` to pick up the next Phase 15 plan (02, 03, or 04)
 
-Next action: `/gsd:execute-phase 15` — continue with one of plans 02 (native chrome), 03 (worker daemon), 04 (file associations), or 07 (dark-theme retrofit closure)
+Next action: `/gsd:execute-phase 15` — continue with one of plans 02 (native chrome), 03 (worker daemon), or 04 (file associations)
