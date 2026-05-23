@@ -12,30 +12,44 @@ use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Gates the application routes behind a "DB is ready" check (D-21).
+ * Gates the application routes behind the first-launch surfaces (D-21 / D-22).
  *
- * When `FirstLaunchBootstrap::hasPendingMigrations()` is true, the
- * middleware redirects every request to the `desktop.setup` route so the
- * "Setting up…" screen is visible while the bootstrap finishes its work.
- * Once migrations are no longer pending the middleware is a pass-through.
+ * Two redirect predicates, evaluated in order:
  *
- * The setup route itself is exempt — without that carve-out the redirect
- * would loop. The exemption is a NAME-PREFIX match so future extra-safe
- * URLs (an error variant of the setup screen, for example) can be added
- * under the same `desktop.setup.*` prefix without editing this list.
+ *   1. `FirstLaunchBootstrap::hasPendingMigrations()` — the migration runner
+ *      has work outstanding. The user is bounced to `desktop.setup` so the
+ *      "Setting up…" splash is visible while the bootstrap finishes. This
+ *      case is rare in practice (the NativePHP provider's `boot()` already
+ *      runs the migrator before any HTTP request) but stays in place for
+ *      upgrade-shipped migrations that absorb mid-launch.
+ *
+ *   2. `FirstLaunchBootstrap::isFreshInstall()` — migrations have run, the
+ *      `users` table is empty. This is the only reliable post-migration
+ *      signal that no account has been created on this device, so it is
+ *      what gates the welcome screen. The user is bounced to
+ *      `desktop.welcome`, which leads into `/signup` on the "Get started"
+ *      click.
+ *
+ * Both first-launch routes themselves — plus the signup ceremony they lead
+ * into — are exempted from the gate so the redirect cannot loop. The exempt
+ * list is name-prefix-matched so future extra-safe URLs (an error variant of
+ * the setup screen, for example) inherit the exemption automatically.
  */
 final class EnsureDatabaseReady
 {
     /**
-     * Route-name prefixes this middleware never redirects away from —
-     * any route whose name starts with one of these strings is treated
-     * as the gated-state-rendering surface. `desktop.setup` itself is a
-     * legitimate prefix match against itself.
+     * Route-name prefixes this middleware never redirects away from. The
+     * gated-state-rendering surfaces (setup + welcome) match themselves,
+     * and the first-user signup ceremony is included so the welcome →
+     * signup chain does not bounce back to welcome before the user can
+     * create the first account.
      *
      * @var array<int, string>
      */
     private const EXEMPT_ROUTE_PREFIXES = [
         'desktop.setup',
+        'desktop.welcome',
+        'signup',
     ];
 
     public function __construct(
@@ -54,6 +68,10 @@ final class EnsureDatabaseReady
 
         if ($this->bootstrap->hasPendingMigrations()) {
             return new RedirectResponse($this->urls->route('desktop.setup'));
+        }
+
+        if ($this->bootstrap->isFreshInstall()) {
+            return new RedirectResponse($this->urls->route('desktop.welcome'));
         }
 
         /** @var Response $response */

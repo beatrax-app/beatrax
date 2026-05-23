@@ -6,6 +6,7 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
 use Modules\Auth\Models\UserRecoveryCode;
+use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Core\Models\User;
 
@@ -33,6 +34,16 @@ function resetPageOwner(): array
 }
 
 it('renders the reset-password heading, subhead, inline help and button', function (): void {
+    // The reset-password page only makes sense once a user exists — the
+    // first-launch DB gate funnels a zero-user state through the welcome
+    // screen, so seed an owner first to exercise the actual page render.
+    // SignupAction auto-logs the new user in; the reset-password route is
+    // in the `guest` group, so log back out before issuing the GET.
+    resetPageOwner();
+    /** @var LogoutAction $logout */
+    $logout = $this->app->make(LogoutAction::class);
+    $logout();
+
     $this->get('/reset-password')
         ->assertOk()
         ->assertSeeText('Reset your password')
