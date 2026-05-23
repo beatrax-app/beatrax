@@ -52,13 +52,21 @@ final class FileOpenIntake
     public const SUPPORTED_EXTENSIONS = ['csv', 'eml'];
 
     /**
-     * Soft cap on the file size accepted at the boundary. Bank / PayPal
-     * CSVs and `.eml` receipts are typically a few hundred KB; a hard
-     * cap two orders of magnitude above that rejects accidental
-     * misdrops of large unrelated files without affecting legitimate
-     * imports.
+     * Per-extension soft caps on the file size accepted at the
+     * boundary. Bank / PayPal CSVs and `.eml` receipts have very
+     * different realistic sizes — a year of ASN CSV exports tops out
+     * around a few MB; a single `.eml` receipt is realistically well
+     * under 1 MB. Tight per-extension caps reject accidental misdrops
+     * (a multi-GB log file mis-dragged onto the dock, a corrupted
+     * mailbox file) before the downstream pipelines spend CPU on
+     * something the user did not mean to import.
+     *
+     * @var array<string, int>
      */
-    public const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
+    public const MAX_BYTES = [
+        'csv' => 50 * 1024 * 1024, // 50 MB — large bank exports
+        'eml' => 5 * 1024 * 1024,  // 5 MB — a fat receipt with inline images
+    ];
 
     public function __construct(
         private readonly Dispatcher $events,
@@ -88,7 +96,8 @@ final class FileOpenIntake
         }
 
         $size = @filesize($canonical);
-        if ($size === false || $size > self::MAX_BYTES) {
+        $cap = self::MAX_BYTES[$extension] ?? null;
+        if ($cap === null || $size === false || $size > $cap) {
             return;
         }
 
