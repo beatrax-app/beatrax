@@ -34,6 +34,14 @@ use Symfony\Component\HttpFoundation\Response;
  * into — are exempted from the gate so the redirect cannot loop. The exempt
  * list is name-prefix-matched so future extra-safe URLs (an error variant of
  * the setup screen, for example) inherit the exemption automatically.
+ *
+ * The Livewire AJAX update endpoint is also exempted. Livewire registers a
+ * `web`-group POST route (`*livewire.update`) that every component update
+ * funnels through — including the signup form's `submit` call. Without the
+ * exemption the gate would short-circuit the AJAX POST that is supposed to
+ * CREATE the first user, returning a 302 to /welcome before SignupAction
+ * runs. The component's own host-route name (`signup`) is exempt, but the
+ * AJAX endpoint has its own distinct route name that needs its own match.
  */
 final class EnsureDatabaseReady
 {
@@ -50,6 +58,21 @@ final class EnsureDatabaseReady
         'desktop.setup',
         'desktop.welcome',
         'signup',
+    ];
+
+    /**
+     * Route-name suffixes this middleware never redirects away from. The
+     * Livewire AJAX update endpoint is named `default-livewire.update`
+     * (or `<prefix>.livewire.update` when an app registers a custom one);
+     * Livewire's own router check uses the `*livewire.update` wildcard,
+     * so a suffix match here is the symmetric exemption. Without it, the
+     * signup form's Livewire POST is funneled into the fresh-install gate
+     * before it can create the first user.
+     *
+     * @var array<int, string>
+     */
+    private const EXEMPT_ROUTE_SUFFIXES = [
+        'livewire.update',
     ];
 
     public function __construct(
@@ -94,6 +117,12 @@ final class EnsureDatabaseReady
 
         foreach (self::EXEMPT_ROUTE_PREFIXES as $prefix) {
             if (str_starts_with($name, $prefix)) {
+                return true;
+            }
+        }
+
+        foreach (self::EXEMPT_ROUTE_SUFFIXES as $suffix) {
+            if (str_ends_with($name, $suffix)) {
                 return true;
             }
         }
