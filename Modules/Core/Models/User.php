@@ -32,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property int $recurring_income_min_amount_minor
  * @property int $drift_alert_threshold_percent
  * @property string $theme
+ * @property string|null $close_behavior
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -57,6 +58,7 @@ final class User extends Authenticatable
         'recurring_income_min_amount_minor',
         'drift_alert_threshold_percent',
         'theme',
+        'close_behavior',
     ];
 
     /** @var list<string> */
@@ -91,6 +93,7 @@ final class User extends Authenticatable
             'recurring_income_min_amount_minor' => 'integer',
             'drift_alert_threshold_percent' => 'integer',
             'theme' => 'string',
+            'close_behavior' => 'string',
         ];
     }
 }
