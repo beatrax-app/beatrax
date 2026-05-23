@@ -194,6 +194,45 @@ it('rejects a file that fails the header sniffer before reading any data row', f
     }
 });
 
+it('parses the 19-column ASN variant (no trailing Categorie column) without errors', function (): void {
+    // Real ASN exports ship 19-col rows for some accounts — the
+    // `Categorie` column is absent. Build a synthetic 19-col fixture
+    // by stripping the trailing column from the gold 20-col fixture
+    // and confirm the adapter yields full DTOs without raising.
+    $body = file_get_contents(base_path('tests/fixtures/asn-sample-1.csv'));
+    expect($body)->toBeString();
+    /** @var string $body */
+    $lines = explode("\n", $body);
+    foreach ($lines as $i => $line) {
+        if ($line === '') {
+            continue;
+        }
+        $lastComma = strrpos($line, ',');
+        if ($lastComma !== false) {
+            $lines[$i] = substr($line, 0, $lastComma);
+        }
+    }
+    $tmp = tempnam(sys_get_temp_dir(), 'asn-19col-').'.csv';
+    file_put_contents($tmp, implode("\n", $lines));
+
+    try {
+        $dtos = iterator_to_array(
+            $this->adapter->parse($tmp, $this->resolver),
+            preserve_keys: false,
+        );
+
+        // Same row count as the 20-col fixture — the absent column
+        // does not change the number of source rows.
+        expect($dtos)->toHaveCount(229);
+        expect($dtos[0])->toBeInstanceOf(SourceTransactionDto::class);
+        expect($dtos[0]->ownIban)->toBe('NL57ASNB0123456789');
+        expect($dtos[0]->amountMinor)->toBe(-399);
+        expect($dtos[0]->rawPayload)->toHaveCount(19);
+    } finally {
+        @unlink($tmp);
+    }
+});
+
 it('exposes the AsnCsvColumnMap as the empirical single source of truth', function (): void {
     expect(AsnCsvColumnMap::POSTED_DATE)->toBe(0);
     expect(AsnCsvColumnMap::OWN_IBAN)->toBe(1);

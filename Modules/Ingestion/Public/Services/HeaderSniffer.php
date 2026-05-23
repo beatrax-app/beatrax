@@ -311,10 +311,14 @@ final class HeaderSniffer
         $delim = AsnCsvHeaderProfile::DELIMITER;
         $columns = str_getcsv($firstLine, $delim, '"', '');
 
-        if (count($columns) !== AsnCsvHeaderProfile::EXPECTED_COLUMN_COUNT) {
+        if (! in_array(count($columns), AsnCsvHeaderProfile::ACCEPTED_COLUMN_COUNTS, strict: true)) {
+            // ASN ships two CSV shapes: 20 columns (with trailing
+            // `Categorie`) and 19 columns (without). Both are valid;
+            // the adapter only reads columns 0..17. Anything else is
+            // a different bank's export or a malformed file.
             throw new SniffMismatchException(sprintf(
-                'Expected %d columns, got %d. This file does not match the ASN CSV layout.',
-                AsnCsvHeaderProfile::EXPECTED_COLUMN_COUNT,
+                'Expected %s columns, got %d. This file does not match the ASN CSV layout.',
+                implode(' or ', AsnCsvHeaderProfile::ACCEPTED_COLUMN_COUNTS),
                 count($columns),
             ));
         }
