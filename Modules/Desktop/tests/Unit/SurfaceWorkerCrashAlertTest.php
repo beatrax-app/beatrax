@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
@@ -42,9 +44,9 @@ it('returns false on the first ProcessExited for the worker alias', function ():
 
     $listener = new SurfaceWorkerCrashAlert(
         $clock,
-        app(\Illuminate\Database\DatabaseManager::class),
+        app(DatabaseManager::class),
         app(WindowFocusState::class),
-        app(\Illuminate\Contracts\Routing\UrlGenerator::class),
+        app(UrlGenerator::class),
     );
 
     expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeFalse();
@@ -68,9 +70,9 @@ it('returns true after threshold ProcessExited events within the rolling window'
 
     $listener = new SurfaceWorkerCrashAlert(
         $clock,
-        app(\Illuminate\Database\DatabaseManager::class),
+        app(DatabaseManager::class),
         app(WindowFocusState::class),
-        app(\Illuminate\Contracts\Routing\UrlGenerator::class),
+        app(UrlGenerator::class),
     );
 
     // Fire THRESHOLD exits within the rolling window — the last one
@@ -97,9 +99,9 @@ it('does not flag a crash-loop when exits are spaced beyond the window', functio
 
     $listener = new SurfaceWorkerCrashAlert(
         $clock,
-        app(\Illuminate\Database\DatabaseManager::class),
+        app(DatabaseManager::class),
         app(WindowFocusState::class),
-        app(\Illuminate\Contracts\Routing\UrlGenerator::class),
+        app(UrlGenerator::class),
     );
 
     // Space the exits one full window apart so only the most recent
@@ -125,9 +127,9 @@ it('ignores ProcessExited events for non-worker aliases', function (): void {
 
     $listener = new SurfaceWorkerCrashAlert(
         $clock,
-        app(\Illuminate\Database\DatabaseManager::class),
+        app(DatabaseManager::class),
         app(WindowFocusState::class),
-        app(\Illuminate\Contracts\Routing\UrlGenerator::class),
+        app(UrlGenerator::class),
     );
 
     // Fire enough events to trip the threshold — but tagged with a

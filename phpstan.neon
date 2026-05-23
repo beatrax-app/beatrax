@@ -72,6 +72,7 @@ parameters:
                 - Modules/Desktop/Internal/Native/*Builder.php
                 - Modules/Desktop/Internal/Native/OsThemeProbe.php
                 - Modules/Desktop/Internal/Listeners/DispatchOsNotification.php
+                - Modules/Desktop/Internal/Listeners/SurfaceWorkerCrashAlert.php
             reportUnmatched: false
         # The `Notification` facade docblock declares its chained
         # builder methods (`title`, `message`, `event`, `reference`,
@@ -82,7 +83,9 @@ parameters:
         # API verbatim — we cannot refactor it.
         -
             message: '#Dynamic call to static method Native\\Desktop\\Facades\\Notification::(message|event|reference|show)\(\)\.#'
-            path: Modules/Desktop/Internal/Listeners/DispatchOsNotification.php
+            paths:
+                - Modules/Desktop/Internal/Listeners/DispatchOsNotification.php
+                - Modules/Desktop/Internal/Listeners/SurfaceWorkerCrashAlert.php
             reportUnmatched: false
         # `Window::open()` returns `PendingOpenWindow|void` per the
         # facade docblock (the contract method has no return type), so
