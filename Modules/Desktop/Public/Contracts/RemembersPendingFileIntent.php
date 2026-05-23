@@ -23,7 +23,7 @@ interface RemembersPendingFileIntent
     /**
      * Persists a validated file-open intent under the current session.
      *
-     * @param  string  $path       Canonicalised, allow-listed file path.
+     * @param  string  $path  Canonicalised, allow-listed file path.
      * @param  string  $extension  'csv' | 'eml' — the file extension
      *                             without the leading dot.
      */
