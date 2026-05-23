@@ -44,28 +44,40 @@ parameters:
         -
             message: "#Global helper function 'config' should not be used\\.#"
             path: app/Providers/HorizonServiceProvider.php
-        # Native-chrome carve-out: NativePHP's window, app-menu and
-        # system-tray API is only reachable through its facades, which
-        # NativePHP invokes outside the container lifecycle — there is no
-        # constructor-injection seam for them. The crossing is confined to
-        # the desktop module's native-chrome classes (the NativePHP-booted
-        # provider and the two builders it delegates to). The BoundaryArchTest
-        # "no Laravel facade usage in module code" test mirrors this allow-list.
-        # The builder path is a glob: the two builder classes are introduced
-        # by a later plan, so an fnmatch pattern keeps the entry valid before
-        # they exist. reportUnmatched is disabled because the provider's facade
-        # calls also land in that later plan (its boot() is empty for now).
+        # Native-chrome carve-out: NativePHP's window, app-menu,
+        # system-tray and OS-theme API is only reachable through its
+        # facades, which NativePHP invokes outside the container
+        # lifecycle — there is no constructor-injection seam for them.
+        # The crossing is confined to the desktop module's native-chrome
+        # classes (the NativePHP-booted provider, the two menu builders
+        # it delegates to, and the OsThemeProbe that wraps
+        # `System::theme()` behind the `OsThemeSignal` Public contract).
+        # The BoundaryArchTest "no Laravel facade usage in module code"
+        # test mirrors this allow-list. The builder path is a glob
+        # covering AppMenuBuilder / TrayMenuBuilder.
+        #
+        # The larastan-strict-rules `noFacadeRule` flags every
+        # `Native\Desktop\Facades\X::y()` call individually; the message
+        # shape is `Native\Desktop\Facades\<Facade> facade should not be
+        # used.` — a single regex covers all four facades the carve-out
+        # admits (Menu, MenuBar, Window, System).
         -
-            message: '#Static call to instance method Native\\Desktop\\Facades\\.*#'
+            message: '#Native\\Desktop\\Facades\\(Menu|MenuBar|Window|System) facade should not be used\.#'
             paths:
                 - Modules/Desktop/Internal/NativeAppServiceProvider.php
                 - Modules/Desktop/Internal/Native/*Builder.php
+                - Modules/Desktop/Internal/Native/OsThemeProbe.php
             reportUnmatched: false
+        # `Window::open()` returns `PendingOpenWindow|void` per the
+        # facade docblock (the contract method has no return type), so
+        # the fluent chain `->width()->height()->rememberState()` is
+        # untyped at the call site. The `WindowManager::open()` contract
+        # is a NativePHP API shape we do not own; type-narrowing at the
+        # call site would force an `assert(...)` we cannot easily express
+        # without leaking NativePHP internals.
         -
-            message: '#Call to an undefined static method Native\\Desktop\\Facades\\.*#'
-            paths:
-                - Modules/Desktop/Internal/NativeAppServiceProvider.php
-                - Modules/Desktop/Internal/Native/*Builder.php
+            message: '#Cannot call method (width|height|rememberState)\(\) on mixed\.#'
+            path: Modules/Desktop/Internal/NativeAppServiceProvider.php
             reportUnmatched: false
     allowedGlobalFunctions:
         - 'app_path'
