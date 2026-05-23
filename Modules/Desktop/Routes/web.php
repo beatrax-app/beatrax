@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\Desktop\Internal\Http\FileOpenController;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
+use Modules\Desktop\Internal\Http\Livewire\FileStagingPage;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
 
@@ -46,4 +47,15 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
     // the user.
     Route::get('/desktop/close-prompt', CloseWindowPrompt::class)
         ->name('desktop.close-prompt');
+
+    /*
+     * The .csv / .eml staging page (D-01 / D-02). Once the OS-supplied
+     * file path is validated and routed via the FileOpenedFromOs Public
+     * event, the user lands here. The page reads the current pending
+     * intent from PendingFileIntent and renders the "File received:
+     * <name>" + "Start import" CTA, or the "We couldn't open that
+     * file" empty state when no intent is present.
+     */
+    Route::get('/desktop/file-staging', FileStagingPage::class)
+        ->name('desktop.file-staging');
 });
