@@ -215,16 +215,17 @@ return [
         // bare `#plugin` entry, which makes the Vite / Rollup build abort.
         'php scripts/nativephp_patch_electron_imports.php',
 
-        // Mark the macOS menu-bar tray icon as a NativeImage template image
-        // so macOS auto-tints it for the active menu-bar appearance (white
-        // in dark menu bar, black in light). NativePHP's PHP `MenuBar` API
-        // does not surface a template-image flag and the Electron-side
-        // `/create` handler constructs `new Tray(<path>)` without ever
-        // calling `setTemplateImage(true)`, which leaves the tray icon
-        // rendering full-color. This hook patches the built
-        // `electron-plugin/dist/server/api/menuBar.js` to construct a
-        // NativeImage, flag it as a template, and hand it to `new Tray`.
-        'php scripts/nativephp_patch_tray_template_image.php',
+        // Inject a persistent macOS menu-bar tray (D-09) directly into the
+        // Electron main process. Replaces NativePHP's `MenuBar` facade,
+        // which wraps the popover-style npm `menubar` library and couples
+        // tray menu items to the focused BrowserWindow — once the user
+        // closes the main window via the X button, the tray's
+        // "Open diederik" item silently does nothing under that paradigm.
+        // The injected block creates a native Electron `Tray` with a
+        // template-flagged icon and a context menu whose handlers either
+        // show + focus the existing main window OR post to
+        // `/api/window/open` to re-construct it from any state.
+        'php scripts/nativephp_inject_persistent_tray.php',
     ],
 
     'postbuild' => [

@@ -69,14 +69,13 @@ arch('no Laravel facade usage in module code')
         // this allow-list.
         'Modules\\Core\\Public\\Support\\LockStore',
         // Native-chrome carve-out: NativePHP's window, app-menu,
-        // system-tray, OS-theme, and notification API is only
-        // reachable through its facades, which NativePHP invokes
-        // outside the container lifecycle — there is no
-        // constructor-injection seam for them. The crossing is
-        // confined to the desktop module's native-chrome classes: the
-        // NativeAppServiceProvider NativePHP boots, the two builders
-        // it delegates window/menu/tray construction to, the
-        // OsThemeProbe that wraps `System::theme()` behind the
+        // OS-theme, and notification API is only reachable through its
+        // facades, which NativePHP invokes outside the container
+        // lifecycle — there is no constructor-injection seam for them.
+        // The crossing is confined to the desktop module's native-chrome
+        // classes: the NativeAppServiceProvider NativePHP boots, the
+        // AppMenuBuilder it delegates application-menu composition to,
+        // the OsThemeProbe that wraps `System::theme()` behind the
         // `OsThemeSignal` Public contract, and the
         // `DispatchOsNotification` listener that calls
         // `Notification::title()->message()->event()->reference()
@@ -85,9 +84,14 @@ arch('no Laravel facade usage in module code')
         // come through constructor DI; only the facade chain itself
         // is unavoidable). The phpstan.neon ignoreErrors list
         // mirrors this allow-list.
+        //
+        // The macOS menu-bar tray (D-09) is intentionally NOT in this
+        // list — the persistent tray is created in the Electron main
+        // process via the `nativephp_inject_persistent_tray` prebuild
+        // patch (see `NativeAppServiceProvider` docblock), so no PHP
+        // module code needs the `MenuBar` facade.
         'Modules\\Desktop\\Internal\\NativeAppServiceProvider',
         'Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
-        'Modules\\Desktop\\Internal\\Native\\TrayMenuBuilder',
         'Modules\\Desktop\\Internal\\Native\\OsThemeProbe',
         'Modules\\Desktop\\Internal\\Listeners\\DispatchOsNotification',
         // SurfaceWorkerCrashAlert calls Notification::title()->...->show()
