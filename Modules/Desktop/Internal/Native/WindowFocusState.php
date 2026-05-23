@@ -19,16 +19,20 @@ namespace Modules\Desktop\Internal\Native;
  * `WindowFocused` / `WindowBlurred` events and call
  * `markFocused()` / `markBlurred()` respectively.
  *
- * Default state on construction is `unfocused` — a fresh launch (or
- * a freshly resolved singleton in a test) treats the window as
- * background until the first `WindowFocused` event arrives. This is
- * a deliberately conservative default so notifications during the
- * boot-up race are NOT silently dropped if NativePHP's first focus
- * event is briefly delayed.
+ * Default state on construction is `focused` — a fresh launch opens
+ * the diederik main window directly in front of the user, so the
+ * conservative assumption is that the freshly-launched window has OS
+ * focus until proven otherwise by a `WindowBlurred` event. Defaulting
+ * the other way (unfocused) would mean every notification fired during
+ * the boot-up race would pop an OS-level toast on top of the in-app
+ * banner the focused user is already looking at — the duplicate
+ * "noise on first launch" failure mode the D-13 focus-gate exists to
+ * prevent. The provider's focus/blur subscribers correct the flag as
+ * soon as the first NativePHP event arrives.
  */
 final class WindowFocusState
 {
-    private bool $focused = false;
+    private bool $focused = true;
 
     public function isFocused(): bool
     {
