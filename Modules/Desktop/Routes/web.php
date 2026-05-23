@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
 
@@ -25,5 +26,13 @@ Route::middleware(['web'])->group(static function (): void {
 });
 
 Route::middleware(['web', 'auth'])->group(static function (): void {
-    // Desktop staging routes land in a later plan.
+    // D-08 first-close prompt — Quit vs Keep-in-tray. The route exists
+    // so the NativePHP close-intercept hook can navigate the focused
+    // window here on a first close (when users.close_behavior IS NULL);
+    // the in-bundle hook lives in NativeAppServiceProvider and decides
+    // whether to navigate-and-prompt (NULL) or apply the recorded
+    // choice directly (non-NULL) without ever surfacing this route to
+    // the user.
+    Route::get('/desktop/close-prompt', CloseWindowPrompt::class)
+        ->name('desktop.close-prompt');
 });
