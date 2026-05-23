@@ -64,6 +64,22 @@ final class CloseWindowPrompt extends Component
     public bool $rememberChoice = true;
 
     /**
+     * Auto-opens the flux:modal as soon as the page renders.
+     *
+     * The close-prompt route is only ever navigated to by the
+     * NativePHP-bundle close-intercept hook on a first close (when
+     * `users.close_behavior IS NULL`). Without this dispatch the page
+     * would render an invisible modal element — the dialog would not
+     * appear and the user would face a blank screen. Dispatching
+     * `modal-show` from `mount()` makes the dialog surface immediately
+     * on navigation; Flux's modal listens for the event by `name`.
+     */
+    public function mount(): void
+    {
+        $this->dispatch('modal-show', name: self::MODAL_NAME);
+    }
+
+    /**
      * "Keep running in the tray" action. Persists `close_behavior='tray'`
      * when `rememberChoice` is true; the actual window-hide call lives
      * in `NativeAppServiceProvider` (the single facade-bearing file)

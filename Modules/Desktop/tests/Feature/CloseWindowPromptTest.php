@@ -63,6 +63,16 @@ it('CloseWindowPrompt has NO constructor (Livewire strict-rules)', function (): 
     expect($reflection->getConstructor())->toBeNull();
 })->group('phase-15');
 
+it('auto-opens the flux:modal on mount so navigating to /desktop/close-prompt surfaces the dialog', function (): void {
+    // Without the modal-show dispatch on mount, visiting the route
+    // would render an invisible flux:modal element — the dialog would
+    // never appear and the entire D-08 prompt UX would be unreachable
+    // even after the Electron-side close-intercept navigates the
+    // window here.
+    Livewire::test(CloseWindowPrompt::class)
+        ->assertDispatched('modal-show', name: CloseWindowPrompt::MODAL_NAME);
+})->group('phase-15');
+
 it('renders the verbatim UI-SPEC copy + flux:modal + h-12 buttons', function (): void {
     $rendered = Livewire::test(CloseWindowPrompt::class);
 
