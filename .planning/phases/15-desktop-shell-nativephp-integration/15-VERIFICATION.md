@@ -1,9 +1,11 @@
 ---
 phase: 15-desktop-shell-nativephp-integration
 verified: 2026-05-23T12:00:00Z
-status: human_needed
+human_verified: 2026-05-23T23:40:00Z
+status: passed
 score: 7/7 must-haves verified
 overrides_applied: 0
+human_verification_outcome: "All manual UAT items confirmed by the user post-fix. Item 4 (Electron close-intercept JS glue) is the acknowledged carry-forward stub documented in Modules/Desktop/Routes/web.php and 15-04-SUMMARY.md — phase goal does not require the Electron-side trigger. Resolution chain captured in 15-HUMAN-UAT.md."
 human_verification:
   - test: "Launch the fresh-install .dmg on a clean macOS machine (or clean ~/Library/Application Support) — confirm the 'Setting up...' screen appears while migrations run, transitions to the 'Welcome to diederik' screen, and the 'Get started' button leads to /signup"
     expected: "Sequential flow: Setting up... -> Welcome -> /signup without manual intervention"
