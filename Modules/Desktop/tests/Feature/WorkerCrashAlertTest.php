@@ -181,3 +181,83 @@ it('suppresses the OS notification when the window is FOCUSED at crash-loop time
     // No outbound POST — the Notification facade was not invoked.
     Http::assertNothingSent();
 });
+
+it('suppresses the OS notification on a SECOND unfocused crash-loop while the prior alert is still un-acknowledged (WR-06)', function (): void {
+    // The original bug: the de-dup guard skipped the system_alerts
+    // insert correctly, but the OS-notification path fired
+    // unconditionally on every crash-loop escalation. A repeat
+    // crash-loop while the prior alert was still un-acknowledged
+    // would spam duplicate OS toasts to a partner who already saw
+    // the first one. Now the OS-notification is gated on
+    // `! $alreadyAlerted` AS WELL AS the focus state, so the second
+    // crash-loop stays quiet until either (a) the row is acknowledged
+    // or (b) the user re-focuses + re-blurs, at which point a fresh
+    // crash will fire a fresh notification.
+    Http::fake();
+
+    $clock = freezableClockAt('2026-05-23T12:00:00Z');
+    $this->app->instance(Clock::class, $clock);
+    app(WindowFocusState::class)->markBlurred();
+
+    /** @var SurfaceWorkerCrashAlert $listener */
+    $listener = app(SurfaceWorkerCrashAlert::class);
+
+    // First crash-loop — one OS notification fires (the unfocused
+    // happy path).
+    for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
+        $clock->time = $clock->time->addSeconds(10);
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+    }
+    Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
+
+    // Second crash-loop while the prior alert is still un-acknowledged.
+    // The de-dup branch skips the system_alerts insert AND the OS
+    // notification — the partner is already aware.
+    $sentBefore = count(Http::recorded());
+    for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
+        $clock->time = $clock->time->addSeconds(10);
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+    }
+
+    expect(count(Http::recorded()))->toBe($sentBefore);
+    expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
+});
+
+it('re-fires the OS notification on a fresh crash-loop after the prior alert is acknowledged (regression of WR-06 over-correction)', function (): void {
+    // The flip-side check: once the user acknowledges the prior row,
+    // a NEW crash-loop must re-insert AND re-notify. Without this
+    // assertion the WR-06 fix could over-correct and silence
+    // legitimate post-acknowledgement crash-loops.
+    Http::fake();
+
+    $clock = freezableClockAt('2026-05-23T12:00:00Z');
+    $this->app->instance(Clock::class, $clock);
+    app(WindowFocusState::class)->markBlurred();
+
+    /** @var SurfaceWorkerCrashAlert $listener */
+    $listener = app(SurfaceWorkerCrashAlert::class);
+
+    for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
+        $clock->time = $clock->time->addSeconds(10);
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+    }
+    expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
+
+    // Acknowledge the row — simulate the user clicking "dismiss" on
+    // the SystemAlertsBanner.
+    SystemAlert::query()
+        ->where('kind', 'worker.crashed')
+        ->update(['acknowledged_at' => $clock->now()->toDateTimeString()]);
+
+    $sentBefore = count(Http::recorded());
+
+    // A fresh crash-loop now must produce a new row AND a new
+    // notification.
+    for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
+        $clock->time = $clock->time->addSeconds(10);
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+    }
+
+    expect(SystemAlert::query()->where('kind', 'worker.crashed')->whereNull('acknowledged_at')->count())->toBe(1);
+    expect(count(Http::recorded()))->toBeGreaterThan($sentBefore);
+});
