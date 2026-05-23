@@ -20,19 +20,21 @@ use Symfony\Component\HttpFoundation\Response;
  * Once migrations are no longer pending the middleware is a pass-through.
  *
  * The setup route itself is exempt — without that carve-out the redirect
- * would loop. The exemption is keyed on the route name so future
- * extra-safe URLs (an error variant of the setup screen, for example) can
- * be added by registering them under the same name prefix.
+ * would loop. The exemption is a NAME-PREFIX match so future extra-safe
+ * URLs (an error variant of the setup screen, for example) can be added
+ * under the same `desktop.setup.*` prefix without editing this list.
  */
 final class EnsureDatabaseReady
 {
     /**
-     * Route names this middleware never redirects away from — they are
-     * the routes that *render* the gated state.
+     * Route-name prefixes this middleware never redirects away from —
+     * any route whose name starts with one of these strings is treated
+     * as the gated-state-rendering surface. `desktop.setup` itself is a
+     * legitimate prefix match against itself.
      *
      * @var array<int, string>
      */
-    private const EXEMPT_ROUTE_NAMES = [
+    private const EXEMPT_ROUTE_PREFIXES = [
         'desktop.setup',
     ];
 
@@ -68,7 +70,16 @@ final class EnsureDatabaseReady
         }
 
         $name = $route->getName();
+        if (! is_string($name)) {
+            return false;
+        }
 
-        return is_string($name) && in_array($name, self::EXEMPT_ROUTE_NAMES, true);
+        foreach (self::EXEMPT_ROUTE_PREFIXES as $prefix) {
+            if (str_starts_with($name, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
