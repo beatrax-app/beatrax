@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Import\Providers;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Desktop\Public\Events\FileOpenedFromOs;
 use Modules\Import\Internal\Http\Livewire\ImportResults;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
+use Modules\Import\Internal\Listeners\HandleFileOpenedFromOs;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Actions\ApplyEnrichments;
@@ -47,9 +50,10 @@ final class ImportServiceProvider extends ServiceProvider
 
         $this->app->singleton(ImportPipeline::class);
         $this->app->singleton(PreviewCache::class);
+        $this->app->singleton(HandleFileOpenedFromOs::class);
     }
 
-    public function boot(LivewireManager $livewire): void
+    public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
@@ -59,5 +63,12 @@ final class ImportServiceProvider extends ServiceProvider
         $livewire->component('import.upload-wizard', UploadWizard::class);
         $livewire->component('import.preview-wizard', PreviewWizard::class);
         $livewire->component('import.import-results', ImportResults::class);
+
+        // SC3 routing caveat: .csv FileOpenedFromOs intents land here
+        // (Import), not in Ingestion. The listener filters by extension
+        // and persists the validated path into the Desktop pending-intent
+        // store; the user then lands on the Desktop staging page bound
+        // to the file.
+        $events->listen(FileOpenedFromOs::class, [HandleFileOpenedFromOs::class, 'handle']);
     }
 }

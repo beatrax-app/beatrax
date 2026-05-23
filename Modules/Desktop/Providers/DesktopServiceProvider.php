@@ -6,19 +6,26 @@ namespace Modules\Desktop\Providers;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Native\Desktop\Events\App\OpenFile;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
+use Modules\Desktop\Internal\Http\Livewire\FileStagingPage;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
+use Modules\Desktop\Internal\Listeners\ContinuePendingFileIntentAfterLogin;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
+use Modules\Desktop\Internal\Listeners\HandleNativeOpenFile;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
+use Modules\Desktop\Internal\Native\PendingFileIntent;
 use Modules\Desktop\Internal\Native\TrayMenuBuilder;
 use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
+use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Import\Public\Events\TransactionImported;
@@ -84,6 +91,32 @@ final class DesktopServiceProvider extends ServiceProvider
         // NativePHP close-intercept hook (in NativeAppServiceProvider).
         $this->app->singleton(WindowCloseBehavior::class);
 
+        // D-04 pending-file-intent store. The Receipts / Import
+        // listeners that subscribe to FileOpenedFromOs persist the
+        // validated path here via the RemembersPendingFileIntent
+        // Public contract; the FileStagingPage Livewire component
+        // reads back through the same store via its concrete class.
+        // Singleton because the Session collaborator is request-
+        // scoped already — the singleton wrapper saves one constructor
+        // call per resolution without breaking session-scoping.
+        $this->app->singleton(PendingFileIntent::class);
+        $this->app->bind(RemembersPendingFileIntent::class, PendingFileIntent::class);
+
+        // D-04 continuation listener. Subscribes to Laravel's Login
+        // event; reads PendingFileIntent and (when an intent is
+        // present + still resolves) the user's next request lands
+        // on the staging page rather than the dashboard.
+        $this->app->singleton(ContinuePendingFileIntentAfterLogin::class);
+
+        // PKG-06 native-event bridge. Subscribes to the NativePHP-emitted
+        // \Native\Desktop\Events\App\OpenFile event (the macOS
+        // open-file event NativePHP already wires; the cross-OS
+        // argv-and-second-instance paths in the published Electron
+        // main.js fire the same event) and feeds the path into
+        // FileOpenIntake — the security boundary for the OS-supplied
+        // path. Singleton because the listener is stateless.
+        $this->app->singleton(HandleNativeOpenFile::class);
+
         // OsThemeProbe is bound to the OsThemeSignal contract ONLY
         // when the app is running inside the NativePHP bundle. Under
         // Herd / in tests / before the Electron shell is ready, no
@@ -118,6 +151,17 @@ final class DesktopServiceProvider extends ServiceProvider
         $livewire->component('desktop.setup-screen', SetupScreen::class);
         $livewire->component('desktop.welcome-screen', WelcomeScreen::class);
         $livewire->component('desktop.close-window-prompt', CloseWindowPrompt::class);
+        $livewire->component('desktop.file-staging-page', FileStagingPage::class);
+
+        // D-04 continuation listener — fires on every successful Login.
+        // The listener re-checks the session-scoped PendingFileIntent
+        // and clears it after consumption so the next login does not
+        // re-fire the same intent. Subscription is NOT bundle-gated:
+        // the pending-intent round-trip must work in Herd / CI / test
+        // runs too (the feature tests cover those paths directly), and
+        // the listener does not call any NativePHP facade — it only
+        // touches the Session contract.
+        $events->listen(Login::class, [ContinuePendingFileIntentAfterLogin::class, 'handle']);
 
         // Focus-state + OS-notification wiring is bundle-only. Under
         // Herd / in tests / before the Electron shell is ready,
@@ -166,5 +210,13 @@ final class DesktopServiceProvider extends ServiceProvider
         // facade when the window is unfocused — under Herd / in tests
         // there is no NativePHP HTTP client to push to.
         $events->listen(ProcessExited::class, [SurfaceWorkerCrashAlert::class, 'handle']);
+
+        // PKG-06 native-event bridge: subscribe to the NativePHP-emitted
+        // OpenFile event and feed it through FileOpenIntake. Bundle-only
+        // because the event itself only fires inside the NativePHP
+        // shell — under Herd / in tests the cross-OS plumbing is
+        // absent and FileOpenIntake is invoked directly by feature
+        // tests instead.
+        $events->listen(OpenFile::class, [HandleNativeOpenFile::class, 'handle']);
     }
 }

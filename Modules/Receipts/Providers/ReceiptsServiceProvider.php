@@ -8,10 +8,12 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Desktop\Public\Events\FileOpenedFromOs;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Receipts\Internal\Http\Livewire\ReceiptConflictToast;
 use Modules\Receipts\Internal\Http\Livewire\WizardEmailFileStep;
 use Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt;
+use Modules\Receipts\Internal\Listeners\HandleFileOpenedFromOs;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
 use Modules\Receipts\Public\Actions\RecordReceipt;
@@ -91,6 +93,7 @@ final class ReceiptsServiceProvider extends ServiceProvider
         $this->app->singleton(RecordReceipt::class);
         $this->app->singleton(FileImportQuery::class);
         $this->app->singleton(DispatchChainHintsFromReceipt::class);
+        $this->app->singleton(HandleFileOpenedFromOs::class);
         // First-conflict toast support: action + read query. The
         // action is singleton-bound; its __invoke is stateless and
         // reads the user policy inline per call (no cross-user state).
@@ -142,5 +145,12 @@ final class ReceiptsServiceProvider extends ServiceProvider
         // registered as a singleton in register() so the listener
         // shares one Dispatcher instance per request.
         $events->listen(TransactionImported::class, [DispatchChainHintsFromReceipt::class, 'handle']);
+
+        // .eml FileOpenedFromOs intents land here. The listener filters
+        // by extension and persists the validated path into the Desktop
+        // pending-intent store; the user then lands on the Desktop
+        // staging page bound to the file, where "Start import" routes
+        // into the email-file step of the upload wizard.
+        $events->listen(FileOpenedFromOs::class, [HandleFileOpenedFromOs::class, 'handle']);
     }
 }
