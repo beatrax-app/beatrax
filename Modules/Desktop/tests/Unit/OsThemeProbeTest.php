@@ -46,12 +46,17 @@ it('does NOT bind OsThemeSignal under Herd / in tests by default', function (): 
     expect(app()->bound(OsThemeSignal::class))->toBeFalse();
 });
 
-it('exposes a currentOsTheme() string from the contract surface', function (): void {
+it('exposes a nullable currentOsTheme() from the contract surface', function (): void {
+    // Phase 15 WR-05: the contract returns `?string` so the layout can
+    // distinguish an explicit OS preference from a no-signal SYSTEM
+    // case. The pre-paint `prefers-color-scheme` script runs only for
+    // null returns — eliminating the silent "SYSTEM-OS-no-explicit-
+    // preference" → light fallback the original probe collapsed into.
     expect(method_exists(OsThemeProbe::class, 'currentOsTheme'))->toBeTrue();
 
     $reflection = new ReflectionMethod(OsThemeProbe::class, 'currentOsTheme');
     $returnType = $reflection->getReturnType();
 
     expect($returnType)->not->toBeNull();
-    expect((string) $returnType)->toBe('string');
+    expect((string) $returnType)->toBe('?string');
 });

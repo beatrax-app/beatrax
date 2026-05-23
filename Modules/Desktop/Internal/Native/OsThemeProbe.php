@@ -23,24 +23,30 @@ use Native\Desktop\Facades\System;
  * `BoundaryArchTest` + `phpstan.neon` admits this file by name.
  *
  * `System::theme()` returns a `SystemThemesEnum` instance with
- * `LIGHT` / `DARK` / `SYSTEM` cases. The contract returns one of
- * `light` or `dark` — the resolved OS preference. When the OS sits in
- * `SYSTEM` (no explicit OS-wide preference, rare) the probe falls
- * back to `light`; the pre-paint `prefers-color-scheme` script in the
- * layout corrects it client-side before first paint.
+ * `LIGHT` / `DARK` / `SYSTEM` cases. The contract returns:
+ *
+ *   - `'dark'` when the OS reports an explicit dark preference.
+ *   - `'light'` when the OS reports an explicit light preference.
+ *   - `null` when the OS sits on `SYSTEM` (no explicit OS-wide choice).
+ *     Without the nullable signal a `SYSTEM`-OS user would silently
+ *     receive light mode even when their actual `prefers-color-scheme`
+ *     resolves to dark — the layout cannot distinguish `light` from
+ *     `unknown` once both collapse to the same string. Returning null
+ *     lets the layout fall through to the client-side pre-paint
+ *     script, which reads `matchMedia` and corrects the class before
+ *     first paint.
  */
 final class OsThemeProbe implements OsThemeSignal
 {
-    public function currentOsTheme(): string
+    public function currentOsTheme(): ?string
     {
-        $theme = System::theme();
-
-        return match ($theme) {
+        return match (System::theme()) {
             SystemThemesEnum::DARK => 'dark',
-            // LIGHT and SYSTEM both resolve to `light` here — `SYSTEM`
-            // means the OS has no explicit choice and the layout's
-            // pre-paint script will correct it before first paint.
-            SystemThemesEnum::LIGHT, SystemThemesEnum::SYSTEM => 'light',
+            SystemThemesEnum::LIGHT => 'light',
+            // SYSTEM: no explicit OS-wide preference. Returning null
+            // hands the decision to the layout's client-side
+            // pre-paint `prefers-color-scheme` script.
+            SystemThemesEnum::SYSTEM => null,
         };
     }
 }
