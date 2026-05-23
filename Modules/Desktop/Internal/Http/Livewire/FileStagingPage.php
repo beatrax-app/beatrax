@@ -19,13 +19,15 @@ use Modules\Desktop\Internal\Native\PendingFileIntent;
  * one of two states:
  *
  *   - PRESENT: brand mark → "File received: `<name>`" heading → a
- *     single emerald "Start import" button. The button routes the
- *     pending intent into the appropriate flow:
- *       - `extension === 'csv'` → the Import preview/confirm flow
- *         (`route('imports.new')`).
- *       - `extension === 'eml'` → the email-file step of the same
- *         upload wizard (the user-facing Receipts entry point — same
- *         wizard component handles both source formats).
+ *     single emerald "Start import" button. Clicking the button
+ *     navigates to `route('imports.new')` for BOTH `.csv` and `.eml`
+ *     extensions — the user-facing Import wizard owns the per-format
+ *     branch internally (its issuer-and-source-format selector picks
+ *     the right step), so the staging page does not need to fork.
+ *     The Blade copy still differentiates the helper text (a bank /
+ *     PayPal export vs an email receipt) so the user sees an
+ *     extension-appropriate message before they commit to the
+ *     wizard.
  *   - EMPTY:  "We couldn't open that file" heading + a link to
  *     `route('imports.new')` so the user can recover by hand.
  *
@@ -35,8 +37,8 @@ use Modules\Desktop\Internal\Native\PendingFileIntent;
  *
  * SC3 routing caveat (locked by the plan): `.csv` routes through
  * `Modules\Import` (the user-facing import flow), NOT
- * `Modules\Ingestion`. Both extensions land on the same staging page
- * here — the per-extension routing decision lives on `startImport()`.
+ * `Modules\Ingestion`. `.eml` lands on the SAME wizard — the wizard
+ * owns the per-source-format branch.
  */
 final class FileStagingPage extends Component
 {
@@ -99,15 +101,15 @@ final class FileStagingPage extends Component
     }
 
     /**
-     * "Start import" action. Reads the pending intent, clears it, and
-     * navigates the user to the relevant entry point:
-     *
-     *   - .csv → route('imports.new')
-     *   - .eml → route('imports.new') (the upload wizard accepts both;
-     *     the email-file step path is selected by the wizard's own
-     *     issuer/source-format selector — the user-facing import flow
-     *     SC3 caveat says BOTH file types route through Import's
-     *     user-facing flow).
+     * "Start import" action. Navigates to the user-facing Import
+     * wizard at `route('imports.new')` for BOTH `.csv` and `.eml`
+     * intents — the wizard owns the per-source-format branch
+     * internally (its issuer / source-format selector picks the right
+     * step), so the staging page does not need to fork on extension
+     * here. The `$pending` property has already been consumed at
+     * mount time; this action is just the navigation step the user
+     * invoked by clicking the CTA. SC3 caveat: both file types route
+     * through the Import module's user-facing flow.
      *
      * The actual emission of FileOpenedFromOs (the intake POST) is
      * elsewhere; this action consumes the resulting session-stored
@@ -116,12 +118,6 @@ final class FileStagingPage extends Component
     public function startImport(
         UrlGenerator $urls,
     ): mixed {
-        // Both extensions route to the user-facing import flow (SC3
-        // caveat). The Import wizard's email-file step is the
-        // .eml-specific landing; the wizard chooses internally based
-        // on issuer. The `$pending` property has already been
-        // consumed at mount time — this action is the navigation
-        // step the user invoked by clicking the CTA.
         return $this->redirect($urls->route('imports.new'), navigate: true);
     }
 }
