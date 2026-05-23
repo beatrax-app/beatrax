@@ -10,6 +10,13 @@
      * first paint and reads `prefers-color-scheme`. When running inside
      * the desktop bundle the OsThemeSignal binding lets `system` resolve
      * server-side too; the script still corrects it if it disagrees.
+     *
+     * `$osTheme` is the resolved OsThemeSignal value: `'light'` /
+     * `'dark'` for an explicit OS preference, or `null` when the OS
+     * has no explicit choice (or the binding is absent). The pre-paint
+     * script below runs whenever the resolution is `null` so the
+     * client-side `prefers-color-scheme` read is the authoritative
+     * source in that branch.
      */
     $userTheme = auth()->check() ? (auth()->user()->theme ?? 'system') : 'system';
 
@@ -19,6 +26,11 @@
     }
 
     $isDark = $userTheme === 'dark' || ($userTheme === 'system' && $osTheme === 'dark');
+    // The pre-paint script runs for every system-themed render unless
+    // the OS has already given us an explicit light/dark answer. A null
+    // $osTheme — bundle says "no explicit preference" or Herd has no
+    // binding — falls through to the script's matchMedia read.
+    $needsPrePaintScript = $userTheme === 'system' && $osTheme === null;
 @endphp
 <!doctype html>
 <html
@@ -31,13 +43,21 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
         <title>{{ $title ?? 'diederik' }}</title>
-        @if ($userTheme === 'system')
+        @if ($needsPrePaintScript)
             {{--
                 Pre-paint theme script. Runs synchronously in <head>
                 before the body renders, so a `system`-theme user never
                 sees a flash of the wrong theme. Reads the OS-level
                 `prefers-color-scheme` media query — a fixed, app-authored
                 snippet with no dynamic interpolation.
+
+                Emitted whenever the OsThemeSignal returned null (no
+                explicit OS preference, or the desktop binding is
+                absent under Herd) — the script's `matchMedia` read is
+                the authoritative source in that case. When the bundle
+                resolved an explicit `light` / `dark`, the server-side
+                `dark` class is already correct and the script would
+                only undo / re-do the same answer.
             --}}
             <script>
                 (function () {
