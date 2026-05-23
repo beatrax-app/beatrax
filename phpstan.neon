@@ -45,31 +45,35 @@ parameters:
             message: "#Global helper function 'config' should not be used\\.#"
             path: app/Providers/HorizonServiceProvider.php
         # Native-chrome carve-out: NativePHP's window, app-menu,
-        # system-tray, OS-theme, and notification API is only
-        # reachable through its facades, which NativePHP invokes
-        # outside the container lifecycle — there is no
-        # constructor-injection seam for them. The crossing is
-        # confined to the desktop module's native-chrome classes
-        # (the NativePHP-booted provider, the two menu builders, the
-        # OsThemeProbe that wraps `System::theme()` behind the
+        # OS-theme, and notification API is only reachable through its
+        # facades, which NativePHP invokes outside the container
+        # lifecycle — there is no constructor-injection seam for them.
+        # The crossing is confined to the desktop module's native-chrome
+        # classes (the NativePHP-booted provider, the AppMenuBuilder,
+        # the OsThemeProbe that wraps `System::theme()` behind the
         # `OsThemeSignal` Public contract, and the
         # `DispatchOsNotification` listener that fires the D-12 OS
         # notifications via `Notification::title()->message()
         # ->event()->reference()->show()`). The BoundaryArchTest "no
         # Laravel facade usage in module code" test mirrors this
-        # allow-list. The builder path is a glob covering
-        # AppMenuBuilder / TrayMenuBuilder.
+        # allow-list.
+        #
+        # The macOS menu-bar tray (D-09) is intentionally NOT a member
+        # of this carve-out — the persistent tray is created in the
+        # Electron main process by `scripts/nativephp_inject_persistent_tray.php`
+        # rather than through any PHP-side facade, so no PHP module
+        # code needs the `MenuBar` facade.
         #
         # The larastan-strict-rules `noFacadeRule` flags every
         # `Native\Desktop\Facades\X::y()` call individually; the message
         # shape is `Native\Desktop\Facades\<Facade> facade should not be
-        # used.` — a single regex covers all five facades the carve-out
-        # admits (Menu, MenuBar, Window, System, Notification).
+        # used.` — a single regex covers all four facades the carve-out
+        # admits (Menu, Window, System, Notification, App).
         -
-            message: '#Native\\Desktop\\Facades\\(Menu|MenuBar|Window|System|Notification|App) facade should not be used\.#'
+            message: '#Native\\Desktop\\Facades\\(Menu|Window|System|Notification|App) facade should not be used\.#'
             paths:
                 - Modules/Desktop/Internal/NativeAppServiceProvider.php
-                - Modules/Desktop/Internal/Native/*Builder.php
+                - Modules/Desktop/Internal/Native/AppMenuBuilder.php
                 - Modules/Desktop/Internal/Native/OsThemeProbe.php
                 - Modules/Desktop/Internal/Listeners/DispatchOsNotification.php
                 - Modules/Desktop/Internal/Listeners/SurfaceWorkerCrashAlert.php

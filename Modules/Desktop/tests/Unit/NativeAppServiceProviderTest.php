@@ -15,20 +15,21 @@ use Native\Desktop\Windows\Window as NativeWindow;
  *   Menu         — ABSENT  (live facade call deferred to manual UAT;
  *                  see AppMenuBuilderTest for the pure-composition
  *                  builder coverage)
- *   MenuBar      — ABSENT  (live facade call deferred to manual UAT
- *                  for visual concerns; the wire-level payload to
- *                  the NativePHP Electron driver is still asserted
- *                  here via Http::fake() request recording — that
- *                  catches regressions in the boot-time builder
- *                  configuration even though the rendered Tray
- *                  cannot be inspected in PHPUnit)
  *
  * The provider boot() must therefore (a) configure the window via the
  * Window facade — automated against the fake here — and (b) hand the
- * built `Menu` + tray context-menu to the live Menu / MenuBar facades.
- * The Menu / MenuBar legs hit the NativePHP HTTP client at boot; we
- * `Http::fake()` to swallow those calls so the provider boot can
- * complete and the Window-fake assertion can still run.
+ * built `Menu` to the live Menu facade. The Menu leg hits the NativePHP
+ * HTTP client at boot; we `Http::fake()` to swallow those calls so the
+ * provider boot can complete and the Window-fake assertion can still run.
+ *
+ * The macOS menu-bar tray (D-09) is NOT installed via NativePHP's
+ * `MenuBar` facade — the persistent tray is created directly in the
+ * Electron main process by `scripts/nativephp_inject_persistent_tray.php`
+ * (see the `NativeAppServiceProvider` class docblock for the
+ * architectural rationale). The regression guard for the tray lives in
+ * `InjectPersistentTrayScriptTest`; this provider must NOT post to
+ * NativePHP's `menu-bar/create` endpoint, which is what the second test
+ * below asserts.
  */
 
 it('configures the application window', function (): void {
@@ -42,37 +43,26 @@ it('configures the application window', function (): void {
     $fake->assertOpened('main');
 });
 
-it('creates the system tray in plain-Tray mode so the icon persists across the app lifecycle', function (): void {
+it('does not call the NativePHP `menu-bar/create` endpoint — the persistent tray lives in the Electron main process', function (): void {
     /*
-     * NativePHP's Electron-side `menu-bar/create` handler branches on
-     * `onlyShowContextMenu`:
-     *
-     *   true  → plain `new Tray(icon)` retained in `state.tray` for
-     *           the entire app lifetime. This is D-09's design:
-     *           persistent macOS menu-bar icon with a right-click
-     *           context menu.
-     *
-     *   false → constructs a popover-style menubar app with its own
-     *           hidden BrowserWindow that hides on blur. The tray
-     *           icon visibly disappears when the stateful main
-     *           window takes focus (UAT-2 regression). NOT what
-     *           D-09 wants.
-     *
-     * The assertion below pins the wire-level flag so a future
-     * refactor of the boot() chain that drops `onlyShowContextMenu(true)`
-     * fails at the test seam, not in manual UAT.
+     * UAT-2 / UAT-3 architectural fix: the tray is no longer routed
+     * through NativePHP's `MenuBar` facade. Calling `MenuBar::create()`
+     * lands in the popover-style menubar paradigm whose context-menu
+     * link items early-return when no window is focused — once the
+     * user closes the main window via the X button, the tray's
+     * "Open diederik" item does nothing. Our fix relocates the tray
+     * to the Electron main process via a prebuild patch. If a future
+     * refactor accidentally reintroduces a `MenuBar::create()` call,
+     * the resulting POST to `/api/menu-bar/create` will be observed
+     * here and the assertion fails.
      */
     Http::fake();
     Window::fake()->alwaysReturnWindows([new NativeWindow('main')]);
 
     app(NativeAppServiceProvider::class)->boot();
 
-    Http::assertSent(function (Request $request): bool {
-        if (! str_ends_with($request->url(), 'menu-bar/create')) {
-            return false;
-        }
-
-        return ($request->data()['onlyShowContextMenu'] ?? null) === true;
+    Http::assertNotSent(function (Request $request): bool {
+        return str_ends_with($request->url(), 'menu-bar/create');
     });
 });
 
