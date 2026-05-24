@@ -74,6 +74,7 @@ final class ImportPipeline
         try {
             foreach ($this->parse->run($localPath, $sourceFormat, $accounts, $user) as $source) {
                 $resolution = $accounts->resolve($source->ownIban);
+                $rowDescription = self::trimToNull($source->description);
 
                 if ($resolution instanceof UnknownAccount) {
                     $unknownIbans[$source->ownIban] = new UnknownIban(
@@ -88,6 +89,7 @@ final class ImportPipeline
                         bookedAt: $source->bookedAt->format('d-m-Y'),
                         counterpartyName: $source->counterpartyName,
                         counterpartyIban: $source->counterpartyIban,
+                        description: $rowDescription,
                         categoryName: null,
                         amountMinor: $source->amountMinor,
                         currency: $source->currency,
@@ -119,6 +121,7 @@ final class ImportPipeline
                         bookedAt: $source->bookedAt->format('d-m-Y'),
                         counterpartyName: $source->counterpartyName,
                         counterpartyIban: $source->counterpartyIban,
+                        description: $rowDescription,
                         categoryName: null,
                         amountMinor: $source->amountMinor,
                         currency: $source->currency,
@@ -147,6 +150,7 @@ final class ImportPipeline
                     bookedAt: $source->bookedAt->format('d-m-Y'),
                     counterpartyName: $source->counterpartyName,
                     counterpartyIban: $source->counterpartyIban,
+                    description: $rowDescription,
                     categoryName: null,
                     amountMinor: $source->amountMinor,
                     currency: $source->currency,
@@ -178,6 +182,7 @@ final class ImportPipeline
                 bookedAt: null,
                 counterpartyName: null,
                 counterpartyIban: null,
+                description: null,
                 categoryName: null,
                 amountMinor: null,
                 currency: null,
@@ -245,5 +250,22 @@ final class ImportPipeline
         $cache[$accountId] = $account?->name;
 
         return $cache[$accountId];
+    }
+
+    /**
+     * Collapses a possibly-empty / whitespace-only description string into
+     * a `null` so the preview view's null-coalescing fallback chain
+     * (`name → iban → description → "—"`) doesn't render an empty span when
+     * the source row carried a description field that was actually blank.
+     */
+    private static function trimToNull(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 }
