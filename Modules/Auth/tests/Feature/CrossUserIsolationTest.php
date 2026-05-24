@@ -47,8 +47,6 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     'auth.recovery-codes-display',
     'auth.users.create',
     'auth.users.manage',
-    'auth.impersonate',
-    'auth.impersonate.end',
     // Phase 15 desktop chrome — neither surface lists foreign data.
     // `desktop.close-prompt` is the D-08 modal: it renders the acting
     // user's own close-behavior preference (`users.close_behavior`)
@@ -289,23 +287,6 @@ it('renders the partner settings page without the owner data', function (): void
     $this->actingAs($this->partner)
         ->get('/settings')
         ->assertOk()
-        ->assertDontSee('OWNER MERCHANT BV');
-});
-
-it('routes data through the partner scope while the owner impersonates the partner', function (): void {
-    xuiTransaction($this->db, $this->partner->id, 'PARTNER IMPERSONATED BV');
-
-    // Act as the partner with the impersonation pivot keys set — exactly
-    // the state ImpersonateUserAction leaves behind. Reads must resolve
-    // against the partner's user_id scope, not the owner's.
-    $this->actingAs($this->partner)
-        ->withSession([
-            'auth.impersonating.original_user_id' => $this->owner->id,
-            'auth.impersonating.original_username' => 'owner',
-        ])
-        ->get('/transactions')
-        ->assertOk()
-        ->assertSee('PARTNER IMPERSONATED BV')
         ->assertDontSee('OWNER MERCHANT BV');
 });
 

@@ -1,8 +1,8 @@
 {
     "name": "Auth",
     "alias": "auth",
-    "description": "Authentication, recovery codes, password reset, and impersonation — DI-only auth surface.",
-    "keywords": ["auth", "recovery-codes", "impersonation"],
+    "description": "Authentication, recovery codes, password reset — DI-only auth surface.",
+    "keywords": ["auth", "recovery-codes"],
     "priority": 1,
     "providers": [
         "Modules\\Auth\\Providers\\AuthServiceProvider"
