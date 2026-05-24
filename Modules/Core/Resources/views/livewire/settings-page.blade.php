@@ -4,6 +4,34 @@
         <p class="text-sm text-slate-500 dark:text-slate-400">Preferences for how your finances appear in the app.</p>
     </header>
 
+    {{-- Developer.
+
+         Instant-apply toggle (no Save button) — clicking the .switch
+         primitive calls setDevMode(), which flips the bool property
+         and writes users.is_developer via the User Eloquent model in
+         one round-trip. The toggle is per-user; the writer scopes to
+         CurrentUser so cross-user writes are structurally impossible.
+         Toggling on immediately unlocks /dev for this user (the
+         EnsureDeveloperMode middleware reads is_developer live). --}}
+    <section class="space-y-2" id="developer-mode">
+        <h2 class="text-xs uppercase tracking-wide text-[var(--color-text-faint)]">Developer</h2>
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+                <p class="text-sm text-[var(--color-text)]">In-app Dev Console</p>
+                <p class="mt-1 text-xs text-[var(--color-text-muted)]">
+                    Show the Dev Console at /dev. Resets the Advanced toggle on every login.
+                </p>
+            </div>
+            <button type="button"
+                    class="switch{{ $isDeveloper ? ' switch--on' : '' }}"
+                    wire:click="setDevMode({{ $isDeveloper ? 'false' : 'true' }})"
+                    aria-pressed="{{ $isDeveloper ? 'true' : 'false' }}"
+                    aria-label="Developer mode">
+                <span class="switch__thumb"></span>
+            </button>
+        </div>
+    </section>
+
     {{-- Appearance.
 
          Instant-apply segmented control (no Save button) — picking a

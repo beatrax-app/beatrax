@@ -92,6 +92,20 @@ final class UserDataPathService
         return self::appPath('backups');
     }
 
+    /**
+     * Daily-rolling log file path. `config/logging.php` reads this so the
+     * Monolog daily handler writes under the user-data storage root —
+     * never under the project-shipped storage tree — which keeps a
+     * packaged build's logs co-located with the per-user database file
+     * and respects the NATIVEPHP_STORAGE_PATH retarget. The Dev
+     * Console's log tailer (16-05) reads the same accessor so the
+     * panel sees the same file Monolog writes.
+     */
+    public static function logsFile(): string
+    {
+        return self::storageRoot().DIRECTORY_SEPARATOR.'logs'.DIRECTORY_SEPARATOR.'laravel.log';
+    }
+
     public static function secretsPath(): string
     {
         return self::appPath('secrets');

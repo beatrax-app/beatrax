@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Routing\Route;
 
 // Arch tests powered by pest-plugin-arch. Empty module skeletons trivially
 // satisfy these rules; once subsequent plans add real code the assertions bind.
@@ -1494,5 +1495,44 @@ it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tes
     expect($hits)->toBe(
         [],
         "Every diederik / Diederik literal must be flipped to beatrax. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+it('requires every /dev route to apply the ensureDeveloperMode middleware (everyDevModeRouteAppliesEnsureDeveloperModeMiddleware)', function (): void {
+    // Phase 16 D-04 invariant: every Dev Console HTTP route MUST apply
+    // the `ensureDeveloperMode` middleware alias so the 404-not-403
+    // information-disclosure mitigation (T-16-01) covers the entire
+    // /dev/* surface. A future plan that registers a new /dev/* route
+    // without the alias would silently disclose the Dev Console's
+    // existence to non-developers — this invariant fails CI before
+    // that ships.
+    //
+    // We walk the runtime route table (not the source files) because
+    // the alias name only resolves against gatherMiddleware(),
+    // which expands group-applied middleware. The URI prefix filter
+    // matches both `dev` (the bare overview route) and any uri starting
+    // with `dev/` (every panel route). It deliberately excludes URIs
+    // like `developer/...` or `develop/...` even though no such route
+    // exists today — a precise containment check is cheaper than a
+    // future surprise.
+    $routes = collect(Illuminate\Support\Facades\Route::getRoutes()->getRoutes())
+        ->filter(static fn (Route $r): bool => $r->uri() === 'dev' || str_starts_with($r->uri(), 'dev/'));
+
+    expect($routes)->not->toBeEmpty(
+        'No /dev/* routes registered — is DevModeServiceProvider booting?',
+    );
+
+    $missing = [];
+    foreach ($routes as $route) {
+        /** @var Route $route */
+        $stack = $route->gatherMiddleware();
+        if (! in_array('ensureDeveloperMode', $stack, true)) {
+            $missing[] = $route->uri();
+        }
+    }
+
+    expect($missing)->toBe(
+        [],
+        "Every /dev/* route MUST apply ensureDeveloperMode. Offenders:\n  ".implode("\n  ", $missing),
     );
 });
