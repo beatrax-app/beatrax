@@ -1,18 +1,137 @@
-<div class="p-8 space-y-6" data-testid="dev-overview-page">
+<div class="p-6 space-y-6" data-testid="dev-overview-page">
     <header class="space-y-1">
         <h1 class="text-xl font-semibold text-[var(--color-text)]">Overview</h1>
         <p class="text-sm text-[var(--color-text-muted)]">Operational surface for the in-app Developer Console.</p>
     </header>
 
     {{--
-        Placeholder card. Wave 5 plans (16-04 / 16-05 / 16-06 / 16-07)
-        replace this body with the real tile grid + theme-locked
-        `.console-pane` per UI-SPEC § /dev overview surfaces. The
-        dev-shell layout itself stays as-is.
+        Console pane — UI-SPEC § /dev overview surfaces.
+        Theme-locked dark inset (#0b1220 bg / #f1f5f9 text regardless of
+        the active light/dark theme). The pane is the page's primary
+        visual anchor and never participates in theme switching.
     --}}
-    <div class="card p-4">
-        <p class="text-sm text-[var(--color-text-muted)]">
-            More Dev Console panels arriving in Wave 5.
-        </p>
+    <section
+        class="console-pane rounded-md p-4"
+        style="background:#0b1220; color:#f1f5f9;"
+        data-testid="console-pane"
+        wire:poll.5s
+    >
+        <div class="grid grid-cols-3 gap-4 console-pane-head">
+            {{-- Worker heartbeat tile --}}
+            <div data-testid="console-pane-heartbeat">
+                <div class="text-[11px] uppercase tracking-wide text-slate-400">Worker heartbeat</div>
+                @if ($workerHeartbeat['secondsAgo'] === null)
+                    <div class="mt-1 text-sm font-mono text-rose-300">NOT RUNNING</div>
+                @else
+                    <div class="mt-1 text-sm font-mono">{{ $workerHeartbeat['label'] }}</div>
+                @endif
+                {{-- Sparkline SVG: static server-rendered 220×32 emerald polyline.
+                     Currently a placeholder polyline so the SVG primitive lands.
+                     A future plan can replace the points list with real heartbeat-history data. --}}
+                <svg
+                    width="220" height="32"
+                    viewBox="0 0 220 32" xmlns="http://www.w3.org/2000/svg"
+                    class="mt-2"
+                    aria-hidden="true"
+                >
+                    <polyline
+                        fill="none" stroke="#10b981" stroke-width="1.5"
+                        points="0,24 20,18 40,22 60,12 80,16 100,10 120,14 140,8 160,12 180,6 200,10 220,4"
+                    />
+                </svg>
+            </div>
+
+            {{-- Queue counts tile --}}
+            <div>
+                <div class="text-[11px] uppercase tracking-wide text-slate-400">Queue</div>
+                <div class="mt-1 flex items-baseline gap-3 font-mono text-sm">
+                    <span data-testid="queue-tile-pending">
+                        <span class="text-[10px] text-slate-400">pending</span>
+                        <span class="ml-1 text-[var(--color-text-inverse,_#f1f5f9)]" style="font-variant-numeric: tabular-nums;">{{ $queueCounts['pending'] }}</span>
+                    </span>
+                    <span data-testid="queue-tile-failed">
+                        <span class="text-[10px] text-slate-400">failed</span>
+                        <span class="ml-1 {{ $queueCounts['failed'] > 0 ? 'text-rose-300' : '' }}" style="font-variant-numeric: tabular-nums;">{{ $queueCounts['failed'] }}</span>
+                    </span>
+                    <span data-testid="queue-tile-batches">
+                        <span class="text-[10px] text-slate-400">batches</span>
+                        <span class="ml-1" style="font-variant-numeric: tabular-nums;">{{ $queueCounts['batches'] }}</span>
+                    </span>
+                </div>
+                <div class="mt-2 text-[11px] text-slate-400">
+                    {{ $queueCounts['failed'] }} failed jobs · {{ $queueCounts['batches'] }} active batch
+                </div>
+            </div>
+
+            {{-- Last command tile --}}
+            <div>
+                <div class="text-[11px] uppercase tracking-wide text-slate-400">Last command</div>
+                <div class="mt-1 text-sm font-mono truncate">
+                    {{ $lastCommand ?? '—' }}
+                </div>
+            </div>
+        </div>
+
+        {{-- 8-line tail-tail of the daily log file, redacted on the way out. --}}
+        <pre
+            class="tail mt-4 text-xs font-mono whitespace-pre-wrap leading-tight text-slate-200"
+            data-testid="console-pane-tail"
+            style="font-variant-numeric: tabular-nums;"
+        >{!! $logTail === []
+            ? 'Waiting for log lines…'
+            : e(implode("\n", $logTail)) !!}<span class="cursor-blink" aria-hidden="true">_</span></pre>
+    </section>
+
+    {{-- Two-column grid below the console pane: Recent runs + Open alerts. --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {{-- Recent runs card --}}
+        <div class="card p-4" data-testid="recent-runs-card">
+            <h2 class="text-sm font-semibold mb-3">Recent runs</h2>
+            @if (count($recentRuns) === 0)
+                <p class="text-sm text-[var(--color-text-muted)]">{{ $recentRunsEmptyCopy }}</p>
+            @else
+                <ul class="space-y-2">
+                    @foreach ($recentRuns as $run)
+                        <li data-testid="recent-run-row">
+                            <a
+                                href="{{ $run['href'] }}"
+                                class="flex items-baseline justify-between gap-2 hover:underline"
+                            >
+                                <span class="text-sm font-mono truncate">{{ $run['command'] }}</span>
+                                <span
+                                    class="tier text-[10px] uppercase px-1.5 py-0.5 rounded {{ $run['tier'] === 'destructive' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700' }}"
+                                >{{ $run['tier'] }}</span>
+                                <span class="text-[11px] text-[var(--color-text-muted)] flex-shrink-0">
+                                    @if ($run['createdAt'])
+                                        {{ $run['createdAt'] }}
+                                    @endif
+                                </span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+
+        {{-- Open alerts card --}}
+        <div class="card p-4" data-testid="open-alerts-card">
+            <h2 class="text-sm font-semibold mb-3">Open alerts</h2>
+            @if ($openAlerts->isEmpty())
+                <p class="text-sm text-[var(--color-text-muted)] text-center">{{ $openAlertsEmptyCopy }}</p>
+            @else
+                <ul class="space-y-2">
+                    @foreach ($openAlerts as $alert)
+                        <li class="text-sm flex items-start justify-between gap-2">
+                            <span>{{ $alert->message }}</span>
+                            @if ($alert->kind === 'oauth_reauth_required')
+                                <a href="/settings/integrations" class="text-blue-600 hover:underline text-xs">
+                                    Re-auth →
+                                </a>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
     </div>
 </div>
