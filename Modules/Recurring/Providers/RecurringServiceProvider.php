@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Providers;
 
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
@@ -18,6 +21,7 @@ use Modules\Recurring\Internal\Http\Livewire\RecurringPage;
 use Modules\Recurring\Internal\Http\Livewire\RecurringReviewPage;
 use Modules\Recurring\Internal\Http\Livewire\RecurringSeriesDetailPage;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
+use Modules\Recurring\Internal\Services\BusRecurringDetectionDispatcher;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
@@ -26,6 +30,8 @@ use Modules\Recurring\Public\Actions\RejectRecurringSeries;
 use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
 use Modules\Recurring\Public\Actions\SnoozeRecurringSeries;
 use Modules\Recurring\Public\Actions\UnRejectRecurringSeries;
+use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
+use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
@@ -67,6 +73,28 @@ final class RecurringServiceProvider extends ServiceProvider
             IncomeSeriesDetector::class,
         ], 'recurring.detector');
 
+        // Bind DetectRecurringSeriesJob::handle()'s resolution explicitly.
+        // The method takes `iterable $detectors`, which Container::call
+        // cannot auto-resolve (iterable is the pseudo-type Traversable|
+        // array with no class to instantiate; contextual class-bindings
+        // do not fire for method calls). Both the sync queue driver
+        // (used in tests) and the database queue worker (production)
+        // dispatch via Dispatcher::dispatchNow → Container::call, so
+        // binding the method here covers every dispatch path.
+        $this->app->bindMethod(
+            [DetectRecurringSeriesJob::class, 'handle'],
+            static function (DetectRecurringSeriesJob $job, Container $c): void {
+                /** @var iterable<SeriesDetector> $detectors */
+                $detectors = $c->tagged('recurring.detector');
+                $job->handle(
+                    $c->make(DatabaseManager::class),
+                    $c->make(Clock::class),
+                    $detectors,
+                    $c->make(RecurringSeriesStateMachine::class),
+                );
+            },
+        );
+
         $this->app->singleton(RecurringSeriesQuery::class);
         $this->app->singleton(FixedPaymentsViewQuery::class);
         $this->app->singleton(ApproveRecurringSeries::class);
@@ -77,6 +105,8 @@ final class RecurringServiceProvider extends ServiceProvider
         $this->app->singleton(SetDriftThresholdForSeries::class);
         $this->app->singleton(UnRejectRecurringSeries::class);
         $this->app->singleton(FixedPaymentsCard::class);
+
+        $this->app->singleton(DispatchesRecurringDetection::class, BusRecurringDetectionDispatcher::class);
     }
 
     public function boot(LivewireManager $livewire): void

@@ -15,6 +15,7 @@ use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Exceptions\PreviewExpiredException;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 
 /**
  * Confirms a previewed import. Loads the cached canonical batch and the
@@ -55,6 +56,7 @@ final class ConfirmImport implements ConfirmsImports
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly DispatchesChainResolution $chainDispatcher,
+        private readonly DispatchesRecurringDetection $recurringDispatcher,
     ) {}
 
     public function __invoke(int $importRunId, User $user): ImportConfirmResult
@@ -177,6 +179,15 @@ final class ConfirmImport implements ConfirmsImports
                 'updated_at' => $now,
             ]);
             $this->chainDispatcher->dispatchForUser($user->id);
+
+            // Recurring-series detection sweep. Same post-commit gate as the
+            // chain resolver above (inserts/enrichments only) and the same
+            // outside-the-transaction position to avoid the stale-read
+            // pitfall. The job's per-user `ShouldBeUniqueUntilProcessing`
+            // lock collapses this dispatch with a same-user re-detect click
+            // on `/recurring` and with the daily scheduled sweep into a
+            // single queued pass.
+            $this->recurringDispatcher->dispatchForUser($user->id);
         }
 
         return $result;
