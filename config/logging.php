@@ -16,11 +16,12 @@ return [
     | Default Log Channel
     |--------------------------------------------------------------------------
     |
-    | The default channel is `daily` (CONTEXT D-27). The Dev Console's log
-    | tailer expects rolling per-day files under storage/logs so the panel
-    | can list "today / yesterday / earlier" without consulting Monolog.
-    | Override via the LOG_CHANNEL env var when a deviating environment
-    | (CI, single-shot script, NativePHP bundle) needs a different shape.
+    | The default channel is `daily`. The Dev Console's log tailer
+    | expects rolling per-day files under storage/logs so the panel
+    | can list "today / yesterday / earlier" without consulting
+    | Monolog. Override via the LOG_CHANNEL env var when a
+    | deviating environment (CI, single-shot script, NativePHP
+    | bundle) needs a different shape.
     */
 
     'default' => env('LOG_CHANNEL', 'daily'),
@@ -41,13 +42,12 @@ return [
     | Log Channels
     |--------------------------------------------------------------------------
     |
-    | Each channel with an actual driver carries a `tap` array slot. The
-    | slot is intentionally empty in this plan; 16-04b installs the
-    | baseline RedactSecretsProcessor FQCN (CONTEXT D-29 / W-1 fix) so the
-    | Bearer + JWT regex set runs before any new log-producing surface
-    | lands, and 16-05 upgrades the same processor in place with the full
-    | OAuth scrub-set. Keeping the slot wired here means the downstream
-    | plans only fill the FQCN — they never re-edit the structure.
+    | Each channel with an actual driver carries a `tap` array slot
+    | pointing at PushRedactProcessor. That tap class resolves
+    | RedactSecretsProcessor from the container on every channel
+    | boot and pushes it onto every handler so OAuth scrub-set +
+    | Bearer + JWT redaction runs on every log record before the
+    | formatter writes the line to disk.
     |
     | Available drivers: "single", "daily", "slack", "syslog",
     |                    "errorlog", "monolog", "custom", "stack"

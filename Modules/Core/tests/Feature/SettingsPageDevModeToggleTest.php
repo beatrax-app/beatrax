@@ -7,15 +7,16 @@ use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 
 /*
- * SettingsPage Developer toggle (Phase 16-03 Task 3 / DEVUI-01).
+ * SettingsPage Developer toggle invariants.
  *
- * Locks the four behaviours per plan 16-03 Task 3:
- *   1. A non-developer mounting the page sees the toggle in "off" state.
- *   2. Calling setDevMode(true) writes users.is_developer=true via
- *      the User Eloquent model and the component re-renders in "on"
+ * Locks four behaviours:
+ *   1. A non-developer mounting the page sees the toggle in "off"
  *      state.
- *   3. The flip is DB-persisted (not session-scoped) — reloading the
- *      User model from storage reflects the new value.
+ *   2. Calling setDevMode(true) writes users.is_developer=true via
+ *      the User Eloquent model and the component re-renders in
+ *      "on" state.
+ *   3. The flip is DB-persisted (not session-scoped) — reloading
+ *      the User model from storage reflects the new value.
  *   4. After toggling on, the /dev route stops returning 404 (the
  *      EnsureDeveloperMode middleware now accepts the request).
  *

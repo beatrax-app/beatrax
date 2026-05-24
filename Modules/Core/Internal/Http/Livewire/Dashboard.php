@@ -200,10 +200,10 @@ final class Dashboard extends Component
             'emailScanHealth' => $emailScanHealth,
             'reauthInboxCount' => $reauthInboxCount,
             'reauthToastDismissed' => $this->reauthToastDismissed,
-            // 16-06 D-37 — the failed-chain-resolution toast is now
-            // gated on the calling user's `is_developer` flag. Non-
-            // developers see no Horizon-style queue messaging here;
-            // their channel is the existing SystemAlertsBanner.
+            // The failed-chain-resolution toast is gated on the
+            // calling user's is_developer flag. Non-developers see
+            // no Horizon-style queue messaging here; their channel
+            // is the existing SystemAlertsBanner.
             'isDeveloper' => $user->is_developer === true,
         ]);
     }

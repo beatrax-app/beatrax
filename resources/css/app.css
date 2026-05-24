@@ -401,14 +401,12 @@ td.date,
 }
 
 /*
- * Dev Console sidebar primitives (Phase 16-03 D-04). The `.dev-side`
- * class is the 220px hard-swap variant of `.side` used inside
- * /dev/* — width comes from `--side-w-dev` so future plans can flip
- * the token without re-declaring the layer. The `.nav-disabled`
- * variant is the "route not yet registered" affordance for sidebar
- * links whose target route lands in a downstream plan (16-04 enables
- * artisan/audit, 16-05 enables logs, 16-06 enables queue + horizon,
- * 16-07 enables doctor + sql + system).
+ * Dev Console sidebar primitives. The `.dev-side` class is the
+ * 220px hard-swap variant of `.side` used inside /dev/* — width
+ * comes from `--side-w-dev` so the token can be flipped without
+ * re-declaring the layer. The `.nav-disabled` variant is the
+ * "route not yet registered" affordance for sidebar links whose
+ * target route is absent.
  */
 @layer components {
     .dev-side {

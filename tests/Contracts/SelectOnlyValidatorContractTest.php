@@ -6,10 +6,10 @@ use Illuminate\Validation\ValidationException;
 use Modules\DevMode\Internal\Sql\SelectOnlyValidator;
 
 /*
- * Contract test — Locks the SelectOnlyValidator's `@internal` Tokenizer
- * mitigation surface (CONTEXT D-45 + RESEARCH Q2 + Pitfall 2).
+ * Contract test — locks the SelectOnlyValidator's @internal
+ * Tokenizer mitigation surface.
  *
- * Doctrine\SqlFormatter\Tokenizer is marked `@internal`. The
+ * Doctrine\\SqlFormatter\\Tokenizer is marked `@internal`. The
  * SelectOnlyValidator class is the SINGLE seam in the codebase that
  * references it. This contract test pins the rejection cases so a
  * future doctrine/sql-formatter upgrade that reshapes the Tokenizer

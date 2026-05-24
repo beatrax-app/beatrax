@@ -89,13 +89,13 @@
     <div class="side-foot">
         @if ($isDeveloper)
             {{--
-                Dev block (D-05 sketch). Server-side gated on
+                Dev block. Server-side gated on
                 `users.is_developer` — non-developers never receive
-                this DOM (T-16-01 mitigation: information disclosure
-                of the Dev Console's existence). Pulsing emerald dot
-                is a static box-shadow ring (no JS) per UI-SPEC §
-                Animation; the static numbers below are placeholders
-                for 16-04 + 16-06 which wire the real cache reads.
+                this DOM so the Dev Console's existence is never
+                disclosed via the rendered HTML. Pulsing emerald
+                dot is a static box-shadow ring (no JS). The
+                live-data numbers below come from the
+                wire:poll.5s sub-tree.
             --}}
             <div class="side-dev-block">
                 <div class="heading">
@@ -108,12 +108,12 @@
                     <span class="kbd" aria-hidden="true">⌘.</span>
                 </a>
                 {{--
-                    16-08: live Dev-block pulse. wire:poll.5s refreshes
+                    Live Dev-block pulse. wire:poll.5s refreshes
                     only this subtree so the heartbeat + queue-count
-                    indicators stay fresh without re-rendering the whole
-                    sidebar. The queue count is jobs.count() (pending
-                    only) per AppSidebar's class docblock; the worker
-                    delta is null when no heartbeat exists in cache.
+                    indicators stay fresh without re-rendering the
+                    whole sidebar. The queue count is jobs.count()
+                    (pending only); the worker delta is null when
+                    no heartbeat exists in cache.
                 --}}
                 <div class="dev-pulse" wire:poll.5s>
                     Queue {{ $queueCount }} · Worker {{ $workerSecondsAgo !== null ? $workerSecondsAgo . 's ago' : '—' }}
