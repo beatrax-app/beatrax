@@ -260,13 +260,17 @@
         </div>
     @endif
 
-    {{-- Failed-job toast. Persistent (no auto-dismiss) backed by the
-         `chain_resolution_runs` audit table filtered by exact
-         `user_id` match. Surface order: above the dashboard content,
-         fixed bottom-right (`z-50`), with a 2px rose-600 left stripe.
-         The toast hides when the audit row is cleared (e.g. the user
-         retried in `/horizon/failed`). --}}
-    @if ($failedChainResolutionExists)
+    {{-- Failed-job toast (16-06 D-37). Persistent (no auto-dismiss)
+         backed by the `chain_resolution_runs` audit table filtered by
+         exact `user_id` match. Gated on `$isDeveloper`: non-developers
+         see nothing here — their channel is the existing
+         SystemAlertsBanner. The deep-link target is
+         `route('dev.queue.tab', ['tab' => 'failed'])` (the canonical
+         B-3 fix shape; never a hardcoded `/dev/queue/failed` literal
+         and never a `route('dev.queue.failed')` call — no such named
+         route exists). The toast hides when the audit row is cleared
+         (e.g. the developer retried via the queue inspector). --}}
+    @if ($failedChainResolutionExists && $isDeveloper)
         <div
             role="status"
             aria-live="polite"
@@ -274,12 +278,12 @@
         >
             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Chain resolution failed.</p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                One or more chain-resolution jobs hit an error. Open Horizon to retry or inspect.
+                One or more chain-resolution jobs hit an error.
             </p>
             <a
-                href="/horizon/failed"
+                href="{{ route('dev.queue.tab', ['tab' => 'failed']) }}"
                 class="mt-2 inline-block text-xs font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100"
-            >Open Horizon</a>
+            >Open Queue Inspector</a>
         </div>
     @endif
 </div>

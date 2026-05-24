@@ -49,7 +49,7 @@ it('returns 404 from /dev for an authenticated non-developer (EnsureDeveloperMod
     $response->assertNotFound();
 });
 
-it('renders all 9 dev-sidebar nav items with Overview + Artisan + Audit + Logs enabled (16-05 registers dev.logs)', function (): void {
+it('renders dev-sidebar nav items with Overview + Artisan + Audit + Logs + Queue enabled (16-06 registers dev.queue) and Horizon DOM-absent when its route is not registered (D-38)', function (): void {
     $user = devOverviewUser(true, 'devov-nav');
 
     $response = $this->actingAs($user)->get('/dev');
@@ -57,21 +57,31 @@ it('renders all 9 dev-sidebar nav items with Overview + Artisan + Audit + Logs e
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // Every nav item label must appear in the rendered sidebar.
-    foreach (['Overview', 'Artisan', 'Audit', 'Logs', 'Queue', 'Doctor', 'SQL', 'Horizon', 'System'] as $label) {
+    // Every non-Horizon nav-item label must appear in the rendered
+    // sidebar. Horizon is conditional per D-38 — when both signals
+    // pass it appears; when either is false the item is DOM-absent
+    // (not nav-disabled). The default test env runs without
+    // `app.dev_mode = true`, so Horizon is omitted here.
+    foreach (['Overview', 'Artisan', 'Audit', 'Logs', 'Queue', 'Doctor', 'SQL', 'System'] as $label) {
         expect(str_contains($html, $label))
             ->toBeTrue("Dev sidebar missing nav item: {$label}");
     }
 
-    // After 16-05 registers dev.logs (on top of 16-04b's dev.artisan +
-    // dev.audit), only FIVE nav-disabled entries remain (Queue /
-    // Doctor / SQL / Horizon / System). 16-04b expected six; 16-06
-    // through 16-07 land further routes and the count drops further.
+    // Horizon is DOM-absent here (the dev.horizon route is not
+    // registered without config('app.dev_mode') = true AND the
+    // Horizon package). The sidebar therefore renders 8 items, of
+    // which 5 are enabled (Overview, Artisan, Audit, Logs, Queue)
+    // and 3 are nav-disabled (Doctor, SQL, System).
     $disabledCount = substr_count($html, 'nav-disabled');
     expect($disabledCount)->toBe(
-        5,
-        "Expected exactly 5 nav-disabled entries (every dev sidebar nav item except Overview/Artisan/Audit/Logs after 16-05), saw {$disabledCount}.",
+        3,
+        "Expected exactly 3 nav-disabled entries (Doctor / SQL / System) after 16-06, saw {$disabledCount}.",
     );
+
+    // Sanity: the Horizon entry's accessible name does NOT leak into
+    // the layout when the route is absent.
+    expect(str_contains($html, '>Horizon<'))
+        ->toBeFalse('Horizon nav item should be DOM-absent when dev.horizon is not registered.');
 });
 
 it('declares the 220px dev-shell sidebar width (--side-w-dev token or inline)', function (): void {
