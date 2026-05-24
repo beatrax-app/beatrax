@@ -119,6 +119,18 @@
                 {{ $slot }}
             </main>
         </div>
+
+        {{-- 16-04b: Global TripleGateModal — any /dev/* page can fire
+             `Livewire.dispatch('triple-gate:open', { command, args })`
+             to open the rose-tinted three-lock confirmation modal. The
+             modal enforces all three gates server-side (Dev Mode env
+             on + session Advanced on + typed "beatrax" matches via
+             hash_equals); on success it dispatches
+             `triple-gate:confirmed` which the runner page's listener
+             POSTs to /dev/artisan/destructive-spawn for the
+             defense-in-depth re-validation + actual spawn. --}}
+        @livewire('dev.triple-gate-modal')
+
         @livewireScripts
     </body>
 </html>

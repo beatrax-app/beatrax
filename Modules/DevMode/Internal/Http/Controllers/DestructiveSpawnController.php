@@ -1,0 +1,137 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\DevMode\Internal\Http\Controllers;
+
+use Illuminate\Contracts\Session\Session;
+use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\DevMode\Internal\Process\CommandSpawner;
+use Modules\DevMode\Internal\Process\RunRegistry;
+use Modules\DevMode\Internal\Services\DevModeFlag;
+use Modules\DevMode\Public\Contracts\DevCommandRegistry;
+use Modules\DevMode\Public\Dto\CommandSpec;
+use RuntimeException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+
+/**
+ * POST /dev/artisan/destructive-spawn — DESTRUCTIVE-tier spawn endpoint.
+ *
+ * The dedicated entry point for DESTRUCTIVE execution. SEPARATE from
+ * 16-04's ArtisanSpawnController (which actively rejects DESTRUCTIVE
+ * with 403). 16-04b's TripleGateModal calls this controller AFTER its
+ * three-gate sweep passes; this controller RE-VALIDATES all three
+ * gates server-side (T-16-02 defense-in-depth) before reaching the
+ * spawner.
+ *
+ * Three gates re-validated:
+ *   1. DevModeFlag->isOn()                                            (env)
+ *   2. session('dev_mode.advanced') === true                          (session)
+ *   3. request body: confirmed_typed === 'beatrax' (hash_equals)     (typed)
+ *
+ * If ANY gate fails, the controller throws 403. This is the
+ * controller-layer mirror of the TripleGateModal's server-side
+ * enforcement; a tampered Livewire payload that somehow bypassed the
+ * modal still cannot reach the spawner without passing this sweep.
+ *
+ * On accept, validates the command name is in the DESTRUCTIVE allow-list
+ * + validates args against ArgSpec::rules (same three-guard
+ * shell-injection discipline as 16-04's safe spawner) + calls
+ * CommandSpawner::start($command, $args, $userId, 'destructive').
+ *
+ * Returns {run_id, pid} with HTTP 202 — same shape as the SAFE
+ * controller so the runner UI consumes both pathways identically.
+ */
+final readonly class DestructiveSpawnController
+{
+    public function __construct(
+        private CommandSpawner $spawner,
+        private DevCommandRegistry $registry,
+        private RunRegistry $runs,
+        private ValidatorFactory $validator,
+        private DevModeFlag $devMode,
+    ) {}
+
+    public function __invoke(
+        Request $request,
+        CurrentUser $user,
+        Session $session,
+    ): JsonResponse {
+        // ---- Gate 1: Dev Mode env flag ----
+        if (! $this->devMode->isOn()) {
+            throw new AccessDeniedHttpException('dev_mode_off');
+        }
+
+        // ---- Gate 2: Session Advanced toggle ----
+        if ($session->get('dev_mode.advanced') !== true) {
+            throw new AccessDeniedHttpException('advanced_off');
+        }
+
+        // ---- Gate 3: Typed-app-name in body ----
+        $payload = $request->all();
+        $confirmed = $payload['confirmed_typed'] ?? '';
+        if (! is_string($confirmed) || ! hash_equals('beatrax', $confirmed)) {
+            throw new AccessDeniedHttpException('app_name_mismatch');
+        }
+
+        $validated = $this->validator
+            ->make($payload, [
+                'command' => ['required', 'string', 'max:255'],
+                'args' => ['sometimes', 'array'],
+                'confirmed_typed' => ['required', 'string'],
+            ])
+            ->validate();
+
+        $commandRaw = $validated['command'] ?? null;
+        if (! is_string($commandRaw)) {
+            return new JsonResponse(['error' => 'invalid_command'], 422);
+        }
+        $command = $commandRaw;
+
+        // Command must be a DESTRUCTIVE-tier registry entry. SAFE-tier
+        // commands belong on the other controller; refusing them here
+        // prevents the dual-entry-point ambiguity from being abused.
+        $destructiveNames = array_map(
+            static fn (CommandSpec $spec): string => $spec->name,
+            $this->registry->destructive(),
+        );
+        if (! in_array($command, $destructiveNames, true)) {
+            return new JsonResponse(
+                ['error' => 'not_destructive', 'command' => $command],
+                422,
+            );
+        }
+
+        $spec = $this->registry->find($command);
+
+        // Same three-guard discipline as the SAFE controller — Laravel
+        // validate() against ArgSpec::rules BEFORE the shell sees any
+        // value. CommandSpawner adds escapeshellarg + registry
+        // whitelist on top.
+        if ($spec->argsSchema !== []) {
+            $argRules = [];
+            foreach ($spec->argsSchema as $argSpec) {
+                $argRules['args.'.$argSpec->name] = $argSpec->rules;
+            }
+            $this->validator->make($payload, $argRules)->validate();
+        }
+
+        $argsRaw = $validated['args'] ?? null;
+        /** @var array<string, mixed> $args */
+        $args = is_array($argsRaw) ? $argsRaw : [];
+
+        $runId = $this->spawner->start($command, $args, $user->id(), 'destructive');
+        $record = $this->runs->find($runId);
+        if ($record === null) {
+            throw new RuntimeException("DestructiveSpawnController: RunRegistry lost record for run {$runId} immediately after spawn.");
+        }
+
+        return new JsonResponse([
+            'run_id' => $runId,
+            'pid' => $record->pid,
+        ], 202);
+    }
+}
