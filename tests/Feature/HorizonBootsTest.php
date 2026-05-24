@@ -20,7 +20,7 @@ use Predis\Client as PredisClient;
  * (Redis container running) became invisible in test output. With the
  * predicate the skip reason surfaces in `pest` output as
  * "SKIPPED: Redis container required — run `docker start
- * diederik-redis` or follow the README setup." so any maintainer or CI
+ * beatrax-redis` or follow the README setup." so any maintainer or CI
  * job sees what is missing.
  *
  * NEVER replace the predicate with a swallow-on-throw alternative — a
@@ -56,7 +56,7 @@ it('connects to Redis on 127.0.0.1:6379', function (): void {
     expect($payload)->toBe('PONG');
 })->skip(
     fn (): bool => ! isRedisReachable('127.0.0.1', 6379),
-    'Redis container required for this test — run `docker start diederik-redis` or follow the README setup.',
+    'Redis container required for this test — run `docker start beatrax-redis` or follow the README setup.',
 );
 
 it('Horizon service provider boots without errors', function (): void {

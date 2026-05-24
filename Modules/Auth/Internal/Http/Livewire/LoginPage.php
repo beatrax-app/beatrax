@@ -55,7 +55,7 @@ final class LoginPage extends Component
         $view = $views->make('auth::livewire.login-page');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Sign in · diederik']);
+        $view->extends('layouts.app', ['title' => 'Sign in · beatrax']);
 
         return $view;
     }

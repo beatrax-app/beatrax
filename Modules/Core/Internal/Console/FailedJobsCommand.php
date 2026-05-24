@@ -18,8 +18,8 @@ use Modules\Core\Public\Contracts\Clock;
  * for v1. Future verbs (`view`, `retry-all`, `clear`) can extend
  * without renaming the command surface.
  *
- *   php artisan diederik:failed-jobs prune --older-than=30d
- *   php artisan diederik:failed-jobs prune --older-than=7d --dry-run
+ *   php artisan beatrax:failed-jobs prune --older-than=30d
+ *   php artisan beatrax:failed-jobs prune --older-than=7d --dry-run
  *
  * The duration token grammar (`30d`, `12h`, `2w`) is parsed by
  * `DurationParser`; invalid tokens exit 1 with the regex error
@@ -38,7 +38,7 @@ use Modules\Core\Public\Contracts\Clock;
 final class FailedJobsCommand extends Command
 {
     /** @var string */
-    protected $signature = 'diederik:failed-jobs
+    protected $signature = 'beatrax:failed-jobs
         {action=prune : Action to run (currently only "prune" is wired)}
         {--older-than=30d : Duration cutoff for the prune action (e.g. 30d, 7d, 12h, 2w)}
         {--dry-run : Print rows that WOULD be deleted without writing}';

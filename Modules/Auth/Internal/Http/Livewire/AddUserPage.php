@@ -61,7 +61,7 @@ final class AddUserPage extends Component
         $view = $views->make('auth::livewire.add-user-page');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Add a user · diederik']);
+        $view->extends('layouts.app', ['title' => 'Add a user · beatrax']);
 
         return $view;
     }

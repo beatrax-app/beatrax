@@ -88,7 +88,7 @@ final class ChainReviewQueue extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Review chains · diederik']);
+        $view->extends('layouts.app', ['title' => 'Review chains · beatrax']);
 
         return $view;
     }

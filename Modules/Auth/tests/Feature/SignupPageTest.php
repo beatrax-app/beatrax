@@ -16,7 +16,7 @@ use Modules\Core\Models\User;
 it('renders the signup page on a fresh database', function (): void {
     $this->get('/signup')
         ->assertOk()
-        ->assertSeeText('Welcome to diederik')
+        ->assertSeeText('Welcome to beatrax')
         ->assertSeeText('Create the first account on this device. The first account becomes the owner.')
         ->assertSeeText('Create the first account');
 });

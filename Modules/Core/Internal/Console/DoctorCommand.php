@@ -16,7 +16,7 @@ use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
 
 /**
- * Runs the diederik operational doctor: a homogeneous iteration over
+ * Runs the beatrax operational doctor: a homogeneous iteration over
  * every registered `Probe` (tool-version checks + SQLite-substrate
  * health + backup freshness). Each probe contributes one line to the
  * output table and one severity bucket to the exit-code aggregator.
@@ -43,7 +43,7 @@ use Modules\Core\Internal\Console\Probes\WalModeProbe;
 final class DoctorCommand extends Command
 {
     /** @var string */
-    protected $signature = 'diederik:doctor';
+    protected $signature = 'beatrax:doctor';
 
     /** @var string */
     protected $description = 'Report installed PHP / Composer / SQLite versions and verify minimums.';
@@ -67,7 +67,7 @@ final class DoctorCommand extends Command
         /** @var list<string> $warnings */
         $warnings = [];
 
-        $this->line('diederik:doctor');
+        $this->line('beatrax:doctor');
         $this->line('-----------------');
 
         // Every check runs through the same Probe -> ProbeResult ->
@@ -98,7 +98,7 @@ final class DoctorCommand extends Command
             '%-24s %-8s %s',
             'ext-imap',
             'info',
-            ($loaded ? 'loaded' : 'not loaded').' (diederik uses webklex/php-imap regardless)',
+            ($loaded ? 'loaded' : 'not loaded').' (beatrax uses webklex/php-imap regardless)',
         ));
 
         $this->line('');

@@ -84,7 +84,7 @@ it('renders the critical backup_corrupt template with its aria-label', function 
         'message' => 'fixture',
         'metadata' => json_encode([
             'timestamp' => '2026-05-20 01:00',
-            'suspect_path' => 'storage/app/backups/diederik-2026-05-20-010000.sqlite.suspect',
+            'suspect_path' => 'storage/app/backups/beatrax-2026-05-20-010000.sqlite.suspect',
         ]),
         'created_at' => '2026-05-20 01:00:00',
     ]);

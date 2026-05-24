@@ -76,7 +76,7 @@ return [
         'client' => env('REDIS_CLIENT', 'predis'),
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', 'diederik_database_'),
+            'prefix' => env('REDIS_PREFIX', 'beatrax_database_'),
         ],
         'default' => [
             'url' => env('REDIS_URL'),

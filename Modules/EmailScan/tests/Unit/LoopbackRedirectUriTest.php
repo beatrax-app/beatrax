@@ -8,7 +8,7 @@ use Modules\EmailScan\Internal\LoopbackRedirectUri;
 it('uses the explicit OAUTH_LOOPBACK_PORT override when set', function (): void {
     $config = new Repository([
         'email-scan' => ['oauth_loopback_port' => 9123],
-        'app' => ['url' => 'https://diederik.test'],
+        'app' => ['url' => 'https://beatrax.test'],
     ]);
 
     $loopback = new LoopbackRedirectUri($config);
@@ -19,7 +19,7 @@ it('uses the explicit OAUTH_LOOPBACK_PORT override when set', function (): void 
 it('accepts a numeric string OAUTH_LOOPBACK_PORT override (env-vars are strings)', function (): void {
     $config = new Repository([
         'email-scan' => ['oauth_loopback_port' => '9123'],
-        'app' => ['url' => 'https://diederik.test'],
+        'app' => ['url' => 'https://beatrax.test'],
     ]);
 
     expect((new LoopbackRedirectUri($config))->forProvider('microsoft'))
@@ -47,12 +47,12 @@ it('falls back to app.url port when host is localhost and port is present', func
 });
 
 it('ignores app.url host/scheme and uses port 8000 when app.url is a Herd .test domain', function (): void {
-    // The Herd case from WR-01: app.url is https://diederik.test, but the
+    // The Herd case from WR-01: app.url is https://beatrax.test, but the
     // OAuth callback MUST land on the loopback IP (both providers reject
     // .test redirects). Default to 8000 unless OAUTH_LOOPBACK_PORT is set.
     $config = new Repository([
         'email-scan' => ['oauth_loopback_port' => null],
-        'app' => ['url' => 'https://diederik.test'],
+        'app' => ['url' => 'https://beatrax.test'],
     ]);
 
     expect((new LoopbackRedirectUri($config))->forProvider('gmail'))

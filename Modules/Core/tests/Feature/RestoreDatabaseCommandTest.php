@@ -35,7 +35,7 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $db->purge('sqlite');
 
-    $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-restore-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
+    $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-restore-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
 
     // The command resolves the maintenance-mode down marker through

@@ -57,7 +57,7 @@ it('streams the .txt download with the right filename and ten lines', function (
     $component = Livewire::actingAs($result['user'])->test(RecoveryCodesDisplay::class)
         ->call('download')
         ->assertSet('downloadShown', true)
-        ->assertFileDownloaded('diederik-recovery-codes-alice.txt');
+        ->assertFileDownloaded('beatrax-recovery-codes-alice.txt');
 
     $download = $component->effects['download'] ?? null;
     expect($download)->not->toBeNull();

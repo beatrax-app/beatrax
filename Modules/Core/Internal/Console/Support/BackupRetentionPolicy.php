@@ -14,7 +14,7 @@ use Throwable;
  * The rule:
  *
  *   1. Keep every basename that does NOT match the
- *      `diederik-YYYY-MM-DD-HHMMSS.sqlite` shape (passes through
+ *      `beatrax-YYYY-MM-DD-HHMMSS.sqlite` shape (passes through
  *      `.suspect` files, `pre-restore-*` snapshots, `.meta.json`
  *      sidecars, and any operator-dropped artifact verbatim).
  *
@@ -43,7 +43,7 @@ final class BackupRetentionPolicy
     /**
      * Matches a scheduled-backup basename. Captures: 1=Y, 2=m, 3=d, 4=HHMMSS.
      */
-    private const FILENAME_PATTERN = '/^diederik-(\d{4})-(\d{2})-(\d{2})-(\d{6})\.sqlite$/';
+    private const FILENAME_PATTERN = '/^beatrax-(\d{4})-(\d{2})-(\d{2})-(\d{6})\.sqlite$/';
 
     private const DAILY_KEEP_COUNT = 7;
 
@@ -111,7 +111,7 @@ final class BackupRetentionPolicy
 
         // Weekly: take the 4 most-recent matched files whose date is a Sunday.
         // The regex captures digit-shaped components but does not enforce
-        // calendar validity — a filename like diederik-2026-13-99-250000.sqlite
+        // calendar validity — a filename like beatrax-2026-13-99-250000.sqlite
         // passes the regex and would crash CarbonImmutable::parse() with
         // an InvalidFormatException, breaking the otherwise-pure policy
         // and aborting the retention sweep mid-flight. Treat calendar-

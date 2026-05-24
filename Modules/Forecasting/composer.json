@@ -1,5 +1,5 @@
 {
-    "name": "diederik/forecasting",
+    "name": "beatrax/forecasting",
     "description": "Forecasting module — 30/60/90-day cash-flow projection, what-if scenarios, /forecast page, dashboard highlights tile.",
     "type": "laravel-module",
     "license": "proprietary",

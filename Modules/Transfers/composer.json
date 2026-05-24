@@ -1,5 +1,5 @@
 {
-    "name": "diederik/transfers",
+    "name": "beatrax/transfers",
     "description": "Transfers module — cross-account pair detection listener.",
     "type": "laravel-module",
     "license": "proprietary",

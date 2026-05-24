@@ -7,7 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 
 /*
- * Drives `php artisan diederik:failed-jobs prune` against a seeded
+ * Drives `php artisan beatrax:failed-jobs prune` against a seeded
  * failed_jobs table:
  *  - --dry-run on a 5-row fixture spread across 7/14/31/45/60 days ago,
  *    cutoff 30d → 3 rows reported but no row removed.
@@ -49,7 +49,7 @@ beforeEach(function (): void {
 });
 
 it('--dry-run prints rows that would be deleted without writing', function (): void {
-    $this->artisan('diederik:failed-jobs', ['action' => 'prune', '--older-than' => '30d', '--dry-run' => true])
+    $this->artisan('beatrax:failed-jobs', ['action' => 'prune', '--older-than' => '30d', '--dry-run' => true])
         ->expectsOutputToContain('Would delete 3 rows')
         ->assertSuccessful();
 
@@ -58,7 +58,7 @@ it('--dry-run prints rows that would be deleted without writing', function (): v
 });
 
 it('deletes failed_jobs rows older than the cutoff on live run', function (): void {
-    $this->artisan('diederik:failed-jobs', ['action' => 'prune', '--older-than' => '30d'])
+    $this->artisan('beatrax:failed-jobs', ['action' => 'prune', '--older-than' => '30d'])
         ->expectsOutputToContain('Removed 3 rows; 2 remaining.')
         ->assertSuccessful();
 
@@ -71,7 +71,7 @@ it('deletes failed_jobs rows older than the cutoff on live run', function (): vo
 });
 
 it('rejects an invalid --older-than token with exit 1 and the regex error message', function (): void {
-    $this->artisan('diederik:failed-jobs', ['action' => 'prune', '--older-than' => '30m'])
+    $this->artisan('beatrax:failed-jobs', ['action' => 'prune', '--older-than' => '30m'])
         ->expectsOutputToContain('Duration must match /^\\d+[dhw]$/')
         ->assertFailed();
 
@@ -80,7 +80,7 @@ it('rejects an invalid --older-than token with exit 1 and the regex error messag
 });
 
 it('rejects an unknown action with exit 1', function (): void {
-    $this->artisan('diederik:failed-jobs', ['action' => 'whatever'])
+    $this->artisan('beatrax:failed-jobs', ['action' => 'whatever'])
         ->expectsOutputToContain('Unknown action: whatever')
         ->assertFailed();
 
@@ -88,8 +88,8 @@ it('rejects an unknown action with exit 1', function (): void {
     expect($remaining)->toBe(5);
 });
 
-it('defaults the action argument to prune so bare `diederik:failed-jobs` runs the prune path', function (): void {
-    $this->artisan('diederik:failed-jobs', ['--older-than' => '30d'])
+it('defaults the action argument to prune so bare `beatrax:failed-jobs` runs the prune path', function (): void {
+    $this->artisan('beatrax:failed-jobs', ['--older-than' => '30d'])
         ->expectsOutputToContain('Removed 3 rows; 2 remaining.')
         ->assertSuccessful();
 

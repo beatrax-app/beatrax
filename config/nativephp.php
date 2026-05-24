@@ -70,7 +70,7 @@ return [
         // Dev-only keys that must never reach the shipped bundle: the
         // developer-mode flag and any Redis connection settings (the
         // shipped build runs the database queue + cache lock store).
-        'DIEDERIK_DEV_MODE',
+        'BEATRAX_DEV_MODE',
         'REDIS_*',
         'NATIVEPHP_UPDATER_PATH',
         'NATIVEPHP_APPLE_ID',
@@ -220,7 +220,7 @@ return [
         // which wraps the popover-style npm `menubar` library and couples
         // tray menu items to the focused BrowserWindow — once the user
         // closes the main window via the X button, the tray's
-        // "Open diederik" item silently does nothing under that paradigm.
+        // "Open beatrax" item silently does nothing under that paradigm.
         // The injected block creates a native Electron `Tray` with a
         // template-flagged icon and a context menu whose handlers either
         // show + focus the existing main window OR post to

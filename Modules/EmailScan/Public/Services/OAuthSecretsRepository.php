@@ -28,8 +28,7 @@ use Throwable;
  * Every read filters by the current user's id and every write stamps
  * it, so two users sharing the SQLite file never see each other's
  * credentials. The current user's id is resolved fresh on every call
- * (never cached) so a guard swap — such as developer impersonation —
- * is honoured immediately.
+ * (never cached) so a guard swap is honoured immediately.
  *
  * Writes go through Eloquent saves, which are transactional and replace
  * the encrypted blob in a single statement.

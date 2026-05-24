@@ -10,9 +10,9 @@ use Modules\Desktop\Internal\Native\AppMenuBuilder;
  * payload — no NativePHP facade fakes are needed (see
  * NATIVEPHP-FAKES.md).
  *
- * The plan locks the verbatim D-11 labels: File → "Import file…",
+ * The plan locks the verbatim labels: File → "Import file…",
  * "Scan email now"; Help → "GitHub repo", "Report an issue", "About
- * diederik". The whole menu is serialised and the rendered string is
+ * beatrax". The whole menu is serialised and the rendered string is
  * grep-asserted so the test is robust against the exact submenu shape
  * the NativePHP package picks (label-on-Link vs label-on-Role etc.).
  */
@@ -35,7 +35,7 @@ it('builds the standard set of top-level menus', function (): void {
     );
 });
 
-it('includes the diederik-specific File menu entries', function (): void {
+it('includes the beatrax-specific File menu entries', function (): void {
     $items = app(AppMenuBuilder::class)->build();
 
     $rendered = json_encode(
@@ -43,13 +43,13 @@ it('includes the diederik-specific File menu entries', function (): void {
         JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE,
     );
 
-    // The two D-11 File entries appear verbatim somewhere in the
+    // The two File entries appear verbatim somewhere in the
     // serialised tree (they live on the File submenu).
     expect($rendered)->toContain('Import file…');
     expect($rendered)->toContain('Scan email now');
 });
 
-it('includes the diederik-specific Help menu entries', function (): void {
+it('includes the beatrax-specific Help menu entries', function (): void {
     $items = app(AppMenuBuilder::class)->build();
 
     $rendered = json_encode(
@@ -59,5 +59,5 @@ it('includes the diederik-specific Help menu entries', function (): void {
 
     expect($rendered)->toContain('GitHub repo');
     expect($rendered)->toContain('Report an issue');
-    expect($rendered)->toContain('About diederik');
+    expect($rendered)->toContain('About beatrax');
 });

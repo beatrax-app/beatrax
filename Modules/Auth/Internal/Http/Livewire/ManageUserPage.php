@@ -94,7 +94,7 @@ final class ManageUserPage extends Component
         $view = $views->make('auth::livewire.manage-user-page');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => "Manage {$this->partnerUsername} · diederik"]);
+        $view->extends('layouts.app', ['title' => "Manage {$this->partnerUsername} · beatrax"]);
 
         return $view;
     }
