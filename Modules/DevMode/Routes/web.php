@@ -8,9 +8,11 @@ use Modules\DevMode\Internal\Http\Controllers\ArtisanCancelController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanSpawnController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanStreamController;
 use Modules\DevMode\Internal\Http\Controllers\DestructiveSpawnController;
+use Modules\DevMode\Internal\Http\Controllers\LogStreamController;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
+use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
 
 /*
  * Dev Console routes. Mounted by DevModeServiceProvider via
@@ -62,4 +64,13 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
         // routing through CommandSpawner::start(..., 'destructive').
         Route::post('/artisan/destructive-spawn', DestructiveSpawnController::class)
             ->name('dev.artisan.destructive-spawn');
+
+        // 16-05: Log tailer page + SSE stream + ±10-line context lookup
+        // (CONTEXT D-28 / D-29 / D-31). The page mounts the Alpine
+        // ring-buffer + EventSource consumer; the SSE controller re-
+        // applies RedactSecretsProcessor (defense-in-depth on top of
+        // the on-write Monolog tap installed in 16-04b).
+        Route::get('/logs', LogTailerPage::class)->name('dev.logs');
+        Route::get('/logs/stream', LogStreamController::class)->name('dev.logs.stream');
+        Route::get('/logs/context', [LogStreamController::class, 'context'])->name('dev.logs.context');
     });
