@@ -14,44 +14,46 @@ use RuntimeException;
 use Symfony\Component\Process\Process;
 
 /**
- * Spawns a whitelisted artisan command in architecture (b) —
- * spawn-then-tail per CONTEXT D-16.
+ * Spawns a whitelisted artisan command via the spawn-then-tail
+ * architecture: the HTTP request that calls start() returns within
+ * milliseconds while the artisan child runs detached and writes
+ * stdout/stderr into a per-run tmp file the SSE stream controller
+ * tails for the browser.
  *
  * The spawn step:
- *   1. Generates a UUID `run_id`.
- *   2. Computes `outPath = storage/app/dev_mode/runs/{runId}.out` via
- *      {@see UserDataPathService::appPath()} (the noStoragePathHard-
- *      CodedOutsideUserDataPathService invariant requires every path
- *      to flow through that service).
+ *   1. Generates a UUID run_id.
+ *   2. Computes outPath = storage/app/dev_mode/runs/{runId}.out via
+ *      {@see UserDataPathService::appPath()}. Every storage path
+ *      flows through that service so a NativePHP retarget is honoured.
  *   3. Ensures the parent directory exists with mode 0700 (developer-
- *      only — these tmp files may contain stdout that 16-04b's audit
- *      pipeline copies into the audit log with redaction; meanwhile
- *      the raw file is restrictive by default).
+ *      only). The audit pipeline copies tmp-file contents into the
+ *      audit log with redaction; the raw file stays restrictive on
+ *      disk regardless.
  *   4. Resolves the CommandSpec via DevCommandRegistry::find() so an
  *      off-whitelist name throws InvalidArgumentException BEFORE a
- *      Process is constructed (CONTEXT D-14 NEVER-EXPOSED commands
- *      never reach the shell).
+ *      Process is constructed. NEVER-EXPOSED commands such as
+ *      migrate / migrate:rollback / db:seed are absent from the
+ *      registry and never reach the shell.
  *   5. Builds a bash invocation that escapes every component via
  *      escapeshellarg, redirects stdout + stderr into the tmp file,
  *      detaches with `&`, and prints `$!` so the parent captures the
  *      child PID. The bash wrapper is the standard pattern for
  *      capturing a backgrounded process's PID; Symfony Process'
  *      built-in start() loses it under shell-redirect detach.
- *   6. Stores `(run_id, pid, command, args, started_at,
- *      callerUserId, tier, outPath)` in RunRegistry under
- *      `dev_mode.run.{runId}`.
- *   7. Returns the `run_id` — the spawning HTTP request returns
+ *   6. Stores (run_id, pid, command, args, started_at,
+ *      callerUserId, tier, outPath) in RunRegistry under
+ *      dev_mode.run.{runId}.
+ *   7. Returns the run_id — the spawning HTTP request returns
  *      immediately because the child is detached.
  *
- * Injection resistance is three guards deep (T-16-11, T-16-SC2):
- *   - The command name comes from DevCommandRegistry::find(); arbitrary
- *     user-supplied names are rejected before assembly.
+ * Injection resistance is three guards deep:
+ *   - The command name comes from DevCommandRegistry::find();
+ *     arbitrary user-supplied names are rejected before assembly.
  *   - Every arg value is wrapped with escapeshellarg before reaching
  *     the shell.
- *   - The controllers validate every arg through Laravel's validate()
- *     against the ArgSpec::$rules list before this method is reached.
- *
- * @see Task 1 Test 4 — the canonical injection-resistance regression.
+ *   - The controllers validate every arg through Laravel's
+ *     validate() against the ArgSpec::$rules list before this method
+ *     is reached.
  */
 final readonly class CommandSpawner
 {
@@ -69,7 +71,7 @@ final readonly class CommandSpawner
         // Whitelist guard — throws InvalidArgumentException for any
         // unknown name (NEVER-EXPOSED commands such as `migrate`
         // never reach the shell). The spec also tells us which args
-        // are positional vs option.
+        // are positional vs option (the leading `--` discriminator).
         $spec = $this->commands->find($command);
 
         $runId = (string) Str::uuid();

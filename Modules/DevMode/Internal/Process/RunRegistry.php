@@ -10,22 +10,20 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * Cache-backed registry of in-flight + recently-completed Dev Console
- * runs (CONTEXT D-16: "`pid` + `run_id` persisted in cache so a page
- * refresh reconnects to the live stream").
+ * Cache-backed registry of in-flight and recently-completed Dev
+ * Console runs. The pid + run_id pair is persisted in cache so a
+ * page refresh during a running command reconnects to the live SSE
+ * stream rather than dropping the run.
  *
- * Each entry is keyed `dev_mode.run.{runId}` and TTLs at 24 hours
- * (RESEARCH Open Q3 recommendation — long enough for the longest
- * SAFE-tier command to complete, short enough to bound cache
- * footprint to one operator-day of activity). The 24h window also
- * gives the audit-pipeline finalize step in 16-04b time to read the
- * tmp file before the cache entry — and only the cache entry —
- * disappears; the tmp file itself stays on disk until its own
- * cleanup (a SAFE-tier `beatrax:prune-dev-runs` is out of scope for
- * this plan).
+ * Each entry is keyed `dev_mode.run.{runId}` and TTLs at 24 hours —
+ * long enough for the longest SAFE-tier command to complete, short
+ * enough to bound cache footprint to roughly one operator-day of
+ * activity. The 24h window also lets the audit-pipeline finalize
+ * step copy stdout/stderr excerpts before the cache entry disappears
+ * (the tmp file on disk has its own retention sweep).
  *
  * No facade calls — the cache contract is constructor-injected per
- * CLAUDE.md DI-only rule.
+ * the project's DI-only rule.
  */
 final readonly class RunRegistry
 {

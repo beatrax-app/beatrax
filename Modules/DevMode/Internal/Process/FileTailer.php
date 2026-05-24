@@ -7,11 +7,11 @@ namespace Modules\DevMode\Internal\Process;
 /**
  * Single-shot tail primitive for a growing file.
  *
- * Pure-PHP utility shared between the artisan-run SSE controller (this
- * plan) and the log-tailer SSE controller (16-05). Both surfaces need
- * the same "open file, seek to known offset, read new bytes, return
- * chunk + new offset" pattern; centralising it here keeps the two SSE
- * pipelines on one tested seam.
+ * Pure-PHP utility shared between the artisan-run SSE controller and
+ * the log-tailer SSE controller. Both surfaces need the same "open
+ * file, seek to known offset, read new bytes, return chunk + new
+ * offset" pattern; centralising it here keeps the two SSE pipelines
+ * on one tested seam.
  *
  * `tailOnce()` invariants:
  *   - `clearstatcache()` is called BEFORE `filesize()` so a growing
@@ -22,8 +22,8 @@ namespace Modules\DevMode\Internal\Process;
  *     UNCHANGED `$fromOffset`. The caller decides whether to reset
  *     to 0 or keep waiting.
  *   - Reads at most 65 536 bytes per call. The SSE loop calls this
- *     once per tick (150 ms in ArtisanStreamController, 250 ms in
- *     LogStreamController), giving ~430 KB/s and ~262 KB/s throughput
+ *     once per tick (150 ms for the artisan stream, 250 ms for the
+ *     log stream), giving ~430 KB/s and ~262 KB/s throughput
  *     ceilings respectively — well above any whitelisted SAFE
  *     command's stdout rate.
  *
