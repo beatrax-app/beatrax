@@ -24,8 +24,12 @@ final class PreviewRowDto extends Data
         /** 'new' | 'duplicate' | 'enriched' | 'error' */
         public readonly string $status,
         public readonly ?int $accountId,
+        /** Resolved name of the user's own account this row debits/credits. */
+        public readonly ?string $sourceAccountName,
         public readonly ?string $bookedAt,
         public readonly ?string $counterpartyName,
+        /** Counterparty IBAN as a visible fallback when the name is missing. */
+        public readonly ?string $counterpartyIban,
         public readonly ?string $categoryName,
         public readonly ?int $amountMinor,
         public readonly ?string $currency,

@@ -146,6 +146,7 @@
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Date</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Source</th>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Counterparty</th>
                             <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Amount</th>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Status</th>
@@ -155,7 +156,16 @@
                         @foreach ($preview->rows as $row)
                             <tr>
                                 <td class="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">{{ $row->bookedAt ?? '—' }}</td>
-                                <td class="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
+                                <td class="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">{{ $row->sourceAccountName ?? '—' }}</td>
+                                <td class="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">
+                                    @if ($row->counterpartyName !== null)
+                                        {{ $row->counterpartyName }}
+                                    @elseif ($row->counterpartyIban !== null)
+                                        <span class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ $row->counterpartyIban }}</span>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
                                 <td class="px-4 py-2 text-right text-sm text-slate-900 dark:text-slate-100">
                                     @if ($row->amountMinor !== null && $row->currency !== null)
                                         {{ $fmt($row->amountMinor, $row->currency) }}
