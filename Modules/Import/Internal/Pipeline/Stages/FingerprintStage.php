@@ -19,23 +19,37 @@ use stdClass;
  *
  * `classify()` is the single decision point. It looks up the v3
  * fingerprint in the `transactions` table (scoped to the current user)
- * and consults the source-format rank of the incoming row vs the
- * existing one to pick a FingerprintDisposition variant:
+ * and picks a FingerprintDisposition variant:
  *
  *  - NewRowDisposition    — no existing row with this fingerprint.
- *  - DuplicateDisposition — fingerprint match but the incoming
+ *  - DuplicateDisposition — fingerprint match where BOTH sides are
+ *                           bank-statement formats (asn-csv,
+ *                           asn-camt053, asn-mt940, ics-pdf,
+ *                           paypal-csv). Same transaction re-imported
+ *                           from a different statement-format export
+ *                           drops as a duplicate without upgrading
+ *                           source_ref. Also returned when at least one
+ *                           side is a receipt format but the incoming
  *                           source_ref is no stronger than the stored
- *                           one (lower rank, equal rank, or NULL).
- *  - EnrichedDisposition  — fingerprint match AND the incoming
- *                           source_ref is strictly stronger; the existing
- *                           row will be UPDATE-d with the new source_ref
- *                           and a provenance entry appended to
- *                           `enriched_from`.
+ *                           one.
+ *  - EnrichedDisposition  — fingerprint match where AT LEAST ONE side
+ *                           is a receipt format (paypal-receipt /
+ *                           ics-receipt / google-play-receipt) AND the
+ *                           incoming source_ref is strictly stronger.
+ *                           The existing row is UPDATE-d with the new
+ *                           source_ref and a provenance entry is
+ *                           appended to `enriched_from`. The receipt-
+ *                           side data (clean merchant name, line items)
+ *                           is the legitimate enrichment surface;
+ *                           statement-vs-statement re-imports are NOT
+ *                           a legitimate enrichment site under the
+ *                           policy locked here.
  *
  * Ranking is delegated to `SourceRefRanker` so the preview-time
  * classifier and the write-time enrichment applier share a single
- * canonical ordering (`asn-camt053` > `asn-mt940` > `asn-csv` > unknown,
- * with NULL or empty refs ranked at zero).
+ * canonical ordering. Receipt-format identification is delegated to
+ * `SourceRefRanker::isReceiptFormat()` so the same list of receipt
+ * formats drives every code path that branches on receipt-vs-statement.
  *
  * The lookup explicitly filters by `user_id` (rather than relying on
  * BelongsToUser's global scope, which falls through to "no scope" in
@@ -43,16 +57,16 @@ use stdClass;
  * a different user never marks the current user's preview row as a
  * duplicate or enriches another user's row.
  *
- * Field-conflict detection (Wave 3 onwards): when the disposition is
- * ENRICHED, the classifier additionally fetches the existing row's
- * counterparty_name / description / currency / amount_minor and
- * compares them to the incoming canonical row. Each field where BOTH
- * sides have a non-null value AND the values disagree (with field-
- * appropriate normalization — case-insensitive for strings, uppercase
- * for currency, exact-int for amount_minor) is recorded on the
- * EnrichedDisposition's conflictingFields map. ApplyEnrichments reads
- * the map at write time and resolves the conflict per the user's
- * receipt_conflict_resolution policy (D-707).
+ * Field-conflict detection: when the disposition is ENRICHED, the
+ * classifier additionally fetches the existing row's counterparty_name
+ * / description / currency / amount_minor and compares them to the
+ * incoming canonical row. Each field where BOTH sides have a non-null
+ * value AND the values disagree (with field-appropriate normalization
+ * — case-insensitive for strings, uppercase for currency, exact-int
+ * for amount_minor) is recorded on the EnrichedDisposition's
+ * conflictingFields map. ApplyEnrichments reads the map at write time
+ * and resolves the conflict per the user's
+ * receipt_conflict_resolution policy.
  */
 final class FingerprintStage
 {
@@ -84,8 +98,33 @@ final class FingerprintStage
             return FingerprintDisposition::newRow();
         }
 
-        $existingRef = is_string($existing->source_ref) ? $existing->source_ref : null;
         $existingFormat = is_string($existing->source_format) ? $existing->source_format : '';
+
+        // Statement-vs-statement collisions drop as duplicates without
+        // upgrading source_ref. The user's UAT report (phase 16, batch
+        // 7) was that re-importing the same date range as XML (CAMT.053)
+        // after CSV showed every overlapping row as "enriched" — they
+        // expected the second import to recognise the row as the same
+        // transaction and skip it. Cross-statement-format enrichment
+        // was the design intent of the rank-based source_ref upgrade,
+        // but the user's policy is "same transaction → drop, never
+        // enrich" for bank-statement re-imports.
+        //
+        // Receipt-driven enrichment is preserved: when ONE side is a
+        // receipt format (paypal-receipt / ics-receipt /
+        // google-play-receipt) the receipt may legitimately carry data
+        // the bank statement lacks (clean merchant name, line items),
+        // so the rank-based upgrade still applies. The receipt-side
+        // dedup pay-off documented in
+        // Modules/Receipts/tests/Contracts/FingerprintParityTest
+        // depends on this branch staying alive.
+        $incomingIsReceipt = $this->ranker->isReceiptFormat($tx->sourceFormat);
+        $existingIsReceipt = $this->ranker->isReceiptFormat($existingFormat);
+        if (! $incomingIsReceipt && ! $existingIsReceipt) {
+            return FingerprintDisposition::duplicate();
+        }
+
+        $existingRef = is_string($existing->source_ref) ? $existing->source_ref : null;
         $rawId = $existing->id;
         $existingId = is_int($rawId) ? $rawId : (int) (is_numeric($rawId) ? $rawId : 0);
 
