@@ -59,6 +59,37 @@ final class AuditLogPage extends Component
     }
 
     /**
+     * Truncate every row from the dev_mode_audit table.
+     *
+     * Wired to the page-level "Clear all" button. The button uses
+     * Alpine `x-on:click` with a `confirm()` gate so the destructive
+     * action never fires from a stray click; this server-side handler
+     * unconditionally executes the truncate when called, trusting the
+     * confirm dialog as the user-facing speed bump.
+     *
+     * Cursor + filter state reset to defaults so the next render shows
+     * the empty-state copy instead of a stale "Older" pager link
+     * pointing at an id that no longer exists.
+     *
+     * Cross-user scope: dev_mode_audit is a shared operational audit
+     * surface (every developer's commands land in the same table); the
+     * /dev/audit page itself is gated by `ensureDeveloperMode`, so only
+     * users with `is_developer = true` reach this surface in the first
+     * place. The truncate intentionally wipes all rows for every
+     * developer — this matches the "Clear all" copy and the user-stated
+     * intent of starting fresh.
+     */
+    public function truncateAll(DatabaseManager $db): void
+    {
+        $db->connection()->table('dev_mode_audit')->delete();
+
+        $this->tierFilter = '';
+        $this->callerFilter = '';
+        $this->commandFilter = '';
+        $this->before = null;
+    }
+
+    /**
      * Walk one page older by pinning the cursor to the smallest id on
      * the currently-rendered page. Each click emits a fresh
      * ?before=<id> URL via the #[Url] binding so the back button
@@ -173,6 +204,7 @@ final class AuditLogPage extends Component
                 'exitCode' => is_int($properties['exit_code'] ?? null) ? $properties['exit_code'] : null,
                 'args' => is_array($properties['args'] ?? null) ? $properties['args'] : [],
                 'stdout' => is_string($properties['stdout_excerpt'] ?? null) ? $properties['stdout_excerpt'] : '',
+                'error' => is_string($properties['error_excerpt'] ?? null) ? $properties['error_excerpt'] : '',
                 'username' => $usernames[$causerId] ?? '',
                 'createdAt' => $createdAt,
             ];
