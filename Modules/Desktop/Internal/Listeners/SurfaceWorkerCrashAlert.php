@@ -71,7 +71,7 @@ final class SurfaceWorkerCrashAlert
     public const ALERT_KIND = 'worker.crashed';
 
     /** Verbatim UI-SPEC body (Copywriting Contract). */
-    public const ALERT_BODY = "diederik's background processing stopped unexpectedly. Imports and email scans are paused. Reopen the app to restart it.";
+    public const ALERT_BODY = "beatrax's background processing stopped unexpectedly. Imports and email scans are paused. Reopen the app to restart it.";
 
     /** Verbatim UI-SPEC OS-notification title. */
     public const OS_NOTIFICATION_TITLE = 'Background work stopped';

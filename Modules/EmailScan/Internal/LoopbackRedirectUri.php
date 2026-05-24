@@ -24,7 +24,7 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
  *  1. `email-scan.oauth_loopback_port` config value if set (lets the
  *     user override via env var `OAUTH_LOOPBACK_PORT=...` for Herd /
  *     custom-port setups where `app.url` does NOT carry the literal
- *     port the listener binds — for `app.url=https://diederik.test`
+ *     port the listener binds — for `app.url=https://beatrax.test`
  *     under Herd, the listener is on 443/80, but the OAuth redirect
  *     has to land on a separate `php artisan serve --port=8000`).
  *  2. `parse_url(app.url, PHP_URL_PORT)` if the host parses as
@@ -35,7 +35,7 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
  *
  * The fallback chain deliberately ignores the scheme + host from
  * app.url because the redirect must always be HTTP on the loopback
- * IP; honouring https://diederik.test verbatim would produce a URI
+ * IP; honouring https://beatrax.test verbatim would produce a URI
  * the provider rejects.
  */
 final class LoopbackRedirectUri

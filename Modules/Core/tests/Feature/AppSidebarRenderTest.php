@@ -20,7 +20,7 @@ use Modules\Core\Models\User;
  *  (3) The account caption renders "developer · local" for developers
  *      and "local" for non-developers.
  *  (4) The brand row literal is `beatrax` (post-rename string per
- *      D-10), NOT `diederik` — guards the rename precondition.
+ *      D-10), NOT `beatrax` — guards the rename precondition.
  *  (5) The rendered `<aside>` references the `--side-w` CSS custom
  *      property (or the matching 248px width token) somewhere on the
  *      sidebar root, so 16-03's dev-shell can flip it to 220px.
@@ -88,16 +88,16 @@ it('renders the brand row literal "beatrax" (post-rename lock per D-10)', functi
 
     $component->assertSee('beatrax');
 
-    // The brand-row text must be `beatrax`, never `diederik`, so the
-    // 16-02 find/replace does not have to touch this view (D-10 lock).
-    // We grep the rendered HTML for a `diederik` literal inside the
-    // brand row markup — route URLs in href attributes that resolve
-    // against APP_URL (still pointing at `https://diederik.test` until
-    // 16-02 flips Herd) are out of scope here.
+    // The brand-row text must be `beatrax`. Post-rename guard: no
+    // `diederik` literal may leak anywhere in the rendered sidebar
+    // HTML. Route URLs already resolve against `https://beatrax.test`
+    // (APP_URL was flipped in 16-02 alongside the brand row), so a
+    // single grep across the entire rendered HTML for any case-
+    // insensitive `diederik` substring is a tight regression guard.
     $html = (string) $component->html();
     expect($html)->toContain('>beatrax</span>')
-        ->and(preg_match('/<span[^>]*>diederik<\/span>/', $html) === 1)
-        ->toBeFalse('Brand row must not render `<span>diederik</span>` literal.');
+        ->and(stripos($html, 'diederik'))
+        ->toBeFalse('Rendered sidebar HTML must not contain any `diederik` literal post-rename.');
 });
 
 it('references the --side-w CSS custom property so the dev-shell layout can override the width', function (): void {

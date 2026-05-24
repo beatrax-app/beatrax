@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Upload statement · diederik'])
+@extends('layouts.app', ['title' => 'Upload statement · beatrax'])
 
 @section('content')
     <main class="min-h-screen bg-white dark:bg-slate-950">

@@ -48,7 +48,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * TransactionDetail::class)` page handler without a separate Blade
  * wrapper. The macro is registered by Livewire's SupportPageComponents
  * feature and produces a `@extends('layouts.app') @section('content')`
- * envelope identical to every other diederik page.
+ * envelope identical to every other beatrax page.
  */
 final class TransactionDetail extends Component
 {
@@ -243,7 +243,7 @@ final class TransactionDetail extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Transaction · diederik']);
+        $view->extends('layouts.app', ['title' => 'Transaction · beatrax']);
 
         return $view;
     }

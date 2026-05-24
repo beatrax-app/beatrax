@@ -40,7 +40,7 @@ use Modules\Core\Public\Events\UserInstalled;
 class InstallCommand extends Command
 {
     /** @var string */
-    protected $signature = 'diederik:install
+    protected $signature = 'beatrax:install
         {--username= : Username for the single-user account}
         {--password= : Password for the single-user account}
         {--period-start-day=1 : Period start day (1-28, 1 = calendar month, 25 = salary cycle)}
@@ -108,7 +108,7 @@ class InstallCommand extends Command
                     $resolvedPath,
                     $token,
                 ));
-                $this->line('diederik is local-only — move database.sqlite outside iCloud Drive, OneDrive, Dropbox, or any other cloud-sync folder before running install again.');
+                $this->line('beatrax is local-only — move database.sqlite outside iCloud Drive, OneDrive, Dropbox, or any other cloud-sync folder before running install again.');
 
                 return self::FAILURE;
             }
@@ -235,7 +235,7 @@ class InstallCommand extends Command
      * plists are macOS-only.
      *
      * For each plist:
-     *  1. Read the template from `deploy/launchd/com.diederik.{name}.plist`.
+     *  1. Read the template from `deploy/launchd/com.beatrax.{name}.plist`.
      *  2. Substitute `{{ABS_PHP_BINARY}}` (PHP_BINARY) +
      *     `{{ABS_PROJECT_ROOT}}` (Application::basePath()) in the contents.
      *  3. Ensure ~/Library/LaunchAgents/ exists (chmod 700 on first
@@ -279,7 +279,7 @@ class InstallCommand extends Command
         $uid = self::resolveCurrentUid();
 
         foreach ($plistNames as $name) {
-            $sourcePath = $this->app->basePath('deploy/launchd/com.diederik.'.$name.'.plist');
+            $sourcePath = $this->app->basePath('deploy/launchd/com.beatrax.'.$name.'.plist');
             if (! $this->files->exists($sourcePath)) {
                 $this->error("Source plist not found: {$sourcePath}");
 
@@ -288,15 +288,15 @@ class InstallCommand extends Command
 
             $template = $this->files->get($sourcePath);
             $rendered = strtr($template, $substitutions);
-            $targetPath = $launchAgentsDir.'/com.diederik.'.$name.'.plist';
+            $targetPath = $launchAgentsDir.'/com.beatrax.'.$name.'.plist';
             $this->files->put($targetPath, $rendered);
             $this->info("Wrote {$targetPath}");
 
             $bootstrapExit = $this->bootstrapPlist($uid, $targetPath);
             if ($bootstrapExit === 0) {
-                $this->info("Loaded com.diederik.{$name}");
+                $this->info("Loaded com.beatrax.{$name}");
             } else {
-                $this->warn("launchctl bootstrap exited {$bootstrapExit} for com.diederik.{$name} (may already be loaded; check `launchctl list | grep diederik`)");
+                $this->warn("launchctl bootstrap exited {$bootstrapExit} for com.beatrax.{$name} (may already be loaded; check `launchctl list | grep beatrax`)");
             }
         }
 

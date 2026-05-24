@@ -4,7 +4,7 @@
     Renders the opening balance + opening-balance-as-of fields side by
     side. The soft-warning banner appears below the inputs when the
     Action raises an OpeningBalanceDivergenceWarning; the banner offers
-    two chips: "Use diederik's number" (replaces the input with the
+    two chips: "Use beatrax's number" (replaces the input with the
     computed sum-of-transactions) and "Use my number" (commits the
     user's value with allowDivergence=true).
 
@@ -18,7 +18,7 @@
       - $errorMessage : ?string
       - $showingDivergenceBanner : bool
       - $divergenceDiffMinor : ?int
-      - $diederiksNumberMinor : ?int
+      - $beatraxsNumberMinor : ?int
       - $saved : bool
 --}}
 
@@ -27,7 +27,7 @@
     $helpText = match (true) {
         str_contains($accountKind, 'paypal') => "PayPal exports don't carry balance lines, so set this manually.",
         str_contains($accountKind, 'asn') => 'Auto-anchored from your latest statement. Override only if you know the live balance differs.',
-        default => 'Override only if you know the current live balance differs from what diederik computes.',
+        default => 'Override only if you know the current live balance differs from what beatrax computes.',
     };
 @endphp
 
@@ -69,14 +69,14 @@
     @if ($showingDivergenceBanner)
         <div role="status" aria-live="polite" class="rounded-md border border-amber-200 bg-amber-50 p-3 dark:bg-amber-950" data-testid="opening-balance-divergence-banner">
             <p class="text-sm text-amber-700">
-                This is more than €500 off the balance diederik computes from your imported transactions. Are you sure?
+                This is more than €500 off the balance beatrax computes from your imported transactions. Are you sure?
             </p>
             <div class="mt-2 flex flex-wrap gap-3">
                 <button
                     type="button"
-                    wire:click="useDiederiksNumber"
+                    wire:click="useBeatraxsNumber"
                     class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-100"
-                >Use diederik's number</button>
+                >Use beatrax's number</button>
                 <button
                     type="button"
                     wire:click="useMyNumber"

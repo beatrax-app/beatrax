@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Console\Probes;
 
 /**
- * Contract for a `diederik:doctor` probe. Each probe is a small testable
+ * Contract for a `beatrax:doctor` probe. Each probe is a small testable
  * unit that reads one operational signal (a PRAGMA value, a backup-
  * directory timestamp) and returns a `ProbeResult` summarising the
  * outcome at severity `ok` / `warning` / `critical`.

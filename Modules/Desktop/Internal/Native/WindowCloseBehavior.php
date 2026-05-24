@@ -16,7 +16,7 @@ use Modules\Core\Public\Contracts\Clock;
  * column:
  *
  *   - `null`  → show the D-08 prompt (CloseWindowPrompt) so the user
- *               chooses between "Quit diederik" and "Keep running in
+ *               chooses between "Quit beatrax" and "Keep running in
  *               the tray". The choice optionally persists via
  *               `persistChoice()`.
  *   - `quit`  → quit the app on every subsequent close.

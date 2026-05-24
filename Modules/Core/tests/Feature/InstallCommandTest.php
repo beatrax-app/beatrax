@@ -10,7 +10,7 @@ use Modules\Core\Public\Events\UserInstalled;
 it('creates User id=1 on a fresh install', function (): void {
     Event::fake([UserInstalled::class]);
 
-    $this->artisan('diederik:install', [
+    $this->artisan('beatrax:install', [
         '--username' => 'wessel',
         '--password' => 'opensesame',
         '--period-start-day' => 25,
@@ -25,7 +25,7 @@ it('creates User id=1 on a fresh install', function (): void {
 });
 
 it('is idempotent — re-running with the same username is a no-op', function (): void {
-    $this->artisan('diederik:install', [
+    $this->artisan('beatrax:install', [
         '--username' => 'wessel',
         '--password' => 'opensesame',
         '--period-start-day' => 1,
@@ -33,7 +33,7 @@ it('is idempotent — re-running with the same username is a no-op', function ()
 
     $originalHash = User::find(1)->password;
 
-    $this->artisan('diederik:install', [
+    $this->artisan('beatrax:install', [
         '--username' => 'wessel',
         '--password' => 'differentpassword',
         '--period-start-day' => 28,
@@ -51,7 +51,7 @@ it('refuses an iCloud-Drive database path', function (): void {
         '/Users/test/Library/Mobile Documents/com~apple~CloudDocs/db.sqlite',
     );
 
-    $this->artisan('diederik:install', [
+    $this->artisan('beatrax:install', [
         '--username' => 'test',
         '--password' => 'opensesame',
         '--period-start-day' => 1,
@@ -68,7 +68,7 @@ it('refuses a Dropbox database path', function (): void {
         '/Users/test/Dropbox/finance/db.sqlite',
     );
 
-    $this->artisan('diederik:install', [
+    $this->artisan('beatrax:install', [
         '--username' => 'test',
         '--password' => 'opensesame',
         '--period-start-day' => 1,
@@ -83,7 +83,7 @@ it('refuses a OneDrive database path', function (): void {
         '/Users/test/OneDrive/finance/db.sqlite',
     );
 
-    $this->artisan('diederik:install', [
+    $this->artisan('beatrax:install', [
         '--username' => 'test',
         '--password' => 'opensesame',
         '--period-start-day' => 1,
@@ -93,7 +93,7 @@ it('refuses a OneDrive database path', function (): void {
 });
 
 it('clamps period_start_day into the 1..28 window', function (): void {
-    $this->artisan('diederik:install', [
+    $this->artisan('beatrax:install', [
         '--username' => 'clamp',
         '--password' => 'opensesame',
         '--period-start-day' => 99,

@@ -27,7 +27,7 @@ uses(RefreshDatabase::class);
  *   - save() with missing as-of-date raises a validation error.
  *   - save() with a divergent value pops the soft-warning banner.
  *   - useMyNumber() commits with allowDivergence=true.
- *   - useDiederiksNumber() populates the input with the sum-of-
+ *   - useBeatraxsNumber() populates the input with the sum-of-
  *     transactions value.
  *   - Cross-user 404 on mount.
  *   - ProjectForecastJob dispatched per horizon after save.
@@ -178,10 +178,10 @@ it('pops the soft-warning banner when the entered value diverges by more than â‚
         ->call('save')
         ->assertSet('showingDivergenceBanner', true)
         ->assertSet('divergenceDiffMinor', 110000)
-        ->assertSet('diederiksNumberMinor', -10000);
+        ->assertSet('beatraxsNumberMinor', -10000);
 });
 
-it('populates input with diederiks number when clicked', function (): void {
+it('populates input with beatraxs number when clicked', function (): void {
     $account = obeAccount($this->user, 'paypal', 'paypal-5');
 
     Livewire::test(OpeningBalanceEditor::class, [
@@ -193,8 +193,8 @@ it('populates input with diederiks number when clicked', function (): void {
         'currency' => 'EUR',
     ])
         ->set('showingDivergenceBanner', true)
-        ->set('diederiksNumberMinor', -2500)
-        ->call('useDiederiksNumber')
+        ->set('beatraxsNumberMinor', -2500)
+        ->call('useBeatraxsNumber')
         ->assertSet('openingInput', '-25,00')
         ->assertSet('showingDivergenceBanner', false)
         ->assertSet('divergenceDiffMinor', null);

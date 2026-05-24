@@ -1,5 +1,5 @@
 {
-    "name": "diederik/drift-alerts",
+    "name": "beatrax/drift-alerts",
     "description": "Drift Alerts module — subscription drift detection, /drift page, cancellation-impact query.",
     "type": "laravel-module",
     "license": "proprietary",

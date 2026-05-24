@@ -10,7 +10,7 @@ it('reports installed versions and probe rows on a healthy environment', functio
     // WAL / synchronous probes already report ok against the testing
     // connection per the SqliteOptimizationsProvider. With all three
     // probes ok the existing inline tool checks decide the exit code.
-    $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
+    $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($backupsDir, 2));
 
     /** @var Filesystem $files */
@@ -20,7 +20,7 @@ it('reports installed versions and probe rows on a healthy environment', functio
     $clock = $this->app->make(Clock::class);
     $tenMinutesAgo = $clock->now()->subMinutes(10);
     $files->put(
-        $backupsDir.DIRECTORY_SEPARATOR.'diederik-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite.meta.json',
+        $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite.meta.json',
         (string) json_encode([
             'data_version' => 1,
             'started_at' => $tenMinutesAgo->subSecond()->toIso8601String(),
@@ -30,7 +30,7 @@ it('reports installed versions and probe rows on a healthy environment', functio
     );
 
     try {
-        $this->artisan('diederik:doctor')
+        $this->artisan('beatrax:doctor')
             ->expectsOutputToContain('PHP')
             ->expectsOutputToContain('Composer')
             ->expectsOutputToContain('SQLite');
@@ -53,7 +53,7 @@ it('prints lines for each Phase 11 probe (WAL / synchronous / backup freshness)'
     // is `memory` rather than `wal` — meaningless for the WAL/sync probes
     // but still useful for proving the labels are printed. The freshness
     // probe is the one we drive with a real sidecar so the row reads ok.
-    $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
+    $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($backupsDir, 2));
 
     /** @var Filesystem $files */
@@ -63,7 +63,7 @@ it('prints lines for each Phase 11 probe (WAL / synchronous / backup freshness)'
     $clock = $this->app->make(Clock::class);
     $tenMinutesAgo = $clock->now()->subMinutes(10);
     $files->put(
-        $backupsDir.DIRECTORY_SEPARATOR.'diederik-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite.meta.json',
+        $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite.meta.json',
         (string) json_encode([
             'data_version' => 1,
             'started_at' => $tenMinutesAgo->subSecond()->toIso8601String(),
@@ -73,7 +73,7 @@ it('prints lines for each Phase 11 probe (WAL / synchronous / backup freshness)'
     );
 
     try {
-        $this->artisan('diederik:doctor')
+        $this->artisan('beatrax:doctor')
             ->expectsOutputToContain('SQLite WAL mode')
             ->expectsOutputToContain('SQLite synchronous mode')
             ->expectsOutputToContain('Backup freshness');
@@ -100,7 +100,7 @@ it('exits non-zero when the BackupFreshnessProbe warns (DoctorCommand probe aggr
     // The drift-detection mechanic for WalModeProbe / SynchronousModeProbe
     // is covered exhaustively by DoctorProbesTest in isolation; this
     // feature test only verifies the command-level aggregation logic.
-    $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
+    $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($backupsDir, 2));
 
     /** @var Filesystem $files */
@@ -108,7 +108,7 @@ it('exits non-zero when the BackupFreshnessProbe warns (DoctorCommand probe aggr
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
     try {
-        $exitCode = $this->artisan('diederik:doctor')->run();
+        $exitCode = $this->artisan('beatrax:doctor')->run();
         expect($exitCode)->toBeGreaterThanOrEqual(1);
     } finally {
         foreach ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'*') as $entry) {

@@ -10,7 +10,7 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\InstallCommand;
 
 /*
- * `diederik:install --launchd` plist install path.
+ * `beatrax:install --launchd` plist install path.
  *
  * Plan 09: the artisan command must render the three deploy/launchd
  * plist templates with PHP_BINARY + base_path() substituted, write
@@ -69,14 +69,14 @@ beforeEach(function (): void {
 
     // Fresh per-test sandbox under sys_get_temp_dir() so a parallel
     // test run does not contend on the same path.
-    $sandbox = sys_get_temp_dir().'/diederik-launchd-test-'.bin2hex(random_bytes(6));
+    $sandbox = sys_get_temp_dir().'/beatrax-launchd-test-'.bin2hex(random_bytes(6));
     mkdir($sandbox, 0700, recursive: true);
     CaptureBootstrapInstallCommand::$sandboxDir = $sandbox;
     CaptureBootstrapInstallCommand::$capturedBootstraps = [];
     $this->sandbox = $sandbox;
 
     // Rebind the InstallCommand the artisan kernel resolves so
-    // `$this->artisan('diederik:install', ...)` picks up the test
+    // `$this->artisan('beatrax:install', ...)` picks up the test
     // subclass. The Symfony console binds commands by their resolved
     // class; rebinding the abstract InstallCommand here is sufficient.
     $this->app->bind(
@@ -106,12 +106,12 @@ afterEach(function (): void {
 });
 
 it('renders horizon + scheduler plists with placeholders substituted, skips redis when --without-redis is passed', function (): void {
-    $this->artisan('diederik:install', ['--launchd' => true, '--without-redis' => true])
+    $this->artisan('beatrax:install', ['--launchd' => true, '--without-redis' => true])
         ->assertExitCode(0);
 
-    $horizonPath = $this->sandbox.'/com.diederik.horizon.plist';
-    $schedulerPath = $this->sandbox.'/com.diederik.scheduler.plist';
-    $redisPath = $this->sandbox.'/com.diederik.redis.plist';
+    $horizonPath = $this->sandbox.'/com.beatrax.horizon.plist';
+    $schedulerPath = $this->sandbox.'/com.beatrax.scheduler.plist';
+    $redisPath = $this->sandbox.'/com.beatrax.redis.plist';
 
     expect(file_exists($horizonPath))->toBeTrue();
     expect(file_exists($schedulerPath))->toBeTrue();
@@ -141,12 +141,12 @@ it('renders horizon + scheduler plists with placeholders substituted, skips redi
 });
 
 it('renders all three plists (horizon + scheduler + redis) when --without-redis is omitted', function (): void {
-    $this->artisan('diederik:install', ['--launchd' => true])
+    $this->artisan('beatrax:install', ['--launchd' => true])
         ->assertExitCode(0);
 
-    $horizonPath = $this->sandbox.'/com.diederik.horizon.plist';
-    $schedulerPath = $this->sandbox.'/com.diederik.scheduler.plist';
-    $redisPath = $this->sandbox.'/com.diederik.redis.plist';
+    $horizonPath = $this->sandbox.'/com.beatrax.horizon.plist';
+    $schedulerPath = $this->sandbox.'/com.beatrax.scheduler.plist';
+    $redisPath = $this->sandbox.'/com.beatrax.redis.plist';
 
     expect(file_exists($horizonPath))->toBeTrue();
     expect(file_exists($schedulerPath))->toBeTrue();
@@ -164,24 +164,24 @@ it('renders all three plists (horizon + scheduler + redis) when --without-redis 
 });
 
 it('renders plists that contain the substituted PHP_BINARY path used by the artisan ProgramArguments', function (): void {
-    $this->artisan('diederik:install', ['--launchd' => true, '--without-redis' => true])
+    $this->artisan('beatrax:install', ['--launchd' => true, '--without-redis' => true])
         ->assertExitCode(0);
 
-    $horizonContents = (string) file_get_contents($this->sandbox.'/com.diederik.horizon.plist');
+    $horizonContents = (string) file_get_contents($this->sandbox.'/com.beatrax.horizon.plist');
     // The plist's ProgramArguments must reference the absolute path
     // to the artisan script in this project (so the launchd-managed
     // process runs against the correct codebase).
     expect($horizonContents)->toContain(base_path().'/artisan');
     expect($horizonContents)->toContain('<string>horizon</string>');
 
-    $schedulerContents = (string) file_get_contents($this->sandbox.'/com.diederik.scheduler.plist');
+    $schedulerContents = (string) file_get_contents($this->sandbox.'/com.beatrax.scheduler.plist');
     expect($schedulerContents)->toContain(base_path().'/artisan');
     expect($schedulerContents)->toContain('<string>schedule:work</string>');
 });
 
 it('outputs a Wrote line for each installed plist', function (): void {
-    $this->artisan('diederik:install', ['--launchd' => true, '--without-redis' => true])
-        ->expectsOutputToContain('Wrote '.$this->sandbox.'/com.diederik.horizon.plist')
-        ->expectsOutputToContain('Wrote '.$this->sandbox.'/com.diederik.scheduler.plist')
+    $this->artisan('beatrax:install', ['--launchd' => true, '--without-redis' => true])
+        ->expectsOutputToContain('Wrote '.$this->sandbox.'/com.beatrax.horizon.plist')
+        ->expectsOutputToContain('Wrote '.$this->sandbox.'/com.beatrax.scheduler.plist')
         ->assertExitCode(0);
 });

@@ -1,5 +1,5 @@
 {
-    "name": "diederik/categorization",
+    "name": "beatrax/categorization",
     "description": "Categorization module — category tree and triage inbox.",
     "type": "laravel-module",
     "license": "proprietary",

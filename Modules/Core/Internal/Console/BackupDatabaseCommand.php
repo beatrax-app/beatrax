@@ -86,7 +86,7 @@ final class BackupDatabaseCommand extends Command
             // message around "aborted before any file was produced"
             // rather than pointing the operator at a file they will
             // never find.
-            $basenameForAlert = 'diederik-'.$startedAt->format('Y-m-d-His').'.sqlite';
+            $basenameForAlert = 'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
             $destinationForAlert = $backupsDir.DIRECTORY_SEPARATOR.$basenameForAlert;
             $this->recordCorruptAlert($destinationForAlert, null, [
                 'pdo_exception' => $e->getMessage(),
@@ -103,7 +103,7 @@ final class BackupDatabaseCommand extends Command
             return self::SUCCESS;
         }
 
-        $basename = 'diederik-'.$startedAt->format('Y-m-d-His').'.sqlite';
+        $basename = 'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
         $destination = $backupsDir.DIRECTORY_SEPARATOR.$basename;
 
         try {
@@ -308,7 +308,7 @@ final class BackupDatabaseCommand extends Command
      */
     private function isSkippable(string $backupsDir, int $liveDataVersion): bool
     {
-        $candidates = glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite.meta.json');
+        $candidates = glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite.meta.json');
         if ($candidates === false || $candidates === []) {
             return false;
         }
@@ -318,7 +318,7 @@ final class BackupDatabaseCommand extends Command
         // a sibling filename family or changes the parent directory
         // shape cannot accidentally flip the "newest" winner — only the
         // YYYY-MM-DD-HHMMSS suffix governs the order. The basename
-        // shape is fixed (`diederik-` prefix + zero-padded fixed-width
+        // shape is fixed (`beatrax-` prefix + zero-padded fixed-width
         // timestamp + `.sqlite.meta.json` suffix), so basename strcmp
         // descending IS chronological descending.
         usort($candidates, static fn (string $a, string $b): int => strcmp(basename($b), basename($a)));
@@ -391,7 +391,7 @@ final class BackupDatabaseCommand extends Command
     }
 
     /**
-     * Deletes any matching `diederik-YYYY-MM-DD-HHMMSS.sqlite` files
+     * Deletes any matching `beatrax-YYYY-MM-DD-HHMMSS.sqlite` files
      * the retention policy did NOT keep. `.suspect`, `pre-restore-*`,
      * and `.meta.json` files are never deleted — the policy passes
      * non-matching basenames through unchanged so the caller's filter

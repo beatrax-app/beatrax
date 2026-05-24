@@ -1,5 +1,5 @@
 {
-    "name": "diederik/import",
+    "name": "beatrax/import",
     "description": "Import module — pipeline orchestrator and wizard.",
     "type": "laravel-module",
     "license": "proprietary",

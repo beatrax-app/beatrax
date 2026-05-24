@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Dashboard · diederik'])
+@extends('layouts.app', ['title' => 'Dashboard · beatrax'])
 
 @section('content')
     <main class="min-h-screen bg-white dark:bg-slate-950">

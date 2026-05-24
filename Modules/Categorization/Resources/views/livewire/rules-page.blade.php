@@ -117,7 +117,7 @@
         </div>
 
         <p class="mt-6 max-w-3xl text-xs text-slate-500 dark:text-slate-400">
-            Rules and merchant history work together. Deleting a rule doesn't clear what diederik has learned from past categorizations — the next import may still auto-suggest the same category from history.
+            Rules and merchant history work together. Deleting a rule doesn't clear what beatrax has learned from past categorizations — the next import may still auto-suggest the same category from history.
         </p>
     @endif
 </div>

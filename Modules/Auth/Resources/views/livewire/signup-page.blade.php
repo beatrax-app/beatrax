@@ -1,7 +1,7 @@
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-md mx-auto px-6 space-y-6">
         <header class="space-y-1">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Welcome to diederik</h1>
+            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Welcome to beatrax</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">Create the first account on this device. The first account becomes the owner.</p>
         </header>
 

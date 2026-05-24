@@ -13,7 +13,7 @@ use Modules\Desktop\Internal\Native\PendingFileIntent;
  *
  * Flow (the remediated path Pitfall 3 in RESEARCH.md describes):
  *
- *   1. The OS hands diederik a file while no user is authenticated.
+ *   1. The OS hands beatrax a file while no user is authenticated.
  *   2. `FileOpenIntake` validates the path; the listener bundle
  *      stores it in `PendingFileIntent` (session-scoped).
  *   3. The user navigates to / is bounced to `/login`.

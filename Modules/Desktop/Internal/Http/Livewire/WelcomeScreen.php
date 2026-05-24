@@ -12,7 +12,7 @@ use Livewire\Component;
  * Welcome screen (D-22).
  *
  * Renders after the first-launch DB bootstrap finishes on a fresh
- * install — a centered brand mark, the "Welcome to diederik" heading,
+ * install — a centered brand mark, the "Welcome to beatrax" heading,
  * and a single emerald "Get started" button that drops the user onto
  * `/signup` (Phase 12 D-03 gates the signup route to `User::count() === 0`,
  * so the welcome page → signup path is internally consistent).
@@ -27,7 +27,7 @@ final class WelcomeScreen extends Component
         $view = $views->make('desktop::welcome');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Welcome · diederik']);
+        $view->extends('layouts.app', ['title' => 'Welcome · beatrax']);
 
         return $view;
     }
