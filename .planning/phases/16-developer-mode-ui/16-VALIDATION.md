@@ -55,6 +55,7 @@ updated: 2026-05-24
 | **16-04b/T1** | **16-04b** | **4** | **DEVUI-02** | **T-16-13** | **SAFE run's done branch invokes FinalizeRunAudit → spatie/laravel-activitylog ^5.0 audit row written with D-24 row shape + 8KB cap + Bearer/JWT redaction** | **feature** | **`pest Modules/DevMode/tests/Feature/AuditLogWriteTest.php`** | ❌ **Wave 0 (16-04b creates)** | ⬜ |
 | 16-04b/T1 | 16-04b | 4 | DEVUI-03 | — | AuditEvent enum locks the audit-action taxonomy (I-5 fix — no free-form strings) | unit | `pest --filter=AuditEvent` (part of AuditLogWrite tests) | ❌ Wave 0 (16-04b creates) | ⬜ |
 | 16-04b/T1 | 16-04b | 4 | DEVUI-02 | — | PruneDevAuditCommand deletes rows older than --older-than days | feature | `pest --filter=PruneDevAudit` (part of AuditLogWrite test file) | ❌ Wave 0 (16-04b creates) | ⬜ |
+| **16-04b/T1** | **16-04b** | **4** | **DEVUI-04** | **T-16-W1, T-16-03** | **W-1 BASELINE fix: Monolog RedactSecretsProcessor + PushRedactProcessor installed by 16-04b; config/logging.php stack/single/daily tap slots reference PushRedactProcessor::class; `logger()->info("...Authorization: Bearer abc.def.ghi...")` writes `Authorization: Bearer [REDACTED]` to disk. Closes on-write redaction-gap window in Wave 4, not Wave 5.** | **unit + feature** | **`pest Modules/DevMode/tests/Unit/RedactSecretsProcessorBaselineTest.php`** | ❌ **Wave 0 (16-04b creates)** | ⬜ |
 | 16-04b/T2 | 16-04b | 4 | DEVUI-03 | T-16-02 | DESTRUCTIVE `db:restore` rejected without all three gates (TripleGateModal + DestructiveSpawnController defense-in-depth re-validation) | feature | `pest Modules/DevMode/tests/Feature/TripleGateTest.php` | ❌ Wave 0 (16-04b creates) | ⬜ |
 | 16-04b/T2 | 16-04b | 4 | DEVUI-02 | T-16-W8 | Worker heartbeat updates cache on every queue:work iteration via QueueManager::looping DI form (W-8 fix — NOT event-listener form) | feature | `pest Modules/DevMode/tests/Feature/WorkerHeartbeatTest.php` | ❌ Wave 0 (16-04b creates) | ⬜ |
 | 16-04b/T2 | 16-04b | 4 | DEVUI-03 | T-16-02 | Full round-trip: triple-gate confirm → DestructiveSpawnController spawn → CommandSpawner → audit row with tier=destructive | feature | `pest Modules/DevMode/tests/Feature/DestructiveTripleGateRoundTripTest.php` | ❌ Wave 0 (16-04b creates) | ⬜ |
@@ -108,11 +109,11 @@ updated: 2026-05-24
 - [x] **16-03:** `package.json` — add `fuse.js@^7.0`
 - [x] **16-03:** `config/activitylog.php` — publish, set `table_name: dev_mode_audit`
 - [x] **16-03:** `config/database.php` — add `readonly_select` connection (PRAGMA `query_only=1` set per-PDO in 16-07)
-- [x] **16-03:** `config/logging.php` — publish, flip `single` → `daily`, add `tap: []` placeholder slot on every channel (16-04b installs the baseline RedactSecretsProcessor FQCN per W-1 fix; 16-05 upgrades the processor in place)
+- [x] **16-03:** `config/logging.php` — publish, flip `single` → `daily`, add `tap: []` placeholder slot on every channel (16-04b fills the stack/single/daily tap slots with PushRedactProcessor::class AND installs the baseline RedactSecretsProcessor per W-1 fix; 16-05 upgrades the processor in place via constructor DI)
 - [x] **16-03:** First arch invariant `everyDevModeRouteAppliesEnsureDeveloperModeMiddleware` added to `BoundaryArchTest` (I-2: filter tightened to `dev/` prefix)
 - [x] **16-04:** CommandRegistry + Spawner + RunRegistry + FileTailer + ArtisanStreamController (spawn-then-tail architecture b per D-16, with B-1 page-refresh-reconnect Pest test as the headline contract)
 - [x] **16-04:** ArtisanStreamReconnectTest at `Modules/DevMode/tests/Feature/ArtisanStreamReconnectTest.php` (B-1 / B-6 fix — the D-16 contract test)
-- [x] **16-04b:** Baseline RedactSecretsProcessor + PushRedactProcessor (W-1 fix: closes the redaction-gap window in the same Wave 4 as the runner)
+- [x] **16-04b:** Baseline RedactSecretsProcessor (`Modules/DevMode/Internal/Logging/RedactSecretsProcessor.php`) + PushRedactProcessor (`Modules/DevMode/Internal/Logging/PushRedactProcessor.php`) + config/logging.php tap-slot fill on stack/single/daily channels + RedactSecretsProcessorBaselineTest (W-1 fix: closes the redaction-gap window in the same Wave 4 as the runner; 16-05 upgrades the processor in place via constructor DI without touching wiring)
 - [x] **16-04b:** RedactionExcerptCap (basic Bearer + JWT version; 16-05 upgrades to full scrub-set)
 - [x] **16-04b:** AuditEvent enum at `Modules/DevMode/Internal/Enums/AuditEvent.php` (I-5 fix — locks audit taxonomy; 16-06/16-07 extend with their cases)
 - [x] **16-04b:** SpatieAuditWriter + FinalizeRunAudit hook wired into 16-04's ArtisanStreamController
@@ -158,7 +159,7 @@ updated: 2026-05-24
 
 - [x] All tasks have `<automated>` verify or Wave 0 dependencies (filled by planner)
 - [x] Sampling continuity: no 3 consecutive tasks without automated verify (Wave 0 setup tasks in 16-03 + 16-04 + 16-04b + 16-05 + 16-07 each create their own test scaffolding within the same task)
-- [x] Wave 0 covers all MISSING references (per Wave 0 Requirements checklist above) — including B-1 ArtisanStreamReconnectTest, W-1 baseline RedactSecretsProcessor in 16-04b, I-5 AuditEvent enum in 16-04b, W-6 WallClockCap in 16-07
+- [x] Wave 0 covers all MISSING references (per Wave 0 Requirements checklist above) — including B-1 ArtisanStreamReconnectTest, W-1 baseline RedactSecretsProcessor + PushRedactProcessor + config/logging.php tap-slot fill + RedactSecretsProcessorBaselineTest in 16-04b, I-5 AuditEvent enum in 16-04b, W-6 WallClockCap in 16-07
 - [x] No watch-mode flags
 - [x] Feedback latency < 30s for the per-task quick filter
 - [ ] `nyquist_compliant: true` set in frontmatter (set by `/gsd:verify-work`)
