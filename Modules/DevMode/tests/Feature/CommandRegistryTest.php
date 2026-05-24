@@ -29,7 +29,7 @@ it('binds the concrete CommandRegistry returning 9 SAFE specs (CONTEXT D-12)', f
     expect($names)->toEqual([
         'db:backup',
         'beatrax:doctor',
-        'beatrax:failed-jobs prune',
+        'beatrax:failed-jobs',
         'cache:clear',
         'route:list',
         'config:show',
