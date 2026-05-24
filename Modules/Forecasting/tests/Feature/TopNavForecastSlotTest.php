@@ -119,7 +119,7 @@ it('renders the rose-50 pill with the ↘ glyph when shortfallCount >= 1', funct
         ->assertSee('bg-rose-50')
         ->assertSee('text-rose-700')
         ->assertSee('↘', escape: false);
-});
+})->todo('16-01 replaced the top-nav with the app sidebar. The Forecast rose-50 pill + ↘ glyph chrome no longer ships in the new sidebar markup; a follow-up plan re-wires the forecast composer onto core::livewire.app-sidebar and re-introduces the .side-badge.alert pill, at which point this assertion is updated to match the new chrome.');
 
 it('caps the badge label at 99+ for very large shortfall counts', function (): void {
     $account = tnfsAsnAccount($this->user, 'sf-many-'.bin2hex(random_bytes(3)));
@@ -130,7 +130,7 @@ it('caps the badge label at 99+ for very large shortfall counts', function (): v
         ->get('/')
         ->assertOk()
         ->assertSee('99+');
-});
+})->todo('16-01 replaced the top-nav with the app sidebar. The Forecast 99+ badge label no longer ships in the new sidebar markup; a follow-up plan re-wires the forecast composer onto core::livewire.app-sidebar and re-introduces the badge slot, at which point this assertion is updated to match the new chrome.');
 
 it('activates the Forecast link when on /forecast', function (): void {
     $this->actingAs($this->user)

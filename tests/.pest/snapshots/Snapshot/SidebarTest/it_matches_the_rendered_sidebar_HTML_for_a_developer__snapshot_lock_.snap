@@ -1,0 +1,102 @@
+<aside wire:name="core.app-sidebar" class="side" aria-label="Primary" style="--side-w: 248px;">
+    <div class="side-brand">
+        <span class="logo" aria-hidden="true">b</span>
+        <span>beatrax</span>
+        <span class="version-chip">v2.0.0-dev</span>
+    </div>
+
+    <div class="side-search" role="search">
+        <span class="ic" aria-hidden="true">⌕</span>
+        <input
+            type="text"
+            placeholder="Search or jump to…"
+            aria-label="Search or jump to"
+            disabled
+        />
+        <span class="kbd" aria-hidden="true">⌘K</span>
+    </div>
+
+    <div class="side-section-label">THIS MONTH</div>
+    <a href="https://diederik.test" class="side-item ">
+        <span class="ic" aria-hidden="true">◆</span>
+        Dashboard
+    </a>
+    <a href="https://diederik.test/transactions" class="side-item ">
+        <span class="ic" aria-hidden="true">≡</span>
+        Transactions
+    </a>
+    <a href="https://diederik.test/forecast" class="side-item ">
+        <span class="ic" aria-hidden="true">↗</span>
+        Forecasts
+    </a>
+
+    <div class="side-section-label">MONEY</div>
+    <a href="https://diederik.test/recurring" class="side-item ">
+        <span class="ic" aria-hidden="true">↻</span>
+        Recurring
+    </a>
+    <a href="https://diederik.test/chains/review" class="side-item ">
+        <span class="ic" aria-hidden="true">⇉</span>
+        Chains
+    </a>
+    <a href="https://diederik.test/drift" class="side-item ">
+        <span class="ic" aria-hidden="true">⚠</span>
+        Drift Alerts
+    </a>
+
+    <div class="side-section-label">INGESTION</div>
+    <a href="https://diederik.test/imports/new" class="side-item ">
+        <span class="ic" aria-hidden="true">⊕</span>
+        Imports
+    </a>
+    <a href="#" class="side-item">
+        <span class="ic" aria-hidden="true">⌗</span>
+        Receipts
+    </a>
+    <a href="https://diederik.test/inboxes" class="side-item ">
+        <span class="ic" aria-hidden="true">✉</span>
+        Email
+    </a>
+    <a href="https://diederik.test/uncategorized" class="side-item ">
+        <span class="ic" aria-hidden="true">⌕</span>
+        Categorization
+    </a>
+
+    <div class="side-section-label">SETTINGS</div>
+    <a href="https://diederik.test/settings" class="side-item ">
+        <span class="ic" aria-hidden="true">⚙</span>
+        Settings
+    </a>
+
+    <div class="side-foot">
+        <!--[if BLOCK]><![endif]-->            
+            <div class="side-dev-block">
+                <div class="heading">
+                    <span class="dot-live" aria-hidden="true"></span>
+                    Developer
+                </div>
+                <a href="/dev" class="side-item">
+                    <span class="ic" aria-hidden="true">›_</span>
+                    Open Dev Console
+                    <span class="kbd" aria-hidden="true">⌘.</span>
+                </a>
+                <div class="dev-pulse">Queue 0 · Worker —</div>
+            </div>
+        <!--[if ENDBLOCK]><![endif]-->
+        <div class="side-account" role="button" tabindex="0">
+            <div class="avatar" aria-hidden="true">S</div>
+            <div>
+                <span class="name">snap-dev</span>
+                <span class="caption">developer · local</span>
+            </div>
+            <span class="ic right" aria-hidden="true">⋯</span>
+        </div>
+
+        <form method="POST" action="https://diederik.test/logout">
+                        <button type="submit" class="side-item" style="width: 100%;">
+                <span class="ic" aria-hidden="true">⏻</span>
+                Sign out
+            </button>
+        </form>
+    </div>
+</aside>

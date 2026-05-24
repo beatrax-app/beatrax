@@ -42,7 +42,7 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
-        <title>{{ $title ?? 'diederik' }}</title>
+        <title>{{ $title ?? 'beatrax' }}</title>
         @if ($needsPrePaintScript)
             {{--
                 Pre-paint theme script. Runs synchronously in <head>
@@ -76,16 +76,20 @@
     </head>
     <body class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100" style="font-family: 'Inter', system-ui, -apple-system, sans-serif;">
         @auth
-            @isset($impersonatingPartnerUsername)
-                @include('auth::partials.impersonation-banner', ['username' => $impersonatingPartnerUsername])
-            @endisset
-            @livewire('core.top-nav')
-            @livewire('core.system-alerts-banner')
-            @livewire('categorization.rule-form-modal')
-            @livewire('categorization.correction-divergence-toast')
-            @livewire('receipts.receipt-conflict-toast')
+            <div class="flex min-h-screen">
+                @livewire('core.app-sidebar')
+                <main class="flex-1 min-w-0 overflow-auto">
+                    @livewire('core.system-alerts-banner')
+                    @livewire('categorization.rule-form-modal')
+                    @livewire('categorization.correction-divergence-toast')
+                    @livewire('receipts.receipt-conflict-toast')
+                    @yield('content')
+                </main>
+            </div>
         @endauth
-        @yield('content')
+        @guest
+            @yield('content')
+        @endguest
         @livewireScripts
         @auth
             {{--

@@ -1,0 +1,129 @@
+@php
+    /**
+     * @var string $currentPath
+     * @var string $username
+     * @var string $userInitial
+     * @var bool $isDeveloper
+     * @var string $accountCaption
+     *
+     * Active-state helper — mirrors TopNav's `$isActive` lambda
+     * (pre-rewrite analog) so route-driven highlighting reads from
+     * the controller-provided `$currentPath` rather than a global
+     * helper.
+     */
+    $isActive = static fn (string $path): string => $currentPath === $path ? 'active' : '';
+@endphp
+
+<aside class="side" aria-label="Primary" style="--side-w: 248px;">
+    <div class="side-brand">
+        <span class="logo" aria-hidden="true">b</span>
+        <span>beatrax</span>
+        <span class="version-chip">v2.0.0-dev</span>
+    </div>
+
+    <div class="side-search" role="search">
+        <span class="ic" aria-hidden="true">⌕</span>
+        <input
+            type="text"
+            placeholder="Search or jump to…"
+            aria-label="Search or jump to"
+            disabled
+        />
+        <span class="kbd" aria-hidden="true">⌘K</span>
+    </div>
+
+    <div class="side-section-label">THIS MONTH</div>
+    <a href="{{ route('dashboard') }}" class="side-item {{ $isActive('/') }}">
+        <span class="ic" aria-hidden="true">◆</span>
+        Dashboard
+    </a>
+    <a href="{{ route('transactions.index') }}" class="side-item {{ $isActive('/transactions') }}">
+        <span class="ic" aria-hidden="true">≡</span>
+        Transactions
+    </a>
+    <a href="{{ route('forecast.index') }}" class="side-item {{ $isActive('/forecast') }}">
+        <span class="ic" aria-hidden="true">↗</span>
+        Forecasts
+    </a>
+
+    <div class="side-section-label">MONEY</div>
+    <a href="{{ route('recurring.index') }}" class="side-item {{ $isActive('/recurring') }}">
+        <span class="ic" aria-hidden="true">↻</span>
+        Recurring
+    </a>
+    <a href="{{ route('chains.review') }}" class="side-item {{ $isActive('/chains/review') }}">
+        <span class="ic" aria-hidden="true">⇉</span>
+        Chains
+    </a>
+    <a href="{{ route('drift.index') }}" class="side-item {{ $isActive('/drift') }}">
+        <span class="ic" aria-hidden="true">⚠</span>
+        Drift Alerts
+    </a>
+
+    <div class="side-section-label">INGESTION</div>
+    <a href="{{ route('imports.new') }}" class="side-item {{ $isActive('/imports/new') }}">
+        <span class="ic" aria-hidden="true">⊕</span>
+        Imports
+    </a>
+    <a href="#" class="side-item">
+        <span class="ic" aria-hidden="true">⌗</span>
+        Receipts
+    </a>
+    <a href="{{ route('inboxes.index') }}" class="side-item {{ $isActive('/inboxes') }}">
+        <span class="ic" aria-hidden="true">✉</span>
+        Email
+    </a>
+    <a href="{{ route('uncategorized') }}" class="side-item {{ $isActive('/uncategorized') }}">
+        <span class="ic" aria-hidden="true">⌕</span>
+        Categorization
+    </a>
+
+    <div class="side-section-label">SETTINGS</div>
+    <a href="{{ route('settings') }}" class="side-item {{ $isActive('/settings') }}">
+        <span class="ic" aria-hidden="true">⚙</span>
+        Settings
+    </a>
+
+    <div class="side-foot">
+        @if ($isDeveloper)
+            {{--
+                Dev block (D-05 sketch). Server-side gated on
+                `users.is_developer` — non-developers never receive
+                this DOM (T-16-01 mitigation: information disclosure
+                of the Dev Console's existence). Pulsing emerald dot
+                is a static box-shadow ring (no JS) per UI-SPEC §
+                Animation; the static numbers below are placeholders
+                for 16-04 + 16-06 which wire the real cache reads.
+            --}}
+            <div class="side-dev-block">
+                <div class="heading">
+                    <span class="dot-live" aria-hidden="true"></span>
+                    Developer
+                </div>
+                <a href="/dev" class="side-item">
+                    <span class="ic" aria-hidden="true">›_</span>
+                    Open Dev Console
+                    <span class="kbd" aria-hidden="true">⌘.</span>
+                </a>
+                <div class="dev-pulse">Queue 0 · Worker —</div>
+            </div>
+        @endif
+
+        <div class="side-account" role="button" tabindex="0">
+            <div class="avatar" aria-hidden="true">{{ $userInitial }}</div>
+            <div>
+                <span class="name">{{ $username }}</span>
+                <span class="caption">{{ $accountCaption }}</span>
+            </div>
+            <span class="ic right" aria-hidden="true">⋯</span>
+        </div>
+
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" class="side-item" style="width: 100%;">
+                <span class="ic" aria-hidden="true">⏻</span>
+                Sign out
+            </button>
+        </form>
+    </div>
+</aside>
