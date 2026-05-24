@@ -22,13 +22,16 @@ use Modules\DevMode\Internal\Console\PruneDevAuditCommand;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
+use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
 use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
+use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
 use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 use Modules\DevMode\Internal\Http\Middleware\EnsureDeveloperMode;
 use Modules\DevMode\Internal\Listeners\BustOAuthScrubSetOnSecretChange;
 use Modules\DevMode\Internal\Listeners\ResetAdvancedToggleOnLogin;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
+use Modules\DevMode\Internal\Navigation\DevSidebarItems;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
@@ -318,6 +321,13 @@ final class DevModeServiceProvider extends ServiceProvider
             $app->make(RunRegistry::class),
             $app->make(Clock::class),
         ));
+
+        // 16-06 — DevSidebarItems registry. Foundation for the W-3
+        // parallel-wave parallelism story: each owning plan flips its
+        // slug's `enabled` field in the constant. The dev-shell
+        // layout still gates `nav-disabled` on Route::has(...) at
+        // render time so runtime truth wins over the constant.
+        $this->app->singleton(DevSidebarItems::class, static fn (): DevSidebarItems => new DevSidebarItems);
     }
 
     public function boot(Router $router, LivewireManager $livewire, Dispatcher $events): void
@@ -339,6 +349,9 @@ final class DevModeServiceProvider extends ServiceProvider
         $livewire->component('dev.artisan-runner-page', ArtisanRunnerPage::class);
         $livewire->component('dev.audit-log-page', AuditLogPage::class);
         $livewire->component('dev.log-tailer-page', LogTailerPage::class);
+        // 16-06 — queue inspector + (conditionally) Horizon iframe page.
+        $livewire->component('dev.queue-inspector-page', QueueInspectorPage::class);
+        $livewire->component('dev.horizon-frame-page', HorizonFramePage::class);
 
         // W-8 FIX: register the queue-worker heartbeat via the
         // QueueManager::looping(closure) form. The event-listener form
