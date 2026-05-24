@@ -80,7 +80,7 @@ return [
 
     'cookie' => env(
         'SESSION_COOKIE',
-        'diederik_session'
+        'beatrax_session'
     ),
 
     /*
