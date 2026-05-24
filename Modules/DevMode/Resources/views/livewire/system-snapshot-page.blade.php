@@ -1,4 +1,19 @@
 <div class="p-6 space-y-6" data-testid="system-snapshot-page">
+    {{--
+        Snapshot sections share a fixed-width key column so the
+        divider between key and value stays in the same X position
+        across every card. Without this each section's <table>
+        sized its key column to the longest key in that section
+        alone, which made every section's value column start at a
+        different X — visually misaligned cards stacked vertically.
+
+        The fixed-width is applied per row via Tailwind's `w-40`
+        on each <th>; the table layout collapses excess width onto
+        the value column.
+    --}}
+    @php
+        $keyTh = 'text-left text-xs uppercase text-[var(--color-text-muted)] pr-4 w-40 align-top';
+    @endphp
     <header class="space-y-1">
         <h1 class="text-xl font-semibold text-[var(--color-text)]">System snapshot</h1>
         <p class="text-sm text-[var(--color-text-muted)]">
@@ -16,11 +31,11 @@
         <h2 class="text-sm font-semibold mb-3">PHP</h2>
         <table class="table w-full text-sm" style="font-variant-numeric: tabular-nums;">
             <tbody>
-                <tr><th class="text-left text-xs uppercase text-[var(--color-text-muted)] pr-4">version</th><td class="font-mono">{{ $php['version'] }}</td></tr>
-                <tr><th class="text-left text-xs uppercase text-[var(--color-text-muted)] pr-4">sapi</th><td class="font-mono">{{ $php['sapi'] }}</td></tr>
-                <tr><th class="text-left text-xs uppercase text-[var(--color-text-muted)] pr-4">ini path</th><td class="font-mono text-xs">{{ $php['ini_path'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">version</th><td class="font-mono">{{ $php['version'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">sapi</th><td class="font-mono">{{ $php['sapi'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">ini path</th><td class="font-mono text-xs">{{ $php['ini_path'] }}</td></tr>
                 <tr>
-                    <th class="text-left text-xs uppercase text-[var(--color-text-muted)] pr-4 align-top">extensions</th>
+                    <th class="{{ $keyTh }}">extensions</th>
                     <td class="text-xs">{{ implode(', ', $php['extensions']) }}</td>
                 </tr>
             </tbody>
@@ -34,7 +49,7 @@
             <tbody>
                 @foreach ($laravel as $k => $v)
                     <tr>
-                        <th class="text-left text-xs uppercase text-[var(--color-text-muted)] pr-4">{{ $k }}</th>
+                        <th class="{{ $keyTh }}">{{ $k }}</th>
                         <td class="font-mono">{{ is_bool($v) ? ($v ? 'true' : 'false') : (is_scalar($v) ? $v : json_encode($v)) }}</td>
                     </tr>
                 @endforeach
@@ -49,12 +64,12 @@
             <tbody>
                 @foreach ($sqlite['pragmas'] as $k => $v)
                     <tr>
-                        <th class="text-left text-xs uppercase text-[var(--color-text-muted)] pr-4">{{ $k }}</th>
+                        <th class="{{ $keyTh }}">{{ $k }}</th>
                         <td class="font-mono">{{ $v }}</td>
                     </tr>
                 @endforeach
-                <tr><th class="text-left text-xs uppercase text-[var(--color-text-muted)] pr-4">file</th><td class="font-mono text-xs">{{ $sqlite['file'] }}</td></tr>
-                <tr><th class="text-left text-xs uppercase text-[var(--color-text-muted)] pr-4">file size</th><td class="font-mono">{{ $sqlite['file_size'] ?? '(missing)' }}</td></tr>
+                <tr><th class="{{ $keyTh }}">file</th><td class="font-mono text-xs">{{ $sqlite['file'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">file size</th><td class="font-mono">{{ $sqlite['file_size'] ?? '(missing)' }}</td></tr>
             </tbody>
         </table>
     </section>
@@ -66,7 +81,7 @@
             <tbody>
                 @foreach ($paths as $k => $v)
                     <tr>
-                        <th class="text-left uppercase text-[var(--color-text-muted)] pr-4">{{ $k }}</th>
+                        <th class="{{ $keyTh }}">{{ $k }}</th>
                         <td class="font-mono">{{ $v }}</td>
                     </tr>
                 @endforeach
@@ -84,7 +99,7 @@
                 <tbody>
                     @foreach ($env as $k => $v)
                         <tr>
-                            <th class="text-left uppercase text-[var(--color-text-muted)] pr-4 font-mono">{{ $k }}</th>
+                            <th class="{{ $keyTh }} font-mono">{{ $k }}</th>
                             <td class="font-mono">{{ $v }}</td>
                         </tr>
                     @endforeach
@@ -98,8 +113,8 @@
         <h2 class="text-sm font-semibold mb-3">Runtime</h2>
         <table class="table w-full text-xs">
             <tbody>
-                <tr><th class="text-left uppercase text-[var(--color-text-muted)] pr-4">nativephp</th><td class="font-mono">{{ $runtime['nativephp'] }}</td></tr>
-                <tr><th class="text-left uppercase text-[var(--color-text-muted)] pr-4">host os</th><td class="font-mono">{{ $runtime['host_os'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">nativephp</th><td class="font-mono">{{ $runtime['nativephp'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">host os</th><td class="font-mono">{{ $runtime['host_os'] }}</td></tr>
             </tbody>
         </table>
     </section>
