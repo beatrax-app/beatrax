@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DevMode\Internal\Http\Livewire;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -15,6 +16,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Queue\QueueActions;
+use Modules\DevMode\Internal\Services\DevModeFlag;
 
 /**
  * `/dev/queue/{tab}` — three-tab queue inspector (CONTEXT D-32).
@@ -181,20 +183,52 @@ final class QueueInspectorPage extends Component
     /**
      * Triple-gate has fired the `triple-gate:confirmed` event. The
      * gate has already validated DevModeFlag + session.advanced +
-     * typed-name; this listener performs the actual destructive
-     * write. Discriminates on the command string so unrelated gate
-     * confirms (artisan-tier destructive) cannot accidentally delete
-     * queue rows.
+     * typed-name; this listener re-validates those same three gates
+     * before performing the destructive write — defense-in-depth in
+     * case a future TripleGateModal bug ever lets a confirmed event
+     * escape without full validation (e.g. an exception in confirm()
+     * that fires the dispatch before throwing). The pattern mirrors
+     * DestructiveSpawnController's re-validation on the artisan side.
+     *
+     * Discriminates on the command string so unrelated gate confirms
+     * (artisan-tier destructive) cannot accidentally delete queue
+     * rows.
      *
      * @param  array<string, mixed>  $args
      */
     #[On('triple-gate:confirmed')]
-    public function executeBulkDelete(QueueActions $actions, string $command = '', array $args = []): void
-    {
+    public function executeBulkDelete(
+        QueueActions $actions,
+        DevModeFlag $devMode,
+        Session $session,
+        string $command = '',
+        array $args = [],
+        string $confirmed_typed = '',
+    ): void {
         if ($command !== 'queue.bulk.delete') {
             return;
         }
         if ($this->selected === []) {
+            return;
+        }
+
+        // Gate 1 — Dev Mode env flag must still be on.
+        if (! $devMode->isOn()) {
+            $this->dispatch('toast', message: 'Bulk delete refused — Dev Mode is OFF.');
+
+            return;
+        }
+        // Gate 2 — Advanced toggle for this session must still be on.
+        if ($session->get('dev_mode.advanced') !== true) {
+            $this->dispatch('toast', message: 'Bulk delete refused — Advanced toggle is OFF.');
+
+            return;
+        }
+        // Gate 3 — Typed app-name token must match the exact lowercase
+        // 'beatrax' string. hash_equals is timing-safe.
+        if (! hash_equals('beatrax', $confirmed_typed)) {
+            $this->dispatch('toast', message: 'Bulk delete refused — typed confirmation token mismatch.');
+
             return;
         }
 
