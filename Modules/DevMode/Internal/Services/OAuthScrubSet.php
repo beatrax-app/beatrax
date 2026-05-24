@@ -14,45 +14,43 @@ use Throwable;
 /**
  * Singleton cache of every decrypted OAuth-secret string the running
  * app knows about. Both the on-write Monolog scrub
- * ({@see RedactSecretsProcessor}) and
- * the on-write audit-row scrub
- * ({@see RedactionExcerptCap}) consume
- * this set so a log line or audit excerpt containing the literal value
- * of an `oauth_secrets.client_secret` or any string inside the
- * `tokens_blob` JSON is replaced with `[REDACTED]` before the bytes
- * leave the trust boundary (CONTEXT D-30).
+ * ({@see RedactSecretsProcessor}) and the on-write audit-row scrub
+ * ({@see RedactionExcerptCap}) consume this set so a log line or
+ * audit excerpt containing the literal value of an
+ * oauth_secrets.client_secret or any string inside the tokens_blob
+ * JSON is replaced with `[REDACTED]` before the bytes leave the
+ * trust boundary.
  *
  * Threat model: a 3rd-party OAuth refresh that prints the raw token
  * into a log line (HTTP debug, exception message, dump) MUST NOT
- * persist that token to `storage/logs/*.log` or to the audit table.
- * The Monolog tap registered on every channel + the audit-row cap
- * inject this set into their pre-compiled scrub regex; on every log
- * record / audit row the set is applied in a single `preg_replace`
- * sweep (Pitfall 8 mitigation — naive `foreach str_replace` is
- * O(n*m) per record; the compiled regex is one pass per record).
+ * persist that token to storage/logs/*.log or to the audit table.
+ * The Monolog tap + the audit-row cap inject this set into their
+ * pre-compiled scrub regex; on every log record / audit row the set
+ * is applied in a single preg_replace sweep (a naive foreach +
+ * str_replace would be O(n*m) per record; the compiled regex is one
+ * pass per record).
  *
  * Cache lifecycle:
- *   - Lazy load on first `all()` / `compiledPattern()` call (avoids
+ *   - Lazy load on first all() / compiledPattern() call (avoids
  *     hitting the DB during framework boot before the schema is
  *     migrated, and dodges the early-boot encrypter circular dep).
  *   - {@see bust()} clears the cache. The Eloquent observer
- *     {@see BustOAuthScrubSetOnSecretChange}
- *     calls `bust()` on every `OAuthSecret::saved` and
- *     `OAuthSecret::deleted` event so a rotated secret takes effect
- *     on the very next log line.
+ *     {@see BustOAuthScrubSetOnSecretChange} calls bust() on every
+ *     OAuthSecret::saved and OAuthSecret::deleted event so a rotated
+ *     secret takes effect on the very next log line.
  *
  * Cross-user scope: this set is NOT user-scoped. A multi-user install
- * (Phase 12+) holds one `oauth_secrets` row per (user_id, provider)
- * pair, and we read every row. The redaction surface is the host
- * filesystem and the audit DB row — both shared across users on the
- * same machine — so scrubbing every user's secret from every line is
- * the only safe shape.
+ * holds one oauth_secrets row per (user_id, provider) pair, and we
+ * read every row. The redaction surface is the host filesystem and
+ * the audit DB row — both shared across users on the same machine —
+ * so scrubbing every user's secret from every line is the only safe
+ * shape.
  *
- * Acceptable behavior on rotation (DOCUMENTED): once an OAuthSecret
- * row is DELETED, the cache busts and the deleted string disappears
- * from the scrub set. A subsequent log line containing the old
- * (revoked) string is NOT scrubbed. This is intentional — a revoked
- * + removed token is no longer sensitive to this app's threat model.
+ * Acceptable rotation behavior (documented): once an OAuthSecret row
+ * is DELETED the cache busts and the deleted string disappears from
+ * the set. A subsequent log line containing the old (revoked) string
+ * is NOT scrubbed — intentional: a revoked + removed token is no
+ * longer sensitive to this app's threat model.
  */
 class OAuthScrubSet
 {
