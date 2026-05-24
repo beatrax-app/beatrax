@@ -4,30 +4,38 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Audit;
 
+use Modules\DevMode\Internal\Services\OAuthScrubSet;
+
 /**
- * Baseline excerpt-capping + Bearer + JWT redaction layer used by
- * SpatieAuditWriter when it writes `stdout_excerpt` / `error_excerpt`
- * into the `dev_mode_audit` table.
+ * Excerpt-capping + three-layer redaction wrapper used by SpatieAuditWriter
+ * when it writes `stdout_excerpt` / `error_excerpt` into the
+ * `dev_mode_audit` table.
  *
  * This is the AUDIT-LOG excerpt layer (a SEPARATE artifact from
  * `Modules/DevMode/Internal/Logging/RedactSecretsProcessor.php`, which
  * handles the on-write Monolog scrub for `storage/logs/*.log`). Both
- * apply the same Bearer + JWT regex set in the baseline; both upgrade
- * in 16-05 to consume the full OAuthScrubSet via constructor DI.
+ * apply the SAME three-layer scrub (OAuth scrub-set → Bearer header →
+ * JWT shape); they live at different paths because they bound different
+ * exit points.
  *
- * The two scrub paths exist because they cross different trust
- * boundaries: this one bounds what lands in the audit DB row; the
- * Monolog processor bounds what lands in the rolling log file.
+ * Behavior:
+ *   1. OAuth scrub-set (the `client_secret` + every string in
+ *      `tokens_blob` for every `oauth_secrets` row) — runs FIRST so a
+ *      JWT-shaped real token reads as `[REDACTED]` rather than the
+ *      less-specific `[JWT_REDACTED]`. Single-pass compiled regex
+ *      per record (Pitfall 8 mitigation).
+ *   2. `Authorization: Bearer <token>` → `Authorization: Bearer [REDACTED]`.
+ *   3. JWT shape → `[JWT_REDACTED]`.
+ *   4. Byte-cap to $maxBytes (default 8 KiB per D-24).
  *
- * Baseline behavior (this plan, 16-04b):
- *   - Replaces `Authorization: Bearer <token>` → `Authorization: Bearer [REDACTED]`
- *   - Replaces JWT-shape tokens (`eyJ…header.payload.signature`) → `[JWT_REDACTED]`
- *   - Truncates the result to $maxBytes via mb_substr (UTF-8 safe).
+ * The cap runs LAST so a token straddling the byte boundary cannot
+ * leak through as a partial.
  *
- * 16-05 upgrade contract: 16-05 adds `OAuthScrubSet $scrubSet` to the
- * constructor and applies the compiled scrub-set regex BEFORE the
- * Bearer/JWT scrub inside `apply()`. The FQCN, the `apply()` signature,
- * and SpatieAuditWriter's usage MUST remain stable across the upgrade.
+ * `OAuthScrubSet` is nullable so callers that legitimately want only
+ * Bearer + JWT scrubbing (none exist after this plan but the baseline
+ * AuditLogWriteTest from 16-04b instantiates this class directly with
+ * `new RedactionExcerptCap;`) continue to work without modification.
+ * The container-bound instance always passes the real singleton.
  */
 final readonly class RedactionExcerptCap
 {
@@ -40,15 +48,29 @@ final readonly class RedactionExcerptCap
     /** JWT shape (eyJ...header.payload.signature with min 20-char segments). */
     private const JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/';
 
+    public function __construct(
+        private ?OAuthScrubSet $scrubSet = null,
+    ) {}
+
     /**
-     * Redact Bearer + JWT tokens from $text and cap to $maxBytes.
-     *
-     * The cap runs AFTER the redaction so a token that straddles the
-     * boundary cannot leak through as a partial.
+     * Redact OAuth scrub-set + Bearer + JWT tokens from $text, then
+     * cap to $maxBytes.
      */
     public function apply(string $text, int $maxBytes = self::DEFAULT_MAX_BYTES): string
     {
-        $scrubbed = (string) preg_replace(self::BEARER_PATTERN, 'Authorization: Bearer [REDACTED]', $text);
+        $scrubbed = $text;
+
+        if ($this->scrubSet !== null) {
+            $pattern = $this->scrubSet->compiledPattern();
+            if ($pattern !== null) {
+                $replaced = preg_replace($pattern, '[REDACTED]', $scrubbed);
+                if (is_string($replaced)) {
+                    $scrubbed = $replaced;
+                }
+            }
+        }
+
+        $scrubbed = (string) preg_replace(self::BEARER_PATTERN, 'Authorization: Bearer [REDACTED]', $scrubbed);
         $scrubbed = (string) preg_replace(self::JWT_PATTERN, '[JWT_REDACTED]', $scrubbed);
 
         if (strlen($scrubbed) <= $maxBytes) {
