@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-    LaunchAgent: optional diederik Redis container starter.
+    LaunchAgent: optional beatrax Redis container starter.
 
-    Only installed when the user passes `diederik:install --launchd`
+    Only installed when the user passes `beatrax:install --launchd`
     WITHOUT `--without-redis`. Users running Docker Desktop with
     autostart enabled should pass `--without-redis` — Docker Desktop
     will start the container on login and this plist would compete
@@ -11,9 +11,9 @@
 
     Mirrors the Phase 5 README's docker-run line verbatim:
 
-        docker run --name diederik-redis \
+        docker run --name beatrax-redis \
           -p 127.0.0.1:6379:6379 \
-          -v diederik-redis-data:/data \
+          -v beatrax-redis-data:/data \
           -d redis:7-alpine \
           redis-server --save 60 1
 
@@ -43,7 +43,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.diederik.redis</string>
+    <string>com.beatrax.redis</string>
 
     <key>ProgramArguments</key>
     <array>
@@ -51,11 +51,11 @@
         <string>run</string>
         <string>--rm</string>
         <string>--name</string>
-        <string>diederik-redis</string>
+        <string>beatrax-redis</string>
         <string>-p</string>
         <string>127.0.0.1:6379:6379</string>
         <string>-v</string>
-        <string>diederik-redis-data:/data</string>
+        <string>beatrax-redis-data:/data</string>
         <string>redis:7-alpine</string>
         <string>redis-server</string>
         <string>--save</string>

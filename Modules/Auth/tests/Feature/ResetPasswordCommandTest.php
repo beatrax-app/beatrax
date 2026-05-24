@@ -23,7 +23,7 @@ it('updates the password and flags a forced change on a valid interactive run', 
         'force_password_change_at_next_login' => false,
     ]);
 
-    $this->artisan('diederik:reset-password', ['username' => 'owner'])
+    $this->artisan('beatrax:reset-password', ['username' => 'owner'])
         ->expectsQuestion('New password', 'a-brand-new-password')
         ->expectsQuestion('Confirm new password', 'a-brand-new-password')
         ->expectsOutputToContain('Password updated for owner.')
@@ -35,7 +35,7 @@ it('updates the password and flags a forced change on a valid interactive run', 
 });
 
 it('exits non-zero for an unknown username', function (): void {
-    $this->artisan('diederik:reset-password', ['username' => 'ghost'])
+    $this->artisan('beatrax:reset-password', ['username' => 'ghost'])
         ->expectsOutputToContain('No user with that username.')
         ->assertFailed();
 });
@@ -50,7 +50,7 @@ it('rejects a new password shorter than twelve characters', function (): void {
         'period_start_day' => 1,
     ]);
 
-    $this->artisan('diederik:reset-password', ['username' => 'owner'])
+    $this->artisan('beatrax:reset-password', ['username' => 'owner'])
         ->expectsQuestion('New password', 'short')
         ->expectsQuestion('Confirm new password', 'short')
         ->assertFailed();
@@ -68,7 +68,7 @@ it('rejects a confirmation that does not match the new password', function (): v
         'period_start_day' => 1,
     ]);
 
-    $this->artisan('diederik:reset-password', ['username' => 'owner'])
+    $this->artisan('beatrax:reset-password', ['username' => 'owner'])
         ->expectsQuestion('New password', 'a-brand-new-password')
         ->expectsQuestion('Confirm new password', 'a-different-password')
         ->assertFailed();
@@ -88,7 +88,7 @@ it('refuses non-interactive invocation and changes nothing', function (): void {
 
     // --no-interaction makes the input non-interactive; the command must
     // refuse rather than fall through to an empty-string password.
-    $this->artisan('diederik:reset-password', ['username' => 'owner', '--no-interaction' => true])
+    $this->artisan('beatrax:reset-password', ['username' => 'owner', '--no-interaction' => true])
         ->assertFailed();
 
     expect($hasher->check('original-password-12', $user->fresh()->password))->toBeTrue();

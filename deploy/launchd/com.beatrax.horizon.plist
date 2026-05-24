@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-    LaunchAgent: diederik Horizon queue worker / supervisor.
+    LaunchAgent: beatrax Horizon queue worker / supervisor.
 
     Runs `php artisan horizon` indefinitely under the user account that
-    runs `diederik:install --launchd`. Horizon supervises every queued
+    runs `beatrax:install --launchd`. Horizon supervises every queued
     job class in the project (BackfillInboxJob, IncrementalScanJob,
     DiscoveryScanJob, ResolveChainLinksJob, plus the Chain resolver
     jobs from Phase 5) — restart it and every supervisor under it
@@ -15,7 +15,7 @@
     user's actual PHP binary + project root):
 
       {{ABS_PHP_BINARY}}    → PHP_BINARY constant (e.g. /Applications/Herd.app/Contents/Resources/php83/bin/php)
-      {{ABS_PROJECT_ROOT}}  → base_path() (e.g. /Users/<you>/code/diederik)
+      {{ABS_PROJECT_ROOT}}  → base_path() (e.g. /Users/<you>/code/beatrax)
 
     Crash-loop guard: ThrottleInterval=10 prevents launchd from
     re-spawning the process more than once per 10 seconds. A genuinely
@@ -33,7 +33,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.diederik.horizon</string>
+    <string>com.beatrax.horizon</string>
 
     <key>ProgramArguments</key>
     <array>
