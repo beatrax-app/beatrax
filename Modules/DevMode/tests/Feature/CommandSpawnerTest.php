@@ -7,7 +7,6 @@ use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
-use Modules\DevMode\Public\Dto\CommandSpec;
 
 /*
  * CommandSpawner architecture-(b) shell-redirect + escapeshellarg

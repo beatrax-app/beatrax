@@ -44,10 +44,10 @@ warnings:
     severity: warning
     impact: "When the chain-resolution-failed branch fires inside the import preview wizard, the user sees an 'Open Horizon' link pointing at /horizon/failed. In shipped builds (dev_mode=false), this route is absent and the link 404s. D-37 targeted only the dashboard; this peer surface was not retargeted to dev.queue.tab."
     fix: "Apply the same D-37 retarget — gate on $isDeveloper + flip href to route('dev.queue.tab', ['tab' => 'failed']) + change label to 'Open Queue Inspector'. Out-of-scope for this phase's stated D-37 boundary but consistent with the phase's intent."
-  - issue: "Pint flag on Modules/DevMode/tests/Feature/ReadOnlyConnectionTest.php (class_definition, fully_qualified_strict_types, braces_position fixers)"
+  - issue: "Pint flags on 6 Modules/DevMode files (ReadOnlyConnectionTest.php + DevModeServiceProvider.php + CommandSpawnerTest.php + ArtisanRunnerSafeTierTest.php + RedactionExcerptCap.php + ArtisanStreamController.php + RedactSecretsProcessor.php) pre-existing from 16-07"
     severity: warning
-    impact: "composer format:check fails on this single file. 16-08-SUMMARY.md acknowledges the flag as pre-existing from 16-07 commit 2034b91 'out of this plan's scope'. The file is test code; functional tests pass. Per CLAUDE.md memory 'Fix every severity, not just blockers — quality above speed' this should have been fixed in 16-07."
-    fix: "Run `./vendor/bin/pint Modules/DevMode/tests/Feature/ReadOnlyConnectionTest.php` to apply the three fixers; no behavior change."
+    impact: "composer format:check failed across 6 files. 16-08-SUMMARY.md acknowledged ReadOnlyConnectionTest.php as 'out of this plan's scope'; the larger set was uncovered during /gsd-progress --next gate review."
+    fix: "RESOLVED 2026-05-24 during /gsd-progress hard-stop. Ran `composer format` (applied unary_operator_spaces, not_operator_with_successor_space, ordered_imports, class_definition, fully_qualified_strict_types, braces_position, single_line_empty_body, no_unused_imports across the 6 files). composer format:check now PASS; composer analyse re-run shows 0 errors across 632 files."
   - issue: "19 ->todo() rendered-badge assertions deferred to follow-up plan"
     severity: info
     impact: "Six pre-Phase-16 cross-module tests (TopNavBadgeViaComposerTest in EmailScan, TopNavDriftBadgeTest in DriftAlerts, TopNavForecastSlotTest in Forecasting, TopNavBadgeComposerTest in Recurring, CrossUserChainLinkIsolationTest in Chains) had their badge-chrome assertions marked ->todo() during 16-01 because the badge composers still target the deleted core::livewire.top-nav view. The .side-badge slots exist in the new sidebar markup but the composers do not yet write to them. Documented as the 'follow-up composer-rewiring plan' in 16-01-SUMMARY.md."
@@ -159,7 +159,7 @@ No HOLLOW or DISCONNECTED artifacts found.
 | All boundary arch tests green | `./vendor/bin/pest --filter BoundaryArchTest --no-coverage` | 45 passed (78 assertions); all 4 Phase 16 invariants green | ✓ PASS |
 | Full suite | `./vendor/bin/pest --no-coverage` | 2394 passed, 0 failed, 19 todos (16-01 deferred badge composer rewiring), 6 skipped (Horizon-conditional + Receipts contract); 25530 assertions | ✓ PASS |
 | Larastan L10 strict | `composer analyse` | 0 errors across 631 analyzed files | ✓ PASS |
-| Pint formatter | `composer format:check` | FAIL — Modules/DevMode/tests/Feature/ReadOnlyConnectionTest.php (3 fixers: class_definition, fully_qualified_strict_types, braces_position) | ✗ FAIL (test file only; pre-existing from 16-07 per 16-08-SUMMARY) |
+| Pint formatter | `composer format:check` | PASSED (after fix: ran `composer format` to apply 3 fixers on ReadOnlyConnectionTest.php + 5 other Modules/DevMode files pre-existing from 16-07) | ✓ PASS |
 | Composer dependencies installed | grep composer.json | spatie/laravel-activitylog ^5.0, doctrine/sql-formatter ^1.5; composer name = beatrax/beatrax | ✓ PASS |
 | Frontend dependency installed | grep package.json | fuse.js ^7.3.0 | ✓ PASS |
 

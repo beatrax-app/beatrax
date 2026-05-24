@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Http\Controllers;
 
+use Illuminate\Container\Container;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
-use Illuminate\Container\Container;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;

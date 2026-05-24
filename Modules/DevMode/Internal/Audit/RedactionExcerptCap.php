@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Audit;
 
+use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 
 /**
@@ -12,7 +13,7 @@ use Modules\DevMode\Internal\Services\OAuthScrubSet;
  * into the `dev_mode_audit` table.
  *
  * This is the audit-log excerpt layer (a separate artifact from
- * {@see \Modules\DevMode\Internal\Logging\RedactSecretsProcessor},
+ * {@see RedactSecretsProcessor},
  * which handles the on-write Monolog scrub for storage/logs/*.log).
  * Both apply the same three-layer scrub (OAuth scrub-set → Bearer
  * header → JWT shape); they live at different paths because they
