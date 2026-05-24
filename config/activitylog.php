@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use Modules\DevMode\Internal\Audit\DevModeActivity;
 use Spatie\Activitylog\Actions\CleanActivityLogAction;
 use Spatie\Activitylog\Actions\LogActivityAction;
-use Spatie\Activitylog\Models\Activity;
 
 return [
 
@@ -56,8 +56,13 @@ return [
      * This model will be used to log activity.
      * It should implement the Spatie\Activitylog\Contracts\Activity interface
      * and extend Illuminate\Database\Eloquent\Model.
+     *
+     * NOTE: spatie/laravel-activitylog v5 REMOVED the `table_name` config
+     * option (see vendor/spatie/laravel-activitylog/UPGRADING.md). The
+     * `DevModeActivity` model overrides $table = 'dev_mode_audit' so
+     * every write lands in the renamed table per CONTEXT D-23.
      */
-    'activity_model' => Activity::class,
+    'activity_model' => DevModeActivity::class,
 
     /*
      * These attributes will be excluded from logging for all models.
