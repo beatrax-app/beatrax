@@ -13,7 +13,7 @@ use Modules\Desktop\Internal\Native\PendingFileIntent;
 /**
  * The .csv / .eml staging page (D-01 / D-02).
  *
- * Renders after the OS hands diederik a file path and the
+ * Renders after the OS hands beatrax a file path and the
  * `FileOpenedFromOs` Public event has been emitted. The page reads the
  * current pending intent (if any) from `PendingFileIntent` and shows
  * one of two states:
@@ -52,7 +52,7 @@ final class FileStagingPage extends Component
     public const EMPTY_HEADING = "We couldn't open that file";
 
     /** Verbatim UI-SPEC empty-state body. */
-    public const EMPTY_BODY = "diederik couldn't read the file you opened. Try importing it from the Imports page instead.";
+    public const EMPTY_BODY = "beatrax couldn't read the file you opened. Try importing it from the Imports page instead.";
 
     /**
      * The pending intent the page is bound to, captured at mount time
@@ -95,7 +95,7 @@ final class FileStagingPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'File received · diederik']);
+        $view->extends('layouts.app', ['title' => 'File received · beatrax']);
 
         return $view;
     }

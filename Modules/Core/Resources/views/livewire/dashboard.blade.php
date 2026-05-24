@@ -237,7 +237,7 @@
             <div class="flex items-start justify-between gap-3">
                 <div class="space-y-1">
                     <p class="text-sm font-medium text-slate-900 dark:text-slate-100">An inbox needs reconnecting.</p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">One or more inboxes were signed out — diederik can't scan them until you reconnect.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">One or more inboxes were signed out — beatrax can't scan them until you reconnect.</p>
                     <a
                         href="{{ route('inboxes.index') }}"
                         class="text-xs text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"

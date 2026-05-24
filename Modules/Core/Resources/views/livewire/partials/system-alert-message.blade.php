@@ -47,7 +47,7 @@
                 ? $metadata['current_mode']
                 : 'unknown';
         @endphp
-        SQLite is not in WAL mode (currently {{ $currentMode }}). Concurrent writes may stall. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan diederik:doctor</code> for guidance.
+        SQLite is not in WAL mode (currently {{ $currentMode }}). Concurrent writes may stall. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> for guidance.
         @break
     @case ('synchronous_misconfigured')
         @php
@@ -56,7 +56,7 @@
                 ? (int) $metadata['current_level']
                 : -1;
         @endphp
-        SQLite synchronous level is {{ $currentLevel }} (expected NORMAL/1). Durability semantics may differ from config. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan diederik:doctor</code> for guidance.
+        SQLite synchronous level is {{ $currentLevel }} (expected NORMAL/1). Durability semantics may differ from config. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> for guidance.
         @break
     @default
         {{-- $alert->message is operator-authored text from

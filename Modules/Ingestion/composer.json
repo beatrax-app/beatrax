@@ -1,5 +1,5 @@
 {
-    "name": "diederik/ingestion",
+    "name": "beatrax/ingestion",
     "description": "Ingestion module — source adapters.",
     "type": "laravel-module",
     "license": "proprietary",

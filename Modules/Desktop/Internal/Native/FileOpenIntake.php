@@ -10,7 +10,7 @@ use Modules\Desktop\Public\Events\FileOpenedFromOs;
 /**
  * Security boundary for the OS-supplied file-open intent (PKG-06 / D-01 / D-02).
  *
- * The OS hands diederik an arbitrary, attacker-influenceable file path
+ * The OS hands beatrax an arbitrary, attacker-influenceable file path
  * (T-15-09 in the plan threat register). `FileOpenIntake` is the ONE
  * place that path is validated; only a path that passes every check
  * emits the Public `FileOpenedFromOs` event for downstream consumers

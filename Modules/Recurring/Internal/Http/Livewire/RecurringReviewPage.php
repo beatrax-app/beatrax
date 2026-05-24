@@ -176,7 +176,7 @@ final class RecurringReviewPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Review recurring · diederik']);
+        $view->extends('layouts.app', ['title' => 'Review recurring · beatrax']);
 
         return $view;
     }

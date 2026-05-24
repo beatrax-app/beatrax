@@ -1,5 +1,5 @@
 {
-    "name": "diederik/auth",
+    "name": "beatrax/auth",
     "description": "Auth module — username-based authentication identity, single-use recovery codes, and the multi-user activation schema.",
     "type": "laravel-module",
     "license": "proprietary",

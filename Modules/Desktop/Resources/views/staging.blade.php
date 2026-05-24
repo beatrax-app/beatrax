@@ -1,6 +1,6 @@
 @php
     /**
-     * D-01 / D-02 file-staging page. Shown after the OS hands diederik
+     * D-01 / D-02 file-staging page. Shown after the OS hands beatrax
      * a `.csv` / `.eml` file path; the page reads the pending intent
      * and either:
      *
@@ -27,7 +27,7 @@
             {{-- Brand mark — same surface the welcome / login screens use (D-18). --}}
             <img
                 src="{{ asset('icon.png') }}"
-                alt="diederik"
+                alt="beatrax"
                 class="h-20 w-20"
             />
         </div>

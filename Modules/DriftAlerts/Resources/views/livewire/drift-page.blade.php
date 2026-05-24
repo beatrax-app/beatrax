@@ -102,7 +102,7 @@
             <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
                 <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No open drift alerts</h2>
                 <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
-                    diederik watches your approved recurring series and flags any whose latest charge differs from the prior amount by more than your threshold.
+                    beatrax watches your approved recurring series and flags any whose latest charge differs from the prior amount by more than your threshold.
                     Adjust threshold on
                     <a
                         href="{{ route('settings') }}#drift-threshold"
@@ -192,7 +192,7 @@
                 @else
                     <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Nothing dismissed yet</h2>
                     <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
-                        When you tell diederik you've cancelled a series, that decision lands here with a timestamp.
+                        When you tell beatrax you've cancelled a series, that decision lands here with a timestamp.
                     </p>
                 @endif
             </div>

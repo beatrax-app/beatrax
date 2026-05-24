@@ -1,5 +1,5 @@
 {
-    "name": "diederik/chains",
+    "name": "beatrax/chains",
     "description": "Chains module — cross-source funding-chain resolver + ICS bulk-iDEAL decomposer + card_statements model.",
     "type": "laravel-module",
     "license": "proprietary",

@@ -79,7 +79,7 @@ final class BoundaryRule implements Rule
             'Cross-module Internal/Models import forbidden: %s cannot use %s',
             $importerModule,
             $imported,
-        ))->identifier('diederik.boundary')->build();
+        ))->identifier('beatrax.boundary')->build();
 
         return [$error];
     }
