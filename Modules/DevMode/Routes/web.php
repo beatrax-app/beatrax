@@ -13,9 +13,12 @@ use Modules\DevMode\Internal\Http\Controllers\LogStreamController;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
+use Modules\DevMode\Internal\Http\Livewire\DoctorPanelPage;
 use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
 use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
 use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
+use Modules\DevMode\Internal\Http\Livewire\SqlPanelPage;
+use Modules\DevMode\Internal\Http\Livewire\SystemSnapshotPage;
 
 /*
  * Dev Console routes. Mounted by DevModeServiceProvider via
@@ -89,6 +92,17 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
         Route::get('/queue/{tab}', QueueInspectorPage::class)
             ->where('tab', 'pending|failed|batches')
             ->name('dev.queue.tab');
+
+        // 16-07: Doctor panel (CONTEXT D-43) + System snapshot
+        // (CONTEXT D-44). Both pages live in the dev-shell layout and
+        // are sourced from the `dev_mode_audit` table (doctor) +
+        // ConfigFlattener (system).
+        Route::get('/doctor', DoctorPanelPage::class)->name('dev.doctor');
+        Route::get('/system', SystemSnapshotPage::class)->name('dev.system');
+        // 16-07 Task 3: SELECT-only SQL panel + schema viewer
+        // (CONTEXT D-45 / D-46 / D-47). Single page with inner sidebar
+        // — I-6 LOCKED decision: NOT a separate /dev/sql/schema route.
+        Route::get('/sql', SqlPanelPage::class)->name('dev.sql');
 
         // 16-06: Horizon iframe (D-38 two-signal). The route is ONLY
         // registered when BOTH `config('app.dev_mode') === true` AND
