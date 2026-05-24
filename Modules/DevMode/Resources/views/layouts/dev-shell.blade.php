@@ -1,5 +1,6 @@
 @inject('currentUser', \Modules\Core\Public\Contracts\CurrentUser::class)
 @inject('container', \Illuminate\Contracts\Container\Container::class)
+@inject('router', \Illuminate\Routing\Router::class)
 @inject('devSidebarItems', \Modules\DevMode\Internal\Navigation\DevSidebarItems::class)
 @php
     /*
@@ -124,12 +125,12 @@
 
                 @foreach ($devNavItems as $item)
                     @php
-                        $routeExists = \Illuminate\Support\Facades\Route::has($item['route']);
-                        // Horizon is the conditional item per D-38 — when its
-                        // route is absent the link is DOM-absent rather than
-                        // nav-disabled. Every other slug renders with the
-                        // disabled class so the operator can see which
-                        // panels are pending. Per 16-06.
+                        $routeExists = $router->getRoutes()->hasNamedRoute($item['route']);
+                        // Conditionally-registered items (Horizon) render as
+                        // DOM-absent rather than nav-disabled when the
+                        // matching route is not registered. Every other
+                        // slug renders with the disabled class so the
+                        // operator can see which panels are pending.
                         $skip = ($item['enabled'] ?? false) === 'conditional' && ! $routeExists;
                     @endphp
                     @if (! $skip)
