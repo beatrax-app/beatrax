@@ -11,29 +11,27 @@ use Monolog\Logger as MonologLogger;
 
 /**
  * Laravel-style "tap class" — registered into the `tap` array of a
- * logging channel inside `config/logging.php`. Laravel resolves the
- * tap class on every channel boot and invokes `__invoke($logger)` so
- * the channel's Monolog handlers can be decorated AFTER they are
+ * logging channel inside config/logging.php. Laravel resolves the
+ * tap class on every channel boot and invokes `__invoke($logger)`
+ * so the channel's Monolog handlers can be decorated AFTER they are
  * constructed by the channel driver.
  *
- * Our job here: resolve {@see RedactSecretsProcessor} from the
- * container and push it onto every handler of the tapped channel so
- * every record that flows through the channel passes through the
- * Bearer + JWT scrub BEFORE it reaches the formatter.
+ * This tap resolves {@see RedactSecretsProcessor} from the container
+ * and pushes it onto every handler of the tapped channel so every
+ * record that flows through the channel passes through the OAuth
+ * scrub-set + Bearer + JWT scrub BEFORE the formatter writes the
+ * line to disk.
  *
- * The container-resolve step is the load-bearing detail: in 16-05,
- * `RedactSecretsProcessor`'s constructor gains `OAuthScrubSet`.
- * Because this tap class never `new`s the processor directly, the
- * upgrade requires no edit to THIS file OR to `config/logging.php`.
- * Both stay stable across the 16-04b baseline → 16-05 full-scrub-set
- * upgrade.
+ * Container resolution (rather than `new RedactSecretsProcessor`)
+ * keeps the binding's constructor dependencies invisible to this
+ * tap class: a future change to the processor's DI chain requires
+ * no edit here or in config/logging.php.
  *
- * Laravel instantiates tap classes with `new $tap()` (per the
- * framework's `Illuminate\Log\LogManager::tap()` source), so the
- * constructor MUST accept no required arguments. Container access
- * here goes through `Container::getInstance()->make(...)` rather than
- * the `app()` global helper to stay larastan-strict-rules clean
- * (the project bans the `app()` helper).
+ * Laravel instantiates tap classes with `new $tap()` (per
+ * Illuminate\\Log\\LogManager::tap), so the constructor MUST accept
+ * no required arguments. Container access goes through
+ * Container::getInstance()->make(...) rather than the app() global
+ * helper to honour the project's DI-only rule.
  */
 final class PushRedactProcessor
 {
