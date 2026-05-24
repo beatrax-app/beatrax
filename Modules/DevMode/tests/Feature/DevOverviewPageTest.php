@@ -49,7 +49,7 @@ it('returns 404 from /dev for an authenticated non-developer (EnsureDeveloperMod
     $response->assertNotFound();
 });
 
-it('renders all 9 dev-sidebar nav items with only Overview enabled (downstream plans enable the rest)', function (): void {
+it('renders all 9 dev-sidebar nav items with Overview + Artisan + Audit enabled (16-04b registers dev.artisan + dev.audit)', function (): void {
     $user = devOverviewUser(true, 'devov-nav');
 
     $response = $this->actingAs($user)->get('/dev');
@@ -63,14 +63,14 @@ it('renders all 9 dev-sidebar nav items with only Overview enabled (downstream p
             ->toBeTrue("Dev sidebar missing nav item: {$label}");
     }
 
-    // Exactly eight nav items carry the `nav-disabled` class in this
-    // plan (every entry except Overview). Counting the literal
-    // substring is the simplest contract; the count drops by one each
-    // time a downstream plan registers a `dev.{slug}` route.
+    // After 16-04b registers the dev.artisan + dev.audit routes, only
+    // SIX nav-disabled entries remain (Logs / Queue / Doctor / SQL /
+    // Horizon / System). The count drops further as 16-05 + 16-06 +
+    // 16-07 land their routes; 16-03 originally expected eight.
     $disabledCount = substr_count($html, 'nav-disabled');
     expect($disabledCount)->toBe(
-        8,
-        "Expected exactly 8 nav-disabled entries (every dev sidebar nav item except Overview), saw {$disabledCount}.",
+        6,
+        "Expected exactly 6 nav-disabled entries (every dev sidebar nav item except Overview/Artisan/Audit after 16-04b), saw {$disabledCount}.",
     );
 });
 
