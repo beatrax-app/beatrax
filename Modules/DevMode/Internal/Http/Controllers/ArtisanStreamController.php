@@ -18,9 +18,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 /**
  * GET /dev/artisan/stream/{runId} — SSE tail of one run's stdout.
  *
- * Adopts the cached RunRecord via RunRegistry::find() and tails the
- * per-run tmp file with the shared {@see FileTailer} primitive. The
- * loop:
+ * Resolves the cached RunRecord via RunRegistry::find() and tails
+ * the per-run tmp file with the shared {@see FileTailer} primitive.
+ * The loop:
  *   - clearstatcache + fseek + fread up to 65 536 bytes per tick.
  *   - Emit `id: <offset>\ndata: {"line":"..."}\n\n` for each chunk.
  *   - posix_kill($pid, 0) liveness check; if the process is gone,
@@ -28,22 +28,20 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *   - usleep(150_000) between ticks (~6.7 ticks/s; well under the
  *     SSE per-event budget).
  *
- * CONTEXT D-16 verbatim: "a page refresh reconnects to the **live
- * stream**." The browser's EventSource auto-reconnects with the
- * `Last-Event-ID` header equal to the offset of the last delivered
- * event; this controller honors it (along with a `?from=` query
- * param fallback for manual tests + the future "show output"
- * affordance from a run-card). A reconnect that sets the offset to
- * the last-seen byte sees ONLY lines emitted after the reconnect
- * point — proving the live-stream guarantee.
+ * Live-stream reconnect: the browser's EventSource auto-reconnects
+ * with the Last-Event-ID header equal to the offset of the last
+ * delivered event; this controller honors it (along with a `?from=`
+ * query-param fallback for manual tests + the run-card's "show
+ * output" affordance). A reconnect that sets the offset to the
+ * last-seen byte sees ONLY lines emitted after the reconnect point.
  *
- * Cross-user inspection (T-16-15): the controller rejects with 403
- * when the requesting developer is not the original spawner. A
- * forged runId still produces 404 (records are unguessable UUIDs).
+ * Cross-user inspection: the controller rejects with 403 when the
+ * requesting developer is not the original spawner. A forged runId
+ * still produces 404 (records are unguessable UUIDs).
  *
- * Pitfall 4 (output buffering): we set X-Accel-Buffering: no and
- * ob_flush() + flush() per emitted chunk so Nginx + PHP-FPM do not
- * buffer the stream into useless silence.
+ * Output buffering: we set X-Accel-Buffering: no and ob_flush() +
+ * flush() per emitted chunk so Nginx + PHP-FPM do not buffer the
+ * stream into useless silence.
  */
 final readonly class ArtisanStreamController
 {
@@ -109,11 +107,11 @@ final readonly class ArtisanStreamController
                     @flush();
                 }
 
-                // Liveness check via posix_kill(pid, 0). If the process is
-                // gone, the spawner-detached child has finished — emit the
-                // terminal `done` event with whatever exit code we can
-                // recover (best-effort; 16-04b's audit pipeline reads the
-                // exit code authoritatively).
+                // Liveness check via posix_kill(pid, 0). If the
+                // process is gone, the spawner-detached child has
+                // finished — emit the terminal `done` event with
+                // whatever exit code we can recover (best-effort; the
+                // audit pipeline reads the exit code authoritatively).
                 if (! posix_kill($record->pid, 0)) {
                     // Read once more in case the child wrote a final
                     // chunk between the previous tail and the exit.
@@ -131,10 +129,11 @@ final readonly class ArtisanStreamController
                     $cancelled = $fresh?->status === 'cancelled';
 
                     // Mark finished in the registry so subsequent SSE
-                    // reconnects observe a terminal status. 16-04b's
-                    // FinalizeRunAudit hook (invoked below) writes the
-                    // dev_mode_audit row that captures the authoritative
-                    // exit code + the redacted stdout excerpt.
+                    // reconnects observe a terminal status. The
+                    // FinalizeRunAudit hook (invoked below) writes
+                    // the dev_mode_audit row that captures the
+                    // authoritative exit code + the redacted stdout
+                    // excerpt.
                     if ($fresh !== null && $fresh->status === 'running') {
                         $registry->markFinished($runIdLocal, $exit ?? 0);
                     }

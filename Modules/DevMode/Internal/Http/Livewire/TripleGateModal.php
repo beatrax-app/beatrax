@@ -13,34 +13,33 @@ use Livewire\Component;
 use Modules\DevMode\Internal\Services\DevModeFlag;
 
 /**
- * Global triple-gate modal SFC. Mounted once in the dev-shell layout
- * so the `triple-gate:open` Livewire event can open the modal from
- * anywhere on `/dev/*` (the runner timeline rows, the future palette,
- * the queue inspector's bulk-delete affordance).
+ * Global triple-gate modal SFC. Mounted once in the dev-shell
+ * layout so the `triple-gate:open` Livewire event can open the
+ * modal from anywhere on `/dev/*` (runner timeline rows, command
+ * palette, queue inspector's bulk-delete affordance).
  *
- * CONTEXT D-20 / D-21 / D-22 — server-side enforcement of all three
- * locks before any DESTRUCTIVE command spawns:
+ * Server-side enforcement of all three locks before any DESTRUCTIVE
+ * command spawns:
  *
- *   Gate 1 (D-20):       config('app.dev_mode') === true (env-pinned).
- *   Gate 2 (D-20):       session('dev_mode.advanced') === true (the
- *                        operator flipped the in-session Advanced
- *                        toggle inside the current login — resets on
- *                        Login via ResetAdvancedToggleOnLogin).
- *   Gate 3 (D-21):       Operator typed the exact lowercase app name
- *                        `beatrax` (timing-safe hash_equals comparison
- *                        so client-side enable/disable of the button
- *                        is purely cosmetic).
+ *   Gate 1: config('app.dev_mode') === true (env-pinned).
+ *   Gate 2: session('dev_mode.advanced') === true (the operator
+ *           flipped the in-session Advanced toggle inside the
+ *           current login — resets on Login via
+ *           ResetAdvancedToggleOnLogin).
+ *   Gate 3: Operator typed the exact lowercase app name `beatrax`
+ *           (timing-safe hash_equals comparison so client-side
+ *           enable/disable of the button is purely cosmetic).
  *
  * On all-three-pass: dispatches `triple-gate:confirmed` with the
- * command + args + the typed token; the ArtisanRunnerPage listener
- * POSTs the payload to `DestructiveSpawnController` which RE-VALIDATES
- * all three gates server-side a second time (defense-in-depth
- * mitigation for T-16-02 — a tampered Livewire payload that somehow
- * spoofs the confirmed event still cannot reach the spawner without
- * passing the controller's identical three-gate sweep).
+ * command + args + the typed token. Downstream listeners
+ * (DestructiveSpawnController for artisan; QueueInspectorPage for
+ * bulk-delete) re-validate all three gates a second time —
+ * defense-in-depth so a tampered Livewire payload that somehow
+ * spoofs the confirmed event still cannot reach the spawner /
+ * delete path without passing the identical three-gate sweep.
  *
- * Method-DI on `confirm(...)` per PATTERN B — Livewire components
- * never receive constructor DI per phpstan-strict-rules.
+ * Method-DI on confirm() — Livewire components never receive
+ * constructor DI per the project's larastan-strict-rules profile.
  */
 final class TripleGateModal extends Component
 {

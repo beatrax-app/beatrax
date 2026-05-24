@@ -13,15 +13,14 @@ use Illuminate\Http\Request;
  * POST /dev/advanced-toggle — flip the per-session Advanced flag.
  *
  * The Advanced toggle is one of the three locks in the destructive-
- * command triple-gate (CONTEXT D-20): session-scoped, default OFF,
- * resets on every login. The full reset listener + the UI surface
- * land in 16-04b — this controller is the storage endpoint they
- * both consume.
+ * command triple-gate: session-scoped, default OFF, resets on every
+ * login (see ResetAdvancedToggleOnLogin). This controller is the
+ * storage endpoint the UI calls when the operator flips the toggle.
  *
- * Body: `{value: bool}`; response: 204 No Content. The session
- * write is the only side effect; no audit row (16-04b's audit
- * pipeline records the actual destructive command runs, not the
- * pre-flight toggles).
+ * Body: {value: bool}; response: 204 No Content. The session write
+ * is the only side effect; no audit row — the audit pipeline
+ * records the actual destructive command runs, not the pre-flight
+ * toggle state.
  */
 final readonly class AdvancedToggleController
 {
