@@ -8,14 +8,14 @@ use Native\Desktop\Contracts\MenuItem;
 use Native\Desktop\Facades\Menu;
 
 /**
- * Builds the diederik application menu (D-11).
+ * Builds the beatrax application menu.
  *
  * Composes the standard top-level set — App (macOS) / File / Edit /
- * View / Window / Help — and appends the diederik-specific entries on
+ * View / Window / Help — and appends the beatrax-specific entries on
  * the File and Help submenus per UI-SPEC verbatim copy:
  *
  *   File → "Import file…", "Scan email now"
- *   Help → "GitHub repo", "Report an issue", "About diederik"
+ *   Help → "GitHub repo", "Report an issue", "About beatrax"
  *
  * The labels are locked verbatim from the UI-SPEC Copywriting
  * Contract; the internal navigation targets are existing app routes
@@ -33,7 +33,7 @@ use Native\Desktop\Facades\Menu;
 final class AppMenuBuilder
 {
     /**
-     * Verbatim D-11 / UI-SPEC labels for the diederik-specific menu
+     * Verbatim UI-SPEC labels for the beatrax-specific menu
      * entries. Pulled into named constants so a future copy edit
      * lands in one place and the test assertions can reference the
      * same source of truth.
@@ -46,20 +46,20 @@ final class AppMenuBuilder
 
     public const HELP_REPORT_ISSUE = 'Report an issue';
 
-    public const HELP_ABOUT = 'About diederik';
+    public const HELP_ABOUT = 'About beatrax';
 
     /**
      * Public repository URL — surfaces from the Help menu. The link
      * opens in the external browser (not inside the Electron
      * webview) via the NativePHP `openInBrowser()` flag.
      */
-    public const GITHUB_REPO_URL = 'https://github.com/diederik-app/diederik';
+    public const GITHUB_REPO_URL = 'https://github.com/beatrax-app/beatrax';
 
     /**
      * Issue-tracker URL — same external-browser policy as the repo
      * link.
      */
-    public const REPORT_ISSUE_URL = 'https://github.com/diederik-app/diederik/issues/new';
+    public const REPORT_ISSUE_URL = 'https://github.com/beatrax-app/beatrax/issues/new';
 
     /**
      * @return list<MenuItem>
@@ -82,7 +82,7 @@ final class AppMenuBuilder
             Menu::help()->submenu(
                 Menu::link(self::GITHUB_REPO_URL, self::HELP_GITHUB_REPO)->openInBrowser(),
                 Menu::link(self::REPORT_ISSUE_URL, self::HELP_REPORT_ISSUE)->openInBrowser(),
-                // "About diederik" routes to the Settings page where
+                // "About beatrax" routes to the Settings page where
                 // app metadata + version surface. A dedicated `/about`
                 // route is out of this phase's scope; SC3 routing
                 // caveat applies (route to the surface that owns the

@@ -28,7 +28,7 @@
             <p class="mt-1 text-sm text-slate-700 dark:text-slate-300">
                 {{ $heading }} (&ldquo;{{ $receiptValue ?? '' }}&rdquo;)
                 than the statement (&ldquo;{{ $csvValue ?? '' }}&rdquo;).
-                Should diederik prefer receipts for future conflicts?
+                Should beatrax prefer receipts for future conflicts?
             </p>
             <div class="mt-md flex items-center gap-sm">
                 <button

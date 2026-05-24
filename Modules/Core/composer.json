@@ -1,5 +1,5 @@
 {
-    "name": "diederik/core",
+    "name": "beatrax/core",
     "description": "Core module — user, authentication, install command, period configuration.",
     "type": "laravel-module",
     "license": "proprietary",

@@ -14,7 +14,7 @@ use RuntimeException;
  *
  * The warning is informational, not blocking — the calling Livewire
  * component catches the exception, renders a "Are you sure?" banner
- * with two chips (`Use diederik's number` / `Use my number`), and
+ * with two chips (`Use beatrax's number` / `Use my number`), and
  * re-invokes the Action with `$allowDivergence=true` on the second
  * pass. The banner is the soft-warning soft-trigger surface.
  *

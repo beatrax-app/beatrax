@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Import complete · diederik'])
+@extends('layouts.app', ['title' => 'Import complete · beatrax'])
 
 @section('content')
     <main class="min-h-screen bg-white dark:bg-slate-950">

@@ -10,7 +10,7 @@ use InvalidArgumentException;
 /**
  * Parses a short duration token like `30d`, `12h`, or `2w` into a
  * CarbonImmutable offset by subtracting the requested span from a
- * caller-supplied "now". Used by `diederik:failed-jobs prune
+ * caller-supplied "now". Used by `beatrax:failed-jobs prune
  * --older-than=<token>` to compute the cutoff timestamp on the
  * `failed_jobs.failed_at` column.
  *

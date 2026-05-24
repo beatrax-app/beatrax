@@ -12,7 +12,7 @@ use Spatie\LaravelData\Data;
  * Payload for the dashboard "Next ICS settlement" tile.
  *
  * `$amount` is denominated in the card_statement's display currency
- * (typically EUR for the diederik ICS account). `$dueDate` is computed
+ * (typically EUR for the beatrax ICS account). `$dueDate` is computed
  * as `period_end + 5 calendar days`; the constant lag is this wave's
  * forecast and a future plan refines it via the user's prior cadence.
  *

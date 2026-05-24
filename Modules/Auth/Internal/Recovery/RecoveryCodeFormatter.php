@@ -25,6 +25,6 @@ final class RecoveryCodeFormatter
 
     public function filenameFor(string $username): string
     {
-        return 'diederik-recovery-codes-'.strtolower(trim($username)).'.txt';
+        return 'beatrax-recovery-codes-'.strtolower(trim($username)).'.txt';
     }
 }

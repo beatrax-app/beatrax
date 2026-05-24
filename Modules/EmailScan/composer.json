@@ -1,5 +1,5 @@
 {
-    "name": "diederik/email-scan",
+    "name": "beatrax/email-scan",
     "description": "EmailScan module — Gmail + Microsoft Graph OAuth ingestion, raw .eml persistence, resumable scan cursors.",
     "type": "laravel-module",
     "license": "proprietary",
