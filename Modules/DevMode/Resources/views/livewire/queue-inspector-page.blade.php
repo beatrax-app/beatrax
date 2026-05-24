@@ -4,9 +4,9 @@
         <p class="text-sm text-[var(--color-text-muted)]">Pending / failed / batches. Live counts; per-row actions; bulk select + triple-gate on destructive bulk delete.</p>
     </header>
 
-    {{-- Count tiles (D-35). wire:poll.5s refreshes the entire
-         component; every count derives from the raw query builder so
-         they stay in sync with the table below. --}}
+    {{-- Count tiles. wire:poll.5s refreshes the entire component;
+         every count derives from the raw query builder so they stay
+         in sync with the table below. --}}
     <div class="grid grid-cols-3 gap-3" wire:poll.5s data-testid="queue-count-tiles">
         <div class="card p-3" data-testid="tile-pending">
             <p class="text-[10.5px] uppercase tracking-wide text-[var(--color-text-faint)]">Pending</p>
@@ -22,8 +22,8 @@
         </div>
     </div>
 
-    {{-- Tab nav row. The three tabs are sub-routes backing the same
-         component (D-32). Each tab is a real URL so back-button +
+    {{-- Tab nav row. The three tabs are sub-routes backing the
+         same component. Each tab is a real URL so back-button +
          bookmarks behave. --}}
     <nav class="flex items-center gap-1" role="tablist" aria-label="Queue tab">
         @foreach (\Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage::TABS as $tabSlug)
@@ -42,8 +42,8 @@
     </nav>
 
     {{-- Bulk-action bar. Renders only when $selected is non-empty.
-         "Retry N" is non-destructive (single-confirm modal); "Delete N"
-         dispatches `triple-gate:open` per D-22 / D-34. --}}
+         "Retry N" is non-destructive (single-confirm modal);
+         "Delete N" dispatches `triple-gate:open`. --}}
     @if (! empty($selected))
         <div class="card flex items-center gap-3 px-3 py-2" data-testid="bulk-actions">
             <span class="text-xs tabular-nums text-[var(--color-text-muted)]" data-testid="bulk-count">{{ count($selected) }} selected</span>
@@ -215,7 +215,7 @@
         @endif
     </div>
 
-    {{-- Bulk-retry single-confirm modal (D-34). Non-destructive — no
+    {{-- Bulk-retry single-confirm modal. Non-destructive — no
          triple-gate. Flux's open-modal dispatch triggers the modal;
          confirming wires through to bulkRetryConfirm(). --}}
     <flux:modal name="bulk-retry-confirm" :dismissible="true">

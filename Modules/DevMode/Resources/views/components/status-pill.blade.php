@@ -1,8 +1,8 @@
 {{-- Status pill primitive. Variants: ok | warn | fail | muted.
      2px 8px padding; 6px dot prefix; tabular-nums for alignment.
 
-     Used by run-card status + the queue worker pre-flight pill on
-     the runner page; consumed by 16-06's queue health surface too.
+     Used by run-card status, the queue-worker pre-flight pill on
+     the runner page, and the queue inspector's health tiles.
 --}}
 @props([
     'variant' => 'muted',

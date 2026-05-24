@@ -1,5 +1,5 @@
 <div class="flex min-h-full" data-testid="sql-panel-page">
-    {{-- Inner sidebar: Schema viewer (I-6 LOCKED — one route, one component). --}}
+    {{-- Inner sidebar: Schema viewer (lives inside /dev/sql, not a separate route). --}}
     <aside
         class="border-r border-[var(--color-border)] w-[220px] flex-shrink-0 overflow-auto"
         data-testid="schema-viewer"
