@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Logging\PushRedactProcessor;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -58,7 +59,7 @@ return [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
-            'tap' => [],
+            'tap' => [PushRedactProcessor::class],
         ],
 
         'single' => [
@@ -66,7 +67,7 @@ return [
             'path' => UserDataPathService::logsFile(),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
-            'tap' => [],
+            'tap' => [PushRedactProcessor::class],
         ],
 
         'daily' => [
@@ -75,7 +76,7 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
-            'tap' => [],
+            'tap' => [PushRedactProcessor::class],
         ],
 
         'slack' => [
