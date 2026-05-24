@@ -83,4 +83,23 @@
             </table>
         @endif
     </div>
+
+    {{-- Cursor pager: walks back through history by pinning the
+         smallest rendered id as ?before=<id>. --}}
+    @if ($hasMore || $isPaged)
+        <nav class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400" aria-label="Audit pagination">
+            <button
+                type="button"
+                wire:click="newer"
+                @disabled(! $isPaged)
+                class="rounded border px-3 py-1 font-medium {{ $isPaged ? 'border-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:hover:bg-slate-800' : 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-600' }}"
+            >Newer</button>
+            <button
+                type="button"
+                wire:click="older({{ $oldestRenderedId }})"
+                @disabled(! $hasMore || $oldestRenderedId <= 0)
+                class="rounded border px-3 py-1 font-medium {{ $hasMore && $oldestRenderedId > 0 ? 'border-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:hover:bg-slate-800' : 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-600' }}"
+            >Older</button>
+        </nav>
+    @endif
 </div>
