@@ -1,0 +1,121 @@
+<?php
+
+declare(strict_types=1);
+
+use Livewire\Livewire;
+use Modules\Core\Internal\Http\Livewire\AppSidebar;
+use Modules\Core\Models\User;
+
+/*
+ * AppSidebar rendering invariants (Phase 16 D-05).
+ *
+ * Behavior contract per 16-01-PLAN.md Task 1:
+ *
+ *  (1) Authenticated NON-developer → renders → response does NOT
+ *      contain the literal substring "side-dev-block". The Dev block
+ *      is server-side absent for non-developers (T-16-01 mitigation).
+ *  (2) Authenticated developer (is_developer=true) → renders →
+ *      response contains "side-dev-block" + the literal "Developer"
+ *      heading + the literal "dot-live" class + the kbd hint "⌘.".
+ *  (3) The account caption renders "developer · local" for developers
+ *      and "local" for non-developers.
+ *  (4) The brand row literal is `beatrax` (post-rename string per
+ *      D-10), NOT `diederik` — guards the rename precondition.
+ *  (5) The rendered `<aside>` references the `--side-w` CSS custom
+ *      property (or the matching 248px width token) somewhere on the
+ *      sidebar root, so 16-03's dev-shell can flip it to 220px.
+ */
+
+function asbUser(bool $isDeveloper, string $username = 'fixture'): User
+{
+    return User::query()->create([
+        'username' => $username,
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+        'is_developer' => $isDeveloper,
+    ]);
+}
+
+it('does not render the Dev block for a non-developer (server-side absent)', function (): void {
+    $user = asbUser(false, 'asb-nondev');
+
+    $component = Livewire::actingAs($user)->test(AppSidebar::class);
+
+    $html = (string) $component->html();
+
+    expect($html)->not->toContain('side-dev-block');
+    expect($html)->not->toContain('Open Dev Console');
+    expect($html)->not->toContain('dot-live');
+});
+
+it('renders the Dev block with heading, dot, and kbd hint for a developer', function (): void {
+    $user = asbUser(true, 'asb-dev');
+
+    $component = Livewire::actingAs($user)->test(AppSidebar::class);
+
+    $component->assertSee('side-dev-block', escape: false);
+    $component->assertSee('Developer');
+    $component->assertSee('Open Dev Console');
+    $component->assertSee('dot-live', escape: false);
+    $component->assertSee('⌘.', escape: false);
+});
+
+it('renders the developer account caption "developer · local" for a developer', function (): void {
+    $user = asbUser(true, 'asb-dev-caption');
+
+    $component = Livewire::actingAs($user)->test(AppSidebar::class);
+
+    $component->assertSee('developer · local', escape: false);
+});
+
+it('renders the plain "local" account caption for a non-developer', function (): void {
+    $user = asbUser(false, 'asb-nondev-caption');
+
+    $component = Livewire::actingAs($user)->test(AppSidebar::class);
+
+    $html = (string) $component->html();
+
+    expect($html)->toContain('local');
+    // The caption "developer · local" must not appear for non-developers.
+    expect($html)->not->toContain('developer · local');
+});
+
+it('renders the brand row literal "beatrax" (post-rename lock per D-10)', function (): void {
+    $user = asbUser(true, 'asb-brand');
+
+    $component = Livewire::actingAs($user)->test(AppSidebar::class);
+
+    $component->assertSee('beatrax');
+
+    // The brand-row text must be `beatrax`, never `diederik`, so the
+    // 16-02 find/replace does not have to touch this view (D-10 lock).
+    // We grep the rendered HTML for a `diederik` literal inside the
+    // brand row markup — route URLs in href attributes that resolve
+    // against APP_URL (still pointing at `https://diederik.test` until
+    // 16-02 flips Herd) are out of scope here.
+    $html = (string) $component->html();
+    expect($html)->toContain('>beatrax</span>')
+        ->and(preg_match('/<span[^>]*>diederik<\/span>/', $html) === 1)
+        ->toBeFalse('Brand row must not render `<span>diederik</span>` literal.');
+});
+
+it('references the --side-w CSS custom property so the dev-shell layout can override the width', function (): void {
+    $user = asbUser(true, 'asb-width');
+
+    $component = Livewire::actingAs($user)->test(AppSidebar::class);
+
+    $html = (string) $component->html();
+
+    // The `--side-w` token drives the sidebar width (declared in the
+    // @theme block of resources/css/app.css; defaulted to 248px). The
+    // rendered <aside> root references it either inline or through the
+    // `.side` class. We assert either form is present.
+    $referencesToken = str_contains($html, '--side-w') || str_contains($html, 'class="side')
+        || str_contains($html, "class='side") || str_contains($html, ' class="side ')
+        || str_contains($html, 'w-[248px]');
+
+    expect($referencesToken)->toBeTrue(
+        'Rendered sidebar must reference --side-w (via the .side class or an inline style) so the 16-03 dev-shell can flip to 220px.',
+    );
+});

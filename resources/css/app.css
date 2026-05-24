@@ -7,6 +7,112 @@
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Sketch-validated calm-slate Linear/Notion token set (Phase 16 D-05,
+ * sketch session 001 — 2026-05-24). Hand-ported from
+ * `Skill("sketch-findings-diederik")/sources/themes/default.css` into a
+ * Tailwind v4 `@theme` block so utilities (`bg-[var(--color-bg)]`,
+ * `text-[var(--color-text-muted)]`) and the bespoke component layer
+ * below both resolve from the same source of truth.
+ *
+ * Sidebar width is exposed as `--side-w` so the Dev Console layout
+ * (16-03) can override it to 220px without re-declaring every other
+ * token (UI-SPEC § Density rules).
+ */
+@theme {
+    /* Surfaces */
+    --color-bg: #ffffff;
+    --color-bg-subtle: #f8fafc;
+    --color-surface: #ffffff;
+    --color-surface-2: #f1f5f9;
+    --color-surface-raised: #ffffff;
+    --color-border: #e2e8f0;
+    --color-border-strong: #cbd5e1;
+
+    /* Text */
+    --color-text: #0f172a;
+    --color-text-muted: #64748b;
+    --color-text-faint: #94a3b8;
+    --color-text-inverse: #f8fafc;
+
+    /* State */
+    --color-emerald: #059669;
+    --color-emerald-bg: #d1fae5;
+    --color-amber: #b45309;
+    --color-amber-bg: #fef3c7;
+    --color-rose: #be123c;
+    --color-rose-bg: #ffe4e6;
+    --color-blue: #2563eb;
+    --color-blue-bg: #dbeafe;
+
+    /* Typography */
+    --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', monospace;
+    --text-xs: 0.75rem;
+    --text-sm: 0.8125rem;
+    --text-base: 0.9375rem;
+    --text-md: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.375rem;
+    --text-2xl: 1.75rem;
+    --text-3xl: 2rem;
+
+    /* Spacing — multiples of 4 */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+
+    /* Shape */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 10px;
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-xs: 0 1px 1px rgba(15, 23, 42, 0.04);
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+    --shadow-lg: 0 14px 30px -6px rgba(15, 23, 42, 0.18), 0 6px 12px -6px rgba(15, 23, 42, 0.10);
+    --shadow-palette: 0 24px 70px -12px rgba(15, 23, 42, 0.40), 0 8px 20px -8px rgba(15, 23, 42, 0.20);
+
+    /* Motion */
+    --ease-smooth: cubic-bezier(0.2, 0.0, 0.0, 1);
+    --tx-quick: all 120ms var(--ease-smooth);
+    --tx-base: all 180ms var(--ease-smooth);
+
+    /* Layout */
+    --side-w: 248px;
+}
+
+.dark {
+    --color-bg: #020617;
+    --color-bg-subtle: #0b1220;
+    --color-surface: #0b1220;
+    --color-surface-2: #1e293b;
+    --color-surface-raised: #0f172a;
+    --color-border: #1e293b;
+    --color-border-strong: #334155;
+    --color-text: #f1f5f9;
+    --color-text-muted: #94a3b8;
+    --color-text-faint: #64748b;
+    --color-text-inverse: #0f172a;
+    --color-emerald: #10b981;
+    --color-emerald-bg: rgba(16, 185, 129, 0.12);
+    --color-amber: #f59e0b;
+    --color-amber-bg: rgba(245, 158, 11, 0.12);
+    --color-rose: #f43f5e;
+    --color-rose-bg: rgba(244, 63, 94, 0.12);
+    --color-blue: #60a5fa;
+    --color-blue-bg: rgba(96, 165, 250, 0.12);
+}
+
 :root {
     /*
      * `Inter` is preferred when locally installed; otherwise the chain falls
@@ -22,4 +128,273 @@ td.date,
 .kpi-number,
 .tabular {
     font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Sidebar primitives (sketch-validated, Phase 16 D-05). The bespoke
+ * classes below honour the token block above — no hard-coded colors,
+ * sizes flip with `.dark` automatically.
+ */
+@layer components {
+    .side {
+        background: var(--color-bg-subtle);
+        border-right: 1px solid var(--color-border);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        width: var(--side-w);
+        padding: var(--space-4) var(--space-3);
+        font-size: var(--text-sm);
+        color: var(--color-text);
+    }
+
+    .side-brand {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-1) var(--space-2) var(--space-3);
+        font-weight: 600;
+        font-size: var(--text-sm);
+        color: var(--color-text);
+    }
+
+    .side-brand .logo {
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: var(--radius-sm);
+        background: var(--color-surface-2);
+        color: var(--color-text);
+        font-weight: 600;
+        font-size: 12px;
+    }
+
+    .side-brand .version-chip,
+    .version-chip {
+        margin-left: auto;
+        padding: 1px var(--space-2);
+        border-radius: var(--radius-full);
+        background: var(--color-surface-2);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-muted);
+        font-size: 10.5px;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .side-search {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin: 0 var(--space-1) var(--space-3);
+        padding: 6px var(--space-2);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-faint);
+        font-size: var(--text-sm);
+    }
+
+    .side-search input {
+        flex: 1 1 auto;
+        min-width: 0;
+        background: transparent;
+        border: 0;
+        outline: 0;
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+    }
+
+    .side-search input::placeholder {
+        color: var(--color-text-faint);
+    }
+
+    .side-section-label {
+        display: block;
+        padding: var(--space-4) var(--space-2) var(--space-1);
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-text-faint);
+        font-weight: 600;
+    }
+
+    .side-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 6px var(--space-2);
+        border-radius: var(--radius-md);
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+        text-decoration: none;
+        transition: var(--tx-quick);
+    }
+
+    .side-item:hover {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+    }
+
+    .side-item.active {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+        font-weight: 500;
+    }
+
+    .side-item .ic {
+        display: inline-grid;
+        place-items: center;
+        width: 16px;
+        font-size: 12px;
+        color: var(--color-text-faint);
+    }
+
+    .side-item.active .ic,
+    .side-item:hover .ic {
+        color: var(--color-text-muted);
+    }
+
+    .side-badge {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 9px;
+        background: var(--color-text);
+        color: var(--color-bg);
+        font-size: 10.5px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .side-badge.muted {
+        background: var(--color-surface);
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+    }
+
+    .side-badge.alert {
+        background: var(--color-rose-bg);
+        color: var(--color-rose);
+    }
+
+    .side-foot {
+        margin-top: auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        padding-top: var(--space-3);
+    }
+
+    .side-account {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 6px var(--space-2);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .side-account:hover {
+        background: var(--color-surface-2);
+    }
+
+    .side-account .name {
+        display: block;
+        font-size: var(--text-sm);
+        color: var(--color-text);
+        font-weight: 500;
+    }
+
+    .side-account .caption {
+        display: block;
+        font-size: 10.5px;
+        color: var(--color-text-muted);
+    }
+
+    .side-account .ic.right {
+        margin-left: auto;
+        color: var(--color-text-faint);
+    }
+
+    .avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #10b981, #2563eb);
+        display: grid;
+        place-items: center;
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .side-dev-block {
+        margin: var(--space-2) 0 var(--space-1);
+        padding: var(--space-2) var(--space-2) 6px;
+        border-radius: var(--radius-md);
+        background: var(--color-surface-2);
+        border: 1px dashed var(--color-border-strong);
+    }
+
+    .side-dev-block .heading {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-text-muted);
+        font-weight: 600;
+        padding: 0 2px var(--space-1);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .side-dev-block .dev-pulse {
+        padding: 2px var(--space-2) 0;
+        font-size: 10.5px;
+        color: var(--color-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .dot-live {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--color-emerald);
+        box-shadow: 0 0 0 3px var(--color-emerald-bg);
+    }
+
+    .kbd {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        padding: 1px 5px;
+        border-radius: var(--radius-sm);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-bottom-width: 2px;
+        color: var(--color-text-faint);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 500;
+    }
+}
+
+/*
+ * Honor `prefers-reduced-motion` by suppressing the dev-block dot's
+ * static box-shadow glow ring (UI-SPEC § Accessibility). The dot itself
+ * stays visible; only the ring is dropped so the surface reads calmer
+ * for users who prefer reduced motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+    .dot-live {
+        box-shadow: none;
+    }
 }
