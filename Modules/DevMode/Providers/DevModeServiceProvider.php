@@ -6,7 +6,9 @@ namespace Modules\DevMode\Providers;
 
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Livewire\LivewireManager;
 use Modules\DevMode\Internal\Audit\NullAuditWriter;
+use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 use Modules\DevMode\Internal\Http\Middleware\EnsureDeveloperMode;
 use Modules\DevMode\Internal\Registries\NullAppActionRegistry;
 use Modules\DevMode\Internal\Registries\NullDevCommandRegistry;
@@ -56,7 +58,7 @@ final class DevModeServiceProvider extends ServiceProvider
         $this->app->singleton(AuditWriter::class, NullAuditWriter::class);
     }
 
-    public function boot(Router $router): void
+    public function boot(Router $router, LivewireManager $livewire): void
     {
         $router->aliasMiddleware('ensureDeveloperMode', EnsureDeveloperMode::class);
 
@@ -69,5 +71,7 @@ final class DevModeServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'dev');
         }
+
+        $livewire->component('dev.overview-page', DevOverviewPage::class);
     }
 }
