@@ -59,7 +59,7 @@ it('renders all 8 Monolog severity chips on /dev/logs', function (): void {
     }
 });
 
-it('wires the SSE stream URL + the context URL into the page payload', function (): void {
+it('wires the poll URL + the context URL into the page payload', function (): void {
     $user = logTailerUser('log-tailer-wiring');
 
     $response = $this->actingAs($user)->get('/dev/logs');
@@ -67,7 +67,7 @@ it('wires the SSE stream URL + the context URL into the page payload', function 
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    expect($html)->toContain('/dev/logs/stream');
+    expect($html)->toContain('/dev/logs/poll');
     expect($html)->toContain('/dev/logs/context');
 });
 
