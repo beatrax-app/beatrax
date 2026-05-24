@@ -25,7 +25,7 @@ it('renders the change-password heading, subhead and button', function (): void 
     $this->actingAs($user)->get('/change-password')
         ->assertOk()
         ->assertSeeText('Set a new password')
-        ->assertSeeText('Diederik needs you to set your own password before you continue.')
+        ->assertSeeText('Beatrax needs you to set your own password before you continue.')
         ->assertSeeText('Save new password');
 });
 

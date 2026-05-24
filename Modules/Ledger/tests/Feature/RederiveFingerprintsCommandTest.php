@@ -7,7 +7,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 
 /**
- * Drives the `diederik:rederive-fingerprints` artisan command across its
+ * Drives the `beatrax:rederive-fingerprints` artisan command across its
  * three operational paths: no-op on a fresh DB, dry-run reports without
  * writing, --confirm writes inside a single transaction, and a v3 tuple
  * collision aborts cleanly without touching the v2 rows.

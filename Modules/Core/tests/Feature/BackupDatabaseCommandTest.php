@@ -14,7 +14,7 @@ use Tests\Helpers\RealSqliteFixture;
  * RealSqliteFixture and rebinds the default sqlite connection to it.
  *
  * Coverage:
- *  - --force happy path: produces diederik-YYYY-MM-DD-HHMMSS.sqlite at
+ *  - --force happy path: produces beatrax-YYYY-MM-DD-HHMMSS.sqlite at
  *    chmod 0600 plus a .meta.json sidecar at chmod 0600.
  *  - Smart-skip: a second run without --force prints "Skipped" and
  *    produces no new file.
@@ -50,7 +50,7 @@ beforeEach(function (): void {
     // NATIVEPHP_STORAGE_PATH when that env var is set — pointing it at
     // the temp storage root keeps tests deterministic without touching
     // the real backups path on the developer machine.
-    $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-test-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage';
+    $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage';
     $this->backupsDir = $this->storageRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.$this->storageRoot);
 });
@@ -85,8 +85,8 @@ it('produces a chmod-600 .sqlite + .meta.json pair when invoked with --force', f
     $backupsDir = $this->backupsDir;
     expect(is_dir($backupsDir))->toBeTrue();
 
-    $sqliteFiles = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite');
-    $metaFiles = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite.meta.json');
+    $sqliteFiles = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite');
+    $metaFiles = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite.meta.json');
 
     expect($sqliteFiles)->toHaveCount(1, 'Expected exactly one .sqlite backup file.');
     expect($metaFiles)->toHaveCount(1, 'Expected exactly one .meta.json sidecar.');
@@ -112,7 +112,7 @@ it('skips a second invocation when data_version is unchanged and --force is abse
 
     /** @var string $backupsDir */
     $backupsDir = $this->backupsDir;
-    $afterFirst = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite');
+    $afterFirst = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite');
     expect($afterFirst)->toHaveCount(1);
 
     // Second run without --force should smart-skip (no DB writes happened).
@@ -120,7 +120,7 @@ it('skips a second invocation when data_version is unchanged and --force is abse
         ->expectsOutputToContain('Skipped')
         ->assertSuccessful();
 
-    $afterSecond = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite');
+    $afterSecond = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite');
     expect($afterSecond)->toHaveCount(1, 'Smart-skip path must NOT create a second .sqlite file.');
 });
 
@@ -148,16 +148,16 @@ it('prunes pre-seeded historical backups outside the 7-daily + 4-Sunday keep set
     ];
 
     foreach ($seedDates as $stamp) {
-        $files->put($backupsDir.DIRECTORY_SEPARATOR.'diederik-'.$stamp.'.sqlite', 'seeded');
+        $files->put($backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$stamp.'.sqlite', 'seeded');
         $files->put(
-            $backupsDir.DIRECTORY_SEPARATOR.'diederik-'.$stamp.'.sqlite.meta.json',
+            $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$stamp.'.sqlite.meta.json',
             json_encode(['data_version' => 1, 'started_at' => 'x', 'completed_at' => 'x', 'integrity' => 'ok']) ?: '',
         );
     }
 
     $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
 
-    $remaining = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite');
+    $remaining = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite');
     // 8 seeded + 1 new = 9 candidate dailies; retention keeps the 7
     // newest. The newest seeded is 2026-04-30; the freshly-written one
     // is today's. So the 7 newest are: today + 04-30, 04-29, 04-28,
