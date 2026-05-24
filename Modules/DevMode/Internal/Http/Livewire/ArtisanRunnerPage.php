@@ -52,8 +52,13 @@ final class ArtisanRunnerPage extends Component
     #[Url(as: 'filter', except: 'all')]
     public string $filter = 'all';
 
-    public function mount(Session $session): void
-    {
+    public function mount(
+        Session $session,
+        CommandSpawner $spawner,
+        CurrentUser $user,
+        DevCommandRegistry $registry,
+        ?string $spawn = null,
+    ): void {
         // Belt-and-braces Advanced-toggle reset on first dev-console
         // load per session.
         //
@@ -71,6 +76,16 @@ final class ArtisanRunnerPage extends Component
         if (! $session->has('dev_mode.advanced_session_seen')) {
             $session->forget('dev_mode.advanced');
             $session->put('dev_mode.advanced_session_seen', true);
+        }
+
+        // Carry-across spawn intent from the command palette: when
+        // /dev/artisan is opened with ?spawn=<name>, fire the spawn
+        // immediately so picking a SAFE command from the palette
+        // outside the runner page produces the same outcome as
+        // picking it from inside. Reuses the spawn() guard logic so
+        // unknown / destructive names route correctly.
+        if (is_string($spawn) && $spawn !== '') {
+            $this->spawn($spawn, [], $spawner, $user, $registry);
         }
     }
 
