@@ -27,9 +27,14 @@ return [
     | keys are omitted.
     */
 
-    'connections' => [
-
-        'sqlite' => [
+    /*
+     * The on-disk `sqlite` shape is reused for the `readonly_select`
+     * sibling — pulled into a local variable so both entries below
+     * point at the same database file and PRAGMA defaults without a
+     * config() lookup during config-load time.
+     */
+    'connections' => (static function (): array {
+        $sqlite = [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
             'database' => env('DB_DATABASE', UserDataPathService::databaseFile()),
@@ -38,16 +43,35 @@ return [
             'busy_timeout' => 5000,
             'journal_mode' => 'WAL',
             'synchronous' => 'NORMAL',
-        ],
+        ];
 
-        'sqlite_testing' => [
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-            'prefix' => '',
-            'foreign_key_constraints' => true,
-        ],
+        return [
+            'sqlite' => $sqlite,
 
-    ],
+            'sqlite_testing' => [
+                'driver' => 'sqlite',
+                'database' => ':memory:',
+                'prefix' => '',
+                'foreign_key_constraints' => true,
+            ],
+
+            /*
+             * Read-only SELECT-only sibling connection for the Dev
+             * Console SQL panel (CONTEXT D-45). Cloned from the on-disk
+             * `sqlite` connection so the database file, foreign-key
+             * behaviour, and busy-timeout match; it is the consumer's
+             * responsibility to open the underlying PDO with
+             * `PRAGMA query_only = 1` so any DDL/DML attempt is rejected
+             * at the SQLite layer rather than relying on application-
+             * level filtering alone. The `ReadOnlySqliteConnection`
+             * service in 16-07 enforces that PRAGMA per-PDO; this entry
+             * only carves out the named slot.
+             */
+            'readonly_select' => array_merge($sqlite, [
+                'name' => 'readonly_select',
+            ]),
+        ];
+    })(),
 
     /*
     |--------------------------------------------------------------------------
