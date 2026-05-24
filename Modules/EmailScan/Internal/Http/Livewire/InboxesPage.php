@@ -268,7 +268,16 @@ final class InboxesPage extends Component
             return $this->redirectRoute('oauth.connect', ['provider' => $provider]);
         }
 
-        $this->dispatch('modal-show', name: 'oauth-client-wizard-'.$provider);
+        // Dispatch the modal's own open event rather than dispatching
+        // `modal-show` directly. The modal listens for this event,
+        // sets its `$provider` property (so the body branch renders
+        // the right variant and the `<flux:modal>` mounts under the
+        // provider-suffixed name), then itself dispatches `modal-show`
+        // against the now-correct name. Dispatching `modal-show` from
+        // here would target a name that does not yet exist in the DOM
+        // for any provider other than the default-rendered one, which
+        // produced the silent no-op the user reported.
+        $this->dispatch('oauth-client-wizard:open', provider: $provider);
 
         return null;
     }
