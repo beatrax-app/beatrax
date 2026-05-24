@@ -68,10 +68,13 @@ final class PruneDevAuditCommand extends Command
 
         $cutoff = $this->clock->now()->subDays($days);
 
+        // Eloquent\Builder::where() returns Builder; ->delete() exists
+        // on the Eloquent\Builder directly (no __call forwarding).
         $deletedRaw = DevModeActivity::query()
             ->where('log_name', 'dev_mode')
             ->where('created_at', '<', $cutoff)
             ->delete();
+        /** @var int|mixed $deletedRaw */
         $deleted = is_int($deletedRaw) ? $deletedRaw : 0;
 
         $this->info("Pruned {$deleted} dev_mode_audit row(s) older than {$days} day(s).");

@@ -19,6 +19,8 @@ use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\CommandRegistry;
 use Modules\DevMode\Internal\Console\PruneDevAuditCommand;
+use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
+use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 use Modules\DevMode\Internal\Http\Middleware\EnsureDeveloperMode;
@@ -317,6 +319,8 @@ final class DevModeServiceProvider extends ServiceProvider
 
         $livewire->component('dev.overview-page', DevOverviewPage::class);
         $livewire->component('dev.triple-gate-modal', TripleGateModal::class);
+        $livewire->component('dev.artisan-runner-page', ArtisanRunnerPage::class);
+        $livewire->component('dev.audit-log-page', AuditLogPage::class);
 
         // W-8 FIX: register the queue-worker heartbeat via the
         // QueueManager::looping(closure) form. The event-listener form
