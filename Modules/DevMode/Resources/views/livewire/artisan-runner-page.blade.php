@@ -86,7 +86,7 @@
                 @foreach ($safeCommands as $spec)
                     <button
                         type="button"
-                        wire:click="spawn('{{ $spec->name }}', {})"
+                        wire:click="spawn('{{ $spec->name }}', [])"
                         class="block w-full rounded border border-slate-200 bg-white px-3 py-2 text-left hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:hover:bg-slate-800"
                     >
                         <div class="flex items-center justify-between">
