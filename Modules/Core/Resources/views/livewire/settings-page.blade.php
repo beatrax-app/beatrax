@@ -161,7 +161,7 @@
     <section class="space-y-3" id="forecast-buffers">
         <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Forecasting</h2>
         <p class="text-sm text-slate-500 dark:text-slate-400">
-            diederik projects your balance forward from your accounts' current state. For accounts without statement balances (PayPal, legacy CSV imports), set the opening balance here so projections start from a known point.
+            beatrax projects your balance forward from your accounts' current state. For accounts without statement balances (PayPal, legacy CSV imports), set the opening balance here so projections start from a known point.
         </p>
 
         @if (count($forecastingAccounts ?? []) === 0)
@@ -206,9 +206,9 @@
                     <span class="block text-sm text-slate-900 dark:text-slate-100">Auto-import from drop folder</span>
                     <p id="auto-import-help" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         @if ($autoImportFromDropFolder)
-                            Drop folder is active. diederik scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/{{ $userId }}/</code> every 5 minutes for new files.
+                            Drop folder is active. beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/{{ $userId }}/</code> every 5 minutes for new files.
                         @else
-                            When on, diederik scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/{{ $userId }}/</code> every 5 minutes for <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> and <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> files and imports them through the same matcher pipeline as the wizard. Processed files move to <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> so they're never imported twice.
+                            When on, beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/{{ $userId }}/</code> every 5 minutes for <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> and <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> files and imports them through the same matcher pipeline as the wizard. Processed files move to <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> so they're never imported twice.
                         @endif
                     </p>
                 </div>

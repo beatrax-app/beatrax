@@ -9,7 +9,7 @@ use Modules\Ledger\Models\Currency;
 
 /**
  * Seeds the ISO 4217 currencies the app understands out of the box. Idempotent
- * via updateOrInsert so `diederik:install` can run safely on every invocation.
+ * via updateOrInsert so `beatrax:install` can run safely on every invocation.
  */
 final class CurrenciesSeeder extends Seeder
 {

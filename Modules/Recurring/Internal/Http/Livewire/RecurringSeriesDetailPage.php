@@ -95,7 +95,7 @@ final class RecurringSeriesDetailPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => $series->displayName().' · diederik']);
+        $view->extends('layouts.app', ['title' => $series->displayName().' · beatrax']);
 
         return $view;
     }

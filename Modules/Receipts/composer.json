@@ -1,5 +1,5 @@
 {
-    "name": "diederik/receipts",
+    "name": "beatrax/receipts",
     "description": "Receipts module — per-sender email matchers, .eml/.mbox ingestion, and ParsedReceiptDto → SourceTransactionDto bridge.",
     "type": "laravel-module",
     "license": "proprietary",

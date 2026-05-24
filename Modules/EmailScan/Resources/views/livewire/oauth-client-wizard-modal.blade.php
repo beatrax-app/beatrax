@@ -23,7 +23,7 @@
                     <flux:heading size="lg">Set up your Microsoft 365 OAuth client</flux:heading>
                 @endif
                 <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    diederik uses your own Google Cloud project / Azure app registration so your credentials never touch a shared server. This is a one-time setup per provider.
+                    beatrax uses your own Google Cloud project / Azure app registration so your credentials never touch a shared server. This is a one-time setup per provider.
                 </p>
             </header>
 
@@ -55,7 +55,7 @@
                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">3</span>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Configure the OAuth consent screen</p>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">Open APIs & Services → OAuth consent screen. Choose User type "External", enter "diederik" as the app name, and your own email as the support contact and developer contact. Add the scope https://www.googleapis.com/auth/gmail.readonly. Click Save and continue, then Back to Dashboard.</p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Open APIs & Services → OAuth consent screen. Choose User type "External", enter "beatrax" as the app name, and your own email as the support contact and developer contact. Add the scope https://www.googleapis.com/auth/gmail.readonly. Click Save and continue, then Back to Dashboard.</p>
                         </div>
                     </li>
 
@@ -63,7 +63,7 @@
                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">4</span>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Push the consent screen to "In production"</p>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">On the OAuth consent screen page, click Publish App and confirm. This is required — without it, the refresh tokens diederik receives expire after 7 days. Publishing requires no Google review when the only user is you.</p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">On the OAuth consent screen page, click Publish App and confirm. This is required — without it, the refresh tokens beatrax receives expire after 7 days. Publishing requires no Google review when the only user is you.</p>
                             <label class="flex items-center gap-2 pt-1">
                                 <input
                                     type="checkbox"
@@ -79,7 +79,7 @@
                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">5</span>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Create the OAuth Client ID</p>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">Open Credentials → Create Credentials → OAuth Client ID. Choose application type "Web application". Set name "diederik". Under "Authorized redirect URIs" paste the URI below exactly.</p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Open Credentials → Create Credentials → OAuth Client ID. Choose application type "Web application". Set name "beatrax". Under "Authorized redirect URIs" paste the URI below exactly.</p>
                             <button
                                 type="button"
                                 x-data
@@ -137,7 +137,7 @@
                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">2</span>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Register a new application</p>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">Open App registrations → New registration. Name it "diederik". Under "Supported account types" choose "Accounts in any organizational directory and personal Microsoft accounts" (this lets you connect personal Outlook.com and work Microsoft 365 inboxes with the same app).</p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Open App registrations → New registration. Name it "beatrax". Under "Supported account types" choose "Accounts in any organizational directory and personal Microsoft accounts" (this lets you connect personal Outlook.com and work Microsoft 365 inboxes with the same app).</p>
                         </div>
                     </li>
 
@@ -167,7 +167,7 @@
                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">5</span>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Create a client secret</p>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">Open Certificates & secrets → New client secret. Set description "diederik" and an expiry of 24 months. Copy the secret value immediately — Azure shows it only once.</p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Open Certificates & secrets → New client secret. Set description "beatrax" and an expiry of 24 months. Copy the secret value immediately — Azure shows it only once.</p>
                         </div>
                     </li>
 

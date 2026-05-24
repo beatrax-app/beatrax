@@ -23,7 +23,7 @@
             </button>
 
             @if ($downloadShown)
-                <p class="text-sm text-slate-500 dark:text-slate-400">Saved as diederik-recovery-codes-{{ $username }}.txt</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Saved as beatrax-recovery-codes-{{ $username }}.txt</p>
             @endif
         </div>
 
@@ -43,7 +43,7 @@
                 'bg-emerald-600/50 cursor-not-allowed dark:bg-emerald-500/40' => ! $confirmed,
             ])
         >
-            Continue to diederik
+            Continue to beatrax
         </button>
     </div>
 </div>

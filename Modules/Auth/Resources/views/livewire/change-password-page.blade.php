@@ -2,7 +2,7 @@
     <div class="w-full max-w-sm px-6 space-y-6">
         <header class="space-y-1">
             <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Set a new password</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Diederik needs you to set your own password before you continue.</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Beatrax needs you to set your own password before you continue.</p>
         </header>
 
         <form wire:submit="submit" class="space-y-4">

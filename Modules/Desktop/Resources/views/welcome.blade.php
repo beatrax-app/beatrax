@@ -4,13 +4,13 @@
             {{-- Brand mark — same surface the welcome / login screens use (D-18). --}}
             <img
                 src="{{ asset('icon.png') }}"
-                alt="diederik"
+                alt="beatrax"
                 class="h-20 w-20"
             />
         </div>
 
         <header class="space-y-2">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Welcome to diederik</h1>
+            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Welcome to beatrax</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 Your local-only finance dashboard is ready. Create your first account to begin.
             </p>
