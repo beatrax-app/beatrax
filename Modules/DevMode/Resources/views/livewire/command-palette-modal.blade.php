@@ -4,19 +4,19 @@
      * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}> $recent
      *
      * Global command-palette modal mounted in both base layouts
-     * (`resources/views/layouts/app.blade.php` + the dev-shell
-     * `Modules/DevMode/Resources/views/layouts/dev-shell.blade.php`).
+     * (resources/views/layouts/app.blade.php and the dev-shell
+     * Modules/DevMode/Resources/views/layouts/dev-shell.blade.php).
      *
      * The shell is server-rendered Blade + Flux; the fuzzy-search
      * runtime is the `palette()` Alpine factory registered in
-     * `resources/js/palette.js` (W-7: NO inline `<script>` blocks
-     * here — inline scripts violate CSP and bypass Vite bundling).
+     * resources/js/palette.js. NO inline <script> blocks here —
+     * inline scripts violate CSP and bypass Vite bundling.
      *
-     * Server emits the JSON registry (filtered by `is_developer` at
-     * the controller layer) and the seeded Recent list. The Alpine
-     * factory wires Fuse.js with the LOCKED weights (label 0.65,
-     * hint 0.20, keywords 0.15) + threshold 0.35 + ignoreLocation
-     * true per UI-SPEC § Component inventory.
+     * Server emits the JSON registry (filtered by `is_developer`
+     * at the Livewire component layer) and the seeded Recent list.
+     * The Alpine factory wires Fuse.js with the locked weights
+     * (label 0.65, hint 0.20, keywords 0.15) + threshold 0.35 +
+     * ignoreLocation true.
      */
 @endphp
 

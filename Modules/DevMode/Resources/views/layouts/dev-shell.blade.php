@@ -4,27 +4,26 @@
 @inject('devSidebarItems', \Modules\DevMode\Internal\Navigation\DevSidebarItems::class)
 @php
     /*
-     * Dev Console layout shell (Phase 16-03 D-04).
+     * Dev Console layout shell.
      *
-     * Mirrors `resources/views/layouts/app.blade.php`'s head + theme
+     * Mirrors resources/views/layouts/app.blade.php's head + theme
      * resolution + Livewire wiring, then swaps the main app sidebar
-     * (.side, 248px) for the Dev Console sidebar (.dev-side, 220px) on
-     * every /dev/* page. The hard swap (not nesting) is sketch-locked
-     * per UI-SPEC § Dev Console sidebar.
+     * (.side, 248px) for the Dev Console sidebar (.dev-side, 220px)
+     * on every /dev/* page. The swap is a hard layout swap (not
+     * nesting).
      *
      * Theme resolution mirrors app.blade.php's intent — no flash of
      * wrong theme on `system` users — but routes the user lookup
-     * through the CurrentUser contract (via @inject, which resolves
+     * through the CurrentUser contract via @inject (which resolves
      * through the container) so the layout honours the project's
      * DI-only rule (no auth() / Auth:: facade calls inside Modules/*).
      * The OsThemeSignal optional binding is resolved through the
-     * injected container, never through app() global.
+     * injected container, never through the app() global.
      *
-     * The sidebar's nav items render `/dev/{slug}` URLs; only `dev.overview`
-     * is registered in this plan, so every other link gets the
-     * `nav-disabled` class. Downstream plans (16-04 / 16-05 / 16-06 /
-     * 16-07) register the routes and the disabled class drops off
-     * automatically via the `Route::has(...)` check.
+     * Sidebar nav items render `/dev/{slug}` URLs; entries whose
+     * matching route is not registered render with the
+     * `nav-disabled` class so the operator can see which panels are
+     * pending.
      */
     $userTheme = $currentUser->isAuthenticated() ? ($currentUser->user()->theme ?? 'system') : 'system';
 
@@ -37,22 +36,21 @@
     $needsPrePaintScript = $userTheme === 'system' && $osTheme === null;
 
     /*
-     * Dev sidebar nav items (16-06).
+     * Dev sidebar nav items.
      *
-     * Sourced from the canonical DevSidebarItems registry. The `enabled`
-     * field on each item is informational (it documents the W-3
-     * plan-ownership contract); the runtime truth that drives the
-     * `nav-disabled` class continues to be `Route::has('dev.{slug}')`
-     * so a slug whose plan has NOT yet landed automatically renders as
-     * disabled regardless of what the constant says. This dual
-     * representation is deliberate per the plan's W-3 fix — it
-     * surfaces config drift instead of masking it.
+     * Sourced from the canonical DevSidebarItems registry. The
+     * `enabled` field on each item is informational; the runtime
+     * truth that drives the `nav-disabled` class is
+     * Router::has('dev.{slug}'). The dual representation surfaces
+     * config drift rather than masking it.
      *
-     * Horizon's `enabled` value is the string `'conditional'`; the
-     * matching route is only registered when D-38's two signals BOTH
-     * pass. The Route::has() guard below covers the conditional
-     * (when the route is absent the nav-disabled class drops the
-     * item visually; non-developers see 404 via EnsureDeveloperMode).
+     * Horizon's `enabled` value is the string 'conditional': the
+     * matching route is only registered when both the dev_mode env
+     * flag is true AND the Horizon package's ServiceProvider class
+     * is present. The Router::has() guard below covers the
+     * conditional case — when the route is absent the entry is
+     * DOM-absent; non-developers see 404 via EnsureDeveloperMode
+     * regardless.
      */
     $devNavItems = $devSidebarItems->all();
 @endphp
@@ -89,12 +87,15 @@
         x-data="{
             onKey(e) {
                 /*
-                 * Global command-palette keybind handler — duplicated
-                 * verbatim from resources/views/layouts/app.blade.php
-                 * so the palette + Dev Console keybind also work inside
-                 * /dev/* (this layout is the hard-swap variant; it does
-                 * NOT inherit body attributes from the main layout).
-                 * D-42 + 16-08 + I-7 carve-out for text inputs.
+                 * Global command-palette keybind handler —
+                 * duplicated verbatim from
+                 * resources/views/layouts/app.blade.php so the
+                 * palette + Dev Console keybind also work inside
+                 * /dev/* (this layout is a hard layout swap and
+                 * does NOT inherit body attributes from the main
+                 * layout). Includes a carve-out for text inputs so
+                 * ⌘K inside a search field types `k` instead of
+                 * stealing focus into the palette.
                  */
                 const t = document.activeElement;
                 if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
@@ -163,22 +164,24 @@
             </main>
         </div>
 
-        {{-- 16-04b: Global TripleGateModal — any /dev/* page can fire
-             `Livewire.dispatch('triple-gate:open', { command, args })`
-             to open the rose-tinted three-lock confirmation modal. The
-             modal enforces all three gates server-side (Dev Mode env
-             on + session Advanced on + typed "beatrax" matches via
-             hash_equals); on success it dispatches
-             `triple-gate:confirmed` which the runner page's listener
-             POSTs to /dev/artisan/destructive-spawn for the
-             defense-in-depth re-validation + actual spawn. --}}
+        {{-- Global TripleGateModal — any /dev/* page can fire
+             Livewire.dispatch('triple-gate:open', { command, args })
+             to open the rose-tinted three-lock confirmation modal.
+             The modal enforces all three gates server-side (Dev
+             Mode env on + session Advanced on + typed "beatrax"
+             matches via hash_equals); on success it dispatches
+             `triple-gate:confirmed`, which downstream listeners
+             (DestructiveSpawnController for artisan,
+             QueueInspectorPage::executeBulkDelete for queue rows)
+             re-validate before acting. --}}
         @livewire('dev.triple-gate-modal')
 
-        {{-- 16-08: Global command-palette modal mounted inside the
-             dev-shell as well as the main-app layout so ⌘K / Ctrl+K
-             works inside /dev/* too. The Livewire component is the
-             same; mounting both keeps the dispatch sink available
-             regardless of which layout the request resolved through. --}}
+        {{-- Global command-palette modal mounted inside the
+             dev-shell as well as the main-app layout so ⌘K /
+             Ctrl+K works inside /dev/* too. The Livewire component
+             is the same; mounting both keeps the dispatch sink
+             available regardless of which layout the request
+             resolved through. --}}
         @livewire('dev.command-palette-modal')
 
         @livewireScripts
