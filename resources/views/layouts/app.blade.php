@@ -74,7 +74,49 @@
         @vite(['resources/css/app.css'])
         @livewireStyles
     </head>
-    <body class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100" style="font-family: 'Inter', system-ui, -apple-system, sans-serif;">
+    <body
+        class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+        style="font-family: 'Inter', system-ui, -apple-system, sans-serif;"
+        x-data="{
+            onKey(e) {
+                /*
+                 * Global command-palette keybind handler (D-42, 16-08).
+                 *
+                 *   - ⌘K / Ctrl+K → dispatch 'palette:open' (the
+                 *     CommandPaletteModal Livewire component listens
+                 *     and pops the Flux modal).
+                 *   - ⌘. / Ctrl+. → jump to /dev (opens the Dev
+                 *     Console; non-developers receive 404 from
+                 *     EnsureDeveloperMode).
+                 *
+                 * I-7 fix: do NOT steal keystrokes when focus is inside
+                 * a text field. Without this carve-out a developer
+                 * typing 'k' inside a search input while holding ⌘
+                 * (e.g. ⌘← / ⌘→ to navigate words on macOS, then a
+                 * 'k') would have the palette open over their input.
+                 * The standard browser bindings inside INPUT /
+                 * TEXTAREA / contentEditable stay primary.
+                 */
+                const t = document.activeElement;
+                if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
+                    return;
+                }
+                const mod = e.metaKey || e.ctrlKey;
+                if (mod && (e.key === 'k' || e.key === 'K')) {
+                    e.preventDefault();
+                    if (window.Livewire) {
+                        window.Livewire.dispatch('palette:open');
+                    }
+                    return;
+                }
+                if (mod && e.key === '.') {
+                    e.preventDefault();
+                    window.location.href = '/dev';
+                }
+            }
+        }"
+        x-on:keydown.window="onKey($event)"
+    >
         @auth
             <div class="flex min-h-screen">
                 @livewire('core.app-sidebar')
@@ -86,6 +128,16 @@
                     @yield('content')
                 </main>
             </div>
+            {{--
+                Global command-palette modal (16-08, DEVUI-09). Mounted
+                once for the entire authenticated session; the body-level
+                Alpine keybind handler above dispatches `palette:open`
+                which the modal listens to. Server-side JSON registry
+                merges nav + dev (SAFE only, devs only) + actions; dev
+                rows are filtered server-side so non-developers never
+                see the labels.
+            --}}
+            @livewire('dev.command-palette-modal')
         @endauth
         @guest
             @yield('content')

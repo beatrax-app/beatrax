@@ -124,7 +124,7 @@ final class CommandPaletteModal extends Component
         $existing = $this->loadRecent($user, $cache);
         $filtered = array_values(array_filter(
             $existing,
-            static fn (array $r): bool => ($r['id'] ?? null) !== $id,
+            static fn (array $r): bool => $r['id'] !== $id,
         ));
         array_unshift($filtered, $row);
         $capped = array_slice($filtered, 0, self::RECENT_LIMIT);

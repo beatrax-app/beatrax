@@ -80,7 +80,10 @@
                     Open Dev Console
                     <span class="kbd" aria-hidden="true">⌘.</span>
                 </a>
-                <div class="dev-pulse">Queue 0 · Worker —</div>
+                
+                <div class="dev-pulse" wire:poll.5s>
+                    Queue 0 · Worker —
+                </div>
             </div>
         <!--[if ENDBLOCK]><![endif]-->
         <div class="side-account" role="button" tabindex="0">
