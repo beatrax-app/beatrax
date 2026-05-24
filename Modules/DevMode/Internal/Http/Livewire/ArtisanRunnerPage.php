@@ -16,6 +16,8 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
+use Modules\DevMode\Internal\Process\CommandSpawner;
+use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 
 /**
@@ -68,6 +70,81 @@ final class ArtisanRunnerPage extends Component
             return;
         }
         $this->filter = $filter;
+    }
+
+    /**
+     * Fallback-modal SAFE-tier spawn entry point.
+     *
+     * The Blade emits `wire:click="spawn('cache:clear', {})"` for each
+     * SAFE-tier row. This method looks the command up in the registry,
+     * routes DESTRUCTIVE rows to the triple-gate (defense-in-depth —
+     * the registry filter already excludes them from the fallback
+     * modal, but a hostile client could still POST a destructive name),
+     * and otherwise spawns the SAFE command directly.
+     *
+     * @param  array<string, mixed>  $args
+     */
+    public function spawn(
+        string $command,
+        array $args,
+        CommandSpawner $spawner,
+        CurrentUser $user,
+        DevCommandRegistry $registry,
+    ): void {
+        try {
+            $spec = $registry->find($command);
+        } catch (\InvalidArgumentException) {
+            // Unknown command — surface a toast but never spawn.
+            $this->dispatch('toast', message: 'Unknown command: '.$command);
+
+            return;
+        }
+
+        if ($spec->tier !== 'safe') {
+            $this->dispatch('triple-gate:open', command: $command, args: $args);
+
+            return;
+        }
+
+        $runId = $spawner->start($command, $args, $user->id(), 'safe');
+        $this->dispatch('toast', message: 'Started '.$command.' (run '.$runId.')');
+    }
+
+    /**
+     * Per-row Re-run entry point.
+     *
+     * The audit-log row's id maps 1:1 to a RunRegistry record. A
+     * destructive re-run pops the triple-gate carrying the original
+     * command + args so the operator confirms again; a safe re-run
+     * spawns immediately. Unknown / expired records (24h cache TTL)
+     * silently no-op — the row is still visible on the timeline as a
+     * historical entry but the cache no longer has the spawn payload.
+     */
+    public function rerun(
+        string $runId,
+        RunRegistry $registry,
+        CommandSpawner $spawner,
+        CurrentUser $user,
+    ): void {
+        $record = $registry->find($runId);
+        if ($record === null) {
+            $this->dispatch('toast', message: 'Run record expired — cannot re-run.');
+
+            return;
+        }
+
+        if ($record->tier === 'destructive') {
+            $this->dispatch(
+                'triple-gate:open',
+                command: $record->command,
+                args: $record->args,
+            );
+
+            return;
+        }
+
+        $newRunId = $spawner->start($record->command, $record->args, $user->id(), 'safe');
+        $this->dispatch('toast', message: 'Re-ran '.$record->command.' (run '.$newRunId.')');
     }
 
     public function render(
