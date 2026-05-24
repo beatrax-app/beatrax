@@ -93,27 +93,38 @@ export const palette = (registry, recent) => ({
     },
     dispatchEntry(item) {
         if (item.source === 'dev' && item.name) {
-            // Per <interfaces> I-3 fix: palette dispatches the spawn
-            // intent only. The arg form lives on /dev/artisan; this
-            // call carries any pre-resolved args + the tier so the
-            // runner page can either route through the triple-gate
-            // (DESTRUCTIVE) or the SAFE spawn pipeline directly.
-            // DESTRUCTIVE-tier commands never reach this branch (the
-            // server-side JSON-emit filter excludes them per D-41).
-            if (window.Livewire) {
-                window.Livewire.dispatch('spawn-command', {
-                    name: item.name,
-                    args: item.resolvedArgs || {},
-                    tier: item.tier || 'safe',
-                });
+            // The palette dispatches the spawn intent only — the arg
+            // form lives on /dev/artisan. DESTRUCTIVE-tier commands
+            // never reach this branch (the server-side JSON-emit
+            // filter excludes them; the runner page owns destructive
+            // execution through the triple-gate).
+            //
+            // When the operator is ON /dev/artisan, the runner page
+            // is mounted and listens for the spawn-command event.
+            // When they are anywhere else, dispatching first and then
+            // navigating loses the dispatch (Livewire unmounts before
+            // the runner page hydrates). Instead, navigate to
+            // /dev/artisan?spawn=<name> and let the runner page's
+            // mount() consume the query param.
+            const onRunnerPage = typeof window !== 'undefined'
+                && window.location.pathname.startsWith('/dev/artisan');
+
+            if (onRunnerPage) {
+                if (window.Livewire) {
+                    window.Livewire.dispatch('spawn-command', {
+                        name: item.name,
+                        args: item.resolvedArgs || {},
+                        tier: item.tier || 'safe',
+                    });
+                }
+                return;
             }
-            // If the palette was opened outside /dev/artisan, the
-            // runner page is not mounted to receive the dispatch.
-            // Navigate there as a fallback so the spawn intent is
-            // never silently dropped.
-            if (item.url || (typeof window !== 'undefined' && !window.location.pathname.startsWith('/dev/artisan'))) {
-                window.location.href = '/dev/artisan';
-            }
+
+            // Carry the spawn intent across the navigation so the
+            // runner page picks it up after mount. encodeURIComponent
+            // keeps a hostile-but-server-validated name safe in the
+            // query string.
+            window.location.href = '/dev/artisan?spawn=' + encodeURIComponent(item.name);
             return;
         }
         if (item.url) {
