@@ -207,7 +207,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3 — 16-04 → 16-04b SERIAL within wave per B-5 split)*
 
 - [x] 16-04-PLAN.md — Artisan SAFE pipeline + CommandRegistry + Spawner (architecture b spawn-then-tail per D-16) + RunRegistry + FileTailer + ArtisanStreamController + cancel + advanced-toggle + missing commands (DEVUI-02 partial)
-- [ ] 16-04b-PLAN.md — Audit pipeline (SpatieAuditWriter + FinalizeRunAudit hook) + AuditEvent enum + TripleGateModal + DestructiveSpawnController + Queue::looping heartbeat (DI form) + ArtisanRunnerPage + AuditLogPage + sidebar Artisan + Audit enable (DEVUI-02 complete, DEVUI-03)
+- [x] 16-04b-PLAN.md — Audit pipeline (SpatieAuditWriter + FinalizeRunAudit hook) + AuditEvent enum + TripleGateModal + DestructiveSpawnController + Queue::looping heartbeat (DI form) + ArtisanRunnerPage + AuditLogPage + sidebar Artisan + Audit enable (DEVUI-02 complete, DEVUI-03)
 
 **Wave 5** *(blocked on Wave 4, parallel)*
 
@@ -308,7 +308,7 @@ Plans:
 | 13. AppPaths | 3/3 | Complete    | 2026-05-20 |
 | 14. Queue Rewire + Horizon Carve-out | 3/3 | Complete    | 2026-05-22 |
 | 15. Desktop Shell (NativePHP Integration) | 7/7 | Complete    | 2026-05-23 |
-| 16. Developer Mode UI | 4/9 | In Progress|  |
+| 16. Developer Mode UI | 5/9 | In Progress|  |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |
 | 19. Public Release Boundary | 0/0 | Not started | - |
