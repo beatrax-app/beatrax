@@ -7,6 +7,9 @@ use Modules\DevMode\Internal\Http\Controllers\AdvancedToggleController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanCancelController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanSpawnController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanStreamController;
+use Modules\DevMode\Internal\Http\Controllers\DestructiveSpawnController;
+use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
+use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 
 /*
@@ -32,6 +35,14 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
     ->group(static function (): void {
         Route::get('/', DevOverviewPage::class)->name('dev.overview');
 
+        // 16-04b: Artisan runner page + Audit log page (dev.artisan +
+        // dev.audit). When these routes resolve, the dev-shell layout's
+        // Route::has() check automatically drops the `nav-disabled`
+        // class from the Artisan + Audit sidebar items (16-03 wired
+        // the per-item Route::has check).
+        Route::get('/artisan', ArtisanRunnerPage::class)->name('dev.artisan');
+        Route::get('/audit', AuditLogPage::class)->name('dev.audit');
+
         // 16-04: SAFE-tier spawn pipeline. The runner UI page +
         // DESTRUCTIVE triple-gate land in 16-04b; only the JSON +
         // SSE endpoints are exposed here.
@@ -44,4 +55,11 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
 
         Route::post('/advanced-toggle', AdvancedToggleController::class)
             ->name('dev.advanced-toggle');
+
+        // 16-04b: DESTRUCTIVE-tier spawn endpoint. SEPARATE from the
+        // SAFE-tier ArtisanSpawnController above; this controller
+        // RE-VALIDATES the triple-gate (env + session + typed) before
+        // routing through CommandSpawner::start(..., 'destructive').
+        Route::post('/artisan/destructive-spawn', DestructiveSpawnController::class)
+            ->name('dev.artisan.destructive-spawn');
     });

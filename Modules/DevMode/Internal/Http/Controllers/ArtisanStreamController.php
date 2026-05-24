@@ -6,6 +6,7 @@ namespace Modules\DevMode\Internal\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -53,6 +54,7 @@ final readonly class ArtisanStreamController
     public function __construct(
         private RunRegistry $registry,
         private FileTailer $tailer,
+        private FinalizeRunAudit $finalize,
     ) {}
 
     public function __invoke(
@@ -75,6 +77,7 @@ final readonly class ArtisanStreamController
         $runIdLocal = $runId;
         $registry = $this->registry;
         $tailer = $this->tailer;
+        $finalize = $this->finalize;
 
         $response = new StreamedResponse(static function () use (
             $record,
@@ -82,6 +85,7 @@ final readonly class ArtisanStreamController
             $registry,
             $tailer,
             $runIdLocal,
+            $finalize,
         ): void {
             @ini_set('output_buffering', '0');
             @ini_set('zlib.output_compression', '0');
@@ -125,11 +129,29 @@ final readonly class ArtisanStreamController
                     $cancelled = $fresh?->status === 'cancelled';
 
                     // Mark finished in the registry so subsequent SSE
-                    // reconnects observe a terminal status — 16-04b's
-                    // audit pipeline overrides the exit-code field
-                    // when it lands.
+                    // reconnects observe a terminal status. 16-04b's
+                    // FinalizeRunAudit hook (invoked below) writes the
+                    // dev_mode_audit row that captures the authoritative
+                    // exit code + the redacted stdout excerpt.
                     if ($fresh !== null && $fresh->status === 'running') {
                         $registry->markFinished($runIdLocal, $exit ?? 0);
+                    }
+
+                    // 16-04b audit pipeline hook (the only 16-04 file
+                    // 16-04b touches): write the dev_mode_audit row
+                    // BEFORE emitting the terminal `event: done` so the
+                    // client observes a strict happens-before between
+                    // "audit row exists" and "browser sees stream
+                    // closed". Any RunRegistry/disk/audit-writer
+                    // failure surfaces in the next request's audit
+                    // page; the SSE client still terminates normally.
+                    try {
+                        ($finalize)($runIdLocal, $exit, $cancelled);
+                    } catch (\Throwable) {
+                        // Swallow — finalize errors must not break the
+                        // SSE protocol. The audit pipeline has its own
+                        // logging path; the next run will reveal a
+                        // systemic problem.
                     }
 
                     echo "event: done\n";
