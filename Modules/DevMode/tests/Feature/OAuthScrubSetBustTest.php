@@ -9,18 +9,17 @@ use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\EmailScan\Models\OAuthSecret;
 
 /*
- * Phase 16-05 Task 1 — OAuthScrubSet end-to-end + cache-bust invariants.
+ * OAuthScrubSet end-to-end + cache-bust invariants.
  *
- * Tests 4 + 5 from the plan: per-test ephemeral log channel built via
- * LogManager::build() (W-5 fix from 16-04b — never the real shared
- * laravel-{date}.log so parallel-Pest workers don't race on the same
- * file). The same PushRedactProcessor tap is applied to the ephemeral
- * channel, exercising the SAME wiring the real `daily` channel
- * resolves in config/logging.php.
+ * Per-test ephemeral log channel built via LogManager::build() so
+ * parallel-Pest workers don't race on the shared
+ * laravel-{date}.log. The same PushRedactProcessor tap is applied
+ * to the ephemeral channel, exercising the same wiring the real
+ * `daily` channel resolves in config/logging.php.
  *
  * The compiled-pattern bust observer is registered by
- * DevModeServiceProvider::boot() via `OAuthSecret::observe(
- * BustOAuthScrubSetOnSecretChange::class)`. Every save/delete fires
+ * DevModeServiceProvider::boot() via OAuthSecret::observe(
+ * BustOAuthScrubSetOnSecretChange::class). Every save/delete fires
  * the observer; the next compiledPattern() call rebuilds from the
  * live table.
  */
@@ -70,7 +69,7 @@ function logWithRedactionToTempFile(string $message): string
     return $contents;
 }
 
-it('busts the OAuthScrubSet cache when an OAuthSecret is saved (Test 4 — D-30)', function (): void {
+it('busts the OAuthScrubSet cache when an OAuthSecret is saved', function (): void {
     $user = scrubSetUser('scrubset-save');
     $this->actingAs($user);
 
@@ -132,7 +131,7 @@ it('busts the cache on UPDATE so a rotated secret is scrubbed on the next log li
     expect($second)->not->toContain('NEW_SECRET');
 });
 
-it('scrubs every leaf string inside an OAuthSecret tokens_blob (refresh tokens, access tokens, scope) — D-30 entire value set', function (): void {
+it('scrubs every leaf string inside an OAuthSecret tokens_blob (refresh tokens, access tokens, scope)', function (): void {
     $user = scrubSetUser('scrubset-tokensblob');
     $this->actingAs($user);
 
@@ -161,8 +160,8 @@ it('scrubs every leaf string inside an OAuthSecret tokens_blob (refresh tokens, 
 
     // The client_secret + each non-empty leaf string in tokens_blob
     // is in the set — the email + scope qualify too because the
-    // scrub set is intentionally aggressive (CONTEXT D-30: "every
-    // string value in tokens_blob").
+    // scrub set is intentionally aggressive: every string value in
+    // tokens_blob is treated as a potential secret.
     expect($secrets)->toContain('CLIENT_SECRET_X');
     expect($secrets)->toContain('REFRESH_TOKEN_VALUE');
     expect($secrets)->toContain('ACCESS_TOKEN_VALUE');

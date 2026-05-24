@@ -15,19 +15,21 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Process\Process;
 
 /*
- * SAFE spawn + SSE reconnect contract tests (Phase 16 plan 04 Task 2).
+ * SAFE spawn + SSE reconnect contract tests.
  *
- * The headline test is "page refresh during a running command reconnects
- * to the live stream" — CONTEXT D-16 verbatim. The test spawns a real
- * SAFE-tier command end-to-end, opens an SSE handle, kills the parent
- * connection mid-stream, opens a second handle with a `?from=` offset
- * matching the first handle's last byte, and asserts the second handle
- * observes ONLY lines emitted after the reconnect point.
+ * The headline test is "page refresh during a running command
+ * reconnects to the live stream". The test spawns a real SAFE-tier
+ * command end-to-end, opens an SSE handle, kills the parent
+ * connection mid-stream, opens a second handle with a `?from=`
+ * offset matching the first handle's last byte, and asserts the
+ * second handle observes ONLY lines emitted after the reconnect
+ * point.
  *
- * Cross-user inspection rejection (T-16-15) is covered by Test 7.
+ * Cross-user inspection rejection is also covered (a non-spawner
+ * developer hitting /dev/artisan/stream/{runId} receives 403).
  *
- * Skipped on Windows — setsid + posix_kill are POSIX-only and the
- * project's local-only constraint is macOS / Linux.
+ * Skipped on Windows — posix_kill is POSIX-only and the project's
+ * local-only constraint is macOS / Linux.
  */
 
 beforeEach(function (): void {
@@ -244,7 +246,7 @@ it('streams text/event-stream from /dev/artisan/stream/{run_id} with data + done
     expect($capture['body'])->toContain('line-3');
 });
 
-it('honors ?from= for page-refresh-reconnect — second handle observes only later lines (CONTEXT D-16)', function (): void {
+it('honors ?from= for page-refresh-reconnect — second handle observes only later lines', function (): void {
     $user = devUser('reconnect-user');
 
     // Long-enough run that we can split it into two SSE captures.
@@ -316,7 +318,7 @@ it('writes session key dev_mode.advanced via POST /dev/advanced-toggle and retur
     expect(session('dev_mode.advanced'))->toBeFalse();
 });
 
-it('rejects cross-user inspection on /dev/artisan/stream/{run_id} with 403 (T-16-15)', function (): void {
+it('rejects cross-user inspection on /dev/artisan/stream/{run_id} with 403', function (): void {
     $spawner = devUser('cross-user-spawner');
     $intruder = devUser('cross-user-intruder');
 

@@ -12,16 +12,15 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 
 /*
- * DevOverviewPage rendering invariants (Phase 16-07 Task 1 upgrade).
+ * DevOverviewPage rendering invariants.
  *
- * Replaces 16-03's placeholder behavior — the page now renders the
- * full UI-SPEC §/dev overview surfaces layout: a theme-locked dark
- * `.console-pane` (primary visual anchor; fixed #0b1220 background)
- * with three-column head (worker heartbeat + queue counts + last
- * command), an 8-line redacted log tail with cursor blink, plus
- * "Recent runs" and "Open alerts" cards beneath the pane. The
- * sidebar's Doctor / SQL / System entries are now enabled (their
- * routes land alongside this overview upgrade in the same plan).
+ * The page renders the /dev overview surface: a theme-locked dark
+ * .console-pane (primary visual anchor; fixed #0b1220 background)
+ * with a three-column head (worker heartbeat + queue counts +
+ * last command), an 8-line redacted log tail with cursor blink,
+ * plus "Recent runs" and "Open alerts" cards beneath the pane.
+ * The sidebar's Doctor / SQL / System entries render enabled when
+ * their routes are registered.
  */
 
 function devOverviewUser(bool $isDeveloper, string $username = 'devov-fixture'): User
@@ -67,13 +66,13 @@ it('renders dev-sidebar nav items with every non-Horizon entry visible (Doctor /
             ->toBeTrue("Dev sidebar missing nav item: {$label}");
     }
 
-    // Horizon is DOM-absent in the default test env (no app.dev_mode +
-    // no Horizon package install). After 16-07 every other entry has
-    // a registered route → no nav-disabled markers.
+    // Horizon is DOM-absent in the default test env (no
+    // app.dev_mode + no Horizon package install). Every other
+    // entry has a registered route → no nav-disabled markers.
     $disabledCount = substr_count($html, 'nav-disabled');
     expect($disabledCount)->toBe(
         0,
-        "Expected zero nav-disabled entries after 16-07 (Doctor / SQL / System routes are registered), saw {$disabledCount}.",
+        "Expected zero nav-disabled entries (every dev route is registered), saw {$disabledCount}.",
     );
 
     expect(str_contains($html, '>Horizon<'))

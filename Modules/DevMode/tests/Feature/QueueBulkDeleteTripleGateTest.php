@@ -13,26 +13,27 @@ use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
 use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 
 /*
- * Phase 16-06 Task 1 — Triple-gate enforcement on bulk delete (D-22 / D-34).
+ * Triple-gate enforcement on bulk delete.
  *
- * Bulk delete is the destructive sibling of bulk retry. Per CONTEXT
- * D-22 ("Triple-gate also applies to bulk DESTRUCTIVE queue actions"),
- * the bulk-delete affordance MUST route through the existing
- * TripleGateModal (the same one 16-04b lands for destructive artisan
+ * Bulk delete is the destructive sibling of bulk retry. The
+ * triple-gate applies to bulk DESTRUCTIVE queue actions: the
+ * bulk-delete affordance routes through the global TripleGateModal
+ * (the same modal the artisan runner uses for DESTRUCTIVE
  * commands).
  *
- * The mitigation surface is two-layered (defense-in-depth, mirroring
- * the artisan-runner pattern):
+ * The surface is two-layered (defense-in-depth, mirroring the
+ * artisan-runner pattern):
  *   1. QueueInspectorPage::bulkDeleteRequest() dispatches
  *      `triple-gate:open` — the user-visible affordance.
  *   2. QueueInspectorPage::executeBulkDelete() is the listener for
  *      `triple-gate:confirmed`; it discriminates by the command
- *      string so unrelated gate confirms (artisan-tier destructive)
- *      don't accidentally delete queue rows.
+ *      string AND re-validates the three gates server-side so a
+ *      tampered Livewire payload still cannot reach the delete
+ *      path.
  *
  * The gate itself enforces the three locks server-side
- * (DevModeFlag + session.advanced + typed-name); those tests live in
- * TripleGateTest. This file exercises the bulk-delete-specific
+ * (DevModeFlag + session.advanced + typed-name); those tests live
+ * in TripleGateTest. This file exercises the bulk-delete-specific
  * round-trip end-to-end.
  */
 
@@ -251,7 +252,7 @@ it('executeBulkDelete refuses when the confirmed_typed token is wrong (defense-i
     expect(DB::table('failed_jobs')->whereIn('uuid', ['uuid-typed-1', 'uuid-typed-2'])->count())->toBe(2);
 });
 
-it('the triple-gate is enforced through the global TripleGateModal — its three gates apply to queue bulk delete (D-22 composition check)', function (): void {
+it('the triple-gate is enforced through the global TripleGateModal — its three gates apply to queue bulk delete (composition check)', function (): void {
     // This is a composition check — the actual gate-by-gate
     // rejection paths are exhaustively covered by TripleGateTest.
     // Here we just verify the modal still rejects when the three

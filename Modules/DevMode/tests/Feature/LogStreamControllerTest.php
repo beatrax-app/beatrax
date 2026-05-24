@@ -7,22 +7,21 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\EmailScan\Models\OAuthSecret;
 
 /*
- * Phase 16-05 Task 2 — LogStreamController invariants.
+ * LogStreamController invariants.
  *
- * The SSE tail itself can't be exercised end-to-end inside Pest's HTTP
- * client (the controller blocks on a 250 ms tick loop with a 600 s
- * deadline). Instead we cover:
+ * The SSE tail itself can't be exercised end-to-end inside Pest's
+ * HTTP client (the controller blocks on a 250 ms tick loop with a
+ * 600 s deadline). Instead we cover:
  *   - The route is gated by EnsureDeveloperMode (404 for non-devs).
  *   - The stream emits text/event-stream headers without buffering.
  *   - The context endpoint validates inputs and clamps radius.
- *   - The context endpoint re-applies redaction (T-16-13 + D-29 on-stream).
- *   - The context endpoint never reads outside the daily log file path
- *     (T-16-18 — path is computed via UserDataPathService).
+ *   - The context endpoint re-applies the on-stream redaction.
+ *   - The context endpoint never reads outside the daily log file
+ *     path (path is computed via UserDataPathService).
  *
  * The stream's tick-loop body (FileTailer + rotation detection) is
- * separately covered by 16-04's existing CommandSpawnerTest /
- * ArtisanStreamReconnectTest (shared FileTailer primitive) so we don't
- * need to re-test the inode-shrinkage path here.
+ * covered by CommandSpawnerTest / ArtisanStreamReconnectTest via
+ * the shared FileTailer primitive.
  */
 
 function logStreamUser(string $username, bool $isDeveloper = true): User
@@ -63,7 +62,7 @@ it('returns 404 from /dev/logs/context for a non-developer (EnsureDeveloperMode 
     $response->assertNotFound();
 });
 
-it('GET /dev/logs/context returns the requested ±radius lines, all redacted (D-29 on-stream)', function (): void {
+it('GET /dev/logs/context returns the requested ±radius lines, all redacted', function (): void {
     $user = logStreamUser('logs-ctx-dev');
 
     ensureDailyLogFile(implode("\n", [
@@ -87,7 +86,7 @@ it('GET /dev/logs/context returns the requested ±radius lines, all redacted (D-
     expect($body['lines'][1]['text'])->not->toContain('SUPERSECRETTOKEN');
 });
 
-it('GET /dev/logs/context clamps radius at MAX_CONTEXT_RADIUS = 50 (T-16-19)', function (): void {
+it('GET /dev/logs/context clamps radius at MAX_CONTEXT_RADIUS = 50', function (): void {
     $user = logStreamUser('logs-ctx-clamp');
 
     ensureDailyLogFile(str_repeat("x\n", 200));

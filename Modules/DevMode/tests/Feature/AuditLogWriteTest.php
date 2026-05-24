@@ -17,17 +17,21 @@ use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\EmailScan\Models\OAuthSecret;
 
 /*
- * Phase 16-04b Task 1 — Audit-pipeline invariants.
+ * Audit-pipeline invariants.
  *
  * Covers:
- *   - AuditEvent enum taxonomy (I-5 fix).
+ *   - AuditEvent enum taxonomy (locks audit-action strings as
+ *     enum cases — no free-form descriptions).
  *   - RedactionExcerptCap baseline (Bearer + JWT + 8 KiB cap).
- *   - SpatieAuditWriter writes D-24 rows with basic redaction.
+ *   - SpatieAuditWriter writes dev_mode_audit rows with the
+ *     expected shape and basic redaction applied.
  *   - FinalizeRunAudit reads the per-run tmp file + writes via the
- *     AuditWriter; the row reflects the recorded run + redacted content.
- *   - DevModeServiceProvider binds AuditWriter to SpatieAuditWriter
- *     (NullAuditWriter is gone).
- *   - PruneDevAuditCommand validates --older-than + deletes only old rows.
+ *     AuditWriter; the row reflects the recorded run + redacted
+ *     content.
+ *   - DevModeServiceProvider binds AuditWriter to
+ *     SpatieAuditWriter.
+ *   - PruneDevAuditCommand validates --older-than + deletes only
+ *     old rows.
  */
 
 function auditDeveloper(string $username): User
@@ -41,7 +45,7 @@ function auditDeveloper(string $username): User
     ]);
 }
 
-it('declares the AuditEvent enum taxonomy (I-5 fix — locks audit-action strings as enum cases)', function (): void {
+it('declares the AuditEvent enum taxonomy (locks audit-action strings as enum cases)', function (): void {
     expect(AuditEvent::CommandExecuted->value)->toBe('command_executed');
     expect(AuditEvent::CommandCancelled->value)->toBe('command_cancelled');
     expect(AuditEvent::QueueAction->value)->toBe('queue_action');
@@ -71,13 +75,13 @@ it('truncates content past the 8 KiB cap (default)', function (): void {
     expect(strlen($out))->toBe(RedactionExcerptCap::DEFAULT_MAX_BYTES);
 });
 
-it('replaces the NullAuditWriter binding with SpatieAuditWriter (16-04b service-provider swap)', function (): void {
+it('binds AuditWriter to SpatieAuditWriter (no Null fallback in container)', function (): void {
     $writer = app(AuditWriter::class);
 
     expect($writer)->toBeInstanceOf(SpatieAuditWriter::class);
 });
 
-it('SpatieAuditWriter writes a D-24 row into dev_mode_audit with log_name + description + properties.command', function (): void {
+it('SpatieAuditWriter writes a row into dev_mode_audit with log_name + description + properties.command', function (): void {
     $user = auditDeveloper('audit-writer');
 
     /** @var SpatieAuditWriter $writer */

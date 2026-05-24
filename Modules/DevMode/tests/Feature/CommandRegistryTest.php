@@ -7,18 +7,16 @@ use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
 /*
- * CommandRegistry roster + ArgSpec structural invariants
- * (Phase 16 plan 04 Task 1 — CONTEXT D-12 / D-13 / D-14).
+ * CommandRegistry roster + ArgSpec structural invariants.
  *
- * Locks the SAFE (9) + DESTRUCTIVE (6) roster shape replacing the
- * Null* registry from 16-03 and asserts the D-14 NEVER-EXPOSED
- * commands (`migrate`, `migrate:rollback`, `db:seed`) are absent
- * from the lookup surface entirely — `find()` throws for them, so
- * the spawner whitelists against the throw and never reaches the
- * shell with those names.
+ * Locks the SAFE (9) + DESTRUCTIVE (6) roster shape and asserts
+ * the NEVER-EXPOSED commands (migrate, migrate:rollback, db:seed)
+ * are absent from the lookup surface entirely — find() throws for
+ * them, so the spawner whitelists against the throw and never
+ * reaches the shell with those names.
  */
 
-it('binds the concrete CommandRegistry returning 9 SAFE specs (CONTEXT D-12)', function (): void {
+it('binds the concrete CommandRegistry returning 9 SAFE specs', function (): void {
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);
 
@@ -43,7 +41,7 @@ it('binds the concrete CommandRegistry returning 9 SAFE specs (CONTEXT D-12)', f
     }
 });
 
-it('binds the concrete CommandRegistry returning 6 DESTRUCTIVE specs (CONTEXT D-13)', function (): void {
+it('binds the concrete CommandRegistry returning 6 DESTRUCTIVE specs', function (): void {
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);
 
@@ -65,7 +63,7 @@ it('binds the concrete CommandRegistry returning 6 DESTRUCTIVE specs (CONTEXT D-
     }
 });
 
-it('throws InvalidArgumentException when find() resolves a NEVER-EXPOSED command (CONTEXT D-14)', function (): void {
+it('throws InvalidArgumentException when find() resolves a NEVER-EXPOSED command', function (): void {
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);
 

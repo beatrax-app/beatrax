@@ -3,21 +3,20 @@
 declare(strict_types=1);
 
 /*
- * Palette keybind handler + Livewire mount invariants (Phase 16-08 Task 2).
+ * Palette keybind handler + Livewire mount invariants.
  *
  * Both base layouts MUST host:
- *   - a body-level Alpine `x-data` block declaring the `onKey($event)`
- *     handler that dispatches `palette:open` on ⌘K / Ctrl+K and
- *     navigates to /dev on ⌘. (D-42).
- *   - an `@livewire('dev.command-palette-modal')` mount so the
+ *   - a body-level Alpine x-data block declaring the
+ *     onKey($event) handler that dispatches `palette:open` on
+ *     ⌘K / Ctrl+K and navigates to /dev on ⌘./Ctrl+.
+ *   - an @livewire('dev.command-palette-modal') mount so the
  *     palette has a dispatch sink inside the layout.
  *
  * The tests grep the on-disk Blade source rather than render the
- * layouts because (a) the `resources/views/layouts/app.blade.php` uses
- * the `auth()` helper which a CLI test cannot resolve cleanly outside
- * a real request, and (b) the rendered HTML still contains the
- * x-data + livewire markers we want to lock — so a source-grep is
- * the simplest, most stable contract.
+ * layouts because (a) a CLI test cannot resolve the layouts'
+ * @inject contracts cleanly outside a real request, and (b) the
+ * rendered HTML still contains the x-data + livewire markers we
+ * want to lock — a source-grep is the simplest stable contract.
  */
 
 it('declares the palette + ⌘. keybind handler on the body tag of resources/views/layouts/app.blade.php', function (): void {
@@ -29,7 +28,7 @@ it('declares the palette + ⌘. keybind handler on the body tag of resources/vie
     // attribute.
     expect($contents)->toContain("'palette:open'");
     expect($contents)->toContain("'/dev'");
-    // The I-7 carve-out for text-input focus is required so the
+    // The carve-out for text-input focus is required so the
     // handler does not steal keystrokes inside an INPUT / TEXTAREA.
     expect($contents)->toContain("'INPUT'");
 });

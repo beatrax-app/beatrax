@@ -9,16 +9,15 @@ use Monolog\Level;
 use Monolog\LogRecord;
 
 /*
- * Phase 16-04b Task 1 — W-1 baseline regression guard for the Monolog
- * `RedactSecretsProcessor` + `PushRedactProcessor` + `config/logging.php`
- * tap-slot wiring.
+ * Baseline regression guard for the Monolog
+ * RedactSecretsProcessor + PushRedactProcessor +
+ * config/logging.php tap-slot wiring.
  *
- * These tests STAY GREEN through 16-05's constructor-DI upgrade (16-05
- * adds OAuthScrubSet; baseline Bearer + JWT scrubbing remains in place).
- *
- * Test 12 (end-to-end on-write redaction) uses an ephemeral per-test
- * channel built via LogManager::build() with the same tap array so the
- * test does not race the real shared laravel-{date}.log under parallel
+ * Covers the Bearer + JWT scrub layer (the OAuthScrubSet layer
+ * has its own coverage in OAuthScrubSetBustTest). The end-to-end
+ * on-write redaction test uses an ephemeral per-test channel built
+ * via LogManager::build() with the same tap array so the test
+ * does not race the real shared laravel-{date}.log under parallel
  * Pest.
  */
 
@@ -72,7 +71,7 @@ it('RedactSecretsProcessor recursively scrubs nested context arrays', function (
     expect($out->extra['extrastring'])->toContain('Authorization: Bearer [REDACTED]');
 });
 
-it('config/logging.php has PushRedactProcessor in the tap slot for stack, single, and daily channels (W-1 wiring guard)', function (): void {
+it('config/logging.php has PushRedactProcessor in the tap slot for stack, single, and daily channels', function (): void {
     $stack = config('logging.channels.stack.tap', []);
     $single = config('logging.channels.single.tap', []);
     $daily = config('logging.channels.daily.tap', []);
@@ -82,7 +81,7 @@ it('config/logging.php has PushRedactProcessor in the tap slot for stack, single
     expect($daily)->toContain(PushRedactProcessor::class);
 });
 
-it('end-to-end: logger() writes redacted Bearer to disk via the tapped channel (W-1 belt+braces)', function (): void {
+it('end-to-end: logger() writes redacted Bearer to disk via the tapped channel', function (): void {
     $tmpPath = tempnam(sys_get_temp_dir(), 'redact-test-').'.log';
 
     /** @var LogManager $manager */

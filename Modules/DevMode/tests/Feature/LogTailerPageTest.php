@@ -5,20 +5,21 @@ declare(strict_types=1);
 use Modules\Core\Models\User;
 
 /*
- * Phase 16-05 Task 2 — /dev/logs page rendering invariants.
+ * /dev/logs page rendering invariants.
  *
  * Covers:
  *   - GET /dev/logs renders the page with severity chips + channel
  *     filter + contains filter + pause button + 10k-line scrollback
- *     for a developer (CONTEXT D-31 components).
- *   - GET /dev/logs returns 404 for a non-developer (EnsureDeveloperMode).
+ *     for a developer.
+ *   - GET /dev/logs returns 404 for a non-developer
+ *     (EnsureDeveloperMode).
  *   - The dev-shell sidebar's Logs nav entry renders WITHOUT the
  *     nav-disabled class once the dev.logs route is registered.
  *   - The page is wired to the SSE stream URL + the context URL.
  *
- * The actual EventSource consumer + Alpine ring-buffer behavior is
- * client-side JS the server tests cannot exercise; the manual smoke
- * test covers that in the verification plan.
+ * The actual EventSource consumer + Alpine ring-buffer behaviour
+ * is client-side JS the server tests cannot exercise; that is
+ * covered manually.
  */
 
 function logTailerUser(string $username, bool $isDeveloper = true): User
@@ -47,7 +48,7 @@ it('returns 200 from GET /dev/logs for an authenticated developer with the page 
     $response->assertSee('data-testid="log-contains-input"', escape: false);
 });
 
-it('renders all 8 Monolog severity chips on /dev/logs (D-31)', function (): void {
+it('renders all 8 Monolog severity chips on /dev/logs', function (): void {
     $user = logTailerUser('log-tailer-severity');
 
     $response = $this->actingAs($user)->get('/dev/logs');

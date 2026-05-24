@@ -10,24 +10,22 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 
 /*
- * EnsureDeveloperMode middleware invariants (Phase 16-03 Task 1).
+ * EnsureDeveloperMode middleware invariants.
  *
- * Locks the 404-not-403 information-disclosure mitigation (T-16-01)
- * for the in-app Developer Console at /dev/*. A non-developer
- * — authenticated or not — receives NotFoundHttpException, not a 403
- * and not a login redirect; the route's existence is never disclosed.
+ * Locks the 404-not-403 information-disclosure mitigation for the
+ * in-app Developer Console at /dev/*. A non-developer —
+ * authenticated or not — receives NotFoundHttpException, not a 403
+ * and not a login redirect; the route's existence is never
+ * disclosed.
  *
- * The /dev/__probe route is registered inside `beforeEach` via
- * Route::middleware(['web', 'ensureDeveloperMode'])->get(...) so the
- * middleware behaviour is exercised in isolation from the Task 2
- * dev-shell + DevOverviewPage rendering paths. The route returns the
- * static string "PROBE" so a 200 response can be matched without
- * pulling Blade into the test.
+ * The /dev/__probe route is registered inside beforeEach so the
+ * middleware behaviour is exercised in isolation from the
+ * dev-shell + DevOverviewPage rendering paths. The route returns
+ * the static string "PROBE" so a 200 response can be matched
+ * without pulling Blade into the test.
  *
- * The contract-resolution test (#4) covers the four Public contract
- * bindings DevModeServiceProvider::register() declares — they MUST
- * resolve via app(...) and return empty list / no-op for the Null*
- * concretes bound in this plan.
+ * The contract-resolution test covers the four Public contract
+ * bindings DevModeServiceProvider::register() declares.
  */
 
 beforeEach(function (): void {
@@ -77,14 +75,12 @@ it('returns 200 with body "PROBE" for an authenticated developer request to /dev
 });
 
 it('resolves all four Public contracts via the container', function (): void {
-    // 16-04 swapped DevCommandRegistry from Null* to the concrete
-    // CommandRegistry (9 SAFE + 6 DESTRUCTIVE roster). 16-08 swaps
-    // NavigationRegistry + AppActionRegistry from Null* to the
-    // concrete *Impl bindings whose factories declare the roster
-    // inline. AuditWriter resolves to the Spatie-backed concrete
-    // bound by 16-04b. The full invariants live in dedicated tests
-    // (CommandRegistryTest, CommandPaletteRegistryTest) — this one
-    // just confirms the four contracts resolve cleanly.
+    // DevCommandRegistry, NavigationRegistry, AppActionRegistry,
+    // and AuditWriter all resolve to their concrete singleton
+    // bindings declared in DevModeServiceProvider::register(). The
+    // full invariants live in dedicated tests (CommandRegistryTest,
+    // CommandPaletteRegistryTest) — this one just confirms the
+    // four contracts resolve cleanly.
     /** @var DevCommandRegistry $commands */
     $commands = app(DevCommandRegistry::class);
     expect($commands)->toBeInstanceOf(DevCommandRegistry::class);
@@ -101,8 +97,8 @@ it('resolves all four Public contracts via the container', function (): void {
     expect($actions)->toBeInstanceOf(AppActionRegistry::class);
     expect($actions->all())->not->toBe([]);
 
-    // AuditWriter is bound to SpatieAuditWriter by 16-04b; resolve
-    // it to confirm the binding shape.
+    // AuditWriter is bound to SpatieAuditWriter; resolve it to
+    // confirm the binding shape.
     /** @var AuditWriter $audit */
     $audit = app(AuditWriter::class);
     expect($audit)->toBeInstanceOf(AuditWriter::class);

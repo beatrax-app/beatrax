@@ -5,15 +5,16 @@ declare(strict_types=1);
 use Modules\DevMode\Internal\System\ConfigFlattener;
 
 /*
- * Phase 16-07 Task 2 — ConfigFlattener (env + effective-config snapshot
- * redaction) invariants.
+ * ConfigFlattener invariants for the env + effective-config
+ * snapshot redaction surface.
  *
  * Covers:
  *   - flatten() walks nested arrays into dot-keys.
- *   - redactSecretSuffixes() masks values for keys matching the locked
- *     denylist (*password*, *secret*, *key, *token*) with [REDACTED].
+ *   - redactSecretSuffixes() masks values for keys matching the
+ *     denylist (*password*, *secret*, *key, *token*) with
+ *     [REDACTED].
  *   - Non-matching keys keep their plain value (e.g.
- *     `BEATRAX_DEV_MODE`, `BEATRAX_RUNTIME` — Open Question Q4 lock).
+ *     BEATRAX_DEV_MODE, BEATRAX_RUNTIME).
  *   - Empty / nested / scalar-leaf shapes handled.
  */
 

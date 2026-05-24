@@ -6,27 +6,26 @@ use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 
 /*
- * AppMenuBuilder Developer-submenu invariants (Phase 16-08 Task 2).
+ * AppMenuBuilder Developer-submenu invariants.
  *
- * 16-08 extends AppMenuBuilder (which already builds the standard
- * App/File/Edit/View/Window/Help set + the beatrax-specific File +
- * Help entries) with a CONDITIONAL Developer submenu that appears
- * only for `is_developer=true` users:
+ * AppMenuBuilder builds the standard App/File/Edit/View/Window/Help
+ * menu set + the beatrax-specific File + Help entries, and
+ * conditionally appends a Developer submenu that appears only for
+ * is_developer=true users:
  *
- *   Developer → "Open Dev Console" (⌘.) + "⌘K Run a command" (⌘K)
+ *   Developer → "Open Dev Console" (⌘.) + "⌘K Run a command"
  *
- * The two entries route to `dev.overview` via Menu::route() (B-4
- * fix: name-based so the menu works in both Herd dev + shipped
- * Electron bundles). Accelerators use the cross-platform `Cmd+.` /
- * `Cmd+K` strings Electron interprets verbatim on macOS, Windows,
- * and Linux.
+ * "Open Dev Console" carries an OS-menu accelerator (Cmd+.); the
+ * "Run a command" entry retains the ⌘K visual hint in its label
+ * but does NOT register an OS-menu accelerator (the body-level
+ * Blade keybind handler owns the actual ⌘K → palette:open dispatch).
  *
- * RESEARCH Pitfall 9: NativePHP app-menu changes do NOT propagate
- * until full bundle relaunch. The build() output is correct here
- * — what changes a running bundle's menu is a separate concern.
+ * NativePHP caveat: app-menu changes do NOT propagate until full
+ * bundle relaunch. The build() output is correct here — what
+ * changes a running bundle's menu is a separate concern.
  *
  * Test design: AppMenuBuilder is a non-Livewire pure-composition
- * class. The fixture uses `actingAs(...)` to seed the CurrentUser
+ * class. The fixture uses actingAs(...) to seed the CurrentUser
  * the container resolves into the builder's constructor.
  */
 
@@ -70,7 +69,7 @@ it('appends a Developer submenu with the Open Dev Console + Run-a-command entrie
     expect($rendered)->not->toContain('Cmd+K');
 });
 
-it('omits the Developer submenu entirely for is_developer=false (T-16-36 defense-in-depth)', function (): void {
+it('omits the Developer submenu entirely for is_developer=false (defense-in-depth)', function (): void {
     devMenuUser(true, 'menu-non-dev-seed');
     $user = devMenuUser(false, 'menu-non-dev');
 
