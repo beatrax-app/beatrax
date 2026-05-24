@@ -9,29 +9,23 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 
 /**
- * Hook 16-04's ArtisanStreamController invokes on the `done` branch:
- * read the per-run tmp file, cap + redact it, and write the audit row
- * via AuditWriter (SpatieAuditWriter at runtime; NullAuditWriter under
- * the 16-03 contract default — which would be a no-op).
+ * Hook ArtisanStreamController invokes on the SSE `done` branch:
+ * read the per-run tmp file, cap + redact it, and write the audit
+ * row via AuditWriter (SpatieAuditWriter at runtime).
  *
- * The stream controller never knew how to "finalize" a run — it just
- * marked the run done in the RunRegistry. This hook closes the gap so
- * every SAFE-tier run that exits cleanly leaves an audit trail.
- *
- * DESTRUCTIVE runs flow through the dedicated DestructiveSpawnController
- * (also in this plan); the stream controller still tails them and still
- * calls this hook the same way — the per-run tmp file shape is
+ * The stream controller marks the run done in the RunRegistry; this
+ * hook is what actually emits the audit-trail row so every SAFE-tier
+ * run that exits cleanly leaves a record. DESTRUCTIVE runs flow
+ * through the dedicated DestructiveSpawnController but their stream
+ * still terminates through the same SSE controller path, so this
+ * hook fires the same way — the per-run tmp file shape is
  * tier-agnostic.
  *
- * Stdout/stderr split (D-24 row shape): the spawner uses a single tmp
- * file with `> file 2>&1` redirection, so stdout and stderr are merged
- * on disk. This hook treats the entire content as `stdout_excerpt` and
- * leaves `error_excerpt` empty. Splitting them requires separate tmp
- * files (architecture change) and is deferred to v2.
- *
- * 16-05 upgrade path: when 16-05 lands the full OAuthScrubSet, the
- * RedactionExcerptCap (consumed by SpatieAuditWriter) picks it up via
- * constructor DI. This hook is unchanged across the upgrade.
+ * Stdout/stderr split: the spawner uses a single tmp file with
+ * `> file 2>&1` redirection, so stdout and stderr are merged on
+ * disk. This hook treats the entire content as `stdout_excerpt` and
+ * leaves `error_excerpt` empty. Splitting them requires separate
+ * tmp files (architecture change) and is deferred to v2.
  */
 final readonly class FinalizeRunAudit
 {

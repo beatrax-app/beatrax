@@ -8,14 +8,15 @@ use Carbon\CarbonInterface;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 
 /**
- * Default AuditWriter concrete bound by DevModeServiceProvider.
+ * Null-shape AuditWriter concrete. Every method is a no-op.
  *
- * Every method is a no-op. The 16-04 audit-pipeline plan replaces
- * this binding with `SpatieAuditWriter`, which routes rows through
- * spatie/laravel-activitylog into the `dev_mode_audit` table. The
- * Null shape exists so consumer Livewire pages can constructor-inject
- * (or method-inject) the AuditWriter contract from day one without
- * `app()->bound(...)` guards or null-checks at every call site.
+ * Exists so consumer code can resolve the AuditWriter contract from
+ * the container without `bound()` guards or null checks at every
+ * call site. The runtime binding in DevModeServiceProvider routes
+ * the contract to SpatieAuditWriter, which persists rows through
+ * spatie/laravel-activitylog into the dev_mode_audit table; this
+ * null shape is the fallback when a consumer instantiates the
+ * contract outside the full container (e.g. ad-hoc unit tests).
  */
 final class NullAuditWriter implements AuditWriter
 {
@@ -33,7 +34,7 @@ final class NullAuditWriter implements AuditWriter
         string $stdoutExcerpt,
         string $errorExcerpt,
     ): void {
-        // no-op until SpatieAuditWriter binds in 16-04.
+        // Null-shape no-op.
     }
 
     /**
@@ -44,7 +45,7 @@ final class NullAuditWriter implements AuditWriter
         array $context,
         int $callerUserId,
     ): void {
-        // no-op until SpatieAuditWriter binds in 16-04.
+        // Null-shape no-op.
     }
 
     public function recordSelectQuery(
@@ -53,6 +54,6 @@ final class NullAuditWriter implements AuditWriter
         int $durationMs,
         int $callerUserId,
     ): void {
-        // no-op until SpatieAuditWriter binds in 16-04.
+        // Null-shape no-op.
     }
 }
