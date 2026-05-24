@@ -26,6 +26,7 @@ use Modules\DevMode\Internal\Http\Livewire\DoctorPanelPage;
 use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
 use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
 use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
+use Modules\DevMode\Internal\Http\Livewire\SqlPanelPage;
 use Modules\DevMode\Internal\Http\Livewire\SystemSnapshotPage;
 use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 use Modules\DevMode\Internal\Http\Middleware\EnsureDeveloperMode;
@@ -357,6 +358,7 @@ final class DevModeServiceProvider extends ServiceProvider
         // 16-07 — doctor + system + sql panels.
         $livewire->component('dev.doctor-panel-page', DoctorPanelPage::class);
         $livewire->component('dev.system-snapshot-page', SystemSnapshotPage::class);
+        $livewire->component('dev.sql-panel-page', SqlPanelPage::class);
 
         // W-8 FIX: register the queue-worker heartbeat via the
         // QueueManager::looping(closure) form. The event-listener form
