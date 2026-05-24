@@ -70,6 +70,21 @@ final class OAuthClientWizardModal extends Component
         $this->clientSecret = '';
         $this->publishedConfirmed = false;
         $this->errorMessage = '';
+
+        // Once the provider is set, the rendered <flux:modal> picks
+        // up its new name (`oauth-client-wizard-gmail` /
+        // `oauth-client-wizard-microsoft`). Dispatch `modal-show` from
+        // here so the listener inside the modal — which is the only
+        // surface that knows the correct provider-suffixed name —
+        // owns the open. The previous shape had InboxesPage dispatch
+        // `modal-show` directly; that ran before this open() handler,
+        // so when the provider was 'microsoft' the show targeted a
+        // name (`oauth-client-wizard-microsoft`) that did not yet
+        // exist in the DOM (the modal had mounted with the default
+        // gmail-named instance), and the button silently no-op'd.
+        if ($this->provider !== null) {
+            $this->dispatch('modal-show', name: 'oauth-client-wizard-'.$this->provider);
+        }
     }
 
     public function submit(OAuthSecretsRepository $secrets, LoopbackRedirectUri $loopback): mixed
