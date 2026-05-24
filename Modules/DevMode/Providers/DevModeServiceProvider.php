@@ -24,6 +24,7 @@ use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 use Modules\DevMode\Internal\Http\Middleware\EnsureDeveloperMode;
+use Modules\DevMode\Internal\Listeners\BustOAuthScrubSetOnSecretChange;
 use Modules\DevMode\Internal\Listeners\ResetAdvancedToggleOnLogin;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
@@ -32,12 +33,14 @@ use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Internal\Registries\NullAppActionRegistry;
 use Modules\DevMode\Internal\Registries\NullNavigationRegistry;
+use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
+use Modules\EmailScan\Models\OAuthSecret;
 use Spatie\Activitylog\Support\ActivityLogger;
 
 /**
@@ -275,19 +278,32 @@ final class DevModeServiceProvider extends ServiceProvider
         $this->app->singleton(NavigationRegistry::class, NullNavigationRegistry::class);
         $this->app->singleton(AppActionRegistry::class, NullAppActionRegistry::class);
 
-        // 16-04b — REPLACE the 16-03 NullAuditWriter binding with the
-        // spatie-routed concrete. 16-05 swaps RedactionExcerptCap's
-        // constructor to inject OAuthScrubSet; this binding chain is
-        // unchanged across the upgrade because RedactionExcerptCap +
-        // RedactSecretsProcessor are both resolved via container DI.
-        $this->app->singleton(RedactionExcerptCap::class, static fn (): RedactionExcerptCap => new RedactionExcerptCap);
+        // 16-05 — OAuthScrubSet singleton. Lazily loads the decrypted
+        // `oauth_secrets.client_secret` + every string in `tokens_blob`
+        // on first `all()` / `compiledPattern()` call. The Eloquent
+        // observer registered in boot() busts this cache on every
+        // OAuthSecret save/delete so a rotated secret applies on the
+        // very next log line / audit excerpt write.
+        $this->app->singleton(OAuthScrubSet::class, static fn (): OAuthScrubSet => new OAuthScrubSet);
 
-        // Container singleton for the Monolog on-write processor — the
-        // PushRedactProcessor tap class resolves THIS instance via
-        // app(RedactSecretsProcessor::class) so 16-05's constructor-DI
-        // upgrade (adding OAuthScrubSet) propagates automatically
-        // without touching PushRedactProcessor or config/logging.php.
-        $this->app->singleton(RedactSecretsProcessor::class, static fn (): RedactSecretsProcessor => new RedactSecretsProcessor);
+        // 16-05 — RedactionExcerptCap UPGRADED in place. Constructor now
+        // takes the OAuthScrubSet singleton so the audit-row excerpt
+        // scrubs every oauth_secret literal before the Bearer + JWT
+        // pattern. SpatieAuditWriter is unchanged — it resolves the cap
+        // via this container singleton.
+        $this->app->singleton(RedactionExcerptCap::class, static fn (Application $app): RedactionExcerptCap => new RedactionExcerptCap(
+            $app->make(OAuthScrubSet::class),
+        ));
+
+        // 16-05 — RedactSecretsProcessor UPGRADED in place. PushRedactProcessor
+        // resolves THIS singleton on every channel boot via the
+        // container so the constructor-DI change propagates without
+        // touching PushRedactProcessor or config/logging.php. The
+        // baseline test (which `new`s the class directly) keeps working
+        // because the OAuthScrubSet constructor arg is nullable.
+        $this->app->singleton(RedactSecretsProcessor::class, static fn (Application $app): RedactSecretsProcessor => new RedactSecretsProcessor(
+            $app->make(OAuthScrubSet::class),
+        ));
 
         $this->app->singleton(AuditWriter::class, static fn (Application $app): SpatieAuditWriter => new SpatieAuditWriter(
             $app->make(CurrentUser::class),
@@ -342,6 +358,14 @@ final class DevModeServiceProvider extends ServiceProvider
         // successful Login. The runner page's mount() resets a SECOND
         // time on first-load-per-session as a belt-and-braces.
         $events->listen(Login::class, [ResetAdvancedToggleOnLogin::class, 'handle']);
+
+        // CONTEXT D-30 — OAuthScrubSet cache invalidation. Attach the
+        // Eloquent observer to OAuthSecret so the scrub set busts on
+        // every save/delete; the next log line / audit row's
+        // compiledPattern() lazy-rebuilds from the live table. The
+        // observer is resolved through the container so it picks up
+        // the singleton OAuthScrubSet.
+        OAuthSecret::observe(BustOAuthScrubSetOnSecretChange::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([

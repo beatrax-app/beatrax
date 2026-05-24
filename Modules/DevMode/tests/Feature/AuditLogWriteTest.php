@@ -14,6 +14,7 @@ use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\AuditEvent;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
+use Modules\EmailScan\Models\OAuthSecret;
 
 /*
  * Phase 16-04b Task 1 — Audit-pipeline invariants.
@@ -105,6 +106,51 @@ it('SpatieAuditWriter writes a D-24 row into dev_mode_audit with log_name + desc
     expect($properties['tier'] ?? null)->toBe('safe');
     expect($properties['exit_code'] ?? null)->toBe(0);
     expect($properties['stdout_excerpt'] ?? null)->toBe('output ok');
+});
+
+it('redacts an oauth_secrets value AND a Bearer header in the audit row (Test 7 — RedactionExcerptCap full scrub-set upgrade)', function (): void {
+    $user = auditDeveloper('audit-redact-oauth');
+    $this->actingAs($user);
+
+    // Seed an oauth_secret row so the container's RedactionExcerptCap
+    // picks up the value via the OAuthScrubSet singleton on its next
+    // compiledPattern() call. The DevModeServiceProvider-registered
+    // observer busts the cache on save.
+    OAuthSecret::query()->create([
+        'user_id' => $user->id,
+        'provider' => 'gmail',
+        'client_id' => 'cid',
+        'client_secret' => 'OAUTH_LITERAL_FROM_STDOUT',
+        'redirect_uri' => 'https://example.test/cb',
+        'tokens_blob' => null,
+    ]);
+
+    /** @var SpatieAuditWriter $writer */
+    $writer = app(AuditWriter::class);
+
+    // Feed a "stdout" excerpt that contains both a Bearer header AND
+    // the literal of the oauth_secret. The audit-row writer routes
+    // through RedactionExcerptCap which now applies the full
+    // three-layer scrub (scrub-set + Bearer + JWT).
+    $writer->recordCommandRun(
+        command: 'cache:clear',
+        args: [],
+        tier: 'safe',
+        callerUserId: $user->id,
+        startedAt: CarbonImmutable::parse('2026-05-24T10:00:00Z'),
+        finishedAt: CarbonImmutable::parse('2026-05-24T10:00:01Z'),
+        exitCode: 0,
+        stdoutExcerpt: "Authorization: Bearer TopLevelToken\nLeaked: OAUTH_LITERAL_FROM_STDOUT\nDONE",
+        errorExcerpt: '',
+    );
+
+    $row = DB::table('dev_mode_audit')->latest('id')->first();
+    $properties = json_decode((string) $row->properties, true);
+
+    expect($properties['stdout_excerpt'] ?? '')->toContain('Authorization: Bearer [REDACTED]');
+    expect($properties['stdout_excerpt'] ?? '')->toContain('[REDACTED]');
+    expect($properties['stdout_excerpt'] ?? '')->not->toContain('OAUTH_LITERAL_FROM_STDOUT');
+    expect($properties['stdout_excerpt'] ?? '')->not->toContain('TopLevelToken');
 });
 
 it('redacts Bearer header content in the audit row via SpatieAuditWriter + RedactionExcerptCap', function (): void {
