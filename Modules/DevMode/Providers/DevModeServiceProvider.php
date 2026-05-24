@@ -4,19 +4,27 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Providers;
 
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\DevMode\Internal\Audit\NullAuditWriter;
+use Modules\DevMode\Internal\CommandRegistry;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 use Modules\DevMode\Internal\Http\Middleware\EnsureDeveloperMode;
+use Modules\DevMode\Internal\Process\CommandSpawner;
+use Modules\DevMode\Internal\Process\FileTailer;
+use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Internal\Registries\NullAppActionRegistry;
-use Modules\DevMode\Internal\Registries\NullDevCommandRegistry;
 use Modules\DevMode\Internal\Registries\NullNavigationRegistry;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
+use Modules\DevMode\Public\Dto\ArgSpec;
+use Modules\DevMode\Public\Dto\CommandSpec;
 
 /**
  * Wires the DevMode module.
@@ -52,7 +60,204 @@ final class DevModeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(DevCommandRegistry::class, NullDevCommandRegistry::class);
+        // CONTEXT D-12 SAFE-tier + D-13 DESTRUCTIVE-tier roster.
+        // CONTEXT D-14 NEVER-EXPOSED commands (migrate, migrate:rollback,
+        // db:seed) are deliberately absent from this list — the spawner
+        // whitelists against CommandRegistry::find() so any attempt to
+        // spawn one of them throws InvalidArgumentException before a
+        // Process is constructed.
+        $this->app->singleton(DevCommandRegistry::class, static fn (): CommandRegistry => new CommandRegistry([
+            // ---- SAFE TIER (CONTEXT D-12) ----
+            new CommandSpec(
+                name: 'db:backup',
+                label: 'Back up database',
+                tier: 'safe',
+                argsSchema: [
+                    new ArgSpec(
+                        name: 'destination',
+                        label: 'Destination file',
+                        type: 'file-path',
+                        rules: ['nullable', 'string', 'max:1024'],
+                        placeholder: '/path/to/backup.sqlite (optional)',
+                        helpText: 'Leave blank to use the default backups directory.',
+                    ),
+                ],
+                description: 'Write a timestamped SQLite copy to the backups directory (or the given path).',
+            ),
+            new CommandSpec(
+                name: 'beatrax:doctor',
+                label: 'Run doctor',
+                tier: 'safe',
+                argsSchema: [],
+                description: 'Report installed PHP / Composer / SQLite versions and verify minimums.',
+            ),
+            new CommandSpec(
+                name: 'beatrax:failed-jobs prune',
+                label: 'Prune failed jobs',
+                tier: 'safe',
+                argsSchema: [],
+                description: 'Prune resolved entries from the Laravel-managed failed_jobs table.',
+            ),
+            new CommandSpec(
+                name: 'cache:clear',
+                label: 'Clear cache',
+                tier: 'safe',
+                argsSchema: [],
+                description: 'Flush the application cache store.',
+            ),
+            new CommandSpec(
+                name: 'route:list',
+                label: 'List routes',
+                tier: 'safe',
+                argsSchema: [],
+                description: 'Print every registered HTTP route to stdout.',
+            ),
+            new CommandSpec(
+                name: 'config:show',
+                label: 'Show config',
+                tier: 'safe',
+                argsSchema: [
+                    new ArgSpec(
+                        name: 'name',
+                        label: 'Config key',
+                        type: 'text',
+                        rules: ['nullable', 'string', 'max:255'],
+                        placeholder: 'app.name (optional)',
+                        helpText: 'Leave blank to dump every config key.',
+                    ),
+                ],
+                description: 'Print the value at the given dotted config key (or the full tree).',
+            ),
+            new CommandSpec(
+                name: 'view:clear',
+                label: 'Clear view cache',
+                tier: 'safe',
+                argsSchema: [],
+                description: 'Flush the compiled Blade-view cache.',
+            ),
+            new CommandSpec(
+                name: 'queue:retry',
+                label: 'Retry failed jobs',
+                tier: 'safe',
+                argsSchema: [
+                    new ArgSpec(
+                        name: 'id',
+                        label: 'Job id',
+                        type: 'text',
+                        rules: ['nullable', 'string', 'max:64'],
+                        placeholder: 'all (or a specific id)',
+                        helpText: 'Leave blank to retry every failed job; pass an id to retry a single entry.',
+                    ),
+                    new ArgSpec(
+                        name: '--queue',
+                        label: 'Queue name',
+                        type: 'text',
+                        rules: ['nullable', 'string', 'max:255'],
+                        placeholder: 'default',
+                        helpText: 'Optional queue filter; defaults to all queues.',
+                    ),
+                ],
+                description: 'Retry one (by id) or every (blank id) failed job.',
+            ),
+            new CommandSpec(
+                name: 'beatrax:rederive-fingerprints',
+                label: 'Rederive fingerprints',
+                tier: 'safe',
+                argsSchema: [],
+                description: 'Re-compute every transaction fingerprint using the current normalization version.',
+            ),
+
+            // ---- DESTRUCTIVE TIER (CONTEXT D-13) — runner-only; triple-gate enforced in 16-04b ----
+            new CommandSpec(
+                name: 'db:restore',
+                label: 'Restore database',
+                tier: 'destructive',
+                argsSchema: [
+                    new ArgSpec(
+                        name: 'from',
+                        label: 'Backup file path',
+                        type: 'file-path',
+                        rules: ['required', 'string', 'max:1024'],
+                        placeholder: '/path/to/backup.sqlite',
+                        helpText: 'Replaces the current database with the file at the given path.',
+                    ),
+                ],
+                description: 'Replace the current database with the given backup file.',
+            ),
+            new CommandSpec(
+                name: 'migrate:fresh',
+                label: 'Drop tables and re-migrate',
+                tier: 'destructive',
+                argsSchema: [],
+                description: 'Drop every table, then re-run every migration.',
+            ),
+            new CommandSpec(
+                name: 'beatrax:reset-password',
+                label: 'Reset password',
+                tier: 'destructive',
+                argsSchema: [
+                    new ArgSpec(
+                        name: 'username',
+                        label: 'Username',
+                        type: 'text',
+                        rules: ['required', 'string', 'max:64'],
+                        placeholder: 'alice',
+                    ),
+                ],
+                description: 'Interactively reset a user password (refuses non-interactive use).',
+            ),
+            new CommandSpec(
+                name: 'beatrax:regenerate-recovery-codes',
+                label: 'Regenerate recovery codes',
+                tier: 'destructive',
+                argsSchema: [
+                    new ArgSpec(
+                        name: 'username',
+                        label: 'Username',
+                        type: 'text',
+                        rules: ['required', 'string', 'max:64'],
+                        placeholder: 'alice',
+                    ),
+                ],
+                description: 'Regenerate the 10 single-use recovery codes for a user.',
+            ),
+            new CommandSpec(
+                name: 'beatrax:grant-dev',
+                label: 'Grant developer access',
+                tier: 'destructive',
+                argsSchema: [
+                    new ArgSpec(
+                        name: 'username',
+                        label: 'Username',
+                        type: 'text',
+                        rules: ['required', 'string', 'max:64'],
+                        placeholder: 'alice',
+                    ),
+                ],
+                description: 'Set is_developer=true for the given user.',
+            ),
+            new CommandSpec(
+                name: 'beatrax:install',
+                label: 'Run install',
+                tier: 'destructive',
+                argsSchema: [],
+                description: 'Idempotent first-run setup. Re-running on a configured install is destructive.',
+            ),
+        ]));
+
+        $this->app->singleton(RunRegistry::class, static fn (Application $app): RunRegistry => new RunRegistry(
+            $app->make(CacheRepository::class),
+            $app->make(Clock::class),
+        ));
+
+        $this->app->singleton(FileTailer::class, static fn (): FileTailer => new FileTailer);
+
+        $this->app->singleton(CommandSpawner::class, static fn (Application $app): CommandSpawner => new CommandSpawner(
+            $app->make(RunRegistry::class),
+            $app->make(Clock::class),
+            $app->make(DevCommandRegistry::class),
+        ));
+
         $this->app->singleton(NavigationRegistry::class, NullNavigationRegistry::class);
         $this->app->singleton(AppActionRegistry::class, NullAppActionRegistry::class);
         $this->app->singleton(AuditWriter::class, NullAuditWriter::class);

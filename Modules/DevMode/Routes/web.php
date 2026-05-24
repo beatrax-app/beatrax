@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\DevMode\Internal\Http\Controllers\AdvancedToggleController;
+use Modules\DevMode\Internal\Http\Controllers\ArtisanCancelController;
+use Modules\DevMode\Internal\Http\Controllers\ArtisanSpawnController;
+use Modules\DevMode\Internal\Http\Controllers\ArtisanStreamController;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 
 /*
@@ -27,4 +31,17 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
     ->prefix('/dev')
     ->group(static function (): void {
         Route::get('/', DevOverviewPage::class)->name('dev.overview');
+
+        // 16-04: SAFE-tier spawn pipeline. The runner UI page +
+        // DESTRUCTIVE triple-gate land in 16-04b; only the JSON +
+        // SSE endpoints are exposed here.
+        Route::post('/artisan/spawn', ArtisanSpawnController::class)
+            ->name('dev.artisan.spawn');
+        Route::get('/artisan/stream/{runId}', ArtisanStreamController::class)
+            ->name('dev.artisan.stream');
+        Route::post('/artisan/cancel/{runId}', ArtisanCancelController::class)
+            ->name('dev.artisan.cancel');
+
+        Route::post('/advanced-toggle', AdvancedToggleController::class)
+            ->name('dev.advanced-toggle');
     });
