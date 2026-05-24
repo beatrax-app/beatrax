@@ -106,6 +106,42 @@ final class UserDataPathService
         return self::storageRoot().DIRECTORY_SEPARATOR.'logs'.DIRECTORY_SEPARATOR.'laravel.log';
     }
 
+    /**
+     * The actual on-disk path of today's daily-rotated log file. Laravel's
+     * RotatingFileHandler takes the `logsFile()` path and rewrites the
+     * filename to `laravel-YYYY-MM-DD.log` per the file's basename. The
+     * Dev Console log tailer (16-05) reads this method to discover the
+     * file Monolog is currently writing into; rotation detection
+     * (D-28 — inode/size shrinkage) is handled by the SSE controller's
+     * tail loop, but the initial open + the daily roll-over to the next
+     * day's file resolve through the same accessor.
+     *
+     * `$date` defaults to today (UTC-rounded clock); passing an explicit
+     * `DateTimeInterface` lets the tailer's "open yesterday's file" and
+     * "follow the rollover into tomorrow" paths share the same accessor.
+     */
+    public static function dailyLogFile(?\DateTimeInterface $date = null): string
+    {
+        $date ??= new \DateTimeImmutable;
+        $base = self::logsFile();
+        $dir = dirname($base);
+        $name = pathinfo($base, PATHINFO_FILENAME);
+        $ext = pathinfo($base, PATHINFO_EXTENSION);
+
+        return $dir.DIRECTORY_SEPARATOR.$name.'-'.$date->format('Y-m-d').($ext !== '' ? '.'.$ext : '');
+    }
+
+    /**
+     * Directory that holds the rolling laravel-YYYY-MM-DD.log files. The
+     * Dev Console log tailer (16-05) uses this to enumerate observed
+     * channel names (when listing available log days) and to compute
+     * sibling files for the rotation-detection re-open path.
+     */
+    public static function logsDirectory(): string
+    {
+        return dirname(self::logsFile());
+    }
+
     public static function secretsPath(): string
     {
         return self::appPath('secrets');

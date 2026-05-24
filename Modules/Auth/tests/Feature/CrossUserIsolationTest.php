@@ -76,6 +76,16 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // routes are EnsureDeveloperMode-gated (non-developers see 404).
     'dev.artisan',
     'dev.audit',
+    // 16-05: log tailer surfaces. The page renders the dev-shell + a
+    // 10k-line client-side ring buffer; the SSE stream emits scrubbed
+    // log lines from the system-wide laravel-YYYY-MM-DD.log; the
+    // context endpoint reads ±radius lines from the same file. None
+    // of these surface foreign user-row data — the log file IS
+    // system-wide on a single-user-per-machine install, and the
+    // EnsureDeveloperMode gate blocks non-developers entirely.
+    'dev.logs',
+    'dev.logs.stream',
+    'dev.logs.context',
 ];
 
 /**

@@ -49,7 +49,7 @@ it('returns 404 from /dev for an authenticated non-developer (EnsureDeveloperMod
     $response->assertNotFound();
 });
 
-it('renders all 9 dev-sidebar nav items with Overview + Artisan + Audit enabled (16-04b registers dev.artisan + dev.audit)', function (): void {
+it('renders all 9 dev-sidebar nav items with Overview + Artisan + Audit + Logs enabled (16-05 registers dev.logs)', function (): void {
     $user = devOverviewUser(true, 'devov-nav');
 
     $response = $this->actingAs($user)->get('/dev');
@@ -63,14 +63,14 @@ it('renders all 9 dev-sidebar nav items with Overview + Artisan + Audit enabled 
             ->toBeTrue("Dev sidebar missing nav item: {$label}");
     }
 
-    // After 16-04b registers the dev.artisan + dev.audit routes, only
-    // SIX nav-disabled entries remain (Logs / Queue / Doctor / SQL /
-    // Horizon / System). The count drops further as 16-05 + 16-06 +
-    // 16-07 land their routes; 16-03 originally expected eight.
+    // After 16-05 registers dev.logs (on top of 16-04b's dev.artisan +
+    // dev.audit), only FIVE nav-disabled entries remain (Queue /
+    // Doctor / SQL / Horizon / System). 16-04b expected six; 16-06
+    // through 16-07 land further routes and the count drops further.
     $disabledCount = substr_count($html, 'nav-disabled');
     expect($disabledCount)->toBe(
-        6,
-        "Expected exactly 6 nav-disabled entries (every dev sidebar nav item except Overview/Artisan/Audit after 16-04b), saw {$disabledCount}.",
+        5,
+        "Expected exactly 5 nav-disabled entries (every dev sidebar nav item except Overview/Artisan/Audit/Logs after 16-05), saw {$disabledCount}.",
     );
 });
 
