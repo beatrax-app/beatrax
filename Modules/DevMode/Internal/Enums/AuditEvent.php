@@ -34,4 +34,41 @@ enum AuditEvent: string
 
     /** SELECT-only SQL query executed through 16-07's Read-only panel. */
     case SqlSelect = 'sql.select';
+
+    // ---- 16-06: queue inspector taxonomy (CONTEXT D-33 / D-34) ----
+
+    /**
+     * `jobs` table row deleted (drop a pending job). Triple-gate
+     * required only when invoked through the bulk path
+     * (QueueBulkDelete); single-row deletes route through the
+     * page-level single-confirm.
+     */
+    case QueuePendingDelete = 'queue.pending.delete';
+
+    /** Single failed-job removed via FailedJobProviderInterface::forget. */
+    case QueueFailedForget = 'queue.failed.forget';
+
+    /**
+     * Single failed-job re-dispatched (its payload re-pushed) AND the
+     * failed_jobs row removed.
+     */
+    case QueueFailedRetry = 'queue.failed.retry';
+
+    /** Batch cancelled via BatchRepository::cancel. */
+    case QueueBatchCancel = 'queue.batch.cancel';
+
+    /** Batch row removed via BatchRepository::delete (triple-gate when bulk). */
+    case QueueBatchDelete = 'queue.batch.delete';
+
+    /**
+     * Batch's failed-job ids re-dispatched. Behaves like a bulk
+     * QueueFailedRetry constrained to the batch's failed_job_ids list.
+     */
+    case QueueBatchRetryFailures = 'queue.batch.retry-failures';
+
+    /** Bulk delete (the triple-gate destructive path — D-22 / D-34). */
+    case QueueBulkDelete = 'queue.bulk.delete';
+
+    /** Bulk retry (the single-confirm non-destructive path — D-34). */
+    case QueueBulkRetry = 'queue.bulk.retry';
 }

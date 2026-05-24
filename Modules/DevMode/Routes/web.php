@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Providers\HorizonServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Modules\DevMode\Internal\Http\Controllers\AdvancedToggleController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanCancelController;
@@ -12,7 +13,9 @@ use Modules\DevMode\Internal\Http\Controllers\LogStreamController;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
+use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
 use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
+use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
 
 /*
  * Dev Console routes. Mounted by DevModeServiceProvider via
@@ -73,4 +76,54 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
         Route::get('/logs', LogTailerPage::class)->name('dev.logs');
         Route::get('/logs/stream', LogStreamController::class)->name('dev.logs.stream');
         Route::get('/logs/context', [LogStreamController::class, 'context'])->name('dev.logs.context');
+
+        // 16-06: Queue inspector (CONTEXT D-32). Three sub-routes back
+        // the same Livewire component; the bare `/dev/queue` URL
+        // redirects to the default `pending` tab so deep-link
+        // ergonomics stay intact. The canonical route name is
+        // `dev.queue.tab` — every deep-link consumer (dashboard toast
+        // in Task 2, future palette in 16-08) builds URLs via
+        // route('dev.queue.tab', ['tab' => 'failed']) per the B-3 fix.
+        Route::get('/queue', static fn () => redirect()->route('dev.queue.tab', ['tab' => 'pending']))
+            ->name('dev.queue');
+        Route::get('/queue/{tab}', QueueInspectorPage::class)
+            ->where('tab', 'pending|failed|batches')
+            ->name('dev.queue.tab');
+
+        // 16-06: Horizon iframe (D-38 two-signal). The route is ONLY
+        // registered when BOTH `config('app.dev_mode') === true` AND
+        // the Horizon package's HorizonServiceProvider class exists
+        // (the package is `require-dev` per Phase 14 D-03, so it is
+        // absent from a `--no-dev` shipped build). The dev-shell
+        // sidebar reads `Route::has('dev.horizon')` to gate the nav
+        // item — when either signal is false the route is absent and
+        // the sidebar link drops off naturally.
+        // Horizon iframe registration walks two constraints:
+        //   - The `noHorizonImportsInShippedBuildCode` arch invariant
+        //     forbids any non-stripped `Laravel\Horizon\` symbol
+        //     outside `app/Providers/HorizonServiceProvider.php`. It
+        //     strips `class_exists(\Laravel\Horizon\...)` arguments
+        //     from the regex sweep first, so an inline FQCN inside
+        //     `class_exists(...)` is legal — but the strip regex does
+        //     NOT cover a top-of-file `use Laravel\Horizon\...` line.
+        //   - Pint's `fully_qualified_strict_types` fixer would
+        //     normally hoist an inline `Laravel\Horizon\…::class`
+        //     into a top-of-file `use` line, breaking the arch test.
+        //     The hoist is suppressed when an imported short name
+        //     `HorizonServiceProvider` is already in scope — Pint
+        //     refuses to introduce an ambiguity. The matching pattern
+        //     lives in `bootstrap/providers.php` (Phase 14 D-04): the
+        //     local `App\Providers\HorizonServiceProvider` is imported
+        //     at the top of the file purely as a name-conflict shim
+        //     AND used in the route registration body below, so the
+        //     import is not unused.
+        if (config('app.dev_mode') === true && class_exists(Laravel\Horizon\HorizonServiceProvider::class)) {
+            // The presence of the local App\Providers\HorizonServiceProvider
+            // is the second signal that Horizon is actually wired (its
+            // boot() registers the dashboard routes the iframe targets).
+            $horizonProviderClass = HorizonServiceProvider::class;
+            if (class_exists($horizonProviderClass)) {
+                Route::get('/horizon', HorizonFramePage::class)->name('dev.horizon');
+            }
+        }
     });
