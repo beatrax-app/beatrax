@@ -21,6 +21,7 @@ use Modules\DevMode\Internal\CommandRegistry;
 use Modules\DevMode\Internal\Console\PruneDevAuditCommand;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
+use Modules\DevMode\Internal\Http\Livewire\CommandPaletteModal;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 use Modules\DevMode\Internal\Http\Livewire\DoctorPanelPage;
 use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
@@ -34,19 +35,21 @@ use Modules\DevMode\Internal\Listeners\BustOAuthScrubSetOnSecretChange;
 use Modules\DevMode\Internal\Listeners\ResetAdvancedToggleOnLogin;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
+use Modules\DevMode\Internal\Navigation\AppActionRegistryImpl;
 use Modules\DevMode\Internal\Navigation\DevSidebarItems;
+use Modules\DevMode\Internal\Navigation\NavigationRegistryImpl;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
-use Modules\DevMode\Internal\Registries\NullAppActionRegistry;
-use Modules\DevMode\Internal\Registries\NullNavigationRegistry;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
+use Modules\DevMode\Public\Dto\AppAction;
 use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
+use Modules\DevMode\Public\Dto\NavigationEntry;
 use Modules\EmailScan\Models\OAuthSecret;
 use Spatie\Activitylog\Support\ActivityLogger;
 
@@ -56,17 +59,16 @@ use Spatie\Activitylog\Support\ActivityLogger;
  * `register()` binds the four Public contracts to their default Null*
  * concretes so consumer code can resolve the contracts from day one:
  *
- *   - DevCommandRegistry → NullDevCommandRegistry (replaced in 16-04
- *     by DevCommandRegistryImpl which hard-codes the CONTEXT D-12 +
- *     D-13 allow-lists)
- *   - NavigationRegistry → NullNavigationRegistry (replaced in 16-08
- *     by NavigationRegistryImpl)
- *   - AppActionRegistry → NullAppActionRegistry (replaced in 16-08
- *     by AppActionRegistryImpl)
- *   - AuditWriter → NullAuditWriter (replaced in 16-04 by
- *     SpatieAuditWriter, which routes through
- *     spatie/laravel-activitylog into the renamed `dev_mode_audit`
- *     table per CONTEXT D-23 + D-24)
+ *   - DevCommandRegistry → CommandRegistry (16-04 — hard-coded
+ *     CONTEXT D-12 + D-13 allow-lists)
+ *   - NavigationRegistry → NavigationRegistryImpl (16-08 — full
+ *     authenticated-nav roster + Dev Console sub-routes; dev rows
+ *     filtered at JSON-emit time by `is_developer`)
+ *   - AppActionRegistry → AppActionRegistryImpl (16-08 — Phase 15
+ *     app-menu entries)
+ *   - AuditWriter → SpatieAuditWriter (16-04, routes through
+ *     spatie/laravel-activitylog into the `dev_mode_audit` table
+ *     per CONTEXT D-23 + D-24)
  *
  * Later plans REPLACE the binding from their own ServiceProviders;
  * the Null* shape is the default so no consumer needs an
@@ -282,8 +284,193 @@ final class DevModeServiceProvider extends ServiceProvider
             $app->make(DevCommandRegistry::class),
         ));
 
-        $this->app->singleton(NavigationRegistry::class, NullNavigationRegistry::class);
-        $this->app->singleton(AppActionRegistry::class, NullAppActionRegistry::class);
+        // 16-08 — concrete NavigationRegistry binding. Replaces 16-03's
+        // NullNavigationRegistry default. The full roster of authenticated
+        // app views (Phase 1-15 surfaces + Dev Console sub-routes) is
+        // materialised lazily through the UrlGenerator so route-name
+        // resolution happens after every module has registered its
+        // routes. Entries whose `id` starts with `dev.` are filtered for
+        // non-developers at JSON-emit time inside CommandPaletteModal.
+        $this->app->singleton(NavigationRegistry::class, static function (Application $app): NavigationRegistryImpl {
+            $router = $app->make(Router::class);
+
+            /**
+             * Resolve a route name to a relative URL, or null when the
+             * route is absent in the current bundle (Horizon iframe,
+             * optional sub-features). Catches Laravel's
+             * RouteNotFoundException so the registry stays well-defined
+             * across every load order — tests that boot the framework
+             * without the full DevMode route group still receive the
+             * main-app entries.
+             */
+            $resolve = static function (string $name) use ($router): ?string {
+                if (! $router->getRoutes()->hasNamedRoute($name)) {
+                    return null;
+                }
+
+                try {
+                    $resolved = $router->getRoutes()->getByName($name)?->uri();
+                } catch (\Throwable) {
+                    return null;
+                }
+
+                if (! is_string($resolved) || $resolved === '') {
+                    return null;
+                }
+
+                return '/'.ltrim($resolved, '/');
+            };
+
+            $entries = [];
+
+            // Main-app nav (Phase 1-15 surfaces). Each entry's `id`
+            // mirrors the route name so the palette's Recent cache
+            // dedupes on the canonical identifier.
+            $nav = [
+                ['id' => 'dashboard', 'label' => 'Dashboard', 'hint' => 'Recent activity overview', 'icon' => '◆', 'route' => 'dashboard', 'keywords' => ['home', 'main', 'this month']],
+                ['id' => 'transactions.index', 'label' => 'Transactions', 'hint' => 'Browse transactions', 'icon' => '≡', 'route' => 'transactions.index', 'keywords' => ['txn', 'ledger']],
+                ['id' => 'forecast.index', 'label' => 'Forecasts', 'hint' => 'What-if scenarios', 'icon' => '↗', 'route' => 'forecast.index', 'keywords' => ['scenario', 'predict']],
+                ['id' => 'recurring.index', 'label' => 'Recurring', 'hint' => 'Subscriptions and fixed payments', 'icon' => '↻', 'route' => 'recurring.index', 'keywords' => ['subscriptions', 'fixed']],
+                ['id' => 'chains.review', 'label' => 'Chains', 'hint' => 'Cross-account funding chains', 'icon' => '⇉', 'route' => 'chains.review', 'keywords' => ['routing', 'funding']],
+                ['id' => 'drift.index', 'label' => 'Drift Alerts', 'hint' => 'Subscription-price drift watch', 'icon' => '⚠', 'route' => 'drift.index', 'keywords' => ['alerts', 'price']],
+                ['id' => 'imports.new', 'label' => 'Imports', 'hint' => 'Upload statements', 'icon' => '⊕', 'route' => 'imports.new', 'keywords' => ['upload', 'csv', 'mt940', 'camt']],
+                ['id' => 'inboxes.index', 'label' => 'Email', 'hint' => 'Connected inboxes', 'icon' => '✉', 'route' => 'inboxes.index', 'keywords' => ['inbox', 'gmail', 'imap']],
+                ['id' => 'uncategorized', 'label' => 'Categorization', 'hint' => 'Review uncategorized transactions', 'icon' => '⌕', 'route' => 'uncategorized', 'keywords' => ['rules', 'tag']],
+                ['id' => 'settings', 'label' => 'Settings', 'hint' => 'App preferences', 'icon' => '⚙', 'route' => 'settings', 'keywords' => ['prefs', 'config', 'profile']],
+            ];
+
+            foreach ($nav as $row) {
+                $resolvedUrl = $resolve($row['route']);
+                if ($resolvedUrl === null) {
+                    continue;
+                }
+                $entries[] = new NavigationEntry(
+                    id: $row['id'],
+                    label: $row['label'],
+                    hint: $row['hint'],
+                    icon: $row['icon'],
+                    url: $resolvedUrl,
+                    keywords: $row['keywords'],
+                );
+            }
+
+            // Dev Console sub-routes. Filtered at JSON-emit time by
+            // CommandPaletteModal::buildRegistry() so non-developers
+            // never see the Dev Console labels in their palette JSON
+            // (T-16-34 defense-in-depth on top of the
+            // `EnsureDeveloperMode` middleware on the routes
+            // themselves).
+            $devNav = [
+                ['id' => 'dev.overview', 'label' => 'Dev Overview', 'hint' => 'System tiles + recent runs', 'icon' => '›_', 'route' => 'dev.overview', 'keywords' => ['dev', 'console']],
+                ['id' => 'dev.artisan', 'label' => 'Artisan runner', 'hint' => 'Run whitelisted commands', 'icon' => '›_', 'route' => 'dev.artisan', 'keywords' => ['command', 'cli']],
+                ['id' => 'dev.audit', 'label' => 'Dev audit log', 'hint' => 'Every dev-mode action', 'icon' => '⌗', 'route' => 'dev.audit', 'keywords' => ['history', 'activity']],
+                ['id' => 'dev.logs', 'label' => 'Log tailer', 'hint' => 'Live laravel-*.log stream', 'icon' => '≡', 'route' => 'dev.logs', 'keywords' => ['tail', 'errors']],
+                ['id' => 'dev.queue', 'label' => 'Queue inspector', 'hint' => 'Pending / failed / batches', 'icon' => '↻', 'route' => 'dev.queue', 'keywords' => ['jobs', 'failed', 'batches']],
+                ['id' => 'dev.doctor', 'label' => 'Doctor', 'hint' => 'System probes', 'icon' => '⚙', 'route' => 'dev.doctor', 'keywords' => ['probes', 'diagnose']],
+                ['id' => 'dev.sql', 'label' => 'SQL panel', 'hint' => 'SELECT-only browser', 'icon' => '⌕', 'route' => 'dev.sql', 'keywords' => ['query', 'schema']],
+                ['id' => 'dev.system', 'label' => 'System snapshot', 'hint' => 'Env + paths + config', 'icon' => '◇', 'route' => 'dev.system', 'keywords' => ['env', 'config']],
+                ['id' => 'dev.horizon', 'label' => 'Horizon', 'hint' => 'Embedded queue dashboard', 'icon' => '↗', 'route' => 'dev.horizon', 'keywords' => ['queue', 'dashboard']],
+            ];
+
+            foreach ($devNav as $row) {
+                $devUrl = $resolve($row['route']);
+                if ($devUrl === null) {
+                    continue;
+                }
+                $entries[] = new NavigationEntry(
+                    id: $row['id'],
+                    label: $row['label'],
+                    hint: $row['hint'],
+                    icon: $row['icon'],
+                    url: $devUrl,
+                    keywords: $row['keywords'],
+                );
+            }
+
+            return new NavigationRegistryImpl($entries);
+        });
+
+        // 16-08 — concrete AppActionRegistry binding. Replaces 16-03's
+        // NullAppActionRegistry default. URL-shaped actions resolve
+        // route names through the UrlGenerator at resolution time so
+        // missing routes drop out cleanly. The "Scan email now" /
+        // "Toggle theme" handlerEvent rows are dispatched by the
+        // palette as Livewire browser events; the receiving Livewire
+        // component lands in future work, but the palette dispatches
+        // the intent today so the source surface is complete.
+        $this->app->singleton(AppActionRegistry::class, static function (Application $app): AppActionRegistryImpl {
+            $router = $app->make(Router::class);
+            $resolve = static function (string $name) use ($router): ?string {
+                if (! $router->getRoutes()->hasNamedRoute($name)) {
+                    return null;
+                }
+
+                try {
+                    $resolved = $router->getRoutes()->getByName($name)?->uri();
+                } catch (\Throwable) {
+                    return null;
+                }
+
+                if (! is_string($resolved) || $resolved === '') {
+                    return null;
+                }
+
+                return '/'.ltrim($resolved, '/');
+            };
+
+            $actions = [];
+
+            $importsNew = $resolve('imports.new');
+            if ($importsNew !== null) {
+                $actions[] = new AppAction(
+                    id: 'action.run-import',
+                    label: 'Run import',
+                    hint: 'Open the import wizard',
+                    icon: '⊕',
+                    handlerEvent: null,
+                    url: $importsNew,
+                    keywords: ['upload', 'csv', 'statement'],
+                );
+            }
+
+            $inboxes = $resolve('inboxes.index');
+            if ($inboxes !== null) {
+                $actions[] = new AppAction(
+                    id: 'action.scan-email',
+                    label: 'Scan email now',
+                    hint: 'Run the inbox sync immediately',
+                    icon: '✉',
+                    handlerEvent: 'email-scan.run',
+                    url: null,
+                    keywords: ['inbox', 'gmail', 'imap', 'sync'],
+                );
+            }
+
+            $settings = $resolve('settings');
+            if ($settings !== null) {
+                $actions[] = new AppAction(
+                    id: 'action.open-profile',
+                    label: 'Open profile',
+                    hint: 'Settings — account and preferences',
+                    icon: '⚙',
+                    handlerEvent: null,
+                    url: $settings,
+                    keywords: ['profile', 'preferences', 'account'],
+                );
+
+                $actions[] = new AppAction(
+                    id: 'action.toggle-theme',
+                    label: 'Toggle theme',
+                    hint: 'Switch between light and dark',
+                    icon: '◐',
+                    handlerEvent: 'theme.cycle',
+                    url: null,
+                    keywords: ['dark', 'light', 'appearance'],
+                );
+            }
+
+            return new AppActionRegistryImpl($actions);
+        });
 
         // 16-05 — OAuthScrubSet singleton. Lazily loads the decrypted
         // `oauth_secrets.client_secret` + every string in `tokens_blob`
@@ -359,6 +546,10 @@ final class DevModeServiceProvider extends ServiceProvider
         $livewire->component('dev.doctor-panel-page', DoctorPanelPage::class);
         $livewire->component('dev.system-snapshot-page', SystemSnapshotPage::class);
         $livewire->component('dev.sql-panel-page', SqlPanelPage::class);
+        // 16-08 — global command-palette modal (DEVUI-09). Mounted in
+        // both base layouts so ⌘K / Ctrl+K fires `palette:open` from
+        // anywhere in the app.
+        $livewire->component('dev.command-palette-modal', CommandPaletteModal::class);
 
         // W-8 FIX: register the queue-worker heartbeat via the
         // QueueManager::looping(closure) form. The event-listener form

@@ -5,6 +5,8 @@
      * @var string $userInitial
      * @var bool $isDeveloper
      * @var string $accountCaption
+     * @var int $queueCount
+     * @var int|null $workerSecondsAgo
      *
      * Active-state helper — mirrors TopNav's `$isActive` lambda
      * (pre-rewrite analog) so route-driven highlighting reads from
@@ -105,7 +107,17 @@
                     Open Dev Console
                     <span class="kbd" aria-hidden="true">⌘.</span>
                 </a>
-                <div class="dev-pulse">Queue 0 · Worker —</div>
+                {{--
+                    16-08: live Dev-block pulse. wire:poll.5s refreshes
+                    only this subtree so the heartbeat + queue-count
+                    indicators stay fresh without re-rendering the whole
+                    sidebar. The queue count is jobs.count() (pending
+                    only) per AppSidebar's class docblock; the worker
+                    delta is null when no heartbeat exists in cache.
+                --}}
+                <div class="dev-pulse" wire:poll.5s>
+                    Queue {{ $queueCount }} · Worker {{ $workerSecondsAgo !== null ? $workerSecondsAgo . 's ago' : '—' }}
+                </div>
             </div>
         @endif
 
