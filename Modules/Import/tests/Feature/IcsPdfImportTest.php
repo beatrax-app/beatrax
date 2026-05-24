@@ -211,7 +211,11 @@ it('prompts the user to name the ICS Account on the first ICS upload', function 
         ->assertSee('Name your ICS card account.', false)
         ->assertSee("first time you've imported ICS data", false)
         ->assertSee('Save name', false)
-        ->assertDontSee('Confirm import', false);
+        // The Confirm button lives in the page header and is always rendered;
+        // the naming-step gate is enforced by the `disabled` attribute (UI)
+        // and the server-side guard in PreviewWizard::confirm() (defense).
+        ->assertSee('Confirm import', false)
+        ->assertSeeHtmlInOrder(['wire:click="confirm"', 'disabled', 'Confirm import']);
 })->group('phase-3');
 
 it('skips the name-your-account step on subsequent ICS uploads', function (): void {
