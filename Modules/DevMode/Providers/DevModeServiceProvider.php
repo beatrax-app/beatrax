@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Providers;
 
+use App\Providers\HorizonServiceProvider;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Queue\QueueManager;
@@ -26,6 +28,7 @@ use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 use Modules\DevMode\Internal\Http\Livewire\DoctorPanelPage;
 use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
 use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
+use Modules\DevMode\Internal\Http\Middleware\HorizonFrameAncestors;
 use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
 use Modules\DevMode\Internal\Http\Livewire\SqlPanelPage;
 use Modules\DevMode\Internal\Http\Livewire\SystemSnapshotPage;
@@ -528,7 +531,7 @@ final class DevModeServiceProvider extends ServiceProvider
         $this->app->singleton(DevSidebarItems::class, static fn (): DevSidebarItems => new DevSidebarItems);
     }
 
-    public function boot(Router $router, LivewireManager $livewire, Dispatcher $events): void
+    public function boot(Router $router, LivewireManager $livewire, Dispatcher $events, ConfigRepository $config): void
     {
         $router->aliasMiddleware('ensureDeveloperMode', EnsureDeveloperMode::class);
 
@@ -540,6 +543,51 @@ final class DevModeServiceProvider extends ServiceProvider
         }
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'dev');
+        }
+
+        // Conditional Horizon iframe route — registered only when BOTH
+        // the dev_mode env flag is true AND the Horizon package's
+        // ServiceProvider class is present (the package is require-dev,
+        // so a shipped --no-dev build will not have it). The dev-shell
+        // sidebar reads Route::has('dev.horizon') to gate the nav item.
+        //
+        // The conditional registration lives here (not in Routes/web.php)
+        // so the dev_mode flag is read through an injected
+        // Config\Repository rather than the config() global helper.
+        //
+        // Horizon iframe registration walks two arch invariants:
+        //   - noHorizonImportsInShippedBuildCode forbids any non-stripped
+        //     Laravel\Horizon\ symbol outside
+        //     app/Providers/HorizonServiceProvider.php. It strips
+        //     class_exists(\Laravel\Horizon\...) arguments from the
+        //     regex sweep first, so an inline FQCN inside class_exists()
+        //     is legal.
+        //   - Pint's fully_qualified_strict_types fixer would hoist an
+        //     inline Laravel\Horizon\…::class into a top-of-file `use`
+        //     line, breaking the arch test. The hoist is suppressed
+        //     when the imported short name HorizonServiceProvider is
+        //     already in scope — Pint refuses to introduce an
+        //     ambiguity. The matching pattern lives in
+        //     bootstrap/providers.php: the local
+        //     App\Providers\HorizonServiceProvider is imported at the
+        //     top of THIS file purely as a name-conflict shim AND used
+        //     in the route registration body below, so the import is
+        //     not unused.
+        if ($config->get('app.dev_mode') === true && class_exists(\Laravel\Horizon\HorizonServiceProvider::class)) {
+            $horizonProviderClass = HorizonServiceProvider::class;
+            if (class_exists($horizonProviderClass)) {
+                $router->group(
+                    [
+                        'middleware' => ['web', 'auth', 'ensureDeveloperMode'],
+                        'prefix' => '/dev',
+                    ],
+                    static function (Router $router): void {
+                        $router->get('/horizon', HorizonFramePage::class)
+                            ->middleware(HorizonFrameAncestors::class)
+                            ->name('dev.horizon');
+                    },
+                );
+            }
         }
 
         $livewire->component('dev.overview-page', DevOverviewPage::class);
