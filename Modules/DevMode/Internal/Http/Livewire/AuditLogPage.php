@@ -11,7 +11,6 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use Modules\Core\Models\User;
 
 /**
  * `/dev/audit` audit-log page (CONTEXT D-25).
@@ -66,15 +65,21 @@ final class AuditLogPage extends Component
         if ($this->callerFilter !== '') {
             // Username lookup → user id (the JSON shape stores the int
             // causer_id, not the username; the username filter is more
-            // useful to the operator).
-            $user = User::query()
+            // useful to the operator). Use the raw query builder
+            // ->value('id') so the lookup pulls a single scalar rather
+            // than hydrating the full Eloquent User model.
+            $callerId = $db->connection()->table('users')
                 ->where('username', $this->callerFilter)
-                ->first();
-            if ($user !== null) {
-                $audit->where('causer_id', $user->id);
+                ->value('id');
+            if ($callerId !== null) {
+                $audit->where('causer_id', $callerId);
             } else {
-                // Force empty result set for an unknown username.
-                $audit->whereRaw('1 = 0');
+                // Unknown username — force an empty result set with a
+                // self-contradictory predicate the query planner
+                // collapses cheaply. Cleaner than a whereRaw('1 = 0')
+                // and survives the trailing limit(50) the caller
+                // applies below.
+                $audit->whereNull('id')->whereNotNull('id');
             }
         }
 
