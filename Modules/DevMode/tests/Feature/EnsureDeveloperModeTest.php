@@ -76,11 +76,19 @@ it('returns 200 with body "PROBE" for an authenticated developer request to /dev
     expect($response->getContent())->toBe('PROBE');
 });
 
-it('resolves all four Public contracts to their Null* defaults via the container', function (): void {
+it('resolves all four Public contracts via the container', function (): void {
+    // DevCommandRegistry is the only contract swapped from its 16-03
+    // Null* default in this plan (16-04 binds the concrete
+    // CommandRegistry with the 9 SAFE + 6 DESTRUCTIVE roster); the
+    // other three still resolve to Null* until later plans swap
+    // them. The full SAFE/DESTRUCTIVE roster invariants live in
+    // CommandRegistryTest — this test just confirms the contract
+    // resolves.
     /** @var DevCommandRegistry $commands */
     $commands = app(DevCommandRegistry::class);
-    expect($commands->safe())->toBe([])
-        ->and($commands->destructive())->toBe([]);
+    expect($commands)->toBeInstanceOf(DevCommandRegistry::class);
+    expect($commands->safe())->toHaveCount(9);
+    expect($commands->destructive())->toHaveCount(6);
 
     /** @var NavigationRegistry $nav */
     $nav = app(NavigationRegistry::class);
@@ -92,7 +100,7 @@ it('resolves all four Public contracts to their Null* defaults via the container
 
     // AuditWriter is a no-op interface; resolve it and confirm the
     // binding is the Null shape (a SpatieAuditWriter replacement in
-    // 16-04 will swap this assertion).
+    // 16-04b will swap this assertion).
     /** @var AuditWriter $audit */
     $audit = app(AuditWriter::class);
     expect($audit)->toBeInstanceOf(AuditWriter::class);

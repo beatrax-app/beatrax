@@ -59,6 +59,16 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // surfaces a foreign data row.
     'desktop.close-prompt',
     'desktop.file-staging',
+    // Phase 16 Dev Console — every /dev/* route is gated by
+    // EnsureDeveloperMode (404-not-403 for non-developers) and
+    // therefore is unreachable by the partner unless `is_developer`
+    // is true. Once inside, the Dev Console surfaces only operator-
+    // level data (registry rosters, the calling developer's own runs
+    // — `dev.artisan.stream` adds a per-controller cross-user
+    // ownership check on top, T-16-15). None of these GETs surface
+    // foreign user-row data.
+    'dev.overview',
+    'dev.artisan.stream',
 ];
 
 /**
