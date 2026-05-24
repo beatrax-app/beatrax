@@ -10,11 +10,11 @@ use Illuminate\Database\Eloquent\Model;
  * Eloquent model for the framework-managed `job_batches` table — one
  * row per dispatched batch (Bus::batch(...) factory).
  *
- * Read-only for Dev Console consumers. Batches in this app are rare
- * today, but the surface is present per CONTEXT D-32 / D-33 so a
- * developer can cancel / retry-failures / delete a batch when one is
- * active. Writes flow through Illuminate\Bus\BatchRepository (which
- * is injected directly into QueueActions via DI per W-4 — no facade).
+ * Read-only for Dev Console consumers. Batches in this app are
+ * rare today, but the queue inspector exposes cancel /
+ * retry-failures / delete affordances so a developer can act on an
+ * active batch. Writes flow through Illuminate\\Bus\\BatchRepository
+ * injected directly into QueueActions via DI — no facade.
  *
  * The `id` column is a string UUID (primary key); this model overrides
  * the conventional `int` key type.

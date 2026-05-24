@@ -9,35 +9,33 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
 
 /**
- * Creates the `dev_mode_audit` table — the persistent audit-log surface
- * the Dev Console writes to via the spatie/laravel-activitylog package.
+ * Creates the `dev_mode_audit` table — the persistent audit-log
+ * surface the Dev Console writes to via the
+ * spatie/laravel-activitylog package.
  *
- * The table is the spatie-published `activity_log` schema renamed per
- * CONTEXT D-23 (`config('activitylog.table_name')` resolves to
- * `dev_mode_audit`). Renaming at the schema level keeps the column
- * shape spatie expects (so `Activity::query()` and `activity()->log()`
- * resolve the right row) while making the table's purpose explicit in
- * the database: the name reads as "Dev Console audit" rather than the
+ * The table is the spatie-published `activity_log` schema renamed
+ * to dev_mode_audit. The DevModeActivity model overrides $table to
+ * point at the renamed table; the column shape is what spatie
+ * expects so Activity::query() and the ActivityLogger pipeline
+ * resolve rows normally. The rename makes the table's purpose
+ * explicit in the database — "Dev Console audit" rather than the
  * generic "activity log".
  *
- * Rows captured here cover every Dev Console action that crosses an
- * operational trust boundary:
+ * Rows captured here cover every Dev Console action that crosses
+ * an operational trust boundary:
  *
- *  - Artisan command runs (SAFE-tier and DESTRUCTIVE-tier), with the
- *    resolved name, args, exit code, stdout/stderr excerpts, and the
- *    causer user_id.
- *  - SELECT-only SQL queries executed through the Read-only SQL panel,
- *    with the verbatim query, rowcount, and duration.
- *  - Destructive queue actions (retry-failed, flush-failed, kill-batch)
- *    with the action name, context, and causer user_id.
+ *  - Artisan command runs (SAFE-tier and DESTRUCTIVE-tier), with
+ *    the resolved name, args, exit code, stdout/stderr excerpts,
+ *    and the causer user_id.
+ *  - SELECT-only SQL queries executed through the read-only SQL
+ *    panel, with the verbatim query, rowcount, and duration.
+ *  - Destructive queue actions (retry-failed, flush-failed,
+ *    kill-batch) with the action name, context, and causer
+ *    user_id.
  *
- * Concrete writers (`SpatieAuditWriter`) and the per-action call sites
- * land in Wave 4 plans (16-04 + 16-04b). This plan only stands up the
- * table so the binding shape is in place when those writers boot.
- *
- * Mirrors PATTERN G from 16-PATTERNS.md (anonymous-class migration with
- * an injected DatabaseManager) — the same shape system_alerts uses, so
- * the migration is reviewable as one of a pair.
+ * Uses the anonymous-class-migration shape with an injected
+ * DatabaseManager — the same pattern other Core migrations
+ * (system_alerts, etc.) follow.
  */
 return new class extends Migration
 {

@@ -9,20 +9,17 @@ use Modules\DevMode\Public\Dto\CommandSpec;
 /**
  * Registry of every artisan command the Dev Console exposes.
  *
- * The Dev Console UI calls `safe()` to populate the command palette
+ * The Dev Console UI calls safe() to populate the command palette
  * (SAFE-tier commands are eligible for palette discovery + the
- * artisan runner) and `destructive()` to populate the runner's
+ * artisan runner) and destructive() to populate the runner's
  * DESTRUCTIVE-tier list (those go through the triple-gate modal
- * before they fire). `find($name)` resolves a single spec by name and
+ * before they fire). find($name) resolves a single spec by name and
  * throws when the lookup misses, so callers do not have to nest
  * null-checks.
  *
- * CONTEXT D-12 + D-13 lock the SAFE and DESTRUCTIVE allow-lists; the
- * concrete `DevCommandRegistryImpl` (lands in 16-04) hard-codes those
- * lists. The Null* concrete bound by this module's ServiceProvider
- * returns empty lists so the binding shape is in place from day one
- * (this plan) without forcing every consumer to ship a real
- * implementation.
+ * The concrete CommandRegistry hard-codes the SAFE and DESTRUCTIVE
+ * allow-lists; NullDevCommandRegistry returns empty lists as a
+ * fallback for ad-hoc unit tests that don't boot the full provider.
  */
 interface DevCommandRegistry
 {

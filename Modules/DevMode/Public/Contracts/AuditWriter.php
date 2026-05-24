@@ -9,14 +9,13 @@ use Carbon\CarbonInterface;
 /**
  * Cross-module audit-write seam for the Dev Console.
  *
- * Every Dev Console action that crosses an operational trust boundary
- * (artisan run, destructive queue action, SELECT-only SQL query) writes
- * one row through this interface. The concrete `SpatieAuditWriter`
- * (lands in 16-04 — audit-pipeline plan) routes the rows through
- * spatie/laravel-activitylog into the renamed `dev_mode_audit` table
- * per CONTEXT D-23 / D-24. This module's `NullAuditWriter` is a no-op
- * so the binding is non-null from day one (so consumer Livewire pages
- * can resolve the contract without `app()->bound(...)` guards).
+ * Every Dev Console action that crosses an operational trust
+ * boundary (artisan run, destructive queue action, SELECT-only SQL
+ * query) writes one row through this interface. The concrete
+ * SpatieAuditWriter routes the rows through
+ * spatie/laravel-activitylog into the dev_mode_audit table.
+ * NullAuditWriter is a no-op fallback so consumer code can resolve
+ * the contract without bound() guards.
  */
 interface AuditWriter
 {
@@ -24,9 +23,9 @@ interface AuditWriter
      * Record a SAFE or DESTRUCTIVE artisan command run.
      *
      * `stdoutExcerpt` and `errorExcerpt` are bounded by the calling
-     * pipeline (RedactionExcerptCap in 16-05) — every byte stored
-     * inside the audit row has already passed the OAuth-scrub-set
-     * redaction sweep.
+     * pipeline — every byte stored inside the audit row has already
+     * passed RedactionExcerptCap's OAuth scrub-set + Bearer + JWT
+     * redaction sweep and the 8 KiB byte cap.
      *
      * @param  array<string, mixed>  $args
      */
