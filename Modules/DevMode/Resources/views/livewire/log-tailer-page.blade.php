@@ -147,6 +147,21 @@
                     this.openStream();
                 },
 
+                // Alpine teardown hook — fires when the component root is
+                // removed from the DOM (wire:navigate page swap, tab close,
+                // hot reload). Closes the SSE so the browser frees the
+                // HTTP/1.1 connection slot it was holding; otherwise that
+                // slot stays in-flight and a single page visit can exhaust
+                // the per-origin parallel-connection cap, which makes the
+                // app sidebar feel frozen.
+                destroy() {
+                    this.paused = true;
+                    if (this.source) {
+                        try { this.source.close(); } catch (e) {}
+                        this.source = null;
+                    }
+                },
+
                 openStream() {
                     if (this.source) {
                         try { this.source.close(); } catch (e) {}
