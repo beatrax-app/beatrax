@@ -8,6 +8,7 @@ use Modules\Categorization\Providers\CategorizationServiceProvider;
 use Modules\Chains\Providers\ChainsServiceProvider;
 use Modules\Core\Providers\CoreServiceProvider;
 use Modules\Desktop\Providers\DesktopServiceProvider;
+use Modules\DevMode\Providers\DevModeServiceProvider;
 use Modules\DriftAlerts\Providers\DriftAlertsServiceProvider;
 use Modules\EmailScan\Providers\EmailScanServiceProvider;
 use Modules\Forecasting\Providers\ForecastingServiceProvider;
@@ -38,4 +39,5 @@ return array_values(array_filter([
     DriftAlertsServiceProvider::class,
     ForecastingServiceProvider::class,
     DesktopServiceProvider::class,
+    DevModeServiceProvider::class,
 ]));
