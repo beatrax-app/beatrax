@@ -12,12 +12,11 @@ use Modules\DevMode\Public\Dto\CommandSpec;
  * Concrete DevCommandRegistry implementation.
  *
  * Holds the full SAFE (9) + DESTRUCTIVE (6) roster the Dev Console
- * surfaces, sourced from CONTEXT D-12 + D-13 (post-rename names).
- * The CONTEXT D-14 NEVER-EXPOSED commands (`migrate`,
- * `migrate:rollback`, `db:seed`) are deliberately absent — the
- * spawner whitelists against `find()` so any attempt to spawn one of
- * them throws InvalidArgumentException at the controller layer
- * before a Process is constructed.
+ * surfaces. The NEVER-EXPOSED commands (migrate, migrate:rollback,
+ * db:seed) are deliberately absent — the spawner whitelists against
+ * find() so any attempt to spawn one of them throws
+ * InvalidArgumentException at the controller layer before a Process
+ * is constructed.
  *
  * The spec list is supplied at construction time so the actual
  * roster lives in the DevModeServiceProvider singleton factory
@@ -76,7 +75,7 @@ final readonly class CommandRegistry implements DevCommandRegistry
         }
 
         throw new InvalidArgumentException(
-            "Unknown Dev Console command: `{$name}`. The command is either NEVER-EXPOSED (CONTEXT D-14) or not registered in the SAFE / DESTRUCTIVE allow-list.",
+            "Unknown Dev Console command: `{$name}`. The command is either NEVER-EXPOSED or not registered in the SAFE / DESTRUCTIVE allow-list.",
         );
     }
 }

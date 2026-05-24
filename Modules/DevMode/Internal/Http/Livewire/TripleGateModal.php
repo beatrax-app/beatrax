@@ -93,8 +93,7 @@ final class TripleGateModal extends Component
 
         // Gate 3 — Typed app name must equal the exact lowercase string.
         // hash_equals is timing-safe; the comparison is intentionally
-        // case-sensitive per CONTEXT D-21 ("`beatrax`, exact
-        // lowercase").
+        // case-sensitive — the lowercase token "beatrax".
         if (! hash_equals('beatrax', $this->typed)) {
             $this->gateError = 'app_name_mismatch';
             throw ValidationException::withMessages(['typed' => 'app_name_mismatch']);
@@ -104,7 +103,7 @@ final class TripleGateModal extends Component
         // the verified command + args + the typed token so the
         // ArtisanRunnerPage listener can POST to
         // DestructiveSpawnController, where the gates are re-validated
-        // (T-16-02 defense-in-depth).
+        // — defense-in-depth.
         $this->dispatch(
             'triple-gate:confirmed',
             command: $this->command,

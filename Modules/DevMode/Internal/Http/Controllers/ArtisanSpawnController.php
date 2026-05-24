@@ -70,7 +70,7 @@ final readonly class ArtisanSpawnController
         $command = $commandRaw;
 
         // Reject DESTRUCTIVE-tier commands at this layer — the runner's
-        // triple-gate pathway in 16-04b owns destructive execution.
+        // triple-gate pathway owns destructive execution.
         if (in_array($command, $destructiveNames, true)) {
             return new JsonResponse(
                 ['error' => 'destructive_requires_triple_gate'],
