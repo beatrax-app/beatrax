@@ -9,6 +9,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
+use Illuminate\Container\Container;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -137,21 +139,36 @@ final readonly class ArtisanStreamController
                         $registry->markFinished($runIdLocal, $exit ?? 0);
                     }
 
-                    // 16-04b audit pipeline hook (the only 16-04 file
-                    // 16-04b touches): write the dev_mode_audit row
+                    // Audit pipeline hook: write the dev_mode_audit row
                     // BEFORE emitting the terminal `event: done` so the
                     // client observes a strict happens-before between
                     // "audit row exists" and "browser sees stream
-                    // closed". Any RunRegistry/disk/audit-writer
-                    // failure surfaces in the next request's audit
-                    // page; the SSE client still terminates normally.
+                    // closed".
+                    //
+                    // A finalize failure must NEVER propagate out of
+                    // the SSE handler — the client always gets a clean
+                    // terminal frame. But the failure also must NOT be
+                    // silently swallowed: a corrupt audit row, a DB
+                    // permission error, or a missing
+                    // dev_mode_audit table needs to surface somewhere
+                    // an operator will see it. Best-effort log to the
+                    // PSR LoggerInterface via the container; if even
+                    // that fails (boot-time logger absent), give up
+                    // silently rather than break the SSE frame.
                     try {
                         ($finalize)($runIdLocal, $exit, $cancelled);
-                    } catch (\Throwable) {
-                        // Swallow — finalize errors must not break the
-                        // SSE protocol. The audit pipeline has its own
-                        // logging path; the next run will reveal a
-                        // systemic problem.
+                    } catch (\Throwable $finalizeError) {
+                        try {
+                            Container::getInstance()
+                                ->make(LoggerInterface::class)
+                                ->error('FinalizeRunAudit failed for run '.$runIdLocal, [
+                                    'exception' => $finalizeError->getMessage(),
+                                    'exception_class' => get_class($finalizeError),
+                                ]);
+                        } catch (\Throwable) {
+                            // Last-resort no-op — the SSE frame still
+                            // closes cleanly.
+                        }
                     }
 
                     echo "event: done\n";
