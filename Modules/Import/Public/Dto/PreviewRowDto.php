@@ -24,11 +24,14 @@ final class PreviewRowDto extends Data
         /** 'new' | 'duplicate' | 'enriched' | 'error' */
         public readonly string $status,
         public readonly ?int $accountId,
-        /** Resolved name of the user's own account this row debits/credits. */
-        public readonly ?string $sourceAccountName,
         public readonly ?string $bookedAt,
         public readonly ?string $counterpartyName,
-        /** Counterparty IBAN as a visible fallback when the name is missing. */
+        /**
+         * Counterparty IBAN. Used both as the value shown in the
+         * "Funding source" column (the IBAN that funded this row) and
+         * as the second-tier fallback in the "Counterparty" column
+         * when the counterparty name is missing.
+         */
         public readonly ?string $counterpartyIban,
         /**
          * Joined payment-reference + free-text description from the source
