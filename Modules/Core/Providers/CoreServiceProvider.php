@@ -13,6 +13,7 @@ use Modules\Core\Internal\Console\FailedJobsCommand;
 use Modules\Core\Internal\Console\InstallCommand;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Console\RestoreDatabaseCommand;
+use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
@@ -74,6 +75,7 @@ final class CoreServiceProvider extends ServiceProvider
         $livewire->component('core.settings-page', SettingsPage::class);
         $livewire->component('core.system-alerts-banner', SystemAlertsBanner::class);
         $livewire->component('core.top-nav', TopNav::class);
+        $livewire->component('core.app-sidebar', AppSidebar::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([
