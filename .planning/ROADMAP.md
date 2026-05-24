@@ -211,9 +211,9 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4, parallel)*
 
-- [ ] 16-05-PLAN.md — Log tailer + Monolog redaction (belt+braces) + OAuth scrub-set (DEVUI-04)
-- [ ] 16-06-PLAN.md — Queue inspector + Horizon iframe + dashboard toast retarget (DEVUI-05, DEVUI-08)
-- [ ] 16-07-PLAN.md — Dev overview + Doctor + System snapshot + SELECT-only SQL + schema viewer (DEVUI-06, DEVUI-07)
+- [x] 16-05-PLAN.md — Log tailer + Monolog redaction (belt+braces) + OAuth scrub-set (DEVUI-04)
+- [x] 16-06-PLAN.md — Queue inspector + Horizon iframe + dashboard toast retarget (DEVUI-05, DEVUI-08)
+- [x] 16-07-PLAN.md — Dev overview + Doctor + System snapshot + SELECT-only SQL + schema viewer (DEVUI-06, DEVUI-07)
 
 **Wave 6** *(blocked on Wave 5)*
 
@@ -308,7 +308,7 @@ Plans:
 | 13. AppPaths | 3/3 | Complete    | 2026-05-20 |
 | 14. Queue Rewire + Horizon Carve-out | 3/3 | Complete    | 2026-05-22 |
 | 15. Desktop Shell (NativePHP Integration) | 7/7 | Complete    | 2026-05-23 |
-| 16. Developer Mode UI | 5/9 | In Progress|  |
+| 16. Developer Mode UI | 8/9 | In Progress|  |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |
 | 19. Public Release Boundary | 0/0 | Not started | - |
