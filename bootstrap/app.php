@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -34,6 +35,16 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // Default exception handling.
+        // AuthenticationException fires every time a guest hits a
+        // protected route — the redirect-to-login that follows is the
+        // intended UX, not an error condition. Laravel's default
+        // handler logs every fire as `production.ERROR`, which on a
+        // NativePHP cold boot floods the log with one entry per
+        // protected route the browser auto-loads before the session
+        // cookie lands. Stop reporting it; the redirect itself is
+        // still surfaced to the user.
+        $exceptions->dontReport([
+            AuthenticationException::class,
+        ]);
     })
     ->create();
