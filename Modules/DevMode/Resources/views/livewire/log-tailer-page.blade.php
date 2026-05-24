@@ -2,13 +2,14 @@
     <header class="space-y-1">
         <h1 class="text-xl font-semibold text-[var(--color-text)]">Logs</h1>
         <p class="text-sm text-[var(--color-text-muted)]">
-            Live tail of the current day's Laravel log file with on-write + on-stream redaction (D-29 belt+braces).
+            Live tail of the current day's Laravel log file with belt-and-braces on-write + on-stream redaction.
         </p>
     </header>
 
     @php
         $allSeverities = ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'];
-        // Per UI-SPEC § Color: DEBUG/INFO muted, WARNING amber, ERROR/CRITICAL/ALERT/EMERGENCY rose, NOTICE neutral.
+        // Severity colour: DEBUG/INFO muted, WARNING amber,
+        // ERROR/CRITICAL/ALERT/EMERGENCY rose, NOTICE neutral.
         $severityClass = [
             'DEBUG' => 'text-slate-400',
             'INFO' => 'text-slate-400',

@@ -44,10 +44,10 @@
         </div>
     </div>
 
-    {{-- Day-section timeline of run-cards.
-         B-5: this plan ships the rendering shell + the SAFE/DESTRUCTIVE
-         re-run wiring; live in-flight cards stream via 16-04's SSE
-         pipeline + finalize through 16-04b's FinalizeRunAudit hook. --}}
+    {{-- Day-section timeline of run-cards. Each card renders a
+         finished run from the audit log; live in-flight cards
+         stream stdout via the SSE pipeline and finalize through
+         the FinalizeRunAudit hook. --}}
     @if ($runs->isEmpty())
         <div class="card p-4">
             <p class="text-sm text-[var(--color-text-muted)]">
@@ -63,18 +63,17 @@
     @endif
 
     {{--
-        Fallback Flux modal — B-2 fix critical: SAFE-tier commands ONLY.
-        DESTRUCTIVE commands are deliberately omitted from this surface
-        per D-41 (palette excludes DESTRUCTIVE to prevent muscle-memory
-        disasters). First-time DESTRUCTIVE runs are reachable via the
-        palette (16-08) or `php artisan` CLI; subsequent DESTRUCTIVE
-        runs are reachable via the timeline's per-row Re-run affordance
-        which routes through TripleGateModal.
+        Fallback Flux modal — SAFE-tier commands ONLY. DESTRUCTIVE
+        commands are deliberately omitted from this surface to
+        prevent muscle-memory disasters; the palette excludes them
+        for the same reason. First-time DESTRUCTIVE runs reach the
+        surface via `php artisan` on the CLI; subsequent runs reach
+        it via the timeline's per-row Re-run affordance, which
+        routes through TripleGateModal.
 
-        The comment above is load-bearing — keeps future maintainers
-        from "fixing" the perceived gap by adding destructive commands
-        to this modal. Test 3 (ArtisanRunnerSafeTierTest) asserts no
-        destructive command name appears in the modal's HTML.
+        The exclusion is load-bearing — do not add destructive
+        commands to this modal. ArtisanRunnerSafeTierTest asserts
+        no destructive command name appears in the modal's HTML.
     --}}
     <flux:modal name="run-command" :dismissible="true">
         <div class="space-y-4">

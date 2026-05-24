@@ -1,17 +1,19 @@
-{{-- Triple-gate modal (D-20 / D-21 / D-22).
+{{-- Triple-gate modal.
 
-     Rose-tinted header (rose-500 family per UI-SPEC § Triple-gate modal).
-     `dismissible="false"` so click-outside / Esc does NOT close the modal
-     — the operator must explicitly Cancel or pass all three gates.
-     Mounted globally in dev-shell.blade.php; dispatched via the
-     `triple-gate:open` Livewire event from the runner page's per-row
-     Re-run affordance + (later) the palette + the queue inspector.
+     Rose-tinted header (rose-500 family). dismissible="false" so
+     click-outside / Esc does NOT close the modal — the operator
+     must explicitly Cancel or pass all three gates. Mounted
+     globally in dev-shell.blade.php; dispatched via the
+     `triple-gate:open` Livewire event from the runner page's
+     per-row Re-run affordance, the queue inspector, and the
+     command palette.
 
      Server enforcement is in TripleGateModal::confirm():
        Gate 1 — DevModeFlag->isOn()
        Gate 2 — session('dev_mode.advanced') === true
        Gate 3 — hash_equals('beatrax', $typed)
-     The disabled-until-match primary button below is purely cosmetic.
+     The disabled-until-match primary button below is purely
+     cosmetic.
 --}}
 <div>
     <flux:modal name="triple-gate" :dismissible="false">
