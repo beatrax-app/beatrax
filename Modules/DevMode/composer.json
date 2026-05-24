@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/devmode",
+    "description": "DevMode module — in-app Developer Console at /dev (artisan runner, audit log, log tailer, queue inspector, doctor, SQL panel, command palette).",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\DevMode\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\DevMode\\Tests\\": "tests/"
+        }
+    }
+}

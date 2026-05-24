@@ -13,5 +13,8 @@
         "laravel-vite-plugin": "^1.0",
         "tailwindcss": "^4.0",
         "vite": "^5.0"
+    },
+    "dependencies": {
+        "fuse.js": "^7.3.0"
     }
 }
