@@ -7,6 +7,7 @@ use Modules\DevMode\Internal\Http\Controllers\AdvancedToggleController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanCancelController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanSpawnController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanStreamController;
+use Modules\DevMode\Internal\Http\Controllers\DestructiveSpawnController;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 
 /*
@@ -44,4 +45,11 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
 
         Route::post('/advanced-toggle', AdvancedToggleController::class)
             ->name('dev.advanced-toggle');
+
+        // 16-04b: DESTRUCTIVE-tier spawn endpoint. SEPARATE from the
+        // SAFE-tier ArtisanSpawnController above; this controller
+        // RE-VALIDATES the triple-gate (env + session + typed) before
+        // routing through CommandSpawner::start(..., 'destructive').
+        Route::post('/artisan/destructive-spawn', DestructiveSpawnController::class)
+            ->name('dev.artisan.destructive-spawn');
     });
