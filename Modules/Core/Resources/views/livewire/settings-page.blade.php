@@ -113,7 +113,7 @@
                 <label for="recurringDetectionWindowMonths" class="block text-sm text-slate-900 dark:text-slate-100">Detection window (months)</label>
                 <input
                     type="number"
-                    min="3"
+                    min="2"
                     max="60"
                     id="recurringDetectionWindowMonths"
                     name="recurringDetectionWindowMonths"

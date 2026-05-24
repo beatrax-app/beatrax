@@ -60,22 +60,22 @@ it('persists recurring_income_min_amount_minor when changed', function (): void 
     expect((int) $this->user->fresh()->recurring_income_min_amount_minor)->toBe(150000);
 })->group('phase-8');
 
-it('rejects recurring_detection_window_months below 3 months and leaves the row unchanged', function (): void {
-    $this->user->update(['recurring_detection_window_months' => 18]);
+it('rejects recurring_detection_window_months below 2 months and leaves the row unchanged', function (): void {
+    $this->user->update(['recurring_detection_window_months' => 6]);
 
     $component = Livewire::test(SettingsPage::class)
-        ->set('recurringDetectionWindowMonths', 2)
+        ->set('recurringDetectionWindowMonths', 1)
         ->call('save')
         ->assertHasErrors(['recurringDetectionWindowMonths']);
 
     expect($component->errors()->first('recurringDetectionWindowMonths'))
-        ->toBe('Choose between 3 and 60 months.');
+        ->toBe('Choose between 2 and 60 months.');
 
-    expect((int) $this->user->fresh()->recurring_detection_window_months)->toBe(18);
+    expect((int) $this->user->fresh()->recurring_detection_window_months)->toBe(6);
 })->group('phase-8');
 
 it('rejects recurring_detection_window_months above 60 months and leaves the row unchanged', function (): void {
-    $this->user->update(['recurring_detection_window_months' => 18]);
+    $this->user->update(['recurring_detection_window_months' => 6]);
 
     $component = Livewire::test(SettingsPage::class)
         ->set('recurringDetectionWindowMonths', 61)
@@ -83,9 +83,9 @@ it('rejects recurring_detection_window_months above 60 months and leaves the row
         ->assertHasErrors(['recurringDetectionWindowMonths']);
 
     expect($component->errors()->first('recurringDetectionWindowMonths'))
-        ->toBe('Choose between 3 and 60 months.');
+        ->toBe('Choose between 2 and 60 months.');
 
-    expect((int) $this->user->fresh()->recurring_detection_window_months)->toBe(18);
+    expect((int) $this->user->fresh()->recurring_detection_window_months)->toBe(6);
 })->group('phase-8');
 
 it('rejects a negative recurring_income_min_amount_minor and leaves the row unchanged', function (): void {

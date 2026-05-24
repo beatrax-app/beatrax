@@ -45,7 +45,7 @@ use stdClass;
  */
 final class ExpenseSeriesDetector implements SeriesDetector
 {
-    private const DEFAULT_WINDOW_MONTHS = 18;
+    private const DEFAULT_WINDOW_MONTHS = 2;
 
     private const DEFAULT_VARIANCE_TOLERANCE_PERCENT = 25;
 

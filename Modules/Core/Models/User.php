@@ -73,7 +73,7 @@ final class User extends Authenticatable
      * @var array<string, mixed>
      */
     protected $attributes = [
-        'recurring_detection_window_months' => 18,
+        'recurring_detection_window_months' => 2,
         'recurring_income_min_amount_minor' => 200000,
         'drift_alert_threshold_percent' => 5,
         'theme' => 'system',
