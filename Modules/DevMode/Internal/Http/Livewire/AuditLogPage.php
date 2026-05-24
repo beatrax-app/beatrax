@@ -178,8 +178,13 @@ final class AuditLogPage extends Component
             ];
         });
 
-        // Cursor metadata for the Older/Newer pager.
-        $oldestId = (int) ($rows->last()->id ?? 0);
+        // Cursor metadata for the Older/Newer pager. The raw query
+        // builder returns rows as stdClass; the id column resolves
+        // to int on the SQLite + spatie/activitylog schema. Narrow
+        // defensively so larastan-strict is happy.
+        $lastRow = $rows->last();
+        $lastIdRaw = $lastRow !== null ? $lastRow->id ?? 0 : 0;
+        $oldestId = is_int($lastIdRaw) ? $lastIdRaw : (is_numeric($lastIdRaw) ? (int) $lastIdRaw : 0);
         $hasMore = $rows->count() === self::PAGE_SIZE;
 
         return $views->make('dev::livewire.audit-log-page', [
