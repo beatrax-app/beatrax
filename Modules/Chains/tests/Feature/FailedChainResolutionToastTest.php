@@ -22,12 +22,13 @@ uses(RefreshDatabase::class);
  * guard).
  */
 
-function fcrtUser(string $username): User
+function fcrtUser(string $username, bool $isDeveloper = true): User
 {
     return User::query()->create([
         'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
+        'is_developer' => $isDeveloper,
     ]);
 }
 
@@ -73,7 +74,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('failed-job toast renders when chain_resolution_runs.status=failed for the user', function (): void {
+it('failed-job toast renders when chain_resolution_runs.status=failed for the user (16-06 D-37 — retargeted to /dev/queue/failed for developers)', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $now = CarbonImmutable::now()->toDateTimeString();
@@ -89,7 +90,7 @@ it('failed-job toast renders when chain_resolution_runs.status=failed for the us
         ->get('/')
         ->assertOk()
         ->assertSeeText('Chain resolution failed')
-        ->assertSeeText('Open Horizon');
+        ->assertSeeText('Open Queue Inspector');
 });
 
 it('failed-job toast hidden when chain_resolution_runs has no failed rows for the user (cross-user — issue #8)', function (): void {
