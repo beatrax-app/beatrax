@@ -82,34 +82,50 @@
             <span x-text="statusMessage"></span>
         </div>
 
-        {{-- 10k-line scrollback. Alpine maintains the ring buffer client-side. --}}
-        <pre
-            class="h-[60vh] overflow-y-auto rounded border border-slate-200 bg-[#0b1220] p-3 font-mono text-xs leading-relaxed text-slate-200 dark:border-slate-700"
-            style="font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', monospace; font-size: 12px;"
+        {{-- 10k-line scrollback. Structured rows replace the prior single-blob
+             <pre>: each entry now renders as timestamp · severity chip ·
+             channel · message with a severity-colored left rule. Continuation
+             lines (stack traces, JSON exception payloads) fold into the
+             previous entry instead of producing standalone rows. Identical
+             back-to-back entries collapse into a "×N" counter so a 6-fire
+             cascade reads as one row, not six. --}}
+        <div
+            class="h-[60vh] overflow-y-auto rounded border border-slate-200 bg-[#0b1220] text-slate-200 dark:border-slate-700"
+            style="font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', monospace;"
             data-testid="log-scrollback"
         >
             <template x-if="visibleLines.length === 0 && !paused">
-                <span class="text-slate-500">Waiting for log lines… <span class="cursor-blink">▌</span></span>
+                <div class="p-3 text-xs text-slate-500">Waiting for log lines… <span class="cursor-blink">▌</span></div>
             </template>
             <template x-for="line in visibleLines" :key="line.id">
-                <span
-                    class="block whitespace-pre-wrap break-words"
-                    x-on:click="expandContext(line)"
+                <div
+                    class="cursor-pointer border-l-2 border-b border-b-slate-800/60 hover:bg-slate-900/60"
+                    x-bind:class="severityRule(line.severity)"
+                    x-on:click="toggleExpand(line)"
+                    x-bind:data-severity="line.severity"
                 >
-                    <span
-                        x-bind:class="severityColor(line.severity)"
-                        x-text="line.formatted"
-                    ></span>
-                    <template x-if="line.context">
-                        <span class="mt-1 block border-l-2 border-slate-600 pl-2 text-slate-400">
-                            <template x-for="ctx in line.context" :key="ctx.index">
-                                <span class="block" x-text="'   ' + ctx.text"></span>
-                            </template>
-                        </span>
+                    <div class="flex items-baseline gap-2 px-2 py-1 text-[11.5px]">
+                        <span class="text-[10.5px] text-slate-500 shrink-0 w-[60px] tabular-nums" x-text="shortTime(line.timestamp)"></span>
+                        <span class="text-[10px] font-semibold uppercase tracking-wide shrink-0 w-[64px]" x-bind:class="severityColor(line.severity)" x-text="line.severity"></span>
+                        <span class="text-[10.5px] text-slate-400 shrink-0 w-[72px] truncate" x-text="line.channel || '—'" x-bind:title="line.channel"></span>
+                        <span
+                            class="text-slate-100 flex-1 min-w-0"
+                            x-bind:class="line.expanded ? 'whitespace-pre-wrap break-words' : 'truncate'"
+                            x-text="line.message || line.raw"
+                        ></span>
+                        <span
+                            x-show="line.count > 1"
+                            x-cloak
+                            class="ml-2 text-[10px] text-slate-300 rounded bg-slate-700 px-1.5 py-0.5 shrink-0 tabular-nums"
+                            x-text="'×' + line.count"
+                        ></span>
+                    </div>
+                    <template x-if="line.expanded && line.continuation">
+                        <div class="pl-[208px] pr-3 pb-2 text-[10.5px] text-slate-400 whitespace-pre-wrap break-words" x-text="line.continuation"></div>
                     </template>
-                </span>
+                </div>
             </template>
-        </pre>
+        </div>
 
         <div class="text-xs text-[var(--color-text-muted)]">
             Showing <span x-text="visibleLines.length"></span> of <span x-text="totalReceived"></span> received lines (buffer capped at 10,000).
@@ -201,6 +217,40 @@
                     for (const raw of lines) {
                         if (raw === '') { continue; }
                         const parsed = this.parseLine(raw);
+                        if (parsed === null) {
+                            // Continuation line (stack trace row, JSON exception
+                            // payload tail) — fold into the previous entry's
+                            // expandable continuation. If the buffer is empty
+                            // we have nothing to attach to; drop silently.
+                            if (this.buffer.length > 0) {
+                                const tail = this.buffer[this.buffer.length - 1];
+                                tail.continuation = tail.continuation
+                                    ? tail.continuation + '\n' + raw
+                                    : raw;
+                            }
+                            this.totalReceived++;
+                            continue;
+                        }
+                        // Collapse identical back-to-back entries (same severity
+                        // + same message + no expansion yet) into a single
+                        // counter row. The 30s-die LogStreamController loop and
+                        // similar tight repeats would otherwise spam six near-
+                        // identical lines in a row; one row + "×6" is far
+                        // easier to read.
+                        if (this.buffer.length > 0) {
+                            const tail = this.buffer[this.buffer.length - 1];
+                            if (
+                                tail.severity === parsed.severity
+                                && tail.channel === parsed.channel
+                                && tail.message === parsed.message
+                                && tail.continuation === ''
+                            ) {
+                                tail.count++;
+                                tail.timestamp = parsed.timestamp;
+                                this.totalReceived++;
+                                continue;
+                            }
+                        }
                         this.buffer.push(parsed);
                         this.totalReceived++;
                         if (this.buffer.length > this.MAX_BUFFER) {
@@ -210,24 +260,34 @@
                 },
 
                 parseLine(raw) {
-                    // Standard Laravel format: "[2026-05-24 10:00:00] local.INFO: message"
-                    const m = raw.match(/^\[([^\]]+)\]\s+([a-z0-9_]+)\.([A-Z]+):/i);
+                    // Standard Laravel format:
+                    //   "[2026-05-24 10:00:00] local.INFO: message body"
+                    // Returns null for any line that does NOT match — the
+                    // caller treats those as continuation lines.
+                    const m = raw.match(/^\[([^\]]+)\]\s+([a-z0-9_]+)\.([A-Z]+):\s*(.*)$/i);
+                    if (!m) { return null; }
                     return {
                         id: this.nextLineId++,
                         raw: raw,
-                        formatted: raw,
-                        timestamp: m ? m[1] : '',
-                        channel: m ? m[2] : '',
-                        severity: m ? m[3].toUpperCase() : 'INFO',
-                        context: null,
+                        timestamp: m[1],
+                        channel: m[2],
+                        severity: m[3].toUpperCase(),
+                        message: m[4],
+                        continuation: '',
+                        count: 1,
+                        expanded: false,
                     };
                 },
 
                 get visibleLines() {
+                    const containsLower = this.contains.toLowerCase();
                     return this.buffer.filter((l) => {
                         if (this.severities.size > 0 && !this.severities.has(l.severity)) { return false; }
                         if (this.channelFilter && !l.channel.includes(this.channelFilter)) { return false; }
-                        if (this.contains && !l.raw.toLowerCase().includes(this.contains.toLowerCase())) { return false; }
+                        if (this.contains) {
+                            const hay = (l.message + ' ' + l.continuation).toLowerCase();
+                            if (!hay.includes(containsLower)) { return false; }
+                        }
                         return true;
                     });
                 },
@@ -262,22 +322,30 @@
                     }
                 },
 
-                async expandContext(line) {
-                    if (line.context) { line.context = null; return; }
-                    const lineIndex = this.buffer.indexOf(line);
-                    if (lineIndex < 0) { return; }
-                    // Use the line's index within the visible buffer as a
-                    // surrogate for the file offset — the controller's
-                    // SplFileObject computes the real line-by-line cursor.
-                    try {
-                        const url = `${this.contextUrl}?line=${encodeURIComponent(lineIndex)}&radius=10`;
-                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                        if (!res.ok) { return; }
-                        const body = await res.json();
-                        line.context = body.lines || [];
-                    } catch (e) {
-                        line.context = [];
+                severityRule(sev) {
+                    // Tailwind class for the left-rule color so a glance down
+                    // the column flags severity without reading text.
+                    switch (sev) {
+                        case 'DEBUG': case 'INFO': return 'border-slate-700';
+                        case 'NOTICE': return 'border-slate-500';
+                        case 'WARNING': return 'border-amber-500';
+                        case 'ERROR': case 'CRITICAL': case 'ALERT': case 'EMERGENCY': return 'border-rose-500';
+                        default: return 'border-slate-700';
                     }
+                },
+
+                shortTime(ts) {
+                    // Laravel timestamps are "YYYY-MM-DD HH:MM:SS" — strip the
+                    // date for the row chrome; the date is the same for every
+                    // row in the daily-rotated file so showing it inline
+                    // wastes column width.
+                    if (typeof ts !== 'string' || ts === '') { return ''; }
+                    const idx = ts.indexOf(' ');
+                    return idx >= 0 ? ts.slice(idx + 1) : ts;
+                },
+
+                toggleExpand(line) {
+                    line.expanded = !line.expanded;
                 },
             }));
         });
