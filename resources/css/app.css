@@ -89,6 +89,7 @@
 
     /* Layout */
     --side-w: 248px;
+    --side-w-dev: 220px;
 }
 
 .dark {
@@ -396,5 +397,129 @@ td.date,
 @media (prefers-reduced-motion: reduce) {
     .dot-live {
         box-shadow: none;
+    }
+}
+
+/*
+ * Dev Console sidebar primitives (Phase 16-03 D-04). The `.dev-side`
+ * class is the 220px hard-swap variant of `.side` used inside
+ * /dev/* — width comes from `--side-w-dev` so future plans can flip
+ * the token without re-declaring the layer. The `.nav-disabled`
+ * variant is the "route not yet registered" affordance for sidebar
+ * links whose target route lands in a downstream plan (16-04 enables
+ * artisan/audit, 16-05 enables logs, 16-06 enables queue + horizon,
+ * 16-07 enables doctor + sql + system).
+ */
+@layer components {
+    .dev-side {
+        background: var(--color-bg-subtle);
+        border-right: 1px solid var(--color-border);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        width: var(--side-w-dev);
+        padding: var(--space-4) var(--space-3);
+        font-size: var(--text-sm);
+        color: var(--color-text);
+    }
+
+    .dev-side-head {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-1) var(--space-2) var(--space-3);
+        font-weight: 600;
+        font-size: var(--text-sm);
+        color: var(--color-text);
+    }
+
+    .dev-on-chip {
+        margin-left: auto;
+        padding: 1px var(--space-2);
+        border-radius: var(--radius-full);
+        background: var(--color-amber-bg);
+        color: var(--color-amber);
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+    }
+
+    .dev-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: 6px var(--space-2);
+        font-size: var(--text-xs);
+        color: var(--color-text-faint);
+        text-decoration: none;
+        transition: var(--tx-quick);
+    }
+
+    .dev-back-link:hover {
+        color: var(--color-text-muted);
+    }
+
+    .nav-disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    /*
+     * Generic calm card surface used by the /dev overview placeholder
+     * and by downstream plans (16-04 Recent runs, Open alerts cards).
+     */
+    .card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-xs);
+    }
+
+    /*
+     * Toggle switch primitive (sketch-findings § Cross-cutting). The
+     * Settings page Developer toggle is the first concrete use; future
+     * Dev Console panels can reuse the same recipe. Emerald-when-on,
+     * 120ms thumb slide. The button itself carries the focus ring; the
+     * thumb is purely visual.
+     */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 36px;
+        height: 20px;
+        border-radius: var(--radius-full);
+        background: var(--color-surface-2);
+        border: 1px solid var(--color-border);
+        cursor: pointer;
+        transition: var(--tx-quick);
+        flex-shrink: 0;
+    }
+
+    .switch:focus-visible {
+        outline: 2px solid var(--color-emerald);
+        outline-offset: 2px;
+    }
+
+    .switch--on {
+        background: var(--color-emerald);
+        border-color: var(--color-emerald);
+    }
+
+    .switch__thumb {
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        width: 16px;
+        height: 16px;
+        border-radius: var(--radius-full);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-xs);
+        transition: var(--tx-quick);
+    }
+
+    .switch--on .switch__thumb {
+        transform: translateX(16px);
+        background: var(--color-bg);
     }
 }
