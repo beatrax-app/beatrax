@@ -34,7 +34,7 @@ v2.0 takes the validated v1.0 core value to a non-technical partner via a code-s
 - [x] **Phase 13: AppPaths** — `UserDataPath` contract replaces every hard-coded `database_path()` / `storage_path()` / `base_path()` call so paths resolve under NativePHP's `Application::storagePath()` in shipped builds and project-rooted paths in Herd dev mode; arch test + CI grep gate forbid the raw helpers outside the service (completed 2026-05-20)
 - [x] **Phase 14: Queue Rewire + Horizon Carve-out** — Shipped bundle moves to `database` queue driver + `database` cache locks; Horizon gated to `DIEDERIK_RUNTIME=herd` dev mode only; chain-resolution proven end-to-end on the new driver under concurrent load (completed 2026-05-22)
 - [x] **Phase 15: Desktop Shell (NativePHP Integration)** — `nativephp/desktop ^2.2` integration producing signed-ready `.dmg` / `.msi` / `.AppImage` / `.deb` installers; native chrome (window/menu/tray/notifications/dark-mode); file-association handlers for `.eml` + `.csv`; new `Modules/Desktop/` quarantines every `Native\Laravel\*` import (completed 2026-05-23)
-- [ ] **Phase 16: Developer Mode UI** — New `Modules/DevMode/`; `is_developer` flag + `EnsureDeveloperMode` middleware; SAFE / DESTRUCTIVE artisan runner with live stdout streaming; log tailer with secret-redaction; bespoke queue inspector replaces Horizon dashboard for shipped builds; embedded Horizon iframe behind dev-runtime flag; ⌘K command palette
+- [x] **Phase 16: Developer Mode UI** — New `Modules/DevMode/`; `is_developer` flag + `EnsureDeveloperMode` middleware; SAFE / DESTRUCTIVE artisan runner with live stdout streaming; log tailer with secret-redaction; bespoke queue inspector replaces Horizon dashboard for shipped builds; embedded Horizon iframe behind dev-runtime flag; ⌘K command palette (completed 2026-05-24)
 - [ ] **Phase 17: CI/CD Pipeline + Code Signing** — `.github/workflows/ci.yml` PR gate (Larastan L10 strict + Pint + Pest on PHP 8.4 + 8.5 axes); `.github/workflows/release.yml` tag-triggered installer matrix; macOS Developer ID + Apple notarytool; Windows Azure Trusted Signing; encrypted secrets with environment scoping + gitleaks
 - [ ] **Phase 18: Auto-Update Plumbing** — `electron-updater` consuming GitHub Releases via `ElectronUpdateChannel` service; Ed25519 publisher pin + signature verification on every download; "skip this version" / "you're on an old version" / critical-update banner UX
 - [ ] **Phase 19: Public Release Boundary** — Hippocratic License 3.0 + `SECURITY.md` + `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`; README rewrite with the supplied SVG hero + per-platform install + screenshots; brand asset import (`resources/brand/logo.svg` + PNG / ICNS / ICO exports); GSD-leakage redaction sweep; deep Modules code review across 14 modules; renderer-JSON audit; "Where is my data?" docs page + export-everything UX
@@ -217,7 +217,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5)*
 
-- [ ] 16-08-PLAN.md — Command palette + sidebar Dev block live data + app-menu Developer submenu (DEVUI-09)
+- [x] 16-08-PLAN.md — Command palette + sidebar Dev block live data + app-menu Developer submenu (DEVUI-09)
 
 ### Phase 17: CI/CD Pipeline + Code Signing
 
@@ -308,7 +308,7 @@ Plans:
 | 13. AppPaths | 3/3 | Complete    | 2026-05-20 |
 | 14. Queue Rewire + Horizon Carve-out | 3/3 | Complete    | 2026-05-22 |
 | 15. Desktop Shell (NativePHP Integration) | 7/7 | Complete    | 2026-05-23 |
-| 16. Developer Mode UI | 8/9 | In Progress|  |
+| 16. Developer Mode UI | 9/9 | Complete   | 2026-05-24 |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |
 | 19. Public Release Boundary | 0/0 | Not started | - |
