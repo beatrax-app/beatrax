@@ -35,12 +35,31 @@ function logStreamUser(string $username, bool $isDeveloper = true): User
 
 function ensureDailyLogFile(string $contents): string
 {
+    // UserDataPathService::dailyLogFile() resolves the log path via the
+    // NATIVEPHP_STORAGE_PATH env var when set, falling back to the
+    // project's `storage/` directory otherwise. Without an override the
+    // test would write into the same file Herd's real Monolog writer
+    // uses for dev, clobbering the developer's local log. We point the
+    // accessor at a per-test sandbox so writes stay isolated. The
+    // afterEach hook below restores the env.
+    $sandboxRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-storage-'.bin2hex(random_bytes(6));
+    putenv('NATIVEPHP_STORAGE_PATH='.$sandboxRoot);
+
     $path = UserDataPathService::dailyLogFile();
     @mkdir(dirname($path), 0755, true);
     file_put_contents($path, $contents);
 
     return $path;
 }
+
+afterEach(function (): void {
+    // Drop the sandbox override so a subsequent test starts clean.
+    // We intentionally do NOT rm -rf the sandbox dir: it lives under
+    // sys_get_temp_dir() which the OS reaps on its own schedule, and
+    // a recursive delete here would be one more chance to wipe the
+    // wrong path if the env was already empty.
+    putenv('NATIVEPHP_STORAGE_PATH');
+});
 
 it('returns 404 from /dev/logs/poll for a non-developer (EnsureDeveloperMode gate)', function (): void {
     logStreamUser('logs-poll-seed', true);
