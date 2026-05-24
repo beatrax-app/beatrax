@@ -241,16 +241,31 @@ final readonly class CommandSpawner
         return (int) $pidLine;
     }
 
+    /**
+     * Create the run-tmp directory walk one level at a time so every
+     * intermediate gets mode 0700, not the default 0755 PHP applies
+     * to mkdir(..., recursive: true) intermediates. A shared host
+     * (multi-user macOS) is the threat model: the per-run UUID
+     * filenames inside the dir are otherwise world-readable through
+     * the parent path even though the individual files are 0600.
+     *
+     * The walk preserves the race-safe `mkdir() || is_dir()` pattern
+     * at every level: two concurrent spawns racing the directory
+     * creation both succeed.
+     */
     private function ensureRunsDirectory(string $dir): void
     {
-        if (is_dir($dir)) {
-            return;
-        }
-
-        if (! @mkdir($dir, 0700, true) && ! is_dir($dir)) {
-            throw new RuntimeException(
-                "CommandSpawner: failed to create runs directory at `{$dir}`.",
-            );
+        $parent = dirname($dir);
+        foreach ([$parent, $dir] as $path) {
+            if (is_dir($path)) {
+                continue;
+            }
+            if (! @mkdir($path, 0700, false) && ! is_dir($path)) {
+                throw new RuntimeException(
+                    "CommandSpawner: failed to create runs directory at `{$path}`.",
+                );
+            }
+            @chmod($path, 0700);
         }
     }
 }
