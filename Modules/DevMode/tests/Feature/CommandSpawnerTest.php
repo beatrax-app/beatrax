@@ -160,6 +160,35 @@ it('FileTailer returns new bytes when the file grows between calls', function ()
     }
 });
 
+it('spawns beatrax:failed-jobs with the positional action arg and the artisan command resolves cleanly', function (): void {
+    if (! extension_loaded('posix')) {
+        $this->markTestSkipped('posix extension required for spawn-then-tail');
+    }
+
+    /** @var CommandSpawner $spawner */
+    $spawner = app(CommandSpawner::class);
+    /** @var RunRegistry $registry */
+    $registry = app(RunRegistry::class);
+
+    $runId = $spawner->start('beatrax:failed-jobs', ['action' => 'prune'], 99, 'safe');
+
+    $record = $registry->find($runId);
+    expect($record)->not->toBeNull();
+
+    expect(awaitProcessExit($record->pid))->toBeTrue();
+
+    clearstatcache(true, $record->outPath);
+    $captured = is_file($record->outPath) ? (string) file_get_contents($record->outPath) : '';
+
+    // If the command name was rendered as the literal token
+    // `beatrax:failed-jobs prune` (one shell arg with a space inside)
+    // Symfony Console would emit "Command ... is not defined". With
+    // the corrected name + positional action arg the command resolves
+    // and emits the prune summary line.
+    expect($captured)->not->toContain('is not defined');
+    expect($captured)->toContain('Removed');
+});
+
 it('renders an --option=value arg as a single shell-safe argv token (no doubled `=`)', function (): void {
     /** @var CommandSpawner $spawner */
     $spawner = app(CommandSpawner::class);

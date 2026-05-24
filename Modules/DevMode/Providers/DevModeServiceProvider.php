@@ -118,10 +118,18 @@ final class DevModeServiceProvider extends ServiceProvider
                 description: 'Report installed PHP / Composer / SQLite versions and verify minimums.',
             ),
             new CommandSpec(
-                name: 'beatrax:failed-jobs prune',
+                name: 'beatrax:failed-jobs',
                 label: 'Prune failed jobs',
                 tier: 'safe',
-                argsSchema: [],
+                argsSchema: [
+                    new ArgSpec(
+                        name: 'action',
+                        label: 'Action',
+                        type: 'select',
+                        rules: ['required', 'in:prune'],
+                        options: ['prune'],
+                    ),
+                ],
                 description: 'Prune resolved entries from the Laravel-managed failed_jobs table.',
             ),
             new CommandSpec(
