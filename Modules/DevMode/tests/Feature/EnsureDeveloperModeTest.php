@@ -77,13 +77,14 @@ it('returns 200 with body "PROBE" for an authenticated developer request to /dev
 });
 
 it('resolves all four Public contracts via the container', function (): void {
-    // DevCommandRegistry is the only contract swapped from its 16-03
-    // Null* default in this plan (16-04 binds the concrete
-    // CommandRegistry with the 9 SAFE + 6 DESTRUCTIVE roster); the
-    // other three still resolve to Null* until later plans swap
-    // them. The full SAFE/DESTRUCTIVE roster invariants live in
-    // CommandRegistryTest — this test just confirms the contract
-    // resolves.
+    // 16-04 swapped DevCommandRegistry from Null* to the concrete
+    // CommandRegistry (9 SAFE + 6 DESTRUCTIVE roster). 16-08 swaps
+    // NavigationRegistry + AppActionRegistry from Null* to the
+    // concrete *Impl bindings whose factories declare the roster
+    // inline. AuditWriter resolves to the Spatie-backed concrete
+    // bound by 16-04b. The full invariants live in dedicated tests
+    // (CommandRegistryTest, CommandPaletteRegistryTest) — this one
+    // just confirms the four contracts resolve cleanly.
     /** @var DevCommandRegistry $commands */
     $commands = app(DevCommandRegistry::class);
     expect($commands)->toBeInstanceOf(DevCommandRegistry::class);
@@ -92,15 +93,16 @@ it('resolves all four Public contracts via the container', function (): void {
 
     /** @var NavigationRegistry $nav */
     $nav = app(NavigationRegistry::class);
-    expect($nav->all())->toBe([]);
+    expect($nav)->toBeInstanceOf(NavigationRegistry::class);
+    expect($nav->all())->not->toBe([]);
 
     /** @var AppActionRegistry $actions */
     $actions = app(AppActionRegistry::class);
-    expect($actions->all())->toBe([]);
+    expect($actions)->toBeInstanceOf(AppActionRegistry::class);
+    expect($actions->all())->not->toBe([]);
 
-    // AuditWriter is a no-op interface; resolve it and confirm the
-    // binding is the Null shape (a SpatieAuditWriter replacement in
-    // 16-04b will swap this assertion).
+    // AuditWriter is bound to SpatieAuditWriter by 16-04b; resolve
+    // it to confirm the binding shape.
     /** @var AuditWriter $audit */
     $audit = app(AuditWriter::class);
     expect($audit)->toBeInstanceOf(AuditWriter::class);
