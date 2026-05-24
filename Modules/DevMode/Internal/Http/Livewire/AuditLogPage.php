@@ -35,11 +35,47 @@ final class AuditLogPage extends Component
     #[Url(as: 'command', except: '')]
     public string $commandFilter = '';
 
+    /**
+     * Cursor for backward (older) pagination. When non-null the
+     * render() query is constrained to rows whose id is strictly less
+     * than this value, so successive Older clicks walk backward
+     * through the full audit history without skipping rows that
+     * arrive between requests.
+     */
+    #[Url(as: 'before', except: null)]
+    public ?int $before = null;
+
+    /** Page size — kept in sync with the rendered row count. */
+    public const PAGE_SIZE = 50;
+
     public function clearFilters(): void
     {
         $this->tierFilter = '';
         $this->callerFilter = '';
         $this->commandFilter = '';
+        $this->before = null;
+    }
+
+    /**
+     * Walk one page older by pinning the cursor to the smallest id on
+     * the currently-rendered page. Each click emits a fresh
+     * ?before=<id> URL via the #[Url] binding so the back button
+     * walks the operator forward through the timeline.
+     */
+    public function older(int $oldestRenderedId): void
+    {
+        if ($oldestRenderedId > 0) {
+            $this->before = $oldestRenderedId;
+        }
+    }
+
+    /**
+     * Walk back to the newest page. Drops the cursor entirely so
+     * render() returns the live top-of-history slice.
+     */
+    public function newer(): void
+    {
+        $this->before = null;
     }
 
     public function render(ViewFactory $views, DatabaseManager $db): View
@@ -83,7 +119,18 @@ final class AuditLogPage extends Component
             }
         }
 
-        $rows = $audit->orderByDesc('created_at')->limit(50)->get();
+        // Cursor pagination — Older walks back through the audit
+        // history without skipping rows that arrived between requests.
+        // Using id < ?before is correct because rows are append-only
+        // and the id column is monotonically increasing with
+        // created_at; ordering by id desc gives the same chronological
+        // order as ordering by created_at desc but stable against
+        // sub-second timestamp ties.
+        if ($this->before !== null && $this->before > 0) {
+            $audit->where('id', '<', $this->before);
+        }
+
+        $rows = $audit->orderByDesc('id')->limit(self::PAGE_SIZE)->get();
 
         // Hydrate username for display alongside each row. Drop null /
         // zero causer ids (system writes); their rendered username is
@@ -129,8 +176,15 @@ final class AuditLogPage extends Component
             ];
         });
 
+        // Cursor metadata for the Older/Newer pager.
+        $oldestId = (int) ($rows->last()->id ?? 0);
+        $hasMore = $rows->count() === self::PAGE_SIZE;
+
         return $views->make('dev::livewire.audit-log-page', [
             'rows' => $rendered,
+            'oldestRenderedId' => $oldestId,
+            'hasMore' => $hasMore,
+            'isPaged' => $this->before !== null,
         ]);
     }
 }
