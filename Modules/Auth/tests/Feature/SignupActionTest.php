@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Auth\AuthManager;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use Modules\Auth\Internal\Http\Middleware\FirstUserOnlyMiddleware;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Events\UserInstalled;
+use Modules\Ledger\Models\Category;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -173,4 +176,50 @@ it('throws a 404 from FirstUserOnlyMiddleware once a user exists', function (): 
 
     expect(fn () => $middleware->handle(Request::create('/signup'), static fn (): Response => new Response('ok')))
         ->toThrow(NotFoundHttpException::class);
+});
+
+it('seeds the default category tree by dispatching UserInstalled after the user is created', function (): void {
+    // Guard the precondition: a fresh test database carries no users and no
+    // shared default-tree categories. The signup ceremony is the sole
+    // mechanism populating both on the bundled-app first-launch GUI path.
+    expect(User::query()->count())->toBe(0);
+    expect(Category::withoutGlobalScopes()->whereNull('user_id')->count())->toBe(0);
+
+    /** @var SignupAction $signup */
+    $signup = $this->app->make(SignupAction::class);
+
+    $result = $signup('alice', 'a-long-password-12chars');
+
+    expect($result['user'])->toBeInstanceOf(User::class);
+
+    // 13 top-level entries in DefaultCategoryTreeSeeder::TREE plus 17 leaves
+    // — assert the lower bound on parents to stay resilient if leaves are
+    // tweaked, and assert a representative slug exists end-to-end so a
+    // partial seeder no-op (event fired but listener short-circuited) would
+    // still fail the test.
+    $sharedCategories = Category::withoutGlobalScopes()->whereNull('user_id');
+    expect($sharedCategories->count())->toBeGreaterThanOrEqual(13);
+    expect($sharedCategories->where('slug', 'subscriptions-streaming')->exists())->toBeTrue();
+});
+
+it('dispatches UserInstalled exactly once with the new users id', function (): void {
+    /** @var list<int> $captured */
+    $captured = [];
+
+    // Attach a probe listener BEFORE invoking SignupAction so the dispatch
+    // is observed live. Event::fake() would shadow the real listener and
+    // mask the end-to-end seeding wiring the other test relies on.
+    $this->app->make(Dispatcher::class)->listen(
+        UserInstalled::class,
+        function (UserInstalled $event) use (&$captured): void {
+            $captured[] = $event->userId;
+        },
+    );
+
+    /** @var SignupAction $signup */
+    $signup = $this->app->make(SignupAction::class);
+
+    $result = $signup('alice', 'a-long-password-12chars');
+
+    expect($captured)->toBe([$result['user']->id]);
 });

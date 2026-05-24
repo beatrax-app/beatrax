@@ -6,6 +6,7 @@ namespace Modules\Auth\Public\Actions;
 
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\StatefulGuard;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
@@ -15,6 +16,7 @@ use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Events\UserInstalled;
 
 /**
  * Single permissible write path for the first-user signup ceremony.
@@ -30,6 +32,13 @@ use Modules\Core\Public\Contracts\Clock;
  * blocks until the first commits, then observes the created user and
  * aborts. The first account becomes the owner: its `is_developer` flag
  * is set true.
+ *
+ * Once the transaction commits, `UserInstalled` is dispatched with the
+ * new user's id before the auto-login fires. This is the same event the
+ * `beatrax:install` console command emits, so any listener that seeds
+ * reference data on first install (e.g. the default category tree)
+ * also runs through the GUI signup path used by the bundled
+ * native-app first launch.
  *
  * On success the new user is logged in through the active guard and the
  * ten plaintext codes are stashed in the session under
@@ -50,6 +59,7 @@ final class SignupAction
         private readonly RecoveryCodeGenerator $codeGenerator,
         private readonly Clock $clock,
         private readonly Session $session,
+        private readonly Dispatcher $events,
     ) {}
 
     /**
@@ -118,6 +128,14 @@ final class SignupAction
 
             return ['user' => $user, 'codesPlain' => $codesPlain];
         });
+
+        // Dispatch after the transaction commits — listeners (e.g. the
+        // default-category-tree seeder) must never run for a user that got
+        // rolled back. Dispatched before the auto-login so the listener
+        // chain executes in the same unauthenticated context as the
+        // `beatrax:install` console path, keeping the two install ceremonies
+        // behaviourally interchangeable.
+        $this->events->dispatch(new UserInstalled($result['user']->id));
 
         /** @var StatefulGuard $guard */
         $guard = $this->auth->guard();
