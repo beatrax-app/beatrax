@@ -20,6 +20,7 @@ use Modules\Ingestion\Public\Dto\UnknownAccount;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -51,6 +52,7 @@ final class ImportPipeline
         private readonly FingerprintStage $fingerprint,
         private readonly SourceAdapterRegistry $adapters,
         private readonly RecordsStatementSummary $statementSummaries,
+        private readonly LoggerInterface $logger,
     ) {}
 
     /**
@@ -108,6 +110,21 @@ final class ImportPipeline
                     $autoOutcome = $this->autoCategory->apply($normalized, $user);
                     $normalized = $autoOutcome->canonical;
                 } catch (Throwable $e) {
+                    // Log every per-row failure with the full stack
+                    // trace so a developer can open /dev/logs and see
+                    // which adapter / stage threw — the preview-row
+                    // surfaces only the user-facing message, which is
+                    // intentionally short and loses the call site.
+                    // Without this log the failure was "silent" past
+                    // the preview row (no entry anywhere triagable).
+                    $this->logger->warning('ImportPipeline: row failed.', [
+                        'source_format' => $sourceFormat,
+                        'import_run_id' => $importRunId,
+                        'row_index' => $source->sourceRowIndex,
+                        'exception_class' => $e::class,
+                        'exception_message' => $e->getMessage(),
+                        'exception_trace' => $e->getTraceAsString(),
+                    ]);
                     $preview[] = new PreviewRowDto(
                         rowIndex: $source->sourceRowIndex,
                         status: 'error',
@@ -167,6 +184,16 @@ final class ImportPipeline
             // A fatal adapter-level error (bad header, encoding mismatch, etc.)
             // surfaces as a single ERROR row covering the whole file so the
             // wizard can still render the preview screen rather than 500ing.
+            // Log the full stack trace so the failure is triagable on
+            // /dev/logs — the surfaced row carries only the user-facing
+            // message, which loses the call site.
+            $this->logger->warning('ImportPipeline: parse failed.', [
+                'source_format' => $sourceFormat,
+                'import_run_id' => $importRunId,
+                'exception_class' => $e::class,
+                'exception_message' => $e->getMessage(),
+                'exception_trace' => $e->getTraceAsString(),
+            ]);
             $preview[] = new PreviewRowDto(
                 rowIndex: 0,
                 status: 'error',
