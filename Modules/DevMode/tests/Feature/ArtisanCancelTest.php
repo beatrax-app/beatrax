@@ -18,9 +18,9 @@ use Symfony\Component\Process\Process;
  *   - SIGTERM dispatched against a real long-running child; the
  *     process is gone within the cancel window; the run status
  *     flips to `cancelled`.
- *   - Cross-user cancel attempts rejected (T-16-16 — the PID comes
- *     from the cache, never the request body, so a forged runId
- *     resolves to 404 before any signal fires).
+ *   - Cross-user cancel attempts rejected — the PID comes from
+ *     the cache, never the request body, so a forged runId
+ *     resolves to 404 before any signal fires.
  *
  * Skipped on Windows — posix_kill is POSIX-only.
  */
@@ -128,7 +128,7 @@ it('cancels a real long-running child via SIGTERM within the 3s grace', function
     expect($record?->status)->toBe('cancelled');
 });
 
-it('rejects cross-user cancel with 403 (T-16-15 / T-16-16)', function (): void {
+it('rejects cross-user cancel with 403', function (): void {
     $owner = cancelUser('cancel-owner');
     $intruder = cancelUser('cancel-intruder');
 

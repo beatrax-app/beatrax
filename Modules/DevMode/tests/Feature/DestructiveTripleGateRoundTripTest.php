@@ -7,20 +7,21 @@ use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Process\RunRegistry;
 
 /*
- * Phase 16-04b Task 2 — DestructiveSpawnController invariants.
+ * DestructiveSpawnController invariants.
  *
- * The controller RE-VALIDATES all three gates server-side (T-16-02
- * defense-in-depth) even though TripleGateModal already validated:
+ * The controller RE-VALIDATES all three gates server-side as
+ * defense-in-depth even though TripleGateModal already validated:
  *   - DevModeFlag->isOn()
  *   - session('dev_mode.advanced') === true
  *   - request body confirmed_typed === 'beatrax' (hash_equals)
  *
- * On accept the controller routes through CommandSpawner::start(...,
- * 'destructive') and returns {run_id, pid} with HTTP 202 — same shape
- * as the SAFE controller so the runner UI consumes both pathways
- * identically.
+ * On accept the controller routes through
+ * CommandSpawner::start(..., 'destructive') and returns
+ * {run_id, pid} with HTTP 202 — same shape as the SAFE controller
+ * so the runner UI consumes both pathways identically.
  *
- * Skipped on systems lacking the posix extension (Linux/macOS only).
+ * Skipped on systems lacking the posix extension (Linux/macOS
+ * only).
  */
 
 beforeEach(function (): void {

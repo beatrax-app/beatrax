@@ -10,20 +10,18 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
 /*
- * Phase 16-06 Task 2 — Dashboard failed-chain toast retarget (D-37).
+ * Dashboard failed-chain toast gating + retarget.
  *
- * The dashboard's "Chain resolution failed" toast was originally a
- * deep-link to `/horizon/failed`. Per CONTEXT D-37, the link is now
- * gated on `$isDeveloper` AND retargets to the canonical
- * `route('dev.queue.tab', ['tab' => 'failed'])` URL.
+ * The dashboard's "Chain resolution failed" toast is gated on
+ * is_developer AND points at the canonical
+ * route('dev.queue.tab', ['tab' => 'failed']) URL.
  *
  * Non-developers see NO queue-failure messaging at all — their
- * channel is the existing `SystemAlertsBanner` (the system-wide
+ * channel is the existing SystemAlertsBanner (the system-wide
  * banner that surfaces operational failures through a separate
  * pipeline).
  *
- * The toast copy is locked verbatim per UI-SPEC § Copywriting
- * (Dashboard failed-chain toast):
+ * The toast copy is locked:
  *   Body:   "Chain resolution failed."
  *   Action: "Open Queue Inspector"
  */
@@ -114,16 +112,16 @@ it('renders the "Open Queue Inspector" toast pointing at route("dev.queue.tab", 
     expect($html)->toContain('Chain resolution failed.');
     expect($html)->toContain('Open Queue Inspector');
 
-    // B-3 fix: the dashboard MUST build the URL via
+    // The dashboard MUST build the URL via
     // route('dev.queue.tab', ['tab' => 'failed']) — assert the
     // rendered href EQUALS the URL the route() helper resolves,
-    // NOT a hardcoded `/dev/queue/failed` literal (which would point
-    // at the non-existent `dev.queue.failed` route alias).
+    // NOT a hardcoded `/dev/queue/failed` literal (which would
+    // point at a non-existent dev.queue.failed route alias).
     $expectedHref = route('dev.queue.tab', ['tab' => 'failed']);
     expect($html)->toContain('href="'.$expectedHref.'"');
 });
 
-it('does NOT render the "Open Queue Inspector" toast for a non-developer EVEN with a failed chain-resolution run (D-37 — non-devs route through SystemAlertsBanner)', function (): void {
+it('does NOT render the "Open Queue Inspector" toast for a non-developer EVEN with a failed chain-resolution run (non-devs route through SystemAlertsBanner)', function (): void {
     dashFailedToastUser('dft-seed-for-nondev', true);
     $user = dashFailedToastUser('dft-non-developer', false);
     dashFailedToastSeedRun($user->id);

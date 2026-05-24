@@ -14,22 +14,20 @@ use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\DevMode\Public\Dto\NavigationEntry;
 
 /*
- * CommandPaletteModal registry + filter + Recent-cache invariants (16-08).
+ * CommandPaletteModal registry + filter + Recent-cache invariants.
  *
- * Behavior contract per 16-08-PLAN.md Task 1:
- *
- *  Test 1: `app(NavigationRegistry::class)` resolves to the concrete
- *          NavigationRegistryImpl (NOT NullNavigationRegistry).
- *  Test 2: The `all()` list contains every authenticated main-app
- *          view AND every Dev Console sub-route registered in the
- *          current bundle.
- *  Test 3: Developer's palette JSON contains view + dev + action
- *          sources; ZERO DESTRUCTIVE-tier dev rows (T-16-33).
- *  Test 4: Non-developer's palette JSON contains ZERO `source: dev`
- *          rows AND zero `dev.*` view rows (T-16-34).
- *  Test 5: `pickEntry()` writes the Recent list to the per-user
- *          cache key, dedupes on `id`, and evicts the oldest when
- *          the list grows beyond RECENT_LIMIT.
+ * Test 1: app(NavigationRegistry::class) resolves to the concrete
+ *         NavigationRegistryImpl (NOT NullNavigationRegistry).
+ * Test 2: The all() list contains every authenticated main-app
+ *         view AND every Dev Console sub-route registered in the
+ *         current bundle.
+ * Test 3: Developer's palette JSON contains view + dev + action
+ *         sources; ZERO DESTRUCTIVE-tier dev rows.
+ * Test 4: Non-developer's palette JSON contains ZERO `source: dev`
+ *         rows AND zero `dev.*` view rows.
+ * Test 5: pickEntry() writes the Recent list to the per-user
+ *         cache key, dedupes on id, and evicts the oldest when
+ *         the list grows beyond RECENT_LIMIT.
  */
 
 function cpUser(bool $isDeveloper, string $username): User
@@ -100,7 +98,7 @@ it('emits the merged palette JSON for a developer (view + dev SAFE + action; ZER
     expect($sources)->toContain('action');
 
     // Every dev row is SAFE-tier — DESTRUCTIVE commands are
-    // structurally absent (T-16-33 mitigation).
+    // structurally absent from the palette JSON.
     $destructiveTiered = array_filter(
         $registry,
         static fn (array $row): bool => ($row['tier'] ?? null) === 'destructive',
@@ -115,7 +113,7 @@ it('emits the merged palette JSON for a developer (view + dev SAFE + action; ZER
     expect($names)->not->toContain('migrate:fresh');  // DESTRUCTIVE — excluded
 });
 
-it('emits a palette JSON without any dev rows for a non-developer (T-16-34)', function (): void {
+it('emits a palette JSON without any dev rows for a non-developer', function (): void {
     cpUser(true, 'cp-non-dev-seed'); // bypass first-launch redirect
     $user = cpUser(false, 'cp-non-dev');
 

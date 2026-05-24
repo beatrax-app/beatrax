@@ -9,19 +9,16 @@ use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\EmailScan\Models\OAuthSecret;
 
 /*
- * Phase 16-05 Task 1 Test 6 (I-4 regression guard) — documented
- * limitation: once an OAuthSecret row is DELETED, the cache busts and
- * the deleted string disappears from the scrub set. A subsequent log
- * line containing the now-revoked string is NOT scrubbed.
+ * Documented limitation: once an OAuthSecret row is DELETED, the
+ * cache busts and the deleted string disappears from the scrub
+ * set. A subsequent log line containing the now-revoked string is
+ * NOT scrubbed.
  *
- * This is INTENTIONAL behavior — a revoked + removed token is no
+ * This is INTENTIONAL behaviour — a revoked + removed token is no
  * longer sensitive in this app's threat model (the secret is dead;
- * the audit trail cares about new lines, not old). The test exists
- * so a future change that silently keeps scrubbing deleted values
- * (e.g. a tombstone table) is surfaced at PR time.
- *
- * The behavior is also surfaced in the plan's SUMMARY known-limitations
- * section.
+ * the audit trail cares about new lines, not old). The test
+ * exists so a future change that silently keeps scrubbing deleted
+ * values (e.g. a tombstone table) is surfaced at PR time.
  */
 
 function deletionUser(string $username): User
@@ -35,7 +32,7 @@ function deletionUser(string $username): User
     ]);
 }
 
-it('STOPS scrubbing a string after the OAuthSecret row is deleted (documented limitation, I-4)', function (): void {
+it('STOPS scrubbing a string after the OAuthSecret row is deleted (documented limitation)', function (): void {
     $user = deletionUser('deletion-fixture');
     $this->actingAs($user);
 

@@ -11,22 +11,25 @@ use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
 use Modules\DevMode\Internal\Queue\QueueActions;
 
 /*
- * Phase 16-06 Task 1 — Queue inspector + QueueActions invariants.
+ * Queue inspector + QueueActions invariants.
  *
  * Covers:
  *   - Route shape: /dev/queue redirects to /dev/queue/pending;
- *     /dev/queue/pending|failed|batches all return 200 for a developer,
- *     404 for a non-developer (EnsureDeveloperMode gate).
- *   - QueueActions::forgetFailed removes the failed_jobs row + writes
- *     an audit row with action=queue.failed.forget.
- *   - QueueActions::retryFailed re-dispatches the payload + removes the
- *     failed_jobs row + writes action=queue.failed.retry.
- *   - QueueActions::cancelBatch sets cancelled_at on the batch row.
- *   - QueueActions::deletePending removes the pending jobs row + audit.
+ *     /dev/queue/pending|failed|batches all return 200 for a
+ *     developer, 404 for a non-developer (EnsureDeveloperMode
+ *     gate).
+ *   - QueueActions::forgetFailed removes the failed_jobs row +
+ *     writes an audit row with action=queue.failed.forget.
+ *   - QueueActions::retryFailed re-dispatches the payload +
+ *     removes the failed_jobs row + writes
+ *     action=queue.failed.retry.
+ *   - QueueActions::cancelBatch sets cancelled_at on the batch
+ *     row.
+ *   - QueueActions::deletePending removes the pending jobs row +
+ *     audit.
  *   - Count tiles render the live counts; wire:poll.5s attribute
  *     present.
- *   - Queue sidebar item enabled (no nav-disabled class) after this
- *     plan.
+ *   - Queue sidebar item enabled (no nav-disabled class).
  */
 
 function queueDeveloper(string $username = 'queue-fixture'): User
@@ -233,14 +236,14 @@ it('enables the Queue sidebar item (drops nav-disabled when dev.queue is registe
     $response = $this->actingAs($user)->get('/dev/queue/pending');
     $html = (string) $response->getContent();
 
-    // Find the Queue nav entry — it has the icon `↻` and label "Queue".
-    // After 16-06 the dev.queue route resolves and Queue should NOT
-    // carry nav-disabled.
+    // Find the Queue nav entry — it has the icon `↻` and label
+    // "Queue". With dev.queue registered, Queue should NOT carry
+    // nav-disabled.
     preg_match_all('#<a\s+href="[^"]*"\s+class="side-item([^"]*)"[^>]*>[\s\S]*?Queue[\s\S]*?</a>#', $html, $matches);
 
     expect($matches[0])->not->toBeEmpty('Queue sidebar entry should render');
     foreach ($matches[1] as $classes) {
-        expect($classes)->not->toContain('nav-disabled', 'Queue sidebar entry should NOT have nav-disabled after 16-06 registers dev.queue');
+        expect($classes)->not->toContain('nav-disabled', 'Queue sidebar entry should NOT have nav-disabled when dev.queue is registered');
     }
 });
 

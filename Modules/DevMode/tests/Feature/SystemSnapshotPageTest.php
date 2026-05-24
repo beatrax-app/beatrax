@@ -5,14 +5,14 @@ declare(strict_types=1);
 use Modules\Core\Models\User;
 
 /*
- * Phase 16-07 Task 2 — SystemSnapshotPage rendering invariants.
+ * SystemSnapshotPage rendering invariants.
  *
  * Covers:
- *   - GET /dev/system renders the snapshot page for a developer with
- *     PHP / Laravel / SQLite / Paths / Env / Runtime / Effective config
- *     section headings (D-44 fields).
+ *   - GET /dev/system renders the snapshot page for a developer
+ *     with PHP / Laravel / SQLite / Paths / Env / Runtime /
+ *     Effective config section headings.
  *   - GET /dev/system does NOT leak the test-env APP_KEY value
- *     (denylist redaction via ConfigFlattener — Q4 resolution).
+ *     (denylist redaction via ConfigFlattener).
  *   - GET /dev/system returns 404 for a non-developer.
  */
 
@@ -50,7 +50,7 @@ it('returns 404 from /dev/system for a non-developer', function (): void {
     $response->assertNotFound();
 });
 
-it('does not render the test-env APP_KEY value on /dev/system (denylist redaction T-16-28)', function (): void {
+it('does not render the test-env APP_KEY value on /dev/system (denylist redaction)', function (): void {
     $user = systemSnapshotUser('sysnap-no-leak');
 
     $appKey = config('app.key');

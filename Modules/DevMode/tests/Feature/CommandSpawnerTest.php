@@ -92,7 +92,7 @@ it('spawns cache:clear and writes stdout into a per-run tmp file', function (): 
     expect(filesize($record->outPath))->toBeGreaterThan(0);
 });
 
-it('rejects an injection-attempt path via escapeshellarg discipline (T-16-11 / T-16-SC2)', function (): void {
+it('rejects an injection-attempt path via escapeshellarg discipline', function (): void {
     if (! extension_loaded('posix')) {
         $this->markTestSkipped('posix extension required for spawn-then-tail');
     }

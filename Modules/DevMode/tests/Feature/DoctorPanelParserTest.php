@@ -8,22 +8,21 @@ use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Doctor\ProbeOutputParser;
 
 /*
- * Phase 16-07 Task 2 — DoctorPanelPage + ProbeOutputParser invariants.
+ * DoctorPanelPage + ProbeOutputParser invariants.
  *
  * Covers:
  *   - GET /dev/doctor renders the page header + primary "Re-run"
  *     button + empty-state card for a developer when no
  *     `beatrax:doctor` audit row exists yet.
- *   - GET /dev/doctor renders the last `beatrax:doctor` audit row's
- *     parsed pass/warn/fail rows (via ProbeOutputParser) with the
- *     correct glyph + accent class.
+ *   - GET /dev/doctor renders the last `beatrax:doctor` audit
+ *     row's parsed pass/warn/fail rows (via ProbeOutputParser)
+ *     with the correct glyph + accent class.
  *   - GET /dev/doctor returns 404 for a non-developer
  *     (EnsureDeveloperMode).
  *   - ProbeOutputParser (pure unit) accepts the DoctorCommand line
- *     format (`%-24s %-8s %s` per Modules/Core/Internal/Console/
- *     DoctorCommand.php) and yields list of {status, label, detail}.
- *     Severity `ok` → `pass`; `warning` → `warn`; `critical` → `fail`;
- *     `info` → `info` (ext-imap row).
+ *     format ('%-24s %-8s %s') and yields list of
+ *     {status, label, detail}. Severity ok → pass; warning →
+ *     warn; critical → fail; info → info.
  */
 
 function doctorUser(string $username, bool $isDeveloper = true): User

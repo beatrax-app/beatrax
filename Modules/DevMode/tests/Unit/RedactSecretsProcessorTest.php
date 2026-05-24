@@ -8,7 +8,7 @@ use Monolog\Level;
 use Monolog\LogRecord;
 
 /*
- * Phase 16-05 Task 1 — RedactSecretsProcessor upgrade invariants.
+ * RedactSecretsProcessor invariants.
  *
  * Covers the three-layer scrub the processor applies in order:
  *   1. OAuth scrub-set (compiled regex over every decrypted
@@ -16,14 +16,15 @@ use Monolog\LogRecord;
  *   2. Authorization: Bearer header pattern.
  *   3. JWT shape (eyJ...header.payload.signature).
  *
- * The processor's __invoke is called against a hand-built LogRecord;
- * end-to-end behavior (the tap class + the actual disk write) is
- * exercised in OAuthScrubSetBustTest and the existing baseline test
- * which both feed real log lines through LogManager::build().
+ * The processor's __invoke is called against a hand-built
+ * LogRecord; end-to-end behaviour (the tap class + the actual disk
+ * write) is exercised in OAuthScrubSetBustTest and the baseline
+ * test, both of which feed real log lines through
+ * LogManager::build().
  *
- * The OAuthScrubSet doubles use a tiny in-memory stub class declared
- * once below; the parent's private cache state is bypassed by
- * overriding all three public methods.
+ * The OAuthScrubSet doubles use a tiny in-memory stub class
+ * declared once below; the parent's private cache state is
+ * bypassed by overriding the three public methods.
  */
 
 /**
