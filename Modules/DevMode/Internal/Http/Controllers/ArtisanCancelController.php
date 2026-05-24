@@ -14,20 +14,20 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 /**
  * POST /dev/artisan/cancel/{runId} — terminate a running command.
  *
- * Reads the PID from the cached RunRecord (never the request body —
- * T-16-16 mitigation: a forged runId cannot SIGTERM an arbitrary
- * PID because the lookup gates against the stored caller). Sends
- * SIGTERM, waits up to 3 seconds for the child to exit (per the
- * 16-04 plan's documented trade-off — 3s blocks the HTTP request,
- * but cancel is rare), then falls back to SIGKILL if the child is
- * still alive. Marks the run cancelled in RunRegistry so the SSE
- * stream's liveness check observes the gone PID and emits its
- * terminal `event: done` with the cancel marker.
+ * Reads the PID from the cached RunRecord (never the request body)
+ * so a forged runId cannot SIGTERM an arbitrary PID: the lookup
+ * gates against the stored caller. Sends SIGTERM, waits up to 3
+ * seconds for the child to exit (the 3-second block trades HTTP
+ * latency for the SSE stream's liveness check actually observing
+ * the gone PID; cancel is rare), then falls back to SIGKILL if the
+ * child is still alive. Marks the run cancelled in RunRegistry so
+ * the SSE stream's liveness check observes the gone PID and emits
+ * its terminal `event: done` with the cancel marker.
  *
  * Returns 204 on success, 404 when the runId is unknown.
  *
- * Cross-user inspection rejected at the same defense-in-depth layer
- * as ArtisanStreamController (T-16-15).
+ * Cross-user inspection is rejected at the same defense-in-depth
+ * layer as ArtisanStreamController.
  */
 final readonly class ArtisanCancelController
 {

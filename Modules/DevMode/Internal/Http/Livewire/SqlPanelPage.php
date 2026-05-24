@@ -18,8 +18,7 @@ use Modules\DevMode\Public\Contracts\AuditWriter;
 use Throwable;
 
 /**
- * `/dev/sql` panel — SELECT-only SQL execution + schema viewer
- * (CONTEXT D-45 / D-46 / D-47).
+ * `/dev/sql` panel — SELECT-only SQL execution + schema viewer.
  *
  * Defense-in-depth pipeline:
  *
@@ -29,22 +28,23 @@ use Throwable;
  *   2. {@see ReadOnlySqliteConnection}::execute() — execution-time
  *      guard via PRAGMA query_only = 1 + 5-second WallClockCap.
  *   3. AuditWriter::recordSelectQuery() — every successful query
- *      writes a `dev_mode_audit` row (AuditEvent::SqlSelect).
+ *      writes a dev_mode_audit row (AuditEvent::SqlSelect).
  *
- * Gating per D-46: the page is gated on Dev Mode ON (the route's
+ * Gating: the page is gated on Dev Mode ON (the route's
  * EnsureDeveloperMode middleware covers that) + the session-scoped
  * Advanced toggle. When Advanced is OFF the page renders but the
  * Run pathway is short-circuited with a banner directing the
  * operator to flip the toggle. No typed-name modal — the parser +
  * PRAGMA + cap are the actual guard.
  *
- * I-6 LOCKED DECISION: schema viewer is an inner sidebar of /dev/sql,
- * NOT a separate route. One page, one Livewire component, one
- * sidebar item. Browse-table reuses the same `run()` pipeline so the
- * audit-row contract is identical.
+ * Schema viewer is an inner sidebar of /dev/sql, NOT a separate
+ * route. One page, one Livewire component, one sidebar item.
+ * Browse-table reuses the same run() pipeline so the audit-row
+ * contract is identical.
  *
- * Pattern B (PATTERNS.md): no constructor on a Livewire Component;
- * collaborators arrive via method-DI on `render()` / action methods.
+ * No constructor — Livewire components never receive constructor DI
+ * per the project's larastan-strict-rules profile; collaborators
+ * arrive via method-DI on render() / action methods.
  */
 #[Layout('dev::layouts.dev-shell')]
 final class SqlPanelPage extends Component

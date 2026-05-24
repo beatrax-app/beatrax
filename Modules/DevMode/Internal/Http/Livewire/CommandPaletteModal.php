@@ -15,37 +15,37 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 
 /**
- * Global command-palette modal (16-08, DEVUI-09).
+ * Global command-palette modal.
  *
- * Mounted once per base layout (`resources/views/layouts/app.blade.php`
- * and `Modules/DevMode/Resources/views/layouts/dev-shell.blade.php`)
- * so any authenticated page can open the palette by dispatching the
- * `palette:open` Livewire event (the global Alpine `x-data` keybind
- * handler on `<body>` fires this on ⌘K / Ctrl+K).
+ * Mounted once per base layout
+ * (resources/views/layouts/app.blade.php and
+ * Modules/DevMode/Resources/views/layouts/dev-shell.blade.php) so
+ * any authenticated page can open the palette by dispatching the
+ * `palette:open` Livewire event (the global Alpine x-data keybind
+ * handler on <body> fires this on ⌘K / Ctrl+K).
  *
  * Renders the server-side JSON registry the client-side Fuse.js
  * factory consumes. The registry merges three sources:
  *
- *   - Navigation entries (every authenticated app view) — visible to
- *     every user.
+ *   - Navigation entries (every authenticated app view) — visible
+ *     to every user.
  *   - Dev commands (SAFE-tier only; DESTRUCTIVE-tier deliberately
- *     EXCLUDED to prevent muscle-memory disasters per D-41 + the
- *     <threat_model> T-16-33 mitigation) — visible to developers
- *     only. The filter applies at JSON-emit time (this method),
- *     never on the client.
+ *     EXCLUDED to prevent muscle-memory disasters) — visible to
+ *     developers only. The filter applies at JSON-emit time (this
+ *     method), never on the client.
  *   - App actions (named cross-app actions like "Open profile") —
  *     visible to every user.
  *
- * The non-developer's JSON literally does not contain the `source:
- * 'dev'` rows — tampering with the client-side JSON does not bypass
- * the filter (T-16-34 mitigation).
+ * The non-developer's JSON literally does not contain the
+ * `source: 'dev'` rows — tampering with the client-side JSON does
+ * not bypass the filter.
  *
  * Recent shortcuts (per-user, 5 entries, 30-day TTL) live in cache
- * key `dev_mode.palette_recent.{userId}`. `pickEntry()` writes to
+ * key `dev_mode.palette_recent.{userId}`. pickEntry() writes to
  * that key on every selection; the same key is read on mount() to
  * seed the Recent rail divider.
  *
- * Method-DI throughout (no facades, per CLAUDE.md DI-only rule).
+ * Method-DI throughout (no facades, per the project's DI-only rule).
  */
 final class CommandPaletteModal extends Component
 {
@@ -155,7 +155,9 @@ final class CommandPaletteModal extends Component
      * Build the merged JSON registry the client-side Fuse.js factory
      * consumes. Filters dev rows by `is_developer` at this layer —
      * non-developers receive ZERO `source: 'dev'` rows so the dev
-     * command labels are never on the client (T-16-34).
+     * command labels are never on the client — defense-in-depth on
+     * top of the EnsureDeveloperMode middleware on the routes
+     * themselves.
      *
      * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, keywords: list<string>}>
      */
@@ -194,11 +196,11 @@ final class CommandPaletteModal extends Component
         }
 
         if ($isDeveloper) {
-            // SAFE-tier only (T-16-33 — DESTRUCTIVE commands deliberately
+            // SAFE-tier only — DESTRUCTIVE commands deliberately
             // EXCLUDED from the palette to prevent muscle-memory
-            // disasters; they remain reachable via /dev/artisan's
-            // fallback Flux modal which gates them behind the
-            // triple-gate).
+            // disasters; they remain reachable via the per-row
+            // Re-run affordance on the artisan timeline, which
+            // routes through the triple-gate.
             foreach ($commands->safe() as $spec) {
                 $registry[] = [
                     'id' => 'dev.cmd.'.$spec->name,

@@ -21,29 +21,32 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 
 /**
- * `/dev/artisan` runner page (CONTEXT D-25).
+ * `/dev/artisan` runner page.
  *
- * Page composition (UI-SPEC § Artisan timeline):
+ * Page composition:
  *   - Header: "Artisan runner" title + primary "⌘K Run a command"
- *     CTA (placeholder — 16-08 wires the palette).
+ *     CTA (dispatches `palette:open`).
  *   - Filter chips row: All | Running | Failed | Destructive
- *     (persisted via #[Url] query string for back-button + bookmarks).
- *   - Worker pre-flight pill: reads cache `dev_mode.queue_worker_heartbeat`
- *     and shows green when fresh (< now()-60s), muted otherwise.
+ *     (persisted via #[Url] query string for back-button +
+ *     bookmarks).
+ *   - Worker pre-flight pill: reads cache
+ *     `dev_mode.queue_worker_heartbeat` and shows green when fresh
+ *     (< now()-60s), muted otherwise.
  *   - Day-section timeline of run-cards.
- *   - Fallback Flux modal — SAFE-tier commands ONLY (B-2 fix; the
- *     DESTRUCTIVE commands are deliberately NOT exposed here per
- *     D-41 to prevent muscle-memory disasters; first-time DESTRUCTIVE
- *     runs reach the surface via the palette or `php artisan` CLI;
+ *   - Fallback Flux modal exposing SAFE-tier commands ONLY.
+ *     DESTRUCTIVE commands are deliberately NOT exposed here to
+ *     prevent muscle-memory disasters; first-time DESTRUCTIVE runs
+ *     reach the surface via the palette or `php artisan` CLI,
  *     subsequent runs via the timeline's per-row Re-run affordance
- *     which routes through the triple-gate).
+ *     which routes through the triple-gate.
  *
- * Method-DI on render() per PATTERN B.
+ * Method-DI on render() and on the spawn() / rerun() action
+ * methods — Livewire components never receive constructor DI per
+ * the project's larastan-strict-rules profile.
  *
- * mount() resets `dev_mode.advanced` on first-load-per-session as a
- * belt-and-braces (ResetAdvancedToggleOnLogin already covers the Login
- * event itself; this guards a long-lived browser tab that resumed an
- * old session without re-firing Login).
+ * mount() resets `dev_mode.advanced` on first-load-per-session as
+ * a belt-and-braces alongside ResetAdvancedToggleOnLogin (see
+ * mount()'s inline docblock for the precise gap it covers).
  */
 #[Layout('dev::layouts.dev-shell')]
 final class ArtisanRunnerPage extends Component

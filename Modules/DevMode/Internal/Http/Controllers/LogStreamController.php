@@ -15,49 +15,49 @@ use SplFileObject;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * GET /dev/logs/stream — SSE tail of the current daily-rolling Laravel
- * log file (`storage/logs/laravel-YYYY-MM-DD.log`). Defense-in-depth
- * re-applies the {@see RedactSecretsProcessor} on every emitted chunk
- * (CONTEXT D-29 — on-stream redaction; the on-write tap installed in
- * 16-04b is the first layer).
+ * GET /dev/logs/stream — SSE tail of the current daily-rolling
+ * Laravel log file (storage/logs/laravel-YYYY-MM-DD.log).
+ * Defense-in-depth re-applies the {@see RedactSecretsProcessor} on
+ * every emitted chunk; the on-write Monolog tap is the first layer.
  *
- * Architecture is the same spawn-then-tail SSE shape 16-04's
- * ArtisanStreamController uses, minus the spawn — we adopt an existing
- * file (the Laravel log) and tail it forever. Reuses the shared
- * {@see FileTailer} primitive 16-04 introduced so both SSE pipelines
- * live on one tested seam.
+ * Architecture is the same spawn-then-tail SSE shape
+ * ArtisanStreamController uses, minus the spawn — this controller
+ * adopts an existing file (the Laravel log) and tails it forever.
+ * Reuses the shared {@see FileTailer} primitive so both SSE
+ * pipelines live on one tested seam.
  *
- * Rotation detection (CONTEXT D-28):
+ * Rotation detection:
  *   - On each tick the controller `stat()`s the path + compares
- *     `inode` and current `filesize()` to the last-observed values.
- *   - An inode change OR `filesize() < lastSize` (truncation) is a
+ *     inode and current filesize() to the last-observed values.
+ *   - An inode change OR filesize() < lastSize (truncation) is a
  *     rotation: the controller computes the new day's filename via
- *     {@see UserDataPathService::dailyLogFile()} and reopens at offset 0.
- *   - At a midnight day-boundary the daily handler closes the old file
- *     and creates the new YYYY-MM-DD file; the controller detects this
- *     because the path on disk for `dailyLogFile()` changes and the
- *     old inode disappears.
+ *     {@see UserDataPathService::dailyLogFile()} and reopens at
+ *     offset 0.
+ *   - At a midnight day-boundary the daily handler closes the old
+ *     file and creates the new YYYY-MM-DD file; the controller
+ *     detects this because dailyLogFile()'s on-disk path changes
+ *     and the old inode disappears.
  *
- * Path safety (T-16-18): the log file path is computed from
+ * Path safety: the log file path is computed from
  * {@see UserDataPathService::dailyLogFile()} which respects the
- * `NATIVEPHP_STORAGE_PATH` retarget AND has no user-controlled input —
- * no LFI surface.
+ * NATIVEPHP_STORAGE_PATH retarget AND has no user-controlled input
+ * — no LFI surface.
  *
  * GET /dev/logs/context — paired JSON endpoint that returns the
- * ±radius lines surrounding the given absolute line offset (CONTEXT
- * D-31 click-to-expand). Offset is validated to a non-negative integer;
- * radius is clamped 0..50 (T-16-19). Same redaction is re-applied to
- * every returned line.
+ * ±radius lines surrounding the given absolute line offset
+ * (click-to-expand). Offset is clamped to the file's valid line
+ * range; radius is clamped 0..MAX_CONTEXT_RADIUS. Same redaction
+ * is re-applied to every returned line.
  */
 final readonly class LogStreamController
 {
-    /** Sleep interval between tail ticks (250 ms per D-28). */
+    /** Sleep interval between tail ticks (250 ms). */
     private const TICK_MICROSECONDS = 250_000;
 
     /** Maximum wall-clock seconds before the stream gracefully closes. */
     private const STREAM_TIMEOUT_SECONDS = 600;
 
-    /** Maximum radius for the context endpoint (T-16-19 mitigation). */
+    /** Maximum radius for the context endpoint (bounds a hostile ?radius=). */
     private const MAX_CONTEXT_RADIUS = 50;
 
     public function __construct(
@@ -106,7 +106,7 @@ final readonly class LogStreamController
                 $newInode = self::inodeOf($todayPath);
                 $newSize = self::sizeOf($todayPath);
 
-                // Rotation detection (D-28): the path changed (midnight
+                // Rotation detection: the path changed (midnight
                 // rollover), OR the inode changed (logrotate-style
                 // truncate + rename), OR the file shrank
                 // (logrotate-style copytruncate).

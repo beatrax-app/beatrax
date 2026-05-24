@@ -19,38 +19,38 @@ use Modules\DevMode\Internal\Queue\QueueActions;
 use Modules\DevMode\Internal\Services\DevModeFlag;
 
 /**
- * `/dev/queue/{tab}` — three-tab queue inspector (CONTEXT D-32).
+ * `/dev/queue/{tab}` — three-tab queue inspector.
  *
- * Deep-linkable URLs: pending / failed / batches each resolve to this
- * single component with the tab driven by the route param. The
+ * Deep-linkable URLs: pending / failed / batches each resolve to
+ * this single component with the tab driven by the route param. The
  * `/dev/queue` bare URL redirects to `/dev/queue/pending` (registered
  * in Routes/web.php).
  *
- * Per-row actions per D-33:
- *   - Pending (`jobs`):  delete
- *   - Failed  (`failed_jobs`): retry, delete (forget)
- *   - Batches (`job_batches`): retry-failures, cancel, delete
+ * Per-row actions:
+ *   - Pending (`jobs`):                delete
+ *   - Failed  (`failed_jobs`):         retry, delete (forget)
+ *   - Batches (`job_batches`):         retry-failures, cancel, delete
  *
- * Bulk actions per D-34:
+ * Bulk actions:
  *   - Bulk retry  → single-confirm modal (`bulk-retry`).
  *   - Bulk delete → triple-gate via the shared TripleGateModal
- *                   (`triple-gate:open`); the modal's confirmed event
- *                   listener calls executeBulkDelete().
+ *                   (`triple-gate:open`); the modal's confirmed
+ *                   event listener calls executeBulkDelete(), which
+ *                   re-validates all three gates before delegating
+ *                   to QueueActions::bulkDelete.
  *
- * Count tiles per D-35: three header tiles (Pending/Failed/Batches)
- * driven by raw query builder counts (Eloquent\Builder dynamic call
- * narrowing is the larastan-strict-rules ban — same pattern 16-04b
- * established for ArtisanRunnerPage). `wire:poll.5s` lives in the
- * Blade.
+ * Count tiles: three header tiles (Pending / Failed / Batches)
+ * driven by raw query-builder counts (Eloquent\\Builder dynamic-call
+ * narrowing is banned by the larastan-strict-rules profile).
+ * wire:poll.5s lives in the Blade.
  *
- * Inline JSON payload viewer per D-36: every payload (jobs +
- * failed_jobs) passes through RedactSecretsProcessor::scrub() at
- * render time so Bearer / JWT / OAuth-secret literals never reach the
- * browser. The viewer is opt-in via `expandedRowId` (one expanded row
- * per page).
+ * Inline JSON payload viewer: every payload (jobs + failed_jobs)
+ * passes through RedactSecretsProcessor::scrub() at render time so
+ * Bearer / JWT / OAuth-secret literals never reach the browser. The
+ * viewer is opt-in via expandedRowId (one expanded row per page).
  *
- * Method-DI on every action per PATTERN B — Livewire components never
- * receive constructor DI per phpstan-strict-rules.
+ * Method-DI on every action — Livewire components never receive
+ * constructor DI per the project's larastan-strict-rules profile.
  *
  * @phpstan-type QueueRow array{
  *   key: string,
@@ -92,8 +92,9 @@ final class QueueInspectorPage extends Component
 
     /**
      * mount() runs once per page load — Livewire 4 wires route params
-     * via the parameter name. Allow-list guard mirrors PATTERNS.md
-     * Pattern I (DriftPage::setTab).
+     * via the parameter name. Allow-list guard mirrors the same
+     * tab-switching pattern used elsewhere in the codebase (e.g.
+     * DriftPage::setTab).
      */
     public function mount(string $tab = 'pending'): void
     {
@@ -153,7 +154,8 @@ final class QueueInspectorPage extends Component
         if ($this->selected === []) {
             return;
         }
-        // Only the Failed tab surfaces bulk-retry per D-33.
+        // Only the Failed tab surfaces bulk-retry — pending and
+        // batches do not offer the retry-all affordance.
         if ($this->tab !== 'failed') {
             return;
         }
@@ -250,10 +252,10 @@ final class QueueInspectorPage extends Component
     ): View {
         $connection = $db->connection();
 
-        // Count tiles (D-35) — all three counts regardless of active
-        // tab. Use raw query builder per the larastan-strict pattern
-        // 16-04b established (Eloquent\Builder __call → Query\Builder
-        // forwarding triggers staticMethod.dynamicCall flags).
+        // Count tiles — all three counts regardless of active tab.
+        // Use the raw query builder per the larastan-strict pattern
+        // (Eloquent\\Builder __call → Query\\Builder forwarding
+        // triggers staticMethod.dynamicCall flags).
         $pendingCount = $connection->table('jobs')->count();
         $failedCount = $connection->table('failed_jobs')->count();
         $batchesCount = $connection->table('job_batches')

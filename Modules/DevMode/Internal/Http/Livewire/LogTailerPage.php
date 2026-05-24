@@ -13,17 +13,18 @@ use Livewire\Component;
 /**
  * /dev/logs page — live tail of the daily-rotated Laravel log file
  * with severity multi-select + channel filter + contains-filter +
- * pause/resume + 10k client-side ring buffer + click-to-expand ±10
- * lines of context (CONTEXT D-31).
+ * pause/resume + 10k client-side ring buffer + click-to-expand
+ * ±10 lines of context.
  *
  * Server state is minimal — every filter is `#[Url]` so the page is
- * deep-linkable. The 10k-line scrollback is a CLIENT-side Alpine ring
- * buffer (the server never holds the buffer); pause/resume is purely
- * client-side too (the SSE controller has no notion of pause — the
- * Alpine handler simply closes + re-opens the EventSource).
+ * deep-linkable. The 10k-line scrollback is a CLIENT-side Alpine
+ * ring buffer (the server never holds the buffer); pause/resume is
+ * purely client-side too (the SSE controller has no notion of pause
+ * — the Alpine handler simply closes + re-opens the EventSource).
  *
- * Pattern B from PATTERNS.md: no constructor on Livewire Components;
- * collaborators arrive via method-DI on `render()`.
+ * No constructor: Livewire components never receive constructor DI
+ * per the project's larastan-strict-rules profile. Collaborators
+ * arrive via method-DI on render().
  */
 #[Layout('dev::layouts.dev-shell')]
 final class LogTailerPage extends Component
