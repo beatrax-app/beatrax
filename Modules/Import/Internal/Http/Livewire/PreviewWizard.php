@@ -346,7 +346,24 @@ final class PreviewWizard extends Component
         ConfirmsImports $confirmer,
         CurrentUser $currentUser,
         UrlGenerator $urls,
+        PreviewCache $cache,
+        DatabaseManager $db,
     ): void {
+        // Defense-in-depth: the Confirm button is always rendered in the
+        // page header and only disabled via the `@disabled` attribute when
+        // the user still has accounts to name. The DOM-level guard can be
+        // bypassed via devtools, so refuse to proceed server-side when
+        // any of the naming preconditions are still unmet. Matches the
+        // `$canConfirmImport` computed condition in preview-wizard.blade.php.
+        if ($this->needsIcsAccountName($currentUser, $db)
+            || $this->needsPaypalAccountName($currentUser, $db)) {
+            return;
+        }
+        $preview = $cache->getPreview($this->importRunId);
+        if ($preview !== null && count($preview->accountsToName) > 0) {
+            return;
+        }
+
         try {
             ($confirmer)($this->importRunId, $currentUser->user());
         } catch (PreviewExpiredException) {
