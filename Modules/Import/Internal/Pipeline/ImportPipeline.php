@@ -18,6 +18,7 @@ use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
+use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Throwable;
@@ -67,6 +68,8 @@ final class ImportPipeline
         /** @var array<string, UnknownIban> $unknownIbans */
         $unknownIbans = [];
         $lastResolvedAccountId = null;
+        /** @var array<int, ?string> $accountNameCache  accountId → name, populated lazily */
+        $accountNameCache = [];
 
         try {
             foreach ($this->parse->run($localPath, $sourceFormat, $accounts, $user) as $source) {
@@ -81,8 +84,10 @@ final class ImportPipeline
                         rowIndex: $source->sourceRowIndex,
                         status: 'error',
                         accountId: null,
+                        sourceAccountName: null,
                         bookedAt: $source->bookedAt->format('d-m-Y'),
                         counterpartyName: $source->counterpartyName,
+                        counterpartyIban: $source->counterpartyIban,
                         categoryName: null,
                         amountMinor: $source->amountMinor,
                         currency: $source->currency,
@@ -98,6 +103,7 @@ final class ImportPipeline
                 /** @var KnownAccount $resolution */
                 $accountId = $resolution->accountId;
                 $lastResolvedAccountId = $accountId;
+                $sourceAccountName = $this->accountNameFor($accountId, $accountNameCache);
 
                 try {
                     $normalized = $this->normalize->run($source, $accountId, $user, $importRunId, $sourceFormat);
@@ -109,8 +115,10 @@ final class ImportPipeline
                         rowIndex: $source->sourceRowIndex,
                         status: 'error',
                         accountId: $accountId,
+                        sourceAccountName: $sourceAccountName,
                         bookedAt: $source->bookedAt->format('d-m-Y'),
                         counterpartyName: $source->counterpartyName,
+                        counterpartyIban: $source->counterpartyIban,
                         categoryName: null,
                         amountMinor: $source->amountMinor,
                         currency: $source->currency,
@@ -135,8 +143,10 @@ final class ImportPipeline
                     rowIndex: $source->sourceRowIndex,
                     status: $disposition->status(),
                     accountId: $accountId,
+                    sourceAccountName: $sourceAccountName,
                     bookedAt: $source->bookedAt->format('d-m-Y'),
                     counterpartyName: $source->counterpartyName,
+                    counterpartyIban: $source->counterpartyIban,
                     categoryName: null,
                     amountMinor: $source->amountMinor,
                     currency: $source->currency,
@@ -164,8 +174,10 @@ final class ImportPipeline
                 rowIndex: 0,
                 status: 'error',
                 accountId: null,
+                sourceAccountName: null,
                 bookedAt: null,
                 counterpartyName: null,
+                counterpartyIban: null,
                 categoryName: null,
                 amountMinor: null,
                 currency: null,
@@ -212,5 +224,26 @@ final class ImportPipeline
             $user,
             $metadata->withImportRunId($importRunId)->withAccountId($accountId),
         );
+    }
+
+    /**
+     * Resolves an Account → name lookup, memoised per preview() call. A
+     * typical ASN export covers 1-3 distinct source accounts, so the cache
+     * keeps the per-row overhead at one SELECT for the entire run instead
+     * of one per row.
+     *
+     * @param  array<int, ?string>  $cache  in-out reference
+     */
+    private function accountNameFor(int $accountId, array &$cache): ?string
+    {
+        if (array_key_exists($accountId, $cache)) {
+            return $cache[$accountId];
+        }
+
+        /** @var Account|null $account */
+        $account = Account::query()->whereKey($accountId)->first();
+        $cache[$accountId] = $account?->name;
+
+        return $cache[$accountId];
     }
 }
