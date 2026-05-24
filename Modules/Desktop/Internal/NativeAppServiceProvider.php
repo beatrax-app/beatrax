@@ -6,6 +6,7 @@ namespace Modules\Desktop\Internal;
 
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
+use Native\Desktop\Contracts\ProvidesPhpIni;
 use Native\Desktop\Contracts\WindowManager;
 use Native\Desktop\Facades\Menu;
 
@@ -54,7 +55,7 @@ use Native\Desktop\Facades\Menu;
  * `resources/brand/tray-icon.png` (with a `@2x` sibling) and is staged
  * into the build by `scripts/nativephp_stage_build_resources.php`.
  */
-final class NativeAppServiceProvider
+final class NativeAppServiceProvider implements ProvidesPhpIni
 {
     /**
      * Default window dimensions. Pulled into named constants so the
@@ -68,11 +69,61 @@ final class NativeAppServiceProvider
 
     private const WINDOW_HEIGHT = 800;
 
+    /**
+     * Upload-related php.ini ceiling for the bundled NativePHP runtime.
+     *
+     * The bundled PHP ships with the stock `upload_max_filesize = 2M` /
+     * `post_max_size = 8M` defaults — well below the wizard's own
+     * server-side `max:10240` (10 MB) Livewire validator ceiling. A
+     * larger statement upload (multi-page ICS PDF, an `.eml` archive,
+     * an MT940 export) fails at the PHP layer BEFORE Livewire's
+     * validator sees the file, and Livewire surfaces the failure as
+     * "The files.0 failed to upload." with no actionable context.
+     *
+     * The 20 MB ceiling here matches the wizard's largest single-file
+     * upload (`.eml` capped at 20 MB inside UploadWizard::rules()) plus
+     * a multipart-envelope headroom. The mbox arm allows up to 1 GB
+     * — that path is rare and the user opts into it by selecting the
+     * mbox issuer, so the standard 20 MB ceiling is the sensible
+     * default; mbox uploads are intentionally a deferred-improvement
+     * surface (the bundled-PHP `post_max_size` would need to grow in
+     * lockstep with any mbox-size ceiling increase, but the 20 MB
+     * default is enough for every other upload path).
+     */
+    private const UPLOAD_MAX_FILESIZE = '20M';
+
+    private const POST_MAX_SIZE = '20M';
+
     public function __construct(
         private readonly WindowManager $windows,
         private readonly AppMenuBuilder $appMenu,
         private readonly FirstLaunchBootstrap $bootstrap,
     ) {}
+
+    /**
+     * php.ini overrides applied to every PHP subprocess the NativePHP
+     * shell spawns (artisan, queue:work, schedule:run, the embedded
+     * web server). NativePHP merges the returned array on top of the
+     * Electron-side defaults defined in
+     * `nativephp/electron/electron-plugin/src/server/php.ts`'s
+     * `getDefaultPhpIniSettings()` (memory_limit + curl/openssl
+     * cainfo), then converts each entry into a `-d key=value` flag at
+     * spawn time.
+     *
+     * Returns key/value pairs as strings — the NativePHP loader does
+     * not coerce types, so a numeric `512` would land as
+     * `-d upload_max_filesize=512` (bytes, not megabytes) and silently
+     * shrink the limit instead of growing it.
+     *
+     * @return array<string, string>
+     */
+    public function phpIni(): array
+    {
+        return [
+            'upload_max_filesize' => self::UPLOAD_MAX_FILESIZE,
+            'post_max_size' => self::POST_MAX_SIZE,
+        ];
+    }
 
     public function boot(): void
     {
