@@ -86,6 +86,20 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     'dev.logs',
     'dev.logs.stream',
     'dev.logs.context',
+    // 16-06: queue inspector surfaces. The framework-managed `jobs`,
+    // `failed_jobs`, and `job_batches` tables are system-wide on a
+    // single-user-per-machine install (Laravel does not user-scope
+    // the queue tables); the EnsureDeveloperMode gate blocks
+    // non-developers entirely. `dev.queue` is the redirect, the
+    // canonical route is `dev.queue.tab` with a route param.
+    'dev.queue',
+    'dev.queue.tab',
+    // 16-06: Horizon iframe (D-38). The route is conditionally
+    // registered only when config('app.dev_mode')=true AND the
+    // Horizon package is installed; when registered it surfaces an
+    // <iframe src="/horizon"> wrapper — the iframe target has its own
+    // auth gate. EnsureDeveloperMode covers the wrapper.
+    'dev.horizon',
 ];
 
 /**
