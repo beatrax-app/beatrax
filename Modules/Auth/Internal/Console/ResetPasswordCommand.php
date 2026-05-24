@@ -13,7 +13,7 @@ use Modules\Core\Models\User;
  * Interactive CLI fallback for resetting a user's password.
  *
  * A local-only install has no SMTP and no other operator-driven way back
- * in if every recovery code is spent: `diederik:reset-password <username>`
+ * in if every recovery code is spent: `beatrax:reset-password <username>`
  * is that path. It prompts for the new password twice through hidden
  * input, validates the two entries match and meet the twelve-character
  * minimum, writes the new hash, and sets
@@ -30,7 +30,7 @@ class ResetPasswordCommand extends Command
     private const MINIMUM_PASSWORD_LENGTH = 12;
 
     /** @var string */
-    protected $signature = 'diederik:reset-password {username : Username of the account to reset}';
+    protected $signature = 'beatrax:reset-password {username : Username of the account to reset}';
 
     /** @var string */
     protected $description = 'Interactively reset a user password. Refuses non-interactive use.';
@@ -45,7 +45,7 @@ class ResetPasswordCommand extends Command
     public function handle(): int
     {
         if (! $this->input->isInteractive()) {
-            $this->error('diederik:reset-password must be run interactively; there is no password flag.');
+            $this->error('beatrax:reset-password must be run interactively; there is no password flag.');
 
             return self::FAILURE;
         }

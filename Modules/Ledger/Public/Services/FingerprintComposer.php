@@ -44,7 +44,7 @@ final class FingerprintComposer
      * `normalize()` output changes; a stored row with a lower version
      * stamp signals "re-derive the fingerprint before comparing against
      * the current algorithm". Re-derive existing rows via the
-     * `diederik:rederive-fingerprints` artisan command when bumping past
+     * `beatrax:rederive-fingerprints` artisan command when bumping past
      * this version.
      */
     public const NORMALIZATION_VERSION = 3;

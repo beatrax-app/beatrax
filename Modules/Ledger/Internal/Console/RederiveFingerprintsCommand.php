@@ -27,7 +27,7 @@ use Modules\Ledger\Internal\Services\FingerprintRederiveService;
 final class RederiveFingerprintsCommand extends Command
 {
     /** @var string */
-    protected $signature = 'diederik:rederive-fingerprints
+    protected $signature = 'beatrax:rederive-fingerprints
         {--confirm : Apply the update inside a single DB transaction.}
         {--dry-run : Compute the new fingerprints in memory and report without writing.}';
 

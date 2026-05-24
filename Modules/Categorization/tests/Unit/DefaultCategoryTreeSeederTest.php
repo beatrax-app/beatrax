@@ -97,10 +97,10 @@ it('never demotes a per-user category that shares a slug with a global default',
     expect($globalCount)->toBe(1);
 });
 
-it('runs from the diederik:install command via the UserInstalled listener', function (): void {
+it('runs from the beatrax:install command via the UserInstalled listener', function (): void {
     // Drive the install command end-to-end (NOT Event::fake — we want the
     // SeedDefaultCategoryTree listener to actually fire on UserInstalled).
-    $exit = $this->app->make(ConsoleKernel::class)->call('diederik:install', [
+    $exit = $this->app->make(ConsoleKernel::class)->call('beatrax:install', [
         '--username' => 'wessel',
         '--password' => 'opensesame',
         '--period-start-day' => 1,
