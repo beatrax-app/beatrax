@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace Modules\DevMode\Internal\Doctor;
 
 /**
- * Pure parser for `beatrax:doctor`'s stdout (CONTEXT D-43).
+ * Pure parser for `beatrax:doctor`'s stdout.
  *
  * The DoctorCommand emits one line per probe in
- * `sprintf('%-24s %-8s %s', $label, $severity, $message)` format. The
+ * sprintf('%-24s %-8s %s', $label, $severity, $message) format. The
  * severity column is one of:
  *
- *   - `ok`        → mapped to `pass` (UI-SPEC § Color → Accent #10 emerald check)
+ *   - `ok`        → mapped to `pass` (emerald check)
  *   - `warning`   → mapped to `warn` (amber)
  *   - `critical`  → mapped to `fail` (rose X)
- *   - `info`      → kept as `info` (the ext-imap row uses a distinct severity bucket)
+ *   - `info`      → kept as `info` (distinct severity bucket for
+ *                   informational rows like the ext-imap status)
  *
  * The parser SKIPS the banner / divider / summary lines:
  *   - The first two header lines ("beatrax:doctor" + "-----------------")

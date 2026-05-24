@@ -8,13 +8,12 @@ use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Dto\AppAction;
 
 /**
- * Default AppActionRegistry concrete bound by DevModeServiceProvider.
+ * Null-shape AppActionRegistry concrete.
  *
- * Returns an empty action list. The 16-08 command-palette plan
- * replaces this binding with `AppActionRegistryImpl`, which mirrors
- * the Phase 15 app-menu entries. The Null shape exists so this plan's
- * tests can resolve the contract without forcing a real
- * implementation.
+ * Returns an empty action list. Exists as a fallback so consumer
+ * code can resolve the contract from the container without bound()
+ * guards when the curated roster (AppActionRegistryImpl) has not
+ * been wired — e.g. in ad-hoc unit tests.
  */
 final class NullAppActionRegistry implements AppActionRegistry
 {

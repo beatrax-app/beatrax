@@ -9,25 +9,24 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\DevMode\Internal\Audit\DevModeActivity;
 
 /**
- * `php artisan beatrax:prune-dev-audit --older-than=Nd` — manual prune of
- * dev_mode_audit rows older than N days.
+ * `php artisan beatrax:prune-dev-audit --older-than=Nd` — manual
+ * prune of dev_mode_audit rows older than N days.
  *
- * The project policy is "History: Full history retained forever"
- * (CLAUDE.md), so this command is NOT scheduled. It exists for the
- * operator's manual use only — e.g. after a one-off noisy test that
- * generated thousands of rows.
+ * The project policy is "History: full history retained forever" so
+ * this command is NOT scheduled. It exists for the operator's
+ * manual use only — e.g. after a one-off noisy test that generated
+ * thousands of rows.
  *
- * Tier: SAFE (CONTEXT D-12 implies any read/cleanup over the dev_mode
- * surface is SAFE because the runner already gates on the developer
- * role). Listed in CommandRegistry as SAFE so the fallback modal can
- * surface it once 16-04b registers the page.
+ * Tier: SAFE — listed in CommandRegistry so the runner's fallback
+ * modal can surface it. Any cleanup over the dev_mode surface is
+ * SAFE because the runner already gates on the developer role.
  *
  * Validation:
  *   - `--older-than` is required (no default — operator must opt in).
  *   - Must be a positive integer.
  *
- * Deletes via the spatie Activity model's eloquent query so the
- * configured table_name override resolves correctly.
+ * Deletes via the spatie Activity model's Eloquent query so the
+ * dev_mode_audit table override resolves correctly.
  */
 final class PruneDevAuditCommand extends Command
 {

@@ -7,16 +7,15 @@ namespace Modules\DevMode\Internal\Services;
 use Illuminate\Contracts\Config\Repository;
 
 /**
- * Thin DI seam over `config('app.dev_mode')`.
+ * Thin DI seam over config('app.dev_mode').
  *
- * Exists so the triple-gate (D-20 / D-21 / D-22) can validate the
- * first lock ("Dev Mode is ON") through a contract that tests can
- * mock without poking `config()` directly. Mirrors PATTERNS.md
- * "Pattern A — DI-only" intent.
+ * Exists so the triple-gate (env-pinned dev-mode + session-scoped
+ * Advanced toggle + typed app-name) can validate the first lock —
+ * "Dev Mode is ON" — through a contract that tests can mock without
+ * poking config() directly.
  *
- * The default Laravel value of `config('app.dev_mode')` is unset
- * (null); operators flip it on by setting `APP_DEV_MODE=true` in
- * `.env` per CONTEXT D-20.
+ * The default Laravel value of config('app.dev_mode') is unset (null);
+ * operators flip it on by setting APP_DEV_MODE=true in .env.
  */
 final readonly class DevModeFlag
 {

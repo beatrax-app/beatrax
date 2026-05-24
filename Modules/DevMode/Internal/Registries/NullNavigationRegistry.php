@@ -8,13 +8,12 @@ use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\DevMode\Public\Dto\NavigationEntry;
 
 /**
- * Default NavigationRegistry concrete bound by DevModeServiceProvider.
+ * Null-shape NavigationRegistry concrete.
  *
- * Returns an empty entry list. The 16-08 command-palette plan
- * replaces this binding with `NavigationRegistryImpl`, which
- * enumerates every `Route::has(...)`-registered authenticated app
- * view. The Null shape exists so this plan's tests can resolve the
- * contract without forcing a real implementation.
+ * Returns an empty entry list. Exists as a fallback so consumer
+ * code can resolve the contract from the container without bound()
+ * guards when the curated roster (NavigationRegistryImpl) has not
+ * been wired — e.g. in ad-hoc unit tests.
  */
 final class NullNavigationRegistry implements NavigationRegistry
 {
