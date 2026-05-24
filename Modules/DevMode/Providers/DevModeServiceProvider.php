@@ -4,16 +4,29 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Providers;
 
+use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Queue\QueueManager;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\DevMode\Internal\Audit\NullAuditWriter;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
+use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
+use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\CommandRegistry;
+use Modules\DevMode\Internal\Console\PruneDevAuditCommand;
+use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
+use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
+use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 use Modules\DevMode\Internal\Http\Middleware\EnsureDeveloperMode;
+use Modules\DevMode\Internal\Listeners\ResetAdvancedToggleOnLogin;
+use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
+use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
@@ -25,6 +38,7 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
+use Spatie\Activitylog\Support\ActivityLogger;
 
 /**
  * Wires the DevMode module.
@@ -260,10 +274,36 @@ final class DevModeServiceProvider extends ServiceProvider
 
         $this->app->singleton(NavigationRegistry::class, NullNavigationRegistry::class);
         $this->app->singleton(AppActionRegistry::class, NullAppActionRegistry::class);
-        $this->app->singleton(AuditWriter::class, NullAuditWriter::class);
+
+        // 16-04b — REPLACE the 16-03 NullAuditWriter binding with the
+        // spatie-routed concrete. 16-05 swaps RedactionExcerptCap's
+        // constructor to inject OAuthScrubSet; this binding chain is
+        // unchanged across the upgrade because RedactionExcerptCap +
+        // RedactSecretsProcessor are both resolved via container DI.
+        $this->app->singleton(RedactionExcerptCap::class, static fn (): RedactionExcerptCap => new RedactionExcerptCap);
+
+        // Container singleton for the Monolog on-write processor — the
+        // PushRedactProcessor tap class resolves THIS instance via
+        // app(RedactSecretsProcessor::class) so 16-05's constructor-DI
+        // upgrade (adding OAuthScrubSet) propagates automatically
+        // without touching PushRedactProcessor or config/logging.php.
+        $this->app->singleton(RedactSecretsProcessor::class, static fn (): RedactSecretsProcessor => new RedactSecretsProcessor);
+
+        $this->app->singleton(AuditWriter::class, static fn (Application $app): SpatieAuditWriter => new SpatieAuditWriter(
+            $app->make(CurrentUser::class),
+            $app->make(Clock::class),
+            $app->make(RedactionExcerptCap::class),
+            $app->make(ActivityLogger::class),
+        ));
+
+        $this->app->singleton(FinalizeRunAudit::class, static fn (Application $app): FinalizeRunAudit => new FinalizeRunAudit(
+            $app->make(AuditWriter::class),
+            $app->make(RunRegistry::class),
+            $app->make(Clock::class),
+        ));
     }
 
-    public function boot(Router $router, LivewireManager $livewire): void
+    public function boot(Router $router, LivewireManager $livewire, Dispatcher $events): void
     {
         $router->aliasMiddleware('ensureDeveloperMode', EnsureDeveloperMode::class);
 
@@ -278,5 +318,35 @@ final class DevModeServiceProvider extends ServiceProvider
         }
 
         $livewire->component('dev.overview-page', DevOverviewPage::class);
+        $livewire->component('dev.triple-gate-modal', TripleGateModal::class);
+        $livewire->component('dev.artisan-runner-page', ArtisanRunnerPage::class);
+        $livewire->component('dev.audit-log-page', AuditLogPage::class);
+
+        // W-8 FIX: register the queue-worker heartbeat via the
+        // QueueManager::looping(closure) form. The event-listener form
+        // (Looping::class) does NOT reliably fire under Laravel 13's
+        // queue:work — only the closure-callbacks do. The closure
+        // resolves WriteWorkerHeartbeat from the container on every
+        // tick so its DI dependencies (Clock, CacheRepository) stay
+        // bound to the latest container singletons.
+        /** @var QueueManager $queueManager */
+        $queueManager = $this->app->make(QueueManager::class);
+        $appLocal = $this->app;
+        $queueManager->looping(static function () use ($appLocal): void {
+            /** @var WriteWorkerHeartbeat $heartbeat */
+            $heartbeat = $appLocal->make(WriteWorkerHeartbeat::class);
+            ($heartbeat)();
+        });
+
+        // CONTEXT D-20 — the Advanced toggle resets to OFF on every
+        // successful Login. The runner page's mount() resets a SECOND
+        // time on first-load-per-session as a belt-and-braces.
+        $events->listen(Login::class, [ResetAdvancedToggleOnLogin::class, 'handle']);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                PruneDevAuditCommand::class,
+            ]);
+        }
     }
 }
