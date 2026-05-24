@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
@@ -53,6 +54,21 @@ function queueGateSetDevModeFlag(bool $on): void
     $config->set('app.dev_mode', $on);
 }
 
+/**
+ * Open all three triple-gate locks for the current request.
+ * executeBulkDelete re-validates the gates as defense-in-depth on
+ * top of TripleGateModal's enforcement, so any test that fires
+ * `triple-gate:confirmed` directly (bypassing the modal) must seed
+ * the same three signals.
+ */
+function queueGateOpenAllGates(): void
+{
+    queueGateSetDevModeFlag(true);
+    /** @var Session $session */
+    $session = app(Session::class);
+    $session->put('dev_mode.advanced', true);
+}
+
 function seedFailedJobForGate(string $uuid): void
 {
     DB::table('failed_jobs')->insert([
@@ -100,6 +116,7 @@ it('the rows are NOT deleted until the triple-gate confirmed event fires', funct
 it('the triple-gate:confirmed event with the queue.bulk.delete discriminator triggers the actual delete + audit row', function (): void {
     $user = queueGateUser('q-gate-confirmed');
     $this->actingAs($user);
+    queueGateOpenAllGates();
 
     seedFailedJobForGate('uuid-confirmed-1');
     seedFailedJobForGate('uuid-confirmed-2');
@@ -108,11 +125,14 @@ it('the triple-gate:confirmed event with the queue.bulk.delete discriminator tri
         ->set('selected', ['uuid-confirmed-1', 'uuid-confirmed-2'])
         // Simulate the gate's confirmed dispatch back to the page —
         // mirrors what TripleGateModal::confirm() emits after the
-        // three gates pass.
+        // three gates pass. The defense-in-depth re-validation in
+        // executeBulkDelete reads dev_mode flag + session.advanced +
+        // confirmed_typed, so the payload must carry the typed token.
         ->dispatch(
             'triple-gate:confirmed',
             command: 'queue.bulk.delete',
             args: ['tab' => 'failed', 'count' => 2],
+            confirmed_typed: 'beatrax',
         );
 
     // Both rows should now be gone.
@@ -130,6 +150,7 @@ it('the triple-gate:confirmed event with the queue.bulk.delete discriminator tri
 it('a triple-gate:confirmed event with a DIFFERENT command (NOT queue.bulk.delete) does NOT delete queue rows', function (): void {
     $user = queueGateUser('q-gate-discriminator');
     $this->actingAs($user);
+    queueGateOpenAllGates();
 
     seedFailedJobForGate('uuid-not-deleted-1');
     seedFailedJobForGate('uuid-not-deleted-2');
@@ -143,6 +164,7 @@ it('a triple-gate:confirmed event with a DIFFERENT command (NOT queue.bulk.delet
             // is mounted with queue rows selected.
             command: 'db:restore',
             args: ['from' => '/tmp/backup.sqlite'],
+            confirmed_typed: 'beatrax',
         );
 
     // Queue rows untouched — the discriminator did its job.
@@ -152,6 +174,7 @@ it('a triple-gate:confirmed event with a DIFFERENT command (NOT queue.bulk.delet
 it('bulk delete on the pending tab deletes from the jobs table (kind switching by tab)', function (): void {
     $user = queueGateUser('q-gate-pending');
     $this->actingAs($user);
+    queueGateOpenAllGates();
 
     $id1 = (int) DB::table('jobs')->insertGetId([
         'queue' => 'default',
@@ -176,9 +199,56 @@ it('bulk delete on the pending tab deletes from the jobs table (kind switching b
             'triple-gate:confirmed',
             command: 'queue.bulk.delete',
             args: ['tab' => 'pending', 'count' => 2],
+            confirmed_typed: 'beatrax',
         );
 
     expect(DB::table('jobs')->whereIn('id', [$id1, $id2])->count())->toBe(0);
+});
+
+it('executeBulkDelete refuses when the dev_mode flag flipped off between gate confirm + listener fire', function (): void {
+    $user = queueGateUser('q-gate-defense-dev-mode');
+    $this->actingAs($user);
+
+    seedFailedJobForGate('uuid-dim-1');
+    seedFailedJobForGate('uuid-dim-2');
+
+    // Advanced ON, typed token correct — but the env flag is OFF.
+    /** @var Session $session */
+    $session = app(Session::class);
+    $session->put('dev_mode.advanced', true);
+    queueGateSetDevModeFlag(false);
+
+    Livewire::test(QueueInspectorPage::class, ['tab' => 'failed'])
+        ->set('selected', ['uuid-dim-1', 'uuid-dim-2'])
+        ->dispatch(
+            'triple-gate:confirmed',
+            command: 'queue.bulk.delete',
+            args: ['tab' => 'failed', 'count' => 2],
+            confirmed_typed: 'beatrax',
+        );
+
+    // Defense-in-depth re-validation refused the listener — rows untouched.
+    expect(DB::table('failed_jobs')->whereIn('uuid', ['uuid-dim-1', 'uuid-dim-2'])->count())->toBe(2);
+});
+
+it('executeBulkDelete refuses when the confirmed_typed token is wrong (defense-in-depth gate 3)', function (): void {
+    $user = queueGateUser('q-gate-defense-typed');
+    $this->actingAs($user);
+    queueGateOpenAllGates();
+
+    seedFailedJobForGate('uuid-typed-1');
+    seedFailedJobForGate('uuid-typed-2');
+
+    Livewire::test(QueueInspectorPage::class, ['tab' => 'failed'])
+        ->set('selected', ['uuid-typed-1', 'uuid-typed-2'])
+        ->dispatch(
+            'triple-gate:confirmed',
+            command: 'queue.bulk.delete',
+            args: ['tab' => 'failed', 'count' => 2],
+            confirmed_typed: 'BEATRAX', // wrong case — gate is case-sensitive
+        );
+
+    expect(DB::table('failed_jobs')->whereIn('uuid', ['uuid-typed-1', 'uuid-typed-2'])->count())->toBe(2);
 });
 
 it('the triple-gate is enforced through the global TripleGateModal — its three gates apply to queue bulk delete (D-22 composition check)', function (): void {
