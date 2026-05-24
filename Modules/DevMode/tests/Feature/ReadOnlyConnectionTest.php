@@ -7,21 +7,18 @@ use Modules\DevMode\Internal\Sql\ReadOnlySqliteConnection;
 use Modules\DevMode\Internal\Sql\WallClockCap;
 
 /*
- * Phase 16-07 Task 3 — ReadOnlySqliteConnection invariants
- * (defense-in-depth layer alongside SelectOnlyValidator).
+ * ReadOnlySqliteConnection invariants (defense-in-depth layer
+ * alongside SelectOnlyValidator).
  *
  * Covers:
- *   - Engine-level rejection — even if a non-SELECT slipped past the
- *     validator, the SQLite engine rejects the write because the
- *     PDO connection is opened with PRAGMA query_only = 1
- *     (SQLITE_READONLY error). Test 1 directly executes a write
- *     via ReadOnlySqliteConnection::execute().
- *   - Successful SELECT path returns the row set + duration_ms > 0.
- *   - WallClockCap mockable seam (W-6 fix): every execute() invokes
- *     WallClockCap::apply(5) exactly once before the query. Test
- *     mocks the seam and asserts the call. The runtime "query
- *     actually dies before 6s" assertion is documented manual-only
- *     in 16-VALIDATION.md.
+ *   - Engine-level rejection — even if a non-SELECT slipped past
+ *     the validator, the SQLite engine rejects the write because
+ *     the PDO connection is opened with PRAGMA query_only = 1
+ *     (SQLITE_READONLY error).
+ *   - Successful SELECT path returns the row set + duration_ms >= 0.
+ *   - WallClockCap mockable seam: every execute() invokes
+ *     WallClockCap::apply(5) before the query. The test mocks the
+ *     seam and asserts the call.
  */
 
 it('rejects a write attempt with SQLITE_READONLY (engine-level guard)', function (): void {
@@ -56,7 +53,7 @@ it('returns rows + duration_ms for a successful SELECT', function (): void {
     expect($result['duration_ms'])->toBeGreaterThanOrEqual(0);
 });
 
-it('calls WallClockCap::apply(5) at least once with the timeout value (W-6 mockable seam)', function (): void {
+it('calls WallClockCap::apply(5) at least once with the timeout value (mockable seam)', function (): void {
     $captured = [];
     $stub = new class($captured) extends WallClockCap
     {
@@ -82,9 +79,9 @@ it('calls WallClockCap::apply(5) at least once with the timeout value (W-6 mocka
     $conn->execute('SELECT 1');
 
     // execute() invokes apply(5) once to arm the cap, then apply(N)
-    // again after the query to RESTORE the previous limit (W-6 fix
-    // + test isolation): the seam test asserts the timeout value
-    // was applied at least once with the canonical 5-second value.
+    // again after the query to RESTORE the previous limit. The seam
+    // test asserts the timeout value was applied at least once
+    // with the canonical 5-second value.
     expect($stub->callsRef[0])->toBe(ReadOnlySqliteConnection::TIMEOUT_SECONDS);
     expect(count($stub->callsRef))->toBeGreaterThanOrEqual(1);
 });

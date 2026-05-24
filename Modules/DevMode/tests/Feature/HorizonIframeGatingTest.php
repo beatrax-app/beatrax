@@ -12,25 +12,24 @@ use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
 use Modules\DevMode\Internal\Http\Middleware\HorizonFrameAncestors;
 
 /*
- * Phase 16-06 Task 2 — Horizon iframe gating (D-38 two-signal).
+ * Horizon iframe gating (two-signal conditional registration).
  *
- * The `/dev/horizon` route is registered only when BOTH:
- *   1. `config('app.dev_mode') === true` (env-pinned), AND
- *   2. `class_exists(\Laravel\Horizon\HorizonServiceProvider::class)`
- *      (Horizon is require-dev per Phase 14 D-03; the class is
- *      present on the developer's Herd box but absent from a shipped
+ * The /dev/horizon route is registered only when BOTH:
+ *   1. config('app.dev_mode') === true (env-pinned), AND
+ *   2. class_exists(\Laravel\Horizon\HorizonServiceProvider::class)
+ *      (Horizon is require-dev; the class is present on the
+ *      developer's Herd box but absent from a shipped
  *      `composer install --no-dev` bundle).
  *
- * When either signal is false the route is absent from the
- * route table; an attempted GET returns 404 even for a developer
- * (the EnsureDeveloperMode middleware sits on top, but the route
- * simply doesn't exist — the 404 comes from the router itself).
+ * When either signal is false the route is absent from the route
+ * table; an attempted GET returns 404 even for a developer (the
+ * EnsureDeveloperMode middleware sits on top, but the route simply
+ * doesn't exist — the 404 comes from the router itself).
  *
- * Route registration is `static` (happens at boot before any request
- * reaches it). Tests that need to flip the config('app.dev_mode')
- * signal at runtime use a `RefreshApplication`-style reset; the
- * route registration code lives in `Modules/DevMode/Routes/web.php`
- * and is exercised on every `loadRoutesFrom()` boot.
+ * Route registration runs once at boot. Tests that need to flip
+ * the config('app.dev_mode') signal at runtime use
+ * horizonGatingReloadRoutes() to reset the router and re-apply the
+ * conditional registration.
  */
 
 function horizonGatingUser(string $username, bool $isDeveloper = true): User
@@ -104,12 +103,12 @@ function horizonGatingReloadRoutes(): void
 }
 
 it('asserts that the Horizon package class IS present in the test environment (precondition for the gating tests below)', function (): void {
-    // The full D-38 gate is a two-signal check; the class signal is
+    // The full gate is a two-signal check; the class signal is
     // platform-driven (Horizon is require-dev). On the developer's
-    // Herd box AND in CI it should be present, so the test below
-    // can exercise the env-flag side of the gate. If this assertion
-    // fails the test environment is broken — the rest of the gating
-    // tests then exercise only the env-flag side.
+    // Herd box AND in CI it should be present, so the tests below
+    // can exercise the env-flag side of the gate. If this
+    // assertion fails the test environment is broken — the rest of
+    // the gating tests then exercise only the env-flag side.
     expect(class_exists(HorizonServiceProvider::class))
         ->toBeTrue('Horizon package is expected to be installed in the dev/test environment.');
 });
@@ -180,9 +179,10 @@ it('drops the Horizon sidebar nav item DOM-absent when the dev.horizon route is 
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // Per D-38 the item is DOM-absent (not nav-disabled) when the
-    // route is not registered. No `>Horizon<` anchor text and no
-    // dev.horizon route stub should appear in the rendered HTML.
+    // The conditional Horizon item is DOM-absent (not
+    // nav-disabled) when the route is not registered. No
+    // `>Horizon<` anchor text and no dev.horizon route stub should
+    // appear in the rendered HTML.
     expect(str_contains($html, '>Horizon<'))
         ->toBeFalse('Horizon nav item should be DOM-absent when dev.horizon is not registered.');
     expect(str_contains($html, 'href="/dev/horizon"'))

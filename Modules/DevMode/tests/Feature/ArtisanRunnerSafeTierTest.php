@@ -13,24 +13,22 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 
 /*
- * Phase 16-04b Task 3 — ArtisanRunnerPage + AuditLogPage + fallback
- * SAFE-only modal + sidebar enable invariants.
+ * ArtisanRunnerPage + AuditLogPage + fallback SAFE-only modal +
+ * sidebar enable invariants.
  *
  * Headline regression guards:
  *   - GET /dev/artisan renders the header + filter chips + worker
  *     pre-flight pill + empty timeline for a fresh developer.
  *   - Worker pre-flight pill flips to "RUNNING" when the heartbeat
- *     key is fresh, "NOT RUNNING" otherwise (D-39).
- *   - The fallback Flux modal exposes SAFE-tier commands ONLY (B-2
- *     fix — Test 3). DESTRUCTIVE commands never appear in this
- *     surface. Test 3 is the canonical B-2 regression guard.
- *   - GET /dev/audit lists prior runs with tier coloring + non-zero
- *     exit-code styling.
- *   - Filtering /dev/audit?tier=destructive returns only destructive
- *     rows.
+ *     key is fresh, "NOT RUNNING" otherwise.
+ *   - The fallback Flux modal exposes SAFE-tier commands ONLY —
+ *     DESTRUCTIVE commands never appear in this surface.
+ *   - GET /dev/audit lists prior runs with tier coloring +
+ *     non-zero exit-code styling.
+ *   - Filtering /dev/audit?tier=destructive returns only
+ *     destructive rows.
  *   - The dev-shell sidebar's Artisan + Audit nav entries render
- *     WITHOUT the `nav-disabled` class (the dev.artisan + dev.audit
- *     routes are now registered).
+ *     WITHOUT the `nav-disabled` class.
  */
 
 function runnerDeveloper(string $username): User
@@ -83,7 +81,7 @@ it('shows worker pre-flight pill RUNNING when the heartbeat is fresh', function 
     $response->assertSee('Queue worker: RUNNING');
 });
 
-it('exposes SAFE-tier commands ONLY in the fallback modal — B-2 regression guard', function (): void {
+it('exposes SAFE-tier commands ONLY in the fallback modal (DESTRUCTIVE never appears here)', function (): void {
     $user = runnerDeveloper('runner-b2');
 
     $response = $this->actingAs($user)->get('/dev/artisan');
@@ -116,7 +114,7 @@ it('exposes SAFE-tier commands ONLY in the fallback modal — B-2 regression gua
         'beatrax:install',
     ];
     foreach ($destructiveNames as $name) {
-        expect(str_contains($html, $name))->toBeFalse("DESTRUCTIVE command {$name} must NOT appear in the runner page when no runs exist (B-2 fix)");
+        expect(str_contains($html, $name))->toBeFalse("DESTRUCTIVE command {$name} must NOT appear in the runner page when no runs exist");
     }
 });
 
@@ -191,9 +189,9 @@ it('filters /dev/audit?tier=destructive to only destructive rows', function (): 
     $response->assertStatus(200);
     $response->assertSee('migrate:fresh');
 
-    // The palette modal (16-08) embeds the SAFE-tier roster in its
-    // JSON registry below the audit page; isolate the assertion to
-    // the audit-page <main> region so the palette's "Run cache:clear"
+    // The palette modal embeds the SAFE-tier roster in its JSON
+    // registry below the audit page; isolate the assertion to the
+    // audit-page <main> region so the palette's "Run cache:clear"
     // dev row does not falsely satisfy the assertion.
     $html = (string) $response->getContent();
     $auditRegion = explode('@livewire(\'dev.command-palette-modal\')', $html)[0];
@@ -295,7 +293,7 @@ it('enables the Artisan + Audit sidebar nav items (drops nav-disabled when dev.a
         $label = $matches[2][$i];
         $classes = $matches[1][$i];
         if (in_array($label, ['Artisan', 'Audit'], true)) {
-            expect($classes)->not->toContain('nav-disabled', "Sidebar entry '{$label}' should NOT have nav-disabled after 16-04b registers its route");
+            expect($classes)->not->toContain('nav-disabled', "Sidebar entry '{$label}' should NOT have nav-disabled when its route is registered");
         }
     }
 });

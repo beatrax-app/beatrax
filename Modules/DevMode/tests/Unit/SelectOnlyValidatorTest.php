@@ -6,16 +6,17 @@ use Illuminate\Validation\ValidationException;
 use Modules\DevMode\Internal\Sql\SelectOnlyValidator;
 
 /*
- * Phase 16-07 Task 3 — SelectOnlyValidator (unit) invariants.
+ * SelectOnlyValidator unit invariants.
  *
- * Covers (RESEARCH § Pattern 5 verbatim):
- *   - Reject every non-SELECT first-token variant (INSERT / UPDATE /
- *     DELETE / DROP / WITH-write / semicolon-stack / comment-only-prefix).
- *     Each case throws ValidationException with the documented
- *     `sql=<reason>` shape.
- *   - Accept plain SELECT + SELECT with leading line + block comments +
- *     WHERE clauses + a CTE that READS.
- *   - Empty / whitespace-only input rejected with `sql=empty_statement`.
+ * Covers:
+ *   - Reject every non-SELECT first-token variant (INSERT / UPDATE
+ *     / DELETE / DROP / WITH-write / semicolon-stack /
+ *     comment-only-prefix). Each case throws ValidationException
+ *     with the documented `sql=<reason>` shape.
+ *   - Accept plain SELECT + SELECT with leading line + block
+ *     comments + WHERE clauses + a CTE that READS.
+ *   - Empty / whitespace-only input rejected with
+ *     `sql=empty_statement`.
  */
 
 it('rejects INSERT INTO statements', function (): void {
