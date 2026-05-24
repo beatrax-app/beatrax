@@ -17,23 +17,22 @@ use RuntimeException;
 /**
  * POST /dev/artisan/spawn — SAFE-tier spawn endpoint.
  *
- * Accepts `{command: string, args?: array<string, mixed>}` and returns
- * `{run_id, pid}` with HTTP 202. The actual process runs detached;
- * the SSE stream endpoint (ArtisanStreamController) tails its stdout
- * tmp file.
+ * Accepts {command: string, args?: array<string, mixed>} and
+ * returns {run_id, pid} with HTTP 202. The actual process runs
+ * detached; the SSE stream endpoint (ArtisanStreamController) tails
+ * its stdout tmp file.
  *
  * **DESTRUCTIVE-tier commands are rejected at this layer.** The
- * DESTRUCTIVE execution path lives in 16-04b behind the TripleGate
- * modal — that endpoint validates the triple-gate then calls
- * CommandSpawner directly. By keeping the rejection at this
- * controller, the SAFE-tier surface stays isolated and a future bug
- * that leaks the runner into the palette (16-08) cannot fire a
- * DESTRUCTIVE command through the SAFE pipe.
+ * DESTRUCTIVE execution path lives behind the TripleGate modal +
+ * DestructiveSpawnController, which re-validates the triple-gate
+ * server-side and then calls CommandSpawner directly. Keeping the
+ * rejection at this controller isolates the SAFE-tier surface so a
+ * future bug that leaks a DESTRUCTIVE name into the palette cannot
+ * fire it through the SAFE pipe.
  *
- * Defense-in-depth: the EnsureDeveloperMode middleware on the route
- * already gates non-developers (404). The arg-spec validation +
- * command-name whitelist add two more independent layers per the
- * Task 1 plan threat model (T-16-11 / T-16-SC2).
+ * Defense in depth: the EnsureDeveloperMode middleware on the route
+ * gates non-developers (404). The arg-spec validation + command-name
+ * whitelist add two more independent layers below.
  */
 final readonly class ArtisanSpawnController
 {

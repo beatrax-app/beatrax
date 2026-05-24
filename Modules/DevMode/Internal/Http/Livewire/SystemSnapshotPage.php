@@ -17,27 +17,28 @@ use Modules\DevMode\Internal\System\ConfigFlattener;
 use Throwable;
 
 /**
- * `/dev/system` env + effective-config snapshot (CONTEXT D-44).
+ * `/dev/system` env + effective-config snapshot.
  *
  * Renders the full operational fact sheet a developer needs when
  * debugging install state:
  *
  *   - PHP: version / sapi / php.ini path / extension list.
  *   - SQLite: 4 key PRAGMAs (journal_mode, synchronous, cache_size,
- *     page_size) + DB file path via {@see UserDataPathService::databaseFile()}
- *     + file size (best-effort).
+ *     page_size) + DB file path via
+ *     {@see UserDataPathService::databaseFile()} + file size
+ *     (best-effort).
  *   - Laravel: version, env, debug, locale, timezone.
  *   - Paths: base / app / storage / config / cache.
- *   - Env: filtered to `BEATRAX_*`, `NATIVEPHP_*`, `APP_KEY` — passed
+ *   - Env: filtered to BEATRAX_*, NATIVEPHP_*, APP_KEY — passed
  *     through {@see ConfigFlattener::redactSecretSuffixes()} so
- *     `APP_KEY` masks while `BEATRAX_DEV_MODE` renders plainly (Q4
- *     resolution).
+ *     APP_KEY masks while BEATRAX_DEV_MODE renders plainly.
  *   - Runtime: NativePHP version (if installed) via
- *     `InstalledVersions::getPrettyVersion()`; host OS via `php_uname`.
- *   - Effective config: `config()->all()` → flatten + redact via the
+ *     InstalledVersions::getPrettyVersion(); host OS via php_uname.
+ *   - Effective config: config()->all() → flatten + redact via the
  *     same denylist.
  *
- * Method-DI on `render()` per PATTERN B.
+ * Method-DI on render() — Livewire components never receive
+ * constructor DI per the project's larastan-strict-rules profile.
  */
 #[Layout('dev::layouts.dev-shell')]
 final class SystemSnapshotPage extends Component

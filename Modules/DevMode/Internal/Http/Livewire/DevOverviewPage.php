@@ -21,46 +21,52 @@ use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Throwable;
 
 /**
- * Dev Console overview page (UI-SPEC § /dev overview surfaces).
+ * Dev Console overview page.
  *
- * Primary visual anchor: the theme-locked dark `.console-pane` (fixed
- * #0b1220 bg / #f1f5f9 text regardless of theme). Three-column head:
- *   - Worker heartbeat (read from cache key {@see WriteWorkerHeartbeat::CACHE_KEY},
- *     rendered as "Ns ago · ttl 60s" when fresh; "NOT RUNNING" when
- *     stale or missing).
+ * Primary visual anchor: the theme-locked dark `.console-pane`
+ * (fixed #0b1220 bg / #f1f5f9 text regardless of theme).
+ * Three-column head:
+ *   - Worker heartbeat (read from cache key
+ *     {@see WriteWorkerHeartbeat::CACHE_KEY}, rendered as
+ *     "Ns ago · ttl 60s" when fresh; "NOT RUNNING" when stale or
+ *     missing).
  *   - Queue counts (pending / failed / active batches via raw query
- *     builder; the rendering Blade uses the same `data-testid`
+ *     builder; the rendering Blade uses the same data-testid
  *     markers downstream tests assert against).
  *   - Last command (most recent dev_mode_audit row, mono rendering).
  *
  * Console-pane tail: the last 8 lines of today's rolling daily log
- * file ({@see UserDataPathService::dailyLogFile()}), each line passed
- * through the same {@see RedactSecretsProcessor} that the on-write
- * Monolog tap + the on-stream log tailer apply (D-29 belt+braces).
+ * file ({@see UserDataPathService::dailyLogFile()}), each line
+ * passed through the same {@see RedactSecretsProcessor} that the
+ * on-write Monolog tap + the on-stream log tailer apply
+ * (belt-and-braces redaction).
  *
  * Recent-runs card: the calling developer's last 5 dev_mode_audit
- * rows; each row's link href encodes `?command=<encoded>` so a click
- * jumps to /dev/audit pre-filtered to the command in question.
+ * rows; each row's link href encodes `?command=<encoded>` so a
+ * click jumps to /dev/audit pre-filtered to the command in
+ * question.
  *
- * Open-alerts card: the {@see SystemAlertQuery::active()} read against
- * the current user — un-acknowledged system_alerts rows scoped to the
+ * Open-alerts card: SystemAlertQuery::active() against the current
+ * user — un-acknowledged system_alerts rows scoped to the
  * caller-or-system-wide cohort.
  *
- * Pattern B (PATTERNS.md): no constructor on a Livewire Component;
- * collaborators arrive as method-DI on render().
+ * No constructor — Livewire components never receive constructor
+ * DI per the project's larastan-strict-rules profile; collaborators
+ * arrive as method-DI on render().
  */
 #[Layout('dev::layouts.dev-shell')]
 final class DevOverviewPage extends Component
 {
-    /** Heading copy is verbatim per UI-SPEC § Copywriting. */
+    /** Empty-state copy for the recent-runs rail. */
     private const string RECENT_RUNS_EMPTY = 'No runs yet. Press ⌘K to run a command.';
 
+    /** Empty-state copy for the open-alerts rail. */
     private const string OPEN_ALERTS_EMPTY = 'No open alerts.';
 
-    /** Tail line cap — 8 lines per UI-SPEC § /dev overview surfaces. */
+    /** Tail line cap — 8 lines on the console-pane. */
     private const int TAIL_LINES = 8;
 
-    /** Recent-runs cap — 5 rows per UI-SPEC § /dev overview surfaces. */
+    /** Recent-runs cap — 5 rows on the rail. */
     private const int RECENT_RUNS_LIMIT = 5;
 
     public function render(
@@ -113,9 +119,8 @@ final class DevOverviewPage extends Component
     }
 
     /**
-     * Queue depth counts via the raw query builder (the same shape the
-     * Phase 16-06 QueueInspectorPage uses for larastan-strict
-     * compatibility).
+     * Queue depth counts via the raw query builder (matches the
+     * shape QueueInspectorPage uses for larastan-strict compatibility).
      *
      * @return array{pending: int, failed: int, batches: int}
      */
@@ -215,10 +220,10 @@ final class DevOverviewPage extends Component
 
     /**
      * Read the last 8 lines of today's daily-rolled Laravel log file
-     * and apply the on-stream redaction processor (defense-in-depth on
-     * top of the on-write Monolog tap — CONTEXT D-29). Missing log
-     * file is treated as "no lines yet" rather than a crash; the
-     * Blade renders the empty-state cursor regardless.
+     * and apply the on-stream redaction processor (defense-in-depth
+     * on top of the on-write Monolog tap). Missing log file is
+     * treated as "no lines yet" rather than a crash; the Blade
+     * renders the empty-state cursor regardless.
      *
      * For a daily-rotated log file (typical size: hundreds of KB) a
      * single `file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)`

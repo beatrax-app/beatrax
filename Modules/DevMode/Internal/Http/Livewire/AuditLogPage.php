@@ -13,15 +13,17 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * `/dev/audit` audit-log page (CONTEXT D-25).
+ * `/dev/audit` audit-log page.
  *
- * Lists the last ~20 dev_mode_audit rows filtered by tier / caller /
- * command. Filters persisted via #[Url] for back-button + bookmarks.
+ * Lists the most recent dev_mode_audit rows filtered by tier /
+ * caller / command, with ?before=<id> cursor pagination for walking
+ * back through history. Filters persist via #[Url] for back-button
+ * + bookmarks.
  *
- * Table per UI-SPEC § Dense tables:
+ * Table columns:
  *   command (mono) · tier chip · caller username · started_at
- *   diffForHumans · exit_code (rose if non-zero). Hover expands the
- *   row to show stdout/stderr excerpts + args JSON.
+ *   diffForHumans · exit_code (rose if non-zero). Hover expands
+ *   the row to show stdout/stderr excerpts + args JSON.
  */
 #[Layout('dev::layouts.dev-shell')]
 final class AuditLogPage extends Component
