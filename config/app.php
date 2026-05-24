@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 return [
 
-    'name' => env('APP_NAME', 'diederik'),
+    'name' => env('APP_NAME', 'beatrax'),
     'env' => env('APP_ENV', 'production'),
     'debug' => (bool) env('APP_DEBUG', false),
-    'dev_mode' => (bool) env('DIEDERIK_DEV_MODE', false),
+    'dev_mode' => (bool) env('BEATRAX_DEV_MODE', false),
     'url' => env('APP_URL', 'http://localhost'),
     'timezone' => env('APP_TIMEZONE', 'UTC'),
     'locale' => env('APP_LOCALE', 'en'),

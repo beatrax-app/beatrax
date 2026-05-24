@@ -16,7 +16,7 @@ return [
     | the provider's redirect-URI allow-list check passes.
     |
     | Set via `OAUTH_LOOPBACK_PORT` in .env when running under Laravel Herd
-    | (which serves the app at `https://diederik.test` on 443 but cannot
+    | (which serves the app at `https://beatrax.test` on 443 but cannot
     | be the OAuth callback host — both providers reject `.test` redirect
     | URIs). The user typically runs `php artisan serve --port=8000` in a
     | separate terminal for the callback handler and sets this to match.
