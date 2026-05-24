@@ -14,23 +14,14 @@ use Modules\EmailScan\Models\OAuthSecret;
  *
  * On every `saved` (created OR updated) and `deleted` event, calls
  * {@see OAuthScrubSet::bust()} so the next log line / audit row
- * recomputes the scrub-set from the current `oauth_secrets` table
- * state. Result: a rotated secret takes effect on the very next
- * write through the redaction pipeline (CONTEXT D-30).
+ * recomputes the scrub-set from the current oauth_secrets table
+ * state. A rotated secret therefore takes effect on the very next
+ * write through the redaction pipeline — no app restart required.
  *
- * Constructor DI on the singleton scrub-set (Pattern A in
- * PATTERNS.md — `final readonly` class, constructor DI). The
- * observer dispatch contract from Eloquent's
- * `Illuminate\Database\Eloquent\Concerns\HasEvents::observe()` will
- * forward each named event ('saved', 'deleted', ...) to a
- * matching public method on this class; we provide exactly the two
- * events the threat model requires.
- *
- * NOTE: Eloquent fires `saved` after both `created` and `updated`
- * lifecycles, so a single `saved` handler covers both transitions
- * without registering two methods. The `deleted` event is the
- * separate rotation-out path the OAuthScrubSet::load() honours when
- * it picks up the now-missing row.
+ * Eloquent fires `saved` after both `created` and `updated`
+ * lifecycles, so a single `saved` handler covers both transitions.
+ * The `deleted` event is the separate rotation-out path that lets
+ * OAuthScrubSet::load() drop the now-missing row from the set.
  */
 final readonly class BustOAuthScrubSetOnSecretChange
 {
