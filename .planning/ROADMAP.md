@@ -188,7 +188,35 @@ Plans:
   6. The command palette (⌘K on macOS, Ctrl+K on Windows/Linux) opens from any page with fuzzy search across registered views + Dev Console commands (Linear/Raycast aesthetic)
 
 **UI hint**: yes
-**Plans**: TBD
+**Plans**: 8 plans
+
+Plans:
+
+**Wave 1**
+
+- [ ] 16-01-PLAN.md — App-wide sidebar restructure + base layout polish + Tailwind v4 theme tokens
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 16-02-PLAN.md — diederik → beatrax full rename + Phase 12 impersonation surface removal
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 16-03-PLAN.md — DevMode module skeleton + EnsureDeveloperMode + Settings toggle + Wave 0 infra (DEVUI-01)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 16-04-PLAN.md — Artisan runner (SAFE + DESTRUCTIVE + triple-gate + SSE + cancel + heartbeat + audit pipeline) (DEVUI-02, DEVUI-03)
+
+**Wave 5** *(blocked on Wave 4, parallel)*
+
+- [ ] 16-05-PLAN.md — Log tailer + Monolog redaction (belt+braces) + OAuth scrub-set (DEVUI-04)
+- [ ] 16-06-PLAN.md — Queue inspector + Horizon iframe + dashboard toast retarget (DEVUI-05, DEVUI-08)
+- [ ] 16-07-PLAN.md — Dev overview + Doctor + System snapshot + SELECT-only SQL + schema viewer (DEVUI-06, DEVUI-07)
+
+**Wave 6** *(blocked on Wave 5)*
+
+- [ ] 16-08-PLAN.md — Command palette + sidebar Dev block live data + app-menu Developer submenu (DEVUI-09)
 
 ### Phase 17: CI/CD Pipeline + Code Signing
 
@@ -279,7 +307,7 @@ Plans:
 | 13. AppPaths | 3/3 | Complete    | 2026-05-20 |
 | 14. Queue Rewire + Horizon Carve-out | 3/3 | Complete    | 2026-05-22 |
 | 15. Desktop Shell (NativePHP Integration) | 7/7 | Complete    | 2026-05-23 |
-| 16. Developer Mode UI | 0/0 | Not started | - |
+| 16. Developer Mode UI | 0/8 | Planned     | - |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |
 | 19. Public Release Boundary | 0/0 | Not started | - |
