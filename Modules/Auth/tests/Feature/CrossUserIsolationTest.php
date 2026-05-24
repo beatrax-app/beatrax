@@ -69,6 +69,13 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // foreign user-row data.
     'dev.overview',
     'dev.artisan.stream',
+    // 16-04b: dev.artisan scopes its timeline query to causer_id ===
+    // current user id; dev.audit is the operator-level audit log
+    // (shows ALL dev_mode_audit rows by design — operators inspecting
+    // each other's runs is the explicit Dev Console contract). Both
+    // routes are EnsureDeveloperMode-gated (non-developers see 404).
+    'dev.artisan',
+    'dev.audit',
 ];
 
 /**
