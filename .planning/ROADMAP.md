@@ -188,7 +188,7 @@ Plans:
   6. The command palette (⌘K on macOS, Ctrl+K on Windows/Linux) opens from any page with fuzzy search across registered views + Dev Console commands (Linear/Raycast aesthetic)
 
 **UI hint**: yes
-**Plans**: 8 plans
+**Plans**: 9 plans
 
 Plans:
 
@@ -204,9 +204,10 @@ Plans:
 
 - [ ] 16-03-PLAN.md — DevMode module skeleton + EnsureDeveloperMode + Settings toggle + Wave 0 infra (DEVUI-01)
 
-**Wave 4** *(blocked on Wave 3)*
+**Wave 4** *(blocked on Wave 3 — 16-04 → 16-04b SERIAL within wave per B-5 split)*
 
-- [ ] 16-04-PLAN.md — Artisan runner (SAFE + DESTRUCTIVE + triple-gate + SSE + cancel + heartbeat + audit pipeline) (DEVUI-02, DEVUI-03)
+- [ ] 16-04-PLAN.md — Artisan SAFE pipeline + CommandRegistry + Spawner (architecture b spawn-then-tail per D-16) + RunRegistry + FileTailer + ArtisanStreamController + cancel + advanced-toggle + missing commands (DEVUI-02 partial)
+- [ ] 16-04b-PLAN.md — Audit pipeline (SpatieAuditWriter + FinalizeRunAudit hook) + AuditEvent enum + TripleGateModal + DestructiveSpawnController + Queue::looping heartbeat (DI form) + ArtisanRunnerPage + AuditLogPage + sidebar Artisan + Audit enable (DEVUI-02 complete, DEVUI-03)
 
 **Wave 5** *(blocked on Wave 4, parallel)*
 
