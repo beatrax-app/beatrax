@@ -9,6 +9,8 @@
             src="/horizon"
             class="w-full h-[80vh] border-0 rounded-md"
             title="Horizon dashboard"
+            sandbox="allow-same-origin allow-scripts allow-forms"
+            referrerpolicy="same-origin"
         ></iframe>
     </div>
 </div>

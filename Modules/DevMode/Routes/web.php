@@ -10,6 +10,7 @@ use Modules\DevMode\Internal\Http\Controllers\ArtisanSpawnController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanStreamController;
 use Modules\DevMode\Internal\Http\Controllers\DestructiveSpawnController;
 use Modules\DevMode\Internal\Http\Controllers\LogStreamController;
+use Modules\DevMode\Internal\Http\Middleware\HorizonFrameAncestors;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
@@ -137,7 +138,9 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
             // boot() registers the dashboard routes the iframe targets).
             $horizonProviderClass = HorizonServiceProvider::class;
             if (class_exists($horizonProviderClass)) {
-                Route::get('/horizon', HorizonFramePage::class)->name('dev.horizon');
+                Route::get('/horizon', HorizonFramePage::class)
+                    ->middleware(HorizonFrameAncestors::class)
+                    ->name('dev.horizon');
             }
         }
     });
