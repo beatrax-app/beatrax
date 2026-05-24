@@ -12,31 +12,33 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Process\FileTailer;
 use SplFileObject;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * GET /dev/logs/stream — SSE tail of the current daily-rolling
- * Laravel log file (storage/logs/laravel-YYYY-MM-DD.log).
- * Defense-in-depth re-applies the {@see RedactSecretsProcessor} on
- * every emitted chunk; the on-write Monolog tap is the first layer.
+ * GET /dev/logs/poll — single-shot JSON read of any new bytes in the
+ * current daily-rolling Laravel log file
+ * (storage/logs/laravel-YYYY-MM-DD.log) past the byte offset the
+ * client passes in `?since=`. Defense-in-depth re-applies the
+ * {@see RedactSecretsProcessor} to every returned chunk; the on-write
+ * Monolog tap is the first layer.
  *
- * Architecture is the same spawn-then-tail SSE shape
- * ArtisanStreamController uses, minus the spawn — this controller
- * adopts an existing file (the Laravel log) and tails it forever.
- * Reuses the shared {@see FileTailer} primitive so both SSE
- * pipelines live on one tested seam.
+ * Returns immediately (~5-50 ms typical) so the single-threaded PHP
+ * built-in server NativePHP uses can move on to the next request.
+ * The earlier SSE implementation held the server's only worker for
+ * up to STREAM_TIMEOUT_SECONDS, which stalled every other in-app
+ * navigation (sidebar clicks, image loads, image preloads) until the
+ * stream returned. The client now polls this endpoint every second
+ * instead — same perceived UX (~1 s latency for new lines) with no
+ * blast-radius on the rest of the app.
  *
  * Rotation detection:
- *   - On each tick the controller `stat()`s the path + compares
- *     inode and current filesize() to the last-observed values.
- *   - An inode change OR filesize() < lastSize (truncation) is a
- *     rotation: the controller computes the new day's filename via
- *     {@see UserDataPathService::dailyLogFile()} and reopens at
- *     offset 0.
- *   - At a midnight day-boundary the daily handler closes the old
- *     file and creates the new YYYY-MM-DD file; the controller
- *     detects this because dailyLogFile()'s on-disk path changes
- *     and the old inode disappears.
+ *   - The response includes the file's current inode. The client
+ *     persists that inode across polls; the next request passes it
+ *     back in `?inode=`.
+ *   - An inode change between the client's last value and the
+ *     current file is treated as a rotation: the response sets
+ *     `reset = true` and the chunk is read from offset 0.
+ *   - A `?since` that lies beyond the current file size is also
+ *     treated as a rotation (logrotate copytruncate, day rollover).
  *
  * Path safety: the log file path is computed from
  * {@see UserDataPathService::dailyLogFile()} which respects the
@@ -51,12 +53,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 final readonly class LogStreamController
 {
-    /** Sleep interval between tail ticks (250 ms). */
-    private const TICK_MICROSECONDS = 250_000;
-
-    /** Maximum wall-clock seconds before the stream gracefully closes. */
-    private const STREAM_TIMEOUT_SECONDS = 600;
-
     /** Maximum radius for the context endpoint (bounds a hostile ?radius=). */
     private const MAX_CONTEXT_RADIUS = 50;
 
@@ -67,94 +63,58 @@ final readonly class LogStreamController
     ) {}
 
     /**
-     * SSE tail of the rolling daily log. Defense-in-depth redaction is
-     * applied per chunk; rotation detection re-opens the new day's file
-     * at offset 0.
+     * Single-shot poll: read any new bytes past `?since=` (with
+     * rotation detection via `?inode=`), apply redaction, return JSON.
+     * No streaming; no long-running PHP process.
      */
-    public function __invoke(Request $request): StreamedResponse
+    public function poll(Request $request): JsonResponse
     {
-        $startOffset = $this->resolveStartOffset($request);
+        $payload = $this->validator->make(
+            [
+                'since' => $request->query('since', '0'),
+                'inode' => $request->query('inode'),
+            ],
+            [
+                'since' => ['required', 'integer', 'min:0'],
+                'inode' => ['nullable', 'integer', 'min:0'],
+            ],
+        )->validate();
 
-        $tailer = $this->tailer;
-        $processor = $this->processor;
+        $sinceValue = $payload['since'] ?? 0;
+        $offset = is_int($sinceValue) ? $sinceValue : (is_numeric($sinceValue) ? (int) $sinceValue : 0);
 
-        $response = new StreamedResponse(static function () use (
-            $startOffset,
-            $tailer,
-            $processor,
-        ): void {
-            @ini_set('output_buffering', '0');
-            @ini_set('zlib.output_compression', '0');
-            @ignore_user_abort(true);
-            // PHP's max_execution_time is wall-clock — without this the
-            // SSE loop is killed at the php.ini default (30s in the shipped
-            // nativephp/php-bin) long before STREAM_TIMEOUT_SECONDS.
-            @set_time_limit(0);
+        $clientInodeRaw = $payload['inode'] ?? null;
+        $clientInode = is_int($clientInodeRaw)
+            ? $clientInodeRaw
+            : (is_numeric($clientInodeRaw) ? (int) $clientInodeRaw : null);
 
-            $currentPath = UserDataPathService::dailyLogFile();
-            $currentInode = self::inodeOf($currentPath);
-            $offset = $startOffset;
+        $path = UserDataPathService::dailyLogFile();
+        $currentInode = self::inodeOf($path);
+        $currentSize = self::sizeOf($path) ?? 0;
 
-            // Cap initial offset at the current file size — a stale
-            // Last-Event-ID from a previous day's much-bigger file
-            // would otherwise sit beyond EOF forever.
-            $currentSize = self::sizeOf($currentPath);
-            if ($currentSize !== null && $offset > $currentSize) {
-                $offset = $currentSize;
-            }
+        $reset = false;
+        // Rotation detection: inode change (logrotate truncate+rename
+        // or midnight day rollover) OR client offset beyond current
+        // file size (logrotate copytruncate, fresh subscriber after a
+        // long pause). Either way the client must zero its cursor.
+        if (($clientInode !== null && $currentInode !== null && $clientInode !== $currentInode)
+            || $offset > $currentSize) {
+            $offset = 0;
+            $reset = true;
+        }
 
-            $deadline = microtime(true) + self::STREAM_TIMEOUT_SECONDS;
+        $result = $this->tailer->tailOnce($path, $offset);
+        $chunk = $result['chunk'];
+        if ($chunk !== '') {
+            $chunk = $this->processor->scrub($chunk);
+        }
 
-            while (microtime(true) < $deadline) {
-                $todayPath = UserDataPathService::dailyLogFile();
-                $newInode = self::inodeOf($todayPath);
-                $newSize = self::sizeOf($todayPath);
-
-                // Rotation detection: the path changed (midnight
-                // rollover), OR the inode changed (logrotate-style
-                // truncate + rename), OR the file shrank
-                // (logrotate-style copytruncate).
-                if ($todayPath !== $currentPath
-                    || ($newInode !== null && $currentInode !== null && $newInode !== $currentInode)
-                    || ($newSize !== null && $currentSize !== null && $newSize < $currentSize)) {
-                    $currentPath = $todayPath;
-                    $currentInode = $newInode;
-                    $currentSize = $newSize;
-                    $offset = 0;
-                }
-
-                $result = $tailer->tailOnce($currentPath, $offset);
-                $offset = $result['newOffset'];
-                $currentSize = self::sizeOf($currentPath);
-
-                if ($result['chunk'] !== '') {
-                    $scrubbed = $processor->scrub($result['chunk']);
-                    echo 'id: '.$offset."\n";
-                    echo 'data: '.json_encode([
-                        'line' => $scrubbed,
-                    ], JSON_UNESCAPED_SLASHES)."\n\n";
-                    @ob_flush();
-                    @flush();
-                }
-
-                if (connection_aborted() !== 0) {
-                    break;
-                }
-
-                usleep(self::TICK_MICROSECONDS);
-            }
-        });
-
-        $response->headers->set('Content-Type', 'text/event-stream');
-        // no-transform pairs with no-cache so an intermediate proxy
-        // never gzip-buffers the SSE response into unpredictable
-        // chunks. Local-only Herd does not need it today; the header
-        // is cheap insurance against a future proxied deployment.
-        $response->headers->set('Cache-Control', 'no-cache, no-transform');
-        $response->headers->set('X-Accel-Buffering', 'no');
-        $response->headers->set('Connection', 'keep-alive');
-
-        return $response;
+        return new JsonResponse([
+            'chunk' => $chunk,
+            'newOffset' => $result['newOffset'],
+            'inode' => $currentInode,
+            'reset' => $reset,
+        ]);
     }
 
     /**
@@ -239,28 +199,6 @@ final readonly class LogStreamController
             'lines' => $out,
             'total' => $total,
         ]);
-    }
-
-    /**
-     * Resolve the starting byte offset. Browser EventSource sends
-     * `Last-Event-ID` on auto-reconnect; tests + manual debugging use
-     * `?from=` as an explicit override. Default 0 — fresh subscribers
-     * replay everything captured so far in the current day's file (the
-     * file lives on disk; the tailer respects the byte cursor).
-     */
-    private function resolveStartOffset(Request $request): int
-    {
-        $lastEventId = $request->header('Last-Event-ID');
-        if (is_string($lastEventId) && preg_match('/^\d+$/', $lastEventId) === 1) {
-            return (int) $lastEventId;
-        }
-
-        $fromQuery = $request->query('from');
-        if (is_string($fromQuery) && preg_match('/^\d+$/', $fromQuery) === 1) {
-            return (int) $fromQuery;
-        }
-
-        return 0;
     }
 
     /**

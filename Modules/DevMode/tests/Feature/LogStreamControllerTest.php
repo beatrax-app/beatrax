@@ -9,19 +9,17 @@ use Modules\EmailScan\Models\OAuthSecret;
 /*
  * LogStreamController invariants.
  *
- * The SSE tail itself can't be exercised end-to-end inside Pest's
- * HTTP client (the controller blocks on a 250 ms tick loop with a
- * 600 s deadline). Instead we cover:
- *   - The route is gated by EnsureDeveloperMode (404 for non-devs).
- *   - The stream emits text/event-stream headers without buffering.
+ * The poll endpoint replaces the earlier SSE handler so the request
+ * returns immediately and PHP's single-threaded built-in dev server
+ * (which NativePHP uses) does not stall every other in-app request
+ * while a tail is active. We cover:
+ *   - Both routes are gated by EnsureDeveloperMode (404 for non-devs).
+ *   - The poll endpoint returns JSON with chunk + newOffset + inode,
+ *     applies redaction, and signals reset on a stale `since` offset.
  *   - The context endpoint validates inputs and clamps radius.
  *   - The context endpoint re-applies the on-stream redaction.
  *   - The context endpoint never reads outside the daily log file
  *     path (path is computed via UserDataPathService).
- *
- * The stream's tick-loop body (FileTailer + rotation detection) is
- * covered by CommandSpawnerTest / ArtisanStreamReconnectTest via
- * the shared FileTailer primitive.
  */
 
 function logStreamUser(string $username, bool $isDeveloper = true): User
@@ -44,13 +42,44 @@ function ensureDailyLogFile(string $contents): string
     return $path;
 }
 
-it('returns 404 from /dev/logs/stream for a non-developer (EnsureDeveloperMode gate)', function (): void {
-    logStreamUser('logs-stream-seed', true);
-    $user = logStreamUser('logs-stream-nondev', false);
+it('returns 404 from /dev/logs/poll for a non-developer (EnsureDeveloperMode gate)', function (): void {
+    logStreamUser('logs-poll-seed', true);
+    $user = logStreamUser('logs-poll-nondev', false);
 
-    $response = $this->actingAs($user)->get('/dev/logs/stream');
+    $response = $this->actingAs($user)->getJson('/dev/logs/poll?since=0');
 
     $response->assertNotFound();
+});
+
+it('returns the new chunk + newOffset + inode from /dev/logs/poll for a developer', function (): void {
+    $user = logStreamUser('logs-poll-developer');
+    $body = "[2026-05-24 10:00:00] local.INFO: line one\n[2026-05-24 10:00:01] local.WARNING: line two\n";
+    $path = ensureDailyLogFile($body);
+
+    $response = $this->actingAs($user)->getJson('/dev/logs/poll?since=0');
+
+    $response->assertOk();
+    $data = $response->json();
+    expect($data['chunk'])->toContain('line one');
+    expect($data['chunk'])->toContain('line two');
+    expect($data['newOffset'])->toBe(strlen($body));
+    expect($data['reset'])->toBeFalse();
+    expect($data['inode'])->toBeInt();
+});
+
+it('signals reset=true when /dev/logs/poll receives a since offset past the current file size', function (): void {
+    $user = logStreamUser('logs-poll-reset');
+    $body = "[2026-05-24 10:00:00] local.INFO: short body\n";
+    ensureDailyLogFile($body);
+    $bigOffset = strlen($body) + 9_999_999;
+
+    $response = $this->actingAs($user)->getJson('/dev/logs/poll?since='.$bigOffset);
+
+    $response->assertOk();
+    $data = $response->json();
+    expect($data['reset'])->toBeTrue();
+    expect($data['chunk'])->toContain('short body');
+    expect($data['newOffset'])->toBe(strlen($body));
 });
 
 it('returns 404 from /dev/logs/context for a non-developer (EnsureDeveloperMode gate)', function (): void {

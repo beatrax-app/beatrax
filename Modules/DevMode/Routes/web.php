@@ -62,13 +62,15 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
         Route::post('/artisan/destructive-spawn', DestructiveSpawnController::class)
             ->name('dev.artisan.destructive-spawn');
 
-        // Log tailer page + SSE stream + ±10-line context lookup.
-        // The page mounts the Alpine ring-buffer + EventSource
-        // consumer; the SSE controller re-applies
-        // RedactSecretsProcessor as defense-in-depth on top of the
-        // on-write Monolog tap.
+        // Log tailer page + JSON poll + ±10-line context lookup. The
+        // page mounts the Alpine ring-buffer + 1 Hz fetch poller; the
+        // poll controller re-applies RedactSecretsProcessor as
+        // defense-in-depth on top of the on-write Monolog tap. Each
+        // poll returns immediately — the earlier SSE version held the
+        // single-threaded PHP built-in server's only worker, stalling
+        // every other in-app navigation.
         Route::get('/logs', LogTailerPage::class)->name('dev.logs');
-        Route::get('/logs/stream', LogStreamController::class)->name('dev.logs.stream');
+        Route::get('/logs/poll', [LogStreamController::class, 'poll'])->name('dev.logs.poll');
         Route::get('/logs/context', [LogStreamController::class, 'context'])->name('dev.logs.context');
 
         // Queue inspector. Three sub-routes back the same Livewire
