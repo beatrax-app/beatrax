@@ -96,6 +96,18 @@ final class SettingsPage extends Component
     public string $theme = 'system';
 
     /**
+     * Developer Mode toggle (Phase 16-03 / DEVUI-01). When on, the
+     * in-app Developer Console at /dev/* renders for this user.
+     * Persisted instant-apply via setDevMode() — toggling writes
+     * `users.is_developer` directly through the Eloquent model so the
+     * flip survives logout/login. The setting is per-user; partner
+     * accounts cannot toggle each other's flag because the writer
+     * always scopes to CurrentUser.
+     */
+    #[Validate('boolean')]
+    public bool $isDeveloper = false;
+
+    /**
      * Inline "Saved." confirmation flag flipped by save() and consumed by
      * the Blade view via `@if ($saved)` + `wire:transition.duration.4000ms`
      * so the confirmation auto-dismisses after four seconds.
@@ -112,6 +124,7 @@ final class SettingsPage extends Component
         $this->recurringIncomeMinAmountMinor = $user->recurring_income_min_amount_minor;
         $this->driftAlertThresholdPercent = $user->drift_alert_threshold_percent;
         $this->theme = $user->theme;
+        $this->isDeveloper = $user->is_developer === true;
     }
 
     /**
@@ -136,6 +149,24 @@ final class SettingsPage extends Component
                 'theme' => $this->theme,
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
+    }
+
+    /**
+     * Instant-apply Developer Mode toggle (Phase 16-03 / DEVUI-01).
+     * Writes the boolean to `users.is_developer` via the Eloquent
+     * model so the flip survives logout/login. Scopes the write to
+     * the CurrentUser's own row — cross-user writes are structurally
+     * impossible because the user resolves through the CurrentUser
+     * contract, not a request-supplied id. Mirrors setTheme()'s
+     * "no Save button" posture: toggling is its own commit.
+     */
+    public function setDevMode(bool $value, CurrentUser $currentUser): void
+    {
+        $this->isDeveloper = $value;
+        $this->validateOnly('isDeveloper');
+
+        $user = $currentUser->user();
+        $user->fill(['is_developer' => $value])->save();
     }
 
     /**
