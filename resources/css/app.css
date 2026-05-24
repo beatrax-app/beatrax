@@ -156,7 +156,28 @@ td.date,
         border-right: 1px solid var(--color-border);
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        /*
+         * Viewport-pinned sidebar. `position: sticky; top: 0; height: 100vh`
+         * keeps the sidebar's foot (`.side-foot` with `margin-top: auto`)
+         * fixed to the bottom of the viewport even when the <main> content
+         * scrolls or the nav list outgrows the viewport. The previous
+         * `min-height: 100vh` let the sidebar grow with the page, pushing
+         * the Developer / Sign-out block below the fold on long pages.
+         *
+         * `align-self: flex-start` keeps the sticky positioning context
+         * tied to the parent flex container's start edge so the sidebar
+         * never stretches to match a taller <main> sibling.
+         *
+         * `overflow-y: auto` lets the sidebar itself scroll independently
+         * when the nav list is taller than the viewport (rare, but
+         * defensive against future additions); `min-height: 0` makes
+         * `flex-1` work correctly inside flex layouts.
+         */
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        align-self: flex-start;
+        overflow-y: auto;
         width: var(--side-w);
         padding: var(--space-4) var(--space-3);
         font-size: var(--text-sm);
@@ -428,7 +449,17 @@ td.date,
         border-right: 1px solid var(--color-border);
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        /*
+         * Viewport-pinned dev sidebar. Same pattern as `.side` — the
+         * sticky position + 100vh height keeps `.side-foot` (the
+         * "Back to app" affordance) anchored to the viewport bottom
+         * even when /dev/* page content scrolls.
+         */
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        align-self: flex-start;
+        overflow-y: auto;
         width: var(--side-w-dev);
         padding: var(--space-4) var(--space-3);
         font-size: var(--text-sm);
