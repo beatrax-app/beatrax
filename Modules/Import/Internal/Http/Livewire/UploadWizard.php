@@ -13,6 +13,8 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Public\Contracts\RunsImports;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * Step 1 of the wizard. The user picks an issuer (ASN / ICS / PayPal)
@@ -73,6 +75,26 @@ final class UploadWizard extends Component
     ];
 
     public ?TemporaryUploadedFile $file = null;
+
+    /**
+     * One-shot error surfaced inline below the upload form when the
+     * importer raises a parse-time exception (sniff mismatch, unsupported
+     * PayPal language, unreadable file, etc.) before the wizard can hand
+     * off to the preview screen. Cleared on every fresh submit() so a
+     * second attempt with a different file does not retain the stale
+     * message.
+     *
+     * The matching stack trace is also written to the Laravel log via
+     * the injected LoggerInterface so the failure is visible on
+     * /dev/logs — the user-reported "silent failure" symptom was that
+     * the Livewire generic-error toast surfaced no actionable detail
+     * AND no log line surfaced the cause. The error message stored here
+     * is intentionally human-readable (typed-exception subclasses carry
+     * a user-facing message; generic Throwables fall back to a stable
+     * "Could not process this file." copy with the exception class
+     * appended for triage).
+     */
+    public ?string $uploadError = null;
 
     /**
      * Issuer driver for the cascading picker. Mounted with the most
@@ -194,7 +216,9 @@ final class UploadWizard extends Component
         RunsImports $importer,
         CurrentUser $currentUser,
         UrlGenerator $urls,
+        LoggerInterface $logger,
     ): void {
+        $this->uploadError = null;
         $this->validate();
 
         if ($this->file === null) {
@@ -205,12 +229,41 @@ final class UploadWizard extends Component
         $tmp = $this->file->getRealPath();
         $originalFilename = $this->sanitiseFilename($this->file->getClientOriginalName());
 
-        $preview = $importer->runFromUpload(
-            $tmp,
-            $this->sourceFormat,
-            $user,
-            $originalFilename,
-        );
+        try {
+            $preview = $importer->runFromUpload(
+                $tmp,
+                $this->sourceFormat,
+                $user,
+                $originalFilename,
+            );
+        } catch (Throwable $e) {
+            // Catch-all guard for failures that bubble out of
+            // runFromUpload() BEFORE the import pipeline's own
+            // try/catch wraps the parse loop — file-system errors on
+            // copyToStableLocation(), hash_file() failures, ImportRun
+            // insert clashes, etc. The pipeline already converts every
+            // parse-time exception into an ERROR row, so a Throwable
+            // hitting this catch is by definition a wizard-layer
+            // failure that the preview screen never sees.
+            //
+            // Log the full stack trace so the failure is triagable on
+            // /dev/logs; surface a stable user-facing copy with the
+            // exception class appended so the operator can grep the
+            // log for the matching entry.
+            $logger->error('UploadWizard: import preview failed.', [
+                'source_format' => $this->sourceFormat,
+                'filename' => $originalFilename,
+                'exception_class' => $e::class,
+                'exception_message' => $e->getMessage(),
+                'exception_trace' => $e->getTraceAsString(),
+            ]);
+            $this->uploadError = sprintf(
+                'Could not process this file (%s). The full error is in /dev/logs.',
+                $e::class,
+            );
+
+            return;
+        }
 
         $this->redirect(
             $urls->route('imports.preview', ['id' => $preview->importRunId]),

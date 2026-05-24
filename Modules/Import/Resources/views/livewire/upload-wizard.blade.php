@@ -5,6 +5,26 @@
         <p class="sr-only" id="upload-statement-mime-hint">That file doesn't look like a supported statement export. Drop in an ASN CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, ICS PDF, an email message (.eml), or a mailbox archive (.mbox).</p>
     </header>
 
+    @if ($uploadError !== null)
+        {{--
+            Inline parse-time error surface. Populated by submit() when
+            the importer raises a typed parser exception (sniff mismatch
+            / unsupported PayPal language) or any other Throwable; the
+            wizard otherwise would strand the user on a generic Livewire
+            "Server error" toast with no actionable detail. The matching
+            stack trace is written to the Laravel log via the injected
+            LoggerInterface so it surfaces on /dev/logs alongside the
+            other ERROR-severity entries.
+        --}}
+        <aside
+            role="alert"
+            class="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200"
+            data-testid="upload-error-banner"
+        >
+            {{ $uploadError }}
+        </aside>
+    @endif
+
     <form wire:submit="submit" class="space-y-4">
         <div class="space-y-1">
             <label for="issuer" class="block text-sm text-slate-900 dark:text-slate-100">Source</label>
