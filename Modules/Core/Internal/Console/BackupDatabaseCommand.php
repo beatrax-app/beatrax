@@ -107,6 +107,16 @@ final class BackupDatabaseCommand extends Command
         $destination = $backupsDir.DIRECTORY_SEPARATOR.$basename;
 
         try {
+            // SQLite does not accept bound parameters for VACUUM INTO's
+            // target string (the target is a parse-time constant), so
+            // the destination is interpolated literally. Reject any
+            // path that carries shell- or SQL-hostile bytes before the
+            // sprintf so a future change to the backups() directory
+            // composition cannot smuggle a NUL byte, newline, or
+            // unescaped single quote into the statement.
+            if (preg_match('/[\x00\n\r]/', $destination) === 1) {
+                throw new RuntimeException('Backup destination path contains an unsafe byte (NUL / newline).');
+            }
             $escaped = str_replace("'", "''", $destination);
             // VACUUM INTO must NOT run inside a transaction (SQLite refuses).
             // The destination path must not exist yet; SQLite refuses to
