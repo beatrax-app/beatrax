@@ -240,7 +240,7 @@ final class ArtisanRunnerPage extends Component
         // Apply filter chip. Note: audit-row replays cannot be in the
         // `running` state (the audit row is written only on the done
         // branch); the `running` chip is reserved for the live-stream
-        // cards a future 16-04b/16-05 iteration may surface.
+        // cards the live-stream surface may add later.
         $filtered = match ($this->filter) {
             'running' => $runs->where('status', 'running')->values(),
             'failed' => $runs->filter(fn (array $r): bool => is_int($r['exitCode'] ?? null) && $r['exitCode'] !== 0)->values(),
