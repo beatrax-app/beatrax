@@ -11,22 +11,23 @@ use Illuminate\Contracts\Session\Session;
  * Clears `dev_mode.advanced` from the session on every successful
  * Login event.
  *
- * CONTEXT D-20: "Advanced toggle … Session-scoped, default OFF.
- * Resets to OFF on every login." This listener implements the
- * second half of that contract — without it, an Advanced toggle
- * flipped ON in a previous session would silently stay ON across
+ * The Advanced toggle is session-scoped and default-OFF; it resets
+ * on every login. Without this listener, an Advanced=true value
+ * flipped ON in a previous session would silently survive
  * logout/login.
  *
  * Wired via `$events->listen(Login::class, [ResetAdvancedToggleOnLogin::class, 'handle'])`
  * inside DevModeServiceProvider::boot(). The pattern mirrors
  * Desktop's ContinuePendingFileIntentAfterLogin listener.
  *
- * Note: the runner page's mount() ALSO resets the toggle on the
- * first dev-console load per session as a belt-and-braces safeguard
- * (a single-page-app open across long-lived sessions might not
- * re-fire the Login event but might still resume an old Advanced
- * state from a re-hydrated browser tab; the mount() reset closes
- * that gap on the first /dev/* navigation).
+ * ArtisanRunnerPage::mount() ALSO resets the toggle on the first
+ * dev-console load per session as a belt-and-braces safeguard:
+ * Laravel's SessionGuard fires Login on explicit credential auth
+ * and on remember-me cookie hydration, but a plain session-resume
+ * (user id still in session, no remember-me involved) fires only
+ * the Authenticated event. The mount() reset closes that gap so a
+ * long-lived sticky session cannot carry an Advanced=true value
+ * forward indefinitely.
  */
 final readonly class ResetAdvancedToggleOnLogin
 {
