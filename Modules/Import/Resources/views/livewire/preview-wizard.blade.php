@@ -158,10 +158,16 @@
                                 <td class="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">{{ $row->bookedAt ?? '—' }}</td>
                                 <td class="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">{{ $row->sourceAccountName ?? '—' }}</td>
                                 <td class="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">
+                                    {{-- Fallback chain: counterparty name → counterparty IBAN → joined
+                                         description (payment ref + free text) → "—". The description
+                                         tier rescues bank-fee / interest / ATM rows where no counterparty
+                                         is present but the narrative carries the only identifying signal. --}}
                                     @if ($row->counterpartyName !== null)
                                         {{ $row->counterpartyName }}
                                     @elseif ($row->counterpartyIban !== null)
                                         <span class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ $row->counterpartyIban }}</span>
+                                    @elseif ($row->description !== null)
+                                        <span class="text-xs italic text-slate-500 dark:text-slate-400">{{ $row->description }}</span>
                                     @else
                                         —
                                     @endif

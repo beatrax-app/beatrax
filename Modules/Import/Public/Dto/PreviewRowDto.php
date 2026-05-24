@@ -30,6 +30,14 @@ final class PreviewRowDto extends Data
         public readonly ?string $counterpartyName,
         /** Counterparty IBAN as a visible fallback when the name is missing. */
         public readonly ?string $counterpartyIban,
+        /**
+         * Joined payment-reference + free-text description from the source
+         * row. Used as the last visible fallback when both
+         * counterpartyName and counterpartyIban are absent — typical for
+         * bank-fee, interest, or ATM rows where only the description carries
+         * any identifying signal.
+         */
+        public readonly ?string $description,
         public readonly ?string $categoryName,
         public readonly ?int $amountMinor,
         public readonly ?string $currency,
