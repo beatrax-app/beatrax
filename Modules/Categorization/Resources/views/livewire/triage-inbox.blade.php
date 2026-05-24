@@ -5,9 +5,17 @@
 @endphp
 
 <div class="space-y-6">
-    <header class="space-y-1">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Uncategorized</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">
+    <header>
+        <div class="flex items-baseline justify-between gap-4">
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Uncategorized</h1>
+            <button
+                type="button"
+                wire:click="save"
+                @disabled(count($pending) === 0)
+                class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+            >Save categories</button>
+        </div>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             @if ($totalPending === 0)
                 Inbox zero.
             @elseif ($batch->hasMore || $totalPending > count($batch->rows))
@@ -77,17 +85,9 @@
                 </table>
             </div>
 
-            <footer class="mt-4 flex items-center justify-between gap-4">
-                <p class="text-xs text-slate-500 dark:text-slate-400">
-                    1–9 assign top categories · ↑/↓ move · Enter save · / search · Esc clear
-                </p>
-                <button
-                    type="button"
-                    wire:click="save"
-                    @disabled(count($pending) === 0)
-                    class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                >Save categories</button>
-            </footer>
+            <p class="mt-4 text-xs text-slate-500 dark:text-slate-400">
+                1–9 assign top categories · ↑/↓ move · Enter save · / search · Esc clear
+            </p>
 
             @if ($batch->hasMore && $batch->nextCursorId !== null)
                 <div class="mt-4 flex justify-center">

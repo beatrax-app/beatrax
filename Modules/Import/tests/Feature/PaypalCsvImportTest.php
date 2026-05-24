@@ -115,7 +115,43 @@ it('prompts the user to name the PayPal Account on the first PayPal upload', fun
         ->assertSee('Name your PayPal account.', false)
         ->assertSee("first time you've imported PayPal data", false)
         ->assertSee('Save name', false)
-        ->assertDontSee('Confirm import', false);
+        // The Confirm button lives in the page header and is always rendered;
+        // the naming-step gate is enforced by the `disabled` attribute (UI)
+        // and the server-side guard in PreviewWizard::confirm() (defense).
+        ->assertSee('Confirm import', false)
+        ->assertSeeHtmlInOrder(['wire:click="confirm"', 'disabled', 'Confirm import']);
+})->group('phase-4');
+
+it('refuses to confirm a PayPal preview while the account name is unset (server-side guard)', function (): void {
+    // Mirror the first-upload setup: no PayPal Account exists, so
+    // needsPaypalAccountName() returns true. A devtools-stripped
+    // disabled attribute on the always-rendered Confirm button must
+    // still no-op server-side, otherwise rows insert against a missing
+    // account mapping.
+    Account::query()
+        ->where('user_id', $this->fixtureUser->id)
+        ->where('kind', 'paypal')
+        ->delete();
+
+    $importer = $this->app->make(RunsImports::class);
+    $preview = $importer->runFromUpload(
+        $this->fixture,
+        'paypal-csv',
+        $this->fixtureUser,
+        'paypal-sample-1.csv',
+    );
+
+    Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
+        ->call('confirm')
+        ->assertNoRedirect()
+        ->assertSee('Name your PayPal account.', false);
+
+    expect(
+        Account::query()
+            ->where('user_id', $this->fixtureUser->id)
+            ->where('kind', 'paypal')
+            ->exists()
+    )->toBeFalse();
 })->group('phase-4');
 
 it('skips the name-your-account step on subsequent PayPal uploads', function (): void {

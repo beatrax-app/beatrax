@@ -2,12 +2,41 @@
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format('nl_NL');
+
+    // Header-action enablement. Discard is meaningful whenever a preview
+    // is still in cache; Confirm requires every naming step to be resolved.
+    $hasLivePreview = $preview !== null && ! $previewExpired;
+    $unnamedAccountCount = $hasLivePreview ? count($preview->accountsToName) : 0;
+    $canConfirmImport = $hasLivePreview
+        && ! $needsIcsAccountName
+        && ! $needsPaypalAccountName
+        && $unnamedAccountCount === 0;
 @endphp
 
 <div class="space-y-6">
-    <header class="space-y-1">
-        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Preview import</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Review the parsed rows. Nothing is saved to your ledger until you confirm.</p>
+    <header>
+        <div class="flex items-baseline justify-between gap-4">
+            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Preview import</h1>
+            <div class="flex items-center gap-3">
+                <button
+                    type="button"
+                    wire:click="discard"
+                    @disabled(! $hasLivePreview)
+                    class="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
+                >
+                    Discard import
+                </button>
+                <button
+                    type="button"
+                    wire:click="confirm"
+                    @disabled(! $canConfirmImport)
+                    class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+                >
+                    Confirm import
+                </button>
+            </div>
+        </div>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Review the parsed rows. Nothing is saved to your ledger until you confirm.</p>
     </header>
 
     @if ($preview === null || $previewExpired)
@@ -158,23 +187,6 @@
                     </tbody>
                 </table>
             </section>
-
-            <div class="flex justify-end gap-3">
-                <button
-                    type="button"
-                    wire:click="discard"
-                    class="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
-                >
-                    Discard import
-                </button>
-                <button
-                    type="button"
-                    wire:click="confirm"
-                    class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
-                >
-                    Confirm import
-                </button>
-            </div>
         @endif
     @endif
 
