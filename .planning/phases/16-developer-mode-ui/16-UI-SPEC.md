@@ -168,7 +168,7 @@ All command names and the typed-app-name use the **post-rename** lowercase `beat
 | Console-pane queue secondary | "{N} failed jobs · {N} active batch" (rose if failed > 0) |
 | Artisan filter chips | "All · {N}" / "Running · {N}" / "Failed · {N}" / "Destructive · {N}" |
 | Day-section labels in timeline | "Today, {D MMM}" / "Yesterday, {D MMM}" / "{D MMM YYYY}" for older |
-| Run-card actions — running | "Cancel" / "Copy" |
+| Run-card actions — running | "Cancel run" / "Copy command" |
 | Run-card actions — done | "Show output" / "Re-run" / "Copy command" |
 | Run-card actions — failed | "Show full output" / "Re-run" / "Copy command" |
 | Triple-gate modal title | "⚠ Destructive command — confirm" (rose-tinted header bg) |
@@ -210,10 +210,11 @@ All command names and the typed-app-name use the **post-rename** lowercase `beat
 **Tone rules (locked):**
 
 - Calm, technical, never celebratory. "No failed jobs." not "🎉 All clean!"
-- Verbs are imperative and short: "Run", "Cancel", "Retry", "Open", "Type".
+- Verbs are imperative and short: "Run", "Cancel run", "Retry", "Open", "Type", "Copy command".
 - Never use "Are you sure?" — the triple-gate IS the are-you-sure. The preview row plus the typed-name gate carry the weight.
 - Never punctuate kbd hints (`⌘K`, not `⌘+K` or `⌘ K`).
 - Always render command names in monospace, even inline in body copy.
+- **Action labels are always verb + noun.** Single-word labels like "Cancel" or "Copy" are forbidden in run-card and dev-surface action rows; use "Cancel run" / "Copy command" so the noun makes the consequence concrete. The only exception is the triple-gate modal's left-side dismiss button ("Cancel"), which is paired with a destructive primary button whose label already carries the verb + noun ("Run {command-name}").
 
 ---
 
@@ -247,9 +248,11 @@ Components the planner and executor must produce, drawn from the locked sketch d
 
 ### `/dev` overview surfaces
 
+**Primary visual anchor:** the `.console-pane` (theme-locked dark inset, fixed `#0b1220` bg / `#f1f5f9` text regardless of theme) is the page's primary focal point. The eye must land on this pane first — every other surface on `/dev` overview (Recent runs card, Open alerts card) is secondary and uses calm surface tokens. The pane's dark inset is the deliberate "you are looking at a console" cue.
+
 | Component | Source | D-refs |
 |-----------|--------|--------|
-| `.console-pane` (theme-locked dark, three-column head + tail) | `dev-console-surfaces.md` | D-03 |
+| `.console-pane` (theme-locked dark, three-column head + tail) — **primary visual anchor for the `/dev` overview** | `dev-console-surfaces.md` | D-03 |
 | `.console-pane .head` (worker heartbeat / queue / last command) | sketch | D-39, D-32 |
 | Sparkline SVG (220×32, server-rendered polyline) | sketch | D-39 |
 | `.console-pane .tail` (mono 8-line rollup with cursor) | sketch | D-27 |
@@ -266,7 +269,7 @@ Components the planner and executor must produce, drawn from the locked sketch d
 | `.run-card` (running / done / failed variants with state-color border) | sketch | D-16, D-17 |
 | `.run-card-head` (status pill + mono cmd + tier chip + meta) | sketch | D-15, D-16 |
 | `.run-card-out` (fixed-dark inset, streaming `<pre>`, 180px max-height, scrolls) | sketch | D-16 |
-| `.run-card-actions` (Cancel/Copy/Re-run row) | sketch | D-16, D-18 |
+| `.run-card-actions` ("Cancel run" / "Copy command" / "Re-run" row — every label is verb + noun, never single-word) | sketch | D-16, D-18 |
 | Worker pre-flight pill | sketch | D-19 |
 
 ### Triple-gate modal (shared component)
@@ -313,7 +316,7 @@ Components the planner and executor must produce, drawn from the locked sketch d
 | `.tier` chip (safe = emerald, destructive = rose) | sketch | D-12, D-13, D-24 |
 | `.kbd` (10px JetBrains Mono, 2px border-bottom for keycap look) | sketch | — |
 | `.pill-btn` + `.pill-btn.primary` (inverted slate fill) + `.pill-btn.danger` | sketch | — |
-| `.icon-btn` (32×32 transparent → surface-2 hover) | sketch | — |
+| `.icon-btn` (32×32 transparent → surface-2 hover) — **accessibility: every `.icon-btn` instance MUST carry both a `title` attribute (for hover tooltip) AND an `aria-label` attribute (for assistive tech). Icon-only buttons without an accessible name are forbidden — there are no exceptions.** | sketch | — |
 | `.switch` (Advanced toggle, session-scoped, emerald when on) | sketch | D-20 |
 | Sparkline SVG primitive (220×32 emerald polyline, server-rendered) | sketch | D-39 |
 | `<x-dev::run-card :run="$run" />` Blade component | sketch | D-16 |
@@ -368,6 +371,7 @@ Not applicable. Stack is Laravel + Livewire 4 + Flux 2 + Tailwind v4 — no shad
 - **Keyboard model** is first-class: ⌘K opens palette, ⌘. opens `/dev`, ↑/↓/Tab/↩/Esc all bound inside the palette. The triple-gate modal traps focus; Esc and Cancel exit; click-outside does NOT exit.
 - **No `alert()` / `confirm()`** browser primitives — they don't theme, can't preview the resolved command, can't enforce the typed-name gate.
 - **Form labels** on every arg-schema input (Flux pattern provides this) — placeholder is not a substitute for label.
+- **Icon-only buttons require an accessible name.** Every `.icon-btn` MUST carry both a `title` attribute and an `aria-label` attribute (see Component Inventory § Cross-cutting primitives). There are no icon-only buttons in the Dev Console without one of these — the sidebar collapse `‹`, palette close, run-card show-output toggle, and any future glyph-only control all comply.
 - **Focus rings** inherit the Flux default; the Dev block dashed border and run-card state borders are visual-only and never replace focus indication.
 - **Reduced motion**: respect `prefers-reduced-motion` by disabling the cursor blink and dev-block dot glow ring animation only. Modal pop and hover transitions are <200ms and acceptable.
 - **Tabular numerics** are mandatory on every count, KPI, badge, amount, exit code, duration, row count — prevents jitter when values tick.
@@ -472,7 +476,7 @@ The hand-port from sketch token names to Tailwind v4 `@theme` is left as a small
 
 | Source | Decisions Used |
 |--------|---------------|
-| `Skill("sketch-findings-diederik")` (4 reference files + theme) | Spacing scale, typography roles, color palette, accent reservation list, component inventory, animation timings, theme tokens, density rules — all locked from sketch session 001 (2026-05-24) |
+| `Skill("sketch-findings-diederik")` (4 reference files + theme) | Spacing scale, typography roles, color palette, accent reservation list, component inventory, animation timings, theme tokens, density rules — all locked from sketch session 001 (2026-05-24); run-card running-state label "Cancel run" matches `component-library.md` line 207's `.pill-btn.danger` validated wording |
 | `16-CONTEXT.md` | Copywriting (D-08 / D-10 / D-21 typed-name; D-12 / D-13 command tier lists; D-19 worker pill copy; D-37 dashboard toast; D-41 palette source taxonomy; D-44 system-snapshot fields), interaction model (D-04 / D-16 / D-17 / D-20 / D-40 / D-42), component scope (every D-* surface) |
 | `CLAUDE.md` | Livewire 4 / Volt / Flux UI / Tailwind v4 / local-only constraint (no webfont fetch) / Inter local-install rule |
 | `resources/css/app.css` (current) | Confirmed Tailwind v4 + `@custom-variant dark` + Inter chain + tabular-nums baseline |
