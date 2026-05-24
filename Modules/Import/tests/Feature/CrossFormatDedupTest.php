@@ -15,7 +15,25 @@ beforeEach(function (): void {
     $this->expectedTransactionCount = 72;
 });
 
-it('csv_then_camt053: importing CAMT after CSV inserts 0 new and enriches every row', function (): void {
+/*
+ * Cross-format dedup policy (phase 16 UAT batch 7):
+ *
+ * Statement-vs-statement collisions (asn-csv / asn-camt053 / asn-mt940
+ * / ics-pdf / paypal-csv) drop as DUPLICATE on fingerprint match —
+ * never enrich. The rank-based source_ref upgrade only fires when AT
+ * LEAST one side is a receipt format (paypal-receipt, ics-receipt,
+ * google-play-receipt); receipts can legitimately carry data the bank
+ * statement lacks (clean merchant name, line items) so the upgrade
+ * pay-off survives there.
+ *
+ * Prior phase-2 tests asserted the inverse (CSV → CAMT enriched every
+ * row). The user's phase-16 UAT report demanded the simpler behaviour
+ * — same transaction → drop — because re-uploading the same date range
+ * in two statement formats should not pollute the row's audit chain
+ * with a second source_format. These tests lock the new policy.
+ */
+
+it('csv_then_camt053: every overlapping row drops as duplicate (no enrichment)', function (): void {
     $first = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser);
     expect($first->inserted)->toBe($this->expectedTransactionCount);
     expect($first->enriched)->toBe(0);
@@ -23,87 +41,48 @@ it('csv_then_camt053: importing CAMT after CSV inserts 0 new and enriches every 
     $second = $this->importer->runAndConfirm($this->camtFixture, 'asn-camt053', $this->fixtureUser);
 
     expect($second->inserted)->toBe(0);
-    expect($second->enriched)->toBeGreaterThan(0);
-    expect($second->enriched + $second->duplicates)->toBe($this->expectedTransactionCount);
+    expect($second->enriched)->toBe(0);
+    expect($second->duplicates)->toBe($this->expectedTransactionCount);
 
-    // On-disk row count is unchanged after the cross-format re-import.
+    // The original asn-csv rows are untouched — no source_format flip,
+    // no enriched_from entry, no source_ref upgrade.
     $totalCsv = Transaction::query()
         ->where('user_id', $this->fixtureUser->id)
         ->where('source_format', 'asn-csv')
         ->count();
     expect($totalCsv)->toBe($this->expectedTransactionCount);
 
-    // Enriched rows now carry a CAMT EndToEndId as source_ref and an
-    // asn-camt053 entry in enriched_from.
-    $enrichedRows = Transaction::query()
+    $rowsWithProvenance = Transaction::query()
         ->where('user_id', $this->fixtureUser->id)
-        ->where('source_format', 'asn-csv')
         ->whereNotNull('enriched_from')
-        ->get();
-
-    expect($enrichedRows->count())->toBe($second->enriched);
-    foreach ($enrichedRows as $row) {
-        /** @var ArrayObject<int, array<string, mixed>> $prov */
-        $prov = $row->enriched_from;
-        $entries = $prov->getArrayCopy();
-        expect($entries)->not->toBeEmpty();
-        $formats = array_map(static fn (array $e): string => (string) $e['format'], $entries);
-        expect($formats)->toContain('asn-camt053');
-    }
+        ->count();
+    expect($rowsWithProvenance)->toBe(0);
 })->group('phase-2');
 
-it('camt053_then_csv: importing CSV after CAMT inserts 0 new and never inserts duplicates', function (): void {
+it('camt053_then_csv: every overlapping row drops as duplicate (no enrichment)', function (): void {
     $first = $this->importer->runAndConfirm($this->camtFixture, 'asn-camt053', $this->fixtureUser);
     expect($first->inserted)->toBe($this->expectedTransactionCount);
     expect($first->enriched)->toBe(0);
 
-    // Snapshot the CAMT rows that already carry an EndToEndId (rank 4).
-    // For those rows, a CSV Volgnummer (rank 1) can never enrich. For
-    // CAMT rows that lacked an EndToEndId (NULL source_ref, rank 0),
-    // a non-null CSV ref is legitimately stronger per the cross-format
-    // enrichment contract (non-null > null).
-    $camtRowsWithRef = Transaction::query()
-        ->where('user_id', $this->fixtureUser->id)
-        ->where('source_format', 'asn-camt053')
-        ->whereNotNull('source_ref')
-        ->count();
-    $camtRowsWithoutRef = $this->expectedTransactionCount - $camtRowsWithRef;
-
     $second = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser);
 
     expect($second->inserted)->toBe(0);
-    expect($second->duplicates)->toBe($camtRowsWithRef);
-    expect($second->enriched)->toBe($camtRowsWithoutRef);
-    expect($second->duplicates + $second->enriched)->toBe($this->expectedTransactionCount);
+    expect($second->enriched)->toBe(0);
+    expect($second->duplicates)->toBe($this->expectedTransactionCount);
 
-    // Total on-disk row count is unchanged.
+    // The original asn-camt053 rows are untouched — no source_format flip,
+    // no enriched_from entry, no source_ref upgrade.
     $totalCamt = Transaction::query()
         ->where('user_id', $this->fixtureUser->id)
         ->where('source_format', 'asn-camt053')
         ->count();
     expect($totalCamt)->toBe($this->expectedTransactionCount);
 
-    // Any provenance entry written during the CSV replay records the
-    // enriching format as `asn-csv`.
-    if ($second->enriched > 0) {
-        $rowsWithCsvProv = Transaction::query()
-            ->where('user_id', $this->fixtureUser->id)
-            ->whereNotNull('enriched_from')
-            ->get()
-            ->filter(function (Transaction $row): bool {
-                /** @var ArrayObject<int, array<string, mixed>> $prov */
-                $prov = $row->enriched_from;
-                foreach ($prov->getArrayCopy() as $entry) {
-                    if (($entry['format'] ?? null) === 'asn-csv') {
-                        return true;
-                    }
-                }
-
-                return false;
-            })
-            ->count();
-        expect($rowsWithCsvProv)->toBe($second->enriched);
-    }
+    $rowsWithProvenance = Transaction::query()
+        ->where('user_id', $this->fixtureUser->id)
+        ->whereNotNull('enriched_from')
+        ->count();
+    expect($rowsWithProvenance)->toBe(0);
 })->group('phase-2');
 
 it('same_format_replay: re-importing CAMT after CAMT produces zero new rows and zero enrichments', function (): void {
@@ -116,7 +95,7 @@ it('same_format_replay: re-importing CAMT after CAMT produces zero new rows and 
     expect($second->enriched)->toBe(0);
 })->group('phase-2');
 
-it('mt940_then_camt053: importing CAMT after MT940 enriches MT940 rows', function (): void {
+it('mt940_then_camt053: every overlapping row drops as duplicate (no enrichment)', function (): void {
     if (! file_exists($this->mt940Fixture)) {
         $this->markTestSkipped('No same-period MT940 export available from ASN — see asn-cross-format/README.md');
     }
@@ -125,10 +104,11 @@ it('mt940_then_camt053: importing CAMT after MT940 enriches MT940 rows', functio
     $second = $this->importer->runAndConfirm($this->camtFixture, 'asn-camt053', $this->fixtureUser);
 
     expect($second->inserted)->toBe(0);
-    expect($second->enriched)->toBeGreaterThan(0);
+    expect($second->enriched)->toBe(0);
+    expect($second->duplicates)->toBeGreaterThan(0);
 })->group('phase-2');
 
-it('camt053_then_mt940: importing MT940 after CAMT produces only duplicates (MT940 is weaker)', function (): void {
+it('camt053_then_mt940: every overlapping row drops as duplicate', function (): void {
     if (! file_exists($this->mt940Fixture)) {
         $this->markTestSkipped('No same-period MT940 export available from ASN — see asn-cross-format/README.md');
     }
@@ -141,7 +121,7 @@ it('camt053_then_mt940: importing MT940 after CAMT produces only duplicates (MT9
     expect($second->duplicates)->toBeGreaterThan(0);
 })->group('phase-2');
 
-it('preview-only flow surfaces enriched rows with the diff field', function (): void {
+it('preview-only flow surfaces every cross-statement collision as duplicate', function (): void {
     $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser);
 
     $preview = $this->importer->runFromUpload(
@@ -152,21 +132,22 @@ it('preview-only flow surfaces enriched rows with the diff field', function (): 
     );
 
     $enrichedRows = array_filter($preview->rows, fn ($r) => $r->status === 'enriched');
-    expect($enrichedRows)->not->toBeEmpty();
-    foreach ($enrichedRows as $row) {
-        expect($row->diff)->not->toBeNull();
-        expect($row->diff)->toHaveKey('source_ref');
-        expect($row->diff['source_ref'])->toHaveKey('to');
-        expect($row->diff['source_ref']['to'])->not->toBe('');
+    expect($enrichedRows)->toBeEmpty();
+
+    $duplicateRows = array_filter($preview->rows, fn ($r) => $r->status === 'duplicate');
+    expect(count($duplicateRows))->toBe($this->expectedTransactionCount);
+
+    foreach ($duplicateRows as $row) {
+        expect($row->diff)->toBeNull();
     }
 })->group('phase-2');
 
 it('cross_format_pair_fingerprints_match: every CSV row has a CAMT counterpart with the same v3 fingerprint', function (): void {
-    // Import the CSV side, capture its fingerprints, then preview the
-    // CAMT side and verify every CSV fingerprint is hit either as a
-    // duplicate (same source_format ranking and ref value) or an
-    // enrichment (CAMT outranks CSV) — both prove v3 fingerprint
-    // stability across the two ingestion paths.
+    // Fingerprint parity still holds — the source_format-independent
+    // tuple (user_id, account_id, posted_at, booked_at, amount_minor,
+    // currency, counterparty_normalized) hashes the same regardless of
+    // which export produced the row. The only change is the disposition
+    // we now return on match: DUPLICATE instead of ENRICHED.
     $first = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser);
     expect($first->inserted)->toBe($this->expectedTransactionCount);
 
@@ -183,9 +164,8 @@ it('cross_format_pair_fingerprints_match: every CSV row has a CAMT counterpart w
     expect($newRows)->toBeEmpty();
     expect($errorRows)->toBeEmpty();
 
-    // Every preview row is either duplicate or enriched — i.e. every
-    // CAMT row hits an existing CSV fingerprint.
+    // Every preview row is a duplicate under the new policy.
     foreach ($preview->rows as $row) {
-        expect($row->status)->toBeIn(['duplicate', 'enriched']);
+        expect($row->status)->toBe('duplicate');
     }
 })->group('phase-2');
