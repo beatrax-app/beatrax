@@ -1,4 +1,4 @@
-# diederik
+# beatrax
 
 A local-only personal finance dashboard that pulls together transactions from ASN
 Bank, ICS Cards, PayPal, and Google Play into a single calm "this month at a
@@ -26,19 +26,19 @@ instead of buried across statements.
 The queue driver is Redis and the chain-resolver job uses `ShouldBeUniqueUntilProcessing` semantics that require it. Redis runs as a single named Docker container, bound to `127.0.0.1` only — never `0.0.0.0`. The loopback bind is mandatory; the default `-p 6379:6379` binds every interface and would expose the cache to the LAN.
 
 ```sh
-docker volume create diederik-redis-data
-docker run --name diederik-redis \
+docker volume create beatrax-redis-data
+docker run --name beatrax-redis \
   -p 127.0.0.1:6379:6379 \
-  -v diederik-redis-data:/data \
+  -v beatrax-redis-data:/data \
   -d redis:7-alpine \
   redis-server --save 60 1
 ```
 
-Persistence is via the named volume `diederik-redis-data` — no source-tree bind mount, so the Sail-on-Mac bind-mount performance trap does not apply. Verify the bind:
+Persistence is via the named volume `beatrax-redis-data` — no source-tree bind mount, so the Sail-on-Mac bind-mount performance trap does not apply. Verify the bind:
 
 ```sh
-docker ps --filter "name=diederik-redis" --format "{{.Names}} {{.Ports}}"
-# Expected: diederik-redis 127.0.0.1:6379->6379/tcp
+docker ps --filter "name=beatrax-redis" --format "{{.Names}} {{.Ports}}"
+# Expected: beatrax-redis 127.0.0.1:6379->6379/tcp
 ```
 
 ### PHP / app install
@@ -51,7 +51,7 @@ php artisan migrate
 
 ### OAuth redirect URI (email ingestion)
 
-When connecting Gmail or Microsoft 365 inboxes, the OAuth dance uses the RFC 8252 loopback IP scheme `http://127.0.0.1:PORT/oauth/callback/{provider}` — never `https://diederik.test`, because Google and Microsoft both reject `*.test` subdomains as redirect URIs. The port is read from `config('app.url')` with a fallback to `8000`. Paste the URI verbatim into the Google Cloud Console / Azure Portal redirect-URI field; the in-app OAuth-client wizard surfaces a copy-to-clipboard button with the exact string.
+When connecting Gmail or Microsoft 365 inboxes, the OAuth dance uses the RFC 8252 loopback IP scheme `http://127.0.0.1:PORT/oauth/callback/{provider}` — never `https://beatrax.test`, because Google and Microsoft both reject `*.test` subdomains as redirect URIs. The port is read from `config('app.url')` with a fallback to `8000`. Paste the URI verbatim into the Google Cloud Console / Azure Portal redirect-URI field; the in-app OAuth-client wizard surfaces a copy-to-clipboard button with the exact string.
 
 The email ingestion path depends on these Composer packages, already pinned in `composer.json`:
 
@@ -68,7 +68,7 @@ The app needs two terminals during development:
 ```sh
 # Terminal 1 — HTTP server
 php artisan serve --host=127.0.0.1 --port=8080
-# or open https://diederik.test if you have Laravel Herd linked
+# or open https://beatrax.test if you have Laravel Herd linked
 
 # Terminal 2 — queue worker / Horizon supervisor
 php artisan horizon
@@ -85,11 +85,11 @@ Production cloud deployment is out of scope.
 
 ### Background workers via macOS launchd
 
-After running `php artisan diederik:install --launchd`, three LaunchAgents are registered:
+After running `php artisan beatrax:install --launchd`, three LaunchAgents are registered:
 
-- `com.diederik.horizon` — runs `php artisan horizon` (queue worker supervisor).
-- `com.diederik.scheduler` — runs `php artisan schedule:work` (hourly Gmail/Graph incremental scans + daily discovery).
-- `com.diederik.redis` — optional; only installed when you're not running Docker Desktop on login. Otherwise pass `--without-redis`.
+- `com.beatrax.horizon` — runs `php artisan horizon` (queue worker supervisor).
+- `com.beatrax.scheduler` — runs `php artisan schedule:work` (hourly Gmail/Graph incremental scans + daily discovery).
+- `com.beatrax.redis` — optional; only installed when you're not running Docker Desktop on login. Otherwise pass `--without-redis`.
 
 The plists run under your user account (no root). All three include `KeepAlive` so they restart on crash. The plists live in version control under `deploy/launchd/` with `{{ABS_PHP_BINARY}}` + `{{ABS_PROJECT_ROOT}}` placeholders; the install command substitutes both before writing the rendered plist to `~/Library/LaunchAgents/` and running `launchctl bootstrap gui/$(id -u)`.
 
@@ -97,36 +97,36 @@ The plists run under your user account (no root). All three include `KeepAlive` 
 
 **Log locations**: `storage/logs/launchd-horizon.log`, `storage/logs/launchd-scheduler.log`, `storage/logs/launchd-redis.log` (plus matching `.err.log` files for stderr).
 
-**Re-run after upgrade**: If Laravel Herd is upgraded (which changes the PHP binary path), re-run `php artisan diederik:install --launchd` so the plists pick up the new binary.
+**Re-run after upgrade**: If Laravel Herd is upgraded (which changes the PHP binary path), re-run `php artisan beatrax:install --launchd` so the plists pick up the new binary.
 
 **Verifying the install**:
 
 ```sh
-launchctl list | grep com.diederik
+launchctl list | grep com.beatrax
 ```
 
 Expected output (with `--without-redis` passed):
 
 ```
-com.diederik.scheduler
-com.diederik.horizon
+com.beatrax.scheduler
+com.beatrax.horizon
 ```
 
-Without `--without-redis`, `com.diederik.redis` appears as a third line.
+Without `--without-redis`, `com.beatrax.redis` appears as a third line.
 
 **Stopping the workers**:
 
 ```sh
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.diederik.horizon.plist
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.diederik.scheduler.plist
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.diederik.redis.plist  # if installed
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.beatrax.horizon.plist
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.beatrax.scheduler.plist
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.beatrax.redis.plist  # if installed
 ```
 
 ## Backups
 
 The supported backup path is `php artisan db:backup`. It runs SQLite
 `VACUUM INTO` against the live database, writes the result to
-`storage/app/backups/diederik-YYYY-MM-DD-HHMMSS.sqlite` at mode `0600`,
+`storage/app/backups/beatrax-YYYY-MM-DD-HHMMSS.sqlite` at mode `0600`,
 verifies the output with a fresh-PDO `PRAGMA integrity_check`, drops a
 matching `.meta.json` sidecar capturing the source `PRAGMA data_version`,
 and prunes the directory to the retention window described below. The
@@ -164,8 +164,8 @@ php artisan db:backup --force
 After every successful run the command prunes
 `storage/app/backups/` so the directory keeps:
 
-- 7 daily `diederik-*.sqlite` files (the 7 most-recent dated files);
-- the 4 most-recent **Sunday-dated** `diederik-*.sqlite` snapshots
+- 7 daily `beatrax-*.sqlite` files (the 7 most-recent dated files);
+- the 4 most-recent **Sunday-dated** `beatrax-*.sqlite` snapshots
   (the project's week anchor; the same Sunday rule the dashboard's
   "this period" tile uses);
 - every `.suspect` file (produced when a backup fails integrity
@@ -185,7 +185,7 @@ The integrity check `db:backup` runs is the same one available
 ad-hoc through the SQLite CLI. To re-verify a file after the fact:
 
 ```sh
-sqlite3 storage/app/backups/diederik-2026-05-20-030000.sqlite "PRAGMA integrity_check;"
+sqlite3 storage/app/backups/beatrax-2026-05-20-030000.sqlite "PRAGMA integrity_check;"
 # Expected output: ok
 ```
 
@@ -224,13 +224,13 @@ worker SIGKILL during development).
 List stuck locks:
 
 ```sh
-docker exec diederik-redis redis-cli KEYS '*unique-lock:resolve-chain-links:*'
+docker exec beatrax-redis redis-cli KEYS '*unique-lock:resolve-chain-links:*'
 ```
 
 Clear a specific lock:
 
 ```sh
-docker exec diederik-redis redis-cli DEL '<key>'
+docker exec beatrax-redis redis-cli DEL '<key>'
 ```
 
 Clear every chain-resolver lock (use with care — only when no jobs are mid-run;
@@ -238,9 +238,9 @@ running this while a worker holds a lock will let a second dispatch enter the
 critical section):
 
 ```sh
-docker exec diederik-redis redis-cli --scan \
+docker exec beatrax-redis redis-cli --scan \
   --pattern 'unique-lock:resolve-chain-links:*' \
-  | xargs -I {} docker exec diederik-redis redis-cli DEL {}
+  | xargs -I {} docker exec beatrax-redis redis-cli DEL {}
 ```
 
 A future phase may wrap the equivalent through an artisan command
@@ -270,10 +270,10 @@ php artisan down
 #    live DB BEFORE the swap, writing it to
 #    storage/app/backups/pre-restore-YYYY-MM-DD-HHMMSS.sqlite at 0600.
 #    If anything goes wrong, that snapshot is your undo button.
-php artisan db:restore --confirm storage/app/backups/diederik-2026-05-20-030000.sqlite
+php artisan db:restore --confirm storage/app/backups/beatrax-2026-05-20-030000.sqlite
 
 # 3) Confirm the restored DB's PRAGMAs match config.
-php artisan diederik:doctor
+php artisan beatrax:doctor
 
 # 4) Bring the app back up. Skip if you used --force-maintenance —
 #    the command brings the app up itself on success.
@@ -285,7 +285,7 @@ back up automatically):
 
 ```sh
 php artisan db:restore --confirm --force-maintenance \
-  storage/app/backups/diederik-2026-05-20-030000.sqlite
+  storage/app/backups/beatrax-2026-05-20-030000.sqlite
 ```
 
 If the post-swap integrity check fails, the command leaves the app in
@@ -314,7 +314,7 @@ To inspect and resolve:
 ```sh
 # Find the suspect file and run the integrity check yourself.
 ls -la storage/app/backups/*.suspect
-sqlite3 storage/app/backups/diederik-2026-05-20-030000.sqlite.suspect "PRAGMA integrity_check;"
+sqlite3 storage/app/backups/beatrax-2026-05-20-030000.sqlite.suspect "PRAGMA integrity_check;"
 
 # Either output reveals genuine corruption (the file is genuinely
 # unsafe; investigate the source DB) or a transient write-time
@@ -323,7 +323,7 @@ php artisan db:backup --force
 
 # Once you have a clean replacement backup, delete the .suspect file
 # manually. The retention sweep never touches it.
-rm storage/app/backups/diederik-2026-05-20-030000.sqlite.suspect
+rm storage/app/backups/beatrax-2026-05-20-030000.sqlite.suspect
 ```
 
 Dismiss the banner by clicking "Mark as resolved" on the rose banner
@@ -334,22 +334,22 @@ page loads.
 ### Failed-jobs maintenance
 
 The `failed_jobs` table grows over time as Horizon retries exhaust.
-The `diederik:failed-jobs prune` command trims it:
+The `beatrax:failed-jobs prune` command trims it:
 
 ```sh
 # Preview — prints up to 50 candidate rows and a footer count,
 # writes nothing.
-php artisan diederik:failed-jobs prune --older-than=30d --dry-run
+php artisan beatrax:failed-jobs prune --older-than=30d --dry-run
 
 # Apply — deletes every failed_jobs row older than the duration.
-php artisan diederik:failed-jobs prune --older-than=30d
+php artisan beatrax:failed-jobs prune --older-than=30d
 ```
 
 The `--older-than=` token accepts `d` (days), `h` (hours), and `w`
 (weeks). `m` is rejected on purpose: across SI-style short durations
 it is ambiguous between minutes and months. Default is `30d`.
 
-For an overall queue-health view, `php artisan diederik:doctor`
+For an overall queue-health view, `php artisan beatrax:doctor`
 includes the WAL + synchronous + backup-freshness probes alongside the
 existing version checks.
 
