@@ -142,7 +142,11 @@ final readonly class LogStreamController
         });
 
         $response->headers->set('Content-Type', 'text/event-stream');
-        $response->headers->set('Cache-Control', 'no-cache');
+        // no-transform pairs with no-cache so an intermediate proxy
+        // never gzip-buffers the SSE response into unpredictable
+        // chunks. Local-only Herd does not need it today; the header
+        // is cheap insurance against a future proxied deployment.
+        $response->headers->set('Cache-Control', 'no-cache, no-transform');
         $response->headers->set('X-Accel-Buffering', 'no');
         $response->headers->set('Connection', 'keep-alive');
 
