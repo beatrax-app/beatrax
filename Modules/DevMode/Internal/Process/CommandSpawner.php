@@ -200,9 +200,12 @@ final readonly class CommandSpawner
         $escaped = escapeshellarg($stringValue);
 
         if ($isOption) {
-            // `--name=value` packs both halves into a single arg so the
-            // shell tokeniser does not need to recombine them.
-            return [escapeshellarg($argSpec->name.'=').'='.$escaped];
+            // `--name=value` packs both halves into a single shell-safe
+            // token. The entire `name=value` string is escapeshellarg'd
+            // as one unit so the resulting argv item reaches artisan
+            // intact (`--name=value`), not split or doubled by a
+            // mid-string quote.
+            return [escapeshellarg($argSpec->name.'='.$stringValue)];
         }
 
         return [$escaped];

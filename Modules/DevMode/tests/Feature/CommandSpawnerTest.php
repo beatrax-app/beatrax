@@ -6,26 +6,33 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
+use Modules\DevMode\Public\Dto\ArgSpec;
+use Modules\DevMode\Public\Dto\CommandSpec;
 
 /*
  * CommandSpawner architecture-(b) shell-redirect + escapeshellarg
- * invariants (Phase 16 plan 04 Task 1 — CONTEXT D-16).
+ * invariants.
  *
- * The spawner detaches via `setsid ... > out 2>&1 < /dev/null &` so
- * the foregrounded HTTP request returns within milliseconds; the
+ * The spawner detaches via `bash -c '... > out 2>&1 < /dev/null &'`
+ * so the foregrounded HTTP request returns within milliseconds; the
  * child writes its full stdout + stderr into a per-run tmp file the
- * SSE controller (Task 2) tails via fseek + clearstatcache.
+ * SSE controller tails via fseek + clearstatcache.
  *
- * Test 4 is the canonical injection-resistance regression — it
- * attempts a classic shell-metachar payload as the `from` arg of
- * db:restore and asserts the spawner-controlled tree is unmodified
- * (PWNED side-effect file never created) even though the spawn
- * call succeeds. The three independent guards (whitelist + escape +
- * validate) ensure the injection attempt becomes inert path data
- * that the artisan command rejects as a missing file.
+ * The injection-resistance regression below attempts a classic
+ * shell-metachar payload as the `from` arg of db:restore and asserts
+ * the spawner-controlled tree is unmodified (PWNED side-effect file
+ * never created) even though the spawn call succeeds. The three
+ * independent guards (whitelist + escape + validate) ensure the
+ * injection attempt becomes inert path data that the artisan command
+ * rejects as a missing file.
  *
- * Skipped on Windows (`setsid` + posix_kill are POSIX-only); the
- * project's local-only constraint is macOS so this is fine.
+ * The option-token regression below covers the `--name=value` shape:
+ * a single `--queue=high` argv item must reach artisan unchanged so
+ * the option parser splits on the first `=` and the value is `high`,
+ * not `=high` or `==high`.
+ *
+ * Skipped on Windows (`posix_kill` is POSIX-only); the project's
+ * local-only constraint is macOS so this is fine.
  */
 
 beforeEach(function (): void {
@@ -151,6 +158,79 @@ it('FileTailer returns new bytes when the file grows between calls', function ()
     } finally {
         @unlink($tmpFile);
     }
+});
+
+it('renders an --option=value arg as a single shell-safe argv token (no doubled `=`)', function (): void {
+    /** @var CommandSpawner $spawner */
+    $spawner = app(CommandSpawner::class);
+
+    // Reach into the private renderArg() via reflection so the test
+    // pins the exact shell-token shape without depending on a live
+    // child process. The bug fixed here produced
+    // `'--queue=' . '=' . 'default'` which the shell tokenised into
+    // `--queue==default` — artisan then parsed the value as `=default`.
+    $argSpec = new ArgSpec(
+        name: '--queue',
+        label: 'Queue name',
+        type: 'text',
+        rules: ['string'],
+    );
+
+    $reflection = new ReflectionClass(CommandSpawner::class);
+    $method = $reflection->getMethod('renderArg');
+    $method->setAccessible(true);
+
+    $tokens = $method->invoke($spawner, $argSpec, 'high');
+
+    expect($tokens)->toBeArray();
+    expect($tokens)->toHaveCount(1);
+
+    $token = $tokens[0];
+    expect($token)->toBeString();
+
+    // The expected single-arg shape: escapeshellarg('--queue=high')
+    // wraps the whole `name=value` pair in shell-safe quoting.
+    expect($token)->toBe(escapeshellarg('--queue=high'));
+
+    // After the shell tokeniser strips the outer single-quotes, the
+    // argv item is exactly `--queue=high` — never `--queue==high`.
+    $unquoted = trim($token, "'");
+    expect($unquoted)->toBe('--queue=high');
+    expect($unquoted)->not->toContain('==');
+});
+
+it('forwards an --option=value pair to a spawned artisan command intact', function (): void {
+    if (! extension_loaded('posix')) {
+        $this->markTestSkipped('posix extension required for spawn-then-tail');
+    }
+
+    /** @var CommandSpawner $spawner */
+    $spawner = app(CommandSpawner::class);
+    /** @var RunRegistry $registry */
+    $registry = app(RunRegistry::class);
+
+    // queue:retry --queue=high is the only --option-bearing SAFE-tier
+    // entry. With the bug present the argv reached artisan as
+    // `--queue==high` and artisan emitted "Queue [=high] is not
+    // defined" (or the equivalent for the failed-jobs query). With
+    // the fix the argv item is `--queue=high` and artisan emits the
+    // standard "No failed jobs found" / "Unable to find job" body,
+    // which contains neither `[=high]` nor `==high`.
+    $runId = $spawner->start('queue:retry', ['id' => 'all', '--queue' => 'high'], 99, 'safe');
+
+    $record = $registry->find($runId);
+    expect($record)->not->toBeNull();
+
+    expect(awaitProcessExit($record->pid))->toBeTrue();
+
+    clearstatcache(true, $record->outPath);
+    $captured = is_file($record->outPath) ? (string) file_get_contents($record->outPath) : '';
+
+    // The smoking gun would be artisan complaining about a queue
+    // whose name begins with `=` — only possible when the spawner
+    // hands artisan a literal `--queue==high` token.
+    expect($captured)->not->toContain('[=high]');
+    expect($captured)->not->toContain('==high');
 });
 
 it('FileTailer returns empty + unchanged offset for a missing or truncated file', function (): void {
