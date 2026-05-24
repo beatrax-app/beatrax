@@ -16,12 +16,12 @@ use Illuminate\Database\Eloquent\Model;
  * dynamic-call larastan flags) for list rendering, and uses this model
  * only when a typed accessor is convenient.
  *
- * The `payload` column carries the serialised job class + bound data.
- * D-36 inline JSON viewer passes the raw string through
- * RedactSecretsProcessor::scrub() before rendering — every Bearer / JWT
- * / OAuth scrub-set literal is masked before any payload byte reaches
- * the browser. Cast to array here for code paths that prefer a parsed
- * structure.
+ * The `payload` column carries the serialised job class + bound
+ * data. The queue inspector's inline JSON viewer passes the raw
+ * string through RedactSecretsProcessor::scrub() before rendering
+ * — every Bearer / JWT / OAuth scrub-set literal is masked before
+ * any payload byte reaches the browser. Cast to array here for
+ * code paths that prefer a parsed structure.
  *
  * @property int $id
  * @property string $queue

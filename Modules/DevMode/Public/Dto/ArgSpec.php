@@ -10,7 +10,7 @@ use Spatie\LaravelData\Data;
  * Declarative schema for one artisan-command argument the Dev Console
  * renders an input for.
  *
- * The runner page (lands in 16-04b) reads the argsSchema list from a
+ * The runner page reads the argsSchema list from a
  * CommandSpec and emits a Flux form widget per ArgSpec entry; the
  * spawn endpoint validates the submitted values against the same
  * schema before the process is spawned. The `rules` field carries a
