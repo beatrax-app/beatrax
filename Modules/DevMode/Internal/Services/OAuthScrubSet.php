@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Services;
 
+use Modules\Core\Models\SystemAlert;
 use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Listeners\BustOAuthScrubSetOnSecretChange;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
@@ -59,6 +60,18 @@ class OAuthScrubSet
     protected ?array $set = null;
 
     protected ?string $compiled = null;
+
+    /**
+     * Tracks whether the next load() is happening during the framework
+     * boot phase (where a missing oauth_secrets table or an unbooted
+     * encrypter is expected and must not halt the app) or at runtime
+     * (where the same failure means redaction is silently disabled and
+     * the operator needs to know).
+     *
+     * Starts true; the first successful load() flips it to false so
+     * subsequent load() failures route through the runtime branch.
+     */
+    protected bool $bootPhase = true;
 
     /**
      * Empty the cache. The next `all()` / `compiledPattern()` call
@@ -128,9 +141,22 @@ class OAuthScrubSet
      * user) because the scrub set is a system-wide redaction surface.
      *
      * Returns a de-duplicated list with empty / whitespace-only
-     * strings filtered out. A DB / decryption failure surfaces as an
-     * empty set — a missing-table or boot-time encrypter blip MUST
-     * NOT halt application boot; the next call retries from scratch.
+     * strings filtered out.
+     *
+     * Boot vs runtime resilience:
+     *   - During the framework boot phase, a missing oauth_secrets
+     *     table or an unbooted encrypter is expected — return an
+     *     empty set so app boot continues. The flag stays true and
+     *     a future load() retries from scratch.
+     *   - After the first successful load() the flag flips to false.
+     *     A failure at THAT point means redaction is silently
+     *     disabled across the Monolog tap AND audit-row pipeline —
+     *     write a critical system_alerts row so the operator sees a
+     *     banner on the next dashboard load. Best-effort: a
+     *     system_alerts write that also fails (e.g. DB is fully
+     *     down) is swallowed at the inner catch — the alternative
+     *     is propagating the exception out of a log/audit codepath
+     *     and crashing every request that emits a log line.
      *
      * @return list<string>
      */
@@ -155,11 +181,44 @@ class OAuthScrubSet
                     }
                 }
             }
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->bootPhase) {
+                $this->recordRuntimeFailure($e);
+            }
+
             return [];
         }
 
+        // First successful load — leave the boot-phase window so
+        // future failures route through the runtime alert branch.
+        $this->bootPhase = false;
+
         return array_keys($collected);
+    }
+
+    /**
+     * Write a critical SystemAlert when a post-boot OAuthScrubSet
+     * load fails. Best-effort — a SystemAlert write that also fails
+     * (e.g. the DB connection is fully down) is swallowed; the
+     * alternative is propagating the exception out of a log/audit
+     * codepath and crashing every request that emits a log line.
+     */
+    protected function recordRuntimeFailure(Throwable $e): void
+    {
+        try {
+            SystemAlert::create([
+                'user_id' => null,
+                'kind' => 'oauth_scrub_set_failed',
+                'severity' => 'critical',
+                'message' => 'OAuth secret redaction is offline. Logs and audit excerpts may contain unredacted tokens until the next successful load.',
+                'metadata' => [
+                    'exception' => $e->getMessage(),
+                    'exception_class' => get_class($e),
+                ],
+            ]);
+        } catch (Throwable) {
+            // Last-resort no-op — never break the surrounding logger.
+        }
     }
 
     /**
