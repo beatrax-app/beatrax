@@ -7,13 +7,12 @@ use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Models\User;
 
 /*
- * AppSidebar rendering invariants (Phase 16 D-05).
- *
- * Behavior contract per 16-01-PLAN.md Task 1:
+ * AppSidebar rendering invariants.
  *
  *  (1) Authenticated NON-developer → renders → response does NOT
- *      contain the literal substring "side-dev-block". The Dev block
- *      is server-side absent for non-developers (T-16-01 mitigation).
+ *      contain the literal substring "side-dev-block". The Dev
+ *      block is server-side absent for non-developers so the Dev
+ *      Console's existence is never disclosed via HTML.
  *  (2) Authenticated developer (is_developer=true) → renders →
  *      response contains "side-dev-block" + the literal "Developer"
  *      heading + the literal "dot-live" class + the kbd hint "⌘.".

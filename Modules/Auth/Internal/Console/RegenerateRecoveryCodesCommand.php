@@ -26,9 +26,9 @@ use Modules\Core\Public\Contracts\Clock;
  * Whole operation runs inside a database transaction so a partial
  * failure does not leave the user with no usable recovery path.
  *
- * Registered as DESTRUCTIVE in the Dev Console (CONTEXT D-13): a
- * mistaken regenerate forces the user back through the password-
- * reset path if they are not signed in.
+ * Registered as DESTRUCTIVE in the Dev Console: a mistaken
+ * regenerate forces the user back through the password-reset
+ * path if they are not signed in.
  */
 class RegenerateRecoveryCodesCommand extends Command
 {

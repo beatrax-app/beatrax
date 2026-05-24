@@ -1499,11 +1499,11 @@ it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tes
 });
 
 it('requires every /dev route to apply the ensureDeveloperMode middleware (everyDevModeRouteAppliesEnsureDeveloperModeMiddleware)', function (): void {
-    // Phase 16 D-04 invariant: every Dev Console HTTP route MUST apply
-    // the `ensureDeveloperMode` middleware alias so the 404-not-403
-    // information-disclosure mitigation (T-16-01) covers the entire
-    // /dev/* surface. A future plan that registers a new /dev/* route
-    // without the alias would silently disclose the Dev Console's
+    // Architectural invariant: every Dev Console HTTP route MUST
+    // apply the `ensureDeveloperMode` middleware alias so the
+    // 404-not-403 information-disclosure mitigation covers the
+    // entire /dev/* surface. A new /dev/* route registered without
+    // the alias would silently disclose the Dev Console's
     // existence to non-developers — this invariant fails CI before
     // that ships.
     //

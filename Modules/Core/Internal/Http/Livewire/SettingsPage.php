@@ -96,13 +96,13 @@ final class SettingsPage extends Component
     public string $theme = 'system';
 
     /**
-     * Developer Mode toggle (Phase 16-03 / DEVUI-01). When on, the
-     * in-app Developer Console at /dev/* renders for this user.
-     * Persisted instant-apply via setDevMode() — toggling writes
-     * `users.is_developer` directly through the Eloquent model so the
-     * flip survives logout/login. The setting is per-user; partner
-     * accounts cannot toggle each other's flag because the writer
-     * always scopes to CurrentUser.
+     * Developer Mode toggle. When on, the in-app Developer Console
+     * at /dev/* renders for this user. Persisted instant-apply via
+     * setDevMode() — toggling writes users.is_developer directly
+     * through the Eloquent model so the flip survives
+     * logout/login. The setting is per-user; partner accounts
+     * cannot toggle each other's flag because the writer always
+     * scopes to CurrentUser.
      */
     #[Validate('boolean')]
     public bool $isDeveloper = false;
@@ -152,13 +152,13 @@ final class SettingsPage extends Component
     }
 
     /**
-     * Instant-apply Developer Mode toggle (Phase 16-03 / DEVUI-01).
-     * Writes the boolean to `users.is_developer` via the Eloquent
-     * model so the flip survives logout/login. Scopes the write to
-     * the CurrentUser's own row — cross-user writes are structurally
-     * impossible because the user resolves through the CurrentUser
-     * contract, not a request-supplied id. Mirrors setTheme()'s
-     * "no Save button" posture: toggling is its own commit.
+     * Instant-apply Developer Mode toggle. Writes the boolean to
+     * users.is_developer via the Eloquent model so the flip
+     * survives logout/login. Scopes the write to the CurrentUser's
+     * own row — cross-user writes are structurally impossible
+     * because the user resolves through the CurrentUser contract,
+     * not a request-supplied id. Mirrors setTheme()'s "no Save
+     * button" posture: toggling is its own commit.
      */
     public function setDevMode(bool $value, CurrentUser $currentUser): void
     {

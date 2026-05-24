@@ -9,27 +9,25 @@ use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Models\User;
 
 /*
- * AppSidebar Dev-block live-data invariants (Phase 16-08 Task 2).
+ * AppSidebar Dev-block live-data invariants.
  *
- * 16-01 shipped the Dev block with static "Queue 0 · Worker —"
- * placeholder copy; 16-08 wires the real cache + jobs.count() reads
- * via render() method-DI. The pulse-row subtree carries `wire:poll.5s`
- * so the live values refresh without re-rendering the whole sidebar.
+ * The Dev block's "Queue N · Worker {N}s ago" pulse row is driven
+ * by real cache + jobs.count() reads via render() method-DI. The
+ * pulse-row subtree carries `wire:poll.5s` so the live values
+ * refresh without re-rendering the whole sidebar.
  *
- * Behavior contract per 16-08-PLAN.md Task 2:
- *
- *  Test 1 (queue count): seeding N rows into the `jobs` table for a
- *      developer renders "Queue N" in the Dev block.
+ *  Test 1 (queue count): seeding N rows into the `jobs` table for
+ *      a developer renders "Queue N" in the Dev block.
  *  Test 2 (worker fresh): a recent heartbeat timestamp in cache
  *      renders "Worker {Ns ago}".
- *  Test 3 (worker missing): an absent cache key renders the em-dash
- *      placeholder "Worker —".
- *  Test 4 (wire:poll): the live-data subtree carries wire:poll.5s so
- *      the sidebar refreshes every 5 seconds.
+ *  Test 3 (worker missing): an absent cache key renders the
+ *      em-dash placeholder "Worker —".
+ *  Test 4 (wire:poll): the live-data subtree carries wire:poll.5s
+ *      so the sidebar refreshes every 5 seconds.
  *  Test 5 (non-developer gate): non-developers do NOT receive the
- *      Dev block at all (T-16-01 still holds; this test guards
- *      against a regression where the new method-DI accidentally
- *      leaks live data into a non-dev render).
+ *      Dev block at all — guards against a regression where the
+ *      method-DI accidentally leaks live data into a non-dev
+ *      render.
  */
 
 function sidebarLiveUser(bool $isDeveloper, string $username = 'sidebar-live-fixture'): User
@@ -96,7 +94,7 @@ it('declares wire:poll.5s on the Dev-block live subtree so the sidebar refreshes
     expect($html)->toContain('wire:poll.5s');
 });
 
-it('still hides the Dev block (and the live data) from a non-developer (T-16-01 holds)', function (): void {
+it('still hides the Dev block (and the live data) from a non-developer', function (): void {
     sidebarLiveUser(true, 'sidebar-live-non-dev-seed');
     $user = sidebarLiveUser(false, 'sidebar-live-non-dev');
 
