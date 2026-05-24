@@ -1,0 +1,188 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\DevMode\Internal\Http\Livewire;
+
+use Illuminate\Contracts\Session\Session;
+use Illuminate\Contracts\View\Factory as ViewFactory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\DevMode\Internal\Sql\ReadOnlySqliteConnection;
+use Modules\DevMode\Internal\Sql\SchemaSnapshot;
+use Modules\DevMode\Internal\Sql\SelectOnlyValidator;
+use Modules\DevMode\Public\Contracts\AuditWriter;
+use Throwable;
+
+/**
+ * `/dev/sql` panel — SELECT-only SQL execution + schema viewer
+ * (CONTEXT D-45 / D-46 / D-47).
+ *
+ * Defense-in-depth pipeline:
+ *
+ *   1. {@see SelectOnlyValidator}::validate() — parse-time guard via
+ *      doctrine/sql-formatter Tokenizer (the single seam — see the
+ *      class PHPDoc + the contract test).
+ *   2. {@see ReadOnlySqliteConnection}::execute() — execution-time
+ *      guard via PRAGMA query_only = 1 + 5-second WallClockCap.
+ *   3. AuditWriter::recordSelectQuery() — every successful query
+ *      writes a `dev_mode_audit` row (AuditEvent::SqlSelect).
+ *
+ * Gating per D-46: the page is gated on Dev Mode ON (the route's
+ * EnsureDeveloperMode middleware covers that) + the session-scoped
+ * Advanced toggle. When Advanced is OFF the page renders but the
+ * Run pathway is short-circuited with a banner directing the
+ * operator to flip the toggle. No typed-name modal — the parser +
+ * PRAGMA + cap are the actual guard.
+ *
+ * I-6 LOCKED DECISION: schema viewer is an inner sidebar of /dev/sql,
+ * NOT a separate route. One page, one Livewire component, one
+ * sidebar item. Browse-table reuses the same `run()` pipeline so the
+ * audit-row contract is identical.
+ *
+ * Pattern B (PATTERNS.md): no constructor on a Livewire Component;
+ * collaborators arrive via method-DI on `render()` / action methods.
+ */
+#[Layout('dev::layouts.dev-shell')]
+final class SqlPanelPage extends Component
+{
+    public string $sqlInput = '';
+
+    public string $errorMessage = '';
+
+    /** @var list<array<string, mixed>> */
+    public array $resultRows = [];
+
+    /** @var list<string> */
+    public array $resultColumns = [];
+
+    public ?int $rowcount = null;
+
+    public ?int $durationMs = null;
+
+    public function run(
+        Session $session,
+        CurrentUser $currentUser,
+        SelectOnlyValidator $validator,
+        ReadOnlySqliteConnection $connection,
+        AuditWriter $audit,
+    ): void {
+        $this->resetResultState();
+
+        if ($session->get('dev_mode.advanced') !== true) {
+            $this->errorMessage = 'Enable Advanced (Dev Mode → Advanced) to run queries.';
+
+            return;
+        }
+
+        $sql = trim($this->sqlInput);
+        if ($sql === '') {
+            $this->errorMessage = 'Only SELECT statements are allowed. Reject reason: empty_statement.';
+
+            return;
+        }
+
+        try {
+            $validator->validate($sql);
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+            $sqlErrors = $errors['sql'] ?? null;
+            $reason = 'unknown';
+            if (is_array($sqlErrors) && isset($sqlErrors[0]) && is_string($sqlErrors[0])) {
+                $reason = $sqlErrors[0];
+            }
+            $this->errorMessage = 'Only SELECT statements are allowed. Reject reason: '.$reason.'.';
+
+            return;
+        }
+
+        try {
+            $result = $connection->execute($sql);
+        } catch (Throwable $e) {
+            $this->errorMessage = 'Query exceeded the 5-second timeout. Refine your query and try again.';
+            // For other engine errors (e.g. SQLITE_READONLY surfaced
+            // from a write that slipped past the validator) the
+            // message body is the engine's own error text — visible
+            // in the panel so the operator can react.
+            if (! str_contains($e->getMessage(), 'maximum execution time')) {
+                $this->errorMessage = 'SQL error: '.$e->getMessage();
+            }
+
+            return;
+        }
+
+        $rows = $result['rows'];
+        $this->rowcount = count($rows);
+        $this->durationMs = $result['duration_ms'];
+        $this->resultColumns = $rows === []
+            ? []
+            : array_values(array_filter(
+                array_keys(get_object_vars($rows[0])),
+                static fn ($k): bool => is_string($k),
+            ));
+        $mapped = [];
+        foreach ($rows as $row) {
+            $normalised = [];
+            foreach (get_object_vars($row) as $key => $value) {
+                if (is_string($key)) {
+                    $normalised[$key] = $value;
+                }
+            }
+            $mapped[] = $normalised;
+        }
+        $this->resultRows = $mapped;
+
+        $audit->recordSelectQuery(
+            query: $sql,
+            rowcount: $this->rowcount,
+            durationMs: $this->durationMs,
+            callerUserId: $currentUser->id(),
+        );
+    }
+
+    public function browseTable(
+        string $table,
+        Session $session,
+        CurrentUser $currentUser,
+        SelectOnlyValidator $validator,
+        ReadOnlySqliteConnection $connection,
+        AuditWriter $audit,
+    ): void {
+        // The schema-viewer Browse button feeds the SELECT * FROM
+        // <table> LIMIT 100 query through the same SQL pipeline so
+        // every browse writes an audit row + observes the
+        // query_only=1 + wall-clock cap.
+        //
+        // The table name is rendered from `Schema::getTables()` —
+        // never user-supplied — and is escaped with double quotes
+        // following SQLite's identifier escape rules.
+        $safeName = '"'.str_replace('"', '""', $table).'"';
+        $this->sqlInput = 'SELECT * FROM '.$safeName.' LIMIT 100';
+        $this->run($session, $currentUser, $validator, $connection, $audit);
+    }
+
+    public function render(
+        ViewFactory $views,
+        Session $session,
+        SchemaSnapshot $schema,
+    ): View {
+        $advancedOn = $session->get('dev_mode.advanced') === true;
+
+        return $views->make('dev::livewire.sql-panel-page', [
+            'tables' => $schema->all(),
+            'advancedOn' => $advancedOn,
+        ]);
+    }
+
+    private function resetResultState(): void
+    {
+        $this->errorMessage = '';
+        $this->resultRows = [];
+        $this->resultColumns = [];
+        $this->rowcount = null;
+        $this->durationMs = null;
+    }
+}

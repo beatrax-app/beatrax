@@ -17,6 +17,7 @@ use Modules\DevMode\Internal\Http\Livewire\DoctorPanelPage;
 use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
 use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
 use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
+use Modules\DevMode\Internal\Http\Livewire\SqlPanelPage;
 use Modules\DevMode\Internal\Http\Livewire\SystemSnapshotPage;
 
 /*
@@ -98,6 +99,10 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
         // ConfigFlattener (system).
         Route::get('/doctor', DoctorPanelPage::class)->name('dev.doctor');
         Route::get('/system', SystemSnapshotPage::class)->name('dev.system');
+        // 16-07 Task 3: SELECT-only SQL panel + schema viewer
+        // (CONTEXT D-45 / D-46 / D-47). Single page with inner sidebar
+        // — I-6 LOCKED decision: NOT a separate /dev/sql/schema route.
+        Route::get('/sql', SqlPanelPage::class)->name('dev.sql');
 
         // 16-06: Horizon iframe (D-38 two-signal). The route is ONLY
         // registered when BOTH `config('app.dev_mode') === true` AND
