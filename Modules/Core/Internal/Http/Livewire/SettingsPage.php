@@ -58,14 +58,14 @@ final class SettingsPage extends Component
 
     /**
      * History window (in months) the recurring-series detector scans
-     * on each sweep. The lower bound of 3 months keeps monthly
-     * detection statistically meaningful (at least three observations
-     * for a stable cadence); the upper bound of 60 months caps the
-     * sweep cost so very long histories still finish in reasonable
-     * time.
+     * on each sweep. The lower bound of 2 months keeps monthly
+     * detection viable (the detector's MIN_OCCURRENCES gate is 2, so
+     * two months of monthly data is the smallest signal the engine
+     * can act on); the upper bound of 60 months caps the sweep cost
+     * so very long histories still finish in reasonable time.
      */
-    #[Validate('required|integer|min:3|max:60')]
-    public int $recurringDetectionWindowMonths = 18;
+    #[Validate('required|integer|min:2|max:60')]
+    public int $recurringDetectionWindowMonths = 2;
 
     /**
      * Lower-bound income amount, in signed BIGINT minor units, below
@@ -279,10 +279,10 @@ final class SettingsPage extends Component
             'periodStartDay.max' => 'Choose a day from 1 to 28.',
             'defaultCurrencyView.required' => 'Pick one of the available options.',
             'defaultCurrencyView.in' => 'Pick one of the available options.',
-            'recurringDetectionWindowMonths.required' => 'Choose between 3 and 60 months.',
-            'recurringDetectionWindowMonths.integer' => 'Choose between 3 and 60 months.',
-            'recurringDetectionWindowMonths.min' => 'Choose between 3 and 60 months.',
-            'recurringDetectionWindowMonths.max' => 'Choose between 3 and 60 months.',
+            'recurringDetectionWindowMonths.required' => 'Choose between 2 and 60 months.',
+            'recurringDetectionWindowMonths.integer' => 'Choose between 2 and 60 months.',
+            'recurringDetectionWindowMonths.min' => 'Choose between 2 and 60 months.',
+            'recurringDetectionWindowMonths.max' => 'Choose between 2 and 60 months.',
             'recurringIncomeMinAmountMinor.required' => 'Enter an amount from €0 upward.',
             'recurringIncomeMinAmountMinor.integer' => 'Enter an amount from €0 upward.',
             'recurringIncomeMinAmountMinor.min' => 'Enter an amount from €0 upward.',
