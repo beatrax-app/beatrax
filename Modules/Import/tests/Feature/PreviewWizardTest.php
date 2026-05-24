@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\ConfirmsImports;
@@ -11,6 +13,7 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
@@ -68,6 +71,59 @@ it('confirms an import and redirects to the results page', function (): void {
 
     expect(Transaction::count())->toBeGreaterThan(0);
     expect(ImportRun::query()->find($preview->importRunId)?->status)->toBe('confirmed');
+});
+
+it('dispatches DetectRecurringSeriesJob alongside ResolveChainLinksJob after a successful confirm', function (): void {
+    /** @var RunsImports $importer */
+    $importer = $this->app->make(RunsImports::class);
+    $preview = $importer->runFromUpload(
+        __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv',
+        'asn-csv',
+        $this->fixtureUser,
+        'asn-sample-1.csv',
+    );
+
+    Queue::fake();
+
+    Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
+        ->call('confirm')
+        ->assertRedirect();
+
+    Queue::assertPushed(
+        ResolveChainLinksJob::class,
+        fn (ResolveChainLinksJob $job): bool => $job->userId === $this->fixtureUser->id,
+    );
+    Queue::assertPushed(
+        DetectRecurringSeriesJob::class,
+        fn (DetectRecurringSeriesJob $job): bool => $job->userId === $this->fixtureUser->id,
+    );
+});
+
+it('does NOT dispatch DetectRecurringSeriesJob on a re-confirm with zero new work', function (): void {
+    /** @var RunsImports $importer */
+    $importer = $this->app->make(RunsImports::class);
+    $preview = $importer->runFromUpload(
+        __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv',
+        'asn-csv',
+        $this->fixtureUser,
+        'asn-sample-1.csv',
+    );
+
+    Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
+        ->call('confirm')
+        ->assertRedirect();
+
+    // Second confirm on the same already-confirmed run: ConfirmImport's
+    // idempotent short-circuit returns zero inserted + zero enriched, so
+    // neither downstream sweep should fire again.
+    Queue::fake();
+
+    /** @var ConfirmsImports $confirmer */
+    $confirmer = $this->app->make(ConfirmsImports::class);
+    ($confirmer)($preview->importRunId, $this->fixtureUser);
+
+    Queue::assertNotPushed(ResolveChainLinksJob::class);
+    Queue::assertNotPushed(DetectRecurringSeriesJob::class);
 });
 
 it('discards an import and redirects back to /imports/new', function (): void {
