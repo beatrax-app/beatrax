@@ -130,16 +130,23 @@ final class AppMenuBuilder
         ];
 
         if ($this->isDeveloper()) {
-            // B-4 fix: route-name based (NOT hardcoded URL host) so
-            // the menu works in both Herd dev (https://beatrax.test)
-            // AND shipped Electron bundles (http://127.0.0.1:{port}).
-            // The existing AppMenuBuilder uses Menu::route('imports.new', ...)
-            // — this is the verified contract. The accelerator
-            // strings (`Cmd+.` / `Cmd+K`) are interpreted by Electron
-            // verbatim on both macOS and Windows/Linux.
+            // Route-name based (NOT hardcoded URL host) so the menu
+            // works in both Herd dev (https://beatrax.test) AND shipped
+            // Electron bundles (http://127.0.0.1:{port}). Menu::route
+            // resolves the URL through the live UrlGenerator at boot
+            // time. The accelerator strings (Cmd+.) are interpreted by
+            // Electron verbatim on macOS and Windows/Linux.
+            //
+            // "Run a command" carries the ⌘K visual hint in its label
+            // but does NOT register an OS-menu accelerator: an
+            // accelerator on this item would let the OS menu intercept
+            // ⌘K before the body-level keybind handler dispatches
+            // palette:open, navigating to /dev instead of opening the
+            // palette. The body-level handler in the Blade layouts
+            // owns the actual keybind.
             $items[] = Menu::label(self::DEVELOPER_SUBMENU)->submenu(
                 Menu::route('dev.overview', self::DEV_OPEN_CONSOLE)->accelerator('Cmd+.'),
-                Menu::route('dev.overview', self::DEV_RUN_COMMAND)->accelerator('Cmd+K'),
+                Menu::route('dev.overview', self::DEV_RUN_COMMAND),
             );
         }
 

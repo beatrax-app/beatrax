@@ -60,9 +60,14 @@ it('appends a Developer submenu with the Open Dev Console + Run-a-command entrie
     expect($rendered)->toContain(AppMenuBuilder::DEV_OPEN_CONSOLE);
     expect($rendered)->toContain(AppMenuBuilder::DEV_RUN_COMMAND);
 
-    // Accelerators are present on both entries.
+    // "Open Dev Console" carries the Cmd+. accelerator. "Run a command"
+    // does NOT register an OS-menu accelerator — the ⌘K visual hint
+    // lives in its label, and the body-level Blade keybind handler
+    // owns the actual ⌘K → palette:open dispatch. Letting the OS menu
+    // intercept Cmd+K would navigate to /dev instead of opening the
+    // palette.
     expect($rendered)->toContain('Cmd+.');
-    expect($rendered)->toContain('Cmd+K');
+    expect($rendered)->not->toContain('Cmd+K');
 });
 
 it('omits the Developer submenu entirely for is_developer=false (T-16-36 defense-in-depth)', function (): void {
