@@ -150,15 +150,27 @@ final class SqlPanelPage extends Component
         SelectOnlyValidator $validator,
         ReadOnlySqliteConnection $connection,
         AuditWriter $audit,
+        SchemaSnapshot $schema,
     ): void {
-        // The schema-viewer Browse button feeds the SELECT * FROM
-        // <table> LIMIT 100 query through the same SQL pipeline so
-        // every browse writes an audit row + observes the
-        // query_only=1 + wall-clock cap.
+        // The schema-viewer Browse button feeds SELECT * FROM <table>
+        // LIMIT 100 through the same SQL pipeline so every browse
+        // writes an audit row + observes the query_only=1 + wall-clock
+        // cap.
         //
-        // The table name is rendered from `Schema::getTables()` —
-        // never user-supplied — and is escaped with double quotes
-        // following SQLite's identifier escape rules.
+        // Defense-in-depth: even though the table value originates in
+        // the Blade-rendered SchemaSnapshot output and the identifier
+        // is double-quoted with the SQLite escape rules, assert the
+        // submitted name is on the live schema allow-list before
+        // building the SELECT. A tampered Livewire payload that
+        // smuggles an off-schema name still gets rejected before the
+        // SELECT ever reaches the engine.
+        $allowedNames = array_column($schema->all(), 'name');
+        if (! in_array($table, $allowedNames, true)) {
+            $this->resetResultState();
+            $this->errorMessage = 'Unknown table.';
+
+            return;
+        }
         $safeName = '"'.str_replace('"', '""', $table).'"';
         $this->sqlInput = 'SELECT * FROM '.$safeName.' LIMIT 100';
         $this->run($session, $currentUser, $validator, $connection, $audit);
