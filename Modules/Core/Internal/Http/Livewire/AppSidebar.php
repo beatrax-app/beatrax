@@ -25,20 +25,17 @@ use Modules\Core\Public\Contracts\CurrentUser;
  *
  * The Dev block at the foot is gated server-side on
  * `users.is_developer` — non-developers do NOT receive the dashed
- * container in the rendered HTML. The block carries a pulsing emerald
- * `.dot-live` dot, an "Open Dev Console" link with a `⌘.` kbd hint,
- * and a "Queue {N} · Worker {N}s ago" live row. 16-08 swapped the
- * 16-01 placeholder for the real cache + jobs table reads — see
- * `render()`'s `$queueCount` + `$workerSecondsAgo` (and the
- * `wire:poll.5s` on the live-data sub-tree in the Blade view).
+ * container in the rendered HTML. The block carries a pulsing
+ * emerald `.dot-live` dot, an "Open Dev Console" link with a `⌘.`
+ * kbd hint, and a "Queue {N} · Worker {N}s ago" live row driven by
+ * a wire:poll.5s sub-tree.
  *
- * Queue-count choice: `jobs.count()` (pending only). Failed jobs
- * already surface in the dashboard toast (D-37) and the dedicated
- * `/dev/queue/failed` tab, so "Queue {N}" in the sidebar reads as
+ * Queue-count choice: jobs.count() (pending only). Failed jobs
+ * already surface in the dashboard toast and the dedicated
+ * /dev/queue/failed tab, so "Queue {N}" in the sidebar reads as
  * "work waiting to be done". The composite count
- * `jobs + failed_jobs` would conflate two distinct operational
- * signals (work-in-progress vs work-that-failed). Documented in
- * 16-08-SUMMARY.md.
+ * jobs + failed_jobs would conflate two distinct operational
+ * signals (work-in-progress vs work-that-failed).
  *
  * The account caption reads "developer · local" for developers and
  * "local" otherwise — the only place in the chrome that reveals the
@@ -50,7 +47,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
  */
 final class AppSidebar extends Component
 {
-    /** Cache key the queue-worker heartbeat producer writes (16-04b). */
+    /** Cache key the queue-worker heartbeat producer writes. */
     private const HEARTBEAT_CACHE_KEY = 'dev_mode.queue_worker_heartbeat';
 
     public function render(

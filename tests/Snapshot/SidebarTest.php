@@ -7,16 +7,16 @@ use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Models\User;
 
 /*
- * AppSidebar HTML structure snapshot (Phase 16-01 Task 2).
+ * AppSidebar HTML structure snapshot.
  *
- * Catches accidental drift in the sidebar HTML structure during
- * downstream plan edits. Locks the rendered shape (section labels +
- * side-item order + dev-block presence + account row composition).
+ * Catches accidental drift in the sidebar HTML structure. Locks
+ * the rendered shape (section labels + side-item order + dev-block
+ * presence + account row composition).
  *
  * The raw Livewire-mounted HTML carries dynamic attributes —
- * `wire:id`, `wire:snapshot`, `wire:effects`, `wire:key` — that
- * fluctuate per render. We strip those before snapshot-matching so
- * the snapshot is deterministic across runs while still capturing
+ * wire:id, wire:snapshot, wire:effects, wire:key — that fluctuate
+ * per render. We strip those before snapshot-matching so the
+ * snapshot is deterministic across runs while still capturing
  * every meaningful structural change.
  */
 

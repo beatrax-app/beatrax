@@ -96,9 +96,9 @@ final class UserDataPathService
      * Daily-rolling log file path. `config/logging.php` reads this so the
      * Monolog daily handler writes under the user-data storage root —
      * never under the project-shipped storage tree — which keeps a
-     * packaged build's logs co-located with the per-user database file
-     * and respects the NATIVEPHP_STORAGE_PATH retarget. The Dev
-     * Console's log tailer (16-05) reads the same accessor so the
+     * packaged build's logs co-located with the per-user database
+     * file and respects the NATIVEPHP_STORAGE_PATH retarget. The
+     * Dev Console's log tailer reads the same accessor so the
      * panel sees the same file Monolog writes.
      */
     public static function logsFile(): string
@@ -107,14 +107,15 @@ final class UserDataPathService
     }
 
     /**
-     * The actual on-disk path of today's daily-rotated log file. Laravel's
-     * RotatingFileHandler takes the `logsFile()` path and rewrites the
-     * filename to `laravel-YYYY-MM-DD.log` per the file's basename. The
-     * Dev Console log tailer (16-05) reads this method to discover the
-     * file Monolog is currently writing into; rotation detection
-     * (D-28 — inode/size shrinkage) is handled by the SSE controller's
-     * tail loop, but the initial open + the daily roll-over to the next
-     * day's file resolve through the same accessor.
+     * The actual on-disk path of today's daily-rotated log file.
+     * Laravel's RotatingFileHandler takes the logsFile() path and
+     * rewrites the filename to `laravel-YYYY-MM-DD.log` per the
+     * file's basename. The Dev Console log tailer reads this
+     * method to discover the file Monolog is currently writing
+     * into; rotation detection (inode/size shrinkage) is handled
+     * by the SSE controller's tail loop, but the initial open +
+     * the daily roll-over to the next day's file resolve through
+     * the same accessor.
      *
      * `$date` defaults to today (UTC-rounded clock); passing an explicit
      * `DateTimeInterface` lets the tailer's "open yesterday's file" and
@@ -132,10 +133,11 @@ final class UserDataPathService
     }
 
     /**
-     * Directory that holds the rolling laravel-YYYY-MM-DD.log files. The
-     * Dev Console log tailer (16-05) uses this to enumerate observed
-     * channel names (when listing available log days) and to compute
-     * sibling files for the rotation-detection re-open path.
+     * Directory that holds the rolling laravel-YYYY-MM-DD.log
+     * files. The Dev Console log tailer uses this to enumerate
+     * observed channel names (when listing available log days) and
+     * to compute sibling files for the rotation-detection re-open
+     * path.
      */
     public static function logsDirectory(): string
     {

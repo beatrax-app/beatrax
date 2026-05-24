@@ -14,29 +14,28 @@ return [
     'enabled' => env('ACTIVITYLOG_ENABLED', true),
 
     /*
-     * Persisted table name for activity rows. The Dev Console's audit
-     * pipeline (CONTEXT D-23) writes through spatie/laravel-activitylog
-     * into this table — renamed from the package default `activity_log`
-     * so the schema name reflects its purpose ("dev_mode_audit") and
-     * future activity-logging consumers outside the Dev Console will
-     * land in a separate, named table.
+     * Persisted table name for activity rows. The Dev Console's
+     * audit pipeline writes through spatie/laravel-activitylog into
+     * this table — renamed from the package default `activity_log`
+     * so the schema name reflects its purpose ("dev_mode_audit")
+     * and future activity-logging consumers outside the Dev
+     * Console will land in a separate, named table.
      */
     'table_name' => 'dev_mode_audit',
 
     /*
      * When the clean command is executed, all recording activities older
      * than the number of days specified here will be deleted. The
-     * project keeps full audit history forever (CLAUDE.md — "History:
-     * Full history retained forever") so this value is intentionally
-     * high; the clean command is not scheduled.
+     * project keeps full audit history forever, so this value is
+     * intentionally high; the clean command is not scheduled.
      */
     'clean_after_days' => 365,
 
     /*
-     * Default log name for entries written via `activity()->log(...)`
-     * without an explicit `->inLog(...)` channel. CONTEXT D-23 names
-     * the channel `dev_mode` so every audit row carries a single,
-     * filterable log_name.
+     * Default log name for entries written via
+     * `activity()->log(...)` without an explicit `->inLog(...)`
+     * channel. The Dev Console pipeline uses `dev_mode` so every
+     * audit row carries a single, filterable log_name.
      */
     'default_log_name' => 'dev_mode',
 
@@ -57,10 +56,11 @@ return [
      * It should implement the Spatie\Activitylog\Contracts\Activity interface
      * and extend Illuminate\Database\Eloquent\Model.
      *
-     * NOTE: spatie/laravel-activitylog v5 REMOVED the `table_name` config
-     * option (see vendor/spatie/laravel-activitylog/UPGRADING.md). The
-     * `DevModeActivity` model overrides $table = 'dev_mode_audit' so
-     * every write lands in the renamed table per CONTEXT D-23.
+     * NOTE: spatie/laravel-activitylog v5 REMOVED the `table_name`
+     * config option (see
+     * vendor/spatie/laravel-activitylog/UPGRADING.md). The
+     * DevModeActivity model overrides $table = 'dev_mode_audit'
+     * so every write lands in the renamed table.
      */
     'activity_model' => DevModeActivity::class,
 

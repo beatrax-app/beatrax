@@ -57,21 +57,22 @@ return [
 
             /*
              * Read-only SELECT-only sibling connection for the Dev
-             * Console SQL panel (CONTEXT D-45). Cloned from the on-disk
-             * `sqlite` connection so the database file, foreign-key
-             * behaviour, and busy-timeout match; it is the consumer's
-             * responsibility to open the underlying PDO with
-             * `PRAGMA query_only = 1` so any DDL/DML attempt is rejected
-             * at the SQLite layer rather than relying on application-
-             * level filtering alone. The `ReadOnlySqliteConnection`
-             * service in 16-07 enforces that PRAGMA per-PDO; this entry
-             * only carves out the named slot. Under the testing
-             * environment (`DB_CONNECTION=sqlite_testing` + in-memory
-             * `:memory:` database) the 16-07 service routes the SELECT
-             * through the default in-memory connection (separate
-             * connections to `:memory:` are isolated); the PRAGMA is
-             * armed + reset per-execute so writes on the same PDO
-             * proceed after the read.
+             * Console SQL panel. Cloned from the on-disk `sqlite`
+             * connection so the database file, foreign-key
+             * behaviour, and busy-timeout match; the consumer is
+             * responsible for opening the underlying PDO with
+             * PRAGMA query_only = 1 so any DDL/DML attempt is
+             * rejected at the SQLite layer rather than relying on
+             * application-level filtering alone. The
+             * ReadOnlySqliteConnection service enforces that PRAGMA
+             * per-PDO; this entry only carves out the named slot.
+             * Under the testing environment
+             * (DB_CONNECTION=sqlite_testing + in-memory :memory:
+             * database) the service routes the SELECT through the
+             * default in-memory connection (separate connections to
+             * :memory: are isolated); the PRAGMA is armed + reset
+             * per-execute so writes on the same PDO proceed after
+             * the read.
              */
             'readonly_select' => array_merge($sqlite, [
                 'name' => 'readonly_select',

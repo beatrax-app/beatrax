@@ -260,15 +260,15 @@
         </div>
     @endif
 
-    {{-- Failed-job toast (16-06 D-37). Persistent (no auto-dismiss)
-         backed by the `chain_resolution_runs` audit table filtered by
-         exact `user_id` match. Gated on `$isDeveloper`: non-developers
-         see nothing here — their channel is the existing
+    {{-- Failed-job toast. Persistent (no auto-dismiss) backed by
+         the `chain_resolution_runs` audit table filtered by exact
+         user_id match. Gated on $isDeveloper: non-developers see
+         nothing here — their channel is the existing
          SystemAlertsBanner. The deep-link target is
-         `route('dev.queue.tab', ['tab' => 'failed'])` (the canonical
-         B-3 fix shape; never a hardcoded `/dev/queue/failed` literal
-         and never a `route('dev.queue.failed')` call — no such named
-         route exists). The toast hides when the audit row is cleared
+         route('dev.queue.tab', ['tab' => 'failed']) — never a
+         hardcoded /dev/queue/failed literal and never a
+         route('dev.queue.failed') call (no such named route
+         exists). The toast hides when the audit row is cleared
          (e.g. the developer retried via the queue inspector). --}}
     @if ($failedChainResolutionExists && $isDeveloper)
         <div
