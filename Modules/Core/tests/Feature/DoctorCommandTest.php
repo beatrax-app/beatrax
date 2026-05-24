@@ -30,7 +30,7 @@ it('reports installed versions and probe rows on a healthy environment', functio
     );
 
     try {
-        $this->artisan('diederik:doctor')
+        $this->artisan('beatrax:doctor')
             ->expectsOutputToContain('PHP')
             ->expectsOutputToContain('Composer')
             ->expectsOutputToContain('SQLite');
@@ -73,7 +73,7 @@ it('prints lines for each Phase 11 probe (WAL / synchronous / backup freshness)'
     );
 
     try {
-        $this->artisan('diederik:doctor')
+        $this->artisan('beatrax:doctor')
             ->expectsOutputToContain('SQLite WAL mode')
             ->expectsOutputToContain('SQLite synchronous mode')
             ->expectsOutputToContain('Backup freshness');
@@ -108,7 +108,7 @@ it('exits non-zero when the BackupFreshnessProbe warns (DoctorCommand probe aggr
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
     try {
-        $exitCode = $this->artisan('diederik:doctor')->run();
+        $exitCode = $this->artisan('beatrax:doctor')->run();
         expect($exitCode)->toBeGreaterThanOrEqual(1);
     } finally {
         foreach ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'*') as $entry) {

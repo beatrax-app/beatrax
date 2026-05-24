@@ -41,7 +41,7 @@ beforeEach(function (): void {
 });
 
 it('reports no changes on a fresh DB (no v2 rows)', function (): void {
-    $this->artisan('diederik:rederive-fingerprints', ['--confirm' => true])
+    $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
         ->expectsOutputToContain('0 rows would be re-derived')
         ->assertSuccessful();
 })->group('phase-2');
@@ -49,7 +49,7 @@ it('reports no changes on a fresh DB (no v2 rows)', function (): void {
 it('reports a dry-run preview without writing when --dry-run is set', function (): void {
     $this->seedTwoNonCollidingV2Rows();
 
-    $this->artisan('diederik:rederive-fingerprints', ['--dry-run' => true])
+    $this->artisan('beatrax:rederive-fingerprints', ['--dry-run' => true])
         ->expectsOutputToContain('Dry-run OK. 2 rows would be re-derived')
         ->assertSuccessful();
 
@@ -69,7 +69,7 @@ it('reports a dry-run preview without writing when --dry-run is set', function (
 it('rewrites v2 rows to v3 in a single transaction when no collisions exist', function (): void {
     $this->seedTwoNonCollidingV2Rows();
 
-    $this->artisan('diederik:rederive-fingerprints', ['--confirm' => true])
+    $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
         ->expectsOutputToContain('Re-derived 2 rows to v3')
         ->assertSuccessful();
 
@@ -95,7 +95,7 @@ it('rewrites v2 rows to v3 in a single transaction when no collisions exist', fu
 it('aborts with a clear error when a v3 tuple collision exists in v2 data', function (): void {
     $this->seedCollidingV2Rows();
 
-    $this->artisan('diederik:rederive-fingerprints', ['--confirm' => true])
+    $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
         ->expectsOutputToContain('Fingerprint v3 migration ABORTED')
         ->expectsOutputToContain('1 collision(s) detected')
         ->assertFailed();
@@ -116,7 +116,7 @@ it('aborts with a clear error when a v3 tuple collision exists in v2 data', func
 it('skips rows already on v3 (idempotent re-run)', function (): void {
     $this->seedOneV3Row();
 
-    $this->artisan('diederik:rederive-fingerprints', ['--confirm' => true])
+    $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
         ->expectsOutputToContain('0 rows would be re-derived')
         ->assertSuccessful();
 
@@ -130,7 +130,7 @@ it('skips rows already on v3 (idempotent re-run)', function (): void {
 it('falls back to dry-run output when neither --confirm nor --dry-run is supplied', function (): void {
     $this->seedTwoNonCollidingV2Rows();
 
-    $this->artisan('diederik:rederive-fingerprints')
+    $this->artisan('beatrax:rederive-fingerprints')
         ->expectsOutputToContain('Dry-run OK. 2 rows would be re-derived')
         ->assertSuccessful();
 
@@ -161,7 +161,7 @@ it('re-derives v3 fingerprints over a realistic-scale row set without collisions
         ]);
     }
 
-    $this->artisan('diederik:rederive-fingerprints', ['--confirm' => true])
+    $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
         ->expectsOutputToContain('Re-derived 229 rows to v3')
         ->assertSuccessful();
 
