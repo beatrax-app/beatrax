@@ -112,6 +112,7 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true,
+            "tbachert/spi": true,
             "wikimedia/composer-merge-plugin": true
         }
     },
