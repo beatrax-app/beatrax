@@ -1044,11 +1044,11 @@ it('does not allow the Auth facade or auth/session helpers across Modules/* outs
     // erode the module-boundary contract.
     //
     // The allow-list below is the only sanctioned exception surface: the
-    // authentication actions and the Fortify / impersonation glue genuinely
-    // need to drive the guard. It is a per-file precise list — never a glob.
-    // Adding a file to it requires editing the array AND a code-review
-    // justification; see the Auth module's service-provider docblock for the
-    // rationale behind that surface.
+    // authentication actions and the Fortify glue genuinely need to drive
+    // the guard. It is a per-file precise list — never a glob. Adding a
+    // file to it requires editing the array AND a code-review
+    // justification; see the Auth module's service-provider docblock for
+    // the rationale behind that surface.
     //
     // The scan walks the entire module tree, strips block + line + Blade
     // comments so PHPDoc references such as `@see Auth::user()` and Blade
@@ -1061,12 +1061,9 @@ it('does not allow the Auth facade or auth/session helpers across Modules/* outs
         'Modules/Auth/Public/Actions/LogoutAction.php',
         'Modules/Auth/Public/Actions/ResetPasswordAction.php',
         'Modules/Auth/Public/Actions/RegenerateRecoveryCodesAction.php',
-        'Modules/Auth/Public/Actions/ImpersonateUserAction.php',
-        'Modules/Auth/Public/Actions/EndImpersonationAction.php',
         'Modules/Auth/Public/Actions/AddUserAction.php',
         'Modules/Auth/Internal/Fortify/FortifyServiceProvider.php',
         'Modules/Auth/Internal/Fortify/Authenticator.php',
-        'Modules/Auth/Internal/Http/Middleware/ImpersonationBannerMiddleware.php',
     ];
 
     // Banned symbols: the Auth facade import + its static lookups, the auth()
@@ -1401,5 +1398,101 @@ it('does not allow a bg-white / text-slate-900 utility without a dark: companion
     expect($hits)->toBe(
         [],
         "Every themed-module view element with a bg-white / text-slate-900 utility needs a dark: companion. Offenders:\n  ".implode("\n  ", array_unique($hits)),
+    );
+});
+
+it('does not allow the impersonation surface to re-appear on disk (impersonationSurfaceRemoved)', function (): void {
+    // Containment invariant for the dropped Phase 12 "Act as partner"
+    // feature: the four files that drove the guard-swap / banner-paint
+    // pipeline must remain absent so a future contributor cannot
+    // re-introduce the surface without also editing this invariant.
+    //
+    // The check is pure filesystem (not class_exists) because
+    // class_exists() triggers the Composer autoloader, which may hold a
+    // stale entry pointing at a recently-deleted file and emit a
+    // misleading "failed to open stream" warning. A direct file_exists
+    // call against base_path() is deterministic.
+    //
+    // A regression here means: someone added back the action / DTO /
+    // middleware / Blade partial without also reviewing the security
+    // posture trade-off recorded in the deletion commit. Fail loudly.
+    $bannedFiles = [
+        'Modules/Auth/Public/Actions/ImpersonateUserAction.php',
+        'Modules/Auth/Public/Actions/EndImpersonationAction.php',
+        'Modules/Auth/Public/Dto/ImpersonationResult.php',
+        'Modules/Auth/Internal/Http/Middleware/ImpersonationBannerMiddleware.php',
+        'Modules/Auth/Resources/views/partials/impersonation-banner.blade.php',
+    ];
+
+    $present = [];
+    foreach ($bannedFiles as $relative) {
+        if (file_exists(base_path($relative))) {
+            $present[] = $relative;
+        }
+    }
+
+    expect($present)->toBe(
+        [],
+        "The impersonation surface must remain deleted. Found:\n  ".implode("\n  ", $present),
+    );
+});
+
+it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tests / resources / config (noDiederikLiteralAfterRename)', function (): void {
+    // Containment invariant for the diederik -> beatrax rename: every
+    // production-side literal must be flipped so a future contributor
+    // adding a new file does not accidentally re-introduce the old
+    // brand name. The case-insensitive grep matches both `diederik`
+    // and `Diederik` shapes.
+    //
+    // Allow-list: this invariant's own file (needs the literal to
+    // assert the absence), the regression-guard test that asserts no
+    // `diederik:*` artisan signature remains in the kernel, and the
+    // sidebar render test that grep-asserts the rendered HTML carries
+    // no `diederik` literal post-rename. All three deliberately house
+    // the literal `diederik` as their assertion subject.
+    $allowList = [
+        'tests/Contracts/BoundaryArchTest.php',
+        'tests/Feature/BeatraxCommandsResolveTest.php',
+        'Modules/Core/tests/Feature/AppSidebarRenderTest.php',
+    ];
+
+    $roots = ['Modules', 'tests', 'resources', 'config'];
+
+    $hits = [];
+    foreach ($roots as $root) {
+        $abs = base_path($root);
+        if (! is_dir($abs)) {
+            continue;
+        }
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($abs, RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            if (! $file->isFile()) {
+                continue;
+            }
+            $path = $file->getPathname();
+            // Pest snapshot baselines belong to the test infrastructure;
+            // they are re-baselined alongside the source rename so the
+            // snapshot diff is reviewable. Skipping `.snap` keeps the
+            // arch test from double-counting that work.
+            if (str_ends_with($path, '.snap')) {
+                continue;
+            }
+            $relative = str_replace(base_path().'/', '', $path);
+            if (in_array($relative, $allowList, true)) {
+                continue;
+            }
+            $contents = (string) file_get_contents($path);
+            if (preg_match('/diederik/i', $contents) === 1) {
+                $hits[] = $relative;
+            }
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "Every diederik / Diederik literal must be flipped to beatrax. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
