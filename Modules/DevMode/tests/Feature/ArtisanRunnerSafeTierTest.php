@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
+use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 
@@ -248,8 +249,8 @@ it('rerun() for a SAFE-tier prior run spawns a fresh run with the same command',
 
     $user = runnerDeveloper('runner-rerun-safe');
 
-    /** @var \Modules\DevMode\Internal\Process\CommandSpawner $spawner */
-    $spawner = app(\Modules\DevMode\Internal\Process\CommandSpawner::class);
+    /** @var CommandSpawner $spawner */
+    $spawner = app(CommandSpawner::class);
     $originalRunId = $spawner->start('cache:clear', [], $user->id, 'safe');
 
     Livewire::actingAs($user)
@@ -265,8 +266,8 @@ it('rerun() for a DESTRUCTIVE prior run opens the triple-gate carrying the origi
 
     $user = runnerDeveloper('runner-rerun-destructive');
 
-    /** @var \Modules\DevMode\Internal\Process\CommandSpawner $spawner */
-    $spawner = app(\Modules\DevMode\Internal\Process\CommandSpawner::class);
+    /** @var CommandSpawner $spawner */
+    $spawner = app(CommandSpawner::class);
     $originalRunId = $spawner->start('db:restore', ['from' => '/tmp/x.sqlite'], $user->id, 'destructive');
 
     Livewire::actingAs($user)

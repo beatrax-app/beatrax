@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Logging;
 
+use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\DevMode\Providers\DevModeServiceProvider;
 use Monolog\LogRecord;
@@ -34,7 +35,7 @@ use Monolog\Processor\ProcessorInterface;
  *   3. JWT shape (eyJ…header.payload.signature).
  *
  * Separate artifact from
- * {@see \Modules\DevMode\Internal\Audit\RedactionExcerptCap}
+ * {@see RedactionExcerptCap}
  * (the audit-DB row scrub). Both apply the same three-layer
  * redaction; both live at different paths because they bound
  * different exit points: this one writes into the rolling log file,

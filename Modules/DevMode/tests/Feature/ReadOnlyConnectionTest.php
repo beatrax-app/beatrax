@@ -25,7 +25,7 @@ it('rejects a write attempt with SQLITE_READONLY (engine-level guard)', function
     $conn = app(ReadOnlySqliteConnection::class);
 
     expect(fn () => $conn->execute('INSERT INTO users (username, password, period_start_day, default_currency_view, is_developer) VALUES (\'x\', \'x\', 1, \'eur_only\', 0)'))
-        ->toThrow(\PDOException::class);
+        ->toThrow(PDOException::class);
 });
 
 it('returns rows + duration_ms for a successful SELECT', function (): void {
