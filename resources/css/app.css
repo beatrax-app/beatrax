@@ -1,6 +1,20 @@
 @import "tailwindcss";
 
 /*
+ * Tailwind v4 scans the project root by default but skips gitignored
+ * directories — `vendor/` is one of them. Livewire/Flux ships its
+ * anonymous Blade components from
+ * `vendor/livewire/flux/stubs/resources/views/flux/` and those views
+ * carry utility classes (`bg-white dark:bg-zinc-800`, etc.) that
+ * compose every Flux button / modal / input surface. Without an
+ * explicit include the dark-mode variants never reach the built CSS,
+ * so Flux components render with no background in dark mode (the
+ * "Run a command" button is invisible and the modal overlay is a
+ * blank white surface).
+ */
+@source "../../vendor/livewire/flux/stubs/resources/views";
+
+/*
  * Class-strategy dark variant (Tailwind v4 is CSS-first). The `dark`
  * class is toggled on `<html>` server-side from the user's `theme`
  * preference; `dark:` utilities apply to any element under it.
