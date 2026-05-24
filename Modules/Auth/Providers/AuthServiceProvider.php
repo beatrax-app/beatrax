@@ -9,6 +9,8 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Auth\Internal\Console\GrantDevCommand;
+use Modules\Auth\Internal\Console\RegenerateRecoveryCodesCommand;
 use Modules\Auth\Internal\Console\ResetPasswordCommand;
 use Modules\Auth\Internal\Fortify\FortifyServiceProvider;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
@@ -70,7 +72,11 @@ final class AuthServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'auth');
 
         if ($this->app->runningInConsole()) {
-            $this->commands([ResetPasswordCommand::class]);
+            $this->commands([
+                ResetPasswordCommand::class,
+                GrantDevCommand::class,
+                RegenerateRecoveryCodesCommand::class,
+            ]);
         }
 
         $router->aliasMiddleware('first-user-only', FirstUserOnlyMiddleware::class);
