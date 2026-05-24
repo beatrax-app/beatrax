@@ -59,7 +59,7 @@ it('adds recurring_detection_window_months and recurring_income_min_amount_minor
     ]);
     $fresh = User::query()->findOrFail($created->id);
 
-    expect((int) $fresh->recurring_detection_window_months)->toBe(18);
+    expect((int) $fresh->recurring_detection_window_months)->toBe(2);
     expect((int) $fresh->recurring_income_min_amount_minor)->toBe(200000);
 });
 

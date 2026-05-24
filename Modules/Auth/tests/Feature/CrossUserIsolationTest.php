@@ -84,7 +84,7 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // system-wide on a single-user-per-machine install, and the
     // EnsureDeveloperMode gate blocks non-developers entirely.
     'dev.logs',
-    'dev.logs.stream',
+    'dev.logs.poll',
     'dev.logs.context',
     // 16-06: queue inspector surfaces. The framework-managed `jobs`,
     // `failed_jobs`, and `job_batches` tables are system-wide on a

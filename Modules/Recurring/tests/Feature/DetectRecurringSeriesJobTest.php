@@ -162,7 +162,8 @@ afterEach(function (): void {
 it('runs the job for the user and detects one stable monthly expense series', function (): void {
     // Widen the user's detection window so every fixture row sits
     // inside the look-back window regardless of the frozen test
-    // clock — the 18-month default would clip the earliest occurrence.
+    // clock — the 2-month default would clip everything but the
+    // most recent occurrence.
     $this->user->recurring_detection_window_months = 36;
     $this->user->save();
 
@@ -196,6 +197,11 @@ it('runs the job for the user and detects one stable monthly expense series', fu
 })->group('expense-cluster');
 
 it('clusters the drifting-monthly fixture as ONE series under the 25% variance tolerance', function (): void {
+    // Widen past the new 2-month default so the fixture's full
+    // year-plus history falls inside the look-back.
+    $this->user->recurring_detection_window_months = 36;
+    $this->user->save();
+
     drsjSeedFixture($this->db, $this->user, $this->account, $this->run, 'drifting-monthly-spotify');
 
     /** @var ExpenseSeriesDetector $detector */
@@ -349,6 +355,12 @@ it('leaves a snoozed series alone when snoozed_until is still in the future', fu
 it('flips an approved series to cadence_changed and dispatches RecurringSeriesCadenceFlipped on a cadence flip', function (): void {
     Event::fake([RecurringSeriesCadenceFlipped::class]);
 
+    // Widen past the new 2-month default — the cadence-flip probe seeds
+    // six quarterly-spaced transactions back to 2024-08, well outside a
+    // two-month look-back.
+    $this->user->recurring_detection_window_months = 36;
+    $this->user->save();
+
     // Seed an approved monthly series that the detector will revisit.
     $series = RecurringSeries::query()->create([
         'user_id' => $this->user->id,
@@ -443,6 +455,11 @@ it('skips rejected clusters and never re-prompts them', function (): void {
 })->group('rejected-skipped');
 
 it('clusters mixed-currency Netflix on the original USD amount, not settled EUR', function (): void {
+    // Widen past the new 2-month default so the fixture's monthly
+    // Netflix charges across the year all fall inside the look-back.
+    $this->user->recurring_detection_window_months = 36;
+    $this->user->save();
+
     drsjSeedFixture($this->db, $this->user, $this->account, $this->run, 'mixed-currency-netflix-usd');
 
     /** @var ExpenseSeriesDetector $detector */
@@ -466,8 +483,10 @@ it('clusters mixed-currency Netflix on the original USD amount, not settled EUR'
 })->group('original-currency-clustering');
 
 it('respects the per-user recurring_detection_window_months when filtering transactions', function (): void {
-    // Window-out: 24 months in the past, the default 18-month window
-    // should exclude this; window-in: spaced inside the last 18 months.
+    // Pin the window explicitly so the test isolates the
+    // window-clipping behaviour from whatever the model default
+    // happens to be. Out-of-window cluster sits 30 months back;
+    // in-window cluster sits inside the chosen 18-month window.
     $this->user->recurring_detection_window_months = 18;
     $this->user->save();
 

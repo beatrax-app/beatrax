@@ -50,7 +50,7 @@ use stdClass;
  */
 final class IncomeSeriesDetector implements SeriesDetector
 {
-    private const DEFAULT_WINDOW_MONTHS = 18;
+    private const DEFAULT_WINDOW_MONTHS = 2;
 
     private const DEFAULT_MIN_AMOUNT_MINOR = 200000;
 
