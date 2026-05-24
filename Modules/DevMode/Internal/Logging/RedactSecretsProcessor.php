@@ -4,53 +4,54 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Logging;
 
+use Modules\DevMode\Internal\Services\OAuthScrubSet;
+use Modules\DevMode\Providers\DevModeServiceProvider;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 
 /**
- * On-write Monolog processor that scrubs Bearer header tokens + JWT
- * shapes from every log line BEFORE the formatter writes it to disk.
+ * On-write Monolog processor that scrubs every OAuth secret literal
+ * AND `Authorization: Bearer …` header AND JWT-shape token from every
+ * log line BEFORE the formatter writes it to disk (CONTEXT D-29 — on
+ * write).
  *
- * Registered via {@see PushRedactProcessor} (a Laravel tap class)
- * onto every handler of the `stack`, `single`, and `daily` channels
- * defined in `config/logging.php`. Together these three artifacts close
- * the on-write redaction-gap window in Wave 4 (W-1 fix), in the same
- * wave the runner UI lands — so no log line written from any new
- * surface (16-04b's audit pipeline, 16-04's SSE controller, the rest
- * of the app) hits storage with a Bearer/JWT token in cleartext.
+ * Registered via {@see PushRedactProcessor} (a Laravel tap class) onto
+ * every handler of the `stack`, `single`, and `daily` channels defined
+ * in `config/logging.php`. Together these artifacts enforce the
+ * belt+braces redaction discipline: every log record passes through
+ * the same processor at write time, and 16-05's LogStreamController
+ * re-applies the same processor at read time as defense in depth (D-29).
  *
- * SEPARATE artifact from `Modules/DevMode/Internal/Audit/RedactionExcerptCap.php`,
- * which scrubs the audit-DB row excerpts. Both apply the same Bearer +
- * JWT regex baseline; both upgrade in 16-05 to consume the full
- * OAuthScrubSet.
+ * The on-write redaction order matters:
+ *   1. OAuth scrub-set (the `client_secret` + every string in
+ *      `tokens_blob` for every `oauth_secrets` row) — runs FIRST so
+ *      a literal that looks like a JWT (which our OAuth tokens often
+ *      do, since refresh tokens encode user state as JWT) is replaced
+ *      with `[REDACTED]` rather than the less-specific
+ *      `[JWT_REDACTED]`. The scrub-set's compiled regex is a single
+ *      pre-compiled alternation; one `preg_replace` per record
+ *      regardless of set size (Pitfall 8 mitigation).
+ *   2. `Authorization: Bearer …` header pattern.
+ *   3. JWT shape (eyJ…header.payload.signature).
  *
- * Baseline behavior (THIS plan, 16-04b — W-1 fix):
- *   - Replaces `Authorization: Bearer <token>` → `Authorization: Bearer [REDACTED]`
- *   - Replaces JWT-shape tokens (`eyJ…header.payload.signature`) → `[JWT_REDACTED]`
- *   - Recursively scrubs every string value inside `$record->context`
- *     and `$record->extra` (handlers that serialize the whole record
- *     into JSON include those branches).
- *   - LogRecord is immutable in Monolog v3; the processor returns
- *     `$record->with(message: …, context: …, extra: …)`.
+ * SEPARATE artifact from `Modules/DevMode/Internal/Audit/RedactionExcerptCap.php`
+ * (the audit-DB row scrub). Both apply the SAME three-layer redaction;
+ * both live at different paths because they bound different exit
+ * points: this one writes into the rolling log file, the other writes
+ * into the `dev_mode_audit` row.
  *
- * 16-05 upgrade contract (DO NOT BREAK):
- *   - 16-05 adds `OAuthScrubSet $scrubSet` to the constructor of THIS
- *     class and applies the compiled scrub-set regex BEFORE the
- *     Bearer/JWT scrub inside `__invoke()`.
- *   - The FQCN
- *     (`Modules\DevMode\Internal\Logging\RedactSecretsProcessor`)
- *     MUST remain stable across the upgrade.
- *   - The `__invoke(LogRecord $record): LogRecord` signature MUST
- *     remain stable.
- *   - The `config/logging.php` tap-slot registration
- *     (`PushRedactProcessor::class`) MUST keep working without edits —
- *     `PushRedactProcessor` resolves THIS class from the container
- *     so the constructor-DI change is invisible to it.
- *   - The baseline behavior (Bearer + JWT scrub on message + recursive
- *     context + extra) MUST still work after 16-05's upgrade — the
- *     baseline regression test
- *     `Modules/DevMode/tests/Unit/RedactSecretsProcessorBaselineTest.php`
- *     stays green through the upgrade.
+ * Container resolution contract: {@see PushRedactProcessor::__invoke()}
+ * resolves THIS class via the container (`Container::getInstance()->make(...)`)
+ * on every channel boot. The container singleton uses the binding
+ * declared in {@see DevModeServiceProvider::register()},
+ * which constructor-injects the {@see OAuthScrubSet} singleton. The
+ * config/logging.php tap-slot registration stays stable across the
+ * 16-04b baseline → 16-05 upgrade.
+ *
+ * Empty-scrub-set fast path: when `OAuthScrubSet::compiledPattern()`
+ * returns null (no `oauth_secrets` rows yet, or the table is missing,
+ * or the encrypter rejected the cast), the scrub-set step is skipped.
+ * Bearer + JWT scrubbing still runs.
  */
 final class RedactSecretsProcessor implements ProcessorInterface
 {
@@ -59,6 +60,16 @@ final class RedactSecretsProcessor implements ProcessorInterface
 
     /** JWT shape (eyJ...header.payload.signature with min 20-char segments). */
     private const JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/';
+
+    /**
+     * `OAuthScrubSet` is nullable so the baseline regression test
+     * (which calls `new RedactSecretsProcessor` directly) keeps
+     * working without re-instantiating an empty scrub set; the
+     * container binding always passes the real singleton.
+     */
+    public function __construct(
+        private readonly ?OAuthScrubSet $scrubSet = null,
+    ) {}
 
     public function __invoke(LogRecord $record): LogRecord
     {
@@ -97,10 +108,23 @@ final class RedactSecretsProcessor implements ProcessorInterface
     }
 
     /**
-     * Apply the baseline Bearer + JWT scrub in the documented order.
+     * Apply the three-layer scrub in the documented order: OAuth
+     * scrub-set first (so JWT-shaped real tokens are recognised as
+     * `[REDACTED]` rather than `[JWT_REDACTED]`), then Bearer header
+     * pattern, then JWT shape.
      */
-    private function scrub(string $text): string
+    public function scrub(string $text): string
     {
+        if ($this->scrubSet !== null) {
+            $pattern = $this->scrubSet->compiledPattern();
+            if ($pattern !== null) {
+                $replaced = preg_replace($pattern, '[REDACTED]', $text);
+                if (is_string($replaced)) {
+                    $text = $replaced;
+                }
+            }
+        }
+
         $text = (string) preg_replace(self::BEARER_PATTERN, 'Authorization: Bearer [REDACTED]', $text);
         $text = (string) preg_replace(self::JWT_PATTERN, '[JWT_REDACTED]', $text);
 
