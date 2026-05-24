@@ -46,7 +46,7 @@ it('resolves storage-rooted accessors under the project storage dir when the env
 });
 
 it('resolves every storage-rooted accessor under NATIVEPHP_STORAGE_PATH when it is set', function (): void {
-    $tmp = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-test-'.bin2hex(random_bytes(8));
+    $tmp = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8));
     putenv('NATIVEPHP_STORAGE_PATH='.$tmp);
 
     expect(UserDataPathService::databaseFile())
@@ -61,7 +61,7 @@ it('resolves every storage-rooted accessor under NATIVEPHP_STORAGE_PATH when it 
 });
 
 it('normalises a trailing separator on NATIVEPHP_STORAGE_PATH', function (): void {
-    $tmp = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-test-'.bin2hex(random_bytes(8));
+    $tmp = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8));
     putenv('NATIVEPHP_STORAGE_PATH='.$tmp.'/');
 
     expect(UserDataPathService::storageBase())->toBe($tmp);
@@ -70,7 +70,7 @@ it('normalises a trailing separator on NATIVEPHP_STORAGE_PATH', function (): voi
 });
 
 it('joins a relative sub-path onto the storage app root via appPath()', function (): void {
-    $tmp = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-test-'.bin2hex(random_bytes(8));
+    $tmp = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8));
     putenv('NATIVEPHP_STORAGE_PATH='.$tmp);
 
     expect(UserDataPathService::appPath('inbox/2026/05'))
@@ -83,7 +83,7 @@ it('rejects a path-traversal segment in appPath()', function (): void {
 });
 
 it('keeps modulesPath, migrationsPath and publicPath project-rooted even when the env var is set', function (): void {
-    $tmp = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-test-'.bin2hex(random_bytes(8));
+    $tmp = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8));
     putenv('NATIVEPHP_STORAGE_PATH='.$tmp);
 
     expect(UserDataPathService::modulesPath())->toBe(base_path('Modules'));

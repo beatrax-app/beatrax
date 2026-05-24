@@ -149,7 +149,7 @@ final class BackupFreshnessProbe implements Probe
      * matching unacknowledged row already exists within the last
      * hour, this is a no-op. The gate mirrors
      * HealthCheckServiceProvider::recordDriftAlert — running
-     * `diederik:doctor` 100 times in an hour produces at most one
+     * `beatrax:doctor` 100 times in an hour produces at most one
      * banner card, not 100. The banner renders one card per row
      * (`@foreach ($alerts as $alert)`), so without this suppression
      * an audit-trail expectation becomes operator-visible noise.

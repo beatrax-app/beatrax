@@ -35,7 +35,7 @@ final class SetupScreen extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Setting up… · diederik']);
+        $view->extends('layouts.app', ['title' => 'Setting up… · beatrax']);
 
         return $view;
     }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Desktop\Internal\Native;
 
 /**
- * Tracks whether the diederik main window currently has OS focus.
+ * Tracks whether the beatrax main window currently has OS focus.
  *
  * `DispatchOsNotification` consults this state to implement the D-13
  * context-aware notification model: an OS notification fires only
@@ -20,7 +20,7 @@ namespace Modules\Desktop\Internal\Native;
  * `markFocused()` / `markBlurred()` respectively.
  *
  * Default state on construction is `focused` — a fresh launch opens
- * the diederik main window directly in front of the user, so the
+ * the beatrax main window directly in front of the user, so the
  * conservative assumption is that the freshly-launched window has OS
  * focus until proven otherwise by a `WindowBlurred` event. Defaulting
  * the other way (unfocused) would mean every notification fired during

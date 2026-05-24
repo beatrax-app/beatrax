@@ -7,7 +7,7 @@
             {{-- Brand mark — matches the welcome / login layout (D-18). --}}
             <img
                 src="{{ asset('icon.png') }}"
-                alt="diederik"
+                alt="beatrax"
                 class="h-16 w-16"
             />
         </div>
@@ -22,7 +22,7 @@
             <div wire:poll.2000ms class="space-y-2">
                 <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Setting up…</h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                    diederik is preparing your data. This only takes a moment.
+                    beatrax is preparing your data. This only takes a moment.
                 </p>
             </div>
         @else

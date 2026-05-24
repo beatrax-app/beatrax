@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
 use Modules\Ledger\Models\Category;
 
 /**
- * Idempotent default category tree for a fresh diederik install. Categories
+ * Idempotent default category tree for a fresh beatrax install. Categories
  * are seeded with `user_id = NULL` so they act as the shared starting set
  * for every user (single-user app today; partner-sharing in v2). Uses
  * `updateOrCreate` keyed by `(slug, user_id = NULL)` so the lookup only

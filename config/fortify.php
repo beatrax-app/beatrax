@@ -9,7 +9,7 @@ return [
     | Fortify Guard
     |--------------------------------------------------------------------------
     |
-    | diederik is single-user and uses the default `web` session guard. No
+    | beatrax is single-user and uses the default `web` session guard. No
     | API guard, no Passport bridge.
     */
 

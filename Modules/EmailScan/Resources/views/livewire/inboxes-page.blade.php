@@ -14,7 +14,7 @@
     <header class="mb-12">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Inboxes</h1>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Connect Gmail and Microsoft 365 inboxes so diederik can scan them for receipts.
+            Connect Gmail and Microsoft 365 inboxes so beatrax can scan them for receipts.
         </p>
     </header>
 
@@ -65,7 +65,7 @@
         <section class="mx-auto max-w-md text-center mt-12">
             <h2 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Connect your email</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Import receipts from PayPal, ICS Cards, Google Play, and other merchants by giving diederik
+                Import receipts from PayPal, ICS Cards, Google Play, and other merchants by giving beatrax
                 read-only access to one or more of your inboxes.
             </p>
             <div class="mt-8 flex items-center justify-center gap-4">
@@ -81,7 +81,7 @@
                 >Connect Microsoft 365</button>
             </div>
             <p class="mt-4 text-xs text-slate-500 dark:text-slate-400">
-                diederik only reads messages. It never sends, labels, moves, or deletes anything in your inbox.
+                beatrax only reads messages. It never sends, labels, moves, or deletes anything in your inbox.
             </p>
         </section>
     @else
@@ -199,7 +199,7 @@
             <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="rounded-lg border border-slate-200 bg-white p-6 space-y-4 dark:bg-slate-950 dark:border-slate-700">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Gmail</p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Connect a Gmail account so diederik can scan it for receipts.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Connect a Gmail account so beatrax can scan it for receipts.</p>
                     <button
                         type="button"
                         wire:click="openWizard('gmail')"
@@ -208,7 +208,7 @@
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-white p-6 space-y-4 dark:bg-slate-950 dark:border-slate-700">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Microsoft 365</p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Connect a Microsoft 365 or Outlook.com account so diederik can scan it for receipts.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Connect a Microsoft 365 or Outlook.com account so beatrax can scan it for receipts.</p>
                     <button
                         type="button"
                         wire:click="openWizard('microsoft')"
@@ -231,7 +231,7 @@
             <header>
                 <h2 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Discovered senders</h2>
                 <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    Senders that look like they send receipts but aren't on your known-receipts list yet. Add the ones you want diederik to scan; dismiss the rest.
+                    Senders that look like they send receipts but aren't on your known-receipts list yet. Add the ones you want beatrax to scan; dismiss the rest.
                 </p>
             </header>
             <ul class="space-y-3">

@@ -86,10 +86,10 @@ return [
     */
 
     'composer' => [
-        'vendor' => 'diederik',
+        'vendor' => 'beatrax',
         'author' => [
-            'name' => 'diederik',
-            'email' => 'noreply@diederik.test',
+            'name' => 'beatrax',
+            'email' => 'noreply@beatrax.test',
         ],
         'composer-output' => false,
     ],
@@ -103,7 +103,7 @@ return [
     'cache' => [
         'enabled' => false,
         'driver' => 'file',
-        'key' => 'diederik-modules',
+        'key' => 'beatrax-modules',
         'lifetime' => 60,
     ],
 
@@ -128,7 +128,7 @@ return [
         'file' => [
             'class' => FileActivator::class,
             'statuses-file' => UserDataPathService::projectPath('modules_statuses.json'),
-            'cache-key' => 'diederik-activator',
+            'cache-key' => 'beatrax-activator',
             'cache-lifetime' => 604800,
         ],
     ],

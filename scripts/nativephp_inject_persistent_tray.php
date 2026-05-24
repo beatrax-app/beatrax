@@ -18,7 +18,7 @@ declare(strict_types=1);
  *      (i.e. `state.electronApiPort` is set), then construct a native
  *      Electron `Tray` with the bundled `tray-icon.png` flagged as a
  *      template image so macOS auto-tints it for the active menu bar
- *      appearance. The Tray has a three-row context menu (Open diederik /
+ *      appearance. The Tray has a three-row context menu (Open beatrax /
  *      Scan email now / Quit) whose handlers either:
  *        - show + focus the existing main BrowserWindow if it lives in
  *          `state.windows.main`, OR
@@ -36,7 +36,7 @@ declare(strict_types=1);
  *   `compileMenu` in the dist's helper module — that compiles `link`-type
  *   items into a click handler that early-returns when `focusedWindow` is
  *   null. So once the main window is closed (the close handler in
- *   window.js deletes `state.windows[id]`), the tray's "Open diederik"
+ *   window.js deletes `state.windows[id]`), the tray's "Open beatrax"
  *   item silently does nothing. That is the wrong paradigm for D-09 (a
  *   persistent menu-bar icon that re-opens the main window after the X
  *   button was used).
@@ -67,7 +67,7 @@ declare(strict_types=1);
  * Marker comment line written into the patched file. The presence of this
  * marker is the idempotency check.
  */
-const TRAY_PATCH_MARKER = '// ── diederik persistent menu-bar tray ──';
+const TRAY_PATCH_MARKER = '// ── beatrax persistent menu-bar tray ──';
 
 $isDirectlyInvoked = PHP_SAPI === 'cli'
     && isset($_SERVER['argv'][0])
@@ -254,11 +254,11 @@ function findExpressionEnd(string $source, int $start): ?int
  *     (`tray-icon@2x.png`) is loaded by Electron automatically when present.
  *
  *   - Builds the verbatim three-row context menu (D-09 / UI-SPEC labels:
- *     "Open diederik", "Scan email now", "Quit"). The first two items show
+ *     "Open beatrax", "Scan email now", "Quit"). The first two items show
  *     or re-open the main window and (for "Scan email now") navigate it to
  *     the inboxes page. "Quit" calls `app.quit()`.
  *
- *   - Wires a tray click handler that mirrors "Open diederik" so a single
+ *   - Wires a tray click handler that mirrors "Open beatrax" so a single
  *     left-click on the icon also brings the main window back.
  *
  *   - The show-or-recreate helper inspects `state.windows.main`:
@@ -316,7 +316,7 @@ function traySetupBlock(): string
             focusable: true,
             hasShadow: true,
             frame: true,
-            title: 'diederik',
+            title: 'beatrax',
             titleBarStyle: 'default',
             windowButtonVisibility: true,
             alwaysOnTop: false,
@@ -379,10 +379,10 @@ function traySetupBlock(): string
             const image = nativeImage.createFromPath(trayIconPath);
             image.setTemplateImage(true);
             tray = new Tray(image);
-            tray.setToolTip('diederik');
+            tray.setToolTip('beatrax');
             const contextMenu = Menu.buildFromTemplate([
                 {
-                    label: 'Open diederik',
+                    label: 'Open beatrax',
                     click: () => { bringMainWindowToFront(); },
                 },
                 {

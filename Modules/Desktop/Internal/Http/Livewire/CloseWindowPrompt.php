@@ -16,7 +16,7 @@ use Modules\Desktop\Internal\Native\WindowCloseBehavior;
  * On the first window-close (close_behavior IS NULL), the user is
  * shown a `flux:modal` with two equally-prominent choices:
  *
- *   - "Quit diederik" (destructive, rose-600, NOT default-focused)
+ *   - "Quit beatrax" (destructive, rose-600, NOT default-focused)
  *   - "Keep running in the tray" (primary, emerald-600, default-focused)
  *
  * Plus a "Remember my choice" checkbox (checked by default). When the
@@ -39,13 +39,13 @@ use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 final class CloseWindowPrompt extends Component
 {
     /** Verbatim UI-SPEC modal title (locked copy). */
-    public const TITLE = 'Keep diederik running?';
+    public const TITLE = 'Keep beatrax running?';
 
     /** Verbatim UI-SPEC modal body. */
-    public const BODY = 'Closing the window can either quit diederik completely or keep it running quietly in the menu bar so scheduled email scans continue.';
+    public const BODY = 'Closing the window can either quit beatrax completely or keep it running quietly in the menu bar so scheduled email scans continue.';
 
-    /** Verbatim UI-SPEC "Quit diederik" button label. */
-    public const BUTTON_QUIT = 'Quit diederik';
+    /** Verbatim UI-SPEC "Quit beatrax" button label. */
+    public const BUTTON_QUIT = 'Quit beatrax';
 
     /** Verbatim UI-SPEC "Keep running in the tray" button label. */
     public const BUTTON_KEEP_IN_TRAY = 'Keep running in the tray';
@@ -96,7 +96,7 @@ final class CloseWindowPrompt extends Component
     }
 
     /**
-     * "Quit diederik" action. Persists `close_behavior='quit'` when
+     * "Quit beatrax" action. Persists `close_behavior='quit'` when
      * `rememberChoice` is true; the actual `App::quit()` call lives in
      * `NativeAppServiceProvider` listening for the dispatched event.
      */

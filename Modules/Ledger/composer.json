@@ -1,5 +1,5 @@
 {
-    "name": "diederik/ledger",
+    "name": "beatrax/ledger",
     "description": "Ledger module — canonical models and money value object.",
     "type": "laravel-module",
     "license": "proprietary",

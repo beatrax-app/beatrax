@@ -102,7 +102,7 @@ final class RulesPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Rules · diederik']);
+        $view->extends('layouts.app', ['title' => 'Rules · beatrax']);
 
         return $view;
     }

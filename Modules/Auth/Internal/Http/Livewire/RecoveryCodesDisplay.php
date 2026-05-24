@@ -82,7 +82,7 @@ final class RecoveryCodesDisplay extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Save these recovery codes · diederik']);
+        $view->extends('layouts.app', ['title' => 'Save these recovery codes · beatrax']);
 
         return $view;
     }

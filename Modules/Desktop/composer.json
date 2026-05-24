@@ -1,5 +1,5 @@
 {
-    "name": "diederik/desktop",
+    "name": "beatrax/desktop",
     "description": "Desktop module — NativePHP shell integration, native chrome, and OS file-open intent routing.",
     "type": "laravel-module",
     "license": "proprietary",

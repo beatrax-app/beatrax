@@ -10,7 +10,7 @@
 /*
  * Sketch-validated calm-slate Linear/Notion token set (Phase 16 D-05,
  * sketch session 001 — 2026-05-24). Hand-ported from
- * `Skill("sketch-findings-diederik")/sources/themes/default.css` into a
+ * `Skill("sketch-findings-beatrax")/sources/themes/default.css` into a
  * Tailwind v4 `@theme` block so utilities (`bg-[var(--color-bg)]`,
  * `text-[var(--color-text-muted)]`) and the bespoke component layer
  * below both resolve from the same source of truth.

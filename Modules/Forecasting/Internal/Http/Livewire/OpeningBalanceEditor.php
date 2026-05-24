@@ -34,13 +34,13 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *      pops the soft-warning banner, and keeps the form open with
  *      `divergenceDiffMinor` set.
  *   4. The user clicks `Use my number` to commit with
- *      `allowDivergence=true`, OR clicks `Use diederik's number` to
+ *      `allowDivergence=true`, OR clicks `Use beatrax's number` to
  *      replace the input with the computed sum-of-transactions and
  *      manually re-save.
  *
  * Constructor-injection is banned on Livewire `Component` subclasses
  * by phpstan-strict-rules; collaborators arrive on mount / save /
- * useDiederiksNumber / useMyNumber / render via parameter DI.
+ * useBeatraxsNumber / useMyNumber / render via parameter DI.
  */
 final class OpeningBalanceEditor extends Component
 {
@@ -64,7 +64,7 @@ final class OpeningBalanceEditor extends Component
 
     public ?int $divergenceDiffMinor = null;
 
-    public ?int $diederiksNumberMinor = null;
+    public ?int $beatraxsNumberMinor = null;
 
     public bool $showingDivergenceBanner = false;
 
@@ -107,7 +107,7 @@ final class OpeningBalanceEditor extends Component
         $this->errorMessage = null;
         $this->showingDivergenceBanner = false;
         $this->divergenceDiffMinor = null;
-        $this->diederiksNumberMinor = null;
+        $this->beatraxsNumberMinor = null;
         $this->saved = false;
 
         $minor = $this->parseInputToMinor($this->openingInput);
@@ -123,7 +123,7 @@ final class OpeningBalanceEditor extends Component
             ($action)($this->accountId, $currentUser->user(), $minor, $asOf, allowDivergence: false);
         } catch (OpeningBalanceDivergenceWarning $w) {
             $this->divergenceDiffMinor = $w->diffMinor;
-            $this->diederiksNumberMinor = $w->sumOfTransactionsMinor;
+            $this->beatraxsNumberMinor = $w->sumOfTransactionsMinor;
             $this->showingDivergenceBanner = true;
 
             return;
@@ -165,18 +165,18 @@ final class OpeningBalanceEditor extends Component
         $this->currentAsOfDate = $asOf;
         $this->showingDivergenceBanner = false;
         $this->divergenceDiffMinor = null;
-        $this->diederiksNumberMinor = null;
+        $this->beatraxsNumberMinor = null;
         $this->saved = true;
         $this->dispatch('forecast-settings:saved', accountId: $this->accountId);
         $this->dispatch('toast', message: 'Opening balance updated.');
     }
 
-    public function useDiederiksNumber(): void
+    public function useBeatraxsNumber(): void
     {
-        if ($this->diederiksNumberMinor === null) {
+        if ($this->beatraxsNumberMinor === null) {
             return;
         }
-        $this->openingInput = number_format($this->diederiksNumberMinor / 100, 2, ',', '.');
+        $this->openingInput = number_format($this->beatraxsNumberMinor / 100, 2, ',', '.');
         $this->showingDivergenceBanner = false;
         $this->divergenceDiffMinor = null;
         $this->errorMessage = null;
@@ -194,7 +194,7 @@ final class OpeningBalanceEditor extends Component
             'errorMessage' => $this->errorMessage,
             'showingDivergenceBanner' => $this->showingDivergenceBanner,
             'divergenceDiffMinor' => $this->divergenceDiffMinor,
-            'diederiksNumberMinor' => $this->diederiksNumberMinor,
+            'beatraxsNumberMinor' => $this->beatraxsNumberMinor,
             'saved' => $this->saved,
         ]);
     }

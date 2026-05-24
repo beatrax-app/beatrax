@@ -29,10 +29,10 @@ use Native\Desktop\Facades\Menu;
  * `boot()` runs the first-launch DB bootstrap (D-21 / D-22 / D-23)
  * before any window opens so the schema is in place for the very
  * first request the just-opened window makes, then opens the single
- * application window that renders the diederik web UI (D-10: size +
+ * application window that renders the beatrax web UI (D-10: size +
  * position persist via `WindowManager::open()`'s `rememberState()`) and
  * installs the app menu (D-11 — File/Edit/View/Window/Help + the
- * diederik-specific File and Help entries).
+ * beatrax-specific File and Help entries).
  *
  * The macOS menu-bar tray icon (D-09) is intentionally NOT installed
  * through NativePHP's `MenuBar` facade. That facade is a wrapper around
@@ -40,7 +40,7 @@ use Native\Desktop\Facades\Menu;
  * whose context-menu items couple to the focused BrowserWindow (the
  * `link`-type items in the Electron `compileMenu` helper early-return
  * when no window is focused), so once the user closes the main window
- * via the X button the tray's "Open diederik" item silently does
+ * via the X button the tray's "Open beatrax" item silently does
  * nothing — the wrong paradigm for D-09 (the tray must outlive any
  * single window so it can re-open the main window from any state).
  *
@@ -95,7 +95,7 @@ final class NativeAppServiceProvider
             ->rememberState();
 
         // Application menu (D-11). The builder composes the
-        // standard top-level set with the diederik-specific File +
+        // standard top-level set with the beatrax-specific File +
         // Help entries; `Menu::create()` installs them as the
         // application menu via Electron's `Menu.setApplicationMenu()`.
         Menu::create(...$this->appMenu->build());

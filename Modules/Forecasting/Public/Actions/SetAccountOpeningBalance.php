@@ -125,7 +125,7 @@ final class SetAccountOpeningBalance
      * Compute the sum of imported transactions on the account up to a
      * given as-of date. Exposed publicly so the
      * `OpeningBalanceEditor` Livewire SFC can populate the
-     * "Use diederik's number" chip with the computed value without
+     * "Use beatrax's number" chip with the computed value without
      * re-invoking the full Action.
      */
     public function sumOfTransactionsForAccount(int $accountId, User $user, string $asOfDate): int
