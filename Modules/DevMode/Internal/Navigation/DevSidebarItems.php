@@ -49,10 +49,10 @@ final class DevSidebarItems
         ['slug' => 'audit',    'label' => 'Audit',    'icon' => '⌗',  'route' => 'dev.audit', 'enabled' => true],     // 16-04b
         ['slug' => 'logs',     'label' => 'Logs',     'icon' => '≡',  'route' => 'dev.logs', 'enabled' => true],      // 16-05
         ['slug' => 'queue',    'label' => 'Queue',    'icon' => '↻',  'route' => 'dev.queue', 'enabled' => true],     // 16-06 (THIS plan)
-        ['slug' => 'doctor',   'label' => 'Doctor',   'icon' => '⚙',  'route' => 'dev.doctor', 'enabled' => false],   // 16-07 will flip
-        ['slug' => 'sql',      'label' => 'SQL',      'icon' => '⌕',  'route' => 'dev.sql', 'enabled' => false],      // 16-07 will flip
+        ['slug' => 'doctor',   'label' => 'Doctor',   'icon' => '⚙',  'route' => 'dev.doctor', 'enabled' => true],    // 16-07 Task 2
+        ['slug' => 'sql',      'label' => 'SQL',      'icon' => '⌕',  'route' => 'dev.sql', 'enabled' => false],      // 16-07 Task 3 will flip
         ['slug' => 'horizon',  'label' => 'Horizon',  'icon' => '↗',  'route' => 'dev.horizon', 'enabled' => 'conditional'], // D-38 two-signal — THIS plan
-        ['slug' => 'system',   'label' => 'System',   'icon' => '◇',  'route' => 'dev.system', 'enabled' => false],   // 16-07 will flip
+        ['slug' => 'system',   'label' => 'System',   'icon' => '◇',  'route' => 'dev.system', 'enabled' => true],    // 16-07 Task 2
     ];
 
     /**
