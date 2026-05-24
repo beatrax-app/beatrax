@@ -135,7 +135,15 @@ if ($isDirectlyInvoked) {
  */
 function injectPersistentTray(string $source): array
 {
-    if (str_contains($source, TRAY_PATCH_MARKER)) {
+    // Drift-resistant idempotency: the marker text carries the brand name
+    // and was rebranded in 16-02 (diederik→beatrax), so an older patch
+    // run could have written the previous marker into the on-disk
+    // (gitignored) index.js. The injected `installPersistentTray()`
+    // function name is hard-coded in `traySetupBlock()` below, so its
+    // presence is a stable signal that the patch is already applied
+    // regardless of brand drift.
+    if (str_contains($source, TRAY_PATCH_MARKER)
+        || str_contains($source, 'function installPersistentTray()')) {
         return [$source, 'already-patched'];
     }
 
