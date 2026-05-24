@@ -100,6 +100,26 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // <iframe src="/horizon"> wrapper — the iframe target has its own
     // auth gate. EnsureDeveloperMode covers the wrapper.
     'dev.horizon',
+    // 16-07: Doctor + System snapshot surfaces. The doctor page reads
+    // the latest beatrax:doctor dev_mode_audit row (operator-level
+    // event log — same audit-disclosure contract as dev.audit) and
+    // the system page renders host + Laravel + SQLite facts via the
+    // ConfigFlattener's secret-suffix redaction. Neither surfaces
+    // foreign user-row data; the EnsureDeveloperMode gate blocks
+    // non-developers entirely.
+    'dev.doctor',
+    'dev.system',
+    // 16-07: SQL panel. Reads-only against the system-wide SQLite
+    // database; the schema viewer enumerates table metadata which
+    // does not surface per-user row data on its own. Every actual
+    // SELECT is gated by the session-scoped Advanced toggle (D-46)
+    // AND defense-in-depth (SelectOnlyValidator + PRAGMA query_only
+    // = 1). EnsureDeveloperMode blocks non-developers entirely. The
+    // schema viewer itself does not surface per-user data; the
+    // operator decides which SELECT to run after toggling Advanced
+    // and accepting the documented operator-level data-disclosure
+    // contract (same shape as dev.audit + dev.queue.tab).
+    'dev.sql',
 ];
 
 /**
