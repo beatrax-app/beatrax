@@ -16,10 +16,12 @@ use Spatie\LaravelData\Data;
  * rows, or it navigates the focused window to `url` for url-shaped
  * rows.
  *
- * `keywords` extends the Fuse.js scoring surface beyond the label
- * (e.g. ["logout", "quit"] for "Sign out"). Concrete population
- * happens in 16-08; this module's `NullAppActionRegistry` returns an
- * empty list.
+ * `id` is the stable client-side identifier Fuse.js uses for keying
+ * (`:key="hit.item.id"` in the palette modal) AND the cache key for
+ * the per-user Recent-shortcuts list. `keywords` extends the Fuse.js
+ * scoring surface beyond the label (e.g. ["logout", "quit"] for
+ * "Sign out"). Concrete population happens in 16-08 via
+ * `AppActionRegistryImpl`.
  *
  * @param  list<string>  $keywords
  */
@@ -29,6 +31,7 @@ final class AppAction extends Data
      * @param  list<string>  $keywords
      */
     public function __construct(
+        public readonly string $id,
         public readonly string $label,
         public readonly string $hint,
         public readonly string $icon,

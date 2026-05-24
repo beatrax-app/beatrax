@@ -82,7 +82,39 @@
         @vite(['resources/css/app.css'])
         @livewireStyles
     </head>
-    <body class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100" style="font-family: 'Inter', system-ui, -apple-system, sans-serif;">
+    <body
+        class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+        style="font-family: 'Inter', system-ui, -apple-system, sans-serif;"
+        x-data="{
+            onKey(e) {
+                /*
+                 * Global command-palette keybind handler — duplicated
+                 * verbatim from resources/views/layouts/app.blade.php
+                 * so the palette + Dev Console keybind also work inside
+                 * /dev/* (this layout is the hard-swap variant; it does
+                 * NOT inherit body attributes from the main layout).
+                 * D-42 + 16-08 + I-7 carve-out for text inputs.
+                 */
+                const t = document.activeElement;
+                if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
+                    return;
+                }
+                const mod = e.metaKey || e.ctrlKey;
+                if (mod && (e.key === 'k' || e.key === 'K')) {
+                    e.preventDefault();
+                    if (window.Livewire) {
+                        window.Livewire.dispatch('palette:open');
+                    }
+                    return;
+                }
+                if (mod && e.key === '.') {
+                    e.preventDefault();
+                    window.location.href = '/dev';
+                }
+            }
+        }"
+        x-on:keydown.window="onKey($event)"
+    >
         <div class="flex min-h-screen">
             <aside class="dev-side" aria-label="Dev Console" style="--side-w-dev: 220px;">
                 <div class="dev-side-head">
@@ -140,6 +172,13 @@
              POSTs to /dev/artisan/destructive-spawn for the
              defense-in-depth re-validation + actual spawn. --}}
         @livewire('dev.triple-gate-modal')
+
+        {{-- 16-08: Global command-palette modal mounted inside the
+             dev-shell as well as the main-app layout so ⌘K / Ctrl+K
+             works inside /dev/* too. The Livewire component is the
+             same; mounting both keeps the dispatch sink available
+             regardless of which layout the request resolved through. --}}
+        @livewire('dev.command-palette-modal')
 
         @livewireScripts
     </body>
