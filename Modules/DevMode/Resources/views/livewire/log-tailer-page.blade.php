@@ -24,7 +24,7 @@
 
     <div
         x-data="logTailer({
-            streamUrl: '{{ route('dev.logs.stream') }}',
+            pollUrl: '{{ route('dev.logs.poll') }}',
             contextUrl: '{{ route('dev.logs.context') }}',
             initialSeverities: @js($severityList),
             initialContains: @js($contains),
@@ -145,7 +145,7 @@
         window.__devLogTailerRegistered = true;
         document.addEventListener('alpine:init', () => {
             Alpine.data('logTailer', (opts) => ({
-                streamUrl: opts.streamUrl,
+                pollUrl: opts.pollUrl,
                 contextUrl: opts.contextUrl,
                 severities: new Set(opts.initialSeverities || []),
                 contains: opts.initialContains || '',
@@ -154,61 +154,77 @@
                 paused: false,
                 statusMessage: '',
                 totalReceived: 0,
-                source: null,
                 nextLineId: 1,
-                retryDelay: 250,
                 MAX_BUFFER: 10000,
+                // Polling cursor + rotation guard. The server returns the
+                // current inode in every response; the client passes it
+                // back next tick so the server can detect a logrotate /
+                // midnight day-rollover and signal reset.
+                offset: 0,
+                inode: null,
+                pollTimer: null,
+                pollAbort: null,
+                POLL_INTERVAL_MS: 1000,
 
                 start() {
-                    this.openStream();
+                    this.pollNow();
                 },
 
                 // Alpine teardown hook — fires when the component root is
                 // removed from the DOM (wire:navigate page swap, tab close,
-                // hot reload). Closes the SSE so the browser frees the
-                // HTTP/1.1 connection slot it was holding; otherwise that
-                // slot stays in-flight and a single page visit can exhaust
-                // the per-origin parallel-connection cap, which makes the
-                // app sidebar feel frozen.
+                // hot reload). Stops the polling loop AND aborts any
+                // request in flight; otherwise the next tick would fetch
+                // against a torn-down component.
                 destroy() {
                     this.paused = true;
-                    if (this.source) {
-                        try { this.source.close(); } catch (e) {}
-                        this.source = null;
+                    if (this.pollTimer) {
+                        clearTimeout(this.pollTimer);
+                        this.pollTimer = null;
+                    }
+                    if (this.pollAbort) {
+                        try { this.pollAbort.abort(); } catch (e) {}
+                        this.pollAbort = null;
                     }
                 },
 
-                openStream() {
-                    if (this.source) {
-                        try { this.source.close(); } catch (e) {}
-                    }
-                    this.statusMessage = '';
-                    try {
-                        this.source = new EventSource(this.streamUrl);
-                    } catch (e) {
-                        this.statusMessage = 'Log stream interrupted. Reconnecting…';
-                        this.scheduleReconnect();
-                        return;
-                    }
-                    this.source.onmessage = (ev) => {
-                        let payload;
-                        try { payload = JSON.parse(ev.data); } catch (e) { return; }
-                        if (!payload || typeof payload.line !== 'string') { return; }
-                        this.ingest(payload.line);
-                    };
-                    this.source.onerror = () => {
-                        this.statusMessage = 'Log stream interrupted. Reconnecting…';
-                        try { this.source.close(); } catch (e) {}
-                        this.source = null;
-                        this.scheduleReconnect();
-                    };
-                    this.retryDelay = 250;
-                },
-
-                scheduleReconnect() {
+                async pollNow() {
                     if (this.paused) { return; }
-                    setTimeout(() => { if (!this.paused) { this.openStream(); } }, this.retryDelay);
-                    this.retryDelay = Math.min(this.retryDelay * 2, 5000);
+                    if (this.pollTimer) {
+                        clearTimeout(this.pollTimer);
+                        this.pollTimer = null;
+                    }
+                    this.pollAbort = new AbortController();
+                    try {
+                        const params = new URLSearchParams({ since: String(this.offset) });
+                        if (this.inode !== null) { params.set('inode', String(this.inode)); }
+                        const res = await fetch(`${this.pollUrl}?${params.toString()}`, {
+                            headers: { 'Accept': 'application/json' },
+                            signal: this.pollAbort.signal,
+                        });
+                        if (!res.ok) { throw new Error('poll-not-ok'); }
+                        const body = await res.json();
+                        if (body.reset === true) {
+                            this.offset = 0;
+                        }
+                        if (typeof body.inode === 'number') {
+                            this.inode = body.inode;
+                        }
+                        if (typeof body.chunk === 'string' && body.chunk !== '') {
+                            this.ingest(body.chunk);
+                        }
+                        if (typeof body.newOffset === 'number') {
+                            this.offset = body.newOffset;
+                        }
+                        this.statusMessage = '';
+                    } catch (e) {
+                        if (e && e.name === 'AbortError') { return; }
+                        this.statusMessage = 'Log poll interrupted. Retrying…';
+                    } finally {
+                        this.pollAbort = null;
+                    }
+                    if (!this.paused) {
+                        this.pollTimer = setTimeout(() => this.pollNow(), this.POLL_INTERVAL_MS);
+                    }
                 },
 
                 ingest(chunk) {
@@ -302,13 +318,18 @@
                 togglePause() {
                     this.paused = !this.paused;
                     if (this.paused) {
-                        if (this.source) {
-                            try { this.source.close(); } catch (e) {}
-                            this.source = null;
+                        if (this.pollTimer) {
+                            clearTimeout(this.pollTimer);
+                            this.pollTimer = null;
+                        }
+                        if (this.pollAbort) {
+                            try { this.pollAbort.abort(); } catch (e) {}
+                            this.pollAbort = null;
                         }
                         this.statusMessage = 'Paused.';
                     } else {
-                        this.openStream();
+                        this.statusMessage = '';
+                        this.pollNow();
                     }
                 },
 
