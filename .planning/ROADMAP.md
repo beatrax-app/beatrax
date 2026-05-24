@@ -194,7 +194,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 16-01-PLAN.md — App-wide sidebar restructure + base layout polish + Tailwind v4 theme tokens
+- [x] 16-01-PLAN.md — App-wide sidebar restructure + base layout polish + Tailwind v4 theme tokens
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -308,7 +308,7 @@ Plans:
 | 13. AppPaths | 3/3 | Complete    | 2026-05-20 |
 | 14. Queue Rewire + Horizon Carve-out | 3/3 | Complete    | 2026-05-22 |
 | 15. Desktop Shell (NativePHP Integration) | 7/7 | Complete    | 2026-05-23 |
-| 16. Developer Mode UI | 0/9 | Planned     | - |
+| 16. Developer Mode UI | 1/9 | In Progress|  |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |
 | 19. Public Release Boundary | 0/0 | Not started | - |
