@@ -16,7 +16,7 @@
         data-testid="console-pane"
         wire:poll.5s
     >
-        <div class="grid grid-cols-3 gap-4 console-pane-head">
+        <div class="grid grid-cols-3 gap-4 console-pane-head items-start">
             {{-- Worker heartbeat tile --}}
             <div data-testid="console-pane-heartbeat">
                 <div class="text-[11px] uppercase tracking-wide text-slate-400">Worker heartbeat</div>
@@ -82,10 +82,20 @@
             : e(implode("\n", $logTail)) !!}<span class="cursor-blink" aria-hidden="true">_</span></pre>
     </section>
 
-    {{-- Two-column grid below the console pane: Recent runs + Open alerts. --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {{--
+        Two-column grid below the console pane: Recent runs + Open alerts.
+
+        `items-stretch` is the grid default but is restated here next to
+        `h-full` on each card so the intent is explicit: both cards must
+        match heights regardless of how many list rows each one carries.
+        Without `h-full` the cards stretch but their inner content (the
+        `<ul>`) anchors to the top with empty space below — and the
+        empty-state copy in each card uses identical left-aligned typo so
+        the two surfaces never visually disagree when one is empty.
+    --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
         {{-- Recent runs card --}}
-        <div class="card p-4" data-testid="recent-runs-card">
+        <div class="card p-4 h-full" data-testid="recent-runs-card">
             <h2 class="text-sm font-semibold mb-3">Recent runs</h2>
             @if (count($recentRuns) === 0)
                 <p class="text-sm text-[var(--color-text-muted)]">{{ $recentRunsEmptyCopy }}</p>
@@ -114,10 +124,10 @@
         </div>
 
         {{-- Open alerts card --}}
-        <div class="card p-4" data-testid="open-alerts-card">
+        <div class="card p-4 h-full" data-testid="open-alerts-card">
             <h2 class="text-sm font-semibold mb-3">Open alerts</h2>
             @if ($openAlerts->isEmpty())
-                <p class="text-sm text-[var(--color-text-muted)] text-center">{{ $openAlertsEmptyCopy }}</p>
+                <p class="text-sm text-[var(--color-text-muted)]">{{ $openAlertsEmptyCopy }}</p>
             @else
                 <ul class="space-y-2">
                     @foreach ($openAlerts as $alert)
