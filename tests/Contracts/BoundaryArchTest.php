@@ -937,8 +937,8 @@ it('does not allow Laravel facades inside Modules/Core/Internal/Console/ (noFaca
     // calling any `Illuminate\Support\Facades\…` class breaks the
     // testability contract — facade-rooted calls cannot be substituted
     // with a mock from the test harness, which kills the artisan-test
-    // story for db:backup, db:restore, diederik:doctor, and
-    // diederik:failed-jobs. The scan walks Modules/Core/Internal/
+    // story for db:backup, db:restore, beatrax:doctor, and
+    // beatrax:failed-jobs. The scan walks Modules/Core/Internal/
     // Console/ recursively, strips block + line comments so PHPDoc
     // references stay legal, and any remaining facade-namespace
     // import / FQCN reference adds the file to the failure list.

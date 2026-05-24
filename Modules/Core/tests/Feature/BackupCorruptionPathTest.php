@@ -39,7 +39,7 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $db->purge('sqlite');
 
-    $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-test-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
+    $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
 });
 
@@ -96,8 +96,8 @@ it('preserves a produced VACUUM INTO output under a .suspect suffix when integri
         return;
     }
 
-    $suspect = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite.suspect');
-    $clean = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'diederik-*.sqlite');
+    $suspect = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite.suspect');
+    $clean = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite');
 
     if ($suspect !== []) {
         // Happy corrupt path: .suspect file present, no clean .sqlite kept.

@@ -79,7 +79,7 @@ beforeEach(function (): void {
     // listener re-applies synchronous=NORMAL on the next open.
     $config->set('database.default', 'sqlite');
 
-    $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-probe-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
+    $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-probe-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($this->backupsDir, 2));
 });
 
@@ -229,7 +229,7 @@ it('BackupFreshnessProbe returns ok and does NOT write an alert when a fresh sid
 
     // Write a sidecar dated 10 minutes ago.
     $tenMinutesAgo = $clock->now()->subMinutes(10);
-    $sidecar = $backupsDir.DIRECTORY_SEPARATOR.'diederik-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite.meta.json';
+    $sidecar = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite.meta.json';
     $files->put($sidecar, (string) json_encode([
         'data_version' => 1,
         'started_at' => $tenMinutesAgo->subSecond()->toIso8601String(),
@@ -259,7 +259,7 @@ it('BackupFreshnessProbe returns warning AND writes an alert when newest sidecar
 
     // Write a sidecar dated 60h ago.
     $sixtyHoursAgo = $clock->now()->subHours(60);
-    $sidecar = $backupsDir.DIRECTORY_SEPARATOR.'diederik-'.$sixtyHoursAgo->format('Y-m-d-His').'.sqlite.meta.json';
+    $sidecar = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$sixtyHoursAgo->format('Y-m-d-His').'.sqlite.meta.json';
     $files->put($sidecar, (string) json_encode([
         'data_version' => 1,
         'started_at' => $sixtyHoursAgo->subSecond()->toIso8601String(),
@@ -309,7 +309,7 @@ it('WalModeProbe never throws — IO failure is captured as a critical ProbeResu
     // catch it and return a critical ProbeResult instead.
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
-    $config->set('database.connections.sqlite.database', '/nonexistent/path/to/diederik-missing.sqlite');
+    $config->set('database.connections.sqlite.database', '/nonexistent/path/to/beatrax-missing.sqlite');
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

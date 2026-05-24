@@ -7,7 +7,7 @@ use Illuminate\Database\DatabaseManager;
 
 it('applies WAL + synchronous=NORMAL + foreign_keys + busy_timeout pragmas via the connection config keys', function (): void {
     // Use a temp on-disk SQLite file — `:memory:` does not support WAL.
-    $tempStub = (string) tempnam(sys_get_temp_dir(), 'diederik-pragma-');
+    $tempStub = (string) tempnam(sys_get_temp_dir(), 'beatrax-pragma-');
     $tempDb = $tempStub.'.sqlite';
     @unlink($tempStub);
     touch($tempDb);
@@ -46,7 +46,7 @@ it('applies WAL + synchronous=NORMAL + foreign_keys + busy_timeout pragmas via t
 it('applies the same pragmas via the ConnectionEstablished listener even when config keys are absent', function (): void {
     // A connection definition without `journal_mode`/`synchronous`/`busy_timeout`
     // keys proves the SqliteOptimizationsProvider listener fires regardless.
-    $tempStub = (string) tempnam(sys_get_temp_dir(), 'diederik-pragma-listener-');
+    $tempStub = (string) tempnam(sys_get_temp_dir(), 'beatrax-pragma-listener-');
     $tempDb = $tempStub.'.sqlite';
     @unlink($tempStub);
     touch($tempDb);

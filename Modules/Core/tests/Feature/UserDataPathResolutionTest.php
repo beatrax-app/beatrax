@@ -30,7 +30,7 @@ beforeEach(function (): void {
     expect($this->app->configurationIsCached())->toBeFalse();
 
     // Collision-free per-test root under the system temp dir.
-    $this->tmpRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'diederik-test-'.bin2hex(random_bytes(8));
+    $this->tmpRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8));
 
     // SQLite will not create the parent directory of the database file,
     // and db:backup writes into the storage app/backups directory

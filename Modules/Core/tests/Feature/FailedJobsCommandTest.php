@@ -7,7 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 
 /*
- * Drives `php artisan diederik:failed-jobs prune` against a seeded
+ * Drives `php artisan beatrax:failed-jobs prune` against a seeded
  * failed_jobs table:
  *  - --dry-run on a 5-row fixture spread across 7/14/31/45/60 days ago,
  *    cutoff 30d → 3 rows reported but no row removed.
