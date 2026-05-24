@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Providers;
 
+use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Queue\QueueManager;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
@@ -17,7 +20,10 @@ use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\CommandRegistry;
 use Modules\DevMode\Internal\Console\PruneDevAuditCommand;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
+use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 use Modules\DevMode\Internal\Http\Middleware\EnsureDeveloperMode;
+use Modules\DevMode\Internal\Listeners\ResetAdvancedToggleOnLogin;
+use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\FileTailer;
@@ -295,7 +301,7 @@ final class DevModeServiceProvider extends ServiceProvider
         ));
     }
 
-    public function boot(Router $router, LivewireManager $livewire): void
+    public function boot(Router $router, LivewireManager $livewire, Dispatcher $events): void
     {
         $router->aliasMiddleware('ensureDeveloperMode', EnsureDeveloperMode::class);
 
@@ -310,6 +316,28 @@ final class DevModeServiceProvider extends ServiceProvider
         }
 
         $livewire->component('dev.overview-page', DevOverviewPage::class);
+        $livewire->component('dev.triple-gate-modal', TripleGateModal::class);
+
+        // W-8 FIX: register the queue-worker heartbeat via the
+        // QueueManager::looping(closure) form. The event-listener form
+        // (Looping::class) does NOT reliably fire under Laravel 13's
+        // queue:work — only the closure-callbacks do. The closure
+        // resolves WriteWorkerHeartbeat from the container on every
+        // tick so its DI dependencies (Clock, CacheRepository) stay
+        // bound to the latest container singletons.
+        /** @var QueueManager $queueManager */
+        $queueManager = $this->app->make(QueueManager::class);
+        $appLocal = $this->app;
+        $queueManager->looping(static function () use ($appLocal): void {
+            /** @var WriteWorkerHeartbeat $heartbeat */
+            $heartbeat = $appLocal->make(WriteWorkerHeartbeat::class);
+            ($heartbeat)();
+        });
+
+        // CONTEXT D-20 — the Advanced toggle resets to OFF on every
+        // successful Login. The runner page's mount() resets a SECOND
+        // time on first-load-per-session as a belt-and-braces.
+        $events->listen(Login::class, [ResetAdvancedToggleOnLogin::class, 'handle']);
 
         if ($this->app->runningInConsole()) {
             $this->commands([
