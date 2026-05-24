@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Native;
 
+use Modules\Core\Public\Contracts\CurrentUser;
 use Native\Desktop\Contracts\MenuItem;
 use Native\Desktop\Facades\Menu;
 
@@ -17,10 +18,18 @@ use Native\Desktop\Facades\Menu;
  *   File → "Import file…", "Scan email now"
  *   Help → "GitHub repo", "Report an issue", "About beatrax"
  *
+ * 16-08 adds a conditional Developer submenu for `is_developer` users:
+ *
+ *   Developer → "Open Dev Console" (⌘.) + "⌘K Run a command" (⌘K)
+ *
+ * The submenu is omitted from the menu tree entirely for non-developer
+ * accounts — defence-in-depth on top of the EnsureDeveloperMode gate
+ * on the underlying routes (T-16-36).
+ *
  * The labels are locked verbatim from the UI-SPEC Copywriting
  * Contract; the internal navigation targets are existing app routes
- * (`imports.new`, `inboxes.index`, `settings`) and the two outbound
- * links open in the external browser via NativePHP's
+ * (`imports.new`, `inboxes.index`, `settings`, `dev.overview`) and the
+ * two outbound links open in the external browser via NativePHP's
  * `openInBrowser()` flag so the webview never leaves the app.
  *
  * `build()` returns the top-level `MenuItem`s in display order; the
@@ -29,6 +38,11 @@ use Native\Desktop\Facades\Menu;
  * on the facade allow-list (BoundaryArchTest + phpstan.neon) because
  * the `Native\Desktop\Facades\Menu` builder is NativePHP's only path
  * to compose menu items.
+ *
+ * RESEARCH Pitfall 9 reminder: NativePHP app-menu changes do NOT
+ * appear in a running Electron build until the user fully quits and
+ * relaunches the app. PHP autoreload does not propagate to the
+ * already-compiled native menu. Documented in 16-08-SUMMARY.md.
  */
 final class AppMenuBuilder
 {
@@ -48,6 +62,12 @@ final class AppMenuBuilder
 
     public const HELP_ABOUT = 'About beatrax';
 
+    public const DEVELOPER_SUBMENU = 'Developer';
+
+    public const DEV_OPEN_CONSOLE = 'Open Dev Console';
+
+    public const DEV_RUN_COMMAND = '⌘K Run a command';
+
     /**
      * Public repository URL — surfaces from the Help menu. The link
      * opens in the external browser (not inside the Electron
@@ -62,11 +82,29 @@ final class AppMenuBuilder
     public const REPORT_ISSUE_URL = 'https://github.com/beatrax-app/beatrax/issues/new';
 
     /**
+     * Constructor-DI on CurrentUser (16-08). The container resolves
+     * this builder as a singleton in DesktopServiceProvider; on every
+     * call to build() the CurrentUser collaborator reads the live
+     * auth session so a partner account that signs in after the
+     * shipped Electron process started would correctly see no
+     * Developer submenu on next menu rebuild.
+     *
+     * Note: NativePHP composes the menu once at boot — there is no
+     * built-in rebuild trigger on auth state change. The constructor
+     * still takes CurrentUser through DI so build() reflects whoever
+     * is authenticated when the menu IS rebuilt (full app relaunch
+     * per RESEARCH Pitfall 9).
+     */
+    public function __construct(
+        private readonly CurrentUser $currentUser,
+    ) {}
+
+    /**
      * @return list<MenuItem>
      */
     public function build(): array
     {
-        return [
+        $items = [
             Menu::app(),
             Menu::file()->submenu(
                 Menu::route('imports.new', self::FILE_IMPORT),
@@ -90,5 +128,36 @@ final class AppMenuBuilder
                 Menu::route('settings', self::HELP_ABOUT),
             ),
         ];
+
+        if ($this->isDeveloper()) {
+            // B-4 fix: route-name based (NOT hardcoded URL host) so
+            // the menu works in both Herd dev (https://beatrax.test)
+            // AND shipped Electron bundles (http://127.0.0.1:{port}).
+            // The existing AppMenuBuilder uses Menu::route('imports.new', ...)
+            // — this is the verified contract. The accelerator
+            // strings (`Cmd+.` / `Cmd+K`) are interpreted by Electron
+            // verbatim on both macOS and Windows/Linux.
+            $items[] = Menu::label(self::DEVELOPER_SUBMENU)->submenu(
+                Menu::route('dev.overview', self::DEV_OPEN_CONSOLE)->accelerator('Cmd+.'),
+                Menu::route('dev.overview', self::DEV_RUN_COMMAND)->accelerator('Cmd+K'),
+            );
+        }
+
+        return $items;
+    }
+
+    /**
+     * Resolve the current user's developer flag. Returns false when
+     * no user is authenticated — defence in depth so a partial
+     * NativePHP boot (menu composed before the auth guard is wired)
+     * still renders a safe non-developer menu.
+     */
+    private function isDeveloper(): bool
+    {
+        if (! $this->currentUser->isAuthenticated()) {
+            return false;
+        }
+
+        return $this->currentUser->user()->is_developer === true;
     }
 }

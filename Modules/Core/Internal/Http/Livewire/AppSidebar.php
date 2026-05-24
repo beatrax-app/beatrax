@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
 use Livewire\Component;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
@@ -24,10 +27,18 @@ use Modules\Core\Public\Contracts\CurrentUser;
  * `users.is_developer` — non-developers do NOT receive the dashed
  * container in the rendered HTML. The block carries a pulsing emerald
  * `.dot-live` dot, an "Open Dev Console" link with a `⌘.` kbd hint,
- * and a "Queue 0 · Worker —" placeholder pulse row. The live numbers
- * are intentionally static in this plan; 16-04 + 16-06 wire the real
- * `cache('dev_mode.queue_worker_heartbeat')` reads when those surfaces
- * land.
+ * and a "Queue {N} · Worker {N}s ago" live row. 16-08 swapped the
+ * 16-01 placeholder for the real cache + jobs table reads — see
+ * `render()`'s `$queueCount` + `$workerSecondsAgo` (and the
+ * `wire:poll.5s` on the live-data sub-tree in the Blade view).
+ *
+ * Queue-count choice: `jobs.count()` (pending only). Failed jobs
+ * already surface in the dashboard toast (D-37) and the dedicated
+ * `/dev/queue/failed` tab, so "Queue {N}" in the sidebar reads as
+ * "work waiting to be done". The composite count
+ * `jobs + failed_jobs` would conflate two distinct operational
+ * signals (work-in-progress vs work-that-failed). Documented in
+ * 16-08-SUMMARY.md.
  *
  * The account caption reads "developer · local" for developers and
  * "local" otherwise — the only place in the chrome that reveals the
@@ -39,13 +50,39 @@ use Modules\Core\Public\Contracts\CurrentUser;
  */
 final class AppSidebar extends Component
 {
+    /** Cache key the queue-worker heartbeat producer writes (16-04b). */
+    private const HEARTBEAT_CACHE_KEY = 'dev_mode.queue_worker_heartbeat';
+
     public function render(
         CurrentUser $currentUser,
         Request $request,
         ViewFactory $views,
+        CacheRepository $cache,
+        DatabaseManager $db,
+        Clock $clock,
     ): View {
         $user = $currentUser->user();
         $isDeveloper = $user->is_developer === true;
+
+        // Live Dev-block reads — only materialise for developers so
+        // a non-dev render does not pay the cache + jobs-count cost
+        // (and so the placeholder copy never appears in their DOM).
+        $queueCount = 0;
+        $workerSecondsAgo = null;
+        if ($isDeveloper) {
+            // jobs.count() — see class docblock for the
+            // pending-only-not-composite rationale.
+            $queueCount = $db->connection()->table('jobs')->count();
+
+            $heartbeatRaw = $cache->get(self::HEARTBEAT_CACHE_KEY);
+            if (is_int($heartbeatRaw)) {
+                $delta = $clock->now()->getTimestamp() - $heartbeatRaw;
+                // Clamp negative deltas (a clock skew between cache
+                // writer and reader) so the UI never reads
+                // "Worker -3s ago".
+                $workerSecondsAgo = max(0, $delta);
+            }
+        }
 
         return $views->make('core::livewire.app-sidebar', [
             'currentPath' => '/'.ltrim($request->path(), '/'),
@@ -53,6 +90,8 @@ final class AppSidebar extends Component
             'userInitial' => $this->initialFor($user->username),
             'isDeveloper' => $isDeveloper,
             'accountCaption' => $isDeveloper ? 'developer · local' : 'local',
+            'queueCount' => $queueCount,
+            'workerSecondsAgo' => $workerSecondsAgo,
         ]);
     }
 
