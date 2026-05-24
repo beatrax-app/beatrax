@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Providers\HorizonServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Modules\DevMode\Internal\Http\Controllers\AdvancedToggleController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanCancelController;
@@ -10,12 +9,10 @@ use Modules\DevMode\Internal\Http\Controllers\ArtisanSpawnController;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanStreamController;
 use Modules\DevMode\Internal\Http\Controllers\DestructiveSpawnController;
 use Modules\DevMode\Internal\Http\Controllers\LogStreamController;
-use Modules\DevMode\Internal\Http\Middleware\HorizonFrameAncestors;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 use Modules\DevMode\Internal\Http\Livewire\DoctorPanelPage;
-use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
 use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
 use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
 use Modules\DevMode\Internal\Http\Livewire\SqlPanelPage;
@@ -105,42 +102,9 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
         // — I-6 LOCKED decision: NOT a separate /dev/sql/schema route.
         Route::get('/sql', SqlPanelPage::class)->name('dev.sql');
 
-        // 16-06: Horizon iframe (D-38 two-signal). The route is ONLY
-        // registered when BOTH `config('app.dev_mode') === true` AND
-        // the Horizon package's HorizonServiceProvider class exists
-        // (the package is `require-dev` per Phase 14 D-03, so it is
-        // absent from a `--no-dev` shipped build). The dev-shell
-        // sidebar reads `Route::has('dev.horizon')` to gate the nav
-        // item — when either signal is false the route is absent and
-        // the sidebar link drops off naturally.
-        // Horizon iframe registration walks two constraints:
-        //   - The `noHorizonImportsInShippedBuildCode` arch invariant
-        //     forbids any non-stripped `Laravel\Horizon\` symbol
-        //     outside `app/Providers/HorizonServiceProvider.php`. It
-        //     strips `class_exists(\Laravel\Horizon\...)` arguments
-        //     from the regex sweep first, so an inline FQCN inside
-        //     `class_exists(...)` is legal — but the strip regex does
-        //     NOT cover a top-of-file `use Laravel\Horizon\...` line.
-        //   - Pint's `fully_qualified_strict_types` fixer would
-        //     normally hoist an inline `Laravel\Horizon\…::class`
-        //     into a top-of-file `use` line, breaking the arch test.
-        //     The hoist is suppressed when an imported short name
-        //     `HorizonServiceProvider` is already in scope — Pint
-        //     refuses to introduce an ambiguity. The matching pattern
-        //     lives in `bootstrap/providers.php` (Phase 14 D-04): the
-        //     local `App\Providers\HorizonServiceProvider` is imported
-        //     at the top of the file purely as a name-conflict shim
-        //     AND used in the route registration body below, so the
-        //     import is not unused.
-        if (config('app.dev_mode') === true && class_exists(Laravel\Horizon\HorizonServiceProvider::class)) {
-            // The presence of the local App\Providers\HorizonServiceProvider
-            // is the second signal that Horizon is actually wired (its
-            // boot() registers the dashboard routes the iframe targets).
-            $horizonProviderClass = HorizonServiceProvider::class;
-            if (class_exists($horizonProviderClass)) {
-                Route::get('/horizon', HorizonFramePage::class)
-                    ->middleware(HorizonFrameAncestors::class)
-                    ->name('dev.horizon');
-            }
-        }
+        // The Horizon iframe route is conditionally registered by the
+        // ServiceProvider's boot() method — DI-only access to the
+        // Config\Repository lives there, where the dev-mode flag and
+        // Horizon-package signals are read through injected
+        // collaborators rather than the config() global helper.
     });

@@ -8,6 +8,8 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
 use Laravel\Horizon\HorizonServiceProvider;
 use Modules\Core\Models\User;
+use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
+use Modules\DevMode\Internal\Http\Middleware\HorizonFrameAncestors;
 
 /*
  * Phase 16-06 Task 2 — Horizon iframe gating (D-38 two-signal).
@@ -52,9 +54,10 @@ function horizonGatingSetDevModeFlag(bool $on): void
 /**
  * The DevModeServiceProvider's `loadRoutesFrom()` fires once at boot
  * — before any test flips `config('app.dev_mode')`. To exercise the
- * D-38 conditional registration body at the test layer, the test
- * resets the router's route collection and re-includes the routes
- * file directly. Laravel's RouteCollection keeps a separate name
+ * two-signal conditional registration at the test layer, the test
+ * resets the router's route collection, re-includes the routes file
+ * directly, AND re-applies the provider's conditional Horizon-route
+ * registration. Laravel's RouteCollection keeps a separate name
  * lookup table (`refreshNameLookups()`) — `Route::has()` reads that
  * table, NOT the live route list — so the re-include MUST be
  * followed by a refresh.
@@ -69,11 +72,30 @@ function horizonGatingReloadRoutes(): void
     // RouteCollection is the canonical Laravel route-reset.
     Route::setRoutes(new RouteCollection);
 
-    // Re-evaluate the routes file body — the D-38 conditional reads
-    // the live `config('app.dev_mode')` value when the file is
-    // require'd, so a config flip BEFORE this call picks up the new
-    // value on the re-include.
+    // Re-evaluate the routes file body. The base group registers every
+    // /dev/* route except the Horizon iframe — that route is
+    // conditionally registered by the ServiceProvider's boot() because
+    // the dev_mode flag is read through an injected Config\Repository
+    // rather than the config() helper.
     require base_path('Modules/DevMode/Routes/web.php');
+
+    // Mirror the provider's conditional Horizon registration so a
+    // post-config-flip route reload picks up the new flag value.
+    /** @var Repository $config */
+    $config = app(Repository::class);
+    if ($config->get('app.dev_mode') === true && class_exists(HorizonServiceProvider::class)) {
+        $router->group(
+            [
+                'middleware' => ['web', 'auth', 'ensureDeveloperMode'],
+                'prefix' => '/dev',
+            ],
+            static function (Router $router): void {
+                $router->get('/horizon', HorizonFramePage::class)
+                    ->middleware(HorizonFrameAncestors::class)
+                    ->name('dev.horizon');
+            },
+        );
+    }
 
     // Refresh the router's named-route lookup; without this,
     // `Route::has('dev.horizon')` reads stale state regardless of

@@ -1,6 +1,8 @@
+@inject('currentUser', \Modules\Core\Public\Contracts\CurrentUser::class)
+@inject('container', \Illuminate\Contracts\Container\Container::class)
 @php
     /*
-     * Dark-theme resolution (Phase 15 D-15 / D-16).
+     * Dark-theme resolution.
      *
      * `theme` is the authenticated user's appearance preference
      * (light / dark / system); guests fall to `system`. For an explicit
@@ -17,12 +19,17 @@
      * script below runs whenever the resolution is `null` so the
      * client-side `prefers-color-scheme` read is the authoritative
      * source in that branch.
+     *
+     * Authentication state and container lookups go through @inject'd
+     * contracts so the layout honours the project's DI-only rule (no
+     * auth() / app() / config() global helpers in non-test code). The
+     * dev-shell layout uses the same pattern.
      */
-    $userTheme = auth()->check() ? (auth()->user()->theme ?? 'system') : 'system';
+    $userTheme = $currentUser->isAuthenticated() ? ($currentUser->user()->theme ?? 'system') : 'system';
 
     $osTheme = null;
-    if ($userTheme === 'system' && app()->bound(\Modules\Desktop\Public\Contracts\OsThemeSignal::class)) {
-        $osTheme = app(\Modules\Desktop\Public\Contracts\OsThemeSignal::class)->currentOsTheme();
+    if ($userTheme === 'system' && $container->bound(\Modules\Desktop\Public\Contracts\OsThemeSignal::class)) {
+        $osTheme = $container->make(\Modules\Desktop\Public\Contracts\OsThemeSignal::class)->currentOsTheme();
     }
 
     $isDark = $userTheme === 'dark' || ($userTheme === 'system' && $osTheme === 'dark');
