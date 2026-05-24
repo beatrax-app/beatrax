@@ -54,10 +54,20 @@ final class ArtisanRunnerPage extends Component
 
     public function mount(Session $session): void
     {
-        // Belt-and-braces reset: ResetAdvancedToggleOnLogin clears the
-        // session key on every Login event; this clears it on first
-        // dev-console load per session in case the Login event was
-        // missed (rehydrated tab, long-lived sticky session, etc.).
+        // Belt-and-braces Advanced-toggle reset on first dev-console
+        // load per session.
+        //
+        // The ResetAdvancedToggleOnLogin listener clears the toggle on
+        // every Illuminate\Auth\Events\Login event. Login fires on
+        // explicit credential auth AND on remember-me cookie hydration
+        // (SessionGuard::user() fires Login from the recaller branch),
+        // but does NOT fire on session-resume where the user id is
+        // already in the session — that branch fires only the
+        // Authenticated event. A long-lived sticky session that
+        // resumed without re-firing Login can therefore carry an
+        // Advanced=true value from a previous request unless something
+        // else clears it. This mount() reset closes that gap on the
+        // first /dev/* navigation per session.
         if (! $session->has('dev_mode.advanced_session_seen')) {
             $session->forget('dev_mode.advanced');
             $session->put('dev_mode.advanced_session_seen', true);
