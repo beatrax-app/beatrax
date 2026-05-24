@@ -187,7 +187,17 @@ it('filters /dev/audit?tier=destructive to only destructive rows', function (): 
     $response = $this->actingAs($user)->get('/dev/audit?tier=destructive');
     $response->assertStatus(200);
     $response->assertSee('migrate:fresh');
-    $response->assertDontSee('cache:clear');
+
+    // The palette modal (16-08) embeds the SAFE-tier roster in its
+    // JSON registry below the audit page; isolate the assertion to
+    // the audit-page <main> region so the palette's "Run cache:clear"
+    // dev row does not falsely satisfy the assertion.
+    $html = (string) $response->getContent();
+    $auditRegion = explode('@livewire(\'dev.command-palette-modal\')', $html)[0];
+    // Belt + braces: also slice at the literal palette mount, since
+    // the @livewire directive is stripped by Blade compile.
+    $auditRegion = explode('command-palette-modal', $auditRegion)[0];
+    expect($auditRegion)->not->toContain('cache:clear');
 });
 
 it('enables the Artisan + Audit sidebar nav items (drops nav-disabled when dev.artisan + dev.audit are registered)', function (): void {
