@@ -19,9 +19,16 @@ use Modules\Core\Public\Events\UserInstalled;
  * 1. Refuses to run when the SQLite database path is inside a cloud-sync
  *    folder (iCloud Drive / OneDrive / Dropbox / Mobile Documents).
  * 2. Runs pending migrations.
- * 3. Creates User id=1 if absent. Re-running with the same username is a
- *    no-op and never silently updates the password — a dedicated
- *    reset-password command will land in a later operational-hardening phase.
+ * 3. Creates User id=1 if absent. Re-running with the same username does
+ *    NOT update the password — a dedicated reset-password command will
+ *    land in a later operational-hardening phase.
+ * 4. Always dispatches `UserInstalled` for the resolved user (whether
+ *    newly created or pre-existing). Listeners (`SeedDefaultCategoryTree`,
+ *    other module-local install hooks) are required to be idempotent, so
+ *    re-running install heals any seeded reference data that went missing
+ *    between the user's original install and a fresh listener wire-up
+ *    (e.g. the default category tree shipping in a module that wasn't
+ *    loaded when User id=1 was first created).
  *
  * The `--launchd` mode is a separate code path: it installs three
  * macOS LaunchAgent plists from `deploy/launchd/*.plist` to
@@ -48,7 +55,7 @@ class InstallCommand extends Command
         {--without-redis : Skip the optional Redis plist (use when Docker Desktop auto-starts the container on login)}';
 
     /** @var string */
-    protected $description = 'Idempotent first-run setup: validate DB path, run migrations, create the single user. Pass --launchd to install macOS background workers.';
+    protected $description = 'Idempotent first-run setup: validate DB path, run migrations, create or re-confirm the single user, and re-dispatch UserInstalled so seed listeners can heal missing reference data. Pass --launchd to install macOS background workers.';
 
     /**
      * Path tokens that indicate a cloud-sync folder. Matched case-insensitively
@@ -130,9 +137,12 @@ class InstallCommand extends Command
             return self::FAILURE;
         }
 
-        if ($this->db->connection()->table('users')->exists()) {
-            $this->info('A user account is already installed. Nothing to do.');
+        $existingId = self::resolveExistingUserId($this->db);
+        if ($existingId !== null) {
+            $this->info('A user account is already installed. Password is unchanged; re-running install re-confirms the existing account.');
             $this->line('Password changes require a dedicated reset-password command; re-running install with a different password is intentionally a no-op.');
+
+            $this->events->dispatch(new UserInstalled($existingId));
 
             return self::SUCCESS;
         }
@@ -168,6 +178,29 @@ class InstallCommand extends Command
         ));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Returns the smallest id in the `users` table, or null when the table
+     * is empty. Uses the raw query builder so the lookup stays out of the
+     * Eloquent global-scope path (`UserScope` filters by authenticated user
+     * id, which is meaningless during a console install run).
+     */
+    private static function resolveExistingUserId(DatabaseManager $db): ?int
+    {
+        $row = $db->connection()
+            ->table('users')
+            ->orderBy('id')
+            ->select(['id'])
+            ->first();
+
+        if ($row === null) {
+            return null;
+        }
+
+        $value = $row->id;
+
+        return is_numeric($value) ? (int) $value : null;
     }
 
     /**
