@@ -9,10 +9,9 @@ use Modules\DevMode\Public\Dto\AppAction;
 /**
  * Registry of every named app action the command palette can fire.
  *
- * Concrete `AppActionRegistryImpl` lands in 16-08 (palette plan) and
- * mirrors the Phase 15 app-menu entries. This module's
- * `NullAppActionRegistry` returns an empty list so the binding shape
- * is in place from day one.
+ * The concrete AppActionRegistryImpl mirrors the app-menu entries;
+ * NullAppActionRegistry returns an empty list as a fallback for
+ * ad-hoc unit tests that don't boot the full provider.
  */
 interface AppActionRegistry
 {

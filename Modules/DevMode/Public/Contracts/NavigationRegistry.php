@@ -10,11 +10,10 @@ use Modules\DevMode\Public\Dto\NavigationEntry;
  * Registry of every authenticated app view the command palette can
  * jump to.
  *
- * The palette's "view" source chip (UI-SPEC § Command palette) draws
- * rows from this registry; the concrete `NavigationRegistryImpl`
- * lands in 16-08 and enumerates each `Route::has(...)`-registered
- * authenticated view. This module's `NullNavigationRegistry` returns
- * an empty list so the binding shape is in place from day one.
+ * The palette's "view" source chip draws rows from this registry;
+ * NavigationRegistryImpl enumerates each registered authenticated
+ * view. NullNavigationRegistry returns an empty list as a fallback
+ * for ad-hoc unit tests that don't boot the full provider.
  */
 interface NavigationRegistry
 {
