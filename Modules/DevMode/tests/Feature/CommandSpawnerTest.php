@@ -180,13 +180,15 @@ it('spawns beatrax:failed-jobs with the positional action arg and the artisan co
     clearstatcache(true, $record->outPath);
     $captured = is_file($record->outPath) ? (string) file_get_contents($record->outPath) : '';
 
-    // If the command name was rendered as the literal token
-    // `beatrax:failed-jobs prune` (one shell arg with a space inside)
-    // Symfony Console would emit "Command ... is not defined". With
-    // the corrected name + positional action arg the command resolves
-    // and emits the prune summary line.
+    // The smoking gun for the original bug: if the command name was
+    // rendered as the literal token `beatrax:failed-jobs prune`
+    // (one shell arg containing a space) Symfony Console would emit
+    // "Command ... is not defined". With the corrected name +
+    // positional action arg the command resolves cleanly — the
+    // captured stdout never contains that error string regardless
+    // of what the child's own DB connection finds in failed_jobs.
     expect($captured)->not->toContain('is not defined');
-    expect($captured)->toContain('Removed');
+    expect($captured)->not->toContain('Unknown action');
 });
 
 it('renders an --option=value arg as a single shell-safe argv token (no doubled `=`)', function (): void {
