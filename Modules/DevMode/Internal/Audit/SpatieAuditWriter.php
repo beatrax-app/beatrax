@@ -14,32 +14,27 @@ use Modules\DevMode\Public\Contracts\AuditWriter;
 use Spatie\Activitylog\Support\ActivityLogger;
 
 /**
- * Concrete AuditWriter that routes every Dev Console audit row through
- * spatie/laravel-activitylog ^5.0 into the renamed `dev_mode_audit`
- * table (CONTEXT D-23 / D-24). Replaces `NullAuditWriter` (16-03's
- * placeholder binding) at the DevModeServiceProvider::register() layer.
+ * Concrete AuditWriter that routes every Dev Console audit row
+ * through spatie/laravel-activitylog ^5.0 into the dev_mode_audit
+ * table. Bound to the AuditWriter contract in DevModeServiceProvider.
  *
  * Constructor DI on:
- *   - CurrentUser           — read the caller for `causedBy()`.
- *   - Clock                 — present-day default for any null finishedAt.
- *   - RedactionExcerptCap   — Bearer + JWT scrub + 8 KiB cap on every
- *                             excerpt that lands in the `properties` JSON.
- *   - ActivityLogger        — spatie's bindable logger. Per Laravel
- *                             DI-only rule (CLAUDE.md), we never call
- *                             the `activity()` global helper.
+ *   - CurrentUser           — read the caller for causedBy().
+ *   - Clock                 — present-day default for null finishedAt.
+ *   - RedactionExcerptCap   — OAuth scrub-set + Bearer + JWT scrub +
+ *                             byte cap on every excerpt that lands in
+ *                             the `properties` JSON.
+ *   - ActivityLogger        — Spatie's bindable logger. The project's
+ *                             DI-only rule forbids the activity()
+ *                             global helper.
  *
- * Audit row shape (D-24) — every `recordCommandRun` write:
- *   - log_name    = 'dev_mode' (set by config('activitylog.default_log_name'))
- *   - description = AuditEvent::CommandExecuted->value (I-5 fix —
- *                   taxonomy is enum-locked, never a free-form string)
- *   - causer      = the authenticated developer (or callerUserId)
+ * Audit row shape — every recordCommandRun() write:
+ *   - log_name    = 'dev_mode' (set in config/activitylog.php).
+ *   - description = AuditEvent::CommandExecuted->value (taxonomy is
+ *                   enum-locked, never a free-form string).
+ *   - causer      = the authenticated developer (or callerUserId).
  *   - properties  = {command, args, tier, exit_code, stdout_excerpt,
- *                    error_excerpt, started_at, finished_at, cancelled}
- *
- * 16-05 upgrade contract for RedactionExcerptCap: 16-05 adds the full
- * OAuthScrubSet to the cap's constructor; this writer is unchanged
- * across the upgrade because the constructor DI chain resolves through
- * the container.
+ *                    error_excerpt, started_at, finished_at, cancelled}.
  */
 final readonly class SpatieAuditWriter implements AuditWriter
 {
