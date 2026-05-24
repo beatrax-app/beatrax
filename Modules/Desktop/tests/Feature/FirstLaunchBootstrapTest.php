@@ -285,7 +285,7 @@ it('does NOT exempt routes that just happen to share a leading substring (prefix
 it('renders the welcome screen on a fresh install with no users', function (): void {
     $this->get(route('desktop.welcome'))
         ->assertOk()
-        ->assertSee('Welcome to diederik')
+        ->assertSee('Welcome to beatrax')
         ->assertSee('Get started');
 });
 
@@ -334,7 +334,7 @@ it('exempts the welcome route itself from the fresh-install gate', function (): 
 
     $this->get(route('desktop.welcome'))
         ->assertOk()
-        ->assertSee('Welcome to diederik');
+        ->assertSee('Welcome to beatrax');
 });
 
 it('exempts the signup route so the welcome → signup chain does not loop back', function (): void {

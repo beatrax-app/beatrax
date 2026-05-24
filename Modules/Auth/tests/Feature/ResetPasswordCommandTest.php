@@ -6,7 +6,7 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Modules\Core\Models\User;
 
 /*
- * Feature coverage for the diederik:reset-password CLI fallback: it sets
+ * Feature coverage for the beatrax:reset-password CLI fallback: it sets
  * a new password through hidden interactive prompts, flags the user for a
  * forced password change at next login, refuses non-interactive
  * invocation, and exits non-zero for an unknown username.

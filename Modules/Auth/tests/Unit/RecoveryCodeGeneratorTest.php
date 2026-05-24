@@ -55,6 +55,6 @@ it('formats codes one per line with no header and no trailing newline', function
 it('builds a lowercase filename from the username', function (): void {
     $formatter = new RecoveryCodeFormatter;
 
-    expect($formatter->filenameFor('Alice'))->toBe('diederik-recovery-codes-alice.txt');
-    expect($formatter->filenameFor('  BOB  '))->toBe('diederik-recovery-codes-bob.txt');
+    expect($formatter->filenameFor('Alice'))->toBe('beatrax-recovery-codes-alice.txt');
+    expect($formatter->filenameFor('  BOB  '))->toBe('beatrax-recovery-codes-bob.txt');
 });

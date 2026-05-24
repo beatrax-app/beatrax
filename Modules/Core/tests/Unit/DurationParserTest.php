@@ -8,7 +8,7 @@ use Modules\Core\Internal\Console\Support\DurationParser;
 /*
  * DurationParser converts a short string token like `30d`, `12h`, `2w`
  * into a CarbonImmutable offset by subtracting the duration from a
- * caller-supplied "now". Used by diederik:failed-jobs prune --older-than
+ * caller-supplied "now". Used by beatrax:failed-jobs prune --older-than
  * to compute the cutoff timestamp. The token grammar is `/^\d+[dhw]$/i`
  * — digits + a single unit letter (d, h, w). The `m` token is
  * intentionally rejected because it is ambiguous between "months" and
