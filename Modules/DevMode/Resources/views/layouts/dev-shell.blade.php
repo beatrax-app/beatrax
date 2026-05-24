@@ -1,5 +1,6 @@
 @inject('currentUser', \Modules\Core\Public\Contracts\CurrentUser::class)
 @inject('container', \Illuminate\Contracts\Container\Container::class)
+@inject('devSidebarItems', \Modules\DevMode\Internal\Navigation\DevSidebarItems::class)
 @php
     /*
      * Dev Console layout shell (Phase 16-03 D-04).
@@ -35,25 +36,24 @@
     $needsPrePaintScript = $userTheme === 'system' && $osTheme === null;
 
     /*
-     * Dev sidebar nav items. Each entry: label, href, icon, optional
-     * route-name to gate the `nav-disabled` class on (a missing route
-     * means the route is not yet registered — the plan that adds it
-     * also removes the disabled affordance). The Horizon entry is
-     * conditionally rendered downstream when the dev-mode env var is
-     * on AND the Horizon package is present (D-38); for now it just
-     * renders with `nav-disabled` until 16-06 wires its route.
+     * Dev sidebar nav items (16-06).
+     *
+     * Sourced from the canonical DevSidebarItems registry. The `enabled`
+     * field on each item is informational (it documents the W-3
+     * plan-ownership contract); the runtime truth that drives the
+     * `nav-disabled` class continues to be `Route::has('dev.{slug}')`
+     * so a slug whose plan has NOT yet landed automatically renders as
+     * disabled regardless of what the constant says. This dual
+     * representation is deliberate per the plan's W-3 fix — it
+     * surfaces config drift instead of masking it.
+     *
+     * Horizon's `enabled` value is the string `'conditional'`; the
+     * matching route is only registered when D-38's two signals BOTH
+     * pass. The Route::has() guard below covers the conditional
+     * (when the route is absent the nav-disabled class drops the
+     * item visually; non-developers see 404 via EnsureDeveloperMode).
      */
-    $devNavItems = [
-        ['label' => 'Overview', 'slug' => 'overview', 'icon' => '◆', 'route' => 'dev.overview'],
-        ['label' => 'Artisan',  'slug' => 'artisan',  'icon' => '›_', 'route' => 'dev.artisan'],
-        ['label' => 'Audit',    'slug' => 'audit',    'icon' => '⌗',  'route' => 'dev.audit'],
-        ['label' => 'Logs',     'slug' => 'logs',     'icon' => '≡',  'route' => 'dev.logs'],
-        ['label' => 'Queue',    'slug' => 'queue',    'icon' => '↻',  'route' => 'dev.queue'],
-        ['label' => 'Doctor',   'slug' => 'doctor',   'icon' => '⚙',  'route' => 'dev.doctor'],
-        ['label' => 'SQL',      'slug' => 'sql',      'icon' => '⌕',  'route' => 'dev.sql'],
-        ['label' => 'Horizon',  'slug' => 'horizon',  'icon' => '↗',  'route' => 'dev.horizon'],
-        ['label' => 'System',   'slug' => 'system',   'icon' => '◇',  'route' => 'dev.system'],
-    ];
+    $devNavItems = $devSidebarItems->all();
 @endphp
 <!doctype html>
 <html
@@ -93,17 +93,27 @@
                 @foreach ($devNavItems as $item)
                     @php
                         $routeExists = \Illuminate\Support\Facades\Route::has($item['route']);
-                        $href = $routeExists ? route($item['route']) : '/dev/'.$item['slug'];
-                        $disabledClass = $routeExists ? '' : ' nav-disabled';
+                        // Horizon is the conditional item per D-38 — when its
+                        // route is absent the link is DOM-absent rather than
+                        // nav-disabled. Every other slug renders with the
+                        // disabled class so the operator can see which
+                        // panels are pending. Per 16-06.
+                        $skip = ($item['enabled'] ?? false) === 'conditional' && ! $routeExists;
                     @endphp
-                    <a
-                        href="{{ $href }}"
-                        class="side-item{{ $disabledClass }}"
-                        @if (! $routeExists) aria-disabled="true" tabindex="-1" @endif
-                    >
-                        <span class="ic" aria-hidden="true">{!! $item['icon'] !!}</span>
-                        {{ $item['label'] }}
-                    </a>
+                    @if (! $skip)
+                        @php
+                            $href = $routeExists ? route($item['route']) : '/dev/'.$item['slug'];
+                            $disabledClass = $routeExists ? '' : ' nav-disabled';
+                        @endphp
+                        <a
+                            href="{{ $href }}"
+                            class="side-item{{ $disabledClass }}"
+                            @if (! $routeExists) aria-disabled="true" tabindex="-1" @endif
+                        >
+                            <span class="ic" aria-hidden="true">{!! $item['icon'] !!}</span>
+                            {{ $item['label'] }}
+                        </a>
+                    @endif
                 @endforeach
 
                 <div class="side-foot">
