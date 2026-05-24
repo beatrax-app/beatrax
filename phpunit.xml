@@ -36,6 +36,9 @@
         <testsuite name="Contracts">
             <directory>tests/Contracts</directory>
         </testsuite>
+        <testsuite name="Snapshot">
+            <directory>tests/Snapshot</directory>
+        </testsuite>
         <testsuite name="ChainsUnit">
             <directory suffix="Test.php">./Modules/Chains/tests/Unit</directory>
         </testsuite>
