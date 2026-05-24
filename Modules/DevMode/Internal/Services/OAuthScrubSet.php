@@ -104,7 +104,7 @@ class OAuthScrubSet
     /**
      * Pre-compiled regex pattern matching every secret in `all()`.
      * Returns null when the set is empty so callers can skip the
-     * `preg_replace` call entirely (Pitfall 8 mitigation).
+     * `preg_replace` call entirely (single-pass O(n) vs O(n*m)).
      *
      * Pattern shape: `'/(s1|s2|s3)/'` with each `s` `preg_quote`'d.
      * Single pass over the input regardless of set size.
