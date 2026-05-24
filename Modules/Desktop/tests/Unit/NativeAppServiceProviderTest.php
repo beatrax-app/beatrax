@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Modules\Desktop\Internal\NativeAppServiceProvider;
+use Native\Desktop\Contracts\ProvidesPhpIni;
 use Native\Desktop\Facades\Window;
 use Native\Desktop\Windows\Window as NativeWindow;
 
@@ -69,3 +70,40 @@ it('does not call the NativePHP `menu-bar/create` endpoint — the persistent tr
 it('runs the first-launch DB bootstrap before opening the main window — see FirstLaunchBootstrapTest for the post-boot assertion (Unit suite has no DB)')->todo();
 
 it('configures the app menu via Native\\Desktop\\Facades\\Menu — deferred to manual UAT (no v2 fake for Menu)')->todo();
+
+it('publishes php.ini overrides that lift the upload ceiling above the wizard validator', function (): void {
+    /*
+     * The bundled NativePHP runtime ships with the stock PHP defaults
+     * `upload_max_filesize = 2M` / `post_max_size = 8M`, both below
+     * the wizard's own server-side 10 MB Livewire validator. A user-
+     * sized statement upload then fails at the PHP layer BEFORE
+     * Livewire's validator sees the file and surfaces the failure as
+     * "The files.0 failed to upload." with no actionable context (the
+     * UAT batch 7 ICS PDF report).
+     *
+     * NativePHP discovers per-app overrides by calling
+     * `php artisan native:php-ini` at boot; that command JSON-encodes
+     * whatever the configured provider's `phpIni()` method returns
+     * and the Electron shell merges the keys on top of its own
+     * defaults via `-d key=value` flags at PHP spawn time. Locking
+     * the returned shape here prevents an accidental rename / type
+     * coercion drop from silently re-stranding the upload path.
+     */
+    $provider = app(NativeAppServiceProvider::class);
+    $phpIni = $provider->phpIni();
+
+    expect($phpIni)->toHaveKey('upload_max_filesize');
+    expect($phpIni)->toHaveKey('post_max_size');
+
+    // Sized to match UploadWizard's largest single-file upload (eml
+    // arm: 20 MB), plus multipart-envelope headroom comes from
+    // post_max_size being identical to upload_max_filesize.
+    expect($phpIni['upload_max_filesize'])->toBe('20M');
+    expect($phpIni['post_max_size'])->toBe('20M');
+});
+
+it('implements the NativePHP ProvidesPhpIni contract so the LoadPHPConfigurationCommand picks up the overrides', function (): void {
+    $provider = app(NativeAppServiceProvider::class);
+
+    expect($provider)->toBeInstanceOf(ProvidesPhpIni::class);
+});
