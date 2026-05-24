@@ -86,6 +86,10 @@ final readonly class LogStreamController
             @ini_set('output_buffering', '0');
             @ini_set('zlib.output_compression', '0');
             @ignore_user_abort(true);
+            // PHP's max_execution_time is wall-clock — without this the
+            // SSE loop is killed at the php.ini default (30s in the shipped
+            // nativephp/php-bin) long before STREAM_TIMEOUT_SECONDS.
+            @set_time_limit(0);
 
             $currentPath = UserDataPathService::dailyLogFile();
             $currentInode = self::inodeOf($currentPath);

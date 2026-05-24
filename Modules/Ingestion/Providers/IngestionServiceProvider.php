@@ -47,6 +47,5 @@ final class IngestionServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
-        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'ingestion');
     }
 }
