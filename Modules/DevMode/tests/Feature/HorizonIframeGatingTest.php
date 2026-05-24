@@ -167,6 +167,31 @@ it('drops the Horizon sidebar nav item DOM-absent when the dev.horizon route is 
         ->toBeFalse('Sidebar should not link to /dev/horizon when the route is not registered.');
 });
 
+it('emits Content-Security-Policy: frame-ancestors self on GET /dev/horizon (clickjacking guard)', function (): void {
+    horizonGatingSetDevModeFlag(true);
+    horizonGatingReloadRoutes();
+
+    $user = horizonGatingUser('hz-csp');
+
+    $response = $this->actingAs($user)->get('/dev/horizon');
+
+    $response->assertOk();
+    expect($response->headers->get('Content-Security-Policy'))->toBe("frame-ancestors 'self'");
+});
+
+it('renders the Horizon iframe with sandbox + referrerpolicy attributes (clickjacking + referer leak guards)', function (): void {
+    horizonGatingSetDevModeFlag(true);
+    horizonGatingReloadRoutes();
+
+    $user = horizonGatingUser('hz-iframe-attrs');
+
+    $response = $this->actingAs($user)->get('/dev/horizon');
+
+    $response->assertOk();
+    $response->assertSee('sandbox="allow-same-origin allow-scripts allow-forms"', escape: false);
+    $response->assertSee('referrerpolicy="same-origin"', escape: false);
+});
+
 it('renders the Horizon sidebar nav item WITHOUT nav-disabled when the dev.horizon route IS registered', function (): void {
     horizonGatingSetDevModeFlag(true);
     horizonGatingReloadRoutes();
