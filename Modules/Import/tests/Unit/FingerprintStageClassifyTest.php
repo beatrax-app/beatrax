@@ -127,9 +127,47 @@ it('returns duplicate when fingerprint matches and incoming source_ref is NULL',
     expect($disposition->status())->toBe('duplicate');
 })->group('phase-2');
 
-it('returns enriched when fingerprint matches and incoming source_ref is non-null vs existing NULL', function (): void {
-    $existing = seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-csv', null, $this->composer);
+it('returns duplicate when fingerprint matches across statement formats (CSV → CAMT) — receipt-format gate not satisfied', function (): void {
+    // Phase 16 UAT batch 7 policy change: statement-vs-statement
+    // collisions drop as DUPLICATE regardless of source_ref rank. The
+    // prior phase-2 behaviour returned ENRICHED here because the
+    // incoming CAMT source_ref outranked the stored CSV NULL ref; the
+    // user's UAT report locked the simpler "same transaction → drop"
+    // policy because the audit chain shouldn't grow a second
+    // source_format on a re-import.
+    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-csv', null, $this->composer);
     $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-A');
+
+    $disposition = $this->stage->classify($tx, $this->fixtureUser);
+
+    expect($disposition->status())->toBe('duplicate');
+})->group('phase-2');
+
+it('returns duplicate when fingerprint matches across statement formats (MT940 → CAMT)', function (): void {
+    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-mt940', 'MT940-REF-A', $this->composer);
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-B');
+
+    $disposition = $this->stage->classify($tx, $this->fixtureUser);
+
+    expect($disposition->status())->toBe('duplicate');
+})->group('phase-2');
+
+it('returns duplicate when fingerprint matches across statement formats (CSV → MT940)', function (): void {
+    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001', $this->composer);
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-mt940', 'MT940-REF-A');
+
+    $disposition = $this->stage->classify($tx, $this->fixtureUser);
+
+    expect($disposition->status())->toBe('duplicate');
+})->group('phase-2');
+
+it('returns enriched when fingerprint matches and the incoming side is a receipt format (paypal-receipt > paypal-csv)', function (): void {
+    // Receipt-driven enrichment is preserved: a receipt may carry a
+    // clean merchant name / line items the bank-statement export
+    // lacks, so the rank-based upgrade still fires when at least one
+    // side is a receipt format.
+    $existing = seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'paypal-csv', 'O-00000000000000001', $this->composer);
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'paypal-receipt', 'PAYID-CANONICAL');
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
@@ -137,32 +175,19 @@ it('returns enriched when fingerprint matches and incoming source_ref is non-nul
     expect($disposition->isEnriched())->toBeTrue();
     /** @var EnrichedDisposition $disposition */
     expect($disposition->existingTransactionId)->toBe($existing->id);
-    expect($disposition->fromSourceRef)->toBeNull();
-    expect($disposition->toSourceRef)->toBe('EREF-A');
+    expect($disposition->toSourceRef)->toBe('PAYID-CANONICAL');
 })->group('phase-2');
 
-it('returns enriched when both source_refs non-null but incoming has higher rank (CAMT > MT940)', function (): void {
-    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-mt940', 'MT940-REF-A', $this->composer);
-    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-B');
+it('returns enriched when fingerprint matches and the existing side is a receipt format (ics-csv impossible, ics-pdf → ics-receipt)', function (): void {
+    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'ics-pdf', 'PDF-ROW-12', $this->composer);
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'ics-receipt', 'RECEIPT-REF');
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
     expect($disposition->status())->toBe('enriched');
     /** @var EnrichedDisposition $disposition */
-    expect($disposition->fromSourceRef)->toBe('MT940-REF-A');
-    expect($disposition->toSourceRef)->toBe('EREF-B');
-})->group('phase-2');
-
-it('returns enriched when both source_refs non-null but incoming has higher rank (MT940 > CSV)', function (): void {
-    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001', $this->composer);
-    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-mt940', 'MT940-REF-A');
-
-    $disposition = $this->stage->classify($tx, $this->fixtureUser);
-
-    expect($disposition->status())->toBe('enriched');
-    /** @var EnrichedDisposition $disposition */
-    expect($disposition->fromSourceRef)->toBe('CSV-001');
-    expect($disposition->toSourceRef)->toBe('MT940-REF-A');
+    expect($disposition->fromSourceRef)->toBe('PDF-ROW-12');
+    expect($disposition->toSourceRef)->toBe('RECEIPT-REF');
 })->group('phase-2');
 
 it('returns duplicate when incoming rank is lower than existing (CSV after CAMT)', function (): void {
