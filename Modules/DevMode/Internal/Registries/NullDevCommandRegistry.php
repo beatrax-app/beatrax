@@ -9,13 +9,13 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
 /**
- * Default DevCommandRegistry concrete bound by DevModeServiceProvider.
+ * Null-shape DevCommandRegistry concrete.
  *
- * Returns empty SAFE and DESTRUCTIVE lists; `find($name)` always
- * throws. The 16-04 audit-pipeline plan replaces this binding with
- * `DevCommandRegistryImpl` (which hard-codes the CONTEXT D-12 + D-13
- * allow-lists). The Null shape exists so this plan's tests can
- * resolve the contract without forcing a real implementation.
+ * Returns empty SAFE and DESTRUCTIVE lists; find($name) always
+ * throws. Exists as a fallback so consumer code can resolve the
+ * contract from the container without bound() guards when the real
+ * roster (DevModeServiceProvider's CommandRegistry binding) has not
+ * been wired — e.g. in ad-hoc unit tests.
  */
 final class NullDevCommandRegistry implements DevCommandRegistry
 {
@@ -38,7 +38,7 @@ final class NullDevCommandRegistry implements DevCommandRegistry
     public function find(string $name): CommandSpec
     {
         throw new InvalidArgumentException(
-            "DevCommandRegistry has no command registered yet — wave 5 (plan 16-04) installs the real DevCommandRegistryImpl that hosts the SAFE + DESTRUCTIVE lists. Requested: `{$name}`.",
+            "DevCommandRegistry has no commands registered (null shape). Requested: `{$name}`.",
         );
     }
 }

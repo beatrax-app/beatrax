@@ -17,11 +17,11 @@ use Modules\DevMode\Public\Contracts\AuditWriter;
 
 /**
  * Queue actions service — programmatic interface for the Dev Console
- * queue inspector page (CONTEXT D-33). Every action writes one
- * `dev_mode_audit` row via the injected AuditWriter so the operator
- * audit trail captures every destructive (and re-dispatch) write.
+ * queue inspector page. Every action writes one dev_mode_audit row
+ * via the injected AuditWriter so the operator audit trail captures
+ * every destructive (and re-dispatch) write.
  *
- * Constructor-DI per CLAUDE.md DI-only rule:
+ * Constructor DI per the project's DI-only rule:
  *   - FailedJobProviderInterface  — Laravel's queue-failed seam.
  *                                   Bound by the framework's queue
  *                                   service provider; the default
@@ -29,30 +29,30 @@ use Modules\DevMode\Public\Contracts\AuditWriter;
  *                                   {@see DatabaseFailedJobProvider}.
  *                                   Used for forget / find / all + the
  *                                   payload accessor needed for retry.
- *   - BatchRepository             — for `cancel`/`delete` batch ops
- *                                   (W-4 fix — direct DI, NEVER the
- *                                   Bus facade).
+ *   - BatchRepository             — direct DI for cancel/delete batch
+ *                                   ops; never the Bus facade.
  *   - QueueFactory                — needed by retryFailed to re-push
  *                                   the original payload via
  *                                   connection($name)->pushRaw($payload, $queue).
  *   - DatabaseManager             — direct row-level access for the
- *                                   pending `jobs` table (no model
+ *                                   pending jobs table (no model
  *                                   write surface; the framework
- *                                   provider does not expose deletePending).
- *   - AuditWriter                 — `recordDestructiveQueueAction`
- *                                   wraps every call (16-04b binding
- *                                   resolves to SpatieAuditWriter).
+ *                                   provider does not expose
+ *                                   deletePending).
+ *   - AuditWriter                 — recordDestructiveQueueAction
+ *                                   wraps every call.
  *   - CurrentUser                 — the caller identity for the
- *                                   audit's `causer_id` field.
+ *                                   audit's causer_id field.
  *
- * Every action method writes ONE audit row via AuditEvent enum values
- * (I-5 fix — never a free-form string).
+ * Every action method writes ONE audit row via AuditEvent enum
+ * values — never a free-form string.
  *
- * The triple-gate (D-22 / D-34) is enforced at the *Livewire* layer —
- * QueueInspectorPage::bulkDeleteConfirm() dispatches `triple-gate:open`
- * BEFORE invoking bulkDelete. The triple-gate's `confirmed` listener
- * calls back into bulkDelete; the gate is never re-validated inside
- * this class. That keeps the action class a thin, testable seam.
+ * Triple-gate enforcement: the QueueInspectorPage Livewire layer
+ * dispatches `triple-gate:open` BEFORE invoking bulkDelete and the
+ * confirmed-event listener inside the page re-validates all three
+ * gates before delegating to this class. The action class itself
+ * is a thin, testable seam — it trusts the caller to have validated
+ * the gates.
  */
 final readonly class QueueActions
 {
@@ -229,7 +229,7 @@ final readonly class QueueActions
 
     /**
      * Bulk retry every uuid in the list. Non-destructive — the
-     * Livewire layer surfaces a single-confirm modal per D-34.
+     * Livewire layer surfaces a single-confirm modal before calling.
      *
      * @param  list<string>  $uuids
      */
@@ -254,7 +254,7 @@ final readonly class QueueActions
     /**
      * Bulk delete N rows from the matching table. Destructive — the
      * Livewire layer routes the call through the TripleGateModal
-     * before invoking this method (D-22 / D-34).
+     * before invoking this method.
      *
      * `$kind` is one of: pending | failed | batches.
      *

@@ -6,9 +6,8 @@ namespace Modules\DevMode\Internal\System;
 
 /**
  * Pure function class that recursively flattens a config tree into a
- * dot-keyed associative array AND masks secret-suffix-matching values
- * with `[REDACTED]` (CONTEXT D-44 + RESEARCH Open Question Q4
- * resolution).
+ * dot-keyed associative array AND masks secret-suffix-matching
+ * values with `[REDACTED]`.
  *
  * The denylist is suffix/substring based and matches the dot-key
  * (case-insensitively):
@@ -18,13 +17,11 @@ namespace Modules\DevMode\Internal\System;
  *   - `*key`       — anything ending in "key" (e.g. APP_KEY, app.key)
  *   - `*token*`    — anything containing "token"
  *
- * Q4 resolution: the same denylist applies to env keys, so
- * `BEATRAX_DEV_MODE` renders plainly while `BEATRAX_OAUTH_SECRET`
- * masks. Tests in `Modules/DevMode/tests/Unit/EnvSnapshotRedactionTest.php`
- * lock the denylist behaviour.
+ * The same denylist applies to env keys, so BEATRAX_DEV_MODE renders
+ * plainly while BEATRAX_OAUTH_SECRET masks.
  *
- * The class is final + has no DI — it's a pure function holder
- * consumed by `SystemSnapshotPage`.
+ * Final + no DI — a pure function holder consumed by
+ * SystemSnapshotPage.
  */
 final class ConfigFlattener
 {

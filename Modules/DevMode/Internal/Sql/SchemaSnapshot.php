@@ -9,24 +9,20 @@ use Illuminate\Database\Schema\Builder;
 use Throwable;
 
 /**
- * Read-only schema enumeration for the `/dev/sql` schema viewer
- * (CONTEXT D-47 + RESEARCH § Pattern 8).
+ * Read-only schema enumeration for the /dev/sql schema viewer.
  *
  * Uses Laravel 11+'s native Schema API
  * ({@see Builder::getTables()} +
  * {@see Builder::getColumns()} +
  * {@see Builder::getIndexes()} +
- * {@see Builder::getForeignKeys()}) — no
- * raw PRAGMA queries, cross-DB-ready (RESEARCH Q2 documents the
- * SQLite-only assumption: the read-only connection IS sqlite-only,
- * but the schema enumeration itself is portable).
+ * {@see Builder::getForeignKeys()}) — no raw PRAGMA queries. The
+ * read-only sibling connection is sqlite-only, but the schema
+ * enumeration itself is portable across drivers.
  *
  * Row count uses the raw query builder (the table is enumerated via
  * the schema API which has no count primitive); the count flows
  * through the same DatabaseManager so reads stay on the default
- * connection (NOT through the read-only sibling — counts are reads
- * but the default connection has no PRAGMA query_only restriction so
- * a future cross-aggregation would still work).
+ * connection, not the read-only sibling.
  */
 final readonly class SchemaSnapshot
 {
