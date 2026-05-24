@@ -195,7 +195,7 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills
 
-No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, `.github/skills/`, or `.codex/skills/` with a `SKILL.md` index file.
+- **Sketch findings for diederik** (design decisions, CSS patterns, visual direction from sketch experiments) → `Skill("sketch-findings-diederik")`. Auto-load when implementing Phase 16+ UI surfaces, adding new authenticated app pages, or extending the ⌘K palette / Dev Console.
 <!-- GSD:skills-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->
