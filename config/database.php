@@ -65,7 +65,13 @@ return [
              * at the SQLite layer rather than relying on application-
              * level filtering alone. The `ReadOnlySqliteConnection`
              * service in 16-07 enforces that PRAGMA per-PDO; this entry
-             * only carves out the named slot.
+             * only carves out the named slot. Under the testing
+             * environment (`DB_CONNECTION=sqlite_testing` + in-memory
+             * `:memory:` database) the 16-07 service routes the SELECT
+             * through the default in-memory connection (separate
+             * connections to `:memory:` are isolated); the PRAGMA is
+             * armed + reset per-execute so writes on the same PDO
+             * proceed after the read.
              */
             'readonly_select' => array_merge($sqlite, [
                 'name' => 'readonly_select',

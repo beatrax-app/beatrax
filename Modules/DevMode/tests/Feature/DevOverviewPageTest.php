@@ -68,14 +68,12 @@ it('renders dev-sidebar nav items with every non-Horizon entry visible (Doctor /
     }
 
     // Horizon is DOM-absent in the default test env (no app.dev_mode +
-    // no Horizon package install). Doctor / SQL / System nav items
-    // stay nav-disabled until their routes register inside this plan
-    // (Tasks 2 + 3); this assertion tracks the per-task progression
-    // and is tightened to 0 in Task 3's final commit.
+    // no Horizon package install). After 16-07 every other entry has
+    // a registered route → no nav-disabled markers.
     $disabledCount = substr_count($html, 'nav-disabled');
-    expect($disabledCount)->toBeLessThanOrEqual(
-        3,
-        "Expected at most 3 nav-disabled entries (Doctor / SQL / System pending until 16-07 Tasks 2 + 3), saw {$disabledCount}.",
+    expect($disabledCount)->toBe(
+        0,
+        "Expected zero nav-disabled entries after 16-07 (Doctor / SQL / System routes are registered), saw {$disabledCount}.",
     );
 
     expect(str_contains($html, '>Horizon<'))
