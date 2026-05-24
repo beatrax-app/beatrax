@@ -1,0 +1,94 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\DevMode\Internal\Http\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\DevMode\Internal\Process\RunRegistry;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+/**
+ * POST /dev/artisan/cancel/{runId} — terminate a running command.
+ *
+ * Reads the PID from the cached RunRecord (never the request body —
+ * T-16-16 mitigation: a forged runId cannot SIGTERM an arbitrary
+ * PID because the lookup gates against the stored caller). Sends
+ * SIGTERM, waits up to 3 seconds for the child to exit (per the
+ * 16-04 plan's documented trade-off — 3s blocks the HTTP request,
+ * but cancel is rare), then falls back to SIGKILL if the child is
+ * still alive. Marks the run cancelled in RunRegistry so the SSE
+ * stream's liveness check observes the gone PID and emits its
+ * terminal `event: done` with the cancel marker.
+ *
+ * Returns 204 on success, 404 when the runId is unknown.
+ *
+ * Cross-user inspection rejected at the same defense-in-depth layer
+ * as ArtisanStreamController (T-16-15).
+ */
+final readonly class ArtisanCancelController
+{
+    /** Seconds to wait for SIGTERM before SIGKILL fallback. */
+    private const SIGTERM_GRACE_SECONDS = 3;
+
+    public function __construct(
+        private RunRegistry $registry,
+    ) {}
+
+    public function __invoke(string $runId, CurrentUser $user): JsonResponse
+    {
+        $record = $this->registry->find($runId);
+        if ($record === null) {
+            throw new NotFoundHttpException("Unknown run: {$runId}");
+        }
+
+        if ($record->callerUserId !== $user->id()) {
+            throw new AccessDeniedHttpException('cross_user_cancel_forbidden');
+        }
+
+        if (! extension_loaded('posix')) {
+            throw new HttpException(500, 'posix_required_for_cancel');
+        }
+
+        // Already finished — idempotent cancel returns 204.
+        if (! posix_kill($record->pid, 0)) {
+            $this->registry->markCancelled($runId);
+
+            return new JsonResponse(null, 204);
+        }
+
+        // SIGTERM the running child.
+        @posix_kill($record->pid, SIGTERM);
+
+        // 3-second grace, then SIGKILL fallback. Blocking the HTTP
+        // request is the documented trade-off: cancel is rare and
+        // the SSE controller's liveness check needs the PID to
+        // actually be gone before it emits its terminal done event.
+        // PHPStan's posix_kill stub claims `bool(true)` always — the
+        // ignores below are necessary because the runtime return
+        // depends on kernel state the static analyser cannot model.
+        $deadline = microtime(true) + self::SIGTERM_GRACE_SECONDS;
+        while (microtime(true) < $deadline) {
+            /** @phpstan-ignore-next-line booleanNot.alwaysFalse */
+            if (! posix_kill($record->pid, 0)) {
+                break;
+            }
+            usleep(100_000);
+        }
+
+        /** @phpstan-ignore-next-line if.alwaysTrue */
+        if (posix_kill($record->pid, 0)) {
+            @posix_kill($record->pid, SIGKILL);
+            // One more brief wait so the SSE liveness check observes
+            // the gone PID inside the same wall-clock second.
+            usleep(200_000);
+        }
+
+        $this->registry->markCancelled($runId);
+
+        return new JsonResponse(null, 204);
+    }
+}

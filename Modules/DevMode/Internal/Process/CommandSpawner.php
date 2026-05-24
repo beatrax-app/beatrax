@@ -136,15 +136,17 @@ final readonly class CommandSpawner
         $invocation = implode(' ', $parts);
         $redirect = '> '.escapeshellarg($outPath).' 2>&1';
 
-        // `setsid` detaches the child into its own session so it
-        // survives PHP-FPM worker shutdown. Fall back to a plain `&`
-        // detach when `setsid` is unavailable (busybox / minimal
-        // shells); the foregrounded `bash -c` exits as soon as the
-        // child is launched.
-        $detach = 'setsid '.$invocation.' '.$redirect.' < /dev/null &';
+        // Plain bash background detach: `<cmd> > out 2>&1 < /dev/null &
+        // echo $!`. The `&` puts the child in the background; the
+        // closed stdin (`< /dev/null`) prevents SIGHUP propagation
+        // when the parent HTTP request exits. `setsid` would also
+        // work for proper session leadership but is not part of
+        // macOS' default toolchain (the target platform per the
+        // project's local-only constraint). `echo $!` then prints
+        // the backgrounded child's PID so the parent captures it.
+        $detach = $invocation.' '.$redirect.' < /dev/null &';
 
-        // Capture and emit the child PID via $!. The trailing newline
-        // is implicit from `echo`.
+        // Capture and emit the child PID via $!.
         return 'bash -c '.escapeshellarg($detach.' echo $!');
     }
 
