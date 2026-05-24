@@ -201,6 +201,12 @@ final readonly class LogStreamController
         $file->seek(PHP_INT_MAX);
         $total = $file->key() + 1;
 
+        // Clamp the requested line to the file's valid range before
+        // sizing the radius window so an out-of-range ?line=999999
+        // against a 5-line file returns the tail context the operator
+        // can see, not an empty array (start > end edge case).
+        $targetLine = min(max(0, $targetLine), max(0, $total - 1));
+
         $start = max(0, $targetLine - $radius);
         $end = min($total - 1, $targetLine + $radius);
 
