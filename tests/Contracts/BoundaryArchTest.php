@@ -62,6 +62,20 @@ arch('Modules\\Community\\Internal is only used inside Modules\\Community')
     ->expect('Modules\\Community\\Internal')
     ->toOnlyBeUsedIn('Modules\\Community');
 
+// Module Route files (`Modules/*/Routes/web.php`) are the canonical
+// Laravel surface where `Illuminate\Support\Facades\Route` is used as
+// a static DSL entry point. The framework's route loader executes
+// these files as closures rather than classes, so there is no
+// constructor-injection seam for the Route binding. Pest's
+// `expect()->not->toBeUsedIn(...)` walks namespace-classified files;
+// `Routes/web.php` files are anonymous closures under
+// `Modules\<Name>\Routes` and naturally fall outside the class
+// boundary the check enforces. This carve-out is therefore implicit
+// in `pest-plugin-arch`'s file-walk semantics — recorded here so a
+// future contributor adding a class-based router shape (e.g. a
+// `Modules\Foo\Routes\WebRoutes` class) knows the Route facade is
+// part of the documented Laravel-convention allow-list and not a
+// bug.
 arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules')
