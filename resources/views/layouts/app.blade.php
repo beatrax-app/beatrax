@@ -133,6 +133,7 @@
                     @livewire('categorization.correction-divergence-toast')
                     @livewire('receipts.receipt-conflict-toast')
                     @livewire('community.suggest-mapping-modal')
+                    @livewire('email-scan.oauth-client-wizard-modal')
                     @yield('content')
                 </main>
             </div>
