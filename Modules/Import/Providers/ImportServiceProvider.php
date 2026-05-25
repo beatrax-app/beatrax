@@ -11,6 +11,7 @@ use Livewire\LivewireManager;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 use Modules\Import\Internal\Http\Livewire\ImportResults;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
+use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Import\Internal\Listeners\HandleFileOpenedFromOs;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
@@ -18,6 +19,7 @@ use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Pipeline\Stages\PaymentTypeClassifierStage;
 use Modules\Import\Public\Actions\ApplyEnrichments;
 use Modules\Import\Public\Actions\ConfirmImport;
+use Modules\Import\Public\Actions\CreateMerchantAlias;
 use Modules\Import\Public\Actions\RunImport;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Contracts\ConfirmsImports;
@@ -25,6 +27,9 @@ use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\PaymentTypeHinter;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Services\AccountNamer;
+use Modules\Import\Public\Services\AliasMatchPreviewQuery;
+use Modules\Import\Public\Services\MerchantNameResolver;
+use Modules\Import\Public\Services\PatternGeneralizer;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -84,6 +89,16 @@ final class ImportServiceProvider extends ServiceProvider
         $this->app->singleton(PreviewCache::class);
         $this->app->singleton(HandleFileOpenedFromOs::class);
 
+        // Merchant-alias collaborators. The resolver is stateless and
+        // read-only; the generalizer is pure; the preview query and
+        // create-alias action both wrap a single DB write or read.
+        // Binding as singletons keeps the per-row allocation cost zero
+        // in the import pipeline's hot loop.
+        $this->app->singleton(PatternGeneralizer::class);
+        $this->app->singleton(MerchantNameResolver::class);
+        $this->app->singleton(AliasMatchPreviewQuery::class);
+        $this->app->singleton(CreateMerchantAlias::class);
+
         foreach (self::PAYMENT_TYPE_HINTER_FQNS as $fqn) {
             if (class_exists($fqn)) {
                 $this->app->singleton($fqn);
@@ -118,6 +133,7 @@ final class ImportServiceProvider extends ServiceProvider
         $livewire->component('import.upload-wizard', UploadWizard::class);
         $livewire->component('import.preview-wizard', PreviewWizard::class);
         $livewire->component('import.import-results', ImportResults::class);
+        $livewire->component('import.rename-counterparty-popover', RenameCounterpartyPopover::class);
 
         // SC3 routing caveat: .csv FileOpenedFromOs intents land here
         // (Import), not in Ingestion. The listener filters by extension
