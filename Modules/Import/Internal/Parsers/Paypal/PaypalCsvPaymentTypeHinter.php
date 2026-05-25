@@ -133,11 +133,9 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
             return null;
         }
 
+        // array_key_first is non-null because $events is non-empty
+        // (the guard above returned null when $events === []).
         $firstKey = array_key_first($events);
-        if ($firstKey === null) {
-            return null;
-        }
-
         $first = $events[$firstKey];
         if (! is_array($first)) {
             return null;
