@@ -9,7 +9,11 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Onboarding\Internal\Http\Livewire\SetupWizard;
+use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectBankStep;
+use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectCardStep;
+use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectEmailStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\DoneStep;
+use Modules\Onboarding\Internal\Http\Livewire\Steps\FirstImportStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\WelcomeStep;
 use Modules\Onboarding\Internal\Listeners\InitializeWizardProgressOnInstall;
 use Modules\Onboarding\Internal\Services\ResumeStepResolver;
@@ -30,9 +34,9 @@ use Modules\Onboarding\Public\Services\WizardProgressQuery;
  *  - registers the `onboarding::` Blade view namespace so the wizard's
  *    blade views can extend the wizard layout.
  *  - registers the SetupWizard parent + WelcomeStep + DoneStep Livewire
- *    components under the `onboarding.*` alias namespace. Plan 03b
- *    appends the four connector-step registrations (connect-bank,
- *    connect-card, connect-email, first-import).
+ *    components AND the four connector-step Livewire components
+ *    (connect-bank, connect-card, connect-email, first-import) under
+ *    the `onboarding.*` alias namespace.
  */
 final class OnboardingServiceProvider extends ServiceProvider
 {
@@ -63,5 +67,9 @@ final class OnboardingServiceProvider extends ServiceProvider
         $livewire->component('onboarding.setup-wizard', SetupWizard::class);
         $livewire->component('onboarding.steps.welcome-step', WelcomeStep::class);
         $livewire->component('onboarding.steps.done-step', DoneStep::class);
+        $livewire->component('onboarding.steps.connect-bank-step', ConnectBankStep::class);
+        $livewire->component('onboarding.steps.connect-card-step', ConnectCardStep::class);
+        $livewire->component('onboarding.steps.connect-email-step', ConnectEmailStep::class);
+        $livewire->component('onboarding.steps.first-import-step', FirstImportStep::class);
     }
 }
