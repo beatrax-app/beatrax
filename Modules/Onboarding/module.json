@@ -1,0 +1,11 @@
+{
+    "name": "Onboarding",
+    "alias": "onboarding",
+    "description": "First-run setup wizard: state-machine table, step components, and the resume-on-relaunch UX.",
+    "keywords": ["onboarding", "wizard", "setup"],
+    "priority": 5,
+    "providers": [
+        "Modules\\Onboarding\\Providers\\OnboardingServiceProvider"
+    ],
+    "files": []
+}
