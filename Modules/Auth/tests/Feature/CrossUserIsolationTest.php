@@ -120,6 +120,14 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // and accepting the documented operator-level data-disclosure
     // contract (same shape as dev.audit + dev.queue.tab).
     'dev.sql',
+    // 16.1-03a: first-run setup wizard. SetupWizard reads the acting
+    // user's own wizard_progress rows via WizardProgressQuery, which
+    // explicitly filters by current user_id (Phase 16 multi-user
+    // readiness contract). The rendered surface is wizard chrome +
+    // the active step body — no foreign user-row data crosses the
+    // boundary. The mount-time UserInstalled safety-net + the
+    // `?force=1` reset both bound their writes to the acting user.
+    'setup',
 ];
 
 /**

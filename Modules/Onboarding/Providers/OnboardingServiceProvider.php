@@ -7,27 +7,38 @@ namespace Modules\Onboarding\Providers;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Events\UserInstalled;
+use Modules\Onboarding\Internal\Http\Livewire\SetupWizard;
+use Modules\Onboarding\Internal\Listeners\InitializeWizardProgressOnInstall;
+use Modules\Onboarding\Internal\Services\ResumeStepResolver;
+use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
+use Modules\Onboarding\Internal\Services\WizardStepRegistry;
+use Modules\Onboarding\Public\Services\WizardProgressQuery;
 
 /**
  * Wires the Onboarding module:
  *
+ *  - registers the wizard's state collaborators (registry / initializer
+ *    / resume resolver / public progress query) as singletons.
+ *  - listens for `UserInstalled` so the wizard's six per-user rows are
+ *    seeded by the same event the default-category-tree seeder uses.
  *  - loads the wizard_progress migration so the state-machine table is
  *    created on `php artisan migrate`.
- *  - loads the module's routes file when present (the wizard's `/setup`
- *    route registers there once the wizard components land in a later
- *    plan).
- *  - registers the `onboarding::` Blade view namespace so step views can
- *    extend the wizard layout.
- *
- * Service bindings, Livewire component registrations, and event-listener
- * wiring (e.g. UserInstalled → InitializeWizardProgress) attach in later
- * plans as the wizard surface lands; this skeleton boots clean with an
- * empty `register()` so the migration + tests in plan 16.1-01 exercise
- * the schema without needing any wizard-side wiring.
+ *  - loads `/setup` and any other module routes.
+ *  - registers the `onboarding::` Blade view namespace so the wizard's
+ *    blade views can extend the wizard layout.
+ *  - registers the `SetupWizard` Livewire parent component under the
+ *    `onboarding.setup-wizard` alias.
  */
 final class OnboardingServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        $this->app->singleton(WizardStepRegistry::class);
+        $this->app->singleton(WizardProgressInitializer::class);
+        $this->app->singleton(ResumeStepResolver::class);
+        $this->app->singleton(WizardProgressQuery::class);
+    }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
@@ -43,6 +54,8 @@ final class OnboardingServiceProvider extends ServiceProvider
             $this->loadViewsFrom($viewsPath, 'onboarding');
         }
 
-        unset($events, $livewire);
+        $events->listen(UserInstalled::class, InitializeWizardProgressOnInstall::class);
+
+        $livewire->component('onboarding.setup-wizard', SetupWizard::class);
     }
 }

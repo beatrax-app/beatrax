@@ -52,12 +52,18 @@ final class EnsureDatabaseReady
      * signup chain does not bounce back to welcome before the user can
      * create the first account.
      *
+     * `setup` covers the post-signup first-run wizard surface — the
+     * Onboarding module's `/setup` route gates its own first-launch UX
+     * (the user is already past welcome by then) and must not be
+     * bounced back to the welcome screen mid-wizard.
+     *
      * @var array<int, string>
      */
     private const EXEMPT_ROUTE_PREFIXES = [
         'desktop.setup',
         'desktop.welcome',
         'signup',
+        'setup',
     ];
 
     /**
