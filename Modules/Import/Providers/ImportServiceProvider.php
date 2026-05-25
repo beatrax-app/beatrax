@@ -35,7 +35,6 @@ use Modules\Import\Public\Services\AccountNamer;
 use Modules\Import\Public\Services\AliasMatchPreviewQuery;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Import\Public\Services\PatternGeneralizer;
-use Psr\Log\LoggerInterface;
 
 /**
  * Wires the Import module:
@@ -133,9 +132,7 @@ final class ImportServiceProvider extends ServiceProvider
                     $hinters[] = $hinter;
                 }
 
-                $logger = $app->make(LoggerInterface::class);
-
-                return new PaymentTypeClassifierStage($hinters, $logger);
+                return new PaymentTypeClassifierStage($hinters);
             },
         );
     }
