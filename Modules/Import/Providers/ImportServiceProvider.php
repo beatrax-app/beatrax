@@ -9,6 +9,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
+use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Import\Internal\Http\Livewire\ImportResults;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
@@ -150,6 +151,7 @@ final class ImportServiceProvider extends ServiceProvider
         $livewire->component('import.preview-wizard', PreviewWizard::class);
         $livewire->component('import.import-results', ImportResults::class);
         $livewire->component('import.rename-counterparty-popover', RenameCounterpartyPopover::class);
+        $livewire->component('import.aliases-settings-page', AliasesSettingsPage::class);
 
         // SC3 routing caveat: .csv FileOpenedFromOs intents land here
         // (Import), not in Ingestion. The listener filters by extension
