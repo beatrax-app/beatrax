@@ -7,28 +7,52 @@ namespace Modules\Community\Providers;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Community\Internal\Corpus\CorpusLoader;
+use Modules\Community\Internal\Http\Livewire\HelpOthersTriageButton;
+use Modules\Community\Internal\Http\Livewire\MysteryMerchantsPage;
+use Modules\Community\Internal\Http\Livewire\SharedListSettingsPanel;
+use Modules\Community\Internal\Http\Livewire\SuggestMappingModal;
+use Modules\Community\Internal\Listeners\SeedCommunityCorpus;
+use Modules\Community\Internal\Services\GitHubCompareUrlBuilder;
+use Modules\Community\Internal\Shell\NoOpShell;
+use Modules\Community\Public\Actions\OpenExternalUrlAction;
+use Modules\Community\Public\Services\CommunityCorpusQuery;
+use Modules\Core\Public\Events\UserInstalled;
+use Native\Desktop\Contracts\Shell as ShellContract;
 
 /**
  * Wires the Community module:
  *
- *  - loads the community_merchant_mappings migration so the global
- *    corpus table is created on `php artisan migrate`.
- *  - loads the module's routes file when present (the
- *    `/community/mystery-merchants` page registers there once the
- *    corpus surface lands in a later plan).
- *  - registers the `community::` Blade view namespace so corpus pages
- *    and the suggest-mapping modal can render their views.
- *
- * Service bindings, the UserInstalled → SeedCommunityCorpus listener,
- * the Native\Desktop\Contracts\Shell binding for the external-browser
- * launch, and Livewire component registrations attach in later plans;
- * this skeleton boots clean with an empty `register()` so the migration
- * + tests in plan 16.1-01 exercise the schema without needing any
- * corpus-side wiring.
+ *  - registers the corpus loader, the community-tier read-only query,
+ *    and the GitHub Compare URL builder as singletons.
+ *  - binds the OpenExternalUrlAction so the SuggestMappingModal can
+ *    DI it through its `submit()` method.
+ *  - binds `Native\Desktop\Contracts\Shell` to the in-module NoOpShell
+ *    fallback if no other module has already bound the contract.
+ *    NativePHP's NativeServiceProvider binds the real implementation
+ *    inside the desktop runtime; this binding only takes effect when
+ *    the bundle runs outside that runtime (Herd dev mode, CI tests).
+ *  - listens for `UserInstalled` and runs the SeedCommunityCorpus
+ *    listener, mirroring SeedDefaultCategoryTree's idempotent posture.
+ *  - loads the migration that creates `community_merchant_mappings`,
+ *    the module's routes file, and the `community::` Blade view
+ *    namespace.
  */
 final class CommunityServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        $this->mergeConfigFrom(__DIR__.'/../../../config/community.php', 'community');
+
+        $this->app->singleton(CorpusLoader::class);
+        $this->app->singleton(CommunityCorpusQuery::class);
+        $this->app->singleton(GitHubCompareUrlBuilder::class);
+        $this->app->singleton(OpenExternalUrlAction::class);
+
+        if (! $this->app->bound(ShellContract::class)) {
+            $this->app->singleton(ShellContract::class, NoOpShell::class);
+        }
+    }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
@@ -44,6 +68,11 @@ final class CommunityServiceProvider extends ServiceProvider
             $this->loadViewsFrom($viewsPath, 'community');
         }
 
-        unset($events, $livewire);
+        $events->listen(UserInstalled::class, SeedCommunityCorpus::class);
+
+        $livewire->component('community.suggest-mapping-modal', SuggestMappingModal::class);
+        $livewire->component('community.mystery-merchants-page', MysteryMerchantsPage::class);
+        $livewire->component('community.shared-list-settings-panel', SharedListSettingsPanel::class);
+        $livewire->component('community.help-others-triage-button', HelpOthersTriageButton::class);
     }
 }

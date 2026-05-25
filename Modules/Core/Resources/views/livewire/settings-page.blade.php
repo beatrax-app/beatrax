@@ -218,6 +218,18 @@
          builder in one round-trip. Help text renders the per-user
          path (storage/app/inbox-drop/{userId}/) because the scanner
          only walks that subfolder. --}}
+    {{-- Shared merchant list.
+
+         Hosts the SharedListSettingsPanel Livewire component, which
+         owns the three toggle rows + the meta-side "About the
+         shared list" copy. Toggle 3 ships disabled with a version-
+         agnostic inline note (Phase 18 auto-update plumbing will
+         flip the gate live). --}}
+    <section class="space-y-2" id="shared-merchant-list">
+        <h2 class="text-xs uppercase tracking-wide text-[var(--color-text-faint)]">Shared merchant list</h2>
+        @livewire('community.shared-list-settings-panel')
+    </section>
+
     <section class="space-y-2">
         <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Auto-import</h2>
         <div class="space-y-2">
