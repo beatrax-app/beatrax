@@ -85,7 +85,14 @@
                                 </td>
                                 <td class="px-4 py-2">
                                     <div class="row-cta flex items-center justify-end gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                        @livewire('community.help-others-triage-button', ['raw' => $row->description ?? ($row->counterpartyName ?? '')], key('help-'.$row->transactionId))
+                                        @if ($offerToContribute)
+                                            <button
+                                                type="button"
+                                                wire:click="$dispatch('suggest-mapping:open', { rawDescription: @js($row->description ?? ($row->counterpartyName ?? '')) })"
+                                                class="help-others-link inline-flex items-center rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-500 hover:border-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-200"
+                                                data-testid="help-others-cta"
+                                            >❋ Help others identify this</button>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
