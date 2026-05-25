@@ -224,31 +224,35 @@ Plans:
 **Goal:** Ship six tightly-coupled user-facing surfaces as one vertical MVP — a first-run `/setup` wizard, a click-italic merchant-rename popover with smart pattern generalization, a payment-type chip (PIN / online / transfer / direct-debit / cash / fee / refund / unknown) derived by a shared post-parse classifier stage, a crowd-sourced merchant identification corpus bundled as YAML with a `/community/mystery-merchants` browse destination + suggest-as-draft-PR flow via the system browser, an OAuth re-consent banner wired to the existing `SystemAlertsBanner`, and a power-user `Settings → Aliases` surface with live "Test against my transactions" preview + bulk-merge + YAML import/export — every locked decision (D-01 through D-25) implemented, no scope reduction.
 **Requirements**: WIZ-01, WIZ-02, WIZ-03, WIZ-04, WIZ-05, WIZ-06, RENAME-01, RENAME-02, RENAME-03, PTYPE-01, PTYPE-02, PTYPE-03, CORPUS-01, CORPUS-02, CORPUS-03, CORPUS-04, CORPUS-05, OAUTH-RC-01, OAUTH-RC-02, OAUTH-RC-03, ALIAS-01, ALIAS-02, ALIAS-03, ALIAS-04, ALIAS-05 *(REQ-IDs proposed in 16.1-RESEARCH.md; planner registers them; a follow-up REQUIREMENTS.md update will fold them into the Traceability table)*
 **Depends on:** Phase 16
-**Plans:** 7 plans
+**Plans:** 8 plans
 
 Plans:
 
 **Wave 1**
 
-- [ ] 16.1-01-PLAN.md — Schema foundation: Onboarding + Community modules + 4 migrations (wizard_progress, community_merchant_mappings, transactions.payment_type, merchant_aliases) + PaymentType enum + 4 arch invariants
+- [ ] 16.1-01-PLAN.md — Schema foundation: Onboarding + Community modules + 5 migrations (wizard_progress, community_merchant_mappings, transactions.payment_type, merchant_aliases, users.community_settings) + PaymentType enum + User-model community_settings cast + 4 arch invariants
 
 **Wave 2** *(blocked on Wave 1)*
 
 - [ ] 16.1-02-PLAN.md — Payment-type classifier pipeline: PaymentTypeHinter contract + PaymentTypeClassifierStage + 6 tagged hinters (ASN CSV/CAMT.053/MT940 + ICS PDF + PayPal CSV + description-keyword fallback)
-- [ ] 16.1-03-PLAN.md — Onboarding module + wizard: /setup route + SetupWizard parent + 6 step components + resume / skip / skip-the-rest / force-reset + UserInstalled listener + EnsureDatabaseReady exemption + signup-redirects-to-setup
-- [ ] 16.1-06-PLAN.md — OAuth re-consent detection + banner: ReconsentRequiredException + InboxTokenFailed event + RaiseReconsentAlertOnTokenFailure listener (deduped) + system-alert-message blade branch + InboxesPage ?reconnect query-param handoff
+- [ ] 16.1-03a-PLAN.md — Wizard backbone: /setup route + state services (registry, initializer, resolver, query) + UserInstalled listener + EnsureDatabaseReady exemption + signup-redirects-to-setup + SetupWizard parent + WelcomeStep + DoneStep + app-wizard layout + WIZ-01/02/06 acceptance tests
 
 **Wave 3** *(blocked on Waves 1 + 2)*
 
-- [ ] 16.1-04-PLAN.md — Manual rename + alias learning: PatternGeneralizer + MerchantNameResolver (5-step precedence; community tail stub) + RenameCounterpartyPopover Flux modal + CreateMerchantAlias + AliasMatchPreviewQuery + ImportPipeline wiring
+- [ ] 16.1-03b-PLAN.md — Wizard connector steps: 4 connector step components (ConnectBankStep, ConnectCardStep, ConnectEmailStep, FirstImportStep) + 8 atomic Blade components (wiz-card, wiz-dots, wiz-actions, vd-glyph, mini-step, format-chip, drop-zone, privacy-pill) + wizard CSS (no new theme tokens) + WIZ-03/04/05 acceptance tests
+- [ ] 16.1-06-PLAN.md — OAuth re-consent detection + banner: ReconsentRequiredException + InboxTokenFailed event + RaiseReconsentAlertOnTokenFailure listener (deduped) + provider-specific exception catches in Gmail/Graph clients + system-alert-message blade branch + InboxesPage ?reconnect query-param handoff + OAuthClientWizardModal optional inboxId
 
-**Wave 4** *(blocked on Waves 1 + 3)*
+**Wave 4** *(blocked on Waves 1 + 2 + 3 — `resources/css/app.css` shared with Plan 03b forces sequential ordering after the wave-3 wizard CSS lands)*
 
-- [ ] 16.1-05-PLAN.md — Community corpus + browse + Settings: bundled YAML + CorpusLoader + SeedCommunityCorpus listener + OpenExternalUrlAction (https + github.com allow-list) + GitHubCompareUrlBuilder + MysteryMerchantsPage + SuggestMappingModal + SharedListSettingsPanel + HelpOthersTriageButton + MerchantNameResolver community-tail wiring
+- [ ] 16.1-04-PLAN.md — Manual rename + alias learning: PatternGeneralizer + MerchantNameResolver (5-step precedence; community tail seam) + RenameCounterpartyPopover Flux modal + CreateMerchantAlias + AliasMatchPreviewQuery + ImportPipeline wiring + in-place row refresh
 
-**Wave 5** *(blocked on Waves 1 + 4)*
+**Wave 5** *(blocked on Waves 1 + 2 + 3 + 4)*
 
-- [ ] 16.1-07-PLAN.md — Settings → Aliases power-user surface: AliasesSettingsPage + LongestCommonPrefix + MergeMerchantAliases (merged_from provenance) + AliasYamlExporter + AliasYamlImporter (PARSE_EXCEPTION_ON_INVALID_TYPE) + live debounced Test-against-my-transactions preview
+- [ ] 16.1-05-PLAN.md — Community corpus + browse + Settings: bundled YAML + CorpusLoader (with unknown-category warning) + SeedCommunityCorpus listener + OpenExternalUrlAction (https + github.com allow-list) + NoOpShell + arch invariant + GitHubCompareUrlBuilder + MysteryMerchantsPage + SuggestMappingModal + SharedListSettingsPanel + HelpOthersTriageButton (reads users.community_settings) + MerchantNameResolver community-tail wiring
+
+**Wave 6** *(blocked on Waves 1 + 2 + 3 + 4 + 5)*
+
+- [ ] 16.1-07-PLAN.md — Settings → Aliases power-user surface: AliasesSettingsPage + LongestCommonPrefix + MergeMerchantAliases (merged_from provenance) + AliasYamlExporter + AliasYamlImporter (PARSE_EXCEPTION_ON_INVALID_TYPE) + live debounced Test-against-my-transactions preview + bulk merge + YAML import diff/confirm
 
 ### Phase 17: CI/CD Pipeline + Code Signing
 
