@@ -15,7 +15,7 @@
 <section class="wiz-step wiz-step-connect-email" aria-labelledby="wiz-connect-email-h1">
     <p class="wiz-eyebrow">✉️ Step 4 — Receipts from email (optional)</p>
     <h1 id="wiz-connect-email-h1" class="wiz-h1">
-        Let diederik watch for purchase emails
+        Let beatrax watch for purchase emails
     </h1>
     <p class="wiz-lede">
         Connect Gmail or Outlook so order confirmations and subscription receipts
@@ -25,7 +25,7 @@
     <div class="mini-steps">
         <x-onboarding::mini-step glyph="🔐" label="Sign in" sub="Google or Microsoft" state="done" />
         <x-onboarding::mini-step glyph="📑" label="Approve scope" sub="Read-only access" state="now" />
-        <x-onboarding::mini-step glyph="✉️" label="diederik reads" sub="Receipts only" state="upcoming" />
+        <x-onboarding::mini-step glyph="✉️" label="beatrax reads" sub="Receipts only" state="upcoming" />
         <x-onboarding::mini-step glyph="🔒" label="Token stays local" sub="Encrypted file" state="upcoming" />
     </div>
 
