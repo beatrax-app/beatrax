@@ -18,10 +18,12 @@ use Modules\Auth\Public\Actions\SignupAction;
  * guard returns a 404 once one exists. On submit the page confirms the
  * two password fields match, then delegates to SignupAction, which
  * creates the owner account, logs them in, and stashes the ten recovery
- * codes in the session. A successful submit redirects to the
- * recovery-codes display page; a validation failure renders a single
- * inline error line and clears both password fields so the plaintext
- * never re-enters the component snapshot.
+ * codes in the session. A successful submit redirects to the first-run
+ * setup wizard at `/setup`; the wizard's Done step links onward to
+ * the recovery-codes display ceremony while the plaintext codes are
+ * still in the session. A validation failure renders a single inline
+ * error line and clears both password fields so the plaintext never
+ * re-enters the component snapshot.
  *
  * Constructor-free Livewire component; service collaborators arrive as
  * parameters on the action method and render().
@@ -56,7 +58,7 @@ final class SignupPage extends Component
             return;
         }
 
-        $this->redirect($urls->route('auth.recovery-codes-display'), navigate: false);
+        $this->redirect($urls->route('setup'), navigate: false);
     }
 
     public function render(ViewFactory $views): View
