@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Dto;
 
+use Modules\Import\Public\Enums\PaymentType;
 use Spatie\LaravelData\Data;
 
 /**
@@ -13,6 +14,16 @@ use Spatie\LaravelData\Data;
  * `diff` carries the field-level change a user will see when the row
  * is `status === 'enriched'` — currently scoped to source_ref but the
  * shape supports future fields (description, counterparty IBAN, etc.).
+ *
+ * `paymentType` is the resolved payment-type chip the wizard renders
+ * inside the type column. Sourced from the `PaymentTypeClassifierStage`
+ * run during preview; defaults to null when the pipeline did not run
+ * the classifier (legacy preview paths that bypass the new stage).
+ *
+ * `aliasFriendlyName` carries the rendered-display counterparty name
+ * the merchant alias resolver produced for this row. The wizard uses
+ * it to render the human-readable label alongside the raw
+ * `counterpartyName` in the counterparty column.
  */
 final class PreviewRowDto extends Data
 {
@@ -46,5 +57,7 @@ final class PreviewRowDto extends Data
         public readonly ?string $currency,
         public readonly ?string $error,
         public readonly ?array $diff = null,
+        public readonly ?PaymentType $paymentType = null,
+        public readonly ?string $aliasFriendlyName = null,
     ) {}
 }
