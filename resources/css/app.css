@@ -1294,3 +1294,21 @@ td.date,
         color: var(--color-text-muted);
     }
 }
+
+@layer components {
+    .side-brand .logo-svg {
+        width: 24px;
+        height: 24px;
+        border-radius: var(--radius-md);
+        display: block;
+    }
+
+    .drop-zone[aria-disabled="true"] {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+
+    .drop-zone[aria-disabled="true"] .drop-zone-glyph {
+        filter: grayscale(1);
+    }
+}
