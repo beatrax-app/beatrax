@@ -3,11 +3,14 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
+use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+use PHPUnit\Framework\MockObject\MockObject;
 
 /*
  * SSRF / bearer-token-leak regression test for GraphApiClient.
@@ -61,7 +64,12 @@ beforeEach(function (): void {
         }
     };
 
-    $this->client = new GraphApiClient($this->secrets, $this->oauth, $this->clock);
+    /** @var EventsDispatcher&MockObject $events */
+    $events = $this->createMock(EventsDispatcher::class);
+    /** @var DatabaseManager&MockObject $db */
+    $db = $this->createMock(DatabaseManager::class);
+
+    $this->client = new GraphApiClient($this->secrets, $this->oauth, $this->clock, $events, $db);
 });
 
 it('rejects a deltaPage follow-up against an attacker-controlled host before any bearer token is attached', function (): void {

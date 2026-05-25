@@ -8,8 +8,12 @@ use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
+use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
+use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
@@ -18,6 +22,7 @@ use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Throwable;
 
 /**
  * The `/inboxes` page Livewire SFC.
@@ -63,8 +68,23 @@ final class InboxesPage extends Component
      */
     public ?string $oauthFailedMessage = null;
 
-    public function mount(Request $request, CurrentUser $currentUser): void
-    {
+    /**
+     * Inbox id pulled from the `?reconnect={id}` query parameter. When
+     * present AND the inbox belongs to the current user AND its
+     * provider is one of 'gmail' / 'microsoft', mount() auto-dispatches
+     * `oauth-client-wizard:open` so the modal opens against that inbox
+     * — the OAuth dance writes the refreshed token back to the
+     * existing inbox row instead of inserting a new one. A foreign id
+     * or a missing row is silently ignored (404-not-403 contract).
+     */
+    #[Url(as: 'reconnect', except: '')]
+    public ?int $reconnectInboxId = null;
+
+    public function mount(
+        Request $request,
+        CurrentUser $currentUser,
+        InboxQuery $inboxQuery,
+    ): void {
         // The OAuth callback redirects with a session flash carrying
         // the freshly-connected inbox id. Pick it up and dispatch the
         // backfill-window:open event so the modal opens immediately
@@ -103,9 +123,100 @@ final class InboxesPage extends Component
             }
         }
 
-        // Touch the parameters so PHPStan does not complain about
-        // unused arguments — the contract is the boot-time DI surface.
-        unset($currentUser);
+        // `?reconnect={id}` query-param hand-off: the SystemAlertsBanner
+        // Reconnect link routes here with the inbox id. Auto-dispatch
+        // the modal-open event so the user lands directly inside the
+        // re-consent flow rather than having to re-click "Reconnect"
+        // from the inbox row. Cross-user / missing-row ids are silently
+        // ignored — InboxQuery::findForUser scopes by current user and
+        // returns null for a foreign id (404-not-403).
+        $reconnectId = $this->reconnectInboxId;
+        if ($reconnectId !== null && $reconnectId > 0) {
+            $user = $currentUser->user();
+            $inbox = $inboxQuery->findForUser($reconnectId, $user);
+            if ($inbox !== null && in_array($inbox->provider, ['gmail', 'microsoft'], strict: true)) {
+                $this->dispatch(
+                    'oauth-client-wizard:open',
+                    provider: $inbox->provider,
+                    inboxId: $inbox->inboxId,
+                );
+            }
+        }
+    }
+
+    /**
+     * Acknowledge the user's active oauth_reconsent_required alert for
+     * a given inbox whenever the OAuth wizard modal signals that a re-
+     * consent dance has been kicked off. The acknowledge is per-user
+     * scoped via the system_alerts.user_id column so a forged event
+     * from the browser cannot clear another user's alert.
+     *
+     * The actual token refresh happens server-side in
+     * OAuthCallbackController — this listener clears the banner row
+     * optimistically; if the refresh fails the listener's upstream
+     * (RaiseReconsentAlertOnTokenFailure) re-raises a fresh row on the
+     * next IncrementalScanJob, so the system self-heals.
+     */
+    #[On('oauth-client-wizard:reconsented')]
+    public function acknowledgeReconnect(
+        int $inboxId,
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        AcknowledgeSystemAlert $acknowledge,
+    ): void {
+        if ($inboxId <= 0) {
+            return;
+        }
+        $user = $currentUser->user();
+
+        $matches = $this->activeReconsentAlertIds($db, $user->id, $inboxId);
+        foreach ($matches as $alertId) {
+            try {
+                ($acknowledge)($alertId, $user);
+            } catch (NotFoundHttpException) {
+                // Cross-row race — the alert was acknowledged between
+                // the lookup and the action call. Silent no-op so the
+                // listener stays idempotent.
+            }
+        }
+    }
+
+    /**
+     * Resolve the active oauth_reconsent_required alert ids for the
+     * given user + inbox. Prefers SQLite's `json_extract` against the
+     * metadata column; falls through to a LIKE form when the
+     * JSON1-extension query throws on an older runtime.
+     *
+     * @return list<int>
+     */
+    private function activeReconsentAlertIds(DatabaseManager $db, int $userId, int $inboxId): array
+    {
+        $base = $db->connection()->table('system_alerts')
+            ->where('user_id', $userId)
+            ->where('kind', 'oauth_reconsent_required')
+            ->whereNull('acknowledged_at');
+
+        try {
+            $rows = (clone $base)
+                ->whereRaw("json_extract(metadata, '$.inbox_id') = ?", [$inboxId])
+                ->pluck('id')
+                ->all();
+        } catch (Throwable) {
+            $needle = '%"inbox_id":'.$inboxId.'%';
+            $rows = (clone $base)
+                ->where('metadata', 'like', $needle)
+                ->pluck('id')
+                ->all();
+        }
+
+        $ids = [];
+        foreach ($rows as $row) {
+            if (is_numeric($row)) {
+                $ids[] = (int) $row;
+            }
+        }
+
+        return $ids;
     }
 
     /**

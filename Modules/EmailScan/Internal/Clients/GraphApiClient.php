@@ -8,10 +8,15 @@ use DateTimeImmutable;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
+use Illuminate\Database\DatabaseManager;
 use JsonException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
+use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
 use Modules\EmailScan\Internal\SafeMessage;
+use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
@@ -90,6 +95,8 @@ final class GraphApiClient implements GraphApiClientContract
         private readonly OAuthSecretsRepository $secrets,
         private readonly MicrosoftOAuthProvider $oauth,
         private readonly Clock $clock,
+        private readonly EventsDispatcher $events,
+        private readonly DatabaseManager $db,
     ) {}
 
     /**
@@ -698,7 +705,19 @@ final class GraphApiClient implements GraphApiClientContract
             || $expiresTs === null
             || $expiresTs < $nowTs + 60
         ) {
-            $fresh = $this->oauth->refreshAccessToken($creds->refreshToken);
+            try {
+                $fresh = $this->oauth->refreshAccessToken($creds->refreshToken);
+            } catch (InvalidGrantException $e) {
+                // MicrosoftOAuthProvider maps `invalid_grant` /
+                // `consent_required` IdentityProviderException responses
+                // into this typed sentinel BEFORE the league client's
+                // raw exception reaches us — the catch sits on the
+                // module's own sentinel, not on a generic Throwable, so
+                // legitimate non-OAuth failures (network errors, JSON
+                // decode failures, scope drift) keep their original
+                // exception class and propagate unchanged.
+                throw $this->raiseReconsentRequired($inboxId, $e);
+            }
             // Microsoft Graph rotates the refresh token on every
             // refresh; persist the new pair via the repository's
             // atomic rotateRefreshToken hook (the underlying writeAtomic
@@ -714,6 +733,48 @@ final class GraphApiClient implements GraphApiClientContract
         }
 
         return $cachedAccessToken;
+    }
+
+    /**
+     * Dispatch InboxTokenFailed so the SystemAlertsBanner can surface a
+     * re-consent prompt, then return a typed ReconsentRequiredException
+     * for the caller to throw. The (user_id, inbox_id, provider) tuple
+     * resolves through a single per-inbox row read on the existing
+     * inboxes table.
+     */
+    private function raiseReconsentRequired(int $inboxId, InvalidGrantException $cause): ReconsentRequiredException
+    {
+        $userId = $this->lookupInboxUserId($inboxId);
+        $this->events->dispatch(new InboxTokenFailed(
+            inboxId: $inboxId,
+            userId: $userId,
+            provider: 'microsoft',
+        ));
+
+        return new ReconsentRequiredException(
+            inboxId: $inboxId,
+            userId: $userId,
+            provider: 'microsoft',
+            previous: $cause,
+        );
+    }
+
+    /**
+     * Resolve the owning user_id for an inbox row. Returns 0 when the
+     * row is missing or the column is non-integer — the listener
+     * tolerates the synthetic 0 (no row will dedup against it) so the
+     * caller's error-recovery path is preserved even if the inbox
+     * record was deleted between the scan kick-off and the failed
+     * refresh.
+     */
+    private function lookupInboxUserId(int $inboxId): int
+    {
+        $value = $this->db->connection()
+            ->table('inboxes')
+            ->where('id', $inboxId)
+            ->value('user_id');
+
+        return is_numeric($value) ? (int) $value : 0;
     }
 
     /**
