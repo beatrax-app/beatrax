@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Community\Internal\Corpus;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Import\Public\Services\PatternGeneralizer;
@@ -48,6 +49,7 @@ final class CorpusLoader
         private readonly LoggerInterface $logger,
         private readonly ConfigRepository $config,
         private readonly DatabaseManager $db,
+        private readonly Application $app,
     ) {}
 
     /**
@@ -216,6 +218,12 @@ final class CorpusLoader
      * Resolve a configured path against the application root, leaving
      * absolute paths untouched so a test fixture under sys_get_temp_dir
      * loads from its full path.
+     *
+     * The override key `community.app_root` exists so a feature test can
+     * point the loader at a temporary fixture directory without
+     * relocating the bundled corpus on disk. The production path uses
+     * the injected `Application::basePath()` so a future refactor that
+     * moves this file does not silently break corpus loading.
      */
     private function resolvePath(string $configured): string
     {
@@ -227,8 +235,7 @@ final class CorpusLoader
         }
         $root = $this->stringConfig('community.app_root');
         if ($root === '') {
-            // Fall back to four-up from this file (Modules/Community/Internal/Corpus → repo root).
-            $root = dirname(__DIR__, 4);
+            $root = $this->app->basePath();
         }
 
         return rtrim($root, '/').'/'.$configured;
