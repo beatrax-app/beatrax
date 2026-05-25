@@ -2,12 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Services\MerchantNameResolver;
-
-uses(RefreshDatabase::class);
 
 /*
  * MerchantNameResolver covers the 5-step precedence walk for resolving
