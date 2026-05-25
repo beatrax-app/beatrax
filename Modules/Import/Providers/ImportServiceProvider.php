@@ -11,6 +11,7 @@ use Livewire\LivewireManager;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 use Modules\Import\Internal\Http\Livewire\ImportResults;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
+use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Import\Internal\Listeners\HandleFileOpenedFromOs;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
@@ -118,6 +119,7 @@ final class ImportServiceProvider extends ServiceProvider
         $livewire->component('import.upload-wizard', UploadWizard::class);
         $livewire->component('import.preview-wizard', PreviewWizard::class);
         $livewire->component('import.import-results', ImportResults::class);
+        $livewire->component('import.rename-counterparty-popover', RenameCounterpartyPopover::class);
 
         // SC3 routing caveat: .csv FileOpenedFromOs intents land here
         // (Import), not in Ingestion. The listener filters by extension
