@@ -240,8 +240,58 @@ final class OAuthCallbackController
                 ->with('oauth_failed', $e->getMessage());
         }
 
-        return $this->redirector
+        // Clear any active oauth_reconsent_required banner row for this
+        // inbox so the SystemAlertsBanner stops surfacing the Reconnect
+        // prompt the moment the dance completes. The acknowledge is
+        // per-user scoped — a forged callback for another user's inbox
+        // is already rejected upstream by the state-binding check.
+        $this->acknowledgeReconsentAlerts($userId, $inboxId);
+
+        $redirect = $this->redirector
             ->route('inboxes.index')
             ->with('open_backfill_modal', $inboxId);
+
+        if ($existingInboxId > 0) {
+            // Reconnect path: signal the SystemAlertsBanner-aware
+            // surface to also self-acknowledge (defence in depth) so a
+            // future refactor that moves alert resolution off the
+            // callback still sees the signal land at /inboxes.
+            $redirect = $redirect->with('oauth_reconnect_acknowledged', $inboxId);
+        }
+
+        return $redirect;
+    }
+
+    /**
+     * Acknowledge every active oauth_reconsent_required system_alerts
+     * row scoped to (user_id, inbox_id). Acknowledgement is idempotent
+     * — already-acknowledged rows are skipped by the WHERE predicate.
+     * The acknowledge uses a single UPDATE rather than the per-row
+     * AcknowledgeSystemAlert action because there is no need for the
+     * per-row idempotent return value at this scale; the controller
+     * holds the authoritative server-side success signal.
+     */
+    private function acknowledgeReconsentAlerts(int $userId, int $inboxId): void
+    {
+        $now = $this->clock->now()->toDateTimeString();
+        $connection = $this->db->connection();
+
+        $base = $connection->table('system_alerts')
+            ->where('user_id', $userId)
+            ->where('kind', 'oauth_reconsent_required')
+            ->whereNull('acknowledged_at');
+
+        try {
+            (clone $base)
+                ->whereRaw("json_extract(metadata, '$.inbox_id') = ?", [$inboxId])
+                ->update(['acknowledged_at' => $now]);
+        } catch (\Throwable) {
+            // Fallback for SQLite builds without JSON1 — same shape as
+            // the listener's de-dup fallback.
+            $needle = '%"inbox_id":'.$inboxId.'%';
+            (clone $base)
+                ->where('metadata', 'like', $needle)
+                ->update(['acknowledged_at' => $now]);
+        }
     }
 }
