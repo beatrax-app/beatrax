@@ -9,6 +9,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -218,7 +219,7 @@ final class InboxesPage extends Component
             $withComma = '%"inbox_id":'.$inboxId.',%';
             $withBrace = '%"inbox_id":'.$inboxId.'}%';
             $rows = (clone $base)
-                ->where(static function ($q) use ($withComma, $withBrace): void {
+                ->where(static function (Builder $q) use ($withComma, $withBrace): void {
                     $q->where('metadata', 'like', $withComma)
                         ->orWhere('metadata', 'like', $withBrace);
                 })
