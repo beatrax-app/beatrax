@@ -9,6 +9,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
+use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Import\Internal\Http\Livewire\ImportResults;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
@@ -17,9 +18,13 @@ use Modules\Import\Internal\Listeners\HandleFileOpenedFromOs;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Pipeline\Stages\PaymentTypeClassifierStage;
+use Modules\Import\Internal\Services\AliasYamlExporter;
+use Modules\Import\Internal\Services\AliasYamlImporter;
+use Modules\Import\Internal\Services\LongestCommonPrefix;
 use Modules\Import\Public\Actions\ApplyEnrichments;
 use Modules\Import\Public\Actions\ConfirmImport;
 use Modules\Import\Public\Actions\CreateMerchantAlias;
+use Modules\Import\Public\Actions\MergeMerchantAliases;
 use Modules\Import\Public\Actions\RunImport;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Contracts\ConfirmsImports;
@@ -99,6 +104,18 @@ final class ImportServiceProvider extends ServiceProvider
         $this->app->singleton(AliasMatchPreviewQuery::class);
         $this->app->singleton(CreateMerchantAlias::class);
 
+        // Settings → Aliases collaborators. LongestCommonPrefix is a
+        // stateless pure function; the YAML exporter wraps a single
+        // read query; the YAML importer wraps a parse + diff + apply
+        // trio (the apply step opens a transaction). The merge action
+        // is a single transactional write. None hold per-request
+        // state, so they are bound as singletons alongside the rest of
+        // the alias-resolution chain.
+        $this->app->singleton(LongestCommonPrefix::class);
+        $this->app->singleton(AliasYamlExporter::class);
+        $this->app->singleton(AliasYamlImporter::class);
+        $this->app->singleton(MergeMerchantAliases::class);
+
         foreach (self::PAYMENT_TYPE_HINTER_FQNS as $fqn) {
             if (class_exists($fqn)) {
                 $this->app->singleton($fqn);
@@ -134,6 +151,7 @@ final class ImportServiceProvider extends ServiceProvider
         $livewire->component('import.preview-wizard', PreviewWizard::class);
         $livewire->component('import.import-results', ImportResults::class);
         $livewire->component('import.rename-counterparty-popover', RenameCounterpartyPopover::class);
+        $livewire->component('import.aliases-settings-page', AliasesSettingsPage::class);
 
         // SC3 routing caveat: .csv FileOpenedFromOs intents land here
         // (Import), not in Ingestion. The listener filters by extension
