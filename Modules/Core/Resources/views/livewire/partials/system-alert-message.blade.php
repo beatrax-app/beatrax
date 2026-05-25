@@ -58,6 +58,30 @@
         @endphp
         SQLite synchronous level is {{ $currentLevel }} (expected NORMAL/1). Durability semantics may differ from config. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> for guidance.
         @break
+    @case ('oauth_reconsent_required')
+        {{--
+            Re-consent prompt surfaced when the background inbox scanner
+            catches an invalid_grant / consent_required failure on token
+            refresh. The metadata blob carries `inbox_id` (int) +
+            `provider` ('gmail' | 'microsoft'); the `message` column is
+            the locked literal "Reconnect your Gmail" / "Reconnect your
+            Outlook" written by RaiseReconsentAlertOnTokenFailure. The
+            Reconnect link routes to /inboxes?reconnect={inbox_id} where
+            InboxesPage auto-opens the OAuthClientWizardModal against
+            the existing inbox row, preserving inbox_messages + .eml
+            blobs + the cursor.
+        --}}
+        @php
+            $metadata = is_array($alert->metadata) ? $alert->metadata : [];
+            $inboxId = isset($metadata['inbox_id']) && is_numeric($metadata['inbox_id'])
+                ? (int) $metadata['inbox_id']
+                : null;
+        @endphp
+        <span>{{ $alert->message }}</span>
+        @if ($inboxId !== null)
+            <a href="/inboxes?reconnect={{ $inboxId }}" class="ml-2 inline-flex items-center font-medium text-amber-900 underline underline-offset-2 hover:text-amber-700 dark:text-amber-200 dark:hover:text-amber-100">Reconnect →</a>
+        @endif
+        @break
     @default
         {{-- $alert->message is operator-authored text from
              BackupDatabaseCommand::recordCorruptAlert,
