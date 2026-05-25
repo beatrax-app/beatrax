@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\AuthManager;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\MysteryMerchantsPage;
@@ -78,8 +79,8 @@ it('renders the page with H1, stats strip, and at least one mystery card for an 
 });
 
 it('redirects unauthenticated requests to login when hitting the route', function (): void {
-    /** @var \Illuminate\Auth\AuthManager $auth */
-    $auth = $this->app->make(\Illuminate\Auth\AuthManager::class);
+    /** @var AuthManager $auth */
+    $auth = $this->app->make(AuthManager::class);
     $auth->guard()->logout();
 
     $response = $this->get('/community/mystery-merchants');
