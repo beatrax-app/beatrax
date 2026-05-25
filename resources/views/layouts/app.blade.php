@@ -132,6 +132,7 @@
                     @livewire('categorization.rule-form-modal')
                     @livewire('categorization.correction-divergence-toast')
                     @livewire('receipts.receipt-conflict-toast')
+                    @livewire('community.suggest-mapping-modal')
                     @yield('content')
                 </main>
             </div>
