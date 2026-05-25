@@ -33,7 +33,7 @@ Reference points kept in mind while sketching:
 | 002 | phase-16-1-wizard-shell | What does the first-run wizard chrome feel like — frame, progress, primary/skip/exit? | **D** — A's chrome + 620px wider card + C's emoji-row content | wizard, onboarding, layout |
 | 003 | phase-16-1-connect-source | How do we walk a non-technical user through "log in → find export → pick format → drop file"? | **C** — Linear mini-steps tile-row + persistent drop zone in the same 720px card | wizard, onboarding, upload |
 | 004 | phase-16-1-preview-row | How do payment-type badges + Funding source + inline rename coexist without row noise? | **D** — Leading Type chip (glyph + word) + click-italic rename + per-row confirm/clear suggested categories + bulk confirm | preview, table, badges, categorize |
-| 005 | phase-16-1-crowd-merchant | Where does community merchant identification live and what's the contribute flow? | TBD | community, settings, contribution |
+| 005 | phase-16-1-crowd-merchant | Where does community merchant identification live and what's the contribute flow? | **A+B+C combined** — B is the primary moment-of-use entry (Triage row CTA), A is the browse-all destination (`/community/mystery-merchants`), C is the preferences surface (`Settings → Shared merchant list`); all share one suggest-mapping modal | community, settings, contribution, triage |
 
 ## Key Visual Decisions (from sketch 001)
 
@@ -54,6 +54,41 @@ Reference points kept in mind while sketching:
   (All / Running / Failed / Destructive) at the top. Destructive-tier
   confirmation lives in a triple-gate modal (Dev Mode ON + Advanced ON +
   type `beatrax`).
+
+## Key Visual Decisions (from Phase 16.1 sketches 002–005)
+
+- **Wizard shell (002D)** — Centered card (620px) on a slate-50 page
+  wash. Top bar: brand + progress-dots strip + "Resume later". Card:
+  generous padding, primary + ghost buttons anchored bottom-right.
+  Footer: privacy pill + "Need help?" link. Same chrome wraps every
+  wizard step. For the embedded import-preview step the card relaxes
+  to ~1120px just for the table.
+- **Connector step (003C)** — Inside the wizard card: four glyph
+  mini-tiles across the top (🔐 Log in · 📑 Open afschriften · 📅
+  Pick a range · ⬇️ Download), format chips inline with a quiet
+  "recommended" badge on CAMT.053, drop zone always visible at the
+  bottom. Reused unchanged for ICS PDF and optional email OAuth
+  steps.
+- **Preview row (004D)** — New leading "Type" column with chips that
+  combine glyph + word (⛁ PIN · ⌘ Online · ↔ Transfer · ⤓ Direct
+  debit · € Cash). Counterparty column plain; italic-fallback names
+  are themselves the click-target for inline rename (popover with
+  "remember for future imports" checkbox that seeds a learning rule).
+  Funding source as monospace pill-tag with masked IBAN. Category
+  column has three states: dashed-italic auto-suggested chip with
+  hover ✓/× quick actions, solid confirmed chip with ✓ prefix, or
+  ghost "+ Pick a category" button. Bulk "Confirm all suggestions"
+  button with live count chip in the legend; live footer counter
+  (confirmed / auto-suggested / uncategorized).
+- **Crowd merchant ID (005 A+B+C)** — Three-layer surface for the
+  community-contributed merchant corpus. Primary entry is the
+  dashed "❋ Help others identify this" button on each mystery-code
+  row in `/triage`. Browse-all destination is `/community/
+  mystery-merchants` (sidebar item with a count badge). Preferences
+  live under `Settings → Shared merchant list` with three toggles.
+  All three open the same modal that hides the YAML-PR-to-Git-repo
+  awkwardness behind a friendly form and a "submits as draft PR from
+  diederik-bot" reassurance.
 
 ## Implications for downstream phases
 
