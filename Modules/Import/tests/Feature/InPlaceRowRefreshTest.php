@@ -1,0 +1,134 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Livewire\Livewire;
+use Modules\Import\Internal\Http\Livewire\PreviewWizard;
+use Modules\Import\Internal\Pipeline\PreviewCache;
+use Modules\Import\Public\Dto\ImportPreviewResult;
+use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Ledger\Models\ImportRun;
+
+/*
+ * After the user saves the rename popover with `remember=true`, the
+ * parent wizard listens for `rename-counterparty:saved` and updates
+ * the affected row's `aliasFriendlyName` IN PLACE — no full pipeline
+ * re-run, no DB roundtrip. The listener finds the row by rowIndex,
+ * reconstructs the PreviewRowDto with the new alias, and writes it
+ * back into the wizard's `$rows` array.
+ *
+ * Out-of-bounds rowIndex must silently no-op so a stale dispatch from
+ * a previous render does not throw.
+ */
+
+beforeEach(function (): void {
+    $this->seedFixtureUserAndAccount();
+    $this->actingAs($this->fixtureUser);
+});
+
+function seedPreviewWithThreeRows(int $userId): int
+{
+    /** @var ImportRun $run */
+    $run = ImportRun::create([
+        'user_id' => $userId,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/inplace-'.bin2hex(random_bytes(4)).'.csv',
+        'sha256' => hash('sha256', 'inplace-'.uniqid('', true)),
+        'uploaded_at' => CarbonImmutable::parse('2026-05-15 12:00:00'),
+        'status' => 'previewed',
+    ]);
+
+    $rows = [
+        new PreviewRowDto(
+            rowIndex: 0,
+            status: 'new',
+            accountId: 1,
+            bookedAt: '01-05-2026',
+            counterpartyName: null,
+            counterpartyIban: null,
+            description: 'ROW-ZERO',
+            categoryName: null,
+            amountMinor: -100,
+            currency: 'EUR',
+            error: null,
+            aliasFriendlyName: 'Already Aliased',
+        ),
+        new PreviewRowDto(
+            rowIndex: 1,
+            status: 'new',
+            accountId: 1,
+            bookedAt: '02-05-2026',
+            counterpartyName: null,
+            counterpartyIban: null,
+            description: 'ROW-ONE-RAW',
+            categoryName: null,
+            amountMinor: -200,
+            currency: 'EUR',
+            error: null,
+            aliasFriendlyName: null,
+        ),
+        new PreviewRowDto(
+            rowIndex: 2,
+            status: 'new',
+            accountId: 1,
+            bookedAt: '03-05-2026',
+            counterpartyName: null,
+            counterpartyIban: null,
+            description: 'ROW-TWO',
+            categoryName: null,
+            amountMinor: -300,
+            currency: 'EUR',
+            error: null,
+            aliasFriendlyName: null,
+        ),
+    ];
+
+    /** @var PreviewCache $cache */
+    $cache = app(PreviewCache::class);
+    $cache->put(
+        $run->id,
+        new ImportPreviewResult(
+            importRunId: $run->id,
+            rows: $rows,
+            accountsToName: [],
+        ),
+        canonical: [],
+        enrichments: [],
+    );
+
+    return $run->id;
+}
+
+it('updates the affected row aliasFriendlyName in place when rename-counterparty:saved fires', function (): void {
+    $importRunId = seedPreviewWithThreeRows($this->fixtureUser->id);
+
+    Livewire::test(PreviewWizard::class, ['id' => $importRunId])
+        ->dispatch('rename-counterparty:saved', rowIndex: 1, friendlyName: 'Shell Pieter')
+        ->assertSee('Shell Pieter');
+
+    /** @var PreviewCache $cache */
+    $cache = app(PreviewCache::class);
+    $refreshed = $cache->getPreview($importRunId);
+
+    expect($refreshed)->not->toBeNull();
+    expect($refreshed->rows[0]->aliasFriendlyName)->toBe('Already Aliased');
+    expect($refreshed->rows[1]->aliasFriendlyName)->toBe('Shell Pieter');
+    expect($refreshed->rows[2]->aliasFriendlyName)->toBeNull();
+});
+
+it('silently no-ops when rename-counterparty:saved fires with an out-of-bounds rowIndex', function (): void {
+    $importRunId = seedPreviewWithThreeRows($this->fixtureUser->id);
+
+    Livewire::test(PreviewWizard::class, ['id' => $importRunId])
+        ->dispatch('rename-counterparty:saved', rowIndex: 99, friendlyName: 'Should Be Ignored');
+
+    /** @var PreviewCache $cache */
+    $cache = app(PreviewCache::class);
+    $refreshed = $cache->getPreview($importRunId);
+
+    expect($refreshed)->not->toBeNull();
+    expect($refreshed->rows[0]->aliasFriendlyName)->toBe('Already Aliased');
+    expect($refreshed->rows[1]->aliasFriendlyName)->toBeNull();
+    expect($refreshed->rows[2]->aliasFriendlyName)->toBeNull();
+});

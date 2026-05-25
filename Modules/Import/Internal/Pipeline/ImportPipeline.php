@@ -15,6 +15,7 @@ use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Import\Public\Pipeline\NormalizeStage;
+use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
@@ -55,6 +56,7 @@ final class ImportPipeline
         private readonly FingerprintStage $fingerprint,
         private readonly SourceAdapterRegistry $adapters,
         private readonly RecordsStatementSummary $statementSummaries,
+        private readonly MerchantNameResolver $merchantNameResolver,
         private readonly LoggerInterface $logger,
     ) {}
 
@@ -157,6 +159,10 @@ final class ImportPipeline
                     ];
                 }
 
+                $aliasFriendlyName = $rowDescription === null
+                    ? null
+                    : $this->merchantNameResolver->resolve($rowDescription, $user->id);
+
                 $preview[] = new PreviewRowDto(
                     rowIndex: $source->sourceRowIndex,
                     status: $disposition->status(),
@@ -171,6 +177,7 @@ final class ImportPipeline
                     error: null,
                     diff: $diff,
                     paymentType: $normalized->paymentType,
+                    aliasFriendlyName: $aliasFriendlyName,
                 );
 
                 if ($disposition->isNew()) {
