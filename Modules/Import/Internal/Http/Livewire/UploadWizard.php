@@ -13,6 +13,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -229,12 +230,26 @@ final class UploadWizard extends Component
         $tmp = $this->file->getRealPath();
         $originalFilename = $this->sanitiseFilename($this->file->getClientOriginalName());
 
+        // The two ambiguous CSV dialects need an explicit bank-format
+        // hint to bypass content-sniffing in the pipeline; every other
+        // format (CAMT.053, MT940, ICS PDF, PayPal CSV, eml/mbox) is
+        // self-describing, so the hint is null. The standalone upload
+        // wizard maps the selected `sourceFormat` 1:1 onto the enum
+        // because the picker already commits the user to a specific
+        // bank format.
+        $formatHint = match ($this->sourceFormat) {
+            'asn-csv' => BankCsvFormatHint::Asn,
+            'ing-csv' => BankCsvFormatHint::Ing,
+            default => null,
+        };
+
         try {
             $preview = $importer->runFromUpload(
                 $tmp,
                 $this->sourceFormat,
                 $user,
                 $originalFilename,
+                $formatHint,
             );
         } catch (Throwable $e) {
             // Catch-all guard for failures that bubble out of

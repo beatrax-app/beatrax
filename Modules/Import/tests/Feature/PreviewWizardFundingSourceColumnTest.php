@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 
 /**
  * Locks in the "Funding source" column on the preview-wizard table:
@@ -31,6 +32,7 @@ it('renames the column header to "Funding source"', function (): void {
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
@@ -46,6 +48,7 @@ it('renders the counterparty IBAN in the Funding source cell', function (): void
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     // Pick any preview row that actually carries a counterparty IBAN
@@ -73,6 +76,7 @@ it('renders an em-dash when the source row carries no counterparty IBAN', functi
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     // The fixture must contain at least one row without a counterparty
