@@ -35,18 +35,21 @@ beforeEach(function (): void {
     ]);
 
     // Seed two existing aliases so the diff has both an unchanged
-    // entry (matching pattern + name) and a conflict (matching
-    // pattern, different name).
+    // entry (matching pattern + name + generalized_pattern) and a
+    // conflict (matching pattern, different name). The
+    // generalized_pattern values match what `PatternGeneralizer::
+    // generalize()` produces for the corresponding pattern so the
+    // YAML round-trip diff classifies the rows correctly.
     MerchantAlias::create([
         'user_id' => $this->user->id,
         'pattern' => 'SHELL-PATTERN',
-        'generalized_pattern' => 'shell',
+        'generalized_pattern' => 'shell-pattern',
         'friendly_name' => 'Shell',
     ]);
     MerchantAlias::create([
         'user_id' => $this->user->id,
         'pattern' => 'AH-PATTERN',
-        'generalized_pattern' => 'albert heijn',
+        'generalized_pattern' => 'ah-pattern',
         'friendly_name' => 'Albert Heijn original',
     ]);
 });
