@@ -59,8 +59,8 @@ final class CorpusLoader
 
         $entries = [];
 
-        $bundledPath = $this->resolvePath((string) $this->config->get('community.corpus.bundled_path', ''));
-        $heuristicsPath = $this->resolvePath((string) $this->config->get('community.corpus.heuristics_path', ''));
+        $bundledPath = $this->resolvePath($this->stringConfig('community.corpus.bundled_path'));
+        $heuristicsPath = $this->resolvePath($this->stringConfig('community.corpus.heuristics_path'));
 
         foreach ([$bundledPath, $heuristicsPath] as $path) {
             if ($path === '') {
@@ -124,7 +124,6 @@ final class CorpusLoader
     }
 
     /**
-     * @param  mixed  $raw
      * @param  array<string, true>  $validCategories
      */
     private function buildEntry(mixed $raw, array $validCategories): ?CorpusEntryDto
@@ -226,12 +225,24 @@ final class CorpusLoader
         if (str_starts_with($configured, '/') || preg_match('#^[A-Za-z]:[\\\\/]#', $configured) === 1) {
             return $configured;
         }
-        $root = (string) $this->config->get('community.app_root', '');
+        $root = $this->stringConfig('community.app_root');
         if ($root === '') {
             // Fall back to four-up from this file (Modules/Community/Internal/Corpus → repo root).
             $root = dirname(__DIR__, 4);
         }
 
         return rtrim($root, '/').'/'.$configured;
+    }
+
+    /**
+     * Narrow a config value to a string. The repository contract returns
+     * `mixed`; this helper centralises the type narrowing so the caller
+     * sites stay free of unsafe casts.
+     */
+    private function stringConfig(string $key): string
+    {
+        $value = $this->config->get($key, '');
+
+        return is_string($value) ? $value : '';
     }
 }

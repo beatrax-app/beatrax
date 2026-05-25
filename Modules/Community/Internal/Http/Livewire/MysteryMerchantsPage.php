@@ -97,7 +97,9 @@ final class MysteryMerchantsPage extends Component
 
         // Sort by occurrence count desc + description asc for stability.
         uasort($grouped, static function (array $a, array $b): int {
-            return $b['count'] <=> $a['count'] ?: strcmp($a['description'], $b['description']);
+            $countOrder = $b['count'] <=> $a['count'];
+
+            return $countOrder !== 0 ? $countOrder : strcmp($a['description'], $b['description']);
         });
 
         $cards = array_slice(array_values($grouped), 0, self::CARD_LIMIT);
