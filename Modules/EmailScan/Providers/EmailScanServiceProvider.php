@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Providers;
 
+use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
@@ -20,6 +21,7 @@ use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Internal\Listeners\EmitOAuthReauthRequiredAlert;
+use Modules\EmailScan\Internal\Listeners\RaiseReconsentAlertOnTokenFailure;
 use Modules\EmailScan\Internal\LoopbackRedirectUri;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
@@ -27,6 +29,7 @@ use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
 use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
+use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\InboxesBadgeCount;
@@ -106,10 +109,19 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(IncrementalScanJob::class);
         $this->app->singleton(DiscoveryScanJob::class);
         $this->app->singleton(EmitOAuthReauthRequiredAlert::class);
+        $this->app->singleton(RaiseReconsentAlertOnTokenFailure::class);
     }
 
-    public function boot(LivewireManager $livewire): void
+    public function boot(LivewireManager $livewire, EventsDispatcher $events): void
     {
+        // Per-event listener wiring: a refreshed-token failure inside
+        // GmailApiClient / GraphApiClient raises InboxTokenFailed, which
+        // RaiseReconsentAlertOnTokenFailure picks up to write a single
+        // de-duped system_alerts row of kind oauth_reconsent_required.
+        // The SystemAlertsBanner then renders the row with a Reconnect
+        // link routing back through `/inboxes?reconnect={inbox_id}`.
+        $events->listen(InboxTokenFailed::class, RaiseReconsentAlertOnTokenFailure::class);
+
         if (is_dir(__DIR__.'/../Database/Migrations')) {
             $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         }
