@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sketch 002 — Wizard Shell</title>
+  <link rel="stylesheet" href="../themes/default.css">
+  <style>
+    /* ── Sketch-local primitives ─────────────────────────────────────── */
+    body { padding-top: 48px; min-height: 100vh; }
+
+    .variant { min-height: calc(100vh - 48px); }
+    .variant.hidden { display: none; }
+
+    /* Tab nav */
+    #variant-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+      background: var(--color-surface); border-bottom: 1px solid var(--color-border);
+      padding: 8px 16px; display: flex; gap: 4px;
+      font-family: var(--font-sans); font-size: var(--text-sm);
+    }
+    .variant-tab {
+      background: transparent; border: 1px solid transparent; color: var(--color-text-muted);
+      padding: 6px 12px; border-radius: var(--radius-md);
+      transition: var(--tx-quick);
+    }
+    .variant-tab:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .variant-tab.active { color: var(--color-text); background: var(--color-surface-2); border-color: var(--color-border); }
+
+    /* Floating tools */
+    #sketch-tools {
+      position: fixed; bottom: 12px; right: 12px; z-index: 9999;
+      font-family: system-ui; font-size: 12px;
+      background: rgba(0,0,0,0.72); color: white;
+      padding: 8px 12px; border-radius: var(--radius-md);
+      opacity: 0.4; transition: opacity 0.2s;
+      display: flex; gap: 10px; align-items: center;
+    }
+    #sketch-tools:hover { opacity: 1; }
+    #sketch-tools select, #sketch-tools button {
+      background: rgba(255,255,255,0.08); color: white; border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 4px; padding: 3px 8px; font: inherit;
+    }
+
+    /* Re-used inside variants */
+    .brand-row {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--color-text);
+    }
+    .brand-mark {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text-muted) 100%);
+      display: grid; place-items: center; color: var(--color-bg);
+      font-weight: 700; font-size: 13px;
+    }
+    .brand-name { font-weight: 600; letter-spacing: -0.01em; }
+
+    .privacy-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      background: var(--color-surface-2); border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      color: var(--color-text-muted); font-size: var(--text-xs);
+    }
+    .privacy-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-emerald); }
+
+    .btn {
+      font: inherit; font-size: var(--text-base); font-weight: 500;
+      padding: 11px 20px; border-radius: var(--radius-md);
+      border: 1px solid transparent; cursor: pointer;
+      transition: var(--tx-quick);
+    }
+    .btn-primary {
+      background: var(--color-primary); color: var(--color-primary-text);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .btn-ghost {
+      background: transparent; color: var(--color-text-muted);
+      border-color: transparent;
+    }
+    .btn-ghost:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .btn-outline {
+      background: var(--color-surface); color: var(--color-text);
+      border-color: var(--color-border);
+    }
+    .btn-outline:hover { border-color: var(--color-border-strong); }
+
+    .link-quiet {
+      color: var(--color-text-muted); text-decoration: underline;
+      text-decoration-color: var(--color-border); text-underline-offset: 3px;
+    }
+    .link-quiet:hover { color: var(--color-text); text-decoration-color: currentColor; }
+
+    /* Welcome content (re-used by every variant) */
+    .welcome-eyebrow {
+      font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--color-text-muted); margin: 0 0 12px 0;
+    }
+    .welcome-h1 {
+      font-size: var(--text-3xl); letter-spacing: -0.02em; line-height: 1.15;
+      margin: 0 0 16px 0; color: var(--color-text); font-weight: 600;
+    }
+    .welcome-lede {
+      font-size: var(--text-lg); line-height: 1.55;
+      color: var(--color-text-muted); margin: 0 0 24px 0;
+    }
+    .what-list {
+      list-style: none; padding: 0; margin: 0 0 32px 0;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .what-list li {
+      display: flex; gap: 12px; align-items: flex-start;
+      font-size: var(--text-base); color: var(--color-text);
+    }
+    .what-list .num {
+      flex: 0 0 22px; height: 22px; border-radius: var(--radius-full);
+      background: var(--color-surface-2); color: var(--color-text-muted);
+      display: grid; place-items: center; font-size: var(--text-xs); font-weight: 600;
+      margin-top: 1px;
+    }
+    .what-list .num.done { background: var(--color-emerald-bg); color: var(--color-emerald); }
+    .what-list .num.now { background: var(--color-primary); color: var(--color-primary-text); }
+
+    /* ──────────────────────────────────────────────────────────────────
+       VARIANT A — Centered card (Stripe/Plaid feel)
+       ────────────────────────────────────────────────────────────────── */
+    .va-page {
+      min-height: calc(100vh - 48px);
+      background: var(--color-bg-subtle);
+      display: flex; flex-direction: column;
+    }
+    .va-top {
+      padding: 24px 28px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .va-progress-dots {
+      display: flex; gap: 8px; align-items: center;
+      color: var(--color-text-muted); font-size: var(--text-xs);
+    }
+    .va-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--color-border);
+    }
+    .va-dot.done { background: var(--color-emerald); }
+    .va-dot.now { background: var(--color-primary); width: 24px; border-radius: 4px; }
+    .va-body {
+      flex: 1; display: grid; place-items: center; padding: 24px;
+    }
+    .va-card {
+      width: 100%; max-width: 520px;
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl); box-shadow: var(--shadow-md);
+      padding: 40px 40px 32px 40px;
+    }
+    .va-footer {
+      padding: 16px 28px 24px; display: flex; justify-content: space-between;
+      color: var(--color-text-faint); font-size: var(--text-xs);
+    }
+    .va-actions {
+      display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+      margin-top: 8px;
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       VARIANT D — Synthesis: A's chrome + wider card + C's emoji rows
+       ────────────────────────────────────────────────────────────────── */
+    .vd-card { max-width: 620px; padding: 44px 48px 32px; }
+    .vd-rows {
+      list-style: none; padding: 0; margin: 8px 0 0;
+      display: flex; flex-direction: column; gap: 22px;
+    }
+    .vd-rows li {
+      display: flex; gap: 18px; align-items: flex-start;
+    }
+    .vd-glyph {
+      flex: 0 0 44px; height: 44px;
+      display: grid; place-items: center;
+      font-size: 26px; line-height: 1;
+      background: var(--color-surface-2); border-radius: var(--radius-lg);
+    }
+    .vd-row-title { font-weight: 600; font-size: var(--text-md); line-height: 1.4; }
+    .vd-row-title .optional {
+      font-weight: 400; color: var(--color-text-faint);
+      font-size: var(--text-sm); margin-left: 6px;
+    }
+    .vd-row-desc {
+      color: var(--color-text-muted); font-size: var(--text-sm);
+      line-height: 1.55; margin-top: 2px;
+    }
+    .vd-divider {
+      height: 1px; background: var(--color-border);
+      margin: 32px 0 24px;
+    }
+    .vd-tagline {
+      color: var(--color-text-faint); font-size: var(--text-xs);
+      margin-bottom: 4px;
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       VARIANT B — Split: context (left) + step (right)
+       ────────────────────────────────────────────────────────────────── */
+    .vb-page {
+      min-height: calc(100vh - 48px);
+      display: grid; grid-template-columns: 5fr 7fr;
+      background: var(--color-bg);
+    }
+    .vb-left {
+      background: var(--color-bg-subtle);
+      border-right: 1px solid var(--color-border);
+      padding: 36px 40px; display: flex; flex-direction: column; gap: 24px;
+    }
+    .vb-side-title {
+      font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--color-text-muted);
+    }
+    .vb-stepper {
+      display: flex; flex-direction: column; gap: 2px;
+      border-left: 2px solid var(--color-border);
+      padding-left: 16px; margin-left: 6px;
+    }
+    .vb-stepper li {
+      list-style: none; position: relative;
+      padding: 10px 4px 10px 0;
+      color: var(--color-text-muted);
+      font-size: var(--text-base);
+    }
+    .vb-stepper li::before {
+      content: ''; position: absolute; left: -22px; top: 14px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--color-bg-subtle); border: 2px solid var(--color-border);
+    }
+    .vb-stepper li.done { color: var(--color-text); }
+    .vb-stepper li.done::before { background: var(--color-emerald); border-color: var(--color-emerald); }
+    .vb-stepper li.now {
+      color: var(--color-text); font-weight: 600;
+    }
+    .vb-stepper li.now::before { background: var(--color-primary); border-color: var(--color-primary); }
+    .vb-foot {
+      margin-top: auto; padding-top: 24px; border-top: 1px solid var(--color-border);
+      display: flex; flex-direction: column; gap: 10px;
+      color: var(--color-text-muted); font-size: var(--text-sm);
+    }
+    .vb-right {
+      padding: 56px 64px 40px;
+      display: flex; flex-direction: column;
+      max-width: 640px;
+    }
+    .vb-right .va-actions {
+      margin-top: 32px; justify-content: flex-start;
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       VARIANT C — Single column, generous whitespace (Notion feel)
+       ────────────────────────────────────────────────────────────────── */
+    .vc-page {
+      min-height: calc(100vh - 48px);
+      background: var(--color-bg);
+      display: flex; flex-direction: column;
+    }
+    .vc-topbar {
+      padding: 20px 32px; display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .vc-progress-bar {
+      position: relative; flex: 1; max-width: 360px; margin: 0 32px;
+      height: 4px; background: var(--color-surface-2); border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+    .vc-progress-bar::after {
+      content: ''; position: absolute; top: 0; left: 0; height: 100%;
+      width: 33%; background: var(--color-primary); border-radius: var(--radius-full);
+    }
+    .vc-progress-label {
+      color: var(--color-text-muted); font-size: var(--text-xs);
+      letter-spacing: 0.04em;
+    }
+    .vc-body {
+      flex: 1; padding: 80px 32px;
+      display: flex; justify-content: center;
+    }
+    .vc-inner {
+      width: 100%; max-width: 680px;
+    }
+    .vc-step-mark {
+      font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--color-text-muted); margin-bottom: 16px;
+    }
+    .vc-footer {
+      border-top: 1px solid var(--color-border);
+      padding: 16px 32px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--color-bg-subtle);
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       Small responsive nudges
+       ────────────────────────────────────────────────────────────────── */
+    @media (max-width: 760px) {
+      .vb-page { grid-template-columns: 1fr; }
+      .vb-left { border-right: none; border-bottom: 1px solid var(--color-border); }
+      .vb-right { padding: 32px 24px; }
+      .vc-body { padding: 32px 20px; }
+      .va-card { padding: 28px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab" data-v="a" onclick="showVariant('a')">A — Centered card</button>
+  <button class="variant-tab" data-v="b" onclick="showVariant('b')">B — Split context + form</button>
+  <button class="variant-tab" data-v="c" onclick="showVariant('c')">C — Single column, calm</button>
+  <button class="variant-tab active" data-v="d" onclick="showVariant('d')">D — Wide card + emoji rows ★</button>
+  <span style="flex:1"></span>
+  <span style="color:var(--color-text-faint);font-size:var(--text-xs);align-self:center;">Sketch 002 — wizard shell + welcome</span>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     VARIANT A — Centered card
+     ───────────────────────────────────────────────────────────────────── -->
+<section id="variant-a" class="variant hidden">
+  <div class="va-page">
+
+    <header class="va-top">
+      <div class="brand-row">
+        <div class="brand-mark">d</div>
+        <div class="brand-name">diederik</div>
+      </div>
+      <div class="va-progress-dots" aria-label="Setup progress, step 2 of 6">
+        <span class="va-dot done"></span>
+        <span class="va-dot now"></span>
+        <span class="va-dot"></span>
+        <span class="va-dot"></span>
+        <span class="va-dot"></span>
+        <span class="va-dot"></span>
+        <span style="margin-left:8px;">Step 2 of 6</span>
+      </div>
+      <button class="btn btn-ghost" style="font-size:var(--text-sm);padding:6px 10px;">Resume later →</button>
+    </header>
+
+    <main class="va-body">
+      <article class="va-card">
+        <p class="welcome-eyebrow">Welcome</p>
+        <h1 class="welcome-h1">Let's set up your finances picture</h1>
+        <p class="welcome-lede">
+          Five quick steps. We'll connect your bank, your credit card, and
+          (optionally) your email — then show you a calm dashboard of where
+          your money actually goes.
+        </p>
+
+        <ul class="what-list">
+          <li>
+            <span class="num done">✓</span>
+            <div><strong>Account ready</strong><br>
+              <span style="color:var(--color-text-muted);font-size:var(--text-sm);">You signed up a moment ago.</span>
+            </div>
+          </li>
+          <li>
+            <span class="num now">2</span>
+            <div><strong>Tell us what to expect</strong><br>
+              <span style="color:var(--color-text-muted);font-size:var(--text-sm);">A two-minute tour of what we'll set up.</span>
+            </div>
+          </li>
+          <li>
+            <span class="num">3</span>
+            <div>Connect your bank (ASN)</div>
+          </li>
+          <li>
+            <span class="num">4</span>
+            <div>Connect your credit card (ICS)</div>
+          </li>
+          <li>
+            <span class="num">5</span>
+            <div>Email scanning <em style="color:var(--color-text-faint);">— optional</em></div>
+          </li>
+          <li>
+            <span class="num">6</span>
+            <div>Review your first import</div>
+          </li>
+        </ul>
+
+        <div class="va-actions">
+          <button class="btn btn-ghost">Skip this step</button>
+          <button class="btn btn-primary">Continue →</button>
+        </div>
+      </article>
+    </main>
+
+    <footer class="va-footer">
+      <span class="privacy-pill"><span class="dot"></span> Your data stays on this computer</span>
+      <a href="#" class="link-quiet">Need help?</a>
+    </footer>
+
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     VARIANT B — Split context + form
+     ───────────────────────────────────────────────────────────────────── -->
+<section id="variant-b" class="variant hidden">
+  <div class="vb-page">
+
+    <aside class="vb-left">
+      <div class="brand-row">
+        <div class="brand-mark">d</div>
+        <div class="brand-name">diederik</div>
+      </div>
+
+      <div>
+        <div class="vb-side-title">Setup · about 5 min</div>
+        <ol class="vb-stepper">
+          <li class="done">Create your account</li>
+          <li class="now">Welcome &amp; tour</li>
+          <li>Connect your bank</li>
+          <li>Connect your credit card</li>
+          <li>Email scanning · optional</li>
+          <li>First import preview</li>
+        </ol>
+      </div>
+
+      <div class="vb-foot">
+        <span class="privacy-pill"><span class="dot"></span> Your data never leaves this Mac</span>
+        <span>diederik 1.0.0 · <a href="#" class="link-quiet">Need help?</a></span>
+      </div>
+    </aside>
+
+    <main class="vb-right">
+      <p class="welcome-eyebrow">Step 2 of 6 · Welcome</p>
+      <h1 class="welcome-h1">A calmer view of your money</h1>
+      <p class="welcome-lede">
+        diederik pulls together your bank statements, credit-card statements,
+        PayPal, and (if you want) your receipts from email — and shows you
+        the real picture of where your money goes each month.
+      </p>
+      <p class="welcome-lede" style="margin-top:0;">
+        Everything stays on this computer. No cloud, no signup with us,
+        no accountant looking over your shoulder.
+      </p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:8px 0 0;">
+        <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:16px;background:var(--color-surface);">
+          <div style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:6px;">What you'll need</div>
+          <ul style="margin:0;padding-left:18px;font-size:var(--text-sm);line-height:1.7;">
+            <li>Your bank login (mijn.asnbank.nl)</li>
+            <li>Your ICS Cards PDF statement</li>
+            <li>~5 minutes</li>
+          </ul>
+        </div>
+        <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:16px;background:var(--color-surface);">
+          <div style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:6px;">What we don't need</div>
+          <ul style="margin:0;padding-left:18px;font-size:var(--text-sm);line-height:1.7;">
+            <li>Your card numbers</li>
+            <li>Cloud access to your inbox</li>
+            <li>Anything stored online</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="va-actions">
+        <button class="btn btn-primary">Continue →</button>
+        <button class="btn btn-ghost">Skip the tour</button>
+      </div>
+    </main>
+
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     VARIANT C — Single column, calm whitespace
+     ───────────────────────────────────────────────────────────────────── -->
+<section id="variant-c" class="variant hidden">
+  <div class="vc-page">
+
+    <header class="vc-topbar">
+      <div class="brand-row">
+        <div class="brand-mark">d</div>
+        <div class="brand-name">diederik</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;flex:1;justify-content:center;">
+        <span class="vc-progress-label">Step 2 of 6</span>
+        <div class="vc-progress-bar" aria-label="33% complete"></div>
+      </div>
+      <button class="btn btn-ghost" style="font-size:var(--text-sm);padding:6px 10px;">Resume later</button>
+    </header>
+
+    <main class="vc-body">
+      <div class="vc-inner">
+        <p class="vc-step-mark">Welcome</p>
+        <h1 class="welcome-h1" style="font-size:var(--text-3xl);">
+          Let's get diederik to know your money.
+        </h1>
+        <p class="welcome-lede">
+          Over the next ~5 minutes we'll connect your accounts so diederik
+          can show you a calm monthly picture instead of you piecing it
+          together from statements. Nothing leaves this computer — your
+          banking lives on your Mac, not on someone's server.
+        </p>
+
+        <div style="display:flex;flex-direction:column;gap:18px;margin:32px 0;">
+          <div style="display:flex;gap:14px;align-items:flex-start;">
+            <span style="font-size:22px;">🏦</span>
+            <div>
+              <div style="font-weight:600;">Your bank (ASN)</div>
+              <div style="color:var(--color-text-muted);font-size:var(--text-sm);">
+                Upload your monthly statement — we'll walk you through where to find it.
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:flex-start;">
+            <span style="font-size:22px;">💳</span>
+            <div>
+              <div style="font-weight:600;">Your credit card (ICS)</div>
+              <div style="color:var(--color-text-muted);font-size:var(--text-sm);">
+                The monthly PDF from Mijn ICS, same drop-and-done flow.
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:flex-start;">
+            <span style="font-size:22px;">✉️</span>
+            <div>
+              <div style="font-weight:600;">Receipts from email <span style="font-weight:400;color:var(--color-text-faint);">— optional</span></div>
+              <div style="color:var(--color-text-muted);font-size:var(--text-sm);">
+                We can scan only PayPal &amp; Google Play receipts. You can skip and add later.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p style="color:var(--color-text-faint);font-size:var(--text-sm);">
+          You can always re-run setup from <em>Settings → First-run tour</em>.
+        </p>
+      </div>
+    </main>
+
+    <footer class="vc-footer">
+      <span class="privacy-pill"><span class="dot"></span> Local-only · stored on this Mac</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-ghost">Skip this step</button>
+        <button class="btn btn-primary">Let's go →</button>
+      </div>
+    </footer>
+
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     VARIANT D — A's chrome + wider card + C's emoji rows (synthesis)
+     ───────────────────────────────────────────────────────────────────── -->
+<section id="variant-d" class="variant">
+  <div class="va-page">
+
+    <header class="va-top">
+      <div class="brand-row">
+        <div class="brand-mark">d</div>
+        <div class="brand-name">diederik</div>
+      </div>
+      <div class="va-progress-dots" aria-label="Setup progress, step 2 of 6">
+        <span class="va-dot done"></span>
+        <span class="va-dot now"></span>
+        <span class="va-dot"></span>
+        <span class="va-dot"></span>
+        <span class="va-dot"></span>
+        <span class="va-dot"></span>
+        <span style="margin-left:8px;">Step 2 of 6</span>
+      </div>
+      <button class="btn btn-ghost" style="font-size:var(--text-sm);padding:6px 10px;">Resume later →</button>
+    </header>
+
+    <main class="va-body">
+      <article class="va-card vd-card">
+        <p class="welcome-eyebrow">Welcome</p>
+        <h1 class="welcome-h1">Let's get diederik to know your money.</h1>
+        <p class="welcome-lede">
+          About five minutes from now you'll have a calm monthly picture
+          of where your money goes — instead of you piecing it together
+          from statements. Nothing leaves this computer.
+        </p>
+
+        <p class="vd-tagline">Here's what we'll set up:</p>
+        <ul class="vd-rows">
+          <li>
+            <span class="vd-glyph">🏦</span>
+            <div>
+              <div class="vd-row-title">Your bank (ASN)</div>
+              <div class="vd-row-desc">
+                Upload your monthly statement — we'll walk you through
+                exactly where to find it in your online banking.
+              </div>
+            </div>
+          </li>
+          <li>
+            <span class="vd-glyph">💳</span>
+            <div>
+              <div class="vd-row-title">Your credit card (ICS)</div>
+              <div class="vd-row-desc">
+                Drop in the monthly PDF from Mijn ICS. Same simple flow.
+              </div>
+            </div>
+          </li>
+          <li>
+            <span class="vd-glyph">✉️</span>
+            <div>
+              <div class="vd-row-title">Receipts from email<span class="optional">— optional</span></div>
+              <div class="vd-row-desc">
+                We can scan only PayPal &amp; Google Play receipts.
+                Skip now if you'd like — you can always add it from Settings.
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <div class="vd-divider"></div>
+
+        <div class="va-actions">
+          <button class="btn btn-ghost">Skip this step</button>
+          <button class="btn btn-primary">Let's go →</button>
+        </div>
+      </article>
+    </main>
+
+    <footer class="va-footer">
+      <span class="privacy-pill"><span class="dot"></span> Your data stays on this computer</span>
+      <a href="#" class="link-quiet">Need help?</a>
+    </footer>
+
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     Floating sketch tools
+     ───────────────────────────────────────────────────────────────────── -->
+<div id="sketch-tools">
+  <label>Theme
+    <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+      <option value="default">default</option>
+    </select>
+  </label>
+  <label>Mode
+    <select id="mode-switcher" onchange="toggleMode(this.value)">
+      <option value="light">light</option>
+      <option value="dark">dark</option>
+    </select>
+  </label>
+  <button onclick="cycleViewport()">📱 vw</button>
+  <span id="vw-label" style="color:#aaa;font-size:11px;">full</span>
+</div>
+
+<script>
+  function showVariant(v) {
+    document.querySelectorAll('.variant').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.variant-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('variant-' + v).classList.remove('hidden');
+    document.querySelector('.variant-tab[data-v="' + v + '"]').classList.add('active');
+  }
+
+  function toggleMode(mode) {
+    if (mode === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  }
+
+  // Viewport cycler: full → 1280 → 768 → 375 → full
+  const widths = [null, '1280px', '768px', '375px'];
+  const labels = ['full', '1280', '768', '375'];
+  let vwIdx = 0;
+  function cycleViewport() {
+    vwIdx = (vwIdx + 1) % widths.length;
+    const w = widths[vwIdx];
+    document.querySelectorAll('.variant').forEach(el => {
+      if (w) { el.style.maxWidth = w; el.style.margin = '0 auto'; el.style.border = '1px dashed var(--color-border)'; }
+      else { el.style.maxWidth = ''; el.style.margin = ''; el.style.border = ''; }
+    });
+    document.getElementById('vw-label').textContent = labels[vwIdx];
+  }
+</script>
+
+</body>
+</html>
