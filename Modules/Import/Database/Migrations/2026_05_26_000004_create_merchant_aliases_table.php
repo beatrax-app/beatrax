@@ -26,9 +26,8 @@ use Illuminate\Database\Schema\Builder;
  *
  * `merged_from` is a nullable JSON array of `{id, pattern,
  * friendly_name}` triples preserving provenance after a bulk-merge in
- * Settings → Aliases (D-23). The composite UNIQUE on
- * (user_id, pattern) blocks duplicate-pattern rows for the same user
- * at the DB layer.
+ * Settings → Aliases. The composite UNIQUE on (user_id, pattern)
+ * blocks duplicate-pattern rows for the same user at the DB layer.
  */
 return new class extends Migration
 {

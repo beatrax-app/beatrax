@@ -244,10 +244,11 @@ final class AliasesSettingsPage extends Component
      * accepted (debounced) update of the inline-edit input.
      *
      * The 400ms debounce + 500-row scan cap together bound the cost of
-     * the live preview (Pitfall 5 in research/RESEARCH.md). Patterns
-     * shorter than three characters are short-circuited at the DTO
-     * layer (`withoutMatches(...)`) so the side pane shows a calm
-     * explanatory line instead of running a near-unbounded match.
+     * the live preview so a noisy keystroke stream cannot launch a
+     * near-unbounded LIKE-style scan against the user's history.
+     * Patterns shorter than three characters are short-circuited at
+     * the DTO layer (`withoutMatches(...)`) so the side pane shows a
+     * calm explanatory line instead of running the scan at all.
      */
     public function updatedEditingPattern(AliasMatchPreviewQuery $previewQuery, CurrentUser $currentUser): void
     {

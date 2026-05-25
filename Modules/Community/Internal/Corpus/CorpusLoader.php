@@ -39,7 +39,7 @@ use Throwable;
  * symfony/yaml is invoked with `PARSE_EXCEPTION_ON_INVALID_TYPE` so a
  * YAML body that embeds PHP-object or other native-tag values raises
  * a parse exception rather than silently instantiating arbitrary
- * objects (ASVS V10 / T-16.1-05-01 in the threat model).
+ * objects (ASVS V10 — defends against the YAML deserialization threat).
  */
 final class CorpusLoader
 {

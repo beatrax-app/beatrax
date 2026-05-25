@@ -9,11 +9,10 @@ use Modules\Onboarding\Internal\Http\Livewire\SetupWizard;
  * Onboarding module routes — the first-run setup wizard's surface.
  *
  * URL: `/setup-wizard` (avoids the URL collision with the Desktop
- * module's `/setup` migration splash from Phase 15, which already
- * binds the literal `/setup` URI to `desktop.setup`). The route
- * NAME stays `setup` so the post-signup redirect target + the
- * Settings → First-run tour link can call `route('setup')`
- * symbolically.
+ * module's `/setup` migration splash, which already binds the literal
+ * `/setup` URI to `desktop.setup`). The route NAME stays `setup` so
+ * the post-signup redirect target + the Settings → First-run tour
+ * link can call `route('setup')` symbolically.
  *
  * Auth-gated — the user is already signed up via the SignupAction
  * redirect chain when they reach this URL.

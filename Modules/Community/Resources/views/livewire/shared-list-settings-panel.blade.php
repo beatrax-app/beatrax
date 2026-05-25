@@ -3,9 +3,9 @@
      Two-column 280px + 1fr grid (collapses to a single column on
      narrow viewports). The meta-side renders the "About the shared
      list" headline + stats; the body-side renders three toggle rows.
-     Toggle 3 ships disabled with a version-agnostic inline note (per
-     B-5: no invented release number; the phase note flips to
-     active state when Phase 18's auto-update plumbing lands). --}}
+     Toggle 3 ships disabled with a version-agnostic inline note —
+     no invented release number; the note flips to an active state
+     when the auto-update plumbing lands. --}}
 
 <div class="settings-section grid grid-cols-1 gap-6 border-b border-slate-200 py-6 md:grid-cols-[280px_1fr] dark:border-slate-700">
     <aside class="meta-side rounded-md bg-slate-50 px-5 py-5 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300">
