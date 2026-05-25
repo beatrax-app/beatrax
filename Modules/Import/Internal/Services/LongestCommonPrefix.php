@@ -46,6 +46,13 @@ final class LongestCommonPrefix
      * Returns the lower-cased, trimmed longest common prefix of
      * `$patterns`, or the empty string when no safe prefix exists.
      *
+     * Inputs may be mixed-case or pre-lowercased; the result is
+     * always lowercase to match `PatternGeneralizer::generalize()`'s
+     * output convention. Most callers feed already-generalized
+     * patterns (so the case-fold is a no-op) but the helper performs
+     * its own casefold so an upstream variant that bypasses the
+     * generalizer still gets a deterministic, case-insensitive prefix.
+     *
      * @param  list<string>  $patterns
      *
      * @throws InvalidArgumentException when `$patterns` carries fewer
