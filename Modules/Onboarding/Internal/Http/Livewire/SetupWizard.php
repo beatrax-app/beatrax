@@ -17,6 +17,7 @@ use Modules\Onboarding\Internal\Services\ResumeStepResolver;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 use Modules\Onboarding\Public\Services\WizardProgressQuery;
+use Psr\Log\LoggerInterface;
 
 /**
  * Parent Livewire component for the first-run setup wizard. Owns the
@@ -100,6 +101,7 @@ final class SetupWizard extends Component
         DatabaseManager $db,
         Request $request,
         Clock $clock,
+        LoggerInterface $logger,
     ): mixed {
         $user = $currentUser->user();
 
@@ -109,6 +111,22 @@ final class SetupWizard extends Component
         $initializer->initialize($user->id);
 
         if ($request->boolean('force')) {
+            // Log a `force=1` hit when no row was in-progress — i.e.
+            // the user is resetting a wizard they had not yet started.
+            // The reset itself stays a no-op-equivalent (all rows are
+            // pending already) but the log line surfaces tampered or
+            // bookmarked URLs that have no functional effect.
+            $hadInProgress = (bool) $db->connection()
+                ->table('wizard_progress')
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['in_progress', 'done', 'skipped'])
+                ->exists();
+            if (! $hadInProgress) {
+                $logger->info('SetupWizard: ?force=1 hit while no wizard step had progressed.', [
+                    'user_id' => $user->id,
+                ]);
+            }
+
             $db->connection()
                 ->table('wizard_progress')
                 ->where('user_id', $user->id)
