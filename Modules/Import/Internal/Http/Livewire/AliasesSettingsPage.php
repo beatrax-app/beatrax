@@ -155,10 +155,18 @@ final class AliasesSettingsPage extends Component
     public ?TemporaryUploadedFile $importFile = null;
 
     /**
-     * Diff payload of the most recent YAML upload. Keys: `new`,
-     * `unchanged`, `conflicts`. Empty array outside an active import.
+     * Diff payload of the most recent YAML upload — stored as a
+     * primitive-only array shape so Livewire's wire payload
+     * round-tripping survives. Empty array outside an active import.
      *
-     * @var array{new?: list<CorpusEntryDto>, unchanged?: list<CorpusEntryDto>, conflicts?: list<array{entry: CorpusEntryDto, existing_name: string}>}
+     * Shape (each `entry` is the CorpusEntryDto flattened into a
+     * primitive-only mapping that `confirmImport` rehydrates):
+     *
+     *   new:        list<array{pattern,generalized_pattern,name,category,region,contributor}>
+     *   unchanged:  list<array{pattern,generalized_pattern,name,category,region,contributor}>
+     *   conflicts:  list<array{entry: array{...}, existing_name: string}>
+     *
+     * @var array{new?: list<array<string, mixed>>, unchanged?: list<array<string, mixed>>, conflicts?: list<array{entry: array<string, mixed>, existing_name: string}>}
      */
     public array $importDiff = [];
 
@@ -371,7 +379,14 @@ final class AliasesSettingsPage extends Component
             ->get(['id', 'generalized_pattern', 'friendly_name']);
 
         if ($rows->count() !== count($uniqueIds)) {
-            throw new NotFoundHttpException('One or more selected aliases were not found.');
+            // Cross-user / stale id surface — calm flash, no modal,
+            // clear the selection so the user can pick rows again.
+            // The structural guard is the user_id clause; the flash
+            // is only the UI affordance.
+            $this->selectedIds = [];
+            $this->flashMessage = 'One or more selected aliases were not found.';
+
+            return;
         }
 
         $patterns = [];
@@ -411,10 +426,10 @@ final class AliasesSettingsPage extends Component
 
     /**
      * Commits the bulk-merge via MergeMerchantAliases. On failure
-     * (cross-user id, validation error) the dialog clears + a flash
-     * surfaces the cause without crashing the page. Cross-user
-     * attempts re-throw NotFoundHttpException so the surface stays
-     * 404-not-403.
+     * (cross-user id, validation error) the dialog clears + a calm
+     * flash surfaces the cause without crashing the page. The
+     * structural ownership guard is the action's user-scoped row
+     * loader; the flash is only the UI surface.
      */
     public function confirmMerge(MergeMerchantAliases $merge, CurrentUser $currentUser, LoggerInterface $logger): void
     {
@@ -433,8 +448,9 @@ final class AliasesSettingsPage extends Component
         } catch (NotFoundHttpException) {
             $this->showMergeModal = false;
             $this->selectedIds = [];
-            $this->flashMessage = 'One or more aliases were not found.';
-            throw new NotFoundHttpException('One or more aliases were not found.');
+            $this->flashMessage = 'One or more aliases were not found (they may have been deleted in another tab).';
+
+            return;
         } catch (Throwable $e) {
             $logger->error('AliasesSettingsPage: bulk-merge failed.', [
                 'exception_class' => $e::class,
@@ -510,7 +526,21 @@ final class AliasesSettingsPage extends Component
         }
 
         $diff = $importer->diff($currentUser->user(), $entries);
-        $this->importDiff = $diff;
+
+        // Flatten the CorpusEntryDto instances into primitive-only
+        // arrays so Livewire's wire payload synthesizer can round-trip
+        // the property without a custom synth.
+        $this->importDiff = [
+            'new' => array_map([$this, 'flattenEntry'], $diff['new']),
+            'unchanged' => array_map([$this, 'flattenEntry'], $diff['unchanged']),
+            'conflicts' => array_map(
+                fn (array $conflict): array => [
+                    'entry' => $this->flattenEntry($conflict['entry']),
+                    'existing_name' => $conflict['existing_name'],
+                ],
+                $diff['conflicts'],
+            ),
+        ];
 
         $resolutions = [];
         foreach ($diff['conflicts'] as $conflict) {
@@ -520,25 +550,55 @@ final class AliasesSettingsPage extends Component
     }
 
     /**
+     * Flattens a CorpusEntryDto into a primitive-only array so the
+     * importDiff property survives Livewire's wire round-trip.
+     *
+     * @return array{pattern: string, generalized_pattern: string, name: string, category: ?string, region: ?string, contributor: string}
+     */
+    private function flattenEntry(CorpusEntryDto $entry): array
+    {
+        return [
+            'pattern' => $entry->pattern,
+            'generalized_pattern' => $entry->generalizedPattern,
+            'name' => $entry->name,
+            'category' => $entry->category,
+            'region' => $entry->region,
+            'contributor' => $entry->contributor,
+        ];
+    }
+
+    /**
      * Commits the diffed entries to the user's `merchant_aliases`
      * table — both the new rows and the conflict rows whose resolution
      * the user set to 'replace'. Clears the import state.
      */
     public function confirmImport(AliasYamlImporter $importer, CurrentUser $currentUser): void
     {
-        $entries = array_merge(
-            $this->importDiff['new'] ?? [],
-            array_map(
-                static fn (array $conflict): CorpusEntryDto => $conflict['entry'],
-                $this->importDiff['conflicts'] ?? [],
-            ),
+        $newFlat = $this->importDiff['new'] ?? [];
+        $conflictFlat = array_map(
+            static fn (array $conflict): array => $conflict['entry'],
+            $this->importDiff['conflicts'] ?? [],
         );
-        if ($entries === []) {
+
+        $flatEntries = array_merge($newFlat, $conflictFlat);
+        if ($flatEntries === []) {
             $this->flashMessage = 'Nothing to import.';
             $this->resetImportState();
 
             return;
         }
+
+        $entries = array_map(
+            static fn (array $flat): CorpusEntryDto => new CorpusEntryDto(
+                pattern: is_string($flat['pattern'] ?? null) ? $flat['pattern'] : '',
+                generalizedPattern: is_string($flat['generalized_pattern'] ?? null) ? $flat['generalized_pattern'] : '',
+                name: is_string($flat['name'] ?? null) ? $flat['name'] : '',
+                category: isset($flat['category']) && is_string($flat['category']) ? $flat['category'] : null,
+                region: isset($flat['region']) && is_string($flat['region']) ? $flat['region'] : null,
+                contributor: is_string($flat['contributor'] ?? null) ? $flat['contributor'] : 'user',
+            ),
+            $flatEntries,
+        );
 
         $changed = $importer->apply($currentUser->user(), $entries, $this->conflictResolutions);
         $this->flashMessage = sprintf('Imported %d aliases.', $changed);

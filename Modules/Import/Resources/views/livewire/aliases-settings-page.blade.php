@@ -193,13 +193,13 @@
                                 <div class="space-y-2">
                                     <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Conflicts</p>
                                     @foreach ($importDiff['conflicts'] as $conflict)
-                                        <div class="flex items-center justify-between gap-3" wire:key="conflict-{{ $conflict['entry']->pattern }}">
+                                        <div class="flex items-center justify-between gap-3" wire:key="conflict-{{ $conflict['entry']['pattern'] }}">
                                             <div class="text-xs">
-                                                <span class="font-mono text-slate-900 dark:text-slate-100">{{ $conflict['entry']->pattern }}</span>
-                                                <span class="ml-2 text-slate-500">existing: {{ $conflict['existing_name'] }} → file: {{ $conflict['entry']->name }}</span>
+                                                <span class="font-mono text-slate-900 dark:text-slate-100">{{ $conflict['entry']['pattern'] }}</span>
+                                                <span class="ml-2 text-slate-500">existing: {{ $conflict['existing_name'] }} → file: {{ $conflict['entry']['name'] }}</span>
                                             </div>
                                             <select
-                                                wire:model="conflictResolutions.{{ $conflict['entry']->pattern }}"
+                                                wire:model="conflictResolutions.{{ $conflict['entry']['pattern'] }}"
                                                 class="rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:bg-slate-900 dark:border-slate-700"
                                             >
                                                 <option value="keep">Keep yours</option>
