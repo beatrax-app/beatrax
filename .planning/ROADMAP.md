@@ -254,6 +254,25 @@ Plans:
 
 - [x] 16.1-07-PLAN.md — Settings → Aliases power-user surface: AliasesSettingsPage + LongestCommonPrefix + MergeMerchantAliases (merged_from provenance) + AliasYamlExporter + AliasYamlImporter (PARSE_EXCEPTION_ON_INVALID_TYPE) + live debounced Test-against-my-transactions preview + bulk merge + YAML import diff/confirm
 
+### Phase 16.1.1: Starting balance setup + bank-format-driven wizard copy + ICS PDF preview fix + Dev Mode artisan popover fix + app-chrome brand logo (UAT close-out from phase 16.1) (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 16.1
+**Plans:** 10 plans
+
+Plans:
+- [ ] 16.1.1-01-PLAN.md — Brand logo + supporting CSS (G5)
+- [ ] 16.1.1-02-PLAN.md — OAuth modal global mount in both authenticated layouts (G6)
+- [ ] 16.1.1-03-PLAN.md — Dev Mode artisan popover reproduce-and-fix (G2)
+- [ ] 16.1.1-04-PLAN.md — ICS PDF preview reproduce-and-fix (G4)
+- [ ] 16.1.1-05-PLAN.md — Starting-balance schema + backfill + Account fillable (G1 schema half)
+- [ ] 16.1.1-05b-PLAN.md — Tagged starting-balance detectors + aggregator query with D-04 conflict resolution (G1 detection half)
+- [ ] 16.1.1-06-PLAN.md — Format-first wizard copy + multi-file ICS upload + ImportRun stash plumbing (G3 + G8)
+- [ ] 16.1.1-07-PLAN.md — Consolidated preview query + DTOs + ConfirmImport.dispatchChain flag (G7 query/contract surface)
+- [ ] 16.1.1-07b-PLAN.md — StartingBalanceCard + consolidated-preview-section + FirstImportStep rewrite + commit-everything (G1 + G7 + G9 UI/commit surface)
+- [ ] 16.1.1-08-PLAN.md — ROADMAP.md title + goal update (D-22)
+
 ### Phase 17: CI/CD Pipeline + Code Signing
 
 **Goal**: Every PR runs the full quality gate (Larastan L10 strict + Pint + Pest) on both PHP 8.4 and 8.5 axes via `.github/workflows/ci.yml`; pushing a `v*` tag triggers `.github/workflows/release.yml` which builds + signs + notarizes installers on macOS 14 + Windows 2025 + Ubuntu 24.04 runners and publishes them as GitHub Release assets via `softprops/action-gh-release v2`.
