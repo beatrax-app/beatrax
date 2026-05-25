@@ -1,0 +1,19 @@
+entries:
+  -
+    pattern: 'BCK*SHELL PIETER NIEUW *0123'
+    name: 'Shell Pieter'
+    category: null
+    region: null
+    contributor: user
+  -
+    pattern: 'ALBERT HEIJN 1245 T07438'
+    name: 'Albert Heijn'
+    category: null
+    region: null
+    contributor: user
+  -
+    pattern: 'SPOTIFY P0H8ABC'
+    name: Spotify
+    category: null
+    region: null
+    contributor: user
