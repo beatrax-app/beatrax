@@ -164,9 +164,9 @@ final class AliasesSettingsPage extends Component
      *
      *   new:        list<array{pattern,generalized_pattern,name,category,region,contributor}>
      *   unchanged:  list<array{pattern,generalized_pattern,name,category,region,contributor}>
-     *   conflicts:  list<array{entry: array{...}, existing_name: string}>
+     *   conflicts:  list<array{entry: array{...}, existing_name: string, existing_generalized_pattern: string}>
      *
-     * @var array{new?: list<array<string, mixed>>, unchanged?: list<array<string, mixed>>, conflicts?: list<array{entry: array<string, mixed>, existing_name: string}>}
+     * @var array{new?: list<array<string, mixed>>, unchanged?: list<array<string, mixed>>, conflicts?: list<array{entry: array<string, mixed>, existing_name: string, existing_generalized_pattern: string}>}
      */
     public array $importDiff = [];
 
@@ -538,6 +538,7 @@ final class AliasesSettingsPage extends Component
                 fn (array $conflict): array => [
                     'entry' => $this->flattenEntry($conflict['entry']),
                     'existing_name' => $conflict['existing_name'],
+                    'existing_generalized_pattern' => $conflict['existing_generalized_pattern'],
                 ],
                 $diff['conflicts'],
             ),

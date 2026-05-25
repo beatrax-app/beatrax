@@ -193,10 +193,15 @@
                                 <div class="space-y-2">
                                     <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Conflicts</p>
                                     @foreach ($importDiff['conflicts'] as $conflict)
-                                        <div class="flex items-center justify-between gap-3" wire:key="conflict-{{ $conflict['entry']['pattern'] }}">
-                                            <div class="text-xs">
+                                        <div class="flex items-start justify-between gap-3" wire:key="conflict-{{ $conflict['entry']['pattern'] }}">
+                                            <div class="text-xs space-y-1">
                                                 <span class="font-mono text-slate-900 dark:text-slate-100">{{ $conflict['entry']['pattern'] }}</span>
-                                                <span class="ml-2 text-slate-500">existing: {{ $conflict['existing_name'] }} → file: {{ $conflict['entry']['name'] }}</span>
+                                                @if ($conflict['existing_name'] !== $conflict['entry']['name'])
+                                                    <div class="text-slate-500">name — existing: {{ $conflict['existing_name'] }} → file: {{ $conflict['entry']['name'] }}</div>
+                                                @endif
+                                                @if (($conflict['existing_generalized_pattern'] ?? '') !== $conflict['entry']['generalized_pattern'])
+                                                    <div class="text-slate-500">pattern — existing: <span class="font-mono">{{ $conflict['existing_generalized_pattern'] ?? '' }}</span> → file: <span class="font-mono">{{ $conflict['entry']['generalized_pattern'] }}</span></div>
+                                                @endif
                                             </div>
                                             <select
                                                 wire:model="conflictResolutions.{{ $conflict['entry']['pattern'] }}"
