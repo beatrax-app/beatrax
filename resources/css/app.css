@@ -1075,4 +1075,64 @@ td.date,
         color: var(--color-emerald);
         font-variant-numeric: tabular-nums;
     }
+
+    /*
+     * Italic-fallback counterparty span (sketch 004D verbatim). The
+     * italic raw-description text IS the click target — no pencil
+     * button. Hover surfaces a faint pencil glyph via the ::after
+     * pseudo-element so the affordance reads as "this is editable"
+     * without adding a verb-shaped button next to every row.
+     *
+     * Pointer / focus-visible affordances make the surface keyboard-
+     * reachable: the span carries `tabindex=0` from the partial, the
+     * focus ring uses the same emerald token as the rest of the calm
+     * UI primitives, and the hover background reads as "this is a
+     * click target" without inviting a heavy click verb.
+     */
+    .desc-fallback {
+        font-style: italic;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: var(--radius-sm);
+        transition: var(--tx-quick);
+    }
+
+    .desc-fallback:hover,
+    .desc-fallback:focus-visible {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+        outline: none;
+    }
+
+    .desc-fallback::after {
+        content: '  ✎';
+        opacity: 0;
+        font-style: normal;
+        transition: opacity 150ms var(--ease-smooth);
+    }
+
+    .desc-fallback:hover::after,
+    .desc-fallback:focus-visible::after {
+        opacity: 1;
+    }
+
+    /*
+     * Rename popover preview line — the explanation rendered under
+     * the "Remember as this name" checkbox showing the generalized
+     * pattern (D-10). Faint by design so the popover's primary verbs
+     * (Save / Cancel) remain visually dominant.
+     */
+    .popover-preview-line {
+        font-size: var(--text-xs);
+        color: var(--color-text-faint);
+        margin-top: 4px;
+    }
+
+    .popover-preview-line code {
+        font-family: var(--font-mono);
+        background: var(--color-surface-2);
+        padding: 1px 4px;
+        border-radius: var(--radius-sm);
+    }
 }

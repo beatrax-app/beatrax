@@ -169,16 +169,25 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-2 text-sm text-slate-900 dark:text-slate-100">
-                                    {{-- Fallback chain: counterparty name → counterparty IBAN → joined
-                                         description (payment ref + free text) → "—". The description
-                                         tier rescues bank-fee / interest / ATM rows where no counterparty
-                                         is present but the narrative carries the only identifying signal. --}}
-                                    @if ($row->counterpartyName !== null)
+                                    {{-- Fallback chain: aliasFriendlyName → counterpartyName →
+                                         counterpartyIBAN → joined description (italic, click-to-rename)
+                                         → "—". The italic .desc-fallback span is the click target
+                                         for the rename popover; the popover is mounted once below
+                                         the table and listens for `rename-counterparty:open`. --}}
+                                    @if ($row->aliasFriendlyName !== null)
+                                        {{ $row->aliasFriendlyName }}
+                                    @elseif ($row->counterpartyName !== null)
                                         {{ $row->counterpartyName }}
                                     @elseif ($row->counterpartyIban !== null)
                                         <span class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ $row->counterpartyIban }}</span>
                                     @elseif ($row->description !== null)
-                                        <span class="text-xs italic text-slate-500 dark:text-slate-400">{{ $row->description }}</span>
+                                        <span
+                                            class="desc-fallback"
+                                            tabindex="0"
+                                            role="button"
+                                            aria-label="Rename this counterparty"
+                                            wire:click="$dispatch('rename-counterparty:open', { raw: @js($row->description), rowIndex: {{ $row->rowIndex }} })"
+                                        >{{ $row->description }}</span>
                                     @else
                                         —
                                     @endif
@@ -252,4 +261,14 @@
             @endif
         </section>
     @endif
+
+    {{-- Rename counterparty popover. Single mount per wizard page; the
+         italic .desc-fallback spans in the Counterparty column above
+         dispatch `rename-counterparty:open` with the raw description
+         + row index so this component can open a Flux modal anchored
+         to that row. Saving the popover writes the merchant_aliases
+         row + optional categorization_rules row, then dispatches
+         `rename-counterparty:saved` for the parent wizard to update
+         the affected aliasFriendlyName in place. --}}
+    <livewire:import.rename-counterparty-popover />
 </div>

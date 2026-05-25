@@ -103,5 +103,5 @@ it('renders the italic desc-fallback span when aliasFriendlyName is null and the
     expect($html)->toContain('desc-fallback');
     expect($html)->toContain('BCK*SHELL PIETER NIEUW *0123');
     expect($html)->toContain('Bol.com');
-    expect($html)->toContain("rename-counterparty:open");
+    expect($html)->toContain('rename-counterparty:open');
 });

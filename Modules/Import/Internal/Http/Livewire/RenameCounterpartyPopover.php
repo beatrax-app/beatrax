@@ -1,0 +1,127 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Import\Internal\Http\Livewire;
+
+use Illuminate\Contracts\View\Factory as ViewFactory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\On;
+use Livewire\Component;
+use Modules\Categorization\Public\Actions\CreateCategorizationRule;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Import\Public\Actions\CreateMerchantAlias;
+use Modules\Import\Public\Services\PatternGeneralizer;
+
+/**
+ * Click-italic rename popover. The italic raw-description span in the
+ * import preview row dispatches `rename-counterparty:open` carrying
+ * the raw description + the row index; this component listens, opens
+ * a Flux modal anchored to the row, and on save persists a
+ * merchant_aliases row + optionally a categorization_rules row, then
+ * dispatches `rename-counterparty:saved` so the parent wizard can
+ * update the affected row in place without re-running the importer.
+ *
+ * Mounted once at the bottom of the upload-wizard / preview-wizard
+ * blade — a single instance handles every row's rename flow because
+ * the modal is identity-less (only one rename is in progress at a
+ * time).
+ *
+ * Livewire components forbid constructor DI per the strict-rules
+ * ruleset, so every collaborator arrives as a method argument on the
+ * action that needs it.
+ */
+final class RenameCounterpartyPopover extends Component
+{
+    public string $raw = '';
+
+    public string $friendly = '';
+
+    public bool $remember = true;
+
+    public string $generalized = '';
+
+    public ?int $categoryHint = null;
+
+    public int $rowIndex = -1;
+
+    #[On('rename-counterparty:open')]
+    public function open(
+        string $raw,
+        int $rowIndex,
+        PatternGeneralizer $generalizer,
+        ?int $currentCategoryId = null,
+    ): void {
+        $this->resetErrorBag();
+
+        $this->raw = $raw;
+        $this->rowIndex = $rowIndex;
+        $this->friendly = '';
+        $this->remember = true;
+        $this->generalized = $generalizer->generalize($raw);
+        $this->categoryHint = $currentCategoryId;
+
+        $this->dispatch('modal-show', name: 'rename-counterparty');
+    }
+
+    public function save(
+        CreateMerchantAlias $createAlias,
+        CreateCategorizationRule $createRule,
+        CurrentUser $currentUser,
+    ): void {
+        $this->validate([
+            'friendly' => ['required', 'string', 'min:1', 'max:255'],
+            'raw' => ['required', 'string', 'min:1'],
+            'generalized' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $user = $currentUser->user();
+        $friendlyTrimmed = trim($this->friendly);
+        $generalizedTrimmed = trim($this->generalized);
+
+        if ($this->remember) {
+            ($createAlias)(
+                $user,
+                $this->raw,
+                $generalizedTrimmed === '' ? null : $generalizedTrimmed,
+                $friendlyTrimmed,
+            );
+        }
+
+        if ($this->categoryHint !== null && $this->categoryHint > 0 && $generalizedTrimmed !== '') {
+            try {
+                ($createRule)(
+                    $user,
+                    'description',
+                    'contains',
+                    $generalizedTrimmed,
+                    $this->categoryHint,
+                );
+            } catch (ValidationException) {
+                // A duplicate rule (same field/match/value combination
+                // already seeded for this user) is benign — the alias
+                // has already persisted and the rule was already
+                // contributing to the categorization outcome. Swallow
+                // the duplicate signal so the popover closes calmly.
+            }
+        }
+
+        $this->dispatch(
+            'rename-counterparty:saved',
+            rowIndex: $this->rowIndex,
+            friendlyName: $friendlyTrimmed,
+        );
+        $this->dispatch('modal-hide', name: 'rename-counterparty');
+    }
+
+    public function cancel(): void
+    {
+        $this->dispatch('modal-hide', name: 'rename-counterparty');
+    }
+
+    public function render(ViewFactory $views): View
+    {
+        return $views->make('import::livewire.rename-counterparty-popover');
+    }
+}
