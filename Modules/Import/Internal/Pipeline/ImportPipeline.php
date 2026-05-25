@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
+use Modules\Import\Internal\Pipeline\Stages\PaymentTypeClassifierStage;
 use Modules\Import\Public\Dto\EnrichedDisposition;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Dto\PreviewRowDto;
@@ -24,8 +25,9 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Orchestrates the three stages (parse → normalize → fingerprint) into one
- * preview payload. Returns a tuple of:
+ * Orchestrates the per-row stages (parse → normalize → classify
+ * transaction type → classify payment type → apply auto-category →
+ * fingerprint) into one preview payload. Returns a tuple of:
  *
  *  - `rows`: per-source-row PreviewRowDto for the wizard table
  *    (NEW / DUPLICATE / ENRICHED / ERROR per row).
@@ -48,6 +50,7 @@ final class ImportPipeline
         private readonly ParseStage $parse,
         private readonly NormalizeStage $normalize,
         private readonly ClassifyTransactionType $classifier,
+        private readonly PaymentTypeClassifierStage $paymentTypeClassifier,
         private readonly AppliesAutoCategory $autoCategory,
         private readonly FingerprintStage $fingerprint,
         private readonly SourceAdapterRegistry $adapters,
@@ -107,6 +110,7 @@ final class ImportPipeline
                 try {
                     $normalized = $this->normalize->run($source, $accountId, $user, $importRunId, $sourceFormat);
                     $normalized = $this->classifier->run($normalized, $user);
+                    $normalized = $this->paymentTypeClassifier->run($normalized, $user, $sourceFormat);
                     $autoOutcome = $this->autoCategory->apply($normalized, $user);
                     $normalized = $autoOutcome->canonical;
                 } catch (Throwable $e) {
@@ -166,6 +170,7 @@ final class ImportPipeline
                     currency: $source->currency,
                     error: null,
                     diff: $diff,
+                    paymentType: $normalized->paymentType,
                 );
 
                 if ($disposition->isNew()) {
