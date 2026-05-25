@@ -85,7 +85,7 @@ final class CommunityCorpusQuery
      */
     public function mappingsCount(): int
     {
-        return (int) $this->db->connection()->table('community_merchant_mappings')
+        return $this->db->connection()->table('community_merchant_mappings')
             ->whereNull('user_id')
             ->count();
     }
@@ -96,7 +96,7 @@ final class CommunityCorpusQuery
      */
     public function contributorsCount(): int
     {
-        return (int) $this->db->connection()->table('community_merchant_mappings')
+        return $this->db->connection()->table('community_merchant_mappings')
             ->whereNull('user_id')
             ->distinct()
             ->count('contributor');

@@ -35,10 +35,13 @@ final class GitHubCompareUrlBuilder
 
     public function build(SuggestMappingDto $dto): string
     {
-        $base = (string) $this->config->get(
+        $configured = $this->config->get(
             'community.github_compare_base',
             'https://github.com/nightworksio/beatrax/compare/main',
         );
+        $base = is_string($configured)
+            ? $configured
+            : 'https://github.com/nightworksio/beatrax/compare/main';
 
         $branch = 'suggest-'.substr(hash('sha256', $dto->pattern), 0, 16);
 

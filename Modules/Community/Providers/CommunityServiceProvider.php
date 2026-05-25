@@ -8,7 +8,9 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Community\Internal\Corpus\CorpusLoader;
+use Modules\Community\Internal\Http\Livewire\HelpOthersTriageButton;
 use Modules\Community\Internal\Http\Livewire\MysteryMerchantsPage;
+use Modules\Community\Internal\Http\Livewire\SharedListSettingsPanel;
 use Modules\Community\Internal\Http\Livewire\SuggestMappingModal;
 use Modules\Community\Internal\Listeners\SeedCommunityCorpus;
 use Modules\Community\Internal\Services\GitHubCompareUrlBuilder;
@@ -70,5 +72,7 @@ final class CommunityServiceProvider extends ServiceProvider
 
         $livewire->component('community.suggest-mapping-modal', SuggestMappingModal::class);
         $livewire->component('community.mystery-merchants-page', MysteryMerchantsPage::class);
+        $livewire->component('community.shared-list-settings-panel', SharedListSettingsPanel::class);
+        $livewire->component('community.help-others-triage-button', HelpOthersTriageButton::class);
     }
 }

@@ -19,7 +19,7 @@ beforeEach(function (): void {
     ]);
     $this->actingAs($this->user);
 
-    $this->shell = new ShellFake();
+    $this->shell = new ShellFake;
     $this->app->instance(ShellContract::class, $this->shell);
 });
 

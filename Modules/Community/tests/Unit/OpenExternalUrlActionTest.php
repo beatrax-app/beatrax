@@ -31,7 +31,7 @@ function makeRecorderLogger(): LoggerInterface
 }
 
 beforeEach(function (): void {
-    $this->shell = new ShellFake();
+    $this->shell = new ShellFake;
     $this->logger = makeRecorderLogger();
     $this->app->instance(ShellContract::class, $this->shell);
     $this->app->instance(LoggerInterface::class, $this->logger);
