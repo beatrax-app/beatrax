@@ -21,6 +21,7 @@ use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
 use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
@@ -84,6 +85,7 @@ final class InboxesPage extends Component
         Request $request,
         CurrentUser $currentUser,
         InboxQuery $inboxQuery,
+        LoggerInterface $logger,
     ): void {
         // The OAuth callback redirects with a session flash carrying
         // the freshly-connected inbox id. Pick it up and dispatch the
@@ -128,7 +130,10 @@ final class InboxesPage extends Component
         // re-consent flow rather than having to re-click "Reconnect"
         // from the inbox row. Cross-user / missing-row ids are silently
         // ignored — InboxQuery::findForUser scopes by current user and
-        // returns null for a foreign id (404-not-403).
+        // returns null for a foreign id (404-not-403). The lookup miss
+        // is logged at `info` so an operator monitoring `/dev/logs` can
+        // see attempted reconnects against non-existent or foreign
+        // inbox ids; the failure stays silent for the user.
         $reconnectId = $this->reconnectInboxId;
         if ($reconnectId !== null && $reconnectId > 0) {
             $user = $currentUser->user();
@@ -139,6 +144,11 @@ final class InboxesPage extends Component
                     provider: $inbox->provider,
                     inboxId: $inbox->inboxId,
                 );
+            } elseif ($inbox === null) {
+                $logger->info('InboxesPage: ?reconnect query-param resolved to no inbox for the current user.', [
+                    'user_id' => $user->id,
+                    'reconnect_inbox_id' => $reconnectId,
+                ]);
             }
         }
     }
