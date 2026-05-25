@@ -1270,9 +1270,26 @@ it('does not allow Native\\Desktop imports outside Modules/Desktop (noNativePhpI
     // NativePHP directly. No shipped-build file outside Modules/Desktop may
     // reference a `Native\Desktop\` namespaced symbol.
     //
+    // Allow-list carve-out for Modules/Community: the suggest-mapping flow
+    // launches an https://github.com/... Compare URL in the system
+    // browser via the OpenExternalUrlAction wrapper. The action validates
+    // https + host allow-list BEFORE delegating to the Shell contract,
+    // and the NoOpShell fallback is bound when the bundle runs outside
+    // the NativePHP runtime. The service provider names the contract FQCN
+    // only to inspect prior bindings via `$this->app->bound(...)`. The
+    // companion `noShellContractOutsideAllowList` invariant locks the
+    // contract-import surface tighter; this rule's allow-list is the
+    // wider net for the `Native\Desktop\` namespace as a whole.
+    //
     // Block + line comments are stripped first so PHPDoc references stay
     // legal, and `/tests/` paths are skipped. The Modules/Desktop subtree
     // is the sanctioned home and is excluded wholesale.
+    $allowList = [
+        'Modules/Community/Public/Actions/OpenExternalUrlAction.php',
+        'Modules/Community/Internal/Shell/NoOpShell.php',
+        'Modules/Community/Providers/CommunityServiceProvider.php',
+    ];
+
     $hits = [];
     foreach (['app', 'Modules', 'bootstrap', 'routes'] as $root) {
         $abs = base_path($root);
@@ -1295,6 +1312,9 @@ it('does not allow Native\\Desktop imports outside Modules/Desktop (noNativePhpI
                 continue;
             }
             $relative = str_replace(base_path().'/', '', $path);
+            if (in_array($relative, $allowList, true)) {
+                continue;
+            }
             $contents = (string) file_get_contents($path);
             $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
             if (preg_match('/Native\\\\Desktop\\\\/', $stripped) === 1) {
@@ -1685,5 +1705,70 @@ it('requires every *Hinter class under Modules/Import/Internal/Parsers to implem
     expect($offenders)->toBe(
         [],
         "Every *Hinter class under Modules/Import/Internal/Parsers must implement PaymentTypeHinter. Offenders:\n  ".implode("\n  ", $offenders),
+    );
+});
+
+it('restricts Native\\Desktop\\Contracts\\Shell imports to the allow-listed action and fallback (noShellContractOutsideAllowList)', function (): void {
+    // Plan 16.1-05 invariant: the NativePHP Shell contract is the
+    // sole outbound system-browser path the community module uses.
+    // To keep that surface auditable, only two files may import the
+    // contract: the OpenExternalUrlAction wrapper (validates https +
+    // allow-listed host before invoking the contract) and the
+    // NoOpShell fallback implementation (in-module impl bound when
+    // NativePHP's NativeServiceProvider is absent).
+    //
+    // Per the W-7 pre-survey, no other module currently imports the
+    // contract; the allow-list below is exact and adding a new file
+    // requires a code-review justification mirroring the auth-facade
+    // allow-list at the top of this file. Tests/ files are skipped
+    // so feature suites can bind a ShellFake or substitute a custom
+    // double without tripping the rule. The grep strips block + line
+    // comments first so PHPDoc references stay legal.
+    // Allow-list also covers the service provider that wires the
+    // optional fallback binding: it imports the contract FQCN to
+    // call `$this->app->bound(ShellContract::class)` before binding
+    // the in-module NoOpShell. The provider performs no runtime
+    // dispatch through the contract — it only inspects whether
+    // another service provider has already registered an impl.
+    $allowList = [
+        'Modules/Community/Public/Actions/OpenExternalUrlAction.php',
+        'Modules/Community/Internal/Shell/NoOpShell.php',
+        'Modules/Community/Providers/CommunityServiceProvider.php',
+    ];
+
+    $modulesDir = base_path('Modules');
+    if (! is_dir($modulesDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $hits = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($modulesDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        $relative = str_replace(base_path().'/', '', $path);
+        if (in_array($relative, $allowList, true)) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (preg_match('/Native\\\\Desktop\\\\Contracts\\\\Shell\b/', $stripped) === 1) {
+            $hits[] = $relative;
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "Native\\Desktop\\Contracts\\Shell may only be imported by OpenExternalUrlAction + NoOpShell. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
