@@ -1242,4 +1242,55 @@ td.date,
     .toggle-row:last-of-type {
         border-bottom: 0;
     }
+
+    /*
+     * Settings → Aliases (Phase 16.1 Plan 07) primitives.
+     *
+     * `.aliases-table` is the dense per-row alias editor — read-only
+     * raw pattern + inline-editable generalized pattern + friendly
+     * name + per-row actions. `.row-pattern` locks the raw +
+     * generalized columns to the monospaced font + smaller size so
+     * the table can show enough rows to scan visually without
+     * pagination thrash.
+     *
+     * `.alias-preview-pane` is the right-rail "Test against my
+     * transactions" panel — calm background, generous padding,
+     * rounded corners matching the wider settings-section pattern.
+     */
+    .aliases-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .aliases-table th,
+    .aliases-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--color-border);
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .aliases-table th {
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-text-muted);
+        font-weight: 500;
+    }
+
+    .aliases-table .row-pattern {
+        font-family: var(--font-mono);
+        font-size: var(--text-sm);
+    }
+
+    .alias-preview-pane {
+        background: var(--color-bg-subtle);
+        padding: 16px;
+        border-radius: var(--radius-md);
+    }
+
+    .alias-preview-count {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+    }
 }

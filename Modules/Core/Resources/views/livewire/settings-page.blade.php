@@ -230,6 +230,41 @@
         @livewire('community.shared-list-settings-panel')
     </section>
 
+    {{-- Aliases.
+
+         Deep-link into the power-user surface at /settings/aliases —
+         the consolidated editor, bulk-merge, YAML export/import view
+         over the per-user merchant_aliases table (Phase 16.1 Plan
+         07). The link is the calm one-line entry into the page; the
+         page itself owns the explanation and the actions. --}}
+    <section class="space-y-2" id="aliases">
+        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Aliases</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+            Review and edit the friendly names you've taught beatrax for cryptic statement descriptions.
+        </p>
+        <a
+            href="{{ route('settings.aliases') }}"
+            class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+        >Manage aliases →</a>
+    </section>
+
+    {{-- First-run tour.
+
+         Re-launches the setup wizard at any time. The `force=1` query
+         flag bypasses the EnsureDatabaseReady "already-set-up" gate so
+         a returning user can walk back through the introductory flow
+         without un-completing their setup. --}}
+    <section class="space-y-2" id="first-run-tour">
+        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">First-run tour</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+            Re-launch the setup wizard if you want to walk back through the introductory flow.
+        </p>
+        <a
+            href="{{ route('setup', ['force' => 1]) }}"
+            class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+        >Run setup wizard again</a>
+    </section>
+
     <section class="space-y-2">
         <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Auto-import</h2>
         <div class="space-y-2">
