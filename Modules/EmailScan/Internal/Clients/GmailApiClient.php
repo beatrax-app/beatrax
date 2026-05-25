@@ -10,8 +10,13 @@ use Google\Service\Exception as GoogleServiceException;
 use Google\Service\Gmail as GmailService;
 use Google\Service\Gmail\Resource\UsersHistory;
 use Google\Service\Gmail\Resource\UsersMessages;
+use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
+use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
+use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
+use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
+use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
 
@@ -49,6 +54,8 @@ final class GmailApiClient implements GmailApiClientContract
         private readonly OAuthSecretsRepository $secrets,
         private readonly GoogleOAuthProvider $oauth,
         private readonly Clock $clock,
+        private readonly EventsDispatcher $events,
+        private readonly DatabaseManager $db,
     ) {}
 
     /**
@@ -360,7 +367,19 @@ final class GmailApiClient implements GmailApiClientContract
             || $expiresTs === null
             || $expiresTs < $nowTs + 60
         ) {
-            $fresh = $this->oauth->refreshAccessToken($creds->refreshToken);
+            try {
+                $fresh = $this->oauth->refreshAccessToken($creds->refreshToken);
+            } catch (InvalidGrantException $e) {
+                // GoogleOAuthProvider maps `invalid_grant` /
+                // `consent_required` IdentityProviderException responses
+                // into this typed sentinel BEFORE the league client's
+                // raw exception reaches us — the catch sits on the
+                // module's own sentinel, not on a generic Throwable, so
+                // legitimate non-OAuth failures (network errors, JSON
+                // decode failures, scope drift) keep their original
+                // exception class and propagate unchanged.
+                throw $this->raiseReconsentRequired($inboxId, $e);
+            }
             $this->secrets->rotateRefreshToken(
                 $inboxId,
                 $fresh->refreshToken ?? $creds->refreshToken,
@@ -372,6 +391,50 @@ final class GmailApiClient implements GmailApiClientContract
         }
 
         return $cachedAccessToken;
+    }
+
+    /**
+     * Dispatch InboxTokenFailed so the SystemAlertsBanner can surface a
+     * re-consent prompt, then return a typed ReconsentRequiredException
+     * for the caller to throw. The (user_id, inbox_id, provider) tuple
+     * resolves through a single per-inbox row read on the existing
+     * inboxes table — the load-bearing identifier the listener needs
+     * for de-dup is the inbox id; the row's user_id pins the alert to
+     * the correct authenticated user.
+     */
+    private function raiseReconsentRequired(int $inboxId, InvalidGrantException $cause): ReconsentRequiredException
+    {
+        $userId = $this->lookupInboxUserId($inboxId);
+        $this->events->dispatch(new InboxTokenFailed(
+            inboxId: $inboxId,
+            userId: $userId,
+            provider: 'gmail',
+        ));
+
+        return new ReconsentRequiredException(
+            inboxId: $inboxId,
+            userId: $userId,
+            provider: 'gmail',
+            previous: $cause,
+        );
+    }
+
+    /**
+     * Resolve the owning user_id for an inbox row. Returns 0 when the
+     * row is missing or the column is non-integer — the listener
+     * tolerates the synthetic 0 (no row will dedup against it) so the
+     * caller's error-recovery path is preserved even if the inbox
+     * record was deleted between the scan kick-off and the failed
+     * refresh.
+     */
+    private function lookupInboxUserId(int $inboxId): int
+    {
+        $value = $this->db->connection()
+            ->table('inboxes')
+            ->where('id', $inboxId)
+            ->value('user_id');
+
+        return is_numeric($value) ? (int) $value : 0;
     }
 
     /**
