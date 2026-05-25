@@ -1,6 +1,6 @@
 @php
     /**
-     * @var array{description: string, count: int, lastSeen: ?string, paymentType: ?\Modules\Import\Public\Public\Enums\PaymentType} $row
+     * @var array{description: string, count: int, lastSeen: ?string, paymentType: ?\Modules\Import\Public\Enums\PaymentType} $row
      */
     $description = (string) ($row['description'] ?? '');
     $count = (int) ($row['count'] ?? 0);
