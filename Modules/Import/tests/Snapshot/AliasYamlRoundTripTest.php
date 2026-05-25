@@ -37,10 +37,15 @@ beforeEach(function (): void {
         'period_start_day' => 1,
     ]);
 
+    // Each row's `generalized_pattern` matches what
+    // `PatternGeneralizer::generalize($pattern)` produces so the
+    // round-trip diff classifies every re-imported entry as
+    // `unchanged`. A mismatched generalized_pattern would surface as
+    // a `conflict` row under the diff contract.
     foreach ([
         ['BCK*SHELL PIETER NIEUW *0123', 'bck*shell pieter nieuw', 'Shell Pieter'],
         ['ALBERT HEIJN 1245 T07438', 'albert heijn', 'Albert Heijn'],
-        ['SPOTIFY P0H8ABC', 'spotify', 'Spotify'],
+        ['SPOTIFY P0H8ABC', 'spotify p0h8abc', 'Spotify'],
     ] as [$pattern, $generalized, $friendly]) {
         MerchantAlias::create([
             'user_id' => $this->user->id,
