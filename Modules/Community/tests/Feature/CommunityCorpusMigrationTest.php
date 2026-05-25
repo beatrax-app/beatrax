@@ -24,7 +24,7 @@ it('accepts a global corpus row with user_id null', function (): void {
         'name' => 'Global Merchant A',
         'category' => null,
         'region' => 'NL',
-        'contributor' => 'diederik-bot',
+        'contributor' => 'beatrax-bot',
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
     ]);
@@ -40,7 +40,7 @@ it('rejects duplicate (null, pattern) entries via the UNIQUE index', function ()
         'name' => 'Merchant X',
         'category' => null,
         'region' => null,
-        'contributor' => 'diederik-bot',
+        'contributor' => 'beatrax-bot',
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
     ]);
@@ -52,7 +52,7 @@ it('rejects duplicate (null, pattern) entries via the UNIQUE index', function ()
         'name' => 'Different Name Same Pattern',
         'category' => null,
         'region' => null,
-        'contributor' => 'diederik-bot',
+        'contributor' => 'beatrax-bot',
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
     ]))->toThrow(QueryException::class);
