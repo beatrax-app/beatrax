@@ -24,6 +24,20 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * carries bulk-merge provenance after a Settings → Aliases merge
  * action.
  *
+ * Cross-user posture: every production read / write path that operates
+ * on this table carries an EXPLICIT `where('user_id', $userId)`
+ * filter — the resolver, the Settings → Aliases page, the YAML
+ * importer, and the bulk-merge action all do so. The `BelongsToUser`
+ * global scope is a SECONDARY guard that fires only when an Eloquent
+ * query reaches the resolver within an HTTP-bound request; it does
+ * not fire under queue workers, console commands, or model factory
+ * paths. Defence-in-depth: the explicit filter is the primary guard,
+ * and a new query path MUST carry its own `where('user_id', ...)`
+ * regardless of what the trait does. The trait stays so that any
+ * future Eloquent surface (e.g. an Inertia resource controller) gets
+ * the scope wired automatically; the explicit-filter rule still
+ * applies on top.
+ *
  * @property int $id
  * @property int|null $user_id
  * @property string $pattern
