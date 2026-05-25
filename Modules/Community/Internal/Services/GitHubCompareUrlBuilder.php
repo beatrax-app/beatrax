@@ -15,8 +15,8 @@ use Modules\Community\Public\Dto\SuggestMappingDto;
  *   {base}...{branchSlug}?expand=1&body={url-encoded-yaml-entry}
  *
  * `{base}` is `config('community.github_compare_base')` so the repo
- * destination can be flipped at the Phase 19 (public-release) boundary
- * via the `BEATRAX_GITHUB_COMPARE_BASE` env var without a code change.
+ * destination can be flipped at the public-release boundary via the
+ * `BEATRAX_GITHUB_COMPARE_BASE` env var without a code change.
  *
  * `{branchSlug}` is a deterministic hash of the pattern field so a
  * given mapping always lands on the same proposed branch — the user

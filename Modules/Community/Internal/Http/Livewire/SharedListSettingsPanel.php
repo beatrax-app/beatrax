@@ -17,12 +17,11 @@ use Modules\Core\Public\Contracts\CurrentUser;
  * MerchantNameResolver consults the community-tier corpus), "Offer to
  * contribute" (controls whether the Triage row's
  * `Help others identify this` CTA appears), and "Update the shared
- * list on app updates" (disabled no-op in this phase — the live-update
- * mechanism activates with a future app update; the inline note is
- * version-agnostic per B-5).
+ * list on app updates" (disabled no-op until the live-update mechanism
+ * ships — the inline note is version-agnostic).
  *
  * Toggle state is persisted in `users.community_settings`, the JSON
- * column added by plan 16.1-01. The Eloquent model casts the column
+ * column on the users table. The Eloquent model casts the column
  * to a PHP array; reads and writes go through `$user->community_settings`
  * directly rather than through a separate UserSettings model.
  *

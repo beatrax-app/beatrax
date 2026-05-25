@@ -44,11 +44,11 @@ use Throwable;
 final class InboxesPage extends Component
 {
     /**
-     * When set, the Blade layer auto-dispatches a `modal-show` event
-     * scoped to this inbox id so the backfill window modal opens
-     * immediately after the OAuth callback redirect lands. The
-     * actual modal SFC ships in a later plan; Plan 03 only carries
-     * the flash value through render-time.
+     * When set, the Blade layer auto-dispatches a `backfill-window:open`
+     * event scoped to this inbox id so the backfill window modal opens
+     * immediately after the OAuth callback redirect lands. Populated
+     * from the single-use `open_backfill_modal` session flash that the
+     * OAuth callback controller writes after a successful re-consent.
      */
     public ?int $openBackfillForInboxId = null;
 
@@ -306,8 +306,11 @@ final class InboxesPage extends Component
      *
      * The redirect target is `/oauth/connect/{provider}?inbox_id={id}` —
      * the existing OAuthConnectController reads the inbox_id query
-     * parameter (Plan 06) to scope the consent flow to the existing
-     * inbox row (preserves inbox_messages + .eml blobs + cursor; D-115).
+     * parameter to scope the consent flow to the existing inbox row.
+     * That preserves the inbox's accumulated `inbox_messages` rows, its
+     * stored `.eml` blobs, and the provider-side cursor so a re-consent
+     * resumes scanning where it left off rather than backfilling from
+     * scratch.
      */
     public function reconnect(
         int $inboxId,

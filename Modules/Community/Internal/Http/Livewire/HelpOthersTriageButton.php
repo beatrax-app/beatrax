@@ -15,9 +15,9 @@ use Modules\Core\Public\Contracts\CurrentUser;
  * row. Gated SERVER-SIDE on the user's
  * `community_settings.offerToContribute` toggle — when off, the render
  * method returns an empty view so the CTA is structurally absent from
- * the DOM (not just CSS-hidden, per the UI-SPEC's "Empty / loading /
- * error states" guidance and the T-16.1-05-06 mitigation in the
- * threat model).
+ * the DOM (not just CSS-hidden). Structural absence is the mitigation
+ * for the unauthorized-contribution threat: a client-side hidden
+ * control would still be DOM-reachable and dispatchable.
  *
  * Clicking the CTA dispatches `suggest-mapping:open` with the row's
  * verbatim raw description so the globally-mounted

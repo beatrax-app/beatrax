@@ -10,10 +10,10 @@ use stdClass;
 /**
  * Read-only query surface over the `community_merchant_mappings` table
  * filtered to the global tier (`user_id IS NULL`). Consumed by
- * `MerchantNameResolver` for the community-tail fallback steps (D-15
- * resolution rules c and d), by `MysteryMerchantsPage` for the corpus-
- * size stats strip, and by the SuggestMappingModal for the per-render
- * dedup check.
+ * `MerchantNameResolver` for the community-tail fallback steps (the
+ * exact-then-generalized corpus lookup that runs after the per-user
+ * alias tiers), by `MysteryMerchantsPage` for the corpus-size stats
+ * strip, and by the SuggestMappingModal for the per-render dedup check.
  *
  * Generalized-pattern matching is performed in PHP via `mb_strpos` —
  * never via SQL LIKE — mirroring the Categorization RuleEvaluator

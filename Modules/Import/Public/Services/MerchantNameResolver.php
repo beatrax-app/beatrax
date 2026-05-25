@@ -52,8 +52,8 @@ use stdClass;
  * generalized alias (`generalized_pattern='shell' → "Shell"`) exist
  * for the same user, the exact alias wins. Inverting the order would
  * make a broad rename override a more specific one whenever both
- * matched the same row — exactly the over-matching foot-gun the
- * exact-first rule (D-11) prevents.
+ * matched the same row — the exact-first rule prevents that
+ * over-matching foot-gun.
  */
 final class MerchantNameResolver
 {

@@ -53,9 +53,9 @@ return [
     | user opens the Settings panel and saves an explicit choice. The
     | resolver and the HelpOthersTriageButton both fall back to these
     | values when the JSON column is null or missing a key. Toggle 3
-    | (`updateOnAppUpdates`) ships disabled because Phase 18 will
-    | activate the live-update mechanism; the inline note in the
-    | settings panel is version-agnostic.
+    | (`updateOnAppUpdates`) ships disabled until the live-update
+    | mechanism lands; the inline note in the settings panel is
+    | version-agnostic.
     |
     */
 

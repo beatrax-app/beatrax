@@ -25,8 +25,8 @@ use Throwable;
  *   - Parsing runs with `Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE`, which
  *     refuses YAML constructs that would try to instantiate PHP objects
  *     (the `!php/object` tag and friends). This is the single mitigation
- *     against the YAML-deserialisation-to-RCE class of attack referenced
- *     by ASVS V10 (Modules/Import/.../research/RESEARCH.md Pitfall 1).
+ *     against the YAML-deserialisation-to-RCE class of attack covered by
+ *     ASVS V10.
  *   - Top-level shape is strictly validated: the document must be an
  *     array with an `entries` key holding a list. Anything else throws
  *     `InvalidArgumentException` with a user-facing message; the
@@ -46,8 +46,9 @@ use Throwable;
  *
  * `apply()` runs the writes inside a single transaction. Unknown
  * conflict-resolution actions (anything other than 'replace') fall
- * through to the safe default 'keep', matching the threat-register
- * mitigation for T-16.1-07-08.
+ * through to the safe default 'keep' — a tampered action key from a
+ * forged Livewire payload cannot silently replace the user's existing
+ * alias.
  */
 final class AliasYamlImporter
 {
