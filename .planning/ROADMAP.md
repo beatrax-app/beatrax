@@ -224,7 +224,7 @@ Plans:
 **Goal:** Ship six tightly-coupled user-facing surfaces as one vertical MVP — a first-run `/setup` wizard, a click-italic merchant-rename popover with smart pattern generalization, a payment-type chip (PIN / online / transfer / direct-debit / cash / fee / refund / unknown) derived by a shared post-parse classifier stage, a crowd-sourced merchant identification corpus bundled as YAML with a `/community/mystery-merchants` browse destination + suggest-as-draft-PR flow via the system browser, an OAuth re-consent banner wired to the existing `SystemAlertsBanner`, and a power-user `Settings → Aliases` surface with live "Test against my transactions" preview + bulk-merge + YAML import/export — every locked decision (D-01 through D-25) implemented, no scope reduction.
 **Requirements**: WIZ-01, WIZ-02, WIZ-03, WIZ-04, WIZ-05, WIZ-06, RENAME-01, RENAME-02, RENAME-03, PTYPE-01, PTYPE-02, PTYPE-03, CORPUS-01, CORPUS-02, CORPUS-03, CORPUS-04, CORPUS-05, OAUTH-RC-01, OAUTH-RC-02, OAUTH-RC-03, ALIAS-01, ALIAS-02, ALIAS-03, ALIAS-04, ALIAS-05 *(REQ-IDs proposed in 16.1-RESEARCH.md; planner registers them; a follow-up REQUIREMENTS.md update will fold them into the Traceability table)*
 **Depends on:** Phase 16
-**Plans:** 1/8 plans executed
+**Plans:** 3/8 plans executed
 
 Plans:
 
@@ -234,8 +234,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 16.1-02-PLAN.md — Payment-type classifier pipeline: PaymentTypeHinter contract + PaymentTypeClassifierStage + 6 tagged hinters (ASN CSV/CAMT.053/MT940 + ICS PDF + PayPal CSV + description-keyword fallback)
-- [ ] 16.1-03a-PLAN.md — Wizard backbone: /setup route + state services (registry, initializer, resolver, query) + UserInstalled listener + EnsureDatabaseReady exemption + signup-redirects-to-setup + SetupWizard parent + WelcomeStep + DoneStep + app-wizard layout + WIZ-01/02/06 acceptance tests
+- [x] 16.1-02-PLAN.md — Payment-type classifier pipeline: PaymentTypeHinter contract + PaymentTypeClassifierStage + 6 tagged hinters (ASN CSV/CAMT.053/MT940 + ICS PDF + PayPal CSV + description-keyword fallback)
+- [x] 16.1-03a-PLAN.md — Wizard backbone: /setup route + state services (registry, initializer, resolver, query) + UserInstalled listener + EnsureDatabaseReady exemption + signup-redirects-to-setup + SetupWizard parent + WelcomeStep + DoneStep + app-wizard layout + WIZ-01/02/06 acceptance tests
 
 **Wave 3** *(blocked on Waves 1 + 2)*
 
@@ -344,7 +344,7 @@ Plans:
 | 14. Queue Rewire + Horizon Carve-out | 3/3 | Complete    | 2026-05-22 |
 | 15. Desktop Shell (NativePHP Integration) | 7/7 | Complete    | 2026-05-23 |
 | 16. Developer Mode UI | 9/9 | Complete   | 2026-05-24 |
-| 16.1. First-run wizard + rename + payment-type + crowd corpus + OAuth re-consent + Aliases settings | 1/8 | In Progress|  |
+| 16.1. First-run wizard + rename + payment-type + crowd corpus + OAuth re-consent + Aliases settings | 3/8 | In Progress|  |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |
 | 19. Public Release Boundary | 0/0 | Not started | - |
