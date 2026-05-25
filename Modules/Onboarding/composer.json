@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/onboarding",
+    "description": "Onboarding module — first-run setup wizard.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Onboarding\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Onboarding\\Tests\\": "tests/"
+        }
+    }
+}
