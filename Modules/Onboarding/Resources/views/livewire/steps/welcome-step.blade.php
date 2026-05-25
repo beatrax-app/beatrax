@@ -5,10 +5,10 @@
     only interaction is the Continue button which dispatches
     `wizard.step.completed` up to the SetupWizard parent.
 
-    Plan 03b replaces the inline glyph-row markup with the bespoke
-    `<x-onboarding::vd-glyph>` component; for Plan 03a the raw Tailwind
-    markup keeps the welcome step self-rendering even before the Blade
-    component library lands.
+    The three glyph rows are rendered through the
+    `<x-onboarding::vd-glyph>` atomic component so the same primitive is
+    shared with the connector-step welcome surfaces and with any future
+    page that needs a 44×44 tile + title + description row pattern.
 --}}
 <section class="wiz-step wiz-step-welcome" aria-labelledby="wiz-welcome-h1">
     <p class="wiz-eyebrow">Welcome</p>
@@ -23,39 +23,31 @@
     <p class="wiz-tagline">Here's what we'll set up:</p>
 
     <ul class="vd-rows" role="list">
-        <li class="vd-row">
-            <span class="vd-glyph" aria-hidden="true">🏦</span>
-            <div class="vd-row-text">
-                <span class="vd-row-title">Your bank (ASN)</span>
-                <span class="vd-row-desc">Drop a statement file. We'll show you exactly where to find it.</span>
-            </div>
-        </li>
-        <li class="vd-row">
-            <span class="vd-glyph" aria-hidden="true">💳</span>
-            <div class="vd-row-text">
-                <span class="vd-row-title">Your credit card (ICS)</span>
-                <span class="vd-row-desc">Drop the monthly PDF statement from Mijn ICS.</span>
-            </div>
-        </li>
-        <li class="vd-row">
-            <span class="vd-glyph" aria-hidden="true">✉️</span>
-            <div class="vd-row-text">
-                <span class="vd-row-title">
-                    Receipts from email
-                    <span class="vd-row-optional">— optional</span>
-                </span>
-                <span class="vd-row-desc">Connect Gmail or Outlook to capture purchase confirmations automatically.</span>
-            </div>
-        </li>
+        <x-onboarding::vd-glyph
+            glyph="🏦"
+            title="Your bank (ASN)"
+            description="Drop a statement file. We'll show you exactly where to find it."
+        />
+        <x-onboarding::vd-glyph
+            glyph="💳"
+            title="Your credit card (ICS)"
+            description="Drop the monthly PDF statement from Mijn ICS."
+        />
+        <x-onboarding::vd-glyph
+            glyph="✉️"
+            title="Receipts from email"
+            description="Connect Gmail or Outlook to capture purchase confirmations automatically."
+            :optional="true"
+        />
     </ul>
 
-    <div class="wiz-actions">
+    <x-onboarding::wiz-actions>
         <button
             type="button"
-            class="pill-btn pill-btn-primary"
+            class="pill-btn-primary"
             wire:click="continue"
         >
             Continue →
         </button>
-    </div>
+    </x-onboarding::wiz-actions>
 </section>

@@ -3,6 +3,9 @@
     final step" copy verbatim (eyebrow + H1 + lede + three next-step
     rows + "Open dashboard →" primary CTA). Clicking the CTA fires the
     WizardCompleted event and redirects the user to /.
+
+    The action row uses the `<x-onboarding::wiz-actions>` primitive so
+    the right-aligned spacing matches every other wizard step.
 --}}
 <section class="wiz-step wiz-step-done" aria-labelledby="wiz-done-h1">
     <p class="wiz-eyebrow">Done</p>
@@ -27,13 +30,13 @@
         </li>
     </ul>
 
-    <div class="wiz-actions">
+    <x-onboarding::wiz-actions>
         <button
             type="button"
-            class="pill-btn pill-btn-primary"
+            class="pill-btn-primary"
             wire:click="finish"
         >
             Open dashboard →
         </button>
-    </div>
+    </x-onboarding::wiz-actions>
 </section>
