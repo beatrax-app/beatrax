@@ -33,6 +33,7 @@ use Illuminate\Support\Carbon;
  * @property int $drift_alert_threshold_percent
  * @property string $theme
  * @property string|null $close_behavior
+ * @property array<string, mixed>|null $community_settings
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -59,6 +60,7 @@ final class User extends Authenticatable
         'drift_alert_threshold_percent',
         'theme',
         'close_behavior',
+        'community_settings',
     ];
 
     /** @var list<string> */
@@ -94,6 +96,7 @@ final class User extends Authenticatable
             'drift_alert_threshold_percent' => 'integer',
             'theme' => 'string',
             'close_behavior' => 'string',
+            'community_settings' => 'array',
         ];
     }
 }

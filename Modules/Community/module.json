@@ -1,0 +1,11 @@
+{
+    "name": "Community",
+    "alias": "community",
+    "description": "Crowd-sourced merchant identification corpus: bundled YAML loader, mystery-merchants destination page, and the suggest-mapping draft-PR flow.",
+    "keywords": ["community", "corpus", "merchants"],
+    "priority": 6,
+    "providers": [
+        "Modules\\Community\\Providers\\CommunityServiceProvider"
+    ],
+    "files": []
+}

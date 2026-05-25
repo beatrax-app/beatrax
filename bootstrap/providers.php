@@ -6,6 +6,7 @@ use App\Providers\HorizonServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
 use Modules\Categorization\Providers\CategorizationServiceProvider;
 use Modules\Chains\Providers\ChainsServiceProvider;
+use Modules\Community\Providers\CommunityServiceProvider;
 use Modules\Core\Providers\CoreServiceProvider;
 use Modules\Desktop\Providers\DesktopServiceProvider;
 use Modules\DevMode\Providers\DevModeServiceProvider;
@@ -15,6 +16,7 @@ use Modules\Forecasting\Providers\ForecastingServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
+use Modules\Onboarding\Providers\OnboardingServiceProvider;
 use Modules\Receipts\Providers\ReceiptsServiceProvider;
 use Modules\Recurring\Providers\RecurringServiceProvider;
 use Modules\Transfers\Providers\TransfersServiceProvider;
@@ -40,4 +42,6 @@ return array_values(array_filter([
     ForecastingServiceProvider::class,
     DesktopServiceProvider::class,
     DevModeServiceProvider::class,
+    OnboardingServiceProvider::class,
+    CommunityServiceProvider::class,
 ]));
