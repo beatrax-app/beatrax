@@ -101,7 +101,6 @@ final class ImportServiceProvider extends ServiceProvider
                     $hinters[] = $hinter;
                 }
 
-                /** @var LoggerInterface $logger */
                 $logger = $app->make(LoggerInterface::class);
 
                 return new PaymentTypeClassifierStage($hinters, $logger);
