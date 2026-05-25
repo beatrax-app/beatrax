@@ -23,11 +23,12 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  *  - `IDEAL BETALING` (iDEAL payment confirmation row) → Online
  *  - `INCASSO` (direct-debit settlement row) → DirectDebit
  *
- * Rows whose description matches none of the tokens above represent
- * online merchant charges (PayPal, Amazon, Anthropic, etc.) — the
- * hinter returns the lowest source-specific confidence (`PaymentType::Online`
- * confidence 60) so the description-keyword fallback's verdict is
- * preferred whenever it actually fires, and Unknown is the residual.
+ * Rows whose description matches none of the tokens above return
+ * `null` so the description-keyword fallback can take a shot at the
+ * row at its own confidence; if that also declines, the classifier
+ * resolves to `PaymentType::Unknown`. This matches the
+ * "decline returns null" contract used by AsnCsv / AsnMt940 /
+ * PaypalCsv hinters so every source has a uniform residual path.
  *
  * The token match is case-insensitive (`mb_strpos` after
  * `mb_strtolower`) so future ICS layout-engine changes that re-case
@@ -58,16 +59,6 @@ final class IcsPdfPaymentTypeHinter implements PaymentTypeHinter
         ['keyword' => 'incasso', 'type' => PaymentType::DirectDebit, 'confidence' => 85],
     ];
 
-    /**
-     * Default verdict when no token matches — every other ICS card row
-     * is an online card-not-present charge. The low confidence (60)
-     * keeps the description-keyword fallback's verdict competitive
-     * when it does fire.
-     */
-    private const DEFAULT_TYPE = PaymentType::Online;
-
-    private const DEFAULT_CONFIDENCE = 60;
-
     public function hint(CanonicalTransaction $tx, string $sourceFormat): ?PaymentTypeHint
     {
         if ($sourceFormat !== self::SOURCE_FORMAT) {
@@ -89,10 +80,6 @@ final class IcsPdfPaymentTypeHinter implements PaymentTypeHinter
             }
         }
 
-        return new PaymentTypeHint(
-            type: self::DEFAULT_TYPE,
-            confidence: self::DEFAULT_CONFIDENCE,
-            sourceHint: 'ics-card-default',
-        );
+        return null;
     }
 }
