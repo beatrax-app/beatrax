@@ -16,8 +16,9 @@ use Modules\Onboarding\Internal\Services\WizardStepRegistry;
  * progress strip rather than rendering nothing.
  *
  * Query explicitly filters by `user_id` per the multi-user-readiness
- * rule (Phase 16 contract); never trusts the BelongsToUser global
- * scope, which falls through to "no scope" under non-HTTP contexts.
+ * rule; never trusts the BelongsToUser global scope, which falls
+ * through to "no scope" under non-HTTP contexts (queue workers,
+ * artisan commands, listener tests).
  */
 final readonly class WizardProgressQuery
 {

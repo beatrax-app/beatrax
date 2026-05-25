@@ -18,9 +18,10 @@ use Illuminate\Database\Schema\Builder;
  *   - `offerToContribute`    — bool; when off, the Triage row CTA
  *                               that surfaces the suggest-mapping flow
  *                               is hidden.
- *   - `updateOnAppUpdates`   — bool; reserved for the Phase 18 auto-
+ *   - `updateOnAppUpdates`   — bool; reserved for the future auto-
  *                               update plumbing; ships as a no-op
- *                               control surface.
+ *                               control surface until that mechanism
+ *                               lands.
  *
  * The column is nullable so a fresh user row carries `null` until the
  * user opens the Settings panel and saves an explicit set of
