@@ -7,16 +7,11 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\SuggestMappingModal;
 use Modules\Community\Public\Events\MysteryMerchantSubmitted;
-use Modules\Core\Models\User;
 use Native\Desktop\Contracts\Shell as ShellContract;
 use Native\Desktop\Fakes\ShellFake;
 
 beforeEach(function (): void {
-    $this->user = User::create([
-        'username' => 'suggest-modal-user',
-        'password' => 'fixture-password',
-        'period_start_day' => 1,
-    ]);
+    $this->user = makeCommunityTestUser('suggest-modal-user');
     $this->actingAs($this->user);
 
     $this->shell = new ShellFake;
