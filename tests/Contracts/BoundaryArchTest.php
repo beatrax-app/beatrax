@@ -1618,3 +1618,72 @@ it('keeps PaymentType-unique string literals inside the PaymentType enum (noPaym
         .implode("\n  ", $offenders),
     );
 });
+
+it('requires every *Hinter class under Modules/Import/Internal/Parsers to implement the PaymentTypeHinter contract (paymentTypeHinterContract)', function (): void {
+    // Plan 16.1-02 invariant: every per-source payment-type hinter
+    // plus the universal description-keyword fallback under
+    // Modules/Import/Internal/Parsers/ is a strategy implementation
+    // of the shared `PaymentTypeHinter` contract. The classifier
+    // stage's container-tag wiring depends on the contract being
+    // uniformly implemented — a class named `*Hinter` that omits the
+    // implements clause would silently fail to satisfy the
+    // iterable<PaymentTypeHinter> type at the classifier seam.
+    //
+    // Filesystem walk over Modules/Import/Internal/Parsers, gated on
+    // the `*Hinter.php` filename suffix so both the
+    // `*PaymentTypeHinter` per-source classes and the
+    // `DescriptionKeywordFallbackHinter` are captured. The class FQN
+    // is reconstructed from the path so the check works against the
+    // shipped classes without booting the framework.
+    // ReflectionClass is consulted to resolve the implements list
+    // because a literal grep would miss subclasses that inherit the
+    // contract.
+    $parsersDir = base_path('Modules/Import/Internal/Parsers');
+    if (! is_dir($parsersDir)) {
+        // Parser tree lands in plan 16.1-02; until it does the rule
+        // is trivially satisfied.
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $contract = 'Modules\\Import\\Public\\Contracts\\PaymentTypeHinter';
+    expect(interface_exists($contract))->toBeTrue();
+
+    $offenders = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($parsersDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (! str_ends_with($path, 'Hinter.php')) {
+            continue;
+        }
+
+        // Derive the FQN from the on-disk path: every parser-tree class
+        // lives at Modules/Import/Internal/Parsers/<sub>/Foo.php which
+        // maps onto `Modules\\Import\\Internal\\Parsers\\<sub>\\Foo`.
+        $relativeFromModules = str_replace(base_path().'/', '', $path);
+        $withoutExt = substr($relativeFromModules, 0, -strlen('.php'));
+        $fqn = str_replace('/', '\\', $withoutExt);
+
+        if (! class_exists($fqn)) {
+            $offenders[] = $relativeFromModules.' — class FQN not autoloadable ('.$fqn.')';
+
+            continue;
+        }
+        $reflection = new ReflectionClass($fqn);
+        if (! $reflection->implementsInterface($contract)) {
+            $offenders[] = $relativeFromModules.' — does not implement '.$contract;
+        }
+    }
+
+    expect($offenders)->toBe(
+        [],
+        "Every *Hinter class under Modules/Import/Internal/Parsers must implement PaymentTypeHinter. Offenders:\n  ".implode("\n  ", $offenders),
+    );
+});
