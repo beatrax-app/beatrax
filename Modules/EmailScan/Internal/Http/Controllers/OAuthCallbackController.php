@@ -287,10 +287,16 @@ final class OAuthCallbackController
                 ->update(['acknowledged_at' => $now]);
         } catch (\Throwable) {
             // Fallback for SQLite builds without JSON1 — same shape as
-            // the listener's de-dup fallback.
-            $needle = '%"inbox_id":'.$inboxId.'%';
+            // the listener's de-dup fallback. Anchor the trailing
+            // boundary with separate comma + brace needles so
+            // `inbox_id=1` does not collide with `inbox_id=10`.
+            $withComma = '%"inbox_id":'.$inboxId.',%';
+            $withBrace = '%"inbox_id":'.$inboxId.'}%';
             (clone $base)
-                ->where('metadata', 'like', $needle)
+                ->where(static function ($q) use ($withComma, $withBrace): void {
+                    $q->where('metadata', 'like', $withComma)
+                        ->orWhere('metadata', 'like', $withBrace);
+                })
                 ->update(['acknowledged_at' => $now]);
         }
     }
