@@ -1,6 +1,137 @@
 # Sketch Wrap-Up Summary
 
-**Date:** 2026-05-24
+## Session 2 — 2026-05-25 (Phase 16.1)
+
+**Sketches processed:** 4 (002, 003, 004, 005)
+**Design areas added:** 3 (Onboarding wizard, Import preview & categorization, Community merchant identification)
+**Skill output (append):** `./.claude/skills/sketch-findings-diederik/`
+
+### Included Sketches
+
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 002 | phase-16-1-wizard-shell | D — 620px centered card + emoji rows | Onboarding wizard |
+| 003 | phase-16-1-connect-source | C — glyph mini-tile row + persistent drop zone | Onboarding wizard |
+| 004 | phase-16-1-preview-row | D — leading Type chip + click-italic rename + confirm-suggest categories with bulk-confirm | Import preview & categorization |
+| 005 | phase-16-1-crowd-merchant | A+B+C combined — Triage row CTA (primary) + `/community/mystery-merchants` destination + `Settings → Shared merchant list` toggles | Community merchant identification |
+
+### Excluded Sketches
+
+_None._
+
+### Design Direction (Phase 16.1)
+
+**Calm Linear/Notion aesthetic continues, applied to the user-facing
+first-run flow.** The onboarding wizard introduces a 620px centered-
+card chrome that propagates to every step — top progress dots, body
+card, footer privacy pill — and a connector-step body pattern (glyph
+mini-tile row + format chips + always-visible drop zone) that
+reuses unchanged for bank statements, credit card PDFs, and
+optional email OAuth.
+
+The import preview gets three new affordances layered into the row
+without becoming noisy: a leading Type column (glyph+word chip per
+payment type), an inline rename popover triggered by clicking the
+italic-fallback name itself, and a three-state Category cell (auto-
+suggested / confirmed / uncategorized) with hover quick-actions and a
+bulk-confirm shortcut.
+
+A new crowd-sourced merchant identification corpus is surfaced in
+three places: the moment-of-use CTA on Triage rows, a dedicated
+browse destination, and a Settings section with toggles — all
+sharing one suggest-mapping modal that hides the "this is a PR to
+a YAML file in a Git repo" awkwardness behind a friendly form and
+a diederik-bot draft-PR flow.
+
+### Key Decisions (Phase 16.1)
+
+#### Onboarding wizard (002 + 003)
+
+- **620px centered card** on `--color-bg-subtle` page wash; top bar
+  with brand + progress-dots + "Resume later"; bottom-right `Skip`
+  ghost + `Continue →` primary inside the card; footer with privacy
+  pill + "Need help?" link.
+- **Welcome step body:** eyebrow + H1 + lede + three emoji-glyph
+  rows (🏦 bank · 💳 card · ✉️ receipts/optional). Each row has a
+  44×44 glyph tile + title + one-line description.
+- **Connector step body** (ASN / ICS / email): glyph mini-tile row
+  showing the whole journey (🔐 Log in · 📑 Open afschriften · 📅
+  Pick a range · ⬇️ Download), format chips with quiet "recommended"
+  badge on the preferred format, drop zone always visible at the
+  bottom of the card.
+
+#### Import preview & categorization (004)
+
+- **Column order:** Type · Date · Counterparty · Funding source ·
+  Category · Amount. Type leading so vertical scanning reveals
+  payment-shape patterns.
+- **Type chip:** glyph + word, color-tokenized per type (⛁ PIN
+  violet · ⌘ Online blue · ↔ Transfer slate · ⤓ Direct debit amber
+  · € Cash dark-amber).
+- **Inline rename:** italic-fallback name is itself the click
+  target; popover with "Remember for future imports" learning-rule
+  checkbox.
+- **Category cell three-state:** auto-suggested (dashed italic chip
+  with hover ✓/× quick-actions) → confirmed (solid chip with
+  emerald ✓ prefix) → uncategorized ("+ Pick a category" ghost
+  button).
+- **Bulk-confirm** button in legend with live count chip; **live
+  footer counter** ("N confirmed, M auto-suggested, K uncategorized")
+  so import-readiness is visible at a glance.
+
+#### Community merchant identification (005)
+
+- **Three-layer surface:** B (Triage row CTA — primary moment-of-
+  use entry) + A (`/community/mystery-merchants` browse destination)
+  + C (`Settings → Shared merchant list` preferences + toggles +
+  corpus stats).
+- **Single shared suggest-mapping modal** with mystery code (read-
+  only) + friendly name + optional category hint + optional region
+  + live YAML preview + diederik-bot draft-PR submission +
+  explicit "you're anonymous unless you choose to be" reassurance.
+- **Three Settings toggles:** use shared list (auto-name) · offer
+  contribution buttons on Triage · pull updates on app updates.
+
+### Implications for Phase 16.1 implementation
+
+- **Card-width consistency** must hold across the wizard chrome.
+  The single permitted exception is the embedded import-preview
+  step, which relaxes from 620 to ~1120px to fit the preview
+  table. No other per-step width variation.
+- **Auto-categorization** must always commit to a *tentative* state
+  the user can confirm or clear — never silently set a category as
+  if the user had picked it. The dashed-italic styling is the
+  contract.
+- **Payment-type classification** is both a UI signal *and* a
+  ledger field. The chip rendering is downstream; the classifier
+  must run during import so the field is available to any view that
+  needs it (transactions list, dashboard summaries, future search).
+- **Crowd-sourced corpus contract:** only `pattern` + `name` +
+  optional `category` + optional `region` ship in the YAML.
+  Amounts, dates, account IDs never leave the local machine.
+- **diederik-bot PR submission** abstraction needs a GitHub App or
+  service-account token. Design assumes the abstraction exists; the
+  modal copy promises anonymity.
+
+### Files written this session
+
+- `./.claude/skills/sketch-findings-diederik/references/onboarding-wizard.md`
+- `./.claude/skills/sketch-findings-diederik/references/import-preview-and-categorization.md`
+- `./.claude/skills/sketch-findings-diederik/references/community-merchant-identification.md`
+- `./.claude/skills/sketch-findings-diederik/sources/002-phase-16-1-wizard-shell/{index.html,README.md}`
+- `./.claude/skills/sketch-findings-diederik/sources/003-phase-16-1-connect-source/{index.html,README.md}`
+- `./.claude/skills/sketch-findings-diederik/sources/004-phase-16-1-preview-row/{index.html,README.md}`
+- `./.claude/skills/sketch-findings-diederik/sources/005-phase-16-1-crowd-merchant/{index.html,README.md}`
+- `./.claude/skills/sketch-findings-diederik/SKILL.md` — design-area table + processed-sketches list + auto-load triggers extended
+- `./.planning/sketches/WRAP-UP-SUMMARY.md` — this section appended
+
+CLAUDE.md routing line for `sketch-findings-diederik` was already in
+place from session 1 and didn't need editing.
+
+---
+
+## Session 1 — 2026-05-24
+
 **Sketches processed:** 1
 **Design areas:** 4 (App shell & navigation, Dev Console surfaces, Command palette, Component library)
 **Skill output:** `./.claude/skills/sketch-findings-diederik/`

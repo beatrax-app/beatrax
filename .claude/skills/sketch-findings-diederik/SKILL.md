@@ -19,7 +19,8 @@ hints, and tabular numerics in tables. Light + dark themes are first-class.
 - **Raycast** — palette result row, kbd footer hints, source-tag chips
 - **GitHub Actions** — live-streaming run cards with collapsible output
 
-Sketch sessions wrapped: 2026-05-24.
+Sketch sessions wrapped: 2026-05-24 (Phase 16 dev console) ·
+2026-05-25 (Phase 16.1 first-run wizard + import polish + crowd merchant).
 </context>
 
 <design_direction>
@@ -68,6 +69,9 @@ inside the otherwise-calm-slate room.
 | Dev Console surfaces | `references/dev-console-surfaces.md` | `/dev` overview is a single dark "console pane"; `/dev/artisan` is a palette-dispatched timeline |
 | Command palette | `references/command-palette.md` | ⌘K two-pane (categories + Recent / results) — primary command-entry point |
 | Component library | `references/component-library.md` | Status pills, tier chips, run cards, kbd hints, dense tables, dark-mode tokens |
+| Onboarding wizard | `references/onboarding-wizard.md` | 620px centered card on neutral wash, top progress dots, footer privacy pill; connector steps use a glyph mini-tile row + format chips + always-visible drop zone |
+| Import preview & categorization | `references/import-preview-and-categorization.md` | Leading Type column (glyph+word chip per PIN/online/transfer/dd/cash); italic-fallback name is itself the click-rename target; category cell three-state (auto/confirmed/uncategorized) with hover ✓/× quick actions + bulk-confirm |
+| Community merchant identification | `references/community-merchant-identification.md` | Three-layer surface: dashed "❋ Help others identify this" CTA on Triage rows (primary) + `/community/mystery-merchants` browse destination + `Settings → Shared merchant list` toggles; all share one suggest-mapping modal with live YAML preview that submits as a draft PR from `diederik-bot` |
 
 ## Theme
 
@@ -89,9 +93,13 @@ and demonstrates every winning variant.
 Auto-load when:
 
 - Implementing Phase 16 plans (16-01 sidebar / 16-02 rename / 16-03+ Dev Console pages)
+- Implementing Phase 16.1 plans (first-run wizard, import preview row affordances, crowd-sourced merchant identification, payment-type classification)
 - Adding any new authenticated app surface that needs the sidebar
 - Adding a new ⌘K palette source or app action
 - Adding a new dev tile, run card, audit row, or destructive-action gate
+- Building any wizard / setup / onboarding flow
+- Touching the import preview table or `/triage` row
+- Building any settings page section that exposes a corpus toggle
 
 Match against the **layer** you're working in — `app-shell-and-navigation.md`
 for the sidebar/account/dev block, `dev-console-surfaces.md` for `/dev/*`
@@ -112,4 +120,8 @@ for cross-cutting primitives.
 ## Processed Sketches
 
 - 001-phase-16-developer-mode (winner: all C — sectioned sidebar + Dev block, console pane overview, two-pane palette, palette-dispatched runner timeline)
+- 002-phase-16-1-wizard-shell (winner: D — 620px centered card on neutral wash + emoji-glyph welcome rows)
+- 003-phase-16-1-connect-source (winner: C — four-tile mini-step row + format chips + persistent drop zone in the same wizard card)
+- 004-phase-16-1-preview-row (winner: D — leading Type column with glyph+word chip + click-italic rename popover + category cell three-state with hover ✓/× quick-confirm/clear + bulk-confirm)
+- 005-phase-16-1-crowd-merchant (winner: A+B+C combined — Triage-row "❋ Help others identify this" as primary entry + `/community/mystery-merchants` browse destination + `Settings → Shared merchant list` toggles, all sharing one suggest-mapping modal with diederik-bot draft-PR flow)
 </metadata>
