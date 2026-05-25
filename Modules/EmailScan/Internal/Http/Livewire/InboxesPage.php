@@ -97,22 +97,21 @@ final class InboxesPage extends Component
         // keep the page mountable in both contexts.
         if ($request->hasSession()) {
             $session = $request->session();
-            if ($session->has('open_backfill_modal')) {
-                $candidate = $session->get('open_backfill_modal');
-                if (is_int($candidate) && $candidate > 0) {
-                    $this->openBackfillForInboxId = $candidate;
-                } elseif (is_numeric($candidate)) {
-                    $this->openBackfillForInboxId = (int) $candidate;
-                }
-                if ($this->openBackfillForInboxId !== null) {
-                    $this->dispatch('backfill-window:open', inboxId: $this->openBackfillForInboxId);
-                }
+
+            // Every session flash consumed here uses pull() (single-use)
+            // so a subsequent wire:poll tick or back-button revisit does
+            // not re-fire the backfill-window modal or repaint the
+            // canceled / failed warning banner.
+            $candidate = $session->pull('open_backfill_modal');
+            if (is_int($candidate) && $candidate > 0) {
+                $this->openBackfillForInboxId = $candidate;
+            } elseif (is_numeric($candidate)) {
+                $this->openBackfillForInboxId = (int) $candidate;
+            }
+            if ($this->openBackfillForInboxId !== null) {
+                $this->dispatch('backfill-window:open', inboxId: $this->openBackfillForInboxId);
             }
 
-            // pull() (single-use) rather than get() + has() — the
-            // canceled / failed flashes must clear after the first
-            // render so a subsequent wire:poll tick does not repaint
-            // the warning banner repeatedly.
             $canceled = $session->pull('oauth_canceled');
             if (is_string($canceled) && $canceled !== '') {
                 $this->oauthCanceledMessage = $canceled;
