@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
+use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Internal\Casts\MoneyMinorCast;
 
 /**
@@ -46,6 +47,7 @@ use Modules\Ledger\Internal\Casts\MoneyMinorCast;
  * @property string $fingerprint
  * @property int $fingerprint_version
  * @property string $status
+ * @property PaymentType $payment_type
  */
 final class Transaction extends Model
 {
@@ -76,6 +78,7 @@ final class Transaction extends Model
         'pair_transaction_id',
         'fingerprint', 'fingerprint_version',
         'status',
+        'payment_type',
     ];
 
     /** @return array<string, string> */
@@ -93,6 +96,7 @@ final class Transaction extends Model
             'raw_payload' => 'array',
             'auto_category_provenance' => 'array',
             'enriched_from' => AsArrayObject::class,
+            'payment_type' => PaymentType::class,
             // Virtual Money attributes — `amount` and `settled_amount` are not
             // real columns; the cast bridges them to the (minor, currency) pair.
             'amount' => MoneyMinorCast::class,
