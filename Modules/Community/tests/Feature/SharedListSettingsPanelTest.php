@@ -4,14 +4,9 @@ declare(strict_types=1);
 
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\SharedListSettingsPanel;
-use Modules\Core\Models\User;
 
 beforeEach(function (): void {
-    $this->user = User::create([
-        'username' => 'shared-list-settings-user',
-        'password' => 'fixture-password',
-        'period_start_day' => 1,
-    ]);
+    $this->user = makeCommunityTestUser('shared-list-settings-user');
     $this->actingAs($this->user);
 });
 

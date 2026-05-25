@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
-use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
 
 beforeEach(function (): void {
@@ -57,11 +56,7 @@ afterEach(function (): void {
 });
 
 it('seeds three valid entries and skips the malformed one on UserInstalled', function (): void {
-    $user = User::create([
-        'username' => 'corpus-seed-a',
-        'password' => 'fixture-password',
-        'period_start_day' => 1,
-    ]);
+    $user = makeCommunityTestUser('corpus-seed-a');
 
     /** @var Dispatcher $events */
     $events = $this->app->make(Dispatcher::class);
@@ -77,11 +72,7 @@ it('seeds three valid entries and skips the malformed one on UserInstalled', fun
 });
 
 it('is idempotent on re-dispatch — no duplicate rows', function (): void {
-    $user = User::create([
-        'username' => 'corpus-seed-b',
-        'password' => 'fixture-password',
-        'period_start_day' => 1,
-    ]);
+    $user = makeCommunityTestUser('corpus-seed-b');
 
     /** @var Dispatcher $events */
     $events = $this->app->make(Dispatcher::class);
@@ -94,11 +85,7 @@ it('is idempotent on re-dispatch — no duplicate rows', function (): void {
 });
 
 it('updates the existing row when the YAML name changes on re-dispatch', function (): void {
-    $user = User::create([
-        'username' => 'corpus-seed-c',
-        'password' => 'fixture-password',
-        'period_start_day' => 1,
-    ]);
+    $user = makeCommunityTestUser('corpus-seed-c');
 
     /** @var Dispatcher $events */
     $events = $this->app->make(Dispatcher::class);
@@ -139,11 +126,7 @@ it('tolerates a missing heuristics file without aborting the main corpus seed', 
     $config = $this->app->make(ConfigRepository::class);
     $config->set('community.corpus.heuristics_path', $this->tmpRoot.'/does-not-exist.yaml');
 
-    $user = User::create([
-        'username' => 'corpus-seed-d',
-        'password' => 'fixture-password',
-        'period_start_day' => 1,
-    ]);
+    $user = makeCommunityTestUser('corpus-seed-d');
 
     /** @var Dispatcher $events */
     $events = $this->app->make(Dispatcher::class);
