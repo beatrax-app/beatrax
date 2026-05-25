@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Pipeline;
 
+use Illuminate\Contracts\Foundation\Application;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
@@ -58,6 +60,7 @@ final class ImportPipeline
         private readonly RecordsStatementSummary $statementSummaries,
         private readonly MerchantNameResolver $merchantNameResolver,
         private readonly LoggerInterface $logger,
+        private readonly Application $app,
     ) {}
 
     /**
@@ -129,7 +132,7 @@ final class ImportPipeline
                         'row_index' => $source->sourceRowIndex,
                         'exception_class' => $e::class,
                         'exception_message' => $e->getMessage(),
-                        'exception_trace' => $e->getTraceAsString(),
+                        'exception_trace' => SafeTrace::cap($e, $this->app->basePath()),
                     ]);
                     $preview[] = new PreviewRowDto(
                         rowIndex: $source->sourceRowIndex,

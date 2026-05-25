@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Onboarding\Internal\Http\Livewire\Steps;
 
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Contracts\RunsImports;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -122,6 +124,7 @@ final class ConnectBankStep extends Component
         RunsImports $importer,
         CurrentUser $currentUser,
         LoggerInterface $logger,
+        Application $app,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -142,7 +145,7 @@ final class ConnectBankStep extends Component
                 'filename' => $originalFilename,
                 'exception_class' => $e::class,
                 'exception_message' => $e->getMessage(),
-                'exception_trace' => $e->getTraceAsString(),
+                'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
             $this->uploadError = sprintf(
                 'Could not read this file (%s). The full error is in /dev/logs.',
