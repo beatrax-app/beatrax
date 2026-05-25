@@ -31,13 +31,13 @@ it('returns 404 when a user already exists', function (): void {
     $this->get('/signup')->assertNotFound();
 });
 
-it('signs up the first user successfully', function (): void {
+it('signs up the first user successfully and redirects to the setup wizard', function (): void {
     Livewire::test(SignupPage::class)
         ->set('username', 'alice')
         ->set('password', 'a-long-password-12chars')
         ->set('passwordConfirmation', 'a-long-password-12chars')
         ->call('submit')
-        ->assertRedirect(route('auth.recovery-codes-display'));
+        ->assertRedirect(route('setup'));
 
     $user = User::query()->where('username', 'alice')->first();
     expect($user)->not->toBeNull();
