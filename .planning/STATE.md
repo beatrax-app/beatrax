@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
 stopped_at: Phase 16.1.1 UI-SPEC approved
-last_updated: "2026-05-25T22:27:44.865Z"
-last_activity: 2026-05-25 -- Phase 16.1.1 planning complete
+last_updated: "2026-05-25T22:38:57.826Z"
+last_activity: 2026-05-25 -- Phase 16.1.1 execution started
 progress:
   total_phases: 12
   completed_phases: 6
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-**Current focus:** Phase 16.1 — zero-friction-first-run-setup-wizard-manual-transaction-rena
+**Current focus:** Phase 16.1.1 — starting-balance-setup-bank-format-driven-wizard-copy-ics-pd
 
 ## Current Position
 
-Phase: 16.1 (zero-friction-first-run-setup-wizard-manual-transaction-rena) — EXECUTING
-Plan: 1 of 8
-Status: Ready to execute
-Last activity: 2026-05-25 -- Phase 16.1.1 planning complete
+Phase: 16.1.1 (starting-balance-setup-bank-format-driven-wizard-copy-ics-pd) — EXECUTING
+Plan: 1 of 10
+Status: Executing Phase 16.1.1
+Last activity: 2026-05-25 -- Phase 16.1.1 execution started
 
 ## Performance Metrics
 
