@@ -26,6 +26,13 @@
     'glyph' => '📥',
     'accept' => '',
 ])
+@php
+    /** @var string $wireModel */
+    /** @var string $lead */
+    /** @var string $sublink */
+    /** @var string $glyph */
+    /** @var string $accept */
+@endphp
 
 <label {{ $attributes->class(['drop-zone']) }}>
     <span class="drop-zone-glyph" aria-hidden="true">{{ $glyph }}</span>
