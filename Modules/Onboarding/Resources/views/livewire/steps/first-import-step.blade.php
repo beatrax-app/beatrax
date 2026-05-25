@@ -21,7 +21,7 @@
     <x-onboarding::wiz-card :wide="true">
         <p class="wiz-eyebrow">📥 Step 5 — Your first import</p>
         <h1 id="wiz-first-import-h1" class="wiz-h1">
-            Drop a statement and see what diederik makes of it
+            Drop a statement and see what beatrax makes of it
         </h1>
         <p class="wiz-lede">
             Upload any statement — your ASN export, the ICS PDF you just downloaded,
