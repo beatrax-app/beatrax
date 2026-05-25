@@ -13,21 +13,30 @@ use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
  * Wizard step 3 — connect the user's ICS credit card. ICS Cards's
- * consumer portal (Mijn ICS) only exports monthly PDF statements; there
- * is no CSV export. The step therefore renders a single non-interactive
- * "PDF [only format]" chip and locks the file validator to the .pdf
- * extension. Submission delegates to `RunsImports::runFromUpload()` with
- * the leaf format key `ics-pdf` — the same path `Modules/Import`'s
- * IcsPdfAdapter consumes.
+ * consumer portal (Mijn ICS) only exports monthly PDF statements; the
+ * user typically downloads several months at once so the step accepts
+ * an array of PDF uploads and runs each through the importer in a
+ * single submit pass.
  *
- * On success this step dispatches `wizard.step.completed` so the
- * SetupWizard parent advances. Skip is allowed — the user can come back
- * later from Settings to import a card statement.
+ * Submission delegates per-file to `RunsImports::runFromUpload()` with
+ * the leaf format key `ics-pdf` — the same path `Modules/Import`'s
+ * IcsPdfAdapter consumes. Each successful preview lands one
+ * `ImportRun` row; the resulting ids are merged into
+ * `wizard_progress.data['card_import_run_ids']` as a deduplicated
+ * array so the consolidated preview screen can read them back.
+ *
+ * A per-file parse failure is logged (with capped stack trace) but
+ * does not abort the submit — the loop continues to the next file so
+ * one bad PDF doesn't waste the rest of the upload. Once every file
+ * has been attempted, the step dispatches `wizard.step.completed` if
+ * at least one file landed an ImportRun; otherwise it surfaces an
+ * inline error and stays on the step.
  *
  * Per the project DI-only rule, every collaborator is method-DI'd on
  * `submit()`; no global helpers are called.
@@ -37,14 +46,26 @@ final class ConnectCardStep extends Component
     use WithFileUploads;
 
     /**
-     * The single leaf format the ICS step ships. ICS Cards exports
-     * PDF only; the property exists to keep the connector-step
-     * structure mirror-able to ConnectBankStep, not to offer choice.
+     * The leaf format key the ICS step ships. Constant — ICS Cards
+     * exports PDF only.
      */
     public string $selectedFormat = 'ics-pdf';
 
-    public ?TemporaryUploadedFile $file = null;
+    /**
+     * The PDF uploads queued for this submit. Bound to a
+     * `<input type="file" multiple>` via `wire:model="statements"`;
+     * each entry is a Livewire-staged TemporaryUploadedFile.
+     *
+     * @var array<int, TemporaryUploadedFile>
+     */
+    public array $statements = [];
 
+    /**
+     * One-shot human-readable parse-time error surfaced inline below
+     * the drop-zone when EVERY queued file failed to land an
+     * ImportRun. A mixed-result submit (some succeeded, some failed)
+     * still dispatches `wizard.step.completed`.
+     */
     public ?string $uploadError = null;
 
     /**
@@ -53,7 +74,8 @@ final class ConnectCardStep extends Component
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'max:10240', 'extensions:pdf'],
+            'statements' => ['array', 'min:1'],
+            'statements.*' => ['file', 'max:10240', 'extensions:pdf'],
         ];
     }
 
@@ -63,12 +85,39 @@ final class ConnectCardStep extends Component
     public function messages(): array
     {
         return [
-            'file.required' => 'Drop the monthly PDF statement you downloaded from Mijn ICS.',
-            'file.max' => 'That file is too large. ICS PDF statements are normally under 1 MB.',
-            'file.extensions' => "That file doesn't look like an ICS PDF statement. Mijn ICS only exports PDF — try the latest monthly statement.",
+            'statements.required' => 'Drop the monthly PDF statements you downloaded from Mijn ICS.',
+            'statements.min' => 'Drop at least one ICS PDF statement before continuing.',
+            'statements.*.required' => 'Drop the monthly PDF statement you downloaded from Mijn ICS.',
+            'statements.*.max' => 'One of your files is too large. ICS PDF statements are normally under 1 MB each.',
+            'statements.*.extensions' => "One of your files isn't a PDF. Mijn ICS only exports PDF — try the latest monthly statement.",
         ];
     }
 
+    /**
+     * Removes one statement from the upload queue without re-uploading
+     * the rest. Bound from the per-file chip's `×` button.
+     */
+    public function removeStatement(int $index): void
+    {
+        if (! array_key_exists($index, $this->statements)) {
+            return;
+        }
+
+        unset($this->statements[$index]);
+        $this->statements = array_values($this->statements);
+    }
+
+    /**
+     * Runs every queued PDF through the shared import preview
+     * pipeline. Per-file errors are logged (with capped stack traces)
+     * but do not abort the submit — the loop continues to the next
+     * file so a single bad statement doesn't waste the upload.
+     *
+     * On at least one success the step stashes the resulting ImportRun
+     * ids into `wizard_progress.data['card_import_run_ids']` and
+     * dispatches `wizard.step.completed`. On total failure (every file
+     * threw) the step surfaces the first failure's message inline.
+     */
     public function submit(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -78,30 +127,68 @@ final class ConnectCardStep extends Component
         $this->uploadError = null;
         $this->validate();
 
-        if ($this->file === null) {
+        if ($this->statements === []) {
             return;
         }
 
         $user = $currentUser->user();
-        $tmp = $this->file->getRealPath();
-        $originalFilename = $this->sanitiseFilename($this->file->getClientOriginalName());
 
-        try {
-            $importer->runFromUpload($tmp, $this->selectedFormat, $user, $originalFilename);
-        } catch (Throwable $e) {
-            $logger->error('ConnectCardStep: import preview failed.', [
-                'source_format' => $this->selectedFormat,
-                'filename' => $originalFilename,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
-                'exception_trace' => SafeTrace::cap($e, $app->basePath()),
-            ]);
+        $newRunIds = [];
+        $firstError = null;
+
+        foreach ($this->statements as $statement) {
+            $tmp = $statement->getRealPath();
+            $originalFilename = $this->sanitiseFilename($statement->getClientOriginalName());
+
+            try {
+                $result = $importer->runFromUpload($tmp, $this->selectedFormat, $user, $originalFilename);
+                $newRunIds[] = $result->importRunId;
+            } catch (Throwable $e) {
+                $logger->error('ConnectCardStep: import preview failed.', [
+                    'source_format' => $this->selectedFormat,
+                    'filename' => $originalFilename,
+                    'exception_class' => $e::class,
+                    'exception_message' => $e->getMessage(),
+                    'exception_trace' => SafeTrace::cap($e, $app->basePath()),
+                ]);
+                if ($firstError === null) {
+                    $firstError = sprintf(
+                        'Could not read %s (%s).',
+                        $originalFilename,
+                        $e::class,
+                    );
+                }
+            }
+        }
+
+        if ($newRunIds === []) {
             $this->uploadError = sprintf(
-                'Could not read this file (%s). The full error is in /dev/logs.',
-                $e::class,
+                "We couldn't read any of your ICS PDFs. %s",
+                $firstError ?? 'The full error is in /dev/logs.',
             );
 
             return;
+        }
+
+        $progress = WizardProgress::query()
+            ->where('user_id', $user->id)
+            ->where('step_key', 'connect-card')
+            ->first();
+
+        if ($progress !== null) {
+            $data = $progress->data ?? [];
+            $existingRaw = $data['card_import_run_ids'] ?? [];
+            $existing = [];
+            if (is_array($existingRaw)) {
+                foreach ($existingRaw as $value) {
+                    if (is_int($value) && $value > 0) {
+                        $existing[] = $value;
+                    }
+                }
+            }
+            $merged = array_values(array_unique([...$existing, ...$newRunIds], SORT_NUMERIC));
+            $data['card_import_run_ids'] = $merged;
+            $progress->update(['data' => $data]);
         }
 
         $this->dispatch('wizard.step.completed');
