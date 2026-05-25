@@ -17,9 +17,13 @@ use Modules\Import\Internal\Listeners\HandleFileOpenedFromOs;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Pipeline\Stages\PaymentTypeClassifierStage;
+use Modules\Import\Internal\Services\AliasYamlExporter;
+use Modules\Import\Internal\Services\AliasYamlImporter;
+use Modules\Import\Internal\Services\LongestCommonPrefix;
 use Modules\Import\Public\Actions\ApplyEnrichments;
 use Modules\Import\Public\Actions\ConfirmImport;
 use Modules\Import\Public\Actions\CreateMerchantAlias;
+use Modules\Import\Public\Actions\MergeMerchantAliases;
 use Modules\Import\Public\Actions\RunImport;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Contracts\ConfirmsImports;
@@ -98,6 +102,18 @@ final class ImportServiceProvider extends ServiceProvider
         $this->app->singleton(MerchantNameResolver::class);
         $this->app->singleton(AliasMatchPreviewQuery::class);
         $this->app->singleton(CreateMerchantAlias::class);
+
+        // Settings → Aliases collaborators. LongestCommonPrefix is a
+        // stateless pure function; the YAML exporter wraps a single
+        // read query; the YAML importer wraps a parse + diff + apply
+        // trio (the apply step opens a transaction). The merge action
+        // is a single transactional write. None hold per-request
+        // state, so they are bound as singletons alongside the rest of
+        // the alias-resolution chain.
+        $this->app->singleton(LongestCommonPrefix::class);
+        $this->app->singleton(AliasYamlExporter::class);
+        $this->app->singleton(AliasYamlImporter::class);
+        $this->app->singleton(MergeMerchantAliases::class);
 
         foreach (self::PAYMENT_TYPE_HINTER_FQNS as $fqn) {
             if (class_exists($fqn)) {
