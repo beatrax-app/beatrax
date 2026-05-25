@@ -46,6 +46,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application-root override (test-only)
+    |--------------------------------------------------------------------------
+    |
+    | The CorpusLoader resolves the bundled corpus paths above against
+    | this root. When `null` (the production default) the loader uses
+    | the injected `Application::basePath()` so a relocation of the
+    | source tree continues to work without a code change. Feature
+    | tests bind a fixture directory here so the loader walks a
+    | temporary YAML file without mutating the shipped corpus.
+    |
+    */
+
+    'app_root' => null,
+
+    /*
+    |--------------------------------------------------------------------------
     | Default Settings → Shared merchant list toggles
     |--------------------------------------------------------------------------
     |
