@@ -31,7 +31,7 @@ Reference points kept in mind while sketching:
 |---|------|----------------|--------|------|
 | 001 | phase-16-developer-mode | Four-scene Phase 16 surface: app sidebar shape, /dev overview layout, ⌘K palette structure, artisan runner UX | **All C** — sidebar C (sectioned + Dev block), overview C (console pane), palette C (two-pane), runner C (palette-dispatched timeline) | layout, dev-console, palette, runner |
 | 002 | phase-16-1-wizard-shell | What does the first-run wizard chrome feel like — frame, progress, primary/skip/exit? | **D** — A's chrome + 620px wider card + C's emoji-row content | wizard, onboarding, layout |
-| 003 | phase-16-1-connect-source | How do we walk a non-technical user through "log in → find export → pick format → drop file"? | TBD | wizard, onboarding, upload |
+| 003 | phase-16-1-connect-source | How do we walk a non-technical user through "log in → find export → pick format → drop file"? | **C** — Linear mini-steps tile-row + persistent drop zone in the same 720px card | wizard, onboarding, upload |
 | 004 | phase-16-1-preview-row | How do payment-type badges + Funding source + inline rename coexist without row noise? | TBD | preview, table, badges |
 | 005 | phase-16-1-crowd-merchant | Where does community merchant identification live and what's the contribute flow? | TBD | community, settings, contribution |
 
