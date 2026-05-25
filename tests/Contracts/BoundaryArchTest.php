@@ -1786,3 +1786,65 @@ it('restricts Native\\Desktop\\Contracts\\Shell imports to the allow-listed acti
         "Native\\Desktop\\Contracts\\Shell may only be imported by OpenExternalUrlAction + NoOpShell. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
+
+it('every raw merchant_aliases query in production code carries an explicit user_id filter (noMerchantAliasesQueryWithoutUserIdFilter)', function (): void {
+    // Cross-user posture for merchant_aliases: every production reader
+    // and writer that goes through the raw query builder MUST carry an
+    // explicit `where('user_id', ...)` filter (or include a `user_id`
+    // column on the row payload for inserts). The BelongsToUser global
+    // scope on the Eloquent model is a defence-in-depth secondary
+    // guard; it does not fire under queue workers or console commands.
+    //
+    // The scan walks every `.php` file under Modules/Import that is
+    // not a test file. For each occurrence of `->table('merchant_aliases')`
+    // it looks ahead 30 lines for an explicit `user_id` reference
+    // (either `where('user_id'` for reads/updates or `'user_id' =>` for
+    // inserts). A site that fails this check is flagged so a future
+    // contributor cannot silently introduce a cross-user leak.
+    $importRoot = base_path('Modules/Import');
+    if (! is_dir($importRoot)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $hits = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($importRoot, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        $lines = explode("\n", $stripped);
+
+        foreach ($lines as $index => $line) {
+            if (! str_contains($line, "table('merchant_aliases')")) {
+                continue;
+            }
+            // Look ahead 30 lines for a user_id reference. The window
+            // is generous enough to cover a multi-line update payload
+            // but tight enough that an unrelated downstream
+            // `where('user_id')` on a different table does not falsely
+            // satisfy the check.
+            $window = implode("\n", array_slice($lines, $index, 30));
+            $hasUserIdFilter = preg_match("/where\\(\\s*['\"]user_id['\"]/", $window) === 1
+                || preg_match("/['\"]user_id['\"]\\s*=>/", $window) === 1;
+            if (! $hasUserIdFilter) {
+                $hits[] = sprintf('%s:%d', str_replace(base_path().'/', '', $path), $index + 1);
+            }
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        "Every raw `->table('merchant_aliases')` call in production code must carry an explicit `user_id` filter or column. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
