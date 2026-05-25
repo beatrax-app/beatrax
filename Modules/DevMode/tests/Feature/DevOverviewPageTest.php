@@ -308,7 +308,7 @@ it('renders the empty-state copy when no open alerts exist', function (): void {
     expect($html)->toContain('No open alerts.');
 });
 
-it('renders the 8-line redacted log tail in the console pane', function (): void {
+it('renders the last 5 structured log entries in the console pane as clickable rows that drill into /dev/logs', function (): void {
     $user = devOverviewUser(true, 'devov-log-tail');
 
     // Write a synthetic daily log file with a known secret literal so we
@@ -319,26 +319,84 @@ it('renders the 8-line redacted log tail in the console pane', function (): void
         @mkdir($logDir, 0700, true);
     }
     $lines = [];
-    for ($i = 1; $i <= 12; $i++) {
+    for ($i = 1; $i <= 7; $i++) {
         $lines[] = "[2026-05-24 12:00:0{$i}] testing.INFO: line number {$i}";
     }
-    // Add one line carrying a Bearer header — the tail-tail render path
-    // must scrub it via the on-stream RedactSecretsProcessor.
-    $lines[] = '[2026-05-24 12:00:13] testing.WARNING: Authorization: Bearer abcdefghi1234567890';
+    // Add one line carrying a Bearer header — the row render path must
+    // scrub it via the on-stream RedactSecretsProcessor.
+    $lines[] = '[2026-05-24 12:00:08] testing.WARNING: Authorization: Bearer abcdefghi1234567890';
     file_put_contents($logFile, implode("\n", $lines)."\n");
 
     $response = $this->actingAs($user)->get('/dev');
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // The tail-tail marker + cursor blink must render.
+    // Container marker still anchors the test layer.
     expect($html)->toContain('data-testid="console-pane-tail"');
-    // At least one of the seeded lines must be visible inside the tail.
-    expect($html)->toContain('line number 12');
-    // The Bearer literal MUST NOT appear raw.
+    // Cap at 5 rows even when 8 entries exist in the file.
+    $rowCount = substr_count($html, 'data-testid="recent-log-entry-row"');
+    expect($rowCount)->toBe(5);
+    // The newest 5 entries appear (lines 4-7 + the WARNING). The cap
+    // drops the oldest three. The WARNING row's deep-link must carry
+    // the severity filter pre-populated.
+    expect($html)->toContain('line number 7') // newest INFO surfaces
+        ->and($html)->toContain('line number 4')
+        ->and($html)->not->toContain('line number 1') // older entries dropped by cap
+        ->and($html)->not->toContain('line number 2')
+        ->and($html)->not->toContain('line number 3');
+    // The Bearer literal MUST NOT appear raw in any row.
     expect($html)->not->toContain('abcdefghi1234567890');
-    // The scrubbed marker must appear inside the redacted line.
+    // The scrubbed marker must appear inside the redacted row.
     expect($html)->toContain('[REDACTED]');
+    // Row hrefs deep-link to /dev/logs with severity + contains pre-set.
+    expect($html)->toContain('/dev/logs?severities=INFO&amp;contains=')
+        ->and($html)->toContain('/dev/logs?severities=WARNING&amp;contains=');
+
+    @unlink($logFile);
+});
+
+it('renders the empty-state copy in the console pane when the daily log file is missing', function (): void {
+    $user = devOverviewUser(true, 'devov-log-empty');
+
+    $logFile = UserDataPathService::dailyLogFile();
+    if (is_file($logFile)) {
+        @unlink($logFile);
+    }
+
+    $response = $this->actingAs($user)->get('/dev');
+    $response->assertOk();
+    $html = (string) $response->getContent();
+
+    expect($html)->toContain('data-testid="console-pane-tail"');
+    expect($html)->toContain('Waiting for log lines…');
+    expect(substr_count($html, 'data-testid="recent-log-entry-row"'))->toBe(0);
+});
+
+it('folds continuation lines into the preceding entry so a stack trace renders as one row, not many', function (): void {
+    $user = devOverviewUser(true, 'devov-log-fold');
+
+    $logFile = UserDataPathService::dailyLogFile();
+    $logDir = dirname($logFile);
+    if (! is_dir($logDir)) {
+        @mkdir($logDir, 0700, true);
+    }
+    $lines = [
+        '[2026-05-24 12:00:01] testing.ERROR: boom uncaught',
+        '#0 /app/foo.php(12): doStuff()',
+        '#1 /app/bar.php(34): foo()',
+        '#2 /app/baz.php(56): bar()',
+        '[2026-05-24 12:00:02] testing.INFO: subsequent entry',
+    ];
+    file_put_contents($logFile, implode("\n", $lines)."\n");
+
+    $response = $this->actingAs($user)->get('/dev');
+    $response->assertOk();
+    $html = (string) $response->getContent();
+
+    // The stack-trace continuation lines fold into the ERROR row's
+    // message — the row count reflects two real entries, not five.
+    $rowCount = substr_count($html, 'data-testid="recent-log-entry-row"');
+    expect($rowCount)->toBe(2);
 
     @unlink($logFile);
 });
