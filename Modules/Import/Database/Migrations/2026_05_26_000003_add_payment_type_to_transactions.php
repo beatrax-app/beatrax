@@ -29,14 +29,11 @@ use Illuminate\Database\Schema\Builder;
  * create/save AND raw insertOrIgnore — so a single application-layer
  * bypass cannot land a bad value.
  *
- * Because SQLite's blueprint compiler rebuilds the table when a column
- * is added via `Schema::table('transactions', ...)`, the rebuild can
- * silently drop the previously-installed `transactions_type_check_*`
- * triggers (the same hazard the
- * `2026_05_17_020001_recreate_transactions_type_triggers` migration
- * exists to fix). This migration re-installs the type-check trigger
- * pair at the end of `up()` so both invariants (type + payment_type)
- * remain enforced after the column add.
+ * SQLite's blueprint compiler rebuilds the table on column-add, which
+ * drops the `transactions_type_check_*` trigger pair sitting on the
+ * `type` column. This migration re-installs both trigger pairs at the
+ * end of `up()` so the `type` and `payment_type` invariants stay
+ * enforced after the column add.
  */
 return new class extends Migration
 {

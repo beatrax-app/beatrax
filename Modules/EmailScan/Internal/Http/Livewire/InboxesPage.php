@@ -387,9 +387,9 @@ final class InboxesPage extends Component
         // the right variant and the `<flux:modal>` mounts under the
         // provider-suffixed name), then itself dispatches `modal-show`
         // against the now-correct name. Dispatching `modal-show` from
-        // here would target a name that does not yet exist in the DOM
-        // for any provider other than the default-rendered one, which
-        // produced the silent no-op the user reported.
+        // here would target a name that does not exist in the DOM for
+        // any provider other than the default-rendered one, so the
+        // button click would silently no-op.
         $this->dispatch('oauth-client-wizard:open', provider: $provider);
 
         return null;
