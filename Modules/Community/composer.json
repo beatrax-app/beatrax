@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/community",
+    "description": "Community module — crowd-sourced merchant identification corpus.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Community\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Community\\Tests\\": "tests/"
+        }
+    }
+}
