@@ -566,3 +566,513 @@ td.date,
         background: var(--color-bg);
     }
 }
+
+/*
+ * First-run setup wizard primitives. Sketch-validated calm-slate
+ * surface (sketches 002D / 003C, Phase 16.1 D-01..D-04, UI-SPEC §
+ * "Component Inventory"). Every class below references existing
+ * @theme tokens — Phase 16.1 introduces no new theme variables. The
+ * `--color-emerald` and `--color-emerald-bg` tokens are exported from
+ * the @theme block above and flip with `.dark` automatically.
+ *
+ * Token-source notes:
+ *  - `.wiz-card` padding triple (44px 48px 32px) is sketch-locked from
+ *    002D; it is the single density exception to the 4-multiple rule
+ *    inside the wizard.
+ *  - `.wiz-card--wide` (1120px) is the first-import preview width
+ *    relaxation (UI-SPEC §"Density rules" locked exception) — the
+ *    preview table needs the room.
+ *  - `.drop-zone` vertical 28px is the sketch-validated breathing-room
+ *    exception for the drop-zone glyph + lead + sub stack.
+ *  - All chip / pill geometry exceptions are scoped to the chip / pill
+ *    classes themselves and never propagate to layout containers.
+ */
+@layer components {
+    .wiz-page {
+        min-height: calc(100vh - 48px);
+        display: flex;
+        flex-direction: column;
+        background: var(--color-bg-subtle);
+    }
+
+    .wiz-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-4) var(--space-6);
+    }
+
+    .wiz-brand {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-weight: 600;
+        font-size: var(--text-sm);
+        color: var(--color-text);
+    }
+
+    .wiz-brand-mark {
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: var(--radius-sm);
+        background: var(--color-surface-2);
+        color: var(--color-text);
+        font-weight: 600;
+        font-size: 12px;
+    }
+
+    .wiz-brand-name {
+        font-weight: 600;
+        font-size: var(--text-sm);
+    }
+
+    .wiz-resume-later {
+        padding: 6px var(--space-3);
+        border-radius: var(--radius-md);
+        background: transparent;
+        border: 0;
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .wiz-resume-later:hover {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+    }
+
+    .wiz-body {
+        flex: 1;
+        display: grid;
+        place-items: center;
+        padding: var(--space-6);
+    }
+
+    .wiz-card {
+        max-width: 620px;
+        width: 100%;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        padding: 44px 48px var(--space-8);
+        box-shadow: var(--shadow-md);
+    }
+
+    .wiz-card--wide {
+        max-width: 1120px;
+        padding: var(--space-8);
+    }
+
+    .wiz-eyebrow {
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-text-muted);
+        font-weight: 600;
+        margin: 0 0 var(--space-3);
+    }
+
+    .wiz-h1 {
+        font-size: var(--text-3xl);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        color: var(--color-text);
+        margin: 0 0 var(--space-3);
+    }
+
+    .wiz-lede {
+        font-size: var(--text-lg);
+        line-height: 1.55;
+        color: var(--color-text-muted);
+        margin: 0 0 var(--space-6);
+    }
+
+    .wiz-tagline {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+        margin: 0 0 var(--space-3);
+    }
+
+    .wiz-step,
+    .wiz-step-pending {
+        display: block;
+    }
+
+    .wiz-step-pending-eyebrow {
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-text-muted);
+        font-weight: 600;
+        margin: 0 0 var(--space-3);
+    }
+
+    .wiz-step-pending-h1 {
+        font-size: var(--text-2xl);
+        font-weight: 600;
+        color: var(--color-text);
+        margin: 0 0 var(--space-3);
+    }
+
+    .wiz-step-pending-lede {
+        font-size: var(--text-base);
+        color: var(--color-text-muted);
+        line-height: 1.55;
+        margin: 0;
+    }
+
+    .wiz-dots {
+        display: flex;
+        gap: var(--space-2);
+        align-items: center;
+    }
+
+    .wiz-dots .dot,
+    .wiz-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: var(--radius-full);
+        background: var(--color-border);
+    }
+
+    .wiz-dots .dot.done,
+    .wiz-dot.done {
+        background: var(--color-emerald);
+    }
+
+    .wiz-dots .dot.now,
+    .wiz-dot.now {
+        width: 24px;
+        height: 8px;
+        border-radius: 4px;
+        background: var(--color-text);
+    }
+
+    .wiz-dots-label {
+        margin-left: var(--space-2);
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .wiz-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-2);
+        margin-top: var(--space-6);
+    }
+
+    .wiz-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-4) var(--space-6);
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+    }
+
+    .wiz-help-link {
+        color: var(--color-text-muted);
+        text-decoration: none;
+        font-size: var(--text-xs);
+    }
+
+    .wiz-help-link:hover {
+        color: var(--color-text);
+    }
+
+    .wiz-resume-banner {
+        background: var(--color-surface-2);
+        border-radius: var(--radius-md);
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+        margin-bottom: var(--space-4);
+    }
+
+    .privacy-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    .privacy-pill::before,
+    .privacy-pill-dot {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: var(--radius-full);
+        background: var(--color-emerald);
+        display: inline-block;
+    }
+
+    /* When the parent already emitted a `.privacy-pill-dot` span, the
+     * ::before pseudo would render a redundant bullet next to it.
+     * Suppress the pseudo when the explicit dot span is present so
+     * markup written either way stays visually identical. */
+    .privacy-pill > .privacy-pill-dot ~ .privacy-pill-dot,
+    .privacy-pill:has(> .privacy-pill-dot)::before {
+        display: none;
+        content: none;
+    }
+
+    .vd-rows {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        margin-top: var(--space-6);
+    }
+
+    .vd-glyph,
+    .vd-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+    }
+
+    .vd-glyph .tile,
+    .vd-glyph > .vd-glyph-tile {
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        background: var(--color-bg-subtle);
+        border-radius: var(--radius-md);
+        font-size: 26px;
+        flex-shrink: 0;
+    }
+
+    .vd-glyph-text,
+    .vd-row-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .vd-glyph-title,
+    .vd-row-title {
+        font-size: var(--text-md);
+        font-weight: 600;
+        color: var(--color-text);
+    }
+
+    .vd-glyph-desc,
+    .vd-row-desc {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+    }
+
+    .vd-glyph-optional,
+    .vd-row-optional {
+        color: var(--color-text-faint);
+        font-weight: 400;
+    }
+
+    .mini-steps {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin: var(--space-6) 0;
+    }
+
+    .mini {
+        padding: 14px 12px;
+        border-radius: var(--radius-md);
+        background: transparent;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        font-size: var(--text-xs);
+    }
+
+    .mini.done {
+        background: var(--color-emerald-bg);
+    }
+
+    .mini.now {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+    }
+
+    .mini-glyph {
+        font-size: 18px;
+    }
+
+    .mini-label {
+        font-weight: 600;
+        font-size: var(--text-sm);
+        color: var(--color-text);
+    }
+
+    .mini-sub {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .format-chips {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin: var(--space-3) 0 var(--space-4);
+    }
+
+    .format-chips-label {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+    }
+
+    .format-chip {
+        padding: 4px 10px;
+        border-radius: var(--radius-full);
+        background: var(--color-surface-2);
+        border: 1px solid var(--color-border);
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .format-chip.recommended {
+        background: var(--color-emerald-bg);
+        color: var(--color-emerald);
+        border-color: transparent;
+    }
+
+    .format-chip-badge {
+        padding: 1px 6px;
+        font-size: 10px;
+        opacity: 0.85;
+    }
+
+    .drop-zone {
+        padding: 28px var(--space-5);
+        border: 1px dashed var(--color-border-strong);
+        border-radius: var(--radius-md);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-2);
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .drop-zone:hover {
+        background: var(--color-bg-subtle);
+    }
+
+    .drop-zone-glyph {
+        font-size: 28px;
+    }
+
+    .drop-zone-lead {
+        font-size: var(--text-md);
+        font-weight: 600;
+        color: var(--color-text);
+    }
+
+    .drop-zone-sublink {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+    }
+
+    .drop-zone-input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+        width: 0;
+        height: 0;
+    }
+
+    .pill-btn-primary {
+        padding: 8px var(--space-4);
+        border-radius: var(--radius-md);
+        background: var(--color-text);
+        color: var(--color-text-inverse);
+        border: 0;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .pill-btn-primary:hover {
+        opacity: 0.92;
+    }
+
+    .pill-btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .pill-btn-ghost {
+        padding: 8px var(--space-4);
+        border-radius: var(--radius-md);
+        background: transparent;
+        color: var(--color-text-muted);
+        border: 0;
+        font-size: var(--text-sm);
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .pill-btn-ghost:hover {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+    }
+
+    .wiz-next-steps {
+        list-style: none;
+        padding: 0;
+        margin: var(--space-6) 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .wiz-next-step {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-md);
+        background: var(--color-bg-subtle);
+        font-size: var(--text-sm);
+    }
+
+    .wiz-next-step-label {
+        color: var(--color-text);
+        font-weight: 500;
+    }
+
+    .wiz-next-step-target {
+        color: var(--color-text-muted);
+    }
+
+    .wiz-error {
+        margin-top: var(--space-3);
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-md);
+        background: var(--color-rose-bg);
+        color: var(--color-rose);
+        font-size: var(--text-sm);
+    }
+
+    .wiz-file-ready {
+        margin-top: var(--space-2);
+        font-size: var(--text-sm);
+        color: var(--color-emerald);
+        font-variant-numeric: tabular-nums;
+    }
+}
