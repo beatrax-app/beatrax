@@ -52,6 +52,17 @@ final class OAuthClientWizardModal extends Component
 
     public ?string $provider = null;
 
+    /**
+     * Optional inbox id threaded through from the InboxesPage re-consent
+     * surface. When set, submit()'s redirect target appends
+     * `?inbox_id={id}` so OAuthConnectController binds the resulting
+     * consent dance back to the existing inbox row instead of creating
+     * a fresh one. Null on the first-connect path so the modal stays
+     * backward compatible with call sites (e.g. Plan 03b's wizard
+     * email step) that invoke `open($provider)` with no inbox.
+     */
+    public ?int $reconnectInboxId = null;
+
     public string $clientId = '';
 
     public string $clientSecret = '';
@@ -61,11 +72,12 @@ final class OAuthClientWizardModal extends Component
     public string $errorMessage = '';
 
     #[On('oauth-client-wizard:open')]
-    public function open(string $provider): void
+    public function open(string $provider, ?int $inboxId = null): void
     {
         $this->provider = in_array($provider, ['gmail', 'microsoft'], strict: true)
             ? $provider
             : null;
+        $this->reconnectInboxId = $inboxId !== null && $inboxId > 0 ? $inboxId : null;
         $this->clientId = '';
         $this->clientSecret = '';
         $this->publishedConfirmed = false;
@@ -159,6 +171,25 @@ final class OAuthClientWizardModal extends Component
         }
 
         $this->dispatch('modal-hide', name: 'oauth-client-wizard-'.$provider);
+        // Always dispatch the "client saved" signal so future call
+        // sites (the onboarding wizard's email step) can react without
+        // a new event-name carve-out per use case.
+        $this->dispatch('oauth-client-wizard:saved', provider: $provider);
+
+        // Re-consent flow: thread inbox id back through the connect
+        // route so OAuthConnectController binds the consent dance to
+        // the existing inbox row (preserves inbox_messages + .eml
+        // blobs + cursor). The InboxesPage listener acknowledges the
+        // active oauth_reconsent_required alert in lockstep.
+        $reconnectInboxId = $this->reconnectInboxId;
+        if ($reconnectInboxId !== null && $reconnectInboxId > 0) {
+            $this->dispatch('oauth-client-wizard:reconsented', inboxId: $reconnectInboxId);
+
+            return $this->redirectRoute(
+                'oauth.connect',
+                ['provider' => $provider, 'inbox_id' => $reconnectInboxId],
+            );
+        }
 
         return $this->redirectRoute('oauth.connect', ['provider' => $provider]);
     }
