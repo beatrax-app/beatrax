@@ -58,8 +58,9 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
  * the job flips its own inbox_scan_state.status to 'error' with the
  * truncated exception message. The state machine remains the sole
  * mutator of the status column (BoundaryArchTest invariant). Per-job
- * failed() hooks supersede an earlier serialised-payload regex
- * approach that was fragile against serialiser format changes.
+ * failed() hooks tie failure handling to the typed job class itself,
+ * which keeps the lookup independent of Laravel's serialised-payload
+ * format.
  *
  * The queued jobs' `uniqueVia()` callbacks resolve their lock store
  * through `Modules\Core\Public\Support\LockStore::forUniqueJobs()`,

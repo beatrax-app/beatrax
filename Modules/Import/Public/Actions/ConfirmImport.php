@@ -33,14 +33,13 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
  * land enrichments and an enrichment failure cannot land inserts —
  * confirm is atomic across both halves.
  *
- * AFTER the transaction commits (D-103 / RESEARCH Pitfall 3) the action
- * inserts a `pending` chain_resolution_runs row and dispatches
- * `ResolveChainLinksJob` so the Phase 5 resolver pass runs against the
- * freshly-committed state. The dispatch is gated on
- * `$result->inserted > 0 || $result->enriched > 0` — re-confirms and
- * zero-row previews short-circuit. Dispatching INSIDE the closure
- * would let the queue worker pick up the job before SQLite commits,
- * letting it read stale state.
+ * AFTER the transaction commits the action inserts a `pending`
+ * chain_resolution_runs row and dispatches `ResolveChainLinksJob` so
+ * the chain resolver pass runs against the freshly-committed state.
+ * The dispatch is gated on `$result->inserted > 0 || $result->enriched
+ * > 0` — re-confirms and zero-row previews short-circuit. Dispatching
+ * INSIDE the closure would let the queue worker pick up the job before
+ * SQLite commits, letting it read stale state.
  *
  * Re-confirming an already-confirmed run returns a zero-action result
  * built from the persisted counts, so a refresh/back-button in the
@@ -150,11 +149,10 @@ final class ConfirmImport implements ConfirmsImports
 
         $this->cache->forget($importRunId);
 
-        // D-103 — dispatch the chain resolver post-commit. NEVER
-        // inside the transaction closure (RESEARCH Pitfall 3): the
-        // Redis queue driver does NOT share the SQLite transaction
-        // frame, so an in-transaction dispatch would let the worker
-        // see stale state.
+        // Dispatch the chain resolver post-commit. NEVER inside the
+        // transaction closure: the queue driver does NOT share the
+        // SQLite transaction frame, so an in-transaction dispatch
+        // would let the worker see stale state.
         //
         // Short-circuit when nothing changed — re-confirming an
         // idempotent file or a zero-row preview produces no work for
