@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\StatementSummary;
 use Modules\Ledger\Models\Transaction;
 
@@ -67,6 +68,7 @@ it('does not create a statement_summaries row when the same user imports a CSV',
         __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv',
         'asn-csv',
         $this->fixtureUser,
+        formatHint: BankCsvFormatHint::Asn,
     );
 
     expect($result->inserted)->toBeGreaterThan(0);

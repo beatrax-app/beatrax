@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 
 /**
  * Locks in the third-tier description fallback in the preview-wizard
@@ -30,6 +31,7 @@ it('renders the description in the Counterparty column when name and IBAN are bo
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
