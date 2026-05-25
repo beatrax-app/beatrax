@@ -72,14 +72,38 @@
             </div>
         </div>
 
-        {{-- 8-line tail-tail of the daily log file, redacted on the way out. --}}
-        <pre
-            class="tail mt-4 text-xs font-mono whitespace-pre-wrap leading-tight text-slate-200"
-            data-testid="console-pane-tail"
-            style="font-variant-numeric: tabular-nums;"
-        >{!! $logTail === []
-            ? 'Waiting for log lines…'
-            : e(implode("\n", $logTail)) !!}<span class="cursor-blink" aria-hidden="true">_</span></pre>
+        {{-- Latest 5 structured log entries from today's daily file.
+             Replaces the prior 8-line raw <pre> tail with a compact
+             clickable list — each row drills into /dev/logs with
+             severity + contains filters pre-applied so the operator
+             lands on the source entry in context. --}}
+        <div class="mt-4 space-y-1" data-testid="console-pane-tail">
+            @if ($recentLogEntries === [])
+                <p class="text-xs text-slate-400">Waiting for log lines…</p>
+            @else
+                @foreach ($recentLogEntries as $entry)
+                    @php
+                        $severity = strtoupper($entry['severity']);
+                        $sevClass = match ($severity) {
+                            'WARNING' => 'text-amber-300',
+                            'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY' => 'text-rose-300',
+                            'NOTICE' => 'text-slate-200',
+                            default => 'text-slate-400',
+                        };
+                    @endphp
+                    <a
+                        href="{{ $entry['href'] }}"
+                        class="flex items-baseline gap-2 px-1 py-1 rounded text-xs font-mono hover:bg-slate-800/60"
+                        data-testid="recent-log-entry-row"
+                        style="font-variant-numeric: tabular-nums;"
+                    >
+                        <span class="text-slate-400 flex-shrink-0">{{ $entry['timestamp'] }}</span>
+                        <span class="{{ $sevClass }} flex-shrink-0 uppercase">{{ $severity }}</span>
+                        <span class="text-slate-200 truncate">{{ $entry['message'] }}</span>
+                    </a>
+                @endforeach
+            @endif
+        </div>
     </section>
 
     {{--

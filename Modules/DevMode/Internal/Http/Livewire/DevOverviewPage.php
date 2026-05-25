@@ -15,10 +15,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\SystemAlertQuery;
-use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
-use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
-use Throwable;
+use Modules\DevMode\Internal\Logging\RecentLogEntriesReader;
 
 /**
  * Dev Console overview page.
@@ -35,11 +33,13 @@ use Throwable;
  *     markers downstream tests assert against).
  *   - Last command (most recent dev_mode_audit row, mono rendering).
  *
- * Console-pane tail: the last 8 lines of today's rolling daily log
- * file ({@see UserDataPathService::dailyLogFile()}), each line
- * passed through the same {@see RedactSecretsProcessor} that the
- * on-write Monolog tap + the on-stream log tailer apply
- * (belt-and-braces redaction).
+ * Console-pane tail: the last {@see RECENT_LOG_ENTRIES_LIMIT}
+ * structured entries from today's rolling daily log file, parsed by
+ * {@see RecentLogEntriesReader} (continuation lines fold into the
+ * preceding entry; messages scrubbed by the same
+ * RedactSecretsProcessor the on-write Monolog tap + on-stream log
+ * tailer apply). Each row links to /dev/logs pre-filtered to the
+ * row's severity + first words of the message.
  *
  * Recent-runs card: the calling developer's last 5 dev_mode_audit
  * rows; each row's link href encodes `?command=<encoded>` so a
@@ -63,8 +63,8 @@ final class DevOverviewPage extends Component
     /** Empty-state copy for the open-alerts rail. */
     private const string OPEN_ALERTS_EMPTY = 'No open alerts.';
 
-    /** Tail line cap — 8 lines on the console-pane. */
-    private const int TAIL_LINES = 8;
+    /** Recent log entries cap — 5 rows on the console-pane tail. */
+    private const int RECENT_LOG_ENTRIES_LIMIT = 5;
 
     /** Recent-runs cap — 5 rows on the rail. */
     private const int RECENT_RUNS_LIMIT = 5;
@@ -76,7 +76,7 @@ final class DevOverviewPage extends Component
         Clock $clock,
         SystemAlertQuery $alerts,
         DatabaseManager $db,
-        RedactSecretsProcessor $scrubber,
+        RecentLogEntriesReader $logEntries,
     ): View {
         $user = $currentUser->user();
         $now = $clock->now();
@@ -87,7 +87,7 @@ final class DevOverviewPage extends Component
             'lastCommand' => $this->resolveLastCommand($db),
             'recentRuns' => $this->resolveRecentRuns($db, $user),
             'openAlerts' => $alerts->active($user)->take(self::RECENT_RUNS_LIMIT),
-            'logTail' => $this->resolveLogTail($scrubber),
+            'recentLogEntries' => $logEntries->recent(self::RECENT_LOG_ENTRIES_LIMIT),
             'recentRunsEmptyCopy' => self::RECENT_RUNS_EMPTY,
             'openAlertsEmptyCopy' => self::OPEN_ALERTS_EMPTY,
         ]);
@@ -216,46 +216,5 @@ final class DevOverviewPage extends Component
         }
 
         return $rendered;
-    }
-
-    /**
-     * Read the last 8 lines of today's daily-rolled Laravel log file
-     * and apply the on-stream redaction processor (defense-in-depth
-     * on top of the on-write Monolog tap). Missing log file is
-     * treated as "no lines yet" rather than a crash; the Blade
-     * renders the empty-state cursor regardless.
-     *
-     * For a daily-rotated log file (typical size: hundreds of KB) a
-     * single `file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)`
-     * + `array_slice(-N)` is fast enough and significantly simpler
-     * than an `SplFileObject::seek(PHP_INT_MAX)` walk (which off-by-one's
-     * around final-newline handling). Larger non-daily-rotated files
-     * would warrant a streaming tail, but those don't apply here.
-     *
-     * @return list<string>
-     */
-    private function resolveLogTail(RedactSecretsProcessor $scrubber): array
-    {
-        $path = UserDataPathService::dailyLogFile();
-        if (! is_file($path)) {
-            return [];
-        }
-
-        try {
-            $all = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        } catch (Throwable) {
-            return [];
-        }
-        if (! is_array($all)) {
-            return [];
-        }
-
-        $tail = array_slice($all, -self::TAIL_LINES);
-        $scrubbed = [];
-        foreach ($tail as $line) {
-            $scrubbed[] = $scrubber->scrub($line);
-        }
-
-        return $scrubbed;
     }
 }
