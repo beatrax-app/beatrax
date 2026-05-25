@@ -22,6 +22,14 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * connector, OAuth provider name, uploaded filename) so the wizard
  * resumes mid-flow after a relaunch without re-prompting.
  *
+ * Cross-user posture: every production read / write path that
+ * operates on this table carries an EXPLICIT `where('user_id', ...)`
+ * filter through the raw query builder. The `BelongsToUser` global
+ * scope is a SECONDARY guard that fires only when an Eloquent query
+ * reaches the model inside an HTTP-bound request; it stays so a
+ * future Eloquent surface gets the scope wired automatically, but
+ * the explicit-filter rule still applies on top of it.
+ *
  * @property int $id
  * @property int|null $user_id
  * @property string $step_key
