@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Internal\Http\Controllers;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
@@ -293,7 +294,7 @@ final class OAuthCallbackController
             $withComma = '%"inbox_id":'.$inboxId.',%';
             $withBrace = '%"inbox_id":'.$inboxId.'}%';
             (clone $base)
-                ->where(static function ($q) use ($withComma, $withBrace): void {
+                ->where(static function (Builder $q) use ($withComma, $withBrace): void {
                     $q->where('metadata', 'like', $withComma)
                         ->orWhere('metadata', 'like', $withBrace);
                 })
