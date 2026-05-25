@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Dto;
 
 use Carbon\CarbonImmutable;
+use Modules\Import\Public\Enums\PaymentType;
 use Spatie\LaravelData\Data;
 
 /**
@@ -23,6 +24,15 @@ use Spatie\LaravelData\Data;
  * divergence flow (plan 05) so the drawer panel knows whether the
  * suggestion came from an explicit rule (which the user may want to
  * update) or from learned merchant memory.
+ *
+ * `paymentType` is the resolved `PaymentType` enum value the import
+ * pipeline's classifier stage stamps onto every row before persistence.
+ * The DB column `transactions.payment_type` carries the same closed
+ * enumeration; a paired BEFORE INSERT / BEFORE UPDATE trigger on that
+ * column rejects any value outside the enum's eight cases. Defaults to
+ * null so legacy call-sites (raw row reconstruction in
+ * FingerprintRederiveService, test fixtures, NormalizeStage's first
+ * pass before classification) compile and run unchanged.
  */
 final class CanonicalTransaction extends Data
 {
@@ -54,6 +64,7 @@ final class CanonicalTransaction extends Data
         public readonly ?string $sourceRef,
         public readonly ?array $rawPayload = null,
         public readonly ?array $autoCategoryProvenance = null,
+        public readonly ?PaymentType $paymentType = null,
     ) {}
 
     /**
@@ -89,6 +100,7 @@ final class CanonicalTransaction extends Data
             sourceRef: $this->sourceRef,
             rawPayload: $this->rawPayload,
             autoCategoryProvenance: $this->autoCategoryProvenance,
+            paymentType: $this->paymentType,
         );
     }
 
@@ -124,6 +136,7 @@ final class CanonicalTransaction extends Data
             sourceRef: $this->sourceRef,
             rawPayload: $this->rawPayload,
             autoCategoryProvenance: $this->autoCategoryProvenance,
+            paymentType: $this->paymentType,
         );
     }
 
@@ -160,6 +173,43 @@ final class CanonicalTransaction extends Data
             sourceRef: $this->sourceRef,
             rawPayload: $this->rawPayload,
             autoCategoryProvenance: $provenance,
+            paymentType: $this->paymentType,
+        );
+    }
+
+    /**
+     * Immutable clone-with-override for `paymentType`. The
+     * `PaymentTypeClassifierStage` uses this to stamp the resolved
+     * payment-type chip onto every canonical row after the per-source
+     * hinters and the description-keyword fallback have run.
+     */
+    public function withPaymentType(PaymentType $paymentType): self
+    {
+        return new self(
+            userId: $this->userId,
+            accountId: $this->accountId,
+            type: $this->type,
+            postedAt: $this->postedAt,
+            bookedAt: $this->bookedAt,
+            valueDate: $this->valueDate,
+            amountMinor: $this->amountMinor,
+            currency: $this->currency,
+            settledAmountMinor: $this->settledAmountMinor,
+            settledCurrency: $this->settledCurrency,
+            fxRateUsed: $this->fxRateUsed,
+            counterpartyName: $this->counterpartyName,
+            counterpartyIban: $this->counterpartyIban,
+            counterpartyNormalized: $this->counterpartyNormalized,
+            normalizationVersion: $this->normalizationVersion,
+            description: $this->description,
+            categoryId: $this->categoryId,
+            sourceFormat: $this->sourceFormat,
+            importRunId: $this->importRunId,
+            sourceRowIndex: $this->sourceRowIndex,
+            sourceRef: $this->sourceRef,
+            rawPayload: $this->rawPayload,
+            autoCategoryProvenance: $this->autoCategoryProvenance,
+            paymentType: $paymentType,
         );
     }
 
@@ -200,6 +250,7 @@ final class CanonicalTransaction extends Data
             'source_row_index' => $this->sourceRowIndex,
             'source_ref' => $this->sourceRef,
             'raw_payload' => $this->rawPayload === null ? null : json_encode($this->rawPayload),
+            'payment_type' => ($this->paymentType ?? PaymentType::Unknown)->value,
             'status' => 'cleared',
         ];
     }
