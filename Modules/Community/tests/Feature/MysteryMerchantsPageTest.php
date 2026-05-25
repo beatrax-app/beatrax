@@ -13,11 +13,7 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
-    $this->user = User::create([
-        'username' => 'mystery-page-user',
-        'password' => 'fixture-password',
-        'period_start_day' => 1,
-    ]);
+    $this->user = makeCommunityTestUser('mystery-page-user');
     $this->actingAs($this->user);
 
     $this->account = Account::create([
