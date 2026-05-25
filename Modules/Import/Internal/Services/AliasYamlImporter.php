@@ -141,8 +141,20 @@ final class AliasYamlImporter
      * phpstan-strict-rules `staticMethod.dynamicCall` rule doesn't
      * flag the chained methods.
      *
+     * Classification rules:
+     *   - `new`        — no existing alias shares the `pattern`.
+     *   - `unchanged`  — an existing alias shares the `pattern` AND
+     *                    the `friendly_name` AND the
+     *                    `generalized_pattern`. Round-tripping an
+     *                    untouched YAML export lands every row here.
+     *   - `conflicts`  — an existing alias shares the `pattern` but
+     *                    differs on `friendly_name` OR
+     *                    `generalized_pattern`. The Livewire UI
+     *                    surfaces both fields so the user can pick
+     *                    keep / replace knowingly.
+     *
      * @param  list<CorpusEntryDto>  $entries
-     * @return array{new: list<CorpusEntryDto>, unchanged: list<CorpusEntryDto>, conflicts: list<array{entry: CorpusEntryDto, existing_name: string}>}
+     * @return array{new: list<CorpusEntryDto>, unchanged: list<CorpusEntryDto>, conflicts: list<array{entry: CorpusEntryDto, existing_name: string, existing_generalized_pattern: string}>}
      */
     public function diff(User $user, array $entries): array
     {
@@ -153,20 +165,24 @@ final class AliasYamlImporter
         $conflicts = [];
 
         foreach ($entries as $entry) {
-            $existingName = $existing[$entry->pattern] ?? null;
-            if ($existingName === null) {
+            $existingRow = $existing[$entry->pattern] ?? null;
+            if ($existingRow === null) {
                 $new[] = $entry;
 
                 continue;
             }
-            if ($existingName === $entry->name) {
+            if (
+                $existingRow['friendly_name'] === $entry->name
+                && $existingRow['generalized_pattern'] === $entry->generalizedPattern
+            ) {
                 $unchanged[] = $entry;
 
                 continue;
             }
             $conflicts[] = [
                 'entry' => $entry,
-                'existing_name' => $existingName,
+                'existing_name' => $existingRow['friendly_name'],
+                'existing_generalized_pattern' => $existingRow['generalized_pattern'],
             ];
         }
 
@@ -199,9 +215,9 @@ final class AliasYamlImporter
             $connection = $this->db->connection();
 
             foreach ($entries as $entry) {
-                $existingName = $existing[$entry->pattern] ?? null;
+                $existingRow = $existing[$entry->pattern] ?? null;
 
-                if ($existingName === null) {
+                if ($existingRow === null) {
                     $connection->table('merchant_aliases')->insert([
                         'user_id' => $user->id,
                         'pattern' => $entry->pattern,
@@ -215,7 +231,10 @@ final class AliasYamlImporter
                     continue;
                 }
 
-                if ($existingName === $entry->name) {
+                if (
+                    $existingRow['friendly_name'] === $entry->name
+                    && $existingRow['generalized_pattern'] === $entry->generalizedPattern
+                ) {
                     continue;
                 }
 
@@ -240,28 +259,35 @@ final class AliasYamlImporter
     }
 
     /**
-     * Loads the user's current `(pattern => friendly_name)` map for
-     * diff/apply. Uses the raw query builder per the project's
+     * Loads the user's current alias rows as a `pattern => {
+     * friendly_name, generalized_pattern }` map for diff/apply. Uses
+     * the raw query builder per the project's
      * `staticMethod.dynamicCall` convention.
      *
-     * @return array<string, string>
+     * @return array<string, array{friendly_name: string, generalized_pattern: string}>
      */
     private function loadExistingByPattern(User $user): array
     {
         $rows = $this->db->connection()
             ->table('merchant_aliases')
             ->where('user_id', $user->id)
-            ->get(['pattern', 'friendly_name']);
+            ->get(['pattern', 'friendly_name', 'generalized_pattern']);
 
         $map = [];
         foreach ($rows as $row) {
             /** @var \stdClass $row */
             $pattern = isset($row->pattern) && is_string($row->pattern) ? $row->pattern : '';
             $friendly = isset($row->friendly_name) && is_string($row->friendly_name) ? $row->friendly_name : '';
+            $generalized = isset($row->generalized_pattern) && is_string($row->generalized_pattern)
+                ? $row->generalized_pattern
+                : '';
             if ($pattern === '') {
                 continue;
             }
-            $map[$pattern] = $friendly;
+            $map[$pattern] = [
+                'friendly_name' => $friendly,
+                'generalized_pattern' => $generalized,
+            ];
         }
 
         return $map;
