@@ -69,13 +69,11 @@ it('maps IDEAL BETALING rows to PaymentType::Online', function (): void {
     expect($hint?->type)->toBe(PaymentType::Online);
 });
 
-it('falls back to PaymentType::Online at low confidence when no token matches (default ICS card behaviour)', function (): void {
+it('returns null when no source-specific keyword matches so the description-keyword fallback can take a shot at the row', function (): void {
     $hinter = new IcsPdfPaymentTypeHinter;
     $hint = $hinter->hint(icsRow('CLAUDE.AI SUBSCRIPTION                            ANTHROPIC.COM'), 'ics-pdf');
 
-    expect($hint)->not->toBeNull();
-    expect($hint?->type)->toBe(PaymentType::Online);
-    expect($hint?->confidence)->toBe(60);
+    expect($hint)->toBeNull();
 });
 
 it('returns null when the row originated from a different source format', function (): void {
