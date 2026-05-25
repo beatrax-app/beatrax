@@ -88,3 +88,17 @@ function writeMt940Temp(string $body): string
 
     return $tmp;
 }
+
+/**
+ * Fixture helper for Community feature tests. Returns a freshly-
+ * persisted User with sensible defaults so per-test setup blocks stay
+ * focused on the assertion under test.
+ */
+function makeCommunityTestUser(string $username = 'community-user'): Modules\Core\Models\User
+{
+    return Modules\Core\Models\User::create([
+        'username' => $username,
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+    ]);
+}
