@@ -1136,3 +1136,110 @@ td.date,
         border-radius: var(--radius-sm);
     }
 }
+
+@layer components {
+    /*
+     * Mystery card primitive — one row on the
+     * `/community/mystery-merchants` browse destination. The
+     * `1.4fr 1fr 1fr auto` grid keeps the raw code column wider than
+     * the metadata columns so long descriptions wrap inside the card
+     * rather than pushing the CTA off the right edge. The mono code
+     * chip mirrors the import-preview row's code styling so the
+     * visual vocabulary stays consistent across surfaces.
+     */
+    .mystery-card {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr 1fr auto;
+        gap: 16px;
+        padding: 16px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+    }
+
+    .mystery-card .code {
+        font-family: var(--font-mono);
+        background: var(--color-surface-2);
+        padding: 3px 8px;
+        border-radius: var(--radius-sm);
+        font-size: var(--text-sm);
+    }
+}
+
+@layer components {
+    /*
+     * Triage row action group — flex container holding the per-row
+     * CTAs (currently the community "Help others identify this" link
+     * and any future row-scoped buttons). Faded by default; revealed
+     * on row hover via the parent `.triage-row` selector so the
+     * default state stays calm.
+     */
+    .row-cta {
+        display: flex;
+        gap: 8px;
+        opacity: 0;
+        transition: opacity 150ms var(--ease-smooth, ease);
+    }
+
+    .triage-row:hover .row-cta,
+    .triage-row:focus-within .row-cta {
+        opacity: 1;
+    }
+
+    /*
+     * Help-others CTA — dashed-border link variant for "this is a
+     * soft suggestion" semantics. Calmer than a primary button so
+     * the row's main verbs (Rename, Categorise) stay visually
+     * dominant when both CTAs are present.
+     */
+    .help-others-link {
+        padding: 4px 8px;
+        border: 1px dashed var(--color-border-strong, var(--color-border));
+        background: transparent;
+        color: var(--color-text-muted, var(--color-text-faint));
+        border-radius: var(--radius-sm);
+        font-size: var(--text-xs);
+        cursor: pointer;
+    }
+
+    .help-others-link:hover,
+    .help-others-link:focus-visible {
+        border-color: var(--color-border, var(--color-border-strong));
+        color: var(--color-text, inherit);
+    }
+
+    /*
+     * Settings → Shared merchant list panel — meta-side + body-side
+     * two-column grid. Mirrors the sketch 005C settings-section
+     * pattern referenced by the UI-SPEC.
+     */
+    .settings-section {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 24px;
+        padding: 22px;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .settings-section .meta-side {
+        background: var(--color-bg-subtle, var(--color-surface-2));
+        padding: 22px;
+        border-radius: var(--radius-md);
+    }
+
+    .settings-section .body-side {
+        padding: 22px;
+    }
+
+    .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .toggle-row:last-of-type {
+        border-bottom: 0;
+    }
+}

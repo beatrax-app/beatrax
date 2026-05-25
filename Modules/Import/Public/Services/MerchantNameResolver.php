@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Community\Public\Services\CommunityCorpusQuery;
 use stdClass;
 
 /**
@@ -28,11 +29,17 @@ use stdClass;
  *      runs an `mb_strpos` substring match — the same defence the
  *      Categorization RuleEvaluator uses to keep user-authored
  *      patterns out of any SQL LIKE expression.
- *   3. Resolution falls through to null when no user alias matches.
- *      Other modules may compose additional resolution steps via the
- *      container; the resolver exposes a deliberate seam so a future
- *      composition (community corpus, shared lists) can sit between
- *      step 2 and the null return without altering call sites.
+ *   3. The community corpus's exact `pattern` match on rows with
+ *      `user_id IS NULL`. The bundled YAML seeds the global tier;
+ *      `CommunityCorpusQuery::lookupExact` runs the same explicit
+ *      `whereNull('user_id')` filter the table model carries on every
+ *      read.
+ *   4. The community corpus's generalized-pattern substring match.
+ *      Same lowercase mb_strpos posture as step 2 above, with the
+ *      corpus rows substituted for the user's alias set.
+ *   5. Resolution falls through to null when no alias / corpus row
+ *      matches; the caller renders the italic-muted raw description
+ *      fallback (`.desc-fallback`).
  *
  * Every query carries an explicit `where('user_id', $userId)` clause
  * even though MerchantAlias wears the BelongsToUser global scope. The
@@ -58,12 +65,15 @@ final class MerchantNameResolver
      */
     private const GENERALIZED_SCAN_LIMIT = 500;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly CommunityCorpusQuery $corpus,
+    ) {}
 
     /**
-     * Returns the friendly name the user owns for this raw description,
-     * or null when no alias matches and the extension-point tail does
-     * not contribute a name.
+     * Returns the friendly name resolved for this raw description by
+     * walking the precedence stack documented on the class. Returns
+     * null when no user alias and no community corpus row matches.
      */
     public function resolve(string $rawDescription, int $userId): ?string
     {
@@ -95,6 +105,16 @@ final class MerchantNameResolver
             if (mb_strpos($haystack, mb_strtolower($needle)) !== false) {
                 return $friendly;
             }
+        }
+
+        $communityExact = $this->corpus->lookupExact($rawDescription);
+        if ($communityExact !== null) {
+            return $communityExact;
+        }
+
+        $communityGeneralized = $this->corpus->lookupGeneralized($rawDescription);
+        if ($communityGeneralized !== null) {
+            return $communityGeneralized;
         }
 
         return null;
