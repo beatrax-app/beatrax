@@ -61,6 +61,15 @@ foreach (
     pest()->extend($testCase)
         ->use(RefreshDatabase::class)
         ->in(__DIR__.'/../'.$module.'/tests/Contracts');
+
+    // Snapshot directory: per-module snapshot suites that compare
+    // serialised output (rendered HTML, generated YAML) against a
+    // committed fixture via spatie/pest-plugin-snapshots. Bound to
+    // RefreshDatabase + the module's TestCase so the snapshot tests
+    // can seed fixtures through Eloquent before serialising.
+    pest()->extend($testCase)
+        ->use(RefreshDatabase::class)
+        ->in(__DIR__.'/../'.$module.'/tests/Snapshot');
 }
 
 /**

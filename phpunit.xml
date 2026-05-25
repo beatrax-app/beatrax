@@ -44,6 +44,7 @@
         </testsuite>
         <testsuite name="Snapshot">
             <directory>tests/Snapshot</directory>
+            <directory>Modules/Import/tests/Snapshot</directory>
         </testsuite>
         <testsuite name="ChainsUnit">
             <directory suffix="Test.php">./Modules/Chains/tests/Unit</directory>
