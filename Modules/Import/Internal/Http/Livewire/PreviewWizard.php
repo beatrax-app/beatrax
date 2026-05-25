@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Internal\Pipeline\PreviewCache;
@@ -100,6 +101,24 @@ final class PreviewWizard extends Component
     public function mount(int $id): void
     {
         $this->importRunId = $id;
+    }
+
+    /**
+     * Listens for the rename popover's saved event and updates the
+     * affected preview row's aliasFriendlyName inside the cache so
+     * the next render shows the new name without re-running the
+     * import pipeline. Out-of-bounds rowIndex silently no-ops via
+     * PreviewCache::applyAliasInPlace returning false — a stale
+     * dispatch from a previous wizard render never throws.
+     */
+    #[On('rename-counterparty:saved')]
+    public function applyRenameInPlace(int $rowIndex, string $friendlyName, PreviewCache $cache): void
+    {
+        if ($this->importRunId <= 0) {
+            return;
+        }
+
+        $cache->applyAliasInPlace($this->importRunId, $rowIndex, $friendlyName);
     }
 
     /**

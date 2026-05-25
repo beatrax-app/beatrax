@@ -9,6 +9,7 @@ use JsonException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PendingEnrichment;
+use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Exceptions\PreviewCacheCorruptedException;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
@@ -172,6 +173,67 @@ final class PreviewCache
         $this->cache->forget($this->previewKey($importRunId));
         $this->cache->forget($this->canonicalKey($importRunId));
         $this->cache->forget($this->enrichmentsKey($importRunId));
+    }
+
+    /**
+     * Mutates the cached preview's row at `$rowIndex` so its
+     * `aliasFriendlyName` reflects a just-saved merchant alias. The
+     * cache stays the source of truth — the next render reads the
+     * updated row without re-running the full import pipeline.
+     *
+     * Returns true when the row was updated, false when the cache is
+     * missing for the run OR the rowIndex falls outside the row list.
+     * Both miss cases are silent: a stale dispatch from a previous
+     * render or a tampered rowIndex never throws.
+     *
+     * The 30-minute TTL window is preserved on the rewrite: the
+     * underlying cache key carries the same expiry the original
+     * `put()` set, but the cache backend resets the TTL when the key
+     * is overwritten — keeps the preview alive while the user is
+     * actively renaming.
+     */
+    public function applyAliasInPlace(int $importRunId, int $rowIndex, string $friendlyName): bool
+    {
+        $preview = $this->getPreview($importRunId);
+        if ($preview === null) {
+            return false;
+        }
+        if (! array_key_exists($rowIndex, $preview->rows)) {
+            return false;
+        }
+
+        $existing = $preview->rows[$rowIndex];
+        $updated = new PreviewRowDto(
+            rowIndex: $existing->rowIndex,
+            status: $existing->status,
+            accountId: $existing->accountId,
+            bookedAt: $existing->bookedAt,
+            counterpartyName: $existing->counterpartyName,
+            counterpartyIban: $existing->counterpartyIban,
+            description: $existing->description,
+            categoryName: $existing->categoryName,
+            amountMinor: $existing->amountMinor,
+            currency: $existing->currency,
+            error: $existing->error,
+            diff: $existing->diff,
+            paymentType: $existing->paymentType,
+            aliasFriendlyName: $friendlyName,
+        );
+
+        $newRows = $preview->rows;
+        $newRows[$rowIndex] = $updated;
+
+        $rewritten = new ImportPreviewResult(
+            importRunId: $preview->importRunId,
+            rows: $newRows,
+            accountsToName: $preview->accountsToName,
+            enrichedCount: $preview->enrichedCount,
+        );
+
+        $ttl = $this->clock->now()->addMinutes(30);
+        $this->cache->put($this->previewKey($importRunId), $rewritten->toArray(), $ttl);
+
+        return true;
     }
 
     private function previewKey(int $importRunId): string
