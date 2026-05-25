@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
@@ -34,7 +35,7 @@ beforeEach(function (): void {
  */
 
 it('csv_then_camt053: every overlapping row drops as duplicate (no enrichment)', function (): void {
-    $first = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser);
+    $first = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
     expect($first->inserted)->toBe($this->expectedTransactionCount);
     expect($first->enriched)->toBe(0);
 
@@ -64,7 +65,7 @@ it('camt053_then_csv: every overlapping row drops as duplicate (no enrichment)',
     expect($first->inserted)->toBe($this->expectedTransactionCount);
     expect($first->enriched)->toBe(0);
 
-    $second = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser);
+    $second = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
 
     expect($second->inserted)->toBe(0);
     expect($second->enriched)->toBe(0);
@@ -122,7 +123,7 @@ it('camt053_then_mt940: every overlapping row drops as duplicate', function (): 
 })->group('phase-2');
 
 it('preview-only flow surfaces every cross-statement collision as duplicate', function (): void {
-    $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser);
+    $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
 
     $preview = $this->importer->runFromUpload(
         $this->camtFixture,
@@ -148,7 +149,7 @@ it('cross_format_pair_fingerprints_match: every CSV row has a CAMT counterpart w
     // currency, counterparty_normalized) hashes the same regardless of
     // which export produced the row. The only change is the disposition
     // we now return on match: DUPLICATE instead of ENRICHED.
-    $first = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser);
+    $first = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
     expect($first->inserted)->toBe($this->expectedTransactionCount);
 
     $preview = $this->importer->runFromUpload(
