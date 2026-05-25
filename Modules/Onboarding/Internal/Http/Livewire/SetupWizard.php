@@ -116,7 +116,7 @@ final class SetupWizard extends Component
             // The reset itself stays a no-op-equivalent (all rows are
             // pending already) but the log line surfaces tampered or
             // bookmarked URLs that have no functional effect.
-            $hadInProgress = (bool) $db->connection()
+            $hadInProgress = $db->connection()
                 ->table('wizard_progress')
                 ->where('user_id', $user->id)
                 ->whereIn('status', ['in_progress', 'done', 'skipped'])
