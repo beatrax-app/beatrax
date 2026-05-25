@@ -34,3 +34,37 @@ by the current task's changes get auto-fixed.
   too-old runtime). Plan 03a's tests target Modules/Onboarding which is
   PHP-version-agnostic. Resolve when the developer machine moves to 8.5
   — not a code change.
+
+## 16.1-03b discoveries
+
+- **`BoundaryArchTest > does not allow the literal diederik` — pre-existing
+  on Plan 03a's blade + test files.** The arch invariant landed in Plan 01
+  (commit `bfcfd20`) flags any `diederik` / `Diederik` literal under
+  `Modules/`, `tests/`, `resources/`, `config/`. Plan 03a's `welcome-step`
+  / `done-step` / `setup-wizard` blades and its `ResumeWizardTest` /
+  `ReRunWizardTest` fixtures all carry the UI-SPEC-mandated `diederik`
+  literal copy. Plan 03b's Task 1 edits preserved that copy unchanged
+  (the edits swapped inline markup for `<x-onboarding::*>` Blade
+  components — no new offender introduced).
+
+  Plan 03b's new files (connect-bank, connect-card, connect-email,
+  first-import blades) flip every brand reference to `beatrax` per the
+  arch invariant.
+
+  Fix in a follow-up `diederik → beatrax` brand-rename plan that
+  amends UI-SPEC §"Copywriting Contract" and re-baselines the Onboarding
+  blade copy + the two test fixture strings. Out of scope for Plan 03b.
+
+- **`Tests\Unit\PhpStanBoundaryRuleTest` — env-specific phpstan memory
+  exhaustion in worker subprocess.** The test spawns a `vendor/bin/phpstan`
+  child process via `Symfony\Process` to assert the custom BoundaryRule
+  emits the expected error; the subprocess inherits the default
+  `memory_limit=128M` and fatals with "Allowed memory size of 134217728
+  bytes exhausted" while loading the composer classmap (82k+ classes).
+  Reproducible on the worktree, passes on the main repo (different
+  Process inheritance). Pre-existing — Plan 03b touches no phpstan
+  rule code.
+
+- **`Modules\Receipts\tests\Feature\Phase7MigrationsTest::rejects ...` —
+  Receipts module regression.** Unrelated to Plan 03b's Onboarding
+  scope. Pre-existing on `main`.
