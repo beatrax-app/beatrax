@@ -26,7 +26,7 @@ use Illuminate\Database\Schema\Builder;
  * corpus.
  *
  * The `contributor` string identifies the source of each row
- * (`diederik-bot` for bundled corpus rows, the user's own username
+ * (`beatrax-bot` for bundled corpus rows, the user's own username
  * for per-user overrides) and is surfaced in the suggest-mapping
  * modal's provenance line.
  */

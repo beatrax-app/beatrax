@@ -54,6 +54,14 @@ arch('Modules\\Desktop\\Internal is only used inside Modules\\Desktop')
     ->expect('Modules\\Desktop\\Internal')
     ->toOnlyBeUsedIn('Modules\\Desktop');
 
+arch('Modules\\Onboarding\\Internal is only used inside Modules\\Onboarding')
+    ->expect('Modules\\Onboarding\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Onboarding');
+
+arch('Modules\\Community\\Internal is only used inside Modules\\Community')
+    ->expect('Modules\\Community\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Community');
+
 arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules')
@@ -1534,5 +1542,79 @@ it('requires every /dev route to apply the ensureDeveloperMode middleware (every
     expect($missing)->toBe(
         [],
         "Every /dev/* route MUST apply ensureDeveloperMode. Offenders:\n  ".implode("\n  ", $missing),
+    );
+});
+
+it('keeps PaymentType-unique string literals inside the PaymentType enum (noPaymentTypeStringLeak)', function (): void {
+    // Three PaymentType values — `pin`, `online`, `direct_debit` — are
+    // unique to the payment_type column and never legitimately appear
+    // elsewhere in the codebase. The invariant scans Modules/ for any
+    // production-source-tree appearance of these literals outside the
+    // canonical enum file and the Database/Migrations carve-out
+    // (where the trigger heredoc enumerates the allowed values inline
+    // as part of the SQLite WHEN clause).
+    //
+    // The other PaymentType values (`transfer`, `cash`, `fee`,
+    // `refund`, `unknown`) intentionally collide with the
+    // pre-existing `transactions.type` enum, with categorisation
+    // slugs, and with PayPal CSV event-type values, so a string scan
+    // would flag legitimate domain uses. Callers of those values
+    // resolve them through `PaymentType::Transfer`, etc., by convention
+    // — the per-hinter unit tests in plan 16.1-02 lock in that
+    // convention.
+    //
+    // Test files freely fixture these values to exercise the migration
+    // triggers; the `tests/` exclusion below keeps that legal. The
+    // scan strips PHPDoc / single-line comments before matching so a
+    // comment mentioning the value never flags as an offender.
+    $needles = ['pin', 'online', 'direct_debit'];
+    $modulesDir = base_path('Modules');
+    if (! is_dir($modulesDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $allowedFile = base_path('Modules/Import/Public/Enums/PaymentType.php');
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($modulesDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+
+    $offenders = [];
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        if ($path === $allowedFile) {
+            continue;
+        }
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        if (str_contains($path, '/Database/Migrations/')) {
+            continue;
+        }
+
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+
+        foreach ($needles as $needle) {
+            $singleQuoted = "/(?<![A-Za-z0-9_])'".preg_quote($needle, '/')."'/";
+            $doubleQuoted = '/(?<![A-Za-z0-9_])"'.preg_quote($needle, '/').'"/';
+            if (preg_match($singleQuoted, $stripped) === 1 || preg_match($doubleQuoted, $stripped) === 1) {
+                $offenders[] = $path.' : '.$needle;
+            }
+        }
+    }
+
+    expect($offenders)->toBe(
+        [],
+        "PaymentType-unique string literals leaked outside Modules/Import/Public/Enums/PaymentType.php:\n  "
+        .implode("\n  ", $offenders),
     );
 });
