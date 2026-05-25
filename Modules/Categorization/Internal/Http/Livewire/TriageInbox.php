@@ -7,6 +7,7 @@ namespace Modules\Categorization\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
@@ -47,6 +48,19 @@ final class TriageInbox extends Component
     public function selectForRow(int $transactionId, ?int $categoryId): void
     {
         $this->pending[$transactionId] = $categoryId;
+    }
+
+    /**
+     * Re-render when the SharedListSettingsPanel saves a new
+     * `offerToContribute` value so the per-row CTA visibility tracks
+     * the toggle without a manual page refresh.
+     */
+    #[On('shared-list-settings:saved')]
+    public function refreshSettings(): void
+    {
+        // Empty body — the re-render is the side effect; the listener
+        // existing on the component is what triggers Livewire to walk
+        // render() again, picking up the new community_settings value.
     }
 
     public function clearPending(): void
@@ -92,11 +106,22 @@ final class TriageInbox extends Component
         $categories = $options->for($user);
         $topNine = array_slice($categories, 0, 9);
 
+        // Read the user's `offerToContribute` toggle once per render so
+        // the triage table can render the per-row CTA inline rather
+        // than mounting a Livewire component per row. The default is
+        // `true` so a user who never opens the Settings panel still
+        // sees the CTA.
+        $settings = is_array($user->community_settings) ? $user->community_settings : [];
+        $offerToContribute = array_key_exists('offerToContribute', $settings)
+            ? (bool) $settings['offerToContribute']
+            : true;
+
         return $views->make('categorization::livewire.triage-inbox', [
             'batch' => $batch,
             'categories' => $categories,
             'topNine' => $topNine,
             'totalPending' => $totalPending,
+            'offerToContribute' => $offerToContribute,
         ]);
     }
 }
