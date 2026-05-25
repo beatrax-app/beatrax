@@ -7,9 +7,7 @@ namespace Modules\Onboarding\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Redirector;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -100,10 +98,9 @@ final class SetupWizard extends Component
         WizardProgressInitializer $initializer,
         CurrentUser $currentUser,
         DatabaseManager $db,
-        Redirector $redirector,
         Request $request,
         Clock $clock,
-    ): ?RedirectResponse {
+    ): mixed {
         $user = $currentUser->user();
 
         // Idempotent safety net — if the UserInstalled listener missed
@@ -128,7 +125,13 @@ final class SetupWizard extends Component
 
         if ($resumeKey === '') {
             // All steps done|skipped — exit the wizard for real.
-            return $redirector->to('/');
+            // Livewire 3 honours `$this->redirect(...)` from mount();
+            // a plain `RedirectResponse` return is ignored and the
+            // component continues to render the wizard page (which
+            // would land the user on a stale "welcome" view despite
+            // every step being complete). The same pattern is used by
+            // Modules/EmailScan/.../InboxesPage::reconnect().
+            return $this->redirect('/');
         }
 
         $this->isResuming = $resumeKey !== 'welcome' && ! $request->boolean('force');
@@ -217,9 +220,8 @@ final class SetupWizard extends Component
     public function skipRest(
         DatabaseManager $db,
         CurrentUser $currentUser,
-        Redirector $redirector,
         Clock $clock,
-    ): RedirectResponse {
+    ): mixed {
         $db->connection()
             ->table('wizard_progress')
             ->where('user_id', $currentUser->id())
@@ -230,7 +232,11 @@ final class SetupWizard extends Component
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
 
-        return $redirector->to('/');
+        // Livewire 3 — use `$this->redirect(...)` so the wire:click
+        // protocol's response actually triggers a navigation. A plain
+        // RedirectResponse return is dropped by Livewire's action
+        // dispatcher.
+        return $this->redirect('/');
     }
 
     public function render(ViewFactory $views): View
