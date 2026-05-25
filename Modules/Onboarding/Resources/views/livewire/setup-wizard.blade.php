@@ -65,62 +65,66 @@
     </header>
 
     <main class="wiz-body">
-        <article class="wiz-card">
+        @php
+            // UI-SPEC §"Density rules" locked exception: the first-
+            // import step owns its own 1120px-wide wiz-card wrapper
+            // (rendered inside the step blade) so the preview table
+            // gets the room it needs. Every other step uses the
+            // default 620px card and the parent renders the wrapper
+            // here. The `$selfWrapping` branch avoids double-nesting
+            // wiz-card elements for the first-import variant.
+            $selfWrapping = $currentStepKey === 'first-import';
+        @endphp
+        @if ($selfWrapping)
             @if ($isResuming)
-                <div class="wiz-resume-banner" role="status">
+                <div class="wiz-resume-banner-floating" role="status">
                     Welcome back — let's pick up where you left off.
                 </div>
             @endif
-
-            @switch ($currentStepKey)
-                @case ('welcome')
-                    <livewire:onboarding.steps.welcome-step :key="'welcome'" />
-                    @break
-
-                @case ('done')
-                    <livewire:onboarding.steps.done-step :key="'done'" />
-                    @break
-
-                @case ('connect-bank')
-                @case ('connect-card')
-                @case ('connect-email')
-                @case ('first-import')
-                    {{--
-                        Connector steps are landed by Plan 03b. Until they
-                        ship, render a coherent placeholder so a user
-                        resumed on a connector step (or a tester hitting
-                        the wizard with manual progress writes) sees a
-                        calm explanation rather than a Livewire mount
-                        exception. The placeholder copy stays specific
-                        to the active step so the user understands which
-                        connector is pending.
-                    --}}
-                    <div class="wiz-step-pending">
-                        <p class="wiz-step-pending-eyebrow">Step pending</p>
-                        <h1 class="wiz-step-pending-h1">
-                            The <code>{{ $currentStepKey }}</code> step is being prepared.
-                        </h1>
-                        <p class="wiz-step-pending-lede">
-                            This connector step lands in a follow-up plan; the wizard's
-                            structural backbone is in place but the per-connector UI is
-                            not yet wired. Use Resume later → to exit the wizard cleanly.
-                        </p>
+            <livewire:onboarding.steps.first-import-step :key="'first-import'" />
+        @else
+            <article class="wiz-card">
+                @if ($isResuming)
+                    <div class="wiz-resume-banner" role="status">
+                        Welcome back — let's pick up where you left off.
                     </div>
-                    @break
+                @endif
 
-                @default
-                    <div class="wiz-step-pending">
-                        <p class="wiz-step-pending-eyebrow">Unknown step</p>
-                        <h1 class="wiz-step-pending-h1">
-                            No step is currently active.
-                        </h1>
-                        <p class="wiz-step-pending-lede">
-                            The wizard could not resolve the active step. Use Resume
-                            later → to exit and the next mount will recover.
-                        </p>
-                    </div>
-            @endswitch
-        </article>
+                @switch ($currentStepKey)
+                    @case ('welcome')
+                        <livewire:onboarding.steps.welcome-step :key="'welcome'" />
+                        @break
+
+                    @case ('done')
+                        <livewire:onboarding.steps.done-step :key="'done'" />
+                        @break
+
+                    @case ('connect-bank')
+                        <livewire:onboarding.steps.connect-bank-step :key="'connect-bank'" />
+                        @break
+
+                    @case ('connect-card')
+                        <livewire:onboarding.steps.connect-card-step :key="'connect-card'" />
+                        @break
+
+                    @case ('connect-email')
+                        <livewire:onboarding.steps.connect-email-step :key="'connect-email'" />
+                        @break
+
+                    @default
+                        <div class="wiz-step-pending">
+                            <p class="wiz-step-pending-eyebrow">Unknown step</p>
+                            <h1 class="wiz-step-pending-h1">
+                                No step is currently active.
+                            </h1>
+                            <p class="wiz-step-pending-lede">
+                                The wizard could not resolve the active step. Use Resume
+                                later → to exit and the next mount will recover.
+                            </p>
+                        </div>
+                @endswitch
+            </article>
+        @endif
     </main>
 
     <footer class="wiz-footer">
