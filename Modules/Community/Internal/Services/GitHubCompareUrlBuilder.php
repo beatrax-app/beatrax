@@ -60,8 +60,24 @@ final class GitHubCompareUrlBuilder
         return $base.'...'.$branch.'?expand=1&body='.rawurlencode($body);
     }
 
+    /**
+     * Escape a string for inclusion inside a YAML double-quoted scalar.
+     * YAML 1.2 double-quoted strings recognise the C-style escape
+     * sequences `\\`, `\"`, `\n`, `\t`, `\r`. A raw bank-statement
+     * description that has picked up a stray newline or tab needs to be
+     * encoded as the escape sequence rather than included verbatim, or
+     * GitHub's PR composer rejects the YAML on submit.
+     */
     private function quoteYaml(string $value): string
     {
-        return '"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $value).'"';
+        $escaped = strtr($value, [
+            '\\' => '\\\\',
+            '"' => '\\"',
+            "\n" => '\\n',
+            "\r" => '\\r',
+            "\t" => '\\t',
+        ]);
+
+        return '"'.$escaped.'"';
     }
 }
