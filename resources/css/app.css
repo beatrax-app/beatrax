@@ -1136,3 +1136,32 @@ td.date,
         border-radius: var(--radius-sm);
     }
 }
+
+@layer components {
+    /*
+     * Mystery card primitive — one row on the
+     * `/community/mystery-merchants` browse destination. The
+     * `1.4fr 1fr 1fr auto` grid keeps the raw code column wider than
+     * the metadata columns so long descriptions wrap inside the card
+     * rather than pushing the CTA off the right edge. The mono code
+     * chip mirrors the import-preview row's code styling so the
+     * visual vocabulary stays consistent across surfaces.
+     */
+    .mystery-card {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr 1fr auto;
+        gap: 16px;
+        padding: 16px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+    }
+
+    .mystery-card .code {
+        font-family: var(--font-mono);
+        background: var(--color-surface-2);
+        padding: 3px 8px;
+        border-radius: var(--radius-sm);
+        font-size: var(--text-sm);
+    }
+}
