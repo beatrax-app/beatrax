@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Community\Internal\Corpus\CorpusLoader;
+use Modules\Community\Internal\Http\Livewire\SuggestMappingModal;
 use Modules\Community\Internal\Listeners\SeedCommunityCorpus;
 use Modules\Community\Internal\Services\GitHubCompareUrlBuilder;
 use Modules\Community\Internal\Shell\NoOpShell;
@@ -66,6 +67,6 @@ final class CommunityServiceProvider extends ServiceProvider
 
         $events->listen(UserInstalled::class, SeedCommunityCorpus::class);
 
-        unset($livewire);
+        $livewire->component('community.suggest-mapping-modal', SuggestMappingModal::class);
     }
 }
