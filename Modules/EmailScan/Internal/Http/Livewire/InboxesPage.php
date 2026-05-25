@@ -211,9 +211,17 @@ final class InboxesPage extends Component
                 ->pluck('id')
                 ->all();
         } catch (Throwable) {
-            $needle = '%"inbox_id":'.$inboxId.'%';
+            // SQLite LIKE has no character classes; anchor the
+            // trailing boundary by OR-ing the comma + closing-brace
+            // variants so `inbox_id=1` does not falsely match
+            // `inbox_id=10`, `inbox_id=11`, etc.
+            $withComma = '%"inbox_id":'.$inboxId.',%';
+            $withBrace = '%"inbox_id":'.$inboxId.'}%';
             $rows = (clone $base)
-                ->where('metadata', 'like', $needle)
+                ->where(static function ($q) use ($withComma, $withBrace): void {
+                    $q->where('metadata', 'like', $withComma)
+                        ->orWhere('metadata', 'like', $withBrace);
+                })
                 ->pluck('id')
                 ->all();
         }

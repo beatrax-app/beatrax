@@ -103,14 +103,22 @@ final class RaiseReconsentAlertOnTokenFailure
                 ->whereRaw("json_extract(metadata, '$.inbox_id') = ?", [$inboxId])
                 ->exists();
         } catch (Throwable) {
-            // Fallback — match the JSON-encoded fragment `"inbox_id":N`
-            // inside the raw column text. Same precision for the
-            // single-key shape this listener writes; cheaper than
-            // re-parsing the blob on every poll cycle.
-            $needle = '%"inbox_id":'.$inboxId.'%';
+            // Fallback — match the JSON-encoded fragment
+            // `"inbox_id":N` inside the raw column text. SQLite LIKE
+            // does not support character classes, so we anchor the
+            // trailing boundary by OR-ing two literal needles: one
+            // ending in `,` (when other JSON keys follow) and one
+            // ending in `}` (when inbox_id is the last key in the
+            // object). Without this `inbox_id=1` would falsely match
+            // `inbox_id=10`, `inbox_id=11`, `inbox_id=123`.
+            $withComma = '%"inbox_id":'.$inboxId.',%';
+            $withBrace = '%"inbox_id":'.$inboxId.'}%';
 
             return $this->baseDedupQuery($userId)
-                ->where('metadata', 'like', $needle)
+                ->where(static function (Builder $q) use ($withComma, $withBrace): void {
+                    $q->where('metadata', 'like', $withComma)
+                        ->orWhere('metadata', 'like', $withBrace);
+                })
                 ->exists();
         }
     }
