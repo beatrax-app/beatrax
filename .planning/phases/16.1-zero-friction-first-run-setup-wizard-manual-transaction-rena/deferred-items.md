@@ -68,3 +68,14 @@ by the current task's changes get auto-fixed.
 - **`Modules\Receipts\tests\Feature\Phase7MigrationsTest::rejects ...` —
   Receipts module regression.** Unrelated to Plan 03b's Onboarding
   scope. Pre-existing on `main`.
+
+## 16.1-04 discoveries
+
+Plan 04 confirmed the four pre-existing failures (`BoundaryArchTest`,
+`PhpStanBoundaryRuleTest` × 2, `DoctorProbesTest::PhpVersionProbe`,
+`Phase7MigrationsTest::rejects ...`) reproduce on the parent commit
+without any Plan 04 edits — verified by running the same tests from
+`/Users/wesselverheij/Development/diederik` (main repo working tree)
+against the same HEAD. None of these touch `Modules/Import/`, the
+only directory Plan 04 modifies; they remain deferred until a
+follow-up plan addresses each root cause.
