@@ -47,26 +47,42 @@ final class SeedCommunityCorpus
 
         foreach ($entries as $entry) {
             try {
-                // updateOrInsert keyed on (pattern, user_id IS NULL) is the
-                // canonical idempotent shape: re-dispatch updates the
-                // friendly name / category / region / contributor in place
-                // without producing duplicates. The created_at column is
-                // managed by the per-table query builder defaults +
-                // composite (pattern, user_id) UNIQUE — the timestamp
-                // refresh on update is documented and acceptable for a
-                // seed surface.
-                $connection->table('community_merchant_mappings')->updateOrInsert(
-                    ['pattern' => $entry->pattern, 'user_id' => null],
-                    [
+                // Idempotent shape keyed on (pattern, user_id IS NULL):
+                // re-dispatch updates the mutable fields in place
+                // without producing duplicates. The check-then-branch
+                // is preferred over updateOrInsert here so created_at
+                // is written only on the INSERT side — preserving the
+                // original-seed timestamp for audit even when the
+                // install command re-emits UserInstalled later.
+                $existingId = $connection->table('community_merchant_mappings')
+                    ->where('pattern', $entry->pattern)
+                    ->whereNull('user_id')
+                    ->value('id');
+
+                if ($existingId === null) {
+                    $connection->table('community_merchant_mappings')->insert([
+                        'pattern' => $entry->pattern,
+                        'user_id' => null,
                         'generalized_pattern' => $entry->generalizedPattern,
                         'name' => $entry->name,
                         'category' => $entry->category,
                         'region' => $entry->region,
                         'contributor' => $entry->contributor,
-                        'updated_at' => $now,
                         'created_at' => $now,
-                    ],
-                );
+                        'updated_at' => $now,
+                    ]);
+                } else {
+                    $connection->table('community_merchant_mappings')
+                        ->where('id', $existingId)
+                        ->update([
+                            'generalized_pattern' => $entry->generalizedPattern,
+                            'name' => $entry->name,
+                            'category' => $entry->category,
+                            'region' => $entry->region,
+                            'contributor' => $entry->contributor,
+                            'updated_at' => $now,
+                        ]);
+                }
             } catch (Throwable $e) {
                 $this->logger->warning('SeedCommunityCorpus: skipped malformed entry.', [
                     'pattern' => $entry->pattern,
