@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Ledger\Models\Account;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectBankStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
@@ -85,7 +86,7 @@ it('stashes bank_import_run_id into wizard_progress.data after a successful subm
     // resolves to a known account inside the pipeline; otherwise the
     // preview surfaces unknown-IBAN error rows and no ImportRun id is
     // ever returned to the wizard's stash path.
-    \Modules\Ledger\Models\Account::query()->updateOrCreate(
+    Account::query()->updateOrCreate(
         ['iban' => 'NL57ASNB0123456789'],
         [
             'user_id' => $this->user->id,
