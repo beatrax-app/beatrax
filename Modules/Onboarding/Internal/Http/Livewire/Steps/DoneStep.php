@@ -7,8 +7,6 @@ namespace Modules\Onboarding\Internal\Http\Livewire\Steps;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Routing\Redirector;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Onboarding\Public\Events\WizardCompleted;
@@ -41,11 +39,14 @@ final class DoneStep extends Component
     public function finish(
         Dispatcher $events,
         CurrentUser $currentUser,
-        Redirector $redirector,
-    ): RedirectResponse {
+    ): mixed {
         $events->dispatch(new WizardCompleted($currentUser->id()));
 
-        return $redirector->to('/');
+        // Livewire 3 — use `$this->redirect(...)` so the wire:click
+        // navigation actually fires. A plain Redirector::to(...)
+        // response is dropped by Livewire's action dispatcher; same
+        // pattern as InboxesPage::reconnect() in EmailScan.
+        return $this->redirect('/');
     }
 
     public function render(ViewFactory $views): View
