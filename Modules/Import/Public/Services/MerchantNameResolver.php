@@ -22,7 +22,7 @@ use stdClass;
  *   1. The user's exact `merchant_aliases.pattern` match keyed on the
  *      composite `(user_id, pattern)`. The pattern column stores the
  *      raw description as first seen, so an exact hit means the user
- *      previously renamed this verbatim row.
+ *      owns a rename for this verbatim row.
  *   2. The user's generalized `merchant_aliases.generalized_pattern`
  *      match. The resolver pulls the user's alias set into PHP and
  *      runs an `mb_strpos` substring match — the same defence the
@@ -61,9 +61,9 @@ final class MerchantNameResolver
     public function __construct(private readonly DatabaseManager $db) {}
 
     /**
-     * Returns the friendly name the user previously assigned to this
-     * raw description, or null when no alias matches and the
-     * extension-point tail does not contribute a name.
+     * Returns the friendly name the user owns for this raw description,
+     * or null when no alias matches and the extension-point tail does
+     * not contribute a name.
      */
     public function resolve(string $rawDescription, int $userId): ?string
     {
