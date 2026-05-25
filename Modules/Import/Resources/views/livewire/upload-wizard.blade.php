@@ -83,4 +83,10 @@
             Upload statement
         </button>
     </form>
+
+    {{-- Rename counterparty popover. Mounted here so the FirstImportStep
+         shell that hosts this wizard inline gets the same click-italic
+         rename affordance as the dedicated /imports/{id}/preview page;
+         a single instance per page handles every row's rename flow. --}}
+    <livewire:import.rename-counterparty-popover />
 </div>
