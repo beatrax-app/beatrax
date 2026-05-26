@@ -132,9 +132,13 @@ it('loads stashed bank_import_run_id and card_import_run_ids from wizard_progres
 
     $component = Livewire::test(FirstImportStep::class);
 
+    /** @var FirstImportStep $instance */
+    $instance = $component->instance();
+    $preview = $instance->currentPreview();
+
     // Two sections — one CAMT bank source, one ICS card source.
-    expect($component->get('preview')->sections)->toHaveCount(2);
-    expect($component->get('preview')->dedupedTotalCount)->toBe(6); // 3 + 2 + 1
+    expect($preview->sections)->toHaveCount(2);
+    expect($preview->dedupedTotalCount)->toBe(6); // 3 + 2 + 1
 });
 
 it('renders a consolidated preview section per source with the locked eyebrow copy', function (): void {
