@@ -176,12 +176,14 @@ final readonly class BuildConsolidatedPreviewQuery
 
     /**
      * Build one section for the given source format. Concatenates the
-     * cached preview rows across every contributing run, counts NEW
-     * dispositions for `totalRows` and DUPLICATE dispositions for the
-     * returned `$duplicateCount`, takes the first `SAMPLE_ROW_LIMIT`
-     * rows for `sampleRows`, and derives the section status from cache
-     * hits. Both counts are produced from a single cache read per run,
-     * eliminating the TTL-expiry race a second read would introduce.
+     * cached preview rows across every contributing run, counts NEW +
+     * ENRICHED dispositions for `totalRows` (both statuses result in
+     * a write when the user commits: NEW inserts, ENRICHED updates),
+     * counts DUPLICATE dispositions for the returned `$duplicateCount`,
+     * takes the first `SAMPLE_ROW_LIMIT` rows for `sampleRows`, and
+     * derives the section status from cache hits. All counts are
+     * produced from a single cache read per run, eliminating the
+     * TTL-expiry race a second read would introduce.
      *
      * @param  list<int>  $importRunIds
      * @return array{0: ConsolidatedPreviewSection, 1: int}
@@ -189,7 +191,7 @@ final readonly class BuildConsolidatedPreviewQuery
     private function buildSection(string $sourceFormat, array $importRunIds): array
     {
         $allRows = [];
-        $newRowCount = 0;
+        $committableRowCount = 0;
         $duplicateRowCount = 0;
         $hasCacheMiss = false;
 
@@ -202,8 +204,8 @@ final readonly class BuildConsolidatedPreviewQuery
             }
             foreach ($preview->rows as $row) {
                 $allRows[] = $row;
-                if ($row->status === 'new') {
-                    $newRowCount++;
+                if ($row->status === 'new' || $row->status === 'enriched') {
+                    $committableRowCount++;
                 } elseif ($row->status === 'duplicate') {
                     $duplicateRowCount++;
                 }
@@ -219,7 +221,7 @@ final readonly class BuildConsolidatedPreviewQuery
             new ConsolidatedPreviewSection(
                 sourceFormat: $sourceFormat,
                 importRunIds: $importRunIds,
-                totalRows: $newRowCount,
+                totalRows: $committableRowCount,
                 sampleRows: $sampleRows,
                 status: $status,
             ),
