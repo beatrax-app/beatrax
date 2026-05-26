@@ -112,12 +112,12 @@ final class RenameCounterpartyPopover extends Component
             rowIndex: $this->rowIndex,
             friendlyName: $friendlyTrimmed,
         );
-        $this->dispatch('modal-hide', name: 'rename-counterparty');
+        $this->dispatch('modal-close', name: 'rename-counterparty');
     }
 
     public function cancel(): void
     {
-        $this->dispatch('modal-hide', name: 'rename-counterparty');
+        $this->dispatch('modal-close', name: 'rename-counterparty');
     }
 
     public function render(ViewFactory $views): View

@@ -159,13 +159,13 @@ final class RuleFormModal extends Component
             // another tab, or a tampered ruleId). Close the modal so
             // the page re-renders without it.
             $this->errorValue = 'That rule is no longer available.';
-            $this->dispatch('modal-hide', name: 'rule-form');
+            $this->dispatch('modal-close', name: 'rule-form');
 
             return;
         }
 
         $this->dispatch('rule-form:saved', ruleId: $ruleId, action: $action);
-        $this->dispatch('modal-hide', name: 'rule-form');
+        $this->dispatch('modal-close', name: 'rule-form');
 
         $this->editingRuleId = null;
         $this->field = '';
@@ -176,7 +176,7 @@ final class RuleFormModal extends Component
 
     public function cancel(): void
     {
-        $this->dispatch('modal-hide', name: 'rule-form');
+        $this->dispatch('modal-close', name: 'rule-form');
     }
 
     public function render(

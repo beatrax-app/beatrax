@@ -24,7 +24,15 @@
              modal-show silently no-ops. Skipping the render entirely
              keeps the registration deferred until $provider is set. --}}
     @else
-    <flux:modal name="oauth-client-wizard-{{ $provider }}" class="md:max-w-2xl" dismissible="false">
+    {{-- wire:key forces Livewire's morph to fully unmount + remount the
+         modal element when $provider changes (e.g. user clicked Gmail
+         then Microsoft). Without it, the same DOM element survives
+         re-render with just the `name` attribute swapping, but Flux's
+         Alpine factory caches the modal name from x-data init time —
+         so a later modal-show with the new name silently misses the
+         registered modal. Re-mounting forces fluxModal('...') to
+         re-init with the new name. --}}
+    <flux:modal wire:key="oauth-modal-{{ $provider }}" name="oauth-client-wizard-{{ $provider }}" class="md:max-w-2xl" dismissible="false">
         <div class="space-y-6">
             <header>
                 @if ($provider === 'gmail')

@@ -126,7 +126,7 @@ it('happy path: writes the provider client via OAuthSecretsRepository + dispatch
         ->set('clientId', '12345678-1234-4abc-89ab-123456789abc')
         ->set('clientSecret', 'real-secret-value')
         ->call('submit')
-        ->assertDispatched('modal-hide')
+        ->assertDispatched('modal-close')
         ->assertRedirect(route('oauth.connect', ['provider' => 'microsoft']));
 
     $secrets = $this->app->make(OAuthSecretsRepository::class);

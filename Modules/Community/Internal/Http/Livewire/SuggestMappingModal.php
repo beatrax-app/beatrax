@@ -116,7 +116,7 @@ final class SuggestMappingModal extends Component
         ));
 
         $this->dispatch('toast.show', message: 'Suggestion opened in your browser.');
-        $this->dispatch('modal-hide', name: 'suggest-mapping');
+        $this->dispatch('modal-close', name: 'suggest-mapping');
 
         $this->pattern = '';
         $this->name = '';
@@ -126,7 +126,7 @@ final class SuggestMappingModal extends Component
 
     public function cancel(): void
     {
-        $this->dispatch('modal-hide', name: 'suggest-mapping');
+        $this->dispatch('modal-close', name: 'suggest-mapping');
     }
 
     public function render(ViewFactory $views): View
