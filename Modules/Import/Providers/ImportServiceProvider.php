@@ -28,11 +28,13 @@ use Modules\Import\Public\Actions\MergeMerchantAliases;
 use Modules\Import\Public\Actions\RunImport;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Contracts\ConfirmsImports;
+use Modules\Import\Public\Contracts\DetectsStartingBalance;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\PaymentTypeHinter;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Import\Public\Services\AliasMatchPreviewQuery;
+use Modules\Import\Public\Services\DetectStartingBalancesQuery;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Import\Public\Services\PatternGeneralizer;
 
@@ -167,6 +169,20 @@ final class ImportServiceProvider extends ServiceProvider
                 }
 
                 return new PaymentTypeClassifierStage($hinters);
+            },
+        );
+
+        $this->app->singleton(
+            DetectStartingBalancesQuery::class,
+            static function (Container $app): DetectStartingBalancesQuery {
+                /** @var iterable<DetectsStartingBalance> $tagged */
+                $tagged = $app->tagged('starting-balance.detector');
+                $detectors = [];
+                foreach ($tagged as $detector) {
+                    $detectors[] = $detector;
+                }
+
+                return new DetectStartingBalancesQuery($detectors);
             },
         );
     }
