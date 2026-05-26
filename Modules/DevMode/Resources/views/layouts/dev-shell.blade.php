@@ -80,6 +80,7 @@
         @endif
         @vite(['resources/css/app.css'])
         @livewireStyles
+        @fluxAppearance
     </head>
     <body
         class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
@@ -185,5 +186,6 @@
         @livewire('dev.command-palette-modal')
 
         @livewireScripts
+        @fluxScripts
     </body>
 </html>
