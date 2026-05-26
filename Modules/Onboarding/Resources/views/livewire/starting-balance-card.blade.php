@@ -238,6 +238,9 @@
                     >Save</button>
                 </div>
                 @break
+
+            @default
+                <p class="wiz-error" role="alert">Unknown card state. Reload the wizard.</p>
         @endswitch
     </div>
 </section>
