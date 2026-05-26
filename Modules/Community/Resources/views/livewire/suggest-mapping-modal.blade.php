@@ -96,13 +96,13 @@
                         }"
                         x-text="
                             'entries:\n' +
-                            '  - pattern: "' + (pattern || '') + '"\n' +
-                            '    name: "' + (name || '') + '"\n' +
+                            '  - pattern: &quot;' + (pattern || '') + '&quot;\n' +
+                            '    name: &quot;' + (name || '') + '&quot;\n' +
                             ((category && category.length)
-                                ? '    category: "' + category + '"\n'
+                                ? '    category: &quot;' + category + '&quot;\n'
                                 : '') +
-                            '    region: "' + (region || 'NL') + '"\n' +
-                            '    contributor: "user"\n'
+                            '    region: &quot;' + (region || 'NL') + '&quot;\n' +
+                            '    contributor: &quot;user&quot;\n'
                         "
                         class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-xs font-mono text-slate-900 whitespace-pre dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                     ></pre>
