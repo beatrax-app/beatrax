@@ -7,6 +7,7 @@ namespace Modules\Onboarding\Internal\Http\Livewire\Steps;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -132,6 +133,7 @@ final class ConnectCardStep extends Component
         CurrentUser $currentUser,
         LoggerInterface $logger,
         Application $app,
+        DatabaseManager $db,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -184,7 +186,11 @@ final class ConnectCardStep extends Component
         // nothing on step 5. After creation, re-preview each ImportRun
         // from its stable stored path so the preview cache and
         // statement_summaries rows are populated against the new account.
-        $hasIcsAccount = Account::query()
+        // Raw Query Builder used instead of Account::query()->exists() to
+        // satisfy PHPStan strict-rules staticMethod.dynamicCall — same
+        // pattern as TransactionDetail and UpdateTransactionCategory.
+        $hasIcsAccount = $db->connection()
+            ->table('accounts')
             ->where('user_id', $user->id)
             ->where('iban', self::ICS_OWN_IBAN)
             ->exists();
@@ -209,7 +215,7 @@ final class ConnectCardStep extends Component
                     ->where('user_id', $user->id)
                     ->first();
 
-                if ($run !== null && $run->raw_file_path !== null && file_exists($run->raw_file_path)) {
+                if ($run !== null && file_exists($run->raw_file_path)) {
                     try {
                         $importer->runFromUpload(
                             $run->raw_file_path,
