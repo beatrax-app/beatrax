@@ -24,9 +24,10 @@ use Spatie\LaravelData\Data;
  *    this section. The wizard does not need them for rendering but
  *    the commit-everything action loops over them when calling
  *    ConfirmImport per run.
- *  - `totalRows` counts NEW-disposition rows across every contributing
- *    run. DUPLICATE and ENRICHED rows are summarised separately at
- *    the batch level (see ConsolidatedPreviewBatch).
+ *  - `totalRows` counts rows that will write when the user commits:
+ *    NEW rows (inserts) plus ENRICHED rows (updates to existing
+ *    transactions). DUPLICATE rows are summarised separately at the
+ *    batch level (see ConsolidatedPreviewBatch).
  *  - `sampleRows` is the first 5 rows in run order, used purely for
  *    the visual table preview — never for the commit logic.
  *  - `status` is one of `ready`, `empty`, `error`, `filtered`:
