@@ -61,22 +61,45 @@ final class Camt053StartingBalanceDetector implements DetectsStartingBalance
             ])
             ->get();
 
-        $byAccount = [];
+        // Emit every distinct (openingBalanceMinor, openingBalanceDate)
+        // pair at the earliest opening-balance-date per account so the
+        // aggregator can detect within-source conflicts (two CAMT
+        // imports of overlapping periods reporting different opening
+        // balances on the same date). The detector itself only
+        // restricts to "earliest date per account"; the aggregator
+        // applies the cross-source tie-break rules.
+        $earliestDatePerAccount = [];
+        $emittedKeys = [];
+        $out = [];
         foreach ($rows as $row) {
             $accountId = self::toInt($row->account_id);
-            if (isset($byAccount[$accountId])) {
+            $isoDate = self::dateOnly(self::toString($row->opening_balance_date));
+
+            if (! isset($earliestDatePerAccount[$accountId])) {
+                $earliestDatePerAccount[$accountId] = $isoDate;
+            } elseif ($isoDate !== $earliestDatePerAccount[$accountId]) {
+                // Rows are sorted ASC by date — anything beyond the
+                // earliest date for this account is by definition
+                // later and not a candidate.
                 continue;
             }
 
-            $byAccount[$accountId] = new StartingBalanceCandidate(
+            $minor = self::toInt($row->opening_balance_minor);
+            $dedupKey = $accountId.'|'.$isoDate.'|'.$minor;
+            if (isset($emittedKeys[$dedupKey])) {
+                continue;
+            }
+            $emittedKeys[$dedupKey] = true;
+
+            $out[] = new StartingBalanceCandidate(
                 accountId: $accountId,
-                openingBalanceMinor: self::toInt($row->opening_balance_minor),
-                openingBalanceDate: self::dateOnly(self::toString($row->opening_balance_date)),
+                openingBalanceMinor: $minor,
+                openingBalanceDate: $isoDate,
                 sourceFormat: self::SOURCE_FORMAT,
             );
         }
 
-        return array_values($byAccount);
+        return $out;
     }
 
     /**

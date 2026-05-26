@@ -60,22 +60,40 @@ final class IcsPdfStartingBalanceDetector implements DetectsStartingBalance
             ])
             ->get();
 
-        $byAccount = [];
+        // Emit every distinct (openingBalanceMinor, openingBalanceDate)
+        // pair at the earliest opening-balance-date per account so the
+        // aggregator can detect within-source conflicts. The detector
+        // itself only restricts to "earliest date per account"; the
+        // aggregator applies the cross-source tie-break rules.
+        $earliestDatePerAccount = [];
+        $emittedKeys = [];
+        $out = [];
         foreach ($rows as $row) {
             $accountId = self::toInt($row->account_id);
-            if (isset($byAccount[$accountId])) {
+            $isoDate = self::dateOnly(self::toString($row->opening_balance_date));
+
+            if (! isset($earliestDatePerAccount[$accountId])) {
+                $earliestDatePerAccount[$accountId] = $isoDate;
+            } elseif ($isoDate !== $earliestDatePerAccount[$accountId]) {
                 continue;
             }
 
-            $byAccount[$accountId] = new StartingBalanceCandidate(
+            $minor = self::toInt($row->opening_balance_minor);
+            $dedupKey = $accountId.'|'.$isoDate.'|'.$minor;
+            if (isset($emittedKeys[$dedupKey])) {
+                continue;
+            }
+            $emittedKeys[$dedupKey] = true;
+
+            $out[] = new StartingBalanceCandidate(
                 accountId: $accountId,
-                openingBalanceMinor: self::toInt($row->opening_balance_minor),
-                openingBalanceDate: self::dateOnly(self::toString($row->opening_balance_date)),
+                openingBalanceMinor: $minor,
+                openingBalanceDate: $isoDate,
                 sourceFormat: self::SOURCE_FORMAT,
             );
         }
 
-        return array_values($byAccount);
+        return $out;
     }
 
     /**
