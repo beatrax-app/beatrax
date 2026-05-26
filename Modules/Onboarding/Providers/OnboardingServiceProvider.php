@@ -9,6 +9,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Onboarding\Internal\Http\Livewire\SetupWizard;
+use Modules\Onboarding\Internal\Http\Livewire\StartingBalanceCard;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectBankStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectCardStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectEmailStep;
@@ -35,8 +36,9 @@ use Modules\Onboarding\Public\Services\WizardProgressQuery;
  *    blade views can extend the wizard layout.
  *  - registers the SetupWizard parent + WelcomeStep + DoneStep Livewire
  *    components AND the four connector-step Livewire components
- *    (connect-bank, connect-card, connect-email, first-import) under
- *    the `onboarding.*` alias namespace.
+ *    (connect-bank, connect-card, connect-email, first-import) plus
+ *    the StartingBalanceCard child component under the
+ *    `onboarding.*` alias namespace.
  */
 final class OnboardingServiceProvider extends ServiceProvider
 {
@@ -71,5 +73,6 @@ final class OnboardingServiceProvider extends ServiceProvider
         $livewire->component('onboarding.steps.connect-card-step', ConnectCardStep::class);
         $livewire->component('onboarding.steps.connect-email-step', ConnectEmailStep::class);
         $livewire->component('onboarding.steps.first-import-step', FirstImportStep::class);
+        $livewire->component('onboarding.starting-balance-card', StartingBalanceCard::class);
     }
 }
