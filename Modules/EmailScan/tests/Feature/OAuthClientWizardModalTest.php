@@ -51,6 +51,35 @@ it('open() sets the provider to gmail', function (): void {
         ->assertSet('provider', 'gmail');
 });
 
+it('open(gmail) dispatches modal-show for oauth-client-wizard-gmail so the Flux modal actually opens', function (): void {
+    $user = ocwUser('modal-show-gmail@example.com');
+
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'gmail')
+        ->assertDispatched('modal-show', name: 'oauth-client-wizard-gmail');
+});
+
+it('open(microsoft) dispatches modal-show for oauth-client-wizard-microsoft so the Flux modal actually opens', function (): void {
+    $user = ocwUser('modal-show-ms@example.com');
+
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'microsoft')
+        ->assertSet('provider', 'microsoft')
+        ->assertDispatched('modal-show', name: 'oauth-client-wizard-microsoft');
+});
+
+it('open() does not dispatch modal-show for an unknown provider', function (): void {
+    $user = ocwUser('modal-show-unknown@example.com');
+
+    Livewire::actingAs($user)
+        ->test(OAuthClientWizardModal::class)
+        ->call('open', 'unknown-provider')
+        ->assertSet('provider', null)
+        ->assertNotDispatched('modal-show');
+});
+
 it('rejects an invalid client_id with the locked error copy', function (): void {
     $user = ocwUser('bad-id@example.com');
 
