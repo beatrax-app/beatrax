@@ -31,12 +31,11 @@ use Throwable;
  * the ImportRun ids the connector steps stashed into
  * `wizard_progress.data` (the bank step writes one int, the card step
  * writes an int array; PayPal will land alongside when that connector
- * ships) and feeds the union into Plan 07's
- * `BuildConsolidatedPreviewQuery`, which applies the user-id boundary
- * + stale + already-confirmed filters and groups survivors by source
- * format. The step also feeds the same id list into Plan 05b's
- * `DetectStartingBalancesQuery` to surface a `StartingBalanceCandidate`
- * per detected account.
+ * ships) and feeds the union into `BuildConsolidatedPreviewQuery`,
+ * which applies the user-id boundary + stale + already-confirmed
+ * filters and groups survivors by source format. The step also feeds
+ * the same id list into `DetectStartingBalancesQuery` to surface a
+ * `StartingBalanceCandidate` per detected account.
  *
  * The body renders:
  *
@@ -106,8 +105,7 @@ final class FirstImportStep extends Component
 
     /**
      * True while the commit() action is executing — disables the
-     * primary CTA and swaps its label to "Committing…" per UI-SPEC
-     * line 342.
+     * primary CTA and swaps its label to "Committing…".
      */
     public bool $isCommitting = false;
 
@@ -248,31 +246,36 @@ final class FirstImportStep extends Component
                             'updated_at' => $now,
                         ]);
                 }
+                // Mark wizard_progress done inside the transaction so the
+                // commit is truly atomic: either everything lands or nothing
+                // does. A failure before this UPDATE leaves the step in its
+                // current state so the user can retry safely.
+                $db->connection()
+                    ->table('wizard_progress')
+                    ->where('user_id', $user->id)
+                    ->where('step_key', 'first-import')
+                    ->update([
+                        'status' => 'done',
+                        'completed_at' => $now,
+                        'updated_at' => $now,
+                    ]);
             });
 
-            // Dispatch chain resolution + recurring detection ONCE
-            // after the outer commit. Per the standalone ConfirmImport
-            // action: inside the transaction would let the queue
-            // worker read stale state; once per inner ImportRun would
-            // multiply the worker hits. One post-commit dispatch
-            // collapses both pitfalls.
-            $chainDispatcher->dispatchForUser($user->id);
-            $recurringDispatcher->dispatchForUser($user->id);
-
-            // Mark the wizard_progress row done + advance the wizard
-            // to the DoneStep. The SetupWizard listens for
-            // `wizard.step.completed` and runs the same
-            // `progress.update(...)` we mirror here for robustness
-            // when the dispatch path is stubbed in a test harness.
-            $db->connection()
-                ->table('wizard_progress')
-                ->where('user_id', $user->id)
-                ->where('step_key', 'first-import')
-                ->update([
-                    'status' => 'done',
-                    'completed_at' => $now,
-                    'updated_at' => $now,
+            // Post-commit dispatches: failures here do NOT undo committed
+            // data. Use a separate try/catch with an honest error message
+            // so the user is not misled into thinking nothing was saved.
+            try {
+                $chainDispatcher->dispatchForUser($user->id);
+                $recurringDispatcher->dispatchForUser($user->id);
+            } catch (Throwable $dispatchException) {
+                $logger->error('FirstImportStep: post-commit dispatch failed (data already committed).', [
+                    'exception_class' => $dispatchException::class,
+                    'exception_message' => $dispatchException->getMessage(),
+                    'exception_trace' => SafeTrace::cap($dispatchException, $app->basePath()),
                 ]);
+                // Data is committed and wizard_progress is marked done.
+                // Chain/recurring will catch up on the next scheduled sweep.
+            }
 
             $this->dispatch('wizard.step.completed');
         } catch (Throwable $e) {
@@ -281,10 +284,7 @@ final class FirstImportStep extends Component
                 'exception_message' => $e->getMessage(),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
-            $this->commitError = sprintf(
-                "We couldn't commit your statements: %s. Nothing was changed.",
-                $e->getMessage(),
-            );
+            $this->commitError = "We couldn't commit your statements. Nothing was changed — try again.";
         } finally {
             $this->isCommitting = false;
         }
