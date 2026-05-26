@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,13 +21,33 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property string $kind
  * @property string $iban
  * @property string $default_currency
+ * @property int|null $starting_balance_minor
+ * @property CarbonImmutable|null $starting_balance_date
  */
 final class Account extends Model
 {
     use BelongsToUser;
 
     /** @var list<string> */
-    protected $fillable = ['user_id', 'name', 'slug', 'kind', 'iban', 'default_currency'];
+    protected $fillable = [
+        'user_id',
+        'name',
+        'slug',
+        'kind',
+        'iban',
+        'default_currency',
+        'starting_balance_minor',
+        'starting_balance_date',
+    ];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'starting_balance_minor' => 'integer',
+            'starting_balance_date' => 'immutable_date',
+        ];
+    }
 
     /**
      * @return BelongsTo<Currency, $this>
