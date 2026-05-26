@@ -13,6 +13,8 @@ use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -44,6 +46,13 @@ use Throwable;
 final class ConnectCardStep extends Component
 {
     use WithFileUploads;
+
+    /**
+     * Synthetic IBAN literal IcsPdfAdapter uses for all ICS card rows.
+     * Mirrors `IcsPdfAdapter::ICS_OWN_IBAN` — kept in sync by the
+     * architecture test `ics_pdf_adapter_own_iban_matches_connect_card_step`.
+     */
+    private const ICS_OWN_IBAN = 'ICS-CARD';
 
     /**
      * The leaf format key the ICS step ships. Constant — ICS Cards
@@ -164,6 +173,60 @@ final class ConnectCardStep extends Component
             );
 
             return;
+        }
+
+        // If the user has no ICS card account yet, auto-create one so
+        // the ICS PDF rows resolve against a known account. The
+        // IcsPdfAdapter uses the synthetic IBAN 'ICS-CARD' for every
+        // row; without a matching account the import preview treats every
+        // row as an unknown-IBAN error and the statement_summaries writer
+        // never fires — which means the starting-balance detector can find
+        // nothing on step 5. After creation, re-preview each ImportRun
+        // from its stable stored path so the preview cache and
+        // statement_summaries rows are populated against the new account.
+        $hasIcsAccount = Account::query()
+            ->where('user_id', $user->id)
+            ->where('iban', self::ICS_OWN_IBAN)
+            ->exists();
+
+        if (! $hasIcsAccount) {
+            Account::query()->create([
+                'user_id' => $user->id,
+                'name' => 'ICS card',
+                'slug' => 'ics-card-ics-card',
+                'kind' => 'ics_card',
+                'iban' => self::ICS_OWN_IBAN,
+                'default_currency' => 'EUR',
+            ]);
+
+            // Re-preview the runs from their stable stored paths so
+            // statement_summaries is populated and the preview cache
+            // reflects the now-resolvable account.
+            foreach ($newRunIds as $runId) {
+                /** @var ImportRun|null $run */
+                $run = ImportRun::query()
+                    ->where('id', $runId)
+                    ->where('user_id', $user->id)
+                    ->first();
+
+                if ($run !== null && $run->raw_file_path !== null && file_exists($run->raw_file_path)) {
+                    try {
+                        $importer->runFromUpload(
+                            $run->raw_file_path,
+                            $this->selectedFormat,
+                            $user,
+                            basename($run->raw_file_path),
+                        );
+                    } catch (Throwable $e) {
+                        $logger->warning('ConnectCardStep: re-preview after ICS account creation failed.', [
+                            'import_run_id' => $runId,
+                            'exception_class' => $e::class,
+                            'exception_message' => $e->getMessage(),
+                            'exception_trace' => SafeTrace::cap($e, $app->basePath()),
+                        ]);
+                    }
+                }
+            }
         }
 
         $progress = WizardProgress::query()
