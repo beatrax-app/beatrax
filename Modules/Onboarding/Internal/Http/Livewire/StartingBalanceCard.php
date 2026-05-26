@@ -38,11 +38,11 @@ use Modules\Core\Public\Contracts\CurrentUser;
  *     lede explaining the auto-detect miss.
  *
  * The user-id boundary is enforced when `save()` reads the
- * `transactions.posted_at` column for the D-06 warning lookup — the
- * query carries an explicit `where('user_id', ...)` even though the
- * BelongsToUser global scope would catch it on an Eloquent query
- * (this is a raw `DB::table()` read for tight control over the
- * one-column SELECT).
+ * `transactions.posted_at` column for the earliest-transaction
+ * warning — the query carries an explicit `where('user_id', ...)`
+ * even though the BelongsToUser global scope would catch it on an
+ * Eloquent query (this is a raw `DB::table()` read for tight control
+ * over the one-column SELECT).
  *
  * Per the project DI-only rule, every collaborator is method-DI'd on
  * `save()` — Livewire forbids constructor DI on Component subclasses.
@@ -51,9 +51,8 @@ final class StartingBalanceCard extends Component
 {
     /**
      * Minimum and maximum minor-unit value the validator accepts on
-     * `save()`. ±€10M caps a typo / tampered-frontend cent value at a
-     * sane bound (per the wizard's threat-model entry T-16.1.1-23 —
-     * "Starting-balance amount tampering").
+     * `save()`. ±€10M caps a typo or tampered-frontend cent value at
+     * a sane bound.
      */
     private const MIN_BALANCE_MINOR = -1_000_000_000_00;
 
@@ -127,9 +126,9 @@ final class StartingBalanceCard extends Component
     public bool $isConfirmed = false;
 
     /**
-     * Pre-rendered D-06 warning copy. Populated on `save()` when the
-     * accepted date is later than the account's earliest posted_at
-     * value. Empty string when no warning applies.
+     * Warning message populated on `save()` when the accepted date is
+     * later than the account's earliest imported transaction date.
+     * Empty string when no warning applies.
      */
     public string $dateWarning = '';
 
@@ -152,7 +151,7 @@ final class StartingBalanceCard extends Component
     /**
      * Index into `$alternativeCandidates` the user has selected on
      * the conflict variant. Defaults to 0 (the earliest-date
-     * candidate per D-04's tie-break).
+     * candidate, which wins the tie-break on date alone).
      */
     public int $selectedConflictIndex = 0;
 
@@ -190,7 +189,7 @@ final class StartingBalanceCard extends Component
      */
     public function confirm(): void
     {
-        if ($this->detectedMinor === null || $this->detectedDate === null) {
+        if ($this->accountId <= 0 || $this->detectedMinor === null || $this->detectedDate === null) {
             return;
         }
 
@@ -244,16 +243,22 @@ final class StartingBalanceCard extends Component
 
     /**
      * Validate the user's edits and accept them. Range-checks the
-     * minor amount, requires a parseable ISO date, computes the
-     * D-06 warning (date later than earliest transactions.posted_at
-     * for the account), then dispatches
-     * `starting-balance.confirmed` regardless of the warning — the
-     * warning is informational only per UI-SPEC line 275.
+     * minor amount, requires a parseable ISO date that is not in the
+     * future, optionally surfaces a warning when the date is later
+     * than the account's earliest imported transaction, then
+     * dispatches `starting-balance.confirmed` regardless of the
+     * warning — the warning is informational only.
      */
     public function save(
         DatabaseManager $db,
         CurrentUser $currentUser,
     ): void {
+        if ($this->accountId <= 0) {
+            $this->validationError = 'Account not set. Reload the wizard.';
+
+            return;
+        }
+
         $this->validationError = '';
         $this->dateWarning = '';
 
@@ -278,6 +283,11 @@ final class StartingBalanceCard extends Component
         $timestamp = strtotime($date);
         if ($timestamp === false) {
             $this->validationError = 'Pick a valid date.';
+
+            return;
+        }
+        if ($timestamp > time()) {
+            $this->validationError = 'Starting balance date cannot be in the future.';
 
             return;
         }
@@ -316,7 +326,7 @@ final class StartingBalanceCard extends Component
      */
     public function pickConflictCandidate(int $candidateIndex): void
     {
-        if (! array_key_exists($candidateIndex, $this->alternativeCandidates)) {
+        if ($this->accountId <= 0 || ! array_key_exists($candidateIndex, $this->alternativeCandidates)) {
             return;
         }
 
