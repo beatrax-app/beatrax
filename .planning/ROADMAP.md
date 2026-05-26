@@ -273,6 +273,20 @@ Plans:
 - [x] 16.1.1-07b-PLAN.md — StartingBalanceCard + consolidated-preview-section + FirstImportStep rewrite + commit-everything (G1 + G7 + G9 UI/commit surface)
 - [x] 16.1.1-08-PLAN.md — ROADMAP.md title + goal update (D-22)
 
+### Phase 16.1.2: First-run wizard polish + PayPal connector step + preview pagination + regression test gap-fill (UAT follow-up from Phase 16.1.1) (INSERTED)
+
+**Goal:** Close the remaining UAT polish items left open after 16.1.1 — add a PayPal CSV step to the SetupWizard so the connector trio (bank, card, PayPal) is complete before FirstImportStep, let the user expand any preview section beyond the 5-row sample, tighten the starting-balance / preview visual layout per UAT feedback, and back-fill the three missing FirstImportStep commit-path regression tests called for in Plan 07b. Result: a first-run wizard that covers every funding source the user actually has and a preview that scales past 5 rows.
+**Slug:** `16.1.2-paypal-wizard-step-preview-pagination-visual-polish-regression-tests`
+**Depends on:** Phase 16.1.1
+**Plans:** TBD (planning phase will register them after discussion)
+
+Suggested plans (subject to refinement during discussion + planning):
+- [ ] 16.1.2-01-PLAN.md — PayPal wizard step (`ConnectPaypalStep`) registered between ConnectCardStep and FirstImportStep; stash `paypal_import_run_id`; FirstImportStep consumes it (handover A-1)
+- [ ] 16.1.2-02-PLAN.md — Preview pagination — per-section "Show all N rows" expansion on the consolidated preview (handover A-2)
+- [ ] 16.1.2-03-PLAN.md — Starting-balance section visual polish — tighten/regroup per user feedback (handover A-3)
+- [ ] 16.1.2-04-PLAN.md — FirstImportStep commit-path regression tests (commit-everything, rollback-on-throw, stale-id filter) (handover B-1)
+- [ ] 16.1.2-05-PLAN.md — Refined preview body-block layout — per user feedback (handover A-4)
+
 ### Phase 17: CI/CD Pipeline + Code Signing
 
 **Goal**: Every PR runs the full quality gate (Larastan L10 strict + Pint + Pest) on both PHP 8.4 and 8.5 axes via `.github/workflows/ci.yml`; pushing a `v*` tag triggers `.github/workflows/release.yml` which builds + signs + notarizes installers on macOS 14 + Windows 2025 + Ubuntu 24.04 runners and publishes them as GitHub Release assets via `softprops/action-gh-release v2`.
