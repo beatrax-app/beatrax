@@ -119,7 +119,7 @@ it('creates a new rule on save and dispatches rule-form:saved + modal-hide', fun
         ->set('categoryId', $this->streaming->id)
         ->call('save')
         ->assertDispatched('rule-form:saved')
-        ->assertDispatched('modal-hide');
+        ->assertDispatched('modal-close');
 
     expect(
         DB::table('categorization_rules')
@@ -137,7 +137,7 @@ it('updates an existing rule on save in edit mode', function (): void {
         ->set('categoryId', $this->music->id)
         ->call('save')
         ->assertDispatched('rule-form:saved')
-        ->assertDispatched('modal-hide');
+        ->assertDispatched('modal-close');
 
     $row = DB::table('categorization_rules')->where('id', $ruleId)->first();
     expect($row->category_id)->toBe($this->music->id);
@@ -319,7 +319,7 @@ it('save() catches NotFoundHttpException from a foreign editingRuleId and hides 
         ->set('categoryId', $this->streaming->id)
         ->call('save')
         ->assertSet('errorValue', 'That rule is no longer available.')
-        ->assertDispatched('modal-hide');
+        ->assertDispatched('modal-close');
 
     // The foreign rule MUST remain untouched.
     $row = DB::table('categorization_rules')->where('id', $foreignRuleId)->first();

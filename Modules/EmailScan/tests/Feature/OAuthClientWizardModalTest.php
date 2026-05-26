@@ -138,7 +138,7 @@ it('happy path: writes the provider client via OAuthSecretsRepository + dispatch
         ->set('clientSecret', 'GOCSPX-secret-value')
         ->set('publishedConfirmed', true)
         ->call('submit')
-        ->assertDispatched('modal-hide')
+        ->assertDispatched('modal-close')
         ->assertRedirect(route('oauth.connect', ['provider' => 'gmail']));
 
     $secrets = $this->app->make(OAuthSecretsRepository::class);

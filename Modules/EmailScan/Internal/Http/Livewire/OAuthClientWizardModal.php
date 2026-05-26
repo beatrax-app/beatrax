@@ -170,7 +170,7 @@ final class OAuthClientWizardModal extends Component
             return null;
         }
 
-        $this->dispatch('modal-hide', name: 'oauth-client-wizard-'.$provider);
+        $this->dispatch('modal-close', name: 'oauth-client-wizard-'.$provider);
         // Always dispatch the "client saved" signal so future call
         // sites (the onboarding wizard's email step) can react without
         // a new event-name carve-out per use case.
@@ -197,7 +197,7 @@ final class OAuthClientWizardModal extends Component
     public function cancel(): void
     {
         $provider = $this->provider ?? 'gmail';
-        $this->dispatch('modal-hide', name: 'oauth-client-wizard-'.$provider);
+        $this->dispatch('modal-close', name: 'oauth-client-wizard-'.$provider);
     }
 
     public function render(ViewFactory $views, LoopbackRedirectUri $loopback): View

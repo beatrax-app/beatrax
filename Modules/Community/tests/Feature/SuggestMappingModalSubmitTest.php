@@ -32,7 +32,7 @@ it('opens with a prefilled pattern, submits, launches the system browser, and di
         ->set('name', 'Shell Pieter')
         ->call('submit')
         ->assertDispatched('toast.show')
-        ->assertDispatched('modal-hide');
+        ->assertDispatched('modal-close');
 
     expect($this->shell->openExternalCalls)->not->toBeEmpty();
     $url = $this->shell->openExternalCalls[0];
