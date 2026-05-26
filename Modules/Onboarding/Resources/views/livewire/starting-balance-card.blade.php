@@ -71,7 +71,7 @@
         @switch($state)
             @case('detected')
                 <h3 id="balance-card-{{ $accountId }}-h3" class="balance-card-h3">
-                    We detected your {{ $accountLabel }} account started at …
+                    We detected your {{ $accountLabel }} account started at
                 </h3>
                 @if ($detectedMinor !== null)
                     <p class="value">{{ $formatMinor($detectedMinor, $currency) }}</p>
