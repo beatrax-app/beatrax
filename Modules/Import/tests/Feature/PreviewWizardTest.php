@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -28,6 +29,7 @@ it('renders status badges (New / Duplicate) for parsed rows', function (): void 
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
@@ -47,6 +49,7 @@ it('renders an inline unknown-IBAN prompt when accounts are not yet named', func
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
@@ -61,6 +64,7 @@ it('confirms an import and redirects to the results page', function (): void {
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     expect(Transaction::count())->toBe(0);
@@ -81,6 +85,7 @@ it('dispatches DetectRecurringSeriesJob alongside ResolveChainLinksJob after a s
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     Queue::fake();
@@ -107,6 +112,7 @@ it('does NOT dispatch DetectRecurringSeriesJob on a re-confirm with zero new wor
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
@@ -134,6 +140,7 @@ it('discards an import and redirects back to /imports/new', function (): void {
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
@@ -159,6 +166,7 @@ it('cross-user import access is blocked', function (): void {
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     $this->actingAs($otherUser);
@@ -176,6 +184,7 @@ it('returns inserted_count plus duplicate_count when an already-confirmed run is
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     /** @var ImportRun $run */
@@ -205,6 +214,7 @@ it('renders the canonical results summary on the results page', function (): voi
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     $response = $this->get('/imports/'.$result->importRunId);

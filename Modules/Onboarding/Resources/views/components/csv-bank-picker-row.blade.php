@@ -1,0 +1,44 @@
+{{--
+    CSV bank-picker row — the follow-on chip set the bank connector
+    step reveals when the user picks the CSV format chip. CSV is the
+    only ambiguous bank-statement format, so the user names which bank
+    exported their CSV before the drop zone unlocks.
+
+    Props:
+      :selected   — the currently-picked bank format key ("asn-csv" or
+                     "ing-csv"), or null if the user has not yet picked.
+
+    The row uses the existing `.format-chip-button` styling shipped on
+    the format-chip row so the user reuses one interaction model:
+    pick-a-chip. Each button dispatches a server-side property set on
+    the parent component (`selectedBankFormatHint`); arrow-key
+    navigation comes from the surrounding `role="radiogroup"`.
+--}}
+@props([
+    'selected' => null,
+])
+@php
+    /** @var string|null $selected */
+@endphp
+
+<div class="format-chips csv-bank-picker-row" role="radiogroup" aria-label="Which bank exported your CSV?">
+    <span class="format-chips-label">From:</span>
+    <button
+        type="button"
+        class="format-chip-button"
+        role="radio"
+        aria-checked="{{ $selected === 'asn-csv' ? 'true' : 'false' }}"
+        wire:click="$set('selectedBankFormatHint', 'asn-csv')"
+    >
+        <x-onboarding::format-chip label="ASN" :recommended="$selected === 'asn-csv'" />
+    </button>
+    <button
+        type="button"
+        class="format-chip-button"
+        role="radio"
+        aria-checked="{{ $selected === 'ing-csv' ? 'true' : 'false' }}"
+        wire:click="$set('selectedBankFormatHint', 'ing-csv')"
+    >
+        <x-onboarding::format-chip label="ING" :recommended="$selected === 'ing-csv'" />
+    </button>
+</div>

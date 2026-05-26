@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 
 dataset('idempotent_adapters', [
     'asn-csv' => [
@@ -62,8 +63,14 @@ it('produces zero new rows when the same file is imported twice', function (
     $this->seedFixtureUserAndAccount();
     $importer = $this->app->make(RunsImports::class);
 
-    $first = $importer->runAndConfirm($fixture, $adapterFormat, $this->fixtureUser);
-    $second = $importer->runAndConfirm($fixture, $adapterFormat, $this->fixtureUser);
+    $hint = match ($adapterFormat) {
+        'asn-csv' => BankCsvFormatHint::Asn,
+        'ing-csv' => BankCsvFormatHint::Ing,
+        default => null,
+    };
+
+    $first = $importer->runAndConfirm($fixture, $adapterFormat, $this->fixtureUser, formatHint: $hint);
+    $second = $importer->runAndConfirm($fixture, $adapterFormat, $this->fixtureUser, formatHint: $hint);
 
     expect($first->inserted)->toBeGreaterThan(0);
     expect($second->inserted)->toBe(0);
@@ -79,8 +86,14 @@ it('produces zero new rows when an overlapping period is imported', function (
     $this->seedFixtureUserAndAccount();
     $importer = $this->app->make(RunsImports::class);
 
-    $first = $importer->runAndConfirm($overlapBase, $adapterFormat, $this->fixtureUser);
-    $second = $importer->runAndConfirm($overlapNext, $adapterFormat, $this->fixtureUser);
+    $hint = match ($adapterFormat) {
+        'asn-csv' => BankCsvFormatHint::Asn,
+        'ing-csv' => BankCsvFormatHint::Ing,
+        default => null,
+    };
+
+    $first = $importer->runAndConfirm($overlapBase, $adapterFormat, $this->fixtureUser, formatHint: $hint);
+    $second = $importer->runAndConfirm($overlapNext, $adapterFormat, $this->fixtureUser, formatHint: $hint);
 
     if ($overlapBase === $overlapNext) {
         // Same-file fallback (CAMT / MT940 corpora ship no overlap pair

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
@@ -19,6 +20,7 @@ it('imports every parsed row from the gold fixture on the first run', function (
         __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv',
         'asn-csv',
         $this->fixtureUser,
+        formatHint: BankCsvFormatHint::Asn,
     );
 
     expect($result)->toBeInstanceOf(ImportConfirmResult::class);
@@ -30,8 +32,8 @@ it('imports every parsed row from the gold fixture on the first run', function (
 it('returns zero new rows when re-importing the same file', function (): void {
     $fixture = __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv';
 
-    $first = $this->importer->runAndConfirm($fixture, 'asn-csv', $this->fixtureUser);
-    $second = $this->importer->runAndConfirm($fixture, 'asn-csv', $this->fixtureUser);
+    $first = $this->importer->runAndConfirm($fixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
+    $second = $this->importer->runAndConfirm($fixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
 
     expect($first->inserted)->toBeGreaterThan(0);
     expect($second->inserted)->toBe(0);
@@ -43,8 +45,8 @@ it('returns mixed inserted/duplicates when an overlapping period is re-imported'
     $monthA = __DIR__.'/../../../../tests/fixtures/asn-month-a.csv';
     $monthAandB = __DIR__.'/../../../../tests/fixtures/asn-month-a-and-b.csv';
 
-    $first = $this->importer->runAndConfirm($monthA, 'asn-csv', $this->fixtureUser);
-    $second = $this->importer->runAndConfirm($monthAandB, 'asn-csv', $this->fixtureUser);
+    $first = $this->importer->runAndConfirm($monthA, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
+    $second = $this->importer->runAndConfirm($monthAandB, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
 
     expect($first->inserted)->toBeGreaterThan(0);
     expect($second->inserted)->toBeGreaterThan(0);
@@ -74,6 +76,7 @@ it('refreshes import_runs.source_format when reusing an existing row', function 
         'asn-csv',
         $this->fixtureUser,
         'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
     );
 
     expect($preview->importRunId)->toBe($stale->id);
@@ -83,7 +86,7 @@ it('refreshes import_runs.source_format when reusing an existing row', function 
 it('substitutes the no-counterparty sentinel on rows with an empty Naam column', function (): void {
     $fixture = __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv';
 
-    $first = $this->importer->runAndConfirm($fixture, 'asn-csv', $this->fixtureUser);
+    $first = $this->importer->runAndConfirm($fixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
     $sentinelRows = Transaction::query()->where('counterparty_normalized', '_no_counterparty')->count();
 
     // The gold fixture contains at least one nameless BEA row, so the
