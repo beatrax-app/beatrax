@@ -160,8 +160,8 @@ final readonly class DetectStartingBalancesQuery
             return $camt053;
         }
 
-        // No CAMT in the tie but multiple non-CAMT candidates — surface both.
-        if (count($other) >= 2 && $camt053 === []) {
+        // No CAMT in the tie and multiple non-CAMT candidates — surface all.
+        if (count($other) >= 2) {
             return $other;
         }
 
