@@ -1,28 +1,30 @@
 {{--
-    Connect-card step — wizard step 3. Renders the UI-SPEC §"Wizard
-    connector step — credit card (ICS Cards)" copy verbatim. ICS only
-    offers PDF statements through Mijn ICS (no CSV export) — the
-    format chip row collapses to a single muted "PDF [only format]"
-    chip and the drop-zone accepts only `.pdf`.
+    Connect-card step — wizard step 3. ICS Cards's consumer portal only
+    exports monthly PDF statements, so the user typically downloads
+    several months at once and drops them all into one queue. The drop
+    zone wraps a multi-file `<input>`; each queued PDF renders as a
+    chip below the drop zone with filename, size, and remove button.
 
-    Submission delegates to the existing `RunsImports` pipeline with
-    `ics-pdf` as the format key — same path `IcsPdfAdapter` already
-    consumes for /imports.
+    Submission delegates per-file to the existing `RunsImports`
+    pipeline with `ics-pdf` as the format key — the same path
+    IcsPdfAdapter already consumes for /imports. The successful-submit
+    path stashes the resulting ImportRun ids into
+    `wizard_progress.data['card_import_run_ids']` for the consolidated
+    preview screen to read back.
 --}}
 <section class="wiz-step wiz-step-connect-card" aria-labelledby="wiz-connect-card-h1">
     <p class="wiz-eyebrow">💳 Step 3 — Your credit card (ICS)</p>
     <h1 id="wiz-connect-card-h1" class="wiz-h1">
-        Grab your monthly statement PDF
+        Grab your monthly statement PDFs
     </h1>
     <p class="wiz-lede">
-        ICS only offers PDF statements through Mijn ICS — no CSV export. Download
-        the latest month and drop it below.
+        Drop all your monthly ICS PDF statements — we'll combine them into one preview.
     </p>
 
     <div class="mini-steps">
         <x-onboarding::mini-step glyph="🔐" label="Log in" sub="mijn.icscards.nl" state="done" />
         <x-onboarding::mini-step glyph="📑" label="Open afschriften" sub="Left navigation" state="done" />
-        <x-onboarding::mini-step glyph="📅" label="Pick a month" sub="Most recent" state="now" />
+        <x-onboarding::mini-step glyph="📅" label="Pick months" sub="One PDF per month" state="now" />
         <x-onboarding::mini-step glyph="⬇️" label="Download" sub="PDF" state="upcoming" />
     </div>
 
@@ -31,21 +33,37 @@
         <x-onboarding::format-chip label="PDF" badge="only format" />
     </div>
 
-    <x-onboarding::drop-zone
-        wire-model="file"
-        lead="Drop your ICS PDF here"
-        sublink="or browse for a file"
-        glyph="📥"
-        accept=".pdf"
-    />
+    <label class="drop-zone">
+        <span class="drop-zone-glyph" aria-hidden="true">📥</span>
+        <span class="drop-zone-lead">Drop your ICS PDFs here</span>
+        <span class="drop-zone-sublink">or browse for files</span>
+        <input
+            type="file"
+            class="drop-zone-input"
+            wire:model="statements"
+            multiple
+            accept=".pdf"
+        />
+    </label>
 
-    @if ($file !== null)
-        <p class="wiz-file-ready">
-            {{ $file->getClientOriginalName() }} · ✓ ready
-        </p>
+    @if (count($statements) > 0)
+        <div class="per-file-chip-list" aria-label="Queued PDF statements">
+            @foreach ($statements as $index => $statement)
+                <x-onboarding::per-file-chip
+                    :filename="$statement->getClientOriginalName()"
+                    :sizeBytes="$statement->getSize()"
+                    state="ready"
+                    :index="(int) $index"
+                />
+            @endforeach
+        </div>
     @endif
 
-    @error('file')
+    @error('statements')
+        <p class="wiz-error" role="alert">{{ $message }}</p>
+    @enderror
+
+    @error('statements.*')
         <p class="wiz-error" role="alert">{{ $message }}</p>
     @enderror
 

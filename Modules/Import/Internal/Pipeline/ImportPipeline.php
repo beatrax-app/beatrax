@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Import\Internal\Pipeline;
 
 use Illuminate\Contracts\Foundation\Application;
+use InvalidArgumentException;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\SafeTrace;
@@ -16,6 +17,7 @@ use Modules\Import\Public\Dto\EnrichedDisposition;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Dto\UnknownIban;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
@@ -66,8 +68,20 @@ final class ImportPipeline
     /**
      * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>}
      */
-    public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
+    public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, ?BankCsvFormatHint $formatHint = null): array
     {
+        // Backstop guard at the public-contract boundary: CSV is the only
+        // ambiguous bank-statement format, and the file's own header is
+        // not enough to disambiguate the dialect reliably. Any caller
+        // that asks for a CSV import without naming the bank explicitly
+        // is refused here even if it bypassed the wizard's own
+        // server-side rules() validation (other modules, future
+        // programmatic callers, tests that drive the contract
+        // directly).
+        if ($formatHint === null && in_array($sourceFormat, ['asn-csv', 'ing-csv'], strict: true)) {
+            throw new InvalidArgumentException('CSV imports require a format hint.');
+        }
+
         /** @var list<PreviewRowDto> $preview */
         $preview = [];
         /** @var list<CanonicalTransaction> $canonical */

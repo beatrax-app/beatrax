@@ -16,6 +16,7 @@ use Modules\Import\Public\Actions\DiscardImport;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Import\Public\Exceptions\InvalidAccountNameException;
 use Modules\Import\Public\Exceptions\PreviewExpiredException;
 use Modules\Import\Public\Services\AccountNamer;
@@ -227,6 +228,7 @@ final class PreviewWizard extends Component
             $importRun->source_format,
             $user,
             basename($importRun->raw_file_path),
+            $this->formatHintForReRun($importRun->source_format),
         );
 
         $this->accountName = '';
@@ -292,6 +294,7 @@ final class PreviewWizard extends Component
             $importRun->source_format,
             $user,
             basename($importRun->raw_file_path),
+            $this->formatHintForReRun($importRun->source_format),
         );
 
         $this->icsAccountName = '';
@@ -356,9 +359,29 @@ final class PreviewWizard extends Component
             $importRun->source_format,
             $user,
             basename($importRun->raw_file_path),
+            $this->formatHintForReRun($importRun->source_format),
         );
 
         $this->paypalAccountName = '';
+    }
+
+    /**
+     * Resolves the bank-format hint required when re-running the
+     * importer from inside a name-your-account flow. The pipeline
+     * refuses to dispatch a CSV import without a hint at the
+     * public-contract boundary, and the ImportRun row's
+     * `source_format` is the only signal the re-run path has — the
+     * user already declared the dialect when the original upload
+     * landed. CAMT.053, MT940, PDF, PayPal CSV, and email files do
+     * not need a hint.
+     */
+    private function formatHintForReRun(string $sourceFormat): ?BankCsvFormatHint
+    {
+        return match ($sourceFormat) {
+            'asn-csv' => BankCsvFormatHint::Asn,
+            'ing-csv' => BankCsvFormatHint::Ing,
+            default => null,
+        };
     }
 
     public function confirm(
