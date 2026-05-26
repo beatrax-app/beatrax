@@ -26,8 +26,8 @@ use Throwable;
 /**
  * Wizard step 5 — the consolidated commit surface.
  *
- * This step replaces the earlier upload-wizard wrapper with a single
- * "review everything we found, then commit" page. On mount it reads
+ * This step renders a single "review everything we found, then commit"
+ * page. On mount it reads
  * the ImportRun ids the connector steps stashed into
  * `wizard_progress.data` (the bank step writes one int, the card step
  * writes an int array; PayPal will land alongside when that connector
