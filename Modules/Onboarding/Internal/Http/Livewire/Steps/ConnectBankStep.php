@@ -205,10 +205,7 @@ final class ConnectBankStep extends Component
                 'exception_message' => $e->getMessage(),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
-            $this->uploadError = sprintf(
-                'Could not read this file (%s). The full error is in /dev/logs.',
-                $e::class,
-            );
+            $this->uploadError = 'Could not read this file. The full error is in /dev/logs.';
 
             return;
         }
