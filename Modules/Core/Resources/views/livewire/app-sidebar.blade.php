@@ -18,7 +18,7 @@
 
 <aside class="side" aria-label="Primary" style="--side-w: 248px;">
     <div class="side-brand">
-        <span class="logo" aria-hidden="true">b</span>
+        <img src="{{ Vite::asset('resources/brand/logo.svg') }}" alt="beatrax" width="24" height="24" class="logo logo-svg" />
         <span>beatrax</span>
         <span class="version-chip">v2.0.0-dev</span>
     </div>
