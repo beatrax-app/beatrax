@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sketch 006 · FirstImportStep layout · Phase 16.1.2</title>
+  <link rel="stylesheet" href="../themes/default.css" />
+  <style>
+    /* ─────────────────────────────────────────────────────────────
+       Sketch 006 — shared chrome + per-variant compositions
+       Wide-card exception (~1120px) for FirstImportStep only.
+       ───────────────────────────────────────────────────────────── */
+
+    /* Page wash */
+    .wiz-page {
+      min-height: calc(100vh - 48px);
+      background: var(--color-bg-subtle);
+      display: flex; flex-direction: column;
+      padding-top: 56px; /* room for variant tab bar */
+    }
+    .wiz-top {
+      padding: 20px 32px;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 24px;
+    }
+    .brand-row { display: inline-flex; align-items: center; gap: 10px; }
+    .brand-mark {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text-muted) 100%);
+      color: var(--color-bg);
+      display: grid; place-items: center;
+      font-weight: 700; font-size: 16px;
+    }
+    .brand-name { font-weight: 600; font-size: var(--text-md); }
+
+    .wiz-dots { display: flex; gap: 8px; align-items: center;
+      color: var(--color-text-muted); font-size: var(--text-xs); }
+    .wiz-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-border); display: inline-block; }
+    .wiz-dot.done { background: var(--color-emerald); }
+    .wiz-dot.now { background: var(--color-primary); width: 24px; border-radius: 4px; }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: var(--radius-md);
+      border: 1px solid transparent; font-size: var(--text-sm);
+      font-weight: 500; cursor: pointer; transition: var(--tx-quick); }
+    .btn-ghost { background: transparent; color: var(--color-text-muted); }
+    .btn-ghost:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .btn-primary { background: var(--color-primary); color: var(--color-primary-text);
+      border-color: var(--color-primary); }
+    .btn-primary:hover { opacity: 0.92; }
+    .btn-primary[disabled], .btn-primary[aria-disabled="true"] {
+      opacity: 0.4; cursor: not-allowed; }
+
+    .wiz-body {
+      flex: 1; display: grid; place-items: start center;
+      padding: 16px 24px 32px;
+    }
+    .wiz-card {
+      width: 100%; max-width: 620px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      padding: 40px 48px 32px;
+    }
+    .wiz-card.wide { max-width: 1120px; }
+
+    .wiz-eyebrow {
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      letter-spacing: 0.04em; margin: 0 0 12px;
+    }
+    .wiz-h1 {
+      margin: 0 0 8px; font-size: var(--text-2xl); font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+    .wiz-lede {
+      margin: 0 0 24px; color: var(--color-text-muted);
+      font-size: var(--text-md); line-height: 1.55;
+    }
+    .wiz-lede strong, .wiz-lede .tnum { color: var(--color-text); font-weight: 600; }
+
+    .wiz-actions {
+      display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+      padding-top: 12px;
+    }
+    .wiz-footer {
+      padding: 16px 32px 24px;
+      display: flex; justify-content: space-between;
+      color: var(--color-text-faint); font-size: var(--text-xs);
+    }
+    .privacy-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      color: var(--color-text-muted); font-size: var(--text-xs);
+    }
+    .privacy-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-emerald); }
+    .link-quiet { color: var(--color-text-muted); }
+    .link-quiet:hover { color: var(--color-text); }
+
+    /* ─── Preview section primitives (reused across variants) ───── */
+    .preview-section { padding-top: 4px; }
+    .preview-section-eyebrow {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      font-size: var(--text-xs); letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--color-text-muted);
+      margin: 0 0 10px; font-weight: 500;
+    }
+    .preview-section-eyebrow .preview-section-label { font-weight: 600; color: var(--color-text); letter-spacing: 0.06em; }
+    .preview-section-eyebrow .preview-section-count { color: var(--color-text-faint); }
+    .preview-section-eyebrow .ready  { color: var(--color-emerald); font-weight: 600; }
+    .preview-section-eyebrow .filtered { color: var(--color-text-faint); }
+    .preview-section-eyebrow .rose { color: var(--color-rose); }
+    .preview-section-eyebrow .empty { color: var(--color-amber); }
+
+    .preview-section-table {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      font-size: var(--text-sm); font-variant-numeric: tabular-nums;
+    }
+    .preview-section-table thead th {
+      text-align: left; font-weight: 500;
+      color: var(--color-text-muted); font-size: var(--text-xs);
+      text-transform: uppercase; letter-spacing: 0.04em;
+      padding: 8px 12px; border-bottom: 1px solid var(--color-border);
+    }
+    .preview-section-table tbody tr { transition: var(--tx-quick); }
+    .preview-section-table tbody tr:hover { background: var(--color-surface-2); }
+    .preview-section-table tbody td {
+      padding: 10px 12px; border-bottom: 1px solid var(--color-border);
+      color: var(--color-text);
+    }
+    .preview-section-table tbody tr:last-child td { border-bottom: 0; }
+
+    .preview-row-date { color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--text-xs); white-space: nowrap; }
+    .preview-row-counterparty { line-height: 1.4; }
+    .preview-row-counterparty .funding-tag {
+      display: inline-block; margin-left: 8px;
+      font-family: var(--font-mono); font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      background: var(--color-surface-2);
+      border-radius: var(--radius-sm); padding: 1px 6px;
+    }
+    .preview-row-counterparty .desc-fallback { font-style: italic; color: var(--color-text-muted); }
+    .preview-row-amount { text-align: right; white-space: nowrap;
+      font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+
+    /* Type chip — leading column */
+    .ptype-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: var(--radius-full);
+      font-size: var(--text-xs); font-weight: 500;
+      background: var(--color-surface-2); color: var(--color-text-muted);
+      border: 1px solid var(--color-border);
+      white-space: nowrap;
+    }
+    .ptype-chip.pin { background: var(--color-blue-bg); color: var(--color-blue); border-color: transparent; }
+    .ptype-chip.online { background: var(--color-surface-2); color: var(--color-text); border-color: var(--color-border); }
+    .ptype-chip.transfer { background: var(--color-amber-bg); color: var(--color-amber); border-color: transparent; }
+    .ptype-chip.dd { background: var(--color-rose-bg); color: var(--color-rose); border-color: transparent; }
+    .ptype-chip.cash { background: var(--color-emerald-bg); color: var(--color-emerald); border-color: transparent; }
+    .ptype-chip.unknown { color: var(--color-text-faint); }
+
+    .preview-section-empty {
+      margin: 0; padding: 24px 16px; text-align: center;
+      color: var(--color-text-muted); font-size: var(--text-sm);
+      font-style: italic;
+    }
+    .preview-section-more {
+      margin: 8px 0 0; padding: 0 12px;
+      font-size: var(--text-xs); color: var(--color-text-faint);
+    }
+    .preview-section-more .load-more {
+      cursor: pointer; color: var(--color-text);
+      font-weight: 500; padding: 0 4px; border-radius: var(--radius-sm);
+      transition: var(--tx-quick);
+    }
+    .preview-section-more .load-more:hover {
+      background: var(--color-surface-2);
+    }
+
+    /* ─── Starting balance card primitives ──────────────────── */
+    .balance-card {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+      padding: 20px 22px;
+      transition: var(--tx-quick);
+    }
+    .balance-card:hover { border-color: var(--color-border-strong); }
+    .balance-card.confirmed { background: var(--color-surface-2); }
+    .balance-card .eyebrow {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      font-weight: 500; margin: 0 0 12px;
+    }
+    .balance-card .eyebrow .funding-tag {
+      font-family: var(--font-mono); text-transform: none; letter-spacing: 0;
+      background: var(--color-surface-2); border-radius: var(--radius-sm);
+      padding: 1px 6px; color: var(--color-text-faint);
+    }
+    .balance-card .eyebrow .ready { color: var(--color-emerald); }
+    .balance-card-h3 {
+      margin: 0 0 8px; font-size: var(--text-md);
+      font-weight: 500; color: var(--color-text-muted); letter-spacing: -0.005em;
+      line-height: 1.4;
+    }
+    .balance-card .value {
+      font-family: var(--font-mono); font-size: var(--text-2xl);
+      font-weight: 600; color: var(--color-text); letter-spacing: -0.015em;
+      margin: 4px 0 2px; line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+    .balance-card .date {
+      margin: 0 0 16px; font-size: var(--text-sm);
+      color: var(--color-text-muted); font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+    .balance-card-actions {
+      display: flex; gap: 10px; align-items: center;
+      margin-top: 12px;
+    }
+    .pill-btn-primary {
+      padding: 7px 14px; background: var(--color-primary);
+      color: var(--color-primary-text); border: 1px solid var(--color-primary);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm); font-weight: 500; cursor: pointer;
+      transition: var(--tx-quick);
+    }
+    .pill-btn-primary:hover { opacity: 0.92; }
+    .pill-btn-ghost {
+      padding: 7px 14px; background: transparent;
+      color: var(--color-text-muted); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm); font-weight: 500; cursor: pointer;
+      transition: var(--tx-quick);
+    }
+    .pill-btn-ghost:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .edit-link {
+      background: transparent; border: 0; cursor: pointer;
+      color: var(--color-text-muted); font-size: var(--text-sm);
+      text-decoration: underline; text-underline-offset: 3px;
+      transition: var(--tx-quick);
+    }
+    .edit-link:hover { color: var(--color-text); }
+
+    .conflict-options { border: 0; padding: 0; margin: 8px 0 12px; }
+    .conflict-option {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; margin-bottom: 6px;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      cursor: pointer; transition: var(--tx-quick);
+      font-size: var(--text-sm);
+    }
+    .conflict-option:hover { background: var(--color-surface-2); }
+    .conflict-option input[type=radio] { accent-color: var(--color-primary); margin: 0; }
+    .conflict-option .conflict-source {
+      color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--text-xs);
+      background: var(--color-surface-2); padding: 1px 6px;
+      border-radius: var(--radius-sm);
+    }
+    .conflict-option .value { font-family: var(--font-mono); font-weight: 600; font-size: var(--text-md); margin: 0; line-height: 1; }
+    .conflict-option .date { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-muted); margin: 0; }
+    .conflict-helper { font-size: var(--text-xs); color: var(--color-text-faint);
+      margin: 4px 0 8px; line-height: 1.5; }
+
+    .balance-card-input {
+      display: flex; flex-direction: column; gap: 4px;
+      margin-bottom: 10px;
+    }
+    .balance-card-input-label {
+      font-size: var(--text-xs); letter-spacing: 0.05em;
+      text-transform: uppercase; color: var(--color-text-faint);
+      font-weight: 500;
+    }
+    .balance-card-amount-input, .balance-card-date-input {
+      padding: 8px 12px; border-radius: var(--radius-md);
+      border: 1px solid var(--color-border-strong);
+      background: var(--color-surface);
+      font-family: var(--font-mono);
+      font-size: var(--text-sm); color: var(--color-text);
+    }
+    .balance-card-amount-input:focus, .balance-card-date-input:focus {
+      outline: 2px solid var(--color-primary); outline-offset: 1px;
+    }
+    .balance-card-currency-suffix {
+      font-size: var(--text-xs); color: var(--color-text-faint);
+      margin-top: 2px;
+    }
+    .balance-card-lede {
+      margin: 0 0 10px; color: var(--color-text-muted);
+      font-size: var(--text-sm); line-height: 1.5;
+    }
+
+    /* ─── Commit footer ─────────────────────────────────────── */
+    .commit-footer {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid var(--color-border);
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 16px; flex-wrap: wrap;
+    }
+    .commit-counter {
+      margin: 0; font-size: var(--text-sm); color: var(--color-text-muted);
+    }
+    .commit-counter strong { color: var(--color-text); font-weight: 600; }
+    .commit-btn-primary {
+      padding: 11px 22px; border-radius: var(--radius-md);
+      background: var(--color-primary); color: var(--color-primary-text);
+      border: 1px solid var(--color-primary);
+      font-size: var(--text-md); font-weight: 500; cursor: pointer;
+      transition: var(--tx-quick);
+    }
+    .commit-btn-primary:hover { opacity: 0.94; }
+
+    /* ════════════════════════════════════════════════════════════
+       VARIANT A — Single-frame stack (today, tidied)
+       ════════════════════════════════════════════════════════════ */
+    [data-variant="a"] .preview-sections-stack {
+      display: flex; flex-direction: column; gap: 28px;
+      margin-top: 4px;
+    }
+    [data-variant="a"] .starting-balance-section {
+      margin-top: 36px;
+      padding-top: 28px;
+      border-top: 1px dashed var(--color-border);
+    }
+    [data-variant="a"] .starting-balance-stack {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 16px; margin-top: 16px;
+    }
+    [data-variant="a"] .starting-balance-lede {
+      margin: 0 0 4px; color: var(--color-text-muted);
+      font-size: var(--text-sm); line-height: 1.5;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       VARIANT B — Sub-card per source
+       ════════════════════════════════════════════════════════════ */
+    [data-variant="b"] .source-subcard {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-bg-subtle);
+      padding: 22px 24px;
+      transition: var(--tx-quick);
+    }
+    [data-variant="b"] .source-subcard.empty { background: var(--color-surface-2); }
+    [data-variant="b"] .source-subcard + .source-subcard { margin-top: 18px; }
+    [data-variant="b"] .source-subcard .preview-section-table thead th {
+      background: var(--color-surface);
+      border-radius: var(--radius-sm);
+    }
+    [data-variant="b"] .source-subcard .preview-section-table tbody tr:hover {
+      background: var(--color-surface);
+    }
+    [data-variant="b"] .balance-section-subcard {
+      margin-top: 28px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-bg-subtle);
+      padding: 22px 24px;
+    }
+    [data-variant="b"] .starting-balance-stack {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 16px; margin-top: 16px;
+    }
+    [data-variant="b"] .starting-balance-lede {
+      margin: 0; color: var(--color-text-muted);
+      font-size: var(--text-sm); line-height: 1.5;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       VARIANT C — Inline balances (per-source two-column)
+       ════════════════════════════════════════════════════════════ */
+    [data-variant="c"] .source-row {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-bg-subtle);
+      padding: 0;
+      display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(280px, 1fr);
+      overflow: hidden;
+    }
+    [data-variant="c"] .source-row + .source-row { margin-top: 18px; }
+    [data-variant="c"] .source-row.empty .source-row-preview { background: var(--color-surface-2); }
+    [data-variant="c"] .source-row-preview {
+      padding: 22px 24px; background: var(--color-surface);
+      border-right: 1px solid var(--color-border);
+    }
+    [data-variant="c"] .source-row-balance {
+      padding: 22px 24px; background: var(--color-bg-subtle);
+    }
+    [data-variant="c"] .source-row .preview-section-table tbody tr:hover {
+      background: var(--color-surface-2);
+    }
+    [data-variant="c"] .source-row .balance-card {
+      border: 0; padding: 0; background: transparent;
+    }
+    [data-variant="c"] .source-row .balance-card:hover { border: 0; background: transparent; }
+    [data-variant="c"] .empty .source-row-balance .balance-card-lede {
+      color: var(--color-text-faint);
+    }
+    /* Make the empty preview vertically centered so the row doesn't look top-heavy */
+    [data-variant="c"] .source-row.empty .source-row-preview {
+      display: flex; flex-direction: column; justify-content: center;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       VARIANT D — Two-column page (previews left, sticky balance rail right)
+       ════════════════════════════════════════════════════════════ */
+    [data-variant="d"] .twocol-grid {
+      display: grid; grid-template-columns: minmax(0, 1.78fr) minmax(310px, 1fr);
+      gap: 32px; align-items: flex-start;
+    }
+    [data-variant="d"] .twocol-left {
+      display: flex; flex-direction: column; gap: 28px;
+    }
+    [data-variant="d"] .twocol-right {
+      position: sticky; top: 16px;
+      max-height: calc(100vh - 60px); overflow: auto;
+      padding-right: 4px;
+    }
+    [data-variant="d"] .balance-rail-eyebrow {
+      font-size: var(--text-xs); letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--color-text-muted);
+      font-weight: 600; margin: 0 0 6px;
+    }
+    [data-variant="d"] .balance-rail-lede {
+      font-size: var(--text-sm); color: var(--color-text-muted);
+      line-height: 1.5; margin: 0 0 14px;
+    }
+    [data-variant="d"] .starting-balance-stack {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    /* ─── Sketch chrome (tab bar + toolbar) ─────────────────── */
+    #variant-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: 8px 16px; display: flex; gap: 6px; align-items: center;
+      font-family: var(--font-sans);
+      box-shadow: var(--shadow-sm);
+    }
+    #variant-nav .label {
+      font-size: var(--text-xs); color: var(--color-text-faint);
+      margin-right: 8px; letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .variant-tab {
+      padding: 5px 12px; font-size: var(--text-xs);
+      background: transparent; border: 1px solid transparent;
+      color: var(--color-text-muted);
+      border-radius: var(--radius-sm); cursor: pointer;
+      transition: var(--tx-quick);
+    }
+    .variant-tab:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .variant-tab.active {
+      background: var(--color-text); color: var(--color-bg);
+      border-color: var(--color-text); font-weight: 500;
+    }
+
+    .variant { display: none; }
+    .variant.active { display: block; }
+
+    /* Sketch tools toolbar */
+    #sketch-tools {
+      position: fixed; bottom: 12px; right: 12px; z-index: 9999;
+      font-family: system-ui; font-size: 12px;
+      background: rgba(15, 23, 42, 0.84); color: #f1f5f9;
+      padding: 8px 12px; border-radius: 8px;
+      opacity: 0.4; transition: opacity 0.2s;
+      display: flex; gap: 10px; align-items: center;
+      backdrop-filter: blur(6px);
+    }
+    #sketch-tools:hover { opacity: 1; }
+    #sketch-tools select,
+    #sketch-tools button {
+      background: rgba(255,255,255,0.06); color: #f1f5f9;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 5px; padding: 3px 7px; font-size: 11px;
+      cursor: pointer; font-family: inherit;
+    }
+    #sketch-tools button:hover { background: rgba(255,255,255,0.16); }
+    #sketch-tools .vp-active { background: rgba(255,255,255,0.22); }
+
+    /* Toast for fake interactions */
+    #toast {
+      position: fixed; bottom: 60px; right: 16px; z-index: 9997;
+      background: var(--color-text); color: var(--color-bg);
+      padding: 8px 14px; border-radius: var(--radius-md);
+      font-size: var(--text-sm); box-shadow: var(--shadow-lg);
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Viewport clamp wrapper */
+    .viewport-clamp {
+      max-width: var(--vp, none);
+      margin: 0 auto;
+      transition: max-width 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Variant tab bar ─────────────────────────────────────── -->
+<nav id="variant-nav">
+  <span class="label">Sketch 006</span>
+  <button class="variant-tab active" data-target="a" onclick="showVariant('a', this)">A · Single-frame stack</button>
+  <button class="variant-tab" data-target="b" onclick="showVariant('b', this)">B · Sub-card per source ★ Selected</button>
+  <button class="variant-tab" data-target="c" onclick="showVariant('c', this)">C · Inline balances</button>
+  <button class="variant-tab" data-target="d" onclick="showVariant('d', this)">D · Sticky balance rail</button>
+</nav>
+
+<div class="viewport-clamp">
+
+<!-- ════════════════════════════════════════════════════════════
+     VARIANT A — Single-frame stack (today, tidied)
+     ════════════════════════════════════════════════════════════ -->
+<div id="variant-a" class="variant active" data-variant="a">
+  <div class="wiz-page">
+    <header class="wiz-top">
+      <div class="brand-row">
+        <div class="brand-mark">d</div>
+        <div class="brand-name">diederik</div>
+      </div>
+      <div class="wiz-dots" aria-label="Step 5 of 6">
+        <span class="wiz-dot done"></span><span class="wiz-dot done"></span>
+        <span class="wiz-dot done"></span><span class="wiz-dot done"></span>
+        <span class="wiz-dot now"></span><span class="wiz-dot"></span>
+        <span style="margin-left:8px;">Step 5 of 6 · First import</span>
+      </div>
+      <button class="btn btn-ghost" onclick="toast('Saved — resume any time')">Resume later →</button>
+    </header>
+
+    <main class="wiz-body">
+      <article class="wiz-card wide">
+        <p class="wiz-eyebrow">📥 STEP 5 — REVIEW &amp; COMMIT</p>
+        <h1 class="wiz-h1">Review everything we found</h1>
+        <p class="wiz-lede">
+          <strong class="tnum">128</strong> transactions across
+          <strong class="tnum">2</strong> sources.
+          Confirm your starting balances, then commit.
+        </p>
+
+        <div class="preview-sections-stack">
+
+          <!-- ASN bank section: ready -->
+          <section class="preview-section">
+            <p class="preview-section-eyebrow">
+              🏦 <span class="preview-section-label">FROM YOUR BANK STATEMENT</span>
+              <span class="preview-section-count">· 84 ROWS</span>
+              <span class="ready">· ✓ READY</span>
+            </p>
+            <table class="preview-section-table">
+              <thead>
+                <tr><th>Date</th><th>Type</th><th>Counterparty</th><th style="text-align:right">Amount</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="preview-row-date">2026-04-28</td><td><span class="ptype-chip pin">⛁ PIN</span></td><td class="preview-row-counterparty">Albert Heijn 1438 <span class="funding-tag">NL18 RABO ··· 4291</span></td><td class="preview-row-amount">-€32.47</td></tr>
+                <tr><td class="preview-row-date">2026-04-27</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Bol.com B.V. <span class="funding-tag">NL27 INGB ··· 8821</span></td><td class="preview-row-amount">-€48.99</td></tr>
+                <tr><td class="preview-row-date">2026-04-26</td><td><span class="ptype-chip transfer">↔ Transfer</span></td><td class="preview-row-counterparty">W. Verheij <span class="funding-tag">NL90 ASNB ··· 4012</span></td><td class="preview-row-amount">-€450.00</td></tr>
+                <tr><td class="preview-row-date">2026-04-25</td><td><span class="ptype-chip dd">⤓ Direct debit</span></td><td class="preview-row-counterparty">Energiedirect.nl <span class="funding-tag">NL16 INGB ··· 7715</span></td><td class="preview-row-amount">-€134.20</td></tr>
+                <tr><td class="preview-row-date">2026-04-25</td><td><span class="ptype-chip pin">⛁ PIN</span></td><td class="preview-row-counterparty">NS Reizigers BV <span class="funding-tag">NL91 ABNA ··· 0417</span></td><td class="preview-row-amount">-€21.40</td></tr>
+              </tbody>
+            </table>
+            <p class="preview-section-more">
+              5 rows shown · <span class="load-more" onclick="loadMore(this, 79)">Load more (79 remaining)</span>
+            </p>
+          </section>
+
+          <!-- ICS card section: empty -->
+          <section class="preview-section">
+            <p class="preview-section-eyebrow">
+              💳 <span class="preview-section-label">FROM YOUR ICS CARD STATEMENTS</span>
+              <span class="preview-section-count">· 0 ROWS</span>
+              <span class="empty">· EMPTY</span>
+            </p>
+            <p class="preview-section-empty">This statement is empty — every row was already imported.</p>
+          </section>
+
+          <!-- PayPal section: ready -->
+          <section class="preview-section">
+            <p class="preview-section-eyebrow">
+              <span style="font-family:var(--font-mono); font-weight:700; color: var(--color-blue);">P</span>
+              <span class="preview-section-label">FROM PAYPAL</span>
+              <span class="preview-section-count">· 44 ROWS</span>
+              <span class="ready">· ✓ READY</span>
+            </p>
+            <table class="preview-section-table">
+              <thead>
+                <tr><th>Date</th><th>Type</th><th>Counterparty</th><th style="text-align:right">Amount</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="preview-row-date">2026-04-28</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Google Play <span class="funding-tag">USD funded</span></td><td class="preview-row-amount">-$9.99</td></tr>
+                <tr><td class="preview-row-date">2026-04-22</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Spotify AB <span class="funding-tag">→ ICS card</span></td><td class="preview-row-amount">-€10.99</td></tr>
+                <tr><td class="preview-row-date">2026-04-18</td><td><span class="ptype-chip transfer">↔ Top-up</span></td><td class="preview-row-counterparty"><span class="desc-fallback">From bank balance</span> <span class="funding-tag">← ASN bank</span></td><td class="preview-row-amount">+€50.00</td></tr>
+                <tr><td class="preview-row-date">2026-04-12</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Steam Games <span class="funding-tag">USD funded</span></td><td class="preview-row-amount">-$24.99</td></tr>
+                <tr><td class="preview-row-date">2026-04-08</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Patreon Inc. <span class="funding-tag">→ ICS card</span></td><td class="preview-row-amount">-€8.00</td></tr>
+              </tbody>
+            </table>
+            <p class="preview-section-more">
+              5 rows shown · <span class="load-more" onclick="loadMore(this, 39)">Load more (39 remaining)</span>
+            </p>
+          </section>
+
+        </div>
+
+        <section class="starting-balance-section">
+          <p class="preview-section-eyebrow">
+            🧮 <span class="preview-section-label">STARTING BALANCES</span>
+            <span class="preview-section-count">· 3 ACCOUNTS DETECTED</span>
+          </p>
+          <p class="starting-balance-lede">
+            We detected the starting balance for each account. Confirm or edit before we commit.
+          </p>
+
+          <div class="starting-balance-stack">
+            <!-- ASN: detected -->
+            <section class="balance-card">
+              <p class="eyebrow">🧮 STARTING BALANCE <span class="funding-tag">NL90 ··· 4012</span></p>
+              <h3 class="balance-card-h3">We detected your ASN bank started at</h3>
+              <p class="value">€4,234.56</p>
+              <p class="date">on 2026-02-01</p>
+              <div class="balance-card-actions">
+                <button class="pill-btn-primary" onclick="confirmCard(this)">Confirm</button>
+                <button class="edit-link">Edit</button>
+              </div>
+            </section>
+
+            <!-- ICS: manual-entry -->
+            <section class="balance-card">
+              <p class="eyebrow">🧮 STARTING BALANCE <span class="funding-tag">···· ···· ···· 4290</span></p>
+              <h3 class="balance-card-h3">Enter your ICS card starting balance manually</h3>
+              <p class="balance-card-lede">No detector data — every recent statement was already imported.</p>
+              <label class="balance-card-input">
+                <span class="balance-card-input-label">STARTING BALANCE</span>
+                <input class="balance-card-amount-input" placeholder="0" inputmode="numeric" />
+                <span class="balance-card-currency-suffix">EUR (minor units)</span>
+              </label>
+              <label class="balance-card-input">
+                <span class="balance-card-input-label">ON DATE</span>
+                <input type="date" class="balance-card-date-input" />
+              </label>
+              <div class="balance-card-actions">
+                <button class="pill-btn-primary" onclick="confirmCard(this)">Save</button>
+              </div>
+            </section>
+
+            <!-- PayPal: conflict -->
+            <section class="balance-card">
+              <p class="eyebrow">🧮 STARTING BALANCE <span class="funding-tag">PAYPAL</span></p>
+              <h3 class="balance-card-h3">We saw two values for this account — which is right?</h3>
+              <fieldset class="conflict-options">
+                <label class="conflict-option">
+                  <input type="radio" name="pp-a" checked />
+                  <span class="conflict-source">PayPal CSV</span>
+                  <span class="value">€8.42</span>
+                  <span class="date">on 2026-01-15</span>
+                </label>
+                <label class="conflict-option">
+                  <input type="radio" name="pp-a" />
+                  <span class="conflict-source">Computed</span>
+                  <span class="value">€12.30</span>
+                  <span class="date">on 2026-01-22</span>
+                </label>
+              </fieldset>
+              <p class="conflict-helper">We default to the earliest date. Pick the right one or edit manually.</p>
+              <div class="balance-card-actions">
+                <button class="pill-btn-primary" onclick="confirmCard(this)">Confirm</button>
+                <button class="edit-link">Edit manually</button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <div class="commit-footer">
+          <p class="commit-counter">
+            <strong class="tnum">128</strong> transactions to commit ·
+            <span class="tnum">17</span> already imported
+          </p>
+          <button class="commit-btn-primary" onclick="toast('Would commit 128 transactions across 3 accounts')">Commit everything (128 transactions) →</button>
+        </div>
+      </article>
+    </main>
+
+    <footer class="wiz-footer">
+      <span class="privacy-pill"><span class="dot"></span> Your data stays on this computer</span>
+      <a href="#" class="link-quiet">Need help?</a>
+    </footer>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     VARIANT B — Sub-card per source
+     ════════════════════════════════════════════════════════════ -->
+<div id="variant-b" class="variant" data-variant="b">
+  <div class="wiz-page">
+    <header class="wiz-top">
+      <div class="brand-row">
+        <div class="brand-mark">d</div>
+        <div class="brand-name">diederik</div>
+      </div>
+      <div class="wiz-dots" aria-label="Step 5 of 6">
+        <span class="wiz-dot done"></span><span class="wiz-dot done"></span>
+        <span class="wiz-dot done"></span><span class="wiz-dot done"></span>
+        <span class="wiz-dot now"></span><span class="wiz-dot"></span>
+        <span style="margin-left:8px;">Step 5 of 6 · First import</span>
+      </div>
+      <button class="btn btn-ghost" onclick="toast('Saved — resume any time')">Resume later →</button>
+    </header>
+
+    <main class="wiz-body">
+      <article class="wiz-card wide">
+        <p class="wiz-eyebrow">📥 STEP 5 — REVIEW &amp; COMMIT</p>
+        <h1 class="wiz-h1">Review everything we found</h1>
+        <p class="wiz-lede">
+          <strong class="tnum">128</strong> transactions across
+          <strong class="tnum">2</strong> sources.
+          Confirm your starting balances, then commit.
+        </p>
+
+        <!-- Sub-card 1: ASN bank ready -->
+        <section class="source-subcard">
+          <p class="preview-section-eyebrow">
+            🏦 <span class="preview-section-label">FROM YOUR BANK STATEMENT</span>
+            <span class="preview-section-count">· 84 ROWS</span>
+            <span class="ready">· ✓ READY</span>
+          </p>
+          <table class="preview-section-table">
+            <thead>
+              <tr><th>Date</th><th>Type</th><th>Counterparty</th><th style="text-align:right">Amount</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="preview-row-date">2026-04-28</td><td><span class="ptype-chip pin">⛁ PIN</span></td><td class="preview-row-counterparty">Albert Heijn 1438 <span class="funding-tag">NL18 RABO ··· 4291</span></td><td class="preview-row-amount">-€32.47</td></tr>
+              <tr><td class="preview-row-date">2026-04-27</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Bol.com B.V. <span class="funding-tag">NL27 INGB ··· 8821</span></td><td class="preview-row-amount">-€48.99</td></tr>
+              <tr><td class="preview-row-date">2026-04-26</td><td><span class="ptype-chip transfer">↔ Transfer</span></td><td class="preview-row-counterparty">W. Verheij <span class="funding-tag">NL90 ASNB ··· 4012</span></td><td class="preview-row-amount">-€450.00</td></tr>
+              <tr><td class="preview-row-date">2026-04-25</td><td><span class="ptype-chip dd">⤓ Direct debit</span></td><td class="preview-row-counterparty">Energiedirect.nl <span class="funding-tag">NL16 INGB ··· 7715</span></td><td class="preview-row-amount">-€134.20</td></tr>
+              <tr><td class="preview-row-date">2026-04-25</td><td><span class="ptype-chip pin">⛁ PIN</span></td><td class="preview-row-counterparty">NS Reizigers BV <span class="funding-tag">NL91 ABNA ··· 0417</span></td><td class="preview-row-amount">-€21.40</td></tr>
+            </tbody>
+          </table>
+          <p class="preview-section-more">
+            5 rows shown · <span class="load-more" onclick="loadMore(this, 79)">Load more (79 remaining)</span>
+          </p>
+        </section>
+
+        <!-- Sub-card 2: ICS empty -->
+        <section class="source-subcard empty">
+          <p class="preview-section-eyebrow">
+            💳 <span class="preview-section-label">FROM YOUR ICS CARD STATEMENTS</span>
+            <span class="preview-section-count">· 0 ROWS</span>
+            <span class="empty">· EMPTY</span>
+          </p>
+          <p class="preview-section-empty">This statement is empty — every row was already imported.</p>
+        </section>
+
+        <!-- Sub-card 3: PayPal ready -->
+        <section class="source-subcard">
+          <p class="preview-section-eyebrow">
+            <span style="font-family:var(--font-mono); font-weight:700; color: var(--color-blue);">P</span>
+            <span class="preview-section-label">FROM PAYPAL</span>
+            <span class="preview-section-count">· 44 ROWS</span>
+            <span class="ready">· ✓ READY</span>
+          </p>
+          <table class="preview-section-table">
+            <thead>
+              <tr><th>Date</th><th>Type</th><th>Counterparty</th><th style="text-align:right">Amount</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="preview-row-date">2026-04-28</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Google Play <span class="funding-tag">USD funded</span></td><td class="preview-row-amount">-$9.99</td></tr>
+              <tr><td class="preview-row-date">2026-04-22</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Spotify AB <span class="funding-tag">→ ICS card</span></td><td class="preview-row-amount">-€10.99</td></tr>
+              <tr><td class="preview-row-date">2026-04-18</td><td><span class="ptype-chip transfer">↔ Top-up</span></td><td class="preview-row-counterparty"><span class="desc-fallback">From bank balance</span> <span class="funding-tag">← ASN bank</span></td><td class="preview-row-amount">+€50.00</td></tr>
+              <tr><td class="preview-row-date">2026-04-12</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Steam Games <span class="funding-tag">USD funded</span></td><td class="preview-row-amount">-$24.99</td></tr>
+              <tr><td class="preview-row-date">2026-04-08</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Patreon Inc. <span class="funding-tag">→ ICS card</span></td><td class="preview-row-amount">-€8.00</td></tr>
+            </tbody>
+          </table>
+          <p class="preview-section-more">
+            5 rows shown · <span class="load-more" onclick="loadMore(this, 39)">Load more (39 remaining)</span>
+          </p>
+        </section>
+
+        <!-- Sub-card 4: starting balances -->
+        <section class="balance-section-subcard">
+          <p class="preview-section-eyebrow">
+            🧮 <span class="preview-section-label">STARTING BALANCES</span>
+            <span class="preview-section-count">· 3 ACCOUNTS DETECTED</span>
+          </p>
+          <p class="starting-balance-lede">
+            We detected the starting balance for each account. Confirm or edit before we commit.
+          </p>
+          <div class="starting-balance-stack">
+            <section class="balance-card">
+              <p class="eyebrow">🧮 STARTING BALANCE <span class="funding-tag">NL90 ··· 4012</span></p>
+              <h3 class="balance-card-h3">We detected your ASN bank started at</h3>
+              <p class="value">€4,234.56</p>
+              <p class="date">on 2026-02-01</p>
+              <div class="balance-card-actions">
+                <button class="pill-btn-primary" onclick="confirmCard(this)">Confirm</button>
+                <button class="edit-link">Edit</button>
+              </div>
+            </section>
+
+            <section class="balance-card">
+              <p class="eyebrow">🧮 STARTING BALANCE <span class="funding-tag">···· ···· ···· 4290</span></p>
+              <h3 class="balance-card-h3">Enter your ICS card starting balance manually</h3>
+              <p class="balance-card-lede">No detector data — every recent statement was already imported.</p>
+              <label class="balance-card-input">
+                <span class="balance-card-input-label">STARTING BALANCE</span>
+                <input class="balance-card-amount-input" placeholder="0" inputmode="numeric" />
+                <span class="balance-card-currency-suffix">EUR (minor units)</span>
+              </label>
+              <label class="balance-card-input">
+                <span class="balance-card-input-label">ON DATE</span>
+                <input type="date" class="balance-card-date-input" />
+              </label>
+              <div class="balance-card-actions">
+                <button class="pill-btn-primary" onclick="confirmCard(this)">Save</button>
+              </div>
+            </section>
+
+            <section class="balance-card">
+              <p class="eyebrow">🧮 STARTING BALANCE <span class="funding-tag">PAYPAL</span></p>
+              <h3 class="balance-card-h3">We saw two values for this account — which is right?</h3>
+              <fieldset class="conflict-options">
+                <label class="conflict-option">
+                  <input type="radio" name="pp-b" checked />
+                  <span class="conflict-source">PayPal CSV</span>
+                  <span class="value">€8.42</span>
+                  <span class="date">on 2026-01-15</span>
+                </label>
+                <label class="conflict-option">
+                  <input type="radio" name="pp-b" />
+                  <span class="conflict-source">Computed</span>
+                  <span class="value">€12.30</span>
+                  <span class="date">on 2026-01-22</span>
+                </label>
+              </fieldset>
+              <p class="conflict-helper">We default to the earliest date. Pick the right one or edit manually.</p>
+              <div class="balance-card-actions">
+                <button class="pill-btn-primary" onclick="confirmCard(this)">Confirm</button>
+                <button class="edit-link">Edit manually</button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <div class="commit-footer">
+          <p class="commit-counter">
+            <strong class="tnum">128</strong> transactions to commit ·
+            <span class="tnum">17</span> already imported
+          </p>
+          <button class="commit-btn-primary" onclick="toast('Would commit 128 transactions across 3 accounts')">Commit everything (128 transactions) →</button>
+        </div>
+      </article>
+    </main>
+
+    <footer class="wiz-footer">
+      <span class="privacy-pill"><span class="dot"></span> Your data stays on this computer</span>
+      <a href="#" class="link-quiet">Need help?</a>
+    </footer>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     VARIANT C — Inline balances (per-source two-column)
+     ════════════════════════════════════════════════════════════ -->
+<div id="variant-c" class="variant" data-variant="c">
+  <div class="wiz-page">
+    <header class="wiz-top">
+      <div class="brand-row">
+        <div class="brand-mark">d</div>
+        <div class="brand-name">diederik</div>
+      </div>
+      <div class="wiz-dots" aria-label="Step 5 of 6">
+        <span class="wiz-dot done"></span><span class="wiz-dot done"></span>
+        <span class="wiz-dot done"></span><span class="wiz-dot done"></span>
+        <span class="wiz-dot now"></span><span class="wiz-dot"></span>
+        <span style="margin-left:8px;">Step 5 of 6 · First import</span>
+      </div>
+      <button class="btn btn-ghost" onclick="toast('Saved — resume any time')">Resume later →</button>
+    </header>
+
+    <main class="wiz-body">
+      <article class="wiz-card wide">
+        <p class="wiz-eyebrow">📥 STEP 5 — REVIEW &amp; COMMIT</p>
+        <h1 class="wiz-h1">Review each source, confirm its balance</h1>
+        <p class="wiz-lede">
+          <strong class="tnum">128</strong> transactions across
+          <strong class="tnum">2</strong> sources.
+          Each source's starting balance sits next to its rows — confirm in place.
+        </p>
+
+        <!-- Row 1: ASN bank ready · detected balance -->
+        <section class="source-row">
+          <div class="source-row-preview">
+            <p class="preview-section-eyebrow">
+              🏦 <span class="preview-section-label">FROM YOUR BANK STATEMENT</span>
+              <span class="preview-section-count">· 84 ROWS</span>
+              <span class="ready">· ✓ READY</span>
+            </p>
+            <table class="preview-section-table">
+              <thead>
+                <tr><th>Date</th><th>Type</th><th>Counterparty</th><th style="text-align:right">Amount</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="preview-row-date">2026-04-28</td><td><span class="ptype-chip pin">⛁ PIN</span></td><td class="preview-row-counterparty">Albert Heijn 1438</td><td class="preview-row-amount">-€32.47</td></tr>
+                <tr><td class="preview-row-date">2026-04-27</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Bol.com B.V.</td><td class="preview-row-amount">-€48.99</td></tr>
+                <tr><td class="preview-row-date">2026-04-26</td><td><span class="ptype-chip transfer">↔ Transfer</span></td><td class="preview-row-counterparty">W. Verheij</td><td class="preview-row-amount">-€450.00</td></tr>
+                <tr><td class="preview-row-date">2026-04-25</td><td><span class="ptype-chip dd">⤓ Direct debit</span></td><td class="preview-row-counterparty">Energiedirect.nl</td><td class="preview-row-amount">-€134.20</td></tr>
+                <tr><td class="preview-row-date">2026-04-25</td><td><span class="ptype-chip pin">⛁ PIN</span></td><td class="preview-row-counterparty">NS Reizigers BV</td><td class="preview-row-amount">-€21.40</td></tr>
+              </tbody>
+            </table>
+            <p class="preview-section-more">
+              5 rows shown · <span class="load-more" onclick="loadMore(this, 79)">Load more (79 remaining)</span>
+            </p>
+          </div>
+          <div class="source-row-balance">
+            <section class="balance-card">
+              <p class="eyebrow">🧮 STARTING BALANCE <span class="funding-tag">NL90 ··· 4012</span></p>
+              <h3 class="balance-card-h3">We detected your ASN bank started at</h3>
+              <p class="value">€4,234.56</p>
+              <p class="date">on 2026-02-01</p>
+              <div class="balance-card-actions">
+                <button class="pill-btn-primary" onclick="confirmCard(this)">Confirm</button>
+                <button class="edit-link">Edit</button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- Row 2: ICS empty · manual-entry balance -->
+        <section class="source-row empty">
+          <div class="source-row-preview">
+            <p class="preview-section-eyebrow">
+              💳 <span class="preview-section-label">FROM YOUR ICS CARD STATEMENTS</span>
+              <span class="preview-section-count">· 0 ROWS</span>
+              <span class="empty">· EMPTY</span>
+            </p>
+            <p class="preview-section-empty">This statement is empty — every row was already imported.</p>
+          </div>
+          <div class="source-row-balance">
+            <section class="balance-card">
+              <p class="eyebrow">🧮 STARTING BALANCE <span class="funding-tag">···· ···· ···· 4290</span></p>
+              <h3 class="balance-card-h3">Enter your ICS card starting balance manually</h3>
+              <p class="balance-card-lede">No detector data — every recent statement was already imported.</p>
+              <label class="balance-card-input">
+                <span class="balance-card-input-label">STARTING BALANCE</span>
+                <input class="balance-card-amount-input" placeholder="0" inputmode="numeric" />
+                <span class="balance-card-currency-suffix">EUR (minor units)</span>
+              </label>
+              <label class="balance-card-input">
+                <span class="balance-card-input-label">ON DATE</span>
+                <input type="date" class="balance-card-date-input" />
+              </label>
+              <div class="balance-card-actions">
+                <button class="pill-btn-primary" onclick="confirmCard(this)">Save</button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- Row 3: PayPal ready · conflict balance -->
+        <section class="source-row">
+          <div class="source-row-preview">
+            <p class="preview-section-eyebrow">
+              <span style="font-family:var(--font-mono); font-weight:700; color: var(--color-blue);">P</span>
+              <span class="preview-section-label">FROM PAYPAL</span>
+              <span class="preview-section-count">· 44 ROWS</span>
+              <span class="ready">· ✓ READY</span>
+            </p>
+            <table class="preview-section-table">
+              <thead>
+                <tr><th>Date</th><th>Type</th><th>Counterparty</th><th style="text-align:right">Amount</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="preview-row-date">2026-04-28</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Google Play</td><td class="preview-row-amount">-$9.99</td></tr>
+                <tr><td class="preview-row-date">2026-04-22</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Spotify AB</td><td class="preview-row-amount">-€10.99</td></tr>
+                <tr><td class="preview-row-date">2026-04-18</td><td><span class="ptype-chip transfer">↔ Top-up</span></td><td class="preview-row-counterparty"><span class="desc-fallback">From bank balance</span></td><td class="preview-row-amount">+€50.00</td></tr>
+                <tr><td class="preview-row-date">2026-04-12</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Steam Games</td><td class="preview-row-amount">-$24.99</td></tr>
+                <tr><td class="preview-row-date">2026-04-08</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Patreon Inc.</td><td class="preview-row-amount">-€8.00</td></tr>
+              </tbody>
+            </table>
+            <p class="preview-section-more">
+              5 rows shown · <span class="load-more" onclick="loadMore(this, 39)">Load more (39 remaining)</span>
+            </p>
+          </div>
+          <div class="source-row-balance">
+            <section class="balance-card">
+              <p class="eyebrow">🧮 STARTING BALANCE <span class="funding-tag">PAYPAL</span></p>
+              <h3 class="balance-card-h3">We saw two values — which is right?</h3>
+              <fieldset class="conflict-options">
+                <label class="conflict-option">
+                  <input type="radio" name="pp-c" checked />
+                  <span class="conflict-source">PayPal CSV</span>
+                  <span class="value">€8.42</span>
+                  <span class="date">on 2026-01-15</span>
+                </label>
+                <label class="conflict-option">
+                  <input type="radio" name="pp-c" />
+                  <span class="conflict-source">Computed</span>
+                  <span class="value">€12.30</span>
+                  <span class="date">on 2026-01-22</span>
+                </label>
+              </fieldset>
+              <p class="conflict-helper">We default to the earliest date.</p>
+              <div class="balance-card-actions">
+                <button class="pill-btn-primary" onclick="confirmCard(this)">Confirm</button>
+                <button class="edit-link">Edit</button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <div class="commit-footer">
+          <p class="commit-counter">
+            <strong class="tnum">128</strong> transactions to commit ·
+            <span class="tnum">17</span> already imported
+          </p>
+          <button class="commit-btn-primary" onclick="toast('Would commit 128 transactions across 3 accounts')">Commit everything (128 transactions) →</button>
+        </div>
+      </article>
+    </main>
+
+    <footer class="wiz-footer">
+      <span class="privacy-pill"><span class="dot"></span> Your data stays on this computer</span>
+      <a href="#" class="link-quiet">Need help?</a>
+    </footer>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     VARIANT D — Two-column page (previews left · sticky balance rail right)
+     ════════════════════════════════════════════════════════════ -->
+<div id="variant-d" class="variant" data-variant="d">
+  <div class="wiz-page">
+    <header class="wiz-top">
+      <div class="brand-row">
+        <div class="brand-mark">d</div>
+        <div class="brand-name">diederik</div>
+      </div>
+      <div class="wiz-dots" aria-label="Step 5 of 6">
+        <span class="wiz-dot done"></span><span class="wiz-dot done"></span>
+        <span class="wiz-dot done"></span><span class="wiz-dot done"></span>
+        <span class="wiz-dot now"></span><span class="wiz-dot"></span>
+        <span style="margin-left:8px;">Step 5 of 6 · First import</span>
+      </div>
+      <button class="btn btn-ghost" onclick="toast('Saved — resume any time')">Resume later →</button>
+    </header>
+
+    <main class="wiz-body">
+      <article class="wiz-card wide">
+        <p class="wiz-eyebrow">📥 STEP 5 — REVIEW &amp; COMMIT</p>
+        <h1 class="wiz-h1">Review everything we found</h1>
+        <p class="wiz-lede">
+          <strong class="tnum">128</strong> transactions across
+          <strong class="tnum">2</strong> sources.
+          Balances stay visible on the right while you scroll.
+        </p>
+
+        <div class="twocol-grid">
+          <!-- LEFT: previews stacked -->
+          <div class="twocol-left">
+            <section class="preview-section">
+              <p class="preview-section-eyebrow">
+                🏦 <span class="preview-section-label">FROM YOUR BANK STATEMENT</span>
+                <span class="preview-section-count">· 84 ROWS</span>
+                <span class="ready">· ✓ READY</span>
+              </p>
+              <table class="preview-section-table">
+                <thead>
+                  <tr><th>Date</th><th>Type</th><th>Counterparty</th><th style="text-align:right">Amount</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="preview-row-date">2026-04-28</td><td><span class="ptype-chip pin">⛁ PIN</span></td><td class="preview-row-counterparty">Albert Heijn 1438</td><td class="preview-row-amount">-€32.47</td></tr>
+                  <tr><td class="preview-row-date">2026-04-27</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Bol.com B.V.</td><td class="preview-row-amount">-€48.99</td></tr>
+                  <tr><td class="preview-row-date">2026-04-26</td><td><span class="ptype-chip transfer">↔ Transfer</span></td><td class="preview-row-counterparty">W. Verheij</td><td class="preview-row-amount">-€450.00</td></tr>
+                  <tr><td class="preview-row-date">2026-04-25</td><td><span class="ptype-chip dd">⤓ Direct debit</span></td><td class="preview-row-counterparty">Energiedirect.nl</td><td class="preview-row-amount">-€134.20</td></tr>
+                  <tr><td class="preview-row-date">2026-04-25</td><td><span class="ptype-chip pin">⛁ PIN</span></td><td class="preview-row-counterparty">NS Reizigers BV</td><td class="preview-row-amount">-€21.40</td></tr>
+                </tbody>
+              </table>
+              <p class="preview-section-more">
+                5 rows shown · <span class="load-more" onclick="loadMore(this, 79)">Load more (79 remaining)</span>
+              </p>
+            </section>
+
+            <section class="preview-section">
+              <p class="preview-section-eyebrow">
+                💳 <span class="preview-section-label">FROM YOUR ICS CARD STATEMENTS</span>
+                <span class="preview-section-count">· 0 ROWS</span>
+                <span class="empty">· EMPTY</span>
+              </p>
+              <p class="preview-section-empty">This statement is empty — every row was already imported.</p>
+            </section>
+
+            <section class="preview-section">
+              <p class="preview-section-eyebrow">
+                <span style="font-family:var(--font-mono); font-weight:700; color: var(--color-blue);">P</span>
+                <span class="preview-section-label">FROM PAYPAL</span>
+                <span class="preview-section-count">· 44 ROWS</span>
+                <span class="ready">· ✓ READY</span>
+              </p>
+              <table class="preview-section-table">
+                <thead>
+                  <tr><th>Date</th><th>Type</th><th>Counterparty</th><th style="text-align:right">Amount</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="preview-row-date">2026-04-28</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Google Play</td><td class="preview-row-amount">-$9.99</td></tr>
+                  <tr><td class="preview-row-date">2026-04-22</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Spotify AB</td><td class="preview-row-amount">-€10.99</td></tr>
+                  <tr><td class="preview-row-date">2026-04-18</td><td><span class="ptype-chip transfer">↔ Top-up</span></td><td class="preview-row-counterparty"><span class="desc-fallback">From bank balance</span></td><td class="preview-row-amount">+€50.00</td></tr>
+                  <tr><td class="preview-row-date">2026-04-12</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Steam Games</td><td class="preview-row-amount">-$24.99</td></tr>
+                  <tr><td class="preview-row-date">2026-04-08</td><td><span class="ptype-chip online">⌘ Online</span></td><td class="preview-row-counterparty">Patreon Inc.</td><td class="preview-row-amount">-€8.00</td></tr>
+                </tbody>
+              </table>
+              <p class="preview-section-more">
+                5 rows shown · <span class="load-more" onclick="loadMore(this, 39)">Load more (39 remaining)</span>
+              </p>
+            </section>
+          </div>
+
+          <!-- RIGHT: sticky balance rail -->
+          <aside class="twocol-right">
+            <p class="balance-rail-eyebrow">🧮 Starting balances · 3 accounts</p>
+            <p class="balance-rail-lede">Confirm each before committing — these set the running totals for everything that follows.</p>
+
+            <div class="starting-balance-stack">
+              <section class="balance-card">
+                <p class="eyebrow">🏦 ASN BANK <span class="funding-tag">NL90 ··· 4012</span></p>
+                <h3 class="balance-card-h3">We detected your starting balance:</h3>
+                <p class="value">€4,234.56</p>
+                <p class="date">on 2026-02-01</p>
+                <div class="balance-card-actions">
+                  <button class="pill-btn-primary" onclick="confirmCard(this)">Confirm</button>
+                  <button class="edit-link">Edit</button>
+                </div>
+              </section>
+
+              <section class="balance-card">
+                <p class="eyebrow">💳 ICS CARD <span class="funding-tag">···· 4290</span></p>
+                <h3 class="balance-card-h3">Enter starting balance manually</h3>
+                <p class="balance-card-lede">No detector data — enter the balance on the start date.</p>
+                <label class="balance-card-input">
+                  <span class="balance-card-input-label">STARTING BALANCE</span>
+                  <input class="balance-card-amount-input" placeholder="0" inputmode="numeric" />
+                  <span class="balance-card-currency-suffix">EUR (minor units)</span>
+                </label>
+                <label class="balance-card-input">
+                  <span class="balance-card-input-label">ON DATE</span>
+                  <input type="date" class="balance-card-date-input" />
+                </label>
+                <div class="balance-card-actions">
+                  <button class="pill-btn-primary" onclick="confirmCard(this)">Save</button>
+                </div>
+              </section>
+
+              <section class="balance-card">
+                <p class="eyebrow"><span style="font-family:var(--font-mono); color: var(--color-blue);">P</span> PAYPAL <span class="funding-tag">PAYPAL</span></p>
+                <h3 class="balance-card-h3">We saw two values — pick one:</h3>
+                <fieldset class="conflict-options">
+                  <label class="conflict-option">
+                    <input type="radio" name="pp-d" checked />
+                    <span class="conflict-source">PayPal CSV</span>
+                    <span class="value">€8.42</span>
+                  </label>
+                  <label class="conflict-option">
+                    <input type="radio" name="pp-d" />
+                    <span class="conflict-source">Computed</span>
+                    <span class="value">€12.30</span>
+                  </label>
+                </fieldset>
+                <div class="balance-card-actions">
+                  <button class="pill-btn-primary" onclick="confirmCard(this)">Confirm</button>
+                </div>
+              </section>
+            </div>
+          </aside>
+        </div>
+
+        <div class="commit-footer">
+          <p class="commit-counter">
+            <strong class="tnum">128</strong> transactions to commit ·
+            <span class="tnum">17</span> already imported
+          </p>
+          <button class="commit-btn-primary" onclick="toast('Would commit 128 transactions across 3 accounts')">Commit everything (128 transactions) →</button>
+        </div>
+      </article>
+    </main>
+
+    <footer class="wiz-footer">
+      <span class="privacy-pill"><span class="dot"></span> Your data stays on this computer</span>
+      <a href="#" class="link-quiet">Need help?</a>
+    </footer>
+  </div>
+</div>
+
+</div><!-- /viewport-clamp -->
+
+<!-- ─── Sketch toolbar ─────────────────────────────────────── -->
+<div id="sketch-tools">
+  <select id="theme-switcher" onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Light</option>
+  </select>
+  <button id="dark-toggle" onclick="toggleDark()">🌙 Dark</button>
+  <button class="vp-btn vp-active" data-vp="none" onclick="setViewport(this, null)">Full</button>
+  <button class="vp-btn" data-vp="1280" onclick="setViewport(this, 1280)">1280</button>
+  <button class="vp-btn" data-vp="1024" onclick="setViewport(this, 1024)">1024</button>
+  <button class="vp-btn" data-vp="768" onclick="setViewport(this, 768)">768</button>
+  <button class="vp-btn" data-vp="375" onclick="setViewport(this, 375)">375</button>
+</div>
+
+<div id="toast">Saved</div>
+
+<script>
+  function showVariant(id, btn) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('variant-' + id).classList.add('active');
+    document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function toggleDark() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    document.getElementById('dark-toggle').textContent = isDark ? '☀ Light' : '🌙 Dark';
+  }
+
+  function setViewport(btn, px) {
+    document.querySelectorAll('.vp-btn').forEach(b => b.classList.remove('vp-active'));
+    btn.classList.add('vp-active');
+    const wrap = document.querySelector('.viewport-clamp');
+    wrap.style.setProperty('--vp', px ? px + 'px' : 'none');
+  }
+
+  function loadMore(el, remaining) {
+    const next = Math.max(0, remaining - 25);
+    if (next === 0) {
+      el.outerHTML = '<span style="color: var(--color-text-faint);">All rows shown</span>';
+    } else {
+      el.textContent = 'Load more (' + next + ' remaining)';
+    }
+    toast('Loaded 25 more rows');
+  }
+
+  function confirmCard(btn) {
+    const card = btn.closest('.balance-card');
+    card.classList.add('confirmed');
+    btn.textContent = '✓ Confirmed';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.style.cursor = 'default';
+    toast('Starting balance confirmed');
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+  }
+
+  // Keyboard nav: 1-4 switch variants
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input, textarea, select')) return;
+    const map = { '1': 'a', '2': 'b', '3': 'c', '4': 'd' };
+    const id = map[e.key];
+    if (id) {
+      const btn = document.querySelector('.variant-tab[data-target="' + id + '"]');
+      if (btn) showVariant(id, btn);
+    }
+  });
+</script>
+
+</body>
+</html>

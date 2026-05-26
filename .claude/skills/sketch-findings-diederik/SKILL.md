@@ -20,7 +20,8 @@ hints, and tabular numerics in tables. Light + dark themes are first-class.
 - **GitHub Actions** — live-streaming run cards with collapsible output
 
 Sketch sessions wrapped: 2026-05-24 (Phase 16 dev console) ·
-2026-05-25 (Phase 16.1 first-run wizard + import polish + crowd merchant).
+2026-05-25 (Phase 16.1 first-run wizard + import polish + crowd merchant) ·
+2026-05-27 (Phase 16.1.2 FirstImportStep page composition).
 </context>
 
 <design_direction>
@@ -72,6 +73,7 @@ inside the otherwise-calm-slate room.
 | Onboarding wizard | `references/onboarding-wizard.md` | 620px centered card on neutral wash, top progress dots, footer privacy pill; connector steps use a glyph mini-tile row + format chips + always-visible drop zone |
 | Import preview & categorization | `references/import-preview-and-categorization.md` | Leading Type column (glyph+word chip per PIN/online/transfer/dd/cash); italic-fallback name is itself the click-rename target; category cell three-state (auto/confirmed/uncategorized) with hover ✓/× quick actions + bulk-confirm |
 | Community merchant identification | `references/community-merchant-identification.md` | Three-layer surface: dashed "❋ Help others identify this" CTA on Triage rows (primary) + `/community/mystery-merchants` browse destination + `Settings → Shared merchant list` toggles; all share one suggest-mapping modal with live YAML preview that submits as a draft PR from `diederik-bot` |
+| First-import review step | `references/first-import-review-step.md` | Wide-card (1120px) exception for the FirstImportStep page only; framed sub-card per source on `bg-subtle` (empty sections swap to `surface-2`); framed starting-balance block below the previews holds balance cards in a 3-up CSS grid; commit footer below |
 
 ## Theme
 
@@ -94,6 +96,8 @@ Auto-load when:
 
 - Implementing Phase 16 plans (16-01 sidebar / 16-02 rename / 16-03+ Dev Console pages)
 - Implementing Phase 16.1 plans (first-run wizard, import preview row affordances, crowd-sourced merchant identification, payment-type classification)
+- Implementing Phase 16.1.2 plans (PayPal connector step, preview pagination, FirstImportStep visual polish, regression tests)
+- Touching `FirstImportStep`, `consolidated-preview-section`, or `starting-balance-card` views/CSS
 - Adding any new authenticated app surface that needs the sidebar
 - Adding a new ⌘K palette source or app action
 - Adding a new dev tile, run card, audit row, or destructive-action gate
@@ -104,7 +108,8 @@ Auto-load when:
 Match against the **layer** you're working in — `app-shell-and-navigation.md`
 for the sidebar/account/dev block, `dev-console-surfaces.md` for `/dev/*`
 pages, `command-palette.md` for the modal itself, `component-library.md`
-for cross-cutting primitives.
+for cross-cutting primitives, `first-import-review-step.md` for the
+wide-card wizard step that hosts the consolidated preview + balances.
 
 ## What this skill is *not*
 
@@ -124,4 +129,5 @@ for cross-cutting primitives.
 - 003-phase-16-1-connect-source (winner: C — four-tile mini-step row + format chips + persistent drop zone in the same wizard card)
 - 004-phase-16-1-preview-row (winner: D — leading Type column with glyph+word chip + click-italic rename popover + category cell three-state with hover ✓/× quick-confirm/clear + bulk-confirm)
 - 005-phase-16-1-crowd-merchant (winner: A+B+C combined — Triage-row "❋ Help others identify this" as primary entry + `/community/mystery-merchants` browse destination + `Settings → Shared merchant list` toggles, all sharing one suggest-mapping modal with diederik-bot draft-PR flow)
+- 006-phase-16-1-2-first-import-step-layout (winner: B — framed sub-card per source on `bg-subtle` page wash; empty sections swap to `surface-2`; framed starting-balance block below the previews with a 3-up CSS grid; eyebrow weight unchanged; no new theme tokens)
 </metadata>

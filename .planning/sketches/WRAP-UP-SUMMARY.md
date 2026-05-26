@@ -1,5 +1,103 @@
 # Sketch Wrap-Up Summary
 
+## Session 3 — 2026-05-27 (Phase 16.1.2)
+
+**Sketches processed:** 1 (006)
+**Design areas added:** 1 (First-import review step)
+**Skill output (append):** `./.claude/skills/sketch-findings-diederik/`
+
+### Included Sketches
+
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 006 | phase-16-1-2-first-import-step-layout | B — sub-card per source (framed `bg-subtle`), empty-state fill swaps to `surface-2`, starting balances in their own framed sub-card with a 3-up CSS grid | First-import review step |
+
+### Excluded Sketches
+
+_None._
+
+### Design Direction (Phase 16.1.2)
+
+**The FirstImportStep page composition.** The single wizard step that
+exercises the 1120px wide-card exception now has a settled visual
+language: each per-source preview is its own **framed sub-card** on
+the page-wash color (`--color-bg-subtle`), reading as "carved out of
+the page" rather than stacked on it. Empty sections swap their fill
+to `--color-surface-2` so emptiness reads quietly. Starting balances
+live in **their own framed sub-card** below the previews, with the
+balance cards laid out in a **3-up CSS grid** so the densest state
+(PayPal conflict, two radios + helper) renders at the same width as
+the simplest (detected: a value + Confirm button) — siblings, not
+stranded states. The wizard chrome (top progress dots, footer privacy
+pill, "Resume later") and the eyebrow shape stay identical to every
+other step; only the body composition is new.
+
+### Key Decisions (Phase 16.1.2)
+
+#### First-import review step (006)
+
+- **Wide-card exception** — `wiz-card.wide { max-width: 1120px }` for
+  this step only. Every other wizard step stays at 620px.
+- **Sub-card per source** — each preview section is framed with
+  `border + radius-lg + bg-subtle fill + 22/24 padding`. The
+  preview-section eyebrow lives inside the sub-card. Sub-cards stack
+  vertically with `margin-top: 18px`.
+- **Empty-state fill swap** — `.source-subcard.empty` flips the fill
+  to `--color-surface-2`. ~one-token quiet difference, no extra copy
+  needed.
+- **Starting-balance block** — own framed sub-card below the
+  previews (`margin-top: 28px`). Holds an eyebrow + one-line lede +
+  a `grid-template-columns: repeat(3, 1fr); gap: 16px` grid of
+  balance cards. Replaces the live app's full-width stack.
+- **Eyebrow weight unchanged** — uppercase `letter-spacing: 0.06em`
+  label + faint count + color-coded status badge (`ready` =
+  emerald, `empty` = amber, `filtered` = faint, `error` = rose).
+- **Commit footer** — `flex justify-content: space-between` with the
+  counter on the left and the primary CTA on the right; `border-top`
+  divider above it; `margin-top: 28px` separating it from the
+  balance block.
+- **No new theme tokens** — locked slate-50/100/200/700/900/950 +
+  emerald/amber/rose/blue state palette only (D-17).
+- **Responsive collapse contract** — 3-up balance grid drops to 2-up
+  at ≤1024px and to 1-up at ≤720px; wide-card padding tightens at
+  phone widths. (CSS plan picks exact breakpoints.)
+- **Excluded compositions** (A/C/D in sketch 006) — single-frame
+  stack (A: hierarchy too flat), inline balance pairing (C: assumes
+  1:1 source↔account, breaks if a user imports two ASN accounts in
+  one step), sticky balance rail (D: admin-panel feel, off-family
+  with sketches 002/003).
+
+### Implications for Phase 16.1.2 implementation
+
+- **A-3 + A-4 may merge into one CSS plan.** Both target the same
+  composition contract; the planner decides based on file-overlap on
+  `resources/css/app.css` and `first-import-step.blade.php`.
+- **`consolidated-preview-section` blade does not need internal
+  changes for the sub-card.** Wrap each section in
+  `<section class="source-subcard {{ $section->status === 'empty'
+  ? 'empty' : '' }}">` at the `first-import-step.blade.php` level.
+  The component's internals stay as-is.
+- **`starting-balance-card` blade does not change.** Only its
+  parent's wrapping `.starting-balance-stack` flips from full-width
+  stack to 3-up grid.
+- **`BuildConsolidatedPreviewQuery` is untouched by the visual
+  plans.** The pagination plan (A-2) is independent of the
+  composition plan(s).
+
+### Files written this session
+
+- `./.claude/skills/sketch-findings-diederik/references/first-import-review-step.md`
+- `./.claude/skills/sketch-findings-diederik/sources/006-phase-16-1-2-first-import-step-layout/{index.html,README.md}`
+- `./.claude/skills/sketch-findings-diederik/SKILL.md` — design-area
+  row + processed-sketches list + auto-load triggers + layer-routing
+  note extended
+- `./.planning/sketches/WRAP-UP-SUMMARY.md` — this section prepended
+
+CLAUDE.md routing line for `sketch-findings-diederik` was already in
+place from session 1 and didn't need editing.
+
+---
+
 ## Session 2 — 2026-05-25 (Phase 16.1)
 
 **Sketches processed:** 4 (002, 003, 004, 005)
