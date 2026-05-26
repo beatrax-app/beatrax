@@ -80,6 +80,7 @@
         @endif
         @vite(['resources/css/app.css'])
         @livewireStyles
+        @fluxAppearance
     </head>
     <body
         class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
@@ -152,6 +153,7 @@
             @yield('content')
         @endguest
         @livewireScripts
+        @fluxScripts
         @auth
             {{--
                 D-08 close-window JS glue (plan 15-04). The
