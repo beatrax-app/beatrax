@@ -60,6 +60,15 @@ use Modules\Import\Public\Services\PatternGeneralizer;
  *    — the classifier stage and pipeline binding stay untouched.
  *    `class_exists()` gates every singleton + tag call so a missing
  *    class does not abort container resolution.
+ *  - The four per-source `DetectsStartingBalance` implementations are
+ *    bound under the `starting-balance.detector` container tag so the
+ *    starting-balance aggregator (consumed by the first-import wizard
+ *    step) collects them via `app->tagged(...)` using the same
+ *    discovery pattern as the payment-type hinters. Adding a future
+ *    detector is one edit (append to `STARTING_BALANCE_DETECTOR_FQNS`)
+ *    plus shipping the class — the aggregator and any consumers stay
+ *    untouched. `class_exists()` gates every singleton + tag call so a
+ *    missing class does not abort container resolution.
  */
 final class ImportServiceProvider extends ServiceProvider
 {
@@ -80,6 +89,24 @@ final class ImportServiceProvider extends ServiceProvider
         'Modules\\Import\\Internal\\Parsers\\Ics\\IcsPdfPaymentTypeHinter',
         'Modules\\Import\\Internal\\Parsers\\Paypal\\PaypalCsvPaymentTypeHinter',
         'Modules\\Import\\Internal\\Parsers\\DescriptionKeywordFallbackHinter',
+    ];
+
+    /**
+     * Per-source `DetectsStartingBalance` FQNs registered under the
+     * `starting-balance.detector` container tag. Order matches the
+     * documented detector priority used by the registry test —
+     * CAMT.053 first (canonical opening balance), MT940 next
+     * (legacy fallback), ICS PDF (consumer-portal statements),
+     * PayPal CSV last (always declines, returns an empty list).
+     * A missing class skips its binding gracefully via the
+     * `class_exists()` guard, mirroring the payment-type-hinter
+     * tag loop.
+     */
+    private const STARTING_BALANCE_DETECTOR_FQNS = [
+        'Modules\\Import\\Internal\\Detectors\\Camt053StartingBalanceDetector',
+        'Modules\\Import\\Internal\\Detectors\\Mt940StartingBalanceDetector',
+        'Modules\\Import\\Internal\\Detectors\\IcsPdfStartingBalanceDetector',
+        'Modules\\Import\\Internal\\Detectors\\PaypalCsvStartingBalanceDetector',
     ];
 
     public function register(): void
@@ -119,6 +146,13 @@ final class ImportServiceProvider extends ServiceProvider
             if (class_exists($fqn)) {
                 $this->app->singleton($fqn);
                 $this->app->tag([$fqn], 'import.payment_type_hinter');
+            }
+        }
+
+        foreach (self::STARTING_BALANCE_DETECTOR_FQNS as $fqn) {
+            if (class_exists($fqn)) {
+                $this->app->singleton($fqn);
+                $this->app->tag([$fqn], 'starting-balance.detector');
             }
         }
 
