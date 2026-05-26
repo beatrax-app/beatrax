@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
@@ -35,8 +36,15 @@ use Modules\Ledger\Models\ImportRun;
  */
 
 beforeEach(function (): void {
-    // Freeze the clock so the 14-day stale window is deterministic.
+    // Freeze BOTH the injected Clock contract and the global Carbon
+    // "now" so the 14-day stale window is deterministic AND the
+    // PreviewCache's `Repository::getSeconds()` TTL conversion (which
+    // calls Carbon::now() under the hood) does not collapse to zero
+    // — leaving the cached preview unreadable in subsequent reads.
     $this->frozenNow = CarbonImmutable::parse('2026-05-15 12:00:00');
+    Carbon::setTestNow($this->frozenNow);
+    CarbonImmutable::setTestNow($this->frozenNow);
+
     $this->app->instance(Clock::class, new class($this->frozenNow) implements Clock
     {
         public function __construct(private readonly CarbonImmutable $now) {}
@@ -46,6 +54,15 @@ beforeEach(function (): void {
             return $this->now;
         }
     });
+
+    // PreviewCache + BuildConsolidatedPreviewQuery are singletons that
+    // captured the previous Clock binding when first resolved by an
+    // upstream service-provider boot. Drop both so a fresh resolve
+    // picks up the frozen Clock above. The query is the one under
+    // test; the cache it reads from must share the same Clock or its
+    // 30-minute TTL drifts away from the frozen window.
+    $this->app->forgetInstance(PreviewCache::class);
+    $this->app->forgetInstance(BuildConsolidatedPreviewQuery::class);
 
     $this->userA = User::query()->create([
         'username' => 'consolidated-a',
@@ -60,6 +77,11 @@ beforeEach(function (): void {
     ]);
 });
 
+afterEach(function (): void {
+    Carbon::setTestNow();
+    CarbonImmutable::setTestNow();
+});
+
 /**
  * Insert one `import_runs` row owned by the given user. Returns the id.
  * `createdAt` overrides the timestamps column for the stale-filter
@@ -71,6 +93,10 @@ function seedConsolidatedRun(
     string $status = 'previewed',
     ?CarbonImmutable $createdAt = null,
 ): int {
+    // Mirror the frozen-clock instant the beforeEach pinned via
+    // Carbon::setTestNow so every default-seeded run lands INSIDE the
+    // 14-day stale window unless the caller explicitly overrides
+    // `$createdAt` to push the row past the cutoff.
     $now = CarbonImmutable::parse('2026-05-15 12:00:00');
     $createdAt ??= $now;
 
