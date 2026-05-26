@@ -254,10 +254,10 @@ Plans:
 
 - [x] 16.1-07-PLAN.md — Settings → Aliases power-user surface: AliasesSettingsPage + LongestCommonPrefix + MergeMerchantAliases (merged_from provenance) + AliasYamlExporter + AliasYamlImporter (PARSE_EXCEPTION_ON_INVALID_TYPE) + live debounced Test-against-my-transactions preview + bulk merge + YAML import diff/confirm
 
-### Phase 16.1.1: Starting balance setup + bank-format-driven wizard copy + ICS PDF preview fix + Dev Mode artisan popover fix + app-chrome brand logo (UAT close-out from phase 16.1) (INSERTED)
+### Phase 16.1.1: First-run wizard UAT close-out — starting balance + upload→persist + multi-PDF + bank-format copy + OAuth modal mount-once + ICS PDF preview + Dev Mode artisan popover + brand logo (UAT close-out from Phase 16.1) (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal:** Make the first-run setup wizard actually work end-to-end on a fresh install so a new user can sign up → run the wizard → see their real transactions AND their real starting balance on the dashboard — not just transaction deltas, not "we did nothing" silence, not "upload twice", not "ASN-only" copy. All nine UAT findings (G1–G9) close in this phase.
+**Slug:** `16.1.1-starting-balance-setup-bank-format-driven-wizard-copy-ics-pdf-preview-fix-dev-mode-artisan-popover-fix-app-chrome-brand-logo`
 **Depends on:** Phase 16.1
 **Plans:** 10 plans
 
