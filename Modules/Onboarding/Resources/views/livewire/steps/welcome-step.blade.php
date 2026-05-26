@@ -25,8 +25,8 @@
     <ul class="vd-rows" role="list">
         <x-onboarding::vd-glyph
             glyph="🏦"
-            title="Your bank (ASN)"
-            description="Drop a statement file. We'll show you exactly where to find it."
+            title="Your bank"
+            description="Drop a statement file. We support ASN, ING, and more."
         />
         <x-onboarding::vd-glyph
             glyph="💳"
