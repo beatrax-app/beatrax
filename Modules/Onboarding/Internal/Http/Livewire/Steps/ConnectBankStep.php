@@ -300,13 +300,17 @@ final class ConnectBankStep extends Component
      */
     private function bankLabelFor(string $sourceFormat, ?string $bankFormatHint): string
     {
+        // The label is later concatenated into "We detected your {label}
+        // account started at" — keep "bank" / "ASN" / "ING" only,
+        // never the literal word "account", so the sentence reads
+        // naturally without duplication.
         return match ($sourceFormat) {
-            'asn-camt053', 'asn-mt940', 'asn-csv' => 'ASN bank account',
-            'ing-csv' => 'ING bank account',
+            'asn-camt053', 'asn-mt940', 'asn-csv' => 'ASN bank',
+            'ing-csv' => 'ING bank',
             default => match ($bankFormatHint) {
-                'asn-csv' => 'ASN bank account',
-                'ing-csv' => 'ING bank account',
-                default => 'Bank account',
+                'asn-csv' => 'ASN bank',
+                'ing-csv' => 'ING bank',
+                default => 'bank',
             },
         };
     }
