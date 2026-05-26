@@ -259,19 +259,19 @@ Plans:
 **Goal:** Make the first-run setup wizard actually work end-to-end on a fresh install so a new user can sign up → run the wizard → see their real transactions AND their real starting balance on the dashboard — not just transaction deltas, not "we did nothing" silence, not "upload twice", not "ASN-only" copy. All nine UAT findings (G1–G9) close in this phase.
 **Slug:** `16.1.1-starting-balance-setup-bank-format-driven-wizard-copy-ics-pdf-preview-fix-dev-mode-artisan-popover-fix-app-chrome-brand-logo`
 **Depends on:** Phase 16.1
-**Plans:** 10 plans
+**Plans:** 6/10 plans executed
 
 Plans:
-- [ ] 16.1.1-01-PLAN.md — Brand logo + supporting CSS (G5)
-- [ ] 16.1.1-02-PLAN.md — OAuth modal global mount in both authenticated layouts (G6)
-- [ ] 16.1.1-03-PLAN.md — Dev Mode artisan popover reproduce-and-fix (G2)
+- [x] 16.1.1-01-PLAN.md — Brand logo + supporting CSS (G5)
+- [x] 16.1.1-02-PLAN.md — OAuth modal global mount in both authenticated layouts (G6)
+- [x] 16.1.1-03-PLAN.md — Dev Mode artisan popover reproduce-and-fix (G2)
 - [ ] 16.1.1-04-PLAN.md — ICS PDF preview reproduce-and-fix (G4)
-- [ ] 16.1.1-05-PLAN.md — Starting-balance schema + backfill + Account fillable (G1 schema half)
-- [ ] 16.1.1-05b-PLAN.md — Tagged starting-balance detectors + aggregator query with D-04 conflict resolution (G1 detection half)
-- [ ] 16.1.1-06-PLAN.md — Format-first wizard copy + multi-file ICS upload + ImportRun stash plumbing (G3 + G8)
+- [x] 16.1.1-05-PLAN.md — Starting-balance schema + backfill + Account fillable (G1 schema half)
+- [x] 16.1.1-05b-PLAN.md — Tagged starting-balance detectors + aggregator query with D-04 conflict resolution (G1 detection half)
+- [x] 16.1.1-06-PLAN.md — Format-first wizard copy + multi-file ICS upload + ImportRun stash plumbing (G3 + G8)
 - [ ] 16.1.1-07-PLAN.md — Consolidated preview query + DTOs + ConfirmImport.dispatchChain flag (G7 query/contract surface)
 - [ ] 16.1.1-07b-PLAN.md — StartingBalanceCard + consolidated-preview-section + FirstImportStep rewrite + commit-everything (G1 + G7 + G9 UI/commit surface)
-- [ ] 16.1.1-08-PLAN.md — ROADMAP.md title + goal update (D-22)
+- [x] 16.1.1-08-PLAN.md — ROADMAP.md title + goal update (D-22)
 
 ### Phase 17: CI/CD Pipeline + Code Signing
 
