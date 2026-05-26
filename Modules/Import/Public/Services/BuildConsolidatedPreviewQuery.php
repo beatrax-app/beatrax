@@ -25,7 +25,7 @@ use Modules\Import\Public\Dto\PreviewRowDto;
  *   1. User-scope — only ImportRuns owned by `$user` survive. A
  *      tampered wizard_progress payload that points at a sibling
  *      user's ImportRun never reaches the cache lookup.
- *      (T-16.1.1-21 mitigation.)
+ *      (cross-user tampered-payload mitigation.)
  *   2. Stale window — runs whose `created_at` is older than the
  *      `STALE_WINDOW_DAYS` cutoff are dropped. A forgotten browser
  *      tab whose connector step preview expired weeks ago never
@@ -117,10 +117,10 @@ final readonly class BuildConsolidatedPreviewQuery
         $totalNew = 0;
         $totalDuplicate = 0;
         foreach ($orderedFormats as $format) {
-            $section = $this->buildSection($format, $groupedIds[$format]);
+            [$section, $sectionDuplicateCount] = $this->buildSection($format, $groupedIds[$format]);
             $sections[] = $section;
             $totalNew += $section->totalRows;
-            $totalDuplicate += $this->countDuplicateRowsAcrossRuns($groupedIds[$format]);
+            $totalDuplicate += $sectionDuplicateCount;
         }
 
         return new ConsolidatedPreviewBatch(
@@ -177,16 +177,20 @@ final readonly class BuildConsolidatedPreviewQuery
     /**
      * Build one section for the given source format. Concatenates the
      * cached preview rows across every contributing run, counts NEW
-     * dispositions for `totalRows`, takes the first
-     * `SAMPLE_ROW_LIMIT` rows for `sampleRows`, and derives the
-     * section status from cache hits.
+     * dispositions for `totalRows` and DUPLICATE dispositions for the
+     * returned `$duplicateCount`, takes the first `SAMPLE_ROW_LIMIT`
+     * rows for `sampleRows`, and derives the section status from cache
+     * hits. Both counts are produced from a single cache read per run,
+     * eliminating the TTL-expiry race a second read would introduce.
      *
      * @param  list<int>  $importRunIds
+     * @return array{0: ConsolidatedPreviewSection, 1: int}
      */
-    private function buildSection(string $sourceFormat, array $importRunIds): ConsolidatedPreviewSection
+    private function buildSection(string $sourceFormat, array $importRunIds): array
     {
         $allRows = [];
         $newRowCount = 0;
+        $duplicateRowCount = 0;
         $hasCacheMiss = false;
 
         foreach ($importRunIds as $runId) {
@@ -200,6 +204,8 @@ final readonly class BuildConsolidatedPreviewQuery
                 $allRows[] = $row;
                 if ($row->status === 'new') {
                     $newRowCount++;
+                } elseif ($row->status === 'duplicate') {
+                    $duplicateRowCount++;
                 }
             }
         }
@@ -209,13 +215,16 @@ final readonly class BuildConsolidatedPreviewQuery
         /** @var list<PreviewRowDto> $sampleRows */
         $sampleRows = array_slice($allRows, 0, self::SAMPLE_ROW_LIMIT);
 
-        return new ConsolidatedPreviewSection(
-            sourceFormat: $sourceFormat,
-            importRunIds: $importRunIds,
-            totalRows: $newRowCount,
-            sampleRows: $sampleRows,
-            status: $status,
-        );
+        return [
+            new ConsolidatedPreviewSection(
+                sourceFormat: $sourceFormat,
+                importRunIds: $importRunIds,
+                totalRows: $newRowCount,
+                sampleRows: $sampleRows,
+                status: $status,
+            ),
+            $duplicateRowCount,
+        ];
     }
 
     /**
@@ -237,30 +246,4 @@ final readonly class BuildConsolidatedPreviewQuery
         return 'ready';
     }
 
-    /**
-     * Count DUPLICATE-disposition rows across every contributing run
-     * of a section. Pulled from the same cached preview the
-     * `buildSection` pass reads, so cache misses contribute zero
-     * (the error status on the section already signals the user
-     * needs to re-upload).
-     *
-     * @param  list<int>  $importRunIds
-     */
-    private function countDuplicateRowsAcrossRuns(array $importRunIds): int
-    {
-        $count = 0;
-        foreach ($importRunIds as $runId) {
-            $preview = $this->cache->getPreview($runId);
-            if ($preview === null) {
-                continue;
-            }
-            foreach ($preview->rows as $row) {
-                if ($row->status === 'duplicate') {
-                    $count++;
-                }
-            }
-        }
-
-        return $count;
-    }
 }
