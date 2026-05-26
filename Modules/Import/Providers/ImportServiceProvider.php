@@ -34,6 +34,7 @@ use Modules\Import\Public\Contracts\PaymentTypeHinter;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Import\Public\Services\AliasMatchPreviewQuery;
+use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Import\Public\Services\DetectStartingBalancesQuery;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Import\Public\Services\PatternGeneralizer;
@@ -131,6 +132,12 @@ final class ImportServiceProvider extends ServiceProvider
         $this->app->singleton(MerchantNameResolver::class);
         $this->app->singleton(AliasMatchPreviewQuery::class);
         $this->app->singleton(CreateMerchantAlias::class);
+
+        // Consolidated-preview read query bound as a singleton — the
+        // FirstImportStep resolves it once per step render to project
+        // the per-source preview sections from the stashed ImportRun
+        // ids. Stateless: holds only its three constructor deps.
+        $this->app->singleton(BuildConsolidatedPreviewQuery::class);
 
         // Settings → Aliases collaborators. LongestCommonPrefix is a
         // stateless pure function; the YAML exporter wraps a single
