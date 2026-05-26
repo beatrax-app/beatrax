@@ -152,11 +152,7 @@ final class ConnectCardStep extends Component
                     'exception_trace' => SafeTrace::cap($e, $app->basePath()),
                 ]);
                 if ($firstError === null) {
-                    $firstError = sprintf(
-                        'Could not read %s (%s).',
-                        $originalFilename,
-                        $e::class,
-                    );
+                    $firstError = sprintf('Could not read %s. The full error is in /dev/logs.', $originalFilename);
                 }
             }
         }
