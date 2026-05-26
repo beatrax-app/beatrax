@@ -278,14 +278,29 @@ Plans:
 **Goal:** Close the remaining UAT polish items left open after 16.1.1 — add a PayPal CSV step to the SetupWizard so the connector trio (bank, card, PayPal) is complete before FirstImportStep, let the user expand any preview section beyond the 5-row sample, tighten the starting-balance / preview visual layout per UAT feedback, and back-fill the three missing FirstImportStep commit-path regression tests called for in Plan 07b. Result: a first-run wizard that covers every funding source the user actually has and a preview that scales past 5 rows.
 **Slug:** `16.1.2-paypal-wizard-step-preview-pagination-visual-polish-regression-tests`
 **Depends on:** Phase 16.1.1
-**Plans:** TBD (planning phase will register them after discussion)
+**Plans:** 5 plans
 
-Suggested plans (subject to refinement during discussion + planning):
-- [ ] 16.1.2-01-PLAN.md — PayPal wizard step (`ConnectPaypalStep`) registered between ConnectCardStep and FirstImportStep; stash `paypal_import_run_id`; FirstImportStep consumes it (handover A-1)
-- [ ] 16.1.2-02-PLAN.md — Preview pagination — per-section "Show all N rows" expansion on the consolidated preview (handover A-2)
-- [ ] 16.1.2-03-PLAN.md — Starting-balance section visual polish — tighten/regroup per user feedback (handover A-3)
-- [ ] 16.1.2-04-PLAN.md — FirstImportStep commit-path regression tests (commit-everything, rollback-on-throw, stale-id filter) (handover B-1)
-- [ ] 16.1.2-05-PLAN.md — Refined preview body-block layout — per user feedback (handover A-4)
+Plans:
+
+**Wave 1**
+
+- [ ] 16.1.2-01-PLAN.md — EnsurePaypalAccountAction extraction + PreviewWizard swap (shared synthetic-PayPal-account auto-create)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 16.1.2-02-PLAN.md — PayPal connector wizard step (`ConnectPaypalStep` + WizardStepRegistry order change + FirstImportStep stash read for `paypal_import_run_id`)
+
+**Wave 3** *(blocked on Wave 2 — file-overlap on FirstImportStep.php)*
+
+- [ ] 16.1.2-03-PLAN.md — Per-section preview pagination — "Load more (N remaining)" cursor button, 25-row chunks, server-side clamp
+
+**Wave 4** *(blocked on Wave 3 — file-overlap on resources/css/app.css)*
+
+- [ ] 16.1.2-04-PLAN.md — FirstImportStep visual polish + body-block layout (sketch 006 winner B: sub-card per source + framed balances block + 3-up grid; merges handover A-3 + A-4 per CONTEXT.md D-16)
+
+**Wave 5** *(blocked on Wave 4 — regression tests assert against final FirstImportStep + Blade shape)*
+
+- [ ] 16.1.2-05-PLAN.md — FirstImportStep commit-path regression tests (commit-everything, rollback-on-throw, stale-id filter)
 
 ### Phase 17: CI/CD Pipeline + Code Signing
 
