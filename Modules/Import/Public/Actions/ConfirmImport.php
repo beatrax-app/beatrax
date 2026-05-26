@@ -58,7 +58,7 @@ final class ConfirmImport implements ConfirmsImports
         private readonly DispatchesRecurringDetection $recurringDispatcher,
     ) {}
 
-    public function __invoke(int $importRunId, User $user): ImportConfirmResult
+    public function __invoke(int $importRunId, User $user, bool $dispatchChain = true): ImportConfirmResult
     {
         /** @var ImportRun $importRun */
         $importRun = ImportRun::query()
@@ -168,7 +168,13 @@ final class ConfirmImport implements ConfirmsImports
         // on exhaust — the pending row stays as the user-visible
         // "Resolving chains…" marker until the wizard's next tick
         // observes the running row.
-        if ($result->inserted > 0 || $result->enriched > 0) {
+        // Callers that wrap several ConfirmImport invocations inside an
+        // outer transaction pass `$dispatchChain = false` so the chain
+        // resolver + recurring-detection dispatches do not race the outer
+        // commit. They dispatch ONCE themselves after their own transaction
+        // returns. The default `true` preserves the legacy single-run
+        // behaviour for every existing caller.
+        if ($dispatchChain && ($result->inserted > 0 || $result->enriched > 0)) {
             $now = $this->clock->now()->toDateTimeString();
             $this->db->connection()->table('chain_resolution_runs')->insert([
                 'user_id' => $user->id,
