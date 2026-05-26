@@ -68,6 +68,7 @@
         <div class="wiz-page">
             {{ $slot }}
         </div>
+        @livewire('email-scan.oauth-client-wizard-modal')
         @livewireScripts
     </body>
 </html>
