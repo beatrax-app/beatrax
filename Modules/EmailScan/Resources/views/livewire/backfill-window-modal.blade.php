@@ -53,7 +53,7 @@
             <div class="flex justify-end gap-2">
                 <button
                     type="button"
-                    wire:click="$dispatch('modal-hide', { name: 'backfill-window-{{ $inboxId ?? 0 }}' })"
+                    wire:click="$dispatch('modal-close', { name: 'backfill-window-{{ $inboxId ?? 0 }}' })"
                     class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
                 >Cancel</button>
                 <button

@@ -93,7 +93,7 @@ it('happy submit: persists window + dispatches BackfillInboxJob + emits modal-hi
         ->call('open', $inboxId, 3)
         ->set('months', 4)
         ->call('submit')
-        ->assertDispatched('modal-hide');
+        ->assertDispatched('modal-close');
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

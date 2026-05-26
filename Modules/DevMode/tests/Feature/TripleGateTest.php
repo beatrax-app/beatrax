@@ -91,7 +91,7 @@ it('dispatches triple-gate:confirmed when all three gates pass', function (): vo
         ->set('typed', 'beatrax')
         ->call('confirm')
         ->assertDispatched('triple-gate:confirmed')
-        ->assertDispatched('modal-hide');
+        ->assertDispatched('modal-close');
 });
 
 it('clears typed state after a successful confirm', function (): void {

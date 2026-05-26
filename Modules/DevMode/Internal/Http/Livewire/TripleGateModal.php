@@ -111,7 +111,7 @@ final class TripleGateModal extends Component
             confirmed_typed: $this->typed,
         );
 
-        $this->dispatch('modal-hide', name: 'triple-gate');
+        $this->dispatch('modal-close', name: 'triple-gate');
 
         // Clear local state so the next open() starts fresh.
         $this->typed = '';
@@ -121,7 +121,7 @@ final class TripleGateModal extends Component
     {
         $this->typed = '';
         $this->gateError = '';
-        $this->dispatch('modal-hide', name: 'triple-gate');
+        $this->dispatch('modal-close', name: 'triple-gate');
     }
 
     public function render(ViewFactory $views): View

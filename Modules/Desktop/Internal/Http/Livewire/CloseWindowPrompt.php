@@ -92,7 +92,7 @@ final class CloseWindowPrompt extends Component
         }
 
         $this->dispatch('close-window-choice', choice: WindowCloseBehavior::CHOICE_TRAY);
-        $this->dispatch('modal-hide', name: self::MODAL_NAME);
+        $this->dispatch('modal-close', name: self::MODAL_NAME);
     }
 
     /**
@@ -107,7 +107,7 @@ final class CloseWindowPrompt extends Component
         }
 
         $this->dispatch('close-window-choice', choice: WindowCloseBehavior::CHOICE_QUIT);
-        $this->dispatch('modal-hide', name: self::MODAL_NAME);
+        $this->dispatch('modal-close', name: self::MODAL_NAME);
     }
 
     public function render(ViewFactory $views): View

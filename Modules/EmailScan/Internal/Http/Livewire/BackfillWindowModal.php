@@ -90,7 +90,7 @@ final class BackfillWindowModal extends Component
 
         $bus->dispatch(new BackfillInboxJob($this->inboxId, $clamped));
 
-        $this->dispatch('modal-hide', name: 'backfill-window-'.$this->inboxId);
+        $this->dispatch('modal-close', name: 'backfill-window-'.$this->inboxId);
     }
 
     public function render(ViewFactory $views): View
