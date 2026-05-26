@@ -1,12 +1,11 @@
 {{--
-    Connect-email step — wizard step 4 (optional). Renders the UI-SPEC
-    §"Wizard connector step — optional email" copy verbatim. Replaces
-    the drop-zone primitive with two provider CTAs ("Authorize with
-    Gmail" / "Authorize with Outlook"); both wire to the parent
-    `Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal`
-    via Livewire events. The modal is mounted inline so the wizard
-    does not duplicate the OAuth dance — this step is purely the
-    routing layer.
+    Connect-email step — wizard step 4 (optional). Renders two provider
+    CTAs ("Authorize with Gmail" / "Authorize with Outlook") that
+    dispatch `oauth-client-wizard:open` to the
+    `Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal`.
+    The modal itself is mounted globally by the wizard layout, so this
+    step is purely the routing layer and never duplicates the OAuth
+    dance in its own markup.
 
     `wizard.step.completed` is emitted from `onAuthSaved()` in the
     Livewire component (a `#[On('oauth-client-wizard:saved')]`
@@ -45,13 +44,6 @@
             Authorize with Outlook
         </button>
     </div>
-
-    {{-- Mount the existing OAuth modal inline so the wizard never
-         duplicates the OAuth dance. The modal listens for
-         `oauth-client-wizard:open` and emits `oauth-client-wizard:saved`
-         which this step's `onAuthSaved()` handler converts into
-         `wizard.step.completed`. --}}
-    <livewire:email-scan.oauth-client-wizard-modal />
 
     <x-onboarding::wiz-actions>
         <button

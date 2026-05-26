@@ -15,7 +15,7 @@ use Livewire\Component;
  * matching transactions. The OAuth dance + secrets-on-disk persistence
  * live in `Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal`;
  * this step does NOT duplicate that surface — the modal is mounted
- * inline by the step's blade and opened via the Livewire event the
+ * globally by the wizard layout and opened via the Livewire event the
  * modal already listens for (`oauth-client-wizard:open`).
  *
  * Flow:
