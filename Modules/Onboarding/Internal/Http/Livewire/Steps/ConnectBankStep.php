@@ -7,6 +7,8 @@ namespace Modules\Onboarding\Internal\Http\Livewire\Steps;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -14,6 +16,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -167,6 +171,7 @@ final class ConnectBankStep extends Component
         CurrentUser $currentUser,
         LoggerInterface $logger,
         Application $app,
+        DatabaseManager $db,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -210,6 +215,70 @@ final class ConnectBankStep extends Component
             return;
         }
 
+        // If the parsed statement contained any IBANs the user does not
+        // yet have an account for, auto-create those accounts so the
+        // preview rows resolve against a known account on step 5. Bank
+        // statements report the real account IBAN (one per file in the
+        // CAMT.053 / MT940 / CSV cases); without a matching `accounts`
+        // row, every row resolves to UnknownAccount, gets status 'error',
+        // and the consolidated commit surface shows "0 ROWS" even though
+        // the rows are visible. After creation, re-preview the file so
+        // the cache reflects the now-resolvable account.
+        if ($result->accountsToName !== []) {
+            $bankLabel = $this->bankLabelFor($this->selectedFormat, $this->selectedBankFormatHint);
+
+            $created = 0;
+            foreach ($result->accountsToName as $unknown) {
+                $exists = $db->connection()
+                    ->table('accounts')
+                    ->where('user_id', $user->id)
+                    ->where('iban', $unknown->iban)
+                    ->exists();
+                if ($exists) {
+                    continue;
+                }
+                Account::query()->create([
+                    'user_id' => $user->id,
+                    'name' => $bankLabel,
+                    'slug' => $this->slugFor($bankLabel, $unknown->iban),
+                    'kind' => 'bank',
+                    'iban' => $unknown->iban,
+                    'default_currency' => 'EUR',
+                ]);
+                $created++;
+            }
+
+            if ($created > 0) {
+                // Re-preview the run from its stable stored path so the
+                // preview cache reflects the now-resolvable account and
+                // statement_summaries is populated for the starting-balance
+                // detector on step 5.
+                /** @var ImportRun|null $run */
+                $run = ImportRun::query()
+                    ->where('id', $result->importRunId)
+                    ->where('user_id', $user->id)
+                    ->first();
+                if ($run !== null && file_exists($run->raw_file_path)) {
+                    try {
+                        $importer->runFromUpload(
+                            $run->raw_file_path,
+                            $this->selectedFormat,
+                            $user,
+                            basename($run->raw_file_path),
+                            $formatHint,
+                        );
+                    } catch (Throwable $e) {
+                        $logger->warning('ConnectBankStep: re-preview after bank account creation failed.', [
+                            'import_run_id' => $result->importRunId,
+                            'exception_class' => $e::class,
+                            'exception_message' => $e->getMessage(),
+                            'exception_trace' => SafeTrace::cap($e, $app->basePath()),
+                        ]);
+                    }
+                }
+            }
+        }
+
         $progress = WizardProgress::query()
             ->where('user_id', $user->id)
             ->where('step_key', 'connect-bank')
@@ -222,6 +291,37 @@ final class ConnectBankStep extends Component
         }
 
         $this->dispatch('wizard.step.completed');
+    }
+
+    /**
+     * Best-effort human-readable account label derived from the picked
+     * format. Used as the default `accounts.name` for auto-created bank
+     * accounts; the user can rename it later from Settings.
+     */
+    private function bankLabelFor(string $sourceFormat, ?string $bankFormatHint): string
+    {
+        return match ($sourceFormat) {
+            'asn-camt053', 'asn-mt940', 'asn-csv' => 'ASN bank account',
+            'ing-csv' => 'ING bank account',
+            default => match ($bankFormatHint) {
+                'asn-csv' => 'ASN bank account',
+                'ing-csv' => 'ING bank account',
+                default => 'Bank account',
+            },
+        };
+    }
+
+    /**
+     * Produce a unique-by-user `accounts.slug` for the auto-created
+     * account. The schema's `unique(user_id, slug)` constraint means
+     * adding the IBAN tail keeps multiple bank accounts under one user
+     * from colliding.
+     */
+    private function slugFor(string $label, string $iban): string
+    {
+        $tail = strtolower(substr($iban, -6));
+
+        return Str::slug($label).'-'.$tail;
     }
 
     /**
