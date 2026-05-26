@@ -14,6 +14,16 @@
      "push to production" step for personal accounts). --}}
 
 <div>
+    @if ($provider === null)
+        {{-- The modal mounts globally in app layouts before the user has
+             picked a provider. We must NOT render the flux:modal with a
+             trailing-hyphen "oauth-client-wizard-" name on initial render
+             — Flux UI registers modals at mount time by name, so a later
+             change to the name (oauth-client-wizard-gmail) after the
+             open() listener fires never matches the registered modal and
+             modal-show silently no-ops. Skipping the render entirely
+             keeps the registration deferred until $provider is set. --}}
+    @else
     <flux:modal name="oauth-client-wizard-{{ $provider }}" class="md:max-w-2xl" dismissible="false">
         <div class="space-y-6">
             <header>
@@ -220,4 +230,5 @@
             </footer>
         </div>
     </flux:modal>
+    @endif
 </div>

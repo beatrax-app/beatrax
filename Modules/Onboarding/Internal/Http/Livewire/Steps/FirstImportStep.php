@@ -192,6 +192,14 @@ final class FirstImportStep extends Component
         try {
             $user = $currentUser->user();
 
+            // Diagnostic: log every commit invocation so /dev/logs shows
+            // when the wire:click reaches the server. Helps diagnose
+            // "Commit button does nothing" reports without DevTools.
+            $logger->info('FirstImportStep: commit() invoked.', [
+                'user_id' => $user->id,
+                'balance_confirmations' => count($this->balanceConfirmations),
+            ]);
+
             // Rebuild the consolidated preview at commit time. Livewire
             // calls action methods directly without running render()
             // first, so we cannot rely on the property the render
