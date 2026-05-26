@@ -34,6 +34,7 @@ Reference points kept in mind while sketching:
 | 003 | phase-16-1-connect-source | How do we walk a non-technical user through "log in → find export → pick format → drop file"? | **C** — Linear mini-steps tile-row + persistent drop zone in the same 720px card | wizard, onboarding, upload |
 | 004 | phase-16-1-preview-row | How do payment-type badges + Funding source + inline rename coexist without row noise? | **D** — Leading Type chip (glyph + word) + click-italic rename + per-row confirm/clear suggested categories + bulk confirm | preview, table, badges, categorize |
 | 005 | phase-16-1-crowd-merchant | Where does community merchant identification live and what's the contribute flow? | **A+B+C combined** — B is the primary moment-of-use entry (Triage row CTA), A is the browse-all destination (`/community/mystery-merchants`), C is the preferences surface (`Settings → Shared merchant list`); all share one suggest-mapping modal | community, settings, contribution, triage |
+| 006 | phase-16-1-2-first-import-step-layout | What composition should the FirstImportStep page take — card geometry, eyebrow weight, sub-card vs single-frame, stacked vs two-column, balance-card placement? | **B** — sub-card per source (framed preview blocks on `bg-subtle`), starting balances in their own framed sub-card below the previews, stacked balance grid (3-up) | wizard, first-import, preview, balances, layout, phase-16-1-2 |
 
 ## Key Visual Decisions (from sketch 001)
 
@@ -89,6 +90,33 @@ Reference points kept in mind while sketching:
   All three open the same modal that hides the YAML-PR-to-Git-repo
   awkwardness behind a friendly form and a "submits as draft PR from
   diederik-bot" reassurance.
+
+## Key Visual Decisions (from Phase 16.1.2 sketch 006)
+
+- **FirstImportStep page composition (006B)** — Inside the locked-wide
+  1120px wizard card, each per-source preview becomes its own framed
+  sub-card (border + radius + `--color-bg-subtle` fill). The empty ICS
+  sub-card uses `--color-surface-2` fill instead so its emptiness reads
+  without competing with ready sources. Starting balances live below
+  the preview sub-cards in their own framed sub-card with a
+  `🧮 STARTING BALANCES · N ACCOUNTS DETECTED` eyebrow + one-line lede,
+  and a 3-up CSS grid of balance cards (`grid-template-columns:
+  repeat(3, 1fr); gap: 16px`). The 3-up grid replaces the current
+  full-width stack so the densest state (PayPal conflict card with two
+  radio rows + helper) reads at the same width as the simpler detected
+  and manual-entry cards.
+- **Eyebrow shape carries unchanged** — `🏦 FROM YOUR BANK STATEMENT ·
+  84 ROWS · ✓ READY` (uppercase tracked label + count + emerald ready
+  badge) stays as-is. The framed sub-card doesn't make the eyebrow feel
+  redundant; the eyebrow is what labels the source, the frame is what
+  groups its rows.
+- **Sub-card frames use the page wash** — `--color-bg-subtle` (the page
+  wash the wizard card already sits on) doubles as the sub-card fill.
+  Sub-cards read as "carved out of the wizard card", not "stacked
+  cards on cards".
+- **No new theme tokens** — winner stays inside the locked
+  slate-50/100/200/700/900/950 + emerald/amber/rose/blue state palette
+  per phase 16.1.2 D-17.
 
 ## Implications for downstream phases
 
