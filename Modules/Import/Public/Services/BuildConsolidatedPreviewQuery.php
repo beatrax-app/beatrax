@@ -247,5 +247,4 @@ final readonly class BuildConsolidatedPreviewQuery
 
         return 'ready';
     }
-
 }
