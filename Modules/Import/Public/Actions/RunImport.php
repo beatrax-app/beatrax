@@ -12,6 +12,7 @@ use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
+use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Import\Public\Services\EloquentAccountResolver;
 use Modules\Ledger\Models\ImportRun;
 use RuntimeException;
@@ -51,7 +52,7 @@ final class RunImport implements RunsImports
         private readonly StorageFactory $storage,
     ) {}
 
-    public function runFromUpload(string $localPath, string $sourceFormat, User $user, string $originalFilename): ImportPreviewResult
+    public function runFromUpload(string $localPath, string $sourceFormat, User $user, string $originalFilename, ?BankCsvFormatHint $formatHint = null): ImportPreviewResult
     {
         $sha = hash_file('sha256', $localPath);
         if (! is_string($sha)) {
@@ -109,7 +110,7 @@ final class RunImport implements RunsImports
         }
 
         $accounts = new EloquentAccountResolver($user);
-        $result = $this->pipeline->preview($stablePath, $sourceFormat, $accounts, $user, $importRun->id);
+        $result = $this->pipeline->preview($stablePath, $sourceFormat, $accounts, $user, $importRun->id, $formatHint);
 
         $enrichedCount = 0;
         foreach ($result['rows'] as $row) {
@@ -167,9 +168,9 @@ final class RunImport implements RunsImports
         return $absolute;
     }
 
-    public function runAndConfirm(string $localPath, string $sourceFormat, User $user, string $originalFilename = 'fixture.csv'): ImportConfirmResult
+    public function runAndConfirm(string $localPath, string $sourceFormat, User $user, string $originalFilename = 'fixture.csv', ?BankCsvFormatHint $formatHint = null): ImportConfirmResult
     {
-        $preview = $this->runFromUpload($localPath, $sourceFormat, $user, $originalFilename);
+        $preview = $this->runFromUpload($localPath, $sourceFormat, $user, $originalFilename, $formatHint);
 
         return ($this->confirmAction)($preview->importRunId, $user);
     }
