@@ -12,6 +12,7 @@ use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
 use Modules\Ingestion\Public\Dto\SniffResult;
 use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvLanguageException;
+use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvShapeException;
 use Modules\Receipts\Public\Pipeline\EmlHeaderProfile;
 use Modules\Receipts\Public\Pipeline\MboxHeaderProfile;
 
@@ -143,11 +144,18 @@ final class HeaderSniffer
      * columns) is sufficient to distinguish a PayPal Activity Download
      * from any other CSV.
      *
-     * Raises `UnsupportedPaypalCsvLanguageException` when the header
-     * tokens match the CSV shape but no registered language profile
-     * recognises them, so the wizard renders a typed-exception
-     * user-facing message ("supported locales: nl") rather than a
-     * generic sniff-mismatch.
+     * Two failure modes carry typed exceptions so the wizard can render
+     * a specific user-facing message rather than a generic sniff
+     * mismatch:
+     *
+     *  - `UnsupportedPaypalCsvShapeException` when the first cell is one
+     *    of the Balance Reconciliation Report record-type tokens
+     *    (`RH`, `RD`, `RF`). That export is in scope as a PayPal CSV but
+     *    has a completely different column shape, so the user gets an
+     *    actionable hint to re-download the Activity Download instead.
+     *  - `UnsupportedPaypalCsvLanguageException` when the header tokens
+     *    match the Activity Download shape but no registered language
+     *    profile recognises them ("supported locales: nl").
      */
     private function sniffPaypalCsv(string $path, string $head): SniffResult
     {
@@ -163,6 +171,21 @@ final class HeaderSniffer
         }
 
         $columns = str_getcsv($firstLine, PaypalCsvLanguageProfile::DELIMITER, '"', '');
+
+        // Reject the Balance Reconciliation Report export before the
+        // language-profile check. BRR rows are prefixed by record-type
+        // tokens (`RH` = Report Header, `RD` = Report Data header,
+        // `RF` = Report Footer) which never appear as a column name in
+        // the Activity Download. Detecting that prefix lets us surface
+        // a precise "download the right export" hint instead of the
+        // confusing "language profile not supported" fallback.
+        $firstCell = trim($columns[0] ?? '');
+        if (in_array($firstCell, ['RH', 'RD', 'RF'], strict: true)) {
+            throw new UnsupportedPaypalCsvShapeException(
+                'This looks like a PayPal Balance Reconciliation Report CSV, not the Activity Download. '
+                .'In the PayPal portal, open Activity → Statements → Activity Download (CSV) and re-export.'
+            );
+        }
         // Trim each token so the language-profile detection compares
         // against the verbatim header tokens regardless of stray
         // whitespace (`"Bruto "` / `"Kosten "` ship with a trailing
