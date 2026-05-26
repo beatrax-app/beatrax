@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Container\Container;
 use Illuminate\Database\Migrations\Migration;
 use Modules\Ledger\Internal\Services\BackfillStartingBalanceFromStatementSummaries;
 
@@ -11,10 +12,9 @@ return new class extends Migration
     {
         // Anonymous migrations are instantiated by Laravel's migrator with
         // no constructor arguments, so the backfill service is resolved from
-        // the application container at the migration boundary. This is the
-        // standing exception to the DI-only rule for schema migrations.
+        // the application container at the migration boundary.
         /** @var BackfillStartingBalanceFromStatementSummaries $service */
-        $service = app(BackfillStartingBalanceFromStatementSummaries::class);
+        $service = Container::getInstance()->make(BackfillStartingBalanceFromStatementSummaries::class);
 
         $service->run();
     }
