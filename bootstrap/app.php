@@ -16,6 +16,14 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Auto-discover artisan commands living at the project root under
+    // `app/Console/Commands/`. Module-local commands are still
+    // registered from each module's ServiceProvider via `$this->commands()`;
+    // this entry only covers commands that span multiple modules and
+    // therefore have no natural module owner (e.g. `demo:seed`).
+    ->withCommands([
+        __DIR__.'/../app/Console/Commands',
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(LoopbackOnly::class);
         // Global append (not group-scoped) so the no-store header lands on
