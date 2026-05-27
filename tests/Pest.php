@@ -72,6 +72,18 @@ foreach (
     pest()->extend($testCase)
         ->use(RefreshDatabase::class)
         ->in(__DIR__.'/../'.$module.'/tests/Snapshot');
+
+    // Arch directory: per-module arch-invariant suites. Pest's `arch()`
+    // plugin walks the class graph regardless of where the calling
+    // file lives, so the satellite assertions sit next to the rest of
+    // the module's test tree for fast `vendor/bin/pest Modules/<Name>/`
+    // feedback. The project-wide tests/Contracts/BoundaryArchTest.php
+    // remains the authoritative gate run as part of `composer test`.
+    // No TestCase binding is needed because arch() does not boot the
+    // Laravel container, but the loop entry keeps the discovery shape
+    // uniform with Feature / Unit / Integration / Contracts / Snapshot.
+    pest()->extend($testCase)
+        ->in(__DIR__.'/../'.$module.'/tests/Arch');
 }
 
 /**

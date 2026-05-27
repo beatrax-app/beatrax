@@ -62,6 +62,10 @@ arch('Modules\\Community\\Internal is only used inside Modules\\Community')
     ->expect('Modules\\Community\\Internal')
     ->toOnlyBeUsedIn('Modules\\Community');
 
+arch('Modules\\Counterparties\\Internal is only used inside Modules\\Counterparties')
+    ->expect('Modules\\Counterparties\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Counterparties');
+
 // Module Route files (`Modules/*/Routes/web.php`) are the canonical
 // Laravel surface where `Illuminate\Support\Facades\Route` is used as
 // a static DSL entry point. The framework's route loader executes
