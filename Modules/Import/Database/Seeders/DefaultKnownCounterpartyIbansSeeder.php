@@ -22,6 +22,23 @@ use Modules\Import\Models\KnownCounterpartyIban;
  * produces zero new rows AND preserves any custom `notes` value the
  * user may have edited on an existing row. `updateOrCreate` would
  * reset notes back to the seed default, which is not the intent.
+ *
+ * Calls `withoutGlobalScopes()` so the seeder works correctly
+ * regardless of the calling context. The KnownCounterpartyIban model
+ * uses BelongsToUser, which applies the UserScope global scope that
+ * filters by `auth()->id()` when an HTTP user is authenticated. The
+ * scope's `NotAuthenticatedException` fallback makes the seeder
+ * happen to work in CLI / queued / unauthenticated contexts, but when
+ * an admin endpoint or a `tinker --as=foo` session ever invokes the
+ * seeder for a DIFFERENT user, the scope adds a second
+ * `where('user_id', auth()->id())` filter on top of the explicit
+ * `'user_id' => $user->id` lookup — the AND of those two filters
+ * returns zero rows so `firstOrCreate` runs an INSERT, which then
+ * violates the per-user UNIQUE constraint on (user_id, real_iban).
+ * Dropping the global scope at query time makes the explicit
+ * `user_id` filter the only one that fires and keeps the seeder
+ * context-independent. Mirrors DefaultCategorizationRuleSeeder's
+ * defensive shape.
  */
 final class DefaultKnownCounterpartyIbansSeeder
 {
@@ -44,7 +61,7 @@ final class DefaultKnownCounterpartyIbansSeeder
     public function run(User $user): void
     {
         foreach (self::ALIASES as $alias) {
-            KnownCounterpartyIban::query()->firstOrCreate(
+            KnownCounterpartyIban::withoutGlobalScopes()->firstOrCreate(
                 [
                     'user_id' => $user->id,
                     'real_iban' => $alias['real_iban'],
