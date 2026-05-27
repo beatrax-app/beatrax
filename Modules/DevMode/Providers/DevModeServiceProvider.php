@@ -10,6 +10,8 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +38,7 @@ use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 use Modules\DevMode\Internal\Http\Middleware\EnsureDeveloperMode;
 use Modules\DevMode\Internal\Http\Middleware\HorizonFrameAncestors;
 use Modules\DevMode\Internal\Listeners\BustOAuthScrubSetOnSecretChange;
+use Modules\DevMode\Internal\Listeners\LogQueueLifecycle;
 use Modules\DevMode\Internal\Listeners\ResetAdvancedToggleOnLogin;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
@@ -644,6 +647,14 @@ final class DevModeServiceProvider extends ServiceProvider
         // session-resume path that does NOT fire Login (see the
         // listener's docblock for the precise gap).
         $events->listen(Login::class, [ResetAdvancedToggleOnLogin::class, 'handle']);
+
+        // Queue lifecycle → Laravel log so /dev/logs shows completed
+        // and failed jobs. Both the database driver and Horizon
+        // delete successful rows from the `jobs` table on completion,
+        // so the queue inspector cannot surface them — the log is
+        // the visibility seam.
+        $events->listen(JobProcessed::class, [LogQueueLifecycle::class, 'processed']);
+        $events->listen(JobFailed::class, [LogQueueLifecycle::class, 'failed']);
 
         // OAuthScrubSet cache invalidation. Attach the Eloquent
         // observer to OAuthSecret so the scrub set busts on every
