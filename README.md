@@ -63,7 +63,6 @@ open it — that's expected.
    Applications folder.
 2. Right-click **beatrax** in Applications and choose **Open**.
 3. When macOS asks "are you sure?", click **Open**.
-   <!-- screenshot: .docs/assets/install/macos-gatekeeper.png -->
 4. From now on, double-clicking beatrax launches it normally.
 
 **Alternative (Terminal one-liner):**
@@ -83,7 +82,6 @@ first time you open it — that's expected.
 
 1. Run the downloaded **beatrax-setup.exe**.
 2. When you see "Windows protected your PC", click **More info**.
-   <!-- screenshot: .docs/assets/install/windows-smartscreen.png -->
 3. Click **Run anyway**.
 4. From now on, beatrax launches normally from the Start menu.
 
@@ -124,8 +122,6 @@ the deeper "is this manifest authentic?" check, see
 
 ## Screenshots
 
-<!-- TODO: capture during release walkthrough -->
-
 A handful of representative screens from the running app:
 
 - **Dashboard** — the "this month at a glance" view with the cash-flow
@@ -143,6 +139,10 @@ A handful of representative screens from the running app:
 - **Multi-user profile selector** — switch between personal and
   shared-household views without leaving the app.
   <!-- screenshot: .docs/assets/screenshots/multi-user.png -->
+
+Contributors capturing fresh screenshots can populate a representative
+demo dataset with `php artisan demo:seed --reset` once that command
+lands in an upcoming release.
 
 ## Project status
 
