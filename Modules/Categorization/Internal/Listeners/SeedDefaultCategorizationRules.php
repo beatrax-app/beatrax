@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Categorization\Internal\Listeners;
+
+use Modules\Categorization\Database\Seeders\DefaultCategorizationRuleSeeder;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Events\UserInstalled;
+
+/**
+ * Resolves the installed user from the event's id payload and runs the
+ * per-user rule seeder. The User lookup lives here (not in the seeder)
+ * so the seeder's signature stays `run(User $user)` — matching the
+ * per-user-seeder convention while leaving the legacy global
+ * `DefaultCategoryTreeSeeder::run()` template untouched. A
+ * `UserInstalled` event whose `userId` references no user row throws
+ * `ModelNotFoundException`, failing the install loud — the correct
+ * failure mode for a Core-module bug.
+ */
+final class SeedDefaultCategorizationRules
+{
+    public function __construct(private readonly DefaultCategorizationRuleSeeder $seeder) {}
+
+    public function handle(UserInstalled $event): void
+    {
+        $user = User::query()->findOrFail($event->userId);
+        $this->seeder->run($user);
+    }
+}
