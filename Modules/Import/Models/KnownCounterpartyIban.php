@@ -25,6 +25,16 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * query path MUST carry its own `where('user_id', ...)` regardless
  * of what the trait does.
  *
+ * IBAN shape: the `real_iban` column is `string(34)` and currently
+ * carries no shape validation — the only writer is
+ * DefaultKnownCounterpartyIbansSeeder whose values are literal
+ * compile-time constants. When a user-facing admin surface ever
+ * exposes alias creation (settings page, /counterparties triage
+ * action), add a `Modules\Import\Public\Validation\IbanRule` (the
+ * project's transitive `jschaedl/iban-validation` dependency is
+ * already on the classpath via `genkgo/camt`) and validate at the
+ * action boundary. Out of v1 scope.
+ *
  * @property int $id
  * @property int $user_id
  * @property string $real_iban
