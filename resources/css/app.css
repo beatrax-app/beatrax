@@ -1545,4 +1545,128 @@ td.date,
     .preview-section-load-more:hover {
         background: var(--color-surface-2);
     }
+
+    /* Sub-card per source — each consolidated-preview section sits inside
+       its own framed sub-card that reads as carved out of the page wash. */
+    .source-subcard {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: var(--color-bg-subtle);
+        padding: 22px 24px;
+        transition: var(--tx-quick);
+    }
+
+    .source-subcard + .source-subcard {
+        margin-top: 18px;
+    }
+
+    /* Empty-status sub-cards quietly swap fill to surface-2 — a
+       one-token difference signals "this one is different" without
+       competing with ready sources for attention. */
+    .source-subcard.empty {
+        background: var(--color-surface-2);
+    }
+
+    /* Inside a sub-card, table-row hover swaps to surface so the row
+       still stands out against the sub-card fill. */
+    .source-subcard .preview-section-table tbody tr:hover {
+        background: var(--color-surface);
+    }
+
+    /* Framed starting-balance block — appears below the last preview
+       sub-card when at least one account balance was detected. Shares
+       the source-subcard primitives (border + radius + bg-subtle fill). */
+    .balance-section-subcard {
+        margin-top: 28px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: var(--color-bg-subtle);
+        padding: 22px 24px;
+    }
+
+    /* 3-up CSS grid holds the per-account starting-balance cards at the
+       same width so detected, conflict, and manual-entry states read as
+       siblings. */
+    .starting-balance-stack {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 16px;
+    }
+
+    .starting-balance-lede {
+        margin: 0;
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+        line-height: 1.5;
+    }
+
+    /* Responsive collapse: drop the 3-up grid to 2-up where individual
+       cards would otherwise become too cramped to render the conflict
+       state cleanly. */
+    @media (max-width: 1024px) {
+        .starting-balance-stack {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* Stack to a single column on phone-class widths and tighten the
+       wide-card padding to give back screen space. */
+    @media (max-width: 720px) {
+        .starting-balance-stack {
+            grid-template-columns: 1fr;
+        }
+
+        .wiz-card--wide {
+            padding: 28px 24px 24px;
+        }
+    }
+
+    /* Commit footer — counter on the left, primary CTA on the right,
+       separated from the balance block by a thin top border. */
+    .commit-footer {
+        margin-top: 28px;
+        padding-top: 20px;
+        border-top: 1px solid var(--color-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .commit-counter {
+        margin: 0;
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+    }
+
+    .commit-counter strong {
+        color: var(--color-text);
+        font-weight: 600;
+    }
+
+    /* Primary commit CTA — reuses the locked primary-button color pair
+       (color-text background + color-text-inverse text) shared with
+       .pill-btn-primary so the calm-slate palette stays unified. */
+    .commit-btn-primary {
+        padding: 11px 22px;
+        border-radius: var(--radius-md);
+        background: var(--color-text);
+        color: var(--color-text-inverse);
+        border: 1px solid var(--color-text);
+        font-size: var(--text-md);
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .commit-btn-primary:hover {
+        opacity: 0.94;
+    }
+
+    .commit-btn-primary[disabled] {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
 }
