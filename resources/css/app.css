@@ -1840,7 +1840,7 @@ td.date,
     }
 
     .view-toggle button.active {
-        background: var(--color-text);
+        background: var(--color-primary, var(--color-text));
         color: var(--color-text-inverse);
         font-weight: 600;
     }
