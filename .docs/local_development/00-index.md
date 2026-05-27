@@ -1,0 +1,18 @@
+# Local development
+
+Everything a contributor needs to clone the repo, get a Herd-served instance running at
+`https://beatrax.test`, work against the local SQLite database, and flip into developer
+mode when they need the in-app debug surfaces.
+
+The project is designed around Laravel Herd on macOS and a single local SQLite file.
+The supported developer workflow is "open Herd, drop the project in, browse to the
+`*.test` URL" — no Docker, no Homebrew PHP, no Vagrant.
+
+## Topics
+
+| File | What it covers |
+|---|---|
+| [setup.md](setup.md) | Cloning the repo, Herd install, first-time bootstrap, building the desktop bundle locally |
+| [database.md](database.md) | Where the SQLite file lives, WAL mode, recommended GUIs |
+| [troubleshooting.md](troubleshooting.md) | The recurring gotchas — PHP version, sodium, NativePHP bundle availability |
+| [dev-mode.md](dev-mode.md) | Turning on developer mode and the surfaces it exposes |
