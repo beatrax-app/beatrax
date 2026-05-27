@@ -19,7 +19,17 @@
      rendered in the chain-node partial. --}}
 
 <div>
-    <flux:modal name="chain-drawer-{{ $tree?->rootTransactionId ?? 0 }}" flyout position="right" class="md:w-2xl">
+    {{-- Stable modal name. The earlier draft tied the name to
+         `$tree?->rootTransactionId ?? 0` — which is `0` until the
+         wire round-trip that loads the tree completes. The trigger
+         button's Alpine `$dispatch('modal-show', { name: 'chain-
+         drawer-{tx_id}' })` fires immediately on click and never
+         matched the pre-load modal name → the modal silently did
+         nothing on first click. Pinning the name to the literal
+         string `chain-drawer` removes the race. The component
+         already singleton-scopes per request via `$transactionId`,
+         so one drawer instance serves every row. --}}
+    <flux:modal name="chain-drawer" flyout position="right" class="md:w-2xl">
         <flux:heading size="lg" class="sticky top-0 bg-white z-10 pb-3 -mx-6 px-6 dark:bg-slate-950">
             @if ($tree !== null && count($tree->nodes) > 0 && $tree->nodes[0]->counterpartyName !== '')
                 Chain for {{ $tree->nodes[0]->counterpartyName }}

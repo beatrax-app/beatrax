@@ -72,6 +72,17 @@ final class ChainDrawer extends Component
         $this->fanoutPage = 0;
         $this->expandedFanoutId = null;
         $this->collapsedLegs = [];
+        // Open the Flux flyout from inside the listener so the
+        // dispatch happens AFTER the component has set its
+        // transactionId — and so the modal's stable `chain-drawer`
+        // name is always the target. The earlier draft dispatched
+        // modal-show from the trigger button with a name derived
+        // from `tree.rootTransactionId`, which was `0` on first
+        // click because the tree had not yet loaded; that race
+        // produced the "View chain does nothing on first click"
+        // bug. The browser event reaches Flux via Livewire's
+        // dispatch bus the same way an inline `x-on:click` would.
+        $this->dispatch('modal-show', name: 'chain-drawer');
     }
 
     public function confirm(

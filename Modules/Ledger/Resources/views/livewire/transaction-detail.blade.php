@@ -140,9 +140,14 @@
                      transactionId payload; the drawer Livewire SFC
                      listens via #[On('chain-drawer:open')]. --}}
                 <section class="border-t border-slate-200 pt-6 dark:border-slate-700">
+                    {{-- The drawer component's #[On('chain-drawer:open')]
+                         listener sets its transactionId AND dispatches
+                         the Flux modal-show event itself. Both the
+                         data load and the modal open happen on the same
+                         wire round-trip, so the modal name match is
+                         deterministic — no Alpine + wire race. --}}
                     <button
                         type="button"
-                        x-on:click="$dispatch('chain-drawer:open', { transactionId: {{ $transaction->id }} }); $dispatch('modal-show', { name: 'chain-drawer-{{ $transaction->id }}' })"
                         wire:click="$dispatch('chain-drawer:open', { transactionId: {{ $transaction->id }} })"
                         class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                     >
