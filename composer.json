@@ -7,7 +7,7 @@
         "personal-finance",
         "localhost"
     ],
-    "license": "proprietary",
+    "license": "Hippocratic-3.0",
     "require": {
         "php": "^8.4",
         "brick/money": "^0.11",
@@ -113,6 +113,7 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "license-validation": false,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true,
