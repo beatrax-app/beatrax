@@ -269,6 +269,47 @@ it('openCandidateCount returns count of state=candidate chain_links for the user
     expect($this->query->openCandidateCount($this->user))->toBe(2);
 });
 
+it('hintsForReview returns only NULL-endpoint candidates with parsed evidence lines', function (): void {
+    $bank = clqAccount($this->user, 'clq-bank-hint', 'bank', 'NL12ASNBHINT');
+    $txHint = clqTx($this->user, $bank, $this->run, -198016, 'transfer_out', 'ICS', 'ics', '2026-04-24', 'hintf', 1);
+    clqSeedLink($this->db, $this->user, (int) $txHint->id, null, 'ics_bulk_settle', 'candidate', '0.963', 'auto', [
+        'tolerance_used' => 'exceeded',
+        'unaccounted_delta_minor' => 7413,
+        'covered_count' => 54,
+        'statement_id' => 1,
+        'signature_hash' => 'sig-h1',
+    ]);
+    // A concrete candidate must NOT appear in the hints surface.
+    $txCandFrom = clqTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'A', 'a', '2026-05-10', 'cand1', 2);
+    $txCandTo = clqTx($this->user, $this->asn, $this->run, 1000, 'transfer_in', 'B', 'b', '2026-05-10', 'cand2', 3);
+    clqSeedLink($this->db, $this->user, (int) $txCandFrom->id, (int) $txCandTo->id, 'paypal_funding', 'candidate', '0.900', 'auto', ['signature_hash' => 'sig-c1']);
+
+    $hints = $this->query->hintsForReview($this->user);
+    expect($hints)->toHaveCount(1);
+    expect($hints[0]->kind)->toBe('ics_bulk_settle');
+    expect($hints[0]->fromTransactionId)->toBe($txHint->id);
+    // Evidence is summarised into bullet-line strings the blade view
+    // renders verbatim — order matches the per-kind formatter.
+    expect($hints[0]->evidenceLines)->toContain('Tolerance: exceeded');
+    expect($hints[0]->evidenceLines)->toContain('Covered transactions: 54');
+    expect($hints[0]->evidenceLines)->toContain('Card statement #1');
+});
+
+it('hintCount returns the count of NULL-endpoint candidates only', function (): void {
+    $bank = clqAccount($this->user, 'clq-bank-count', 'bank', 'NL12ASNBCOUNT');
+    $tx1 = clqTx($this->user, $bank, $this->run, -100, 'expense', 'A', 'a', '2026-04-24', 'hc1', 1);
+    $tx2 = clqTx($this->user, $bank, $this->run, -200, 'expense', 'B', 'b', '2026-04-24', 'hc2', 2);
+    clqSeedLink($this->db, $this->user, (int) $tx1->id, null, 'ics_bulk_settle', 'candidate', '0.900', 'auto', ['tolerance_used' => 'exceeded']);
+    clqSeedLink($this->db, $this->user, (int) $tx2->id, null, 'funded_by_card_hint', 'candidate', '0.800', 'auto', ['card_last_four' => '1234']);
+
+    // A concrete candidate — must NOT be counted as a hint.
+    $tx3 = clqTx($this->user, $this->paypal, $this->run, -300, 'expense', 'C', 'c', '2026-05-10', 'hc3', 3);
+    $tx4 = clqTx($this->user, $this->asn, $this->run, 300, 'transfer_in', 'D', 'd', '2026-05-10', 'hc4', 4);
+    clqSeedLink($this->db, $this->user, (int) $tx3->id, (int) $tx4->id, 'paypal_funding', 'candidate', '0.900', 'auto', ['signature_hash' => 'sig-real']);
+
+    expect($this->query->hintCount($this->user))->toBe(2);
+});
+
 it('candidatesForReview excludes hint rows whose to_transaction_id is NULL', function (): void {
     // Actionable candidate — should appear.
     $tx1 = clqTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'A', 'a', '2026-05-10', 'h1', 1);

@@ -38,7 +38,16 @@
 
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-12">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Review chains</h1>
+        <div class="flex items-baseline justify-between gap-4">
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Review chains</h1>
+            @if (($hintCount ?? 0) > 0)
+                <a
+                    href="{{ route('chains.hints') }}"
+                    class="text-xs text-amber-700 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200"
+                    data-testid="chain-hints-link"
+                >{{ $hintCount }} {{ $hintCount === 1 ? 'hint' : 'hints' }} →</a>
+            @endif
+        </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             Confirm or reject candidate links the chain resolver could not auto-confirm.
         </p>
