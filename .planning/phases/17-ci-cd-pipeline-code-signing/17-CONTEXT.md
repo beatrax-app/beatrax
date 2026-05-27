@@ -12,6 +12,23 @@
 > formal UAT or beta cycle precedes the public release — the user
 > acknowledged the risk that first-run issues will land in the public GitHub
 > Issues tab on day 1.
+>
+> **Amendment — 2026-05-27 (evening).** Six additional decisions confirmed:
+> (1) Hippocratic License 3.0 holds; (2) brand is "beatrax", repo is
+> `nightworksio/beatrax` (already exists, currently private); (3) Linux
+> AND Windows installers both stay in the matrix; (4) **counterparty scope
+> expands to "everything that touches your money"** — merchants, personal
+> P2P, banks, government, the user's own cross-account legs — not just
+> external merchants; (5) `CounterpartyGarbageCollectorJob` stays;
+> (6) `.docs/features/` per-module coverage stays full (all modules);
+> (7) performance budget removed (let planner pick); (8) **no signing
+> certs purchased — Apple Developer Program + Azure Trusted Signing both
+> dropped**; macOS builds stay ad-hoc-signed only, Windows builds are
+> unsigned; notarization removed; (9) repo already exists at
+> `nightworksio/beatrax`, currently private, going-public is a visibility
+> flip not a first push. These amendments override the original Section B
+> and Section I decisions where they conflict; the override is captured
+> inline below.
 
 <domain>
 ## Phase Boundary
@@ -34,7 +51,13 @@ Phase 17 ships, grouped by area:
 - `v1.0.0` is reserved as the explicit "go-public" graduation tag —
   user pulls the trigger by name; no automation jumps the version.
 
-### B. CI/CD pipeline (original Phase 17 — CI-01..CI-06)
+### B. CI/CD pipeline (original Phase 17 — CI-01, CI-02, CI-05, CI-06; CI-03 + CI-04 DROPPED)
+
+**Amendment 2026-05-27: no paid signing certs. CI-03 (Apple Developer ID +
+notarytool) and CI-04 (Azure Trusted Signing) are dropped from scope. All
+release artifacts are unsigned (Linux), ad-hoc-signed (macOS), or unsigned
+(Windows). Users must bypass Gatekeeper / SmartScreen on first launch —
+documented in README install copy (Section K).**
 
 - `.github/workflows/ci.yml` PR gate widened from single-axis 8.4 to
   the PHP `[8.4, 8.5]` matrix.
@@ -42,31 +65,50 @@ Phase 17 ships, grouped by area:
   `v*.*.*` → stable channel (DRAFT release); `v*-rc.*` → preview channel
   (immediate publish).
 - Three parallel platform jobs (macOS-14 + Windows-2025 + Ubuntu-24.04)
-  with all-must-succeed publish.
-- macOS signing via `apple-actions/import-codesign-certs v7.0.0` +
-  notarytool `submit --wait --timeout 45m` + staple.
-- Windows signing via `Azure/trusted-signing-action v2.0.0`.
+  with all-must-succeed publish. **No notarization step on macOS** —
+  notarytool requires a paid Apple Developer ID.
+- macOS: existing `scripts/nativephp_force_adhoc_signing.php` runs
+  unchanged — every macOS build is ad-hoc-signed via `mac.identity:
+  null`. The `NATIVEPHP_USE_DEVELOPER_ID` env-var switch (originally
+  D-05) and the two new prebuild hooks `nativephp_inject_developer_id.php`
+  + `nativephp_inject_windows_signing.php` (originally D-06 + D-07) are
+  **NOT BUILT**. Existing ad-hoc hook stays as the sole signing hook.
+- Windows: builds are **unsigned**. No signtool invocation. SmartScreen
+  reputation will build over time as users opt-into "Run anyway".
 - Linux: unsigned `.AppImage` + `.deb`.
-- Smoke tests per platform: install → launch → HTTP `/health` probe →
-  exit. Failure on any platform fails the whole release.
-- Three new prebuild hooks (env-gated, symmetric pattern):
-  `nativephp_inject_developer_id.php` (macOS release),
-  `nativephp_inject_windows_signing.php` (Windows release); existing
-  `nativephp_force_adhoc_signing.php` gets an env-var early-return.
+- Smoke tests per platform: install → **clear quarantine attribute on
+  macOS** (`xattr -d com.apple.quarantine` — only needed during the
+  smoke test itself so Gatekeeper doesn't block automated launch) →
+  launch → HTTP `/health` probe → exit. Failure on any platform fails
+  the whole release.
 - Per-install APP_KEY regeneration at first launch via sentinel file
   (CI-06); first-launch encryption-key generation for `oauth_secrets`.
 - `.env.bundled` template with no real secrets.
-- `signing-prod` GitHub Environment + CODEOWNERS on `.github/workflows/`
-  + `gitleaks-action@v2` on every PR + `pull_request_target`-safe trigger
-  shape (release.yml fires only on tag push, never on fork PRs).
+- **No `signing-prod` GitHub Environment** (no signing secrets to gate).
+- CODEOWNERS on `.github/workflows/` + `gitleaks-action@v2` on every PR
+  + release.yml fires only on tag push (never `pull_request_target`),
+  so fork PRs are safe by construction.
 
 ### C. Auto-update plumbing (absorbed from Phase 18 — UPDATE-01..04)
 
+**Amendment 2026-05-27: with no OS-level signing, Ed25519 manifest
+signing + SHA-512 binary verification become the SOLE security signal
+for auto-updates. UPDATE-02 is now load-bearing, not belt-and-braces.
+This is the standard pattern for unsigned-OSS-Electron-app auto-update
+(Joplin, Logseq, etc.).**
+
 - `Modules\Core\Public\Services\ElectronUpdateChannel` wired through
   `electron-updater`; consumes GitHub Releases as the channel source.
-- Ed25519 publisher pin + signature verification on every download
-  (no unsigned auto-update path). Pest test proves verification fails
-  on a tampered manifest.
+- Ed25519 publisher pin + signature verification on every manifest +
+  SHA-512 verification of the downloaded binary (`electron-updater`
+  publishes the SHA-512 in `latest.yml`; signing the manifest is what
+  prevents tamper). Pest test proves verification fails on a tampered
+  manifest.
+- `electron-updater` is configured with `disableDifferentialDownload:
+  true` on macOS so OS-signature verification is bypassed (would fail
+  on ad-hoc-signed binaries by default); full-binary download + Ed25519
+  manifest verification + SHA-512 binary verification provides the
+  end-to-end integrity guarantee instead.
 - "Update available — install on next launch" + "Skip this version" +
   "you're on an old version" (30-day stale prompt) integrated into
   the existing `SystemAlertsBanner`.
@@ -169,34 +211,92 @@ A fresh `v1.1` milestone holds the deferred items. Lives as:
 
 ### I. Counterparty-profile feature (NEW — item #7)
 
-A new user-facing feature: a page per counterparty (entity that appears in
-transactions) showing all transactions, totals, trends, recurring detection,
-category breakdown.
+**Amendment 2026-05-27: scope expands to "everything that touches your
+money" — not just external merchants. Five counterparty types with
+type-aware profile pages.**
+
+A new user-facing feature: a page per entity that appears in transactions,
+where "entity" means anything the user transacts WITH. Types:
+
+| Type | Examples | Profile shape |
+|---|---|---|
+| `merchant` | Netflix, Albert Heijn, Amazon, Spotify | Full profile — total spend, category, recurring detection, alias mgmt, funding chain |
+| `personal` | Mom, friends, partner (P2P transfers) | Profile with PRIVACY DEFAULTS — IBAN hidden behind a toggle; no public share |
+| `bank` | ASN Bank (fees + interest), ICS Cards (fees) | Profile aggregated by fee type; smaller surface |
+| `government` | Belastingdienst, gemeente, RDW | Profile with tax-year breakdowns; useful at year-end |
+| `self_account` | The user's own PayPal/ICS in cross-account transfer legs | Routes back to the account view — does NOT double-render as a separate profile (would be confusing) |
+| `unknown` | Fallback for unresolved counterparties | Minimal profile + a "Help me identify this" CTA that creates a triage task |
+
+Resolution chain (planner refines order):
+1. **Self-account check first** — if the target IBAN matches one of the
+   user's own account IBANs (ASN, PayPal synthetic, ICS synthetic), type =
+   `self_account`, profile routes to the account view.
+2. **Known-counterparty-IBAN bridge** — consult `known_counterparty_ibans`
+   table (built in Phase 16.1.2.1, in flight on parallel session) for
+   PayPal, ICS, and other bank-owned IBANs → type = `bank`.
+3. **Merchant resolution via Phase 16.1's `MerchantNameResolver`** — when
+   transaction has a merchant string (PayPal merchant payment, ICS card
+   charge, ASN merchant direct debit) → type = `merchant`.
+4. **Personal-IBAN heuristic** — IBAN with a personal name (Dutch IBAN
+   parser; no merchant suffix; appears in P2P-shaped transactions
+   `transfer_out` / `transfer_in`) → type = `personal`.
+5. **Government keyword fallback** — `BELASTINGDIENST`, `GEMEENTE [city]`,
+   `RDW`, `CJIB` in description → type = `government`.
+6. **Description-keyword bank-fee fallback** — `KOSTEN KASOPNAME`,
+   `RENTE`, fee-pattern strings → type = `bank` (bank-fee subcategory).
+7. **Unresolved** — type = `unknown`, IBAN preserved for "Help me
+   identify this" triage.
 
 Scope:
 - `Modules/Counterparties/` (new bounded module) — Public services +
-  Internal resolver + Eloquent models for an `entities` / `counterparties`
-  table
-- A `Counterparty` aggregate keyed by a canonical identity (resolved across
-  PayPal merchant strings + ASN IBAN + ASN counterparty name + ICS PDF
-  merchant strings). Identity resolution reuses Phase 16.1's
-  `MerchantNameResolver` + `PatternGeneralizer` + `MerchantAlias` corpus.
-- `/counterparties` index page (search + sort by total spend / recency)
-- `/counterparties/{slug}` profile page:
-  - Total spend (all-time + last 12 months) with multi-currency display
-  - Transaction list (paginated, filterable by account + date)
-  - Category breakdown (pie / bar)
-  - Recurring detection hits (links to Recurring module surfaces)
-  - Funding-chain visualization (links to Chains module — "this Amazon
-    charge was funded by ASN → ICS → Amazon")
-  - "Add alias for this counterparty" button (reuses Phase 16.1's
-    `RenameCounterpartyPopover`)
-- Sidebar nav entry under the main app shell
+  Internal resolver + Eloquent models for the `counterparties` table.
+- A `Counterparty` aggregate with `type` (enum), `display_name`, `slug`
+  (per-user-unique), `iban` (nullable, for personal/bank/government),
+  `merchant_name` (nullable, for merchant type), `metadata` JSON.
+- `/counterparties` index page (search + sort + **type filter chips**:
+  All / Merchants / Personal / Banks / Government / Unknown).
+- `/counterparties/{slug}` profile page — shape varies by type per the
+  table above.
+- Sidebar nav entry under the main app shell.
 - Transaction-row click-through: clicking a counterparty name on any
-  transaction row navigates to its profile page
+  transaction row navigates to its profile page (with `self_account`
+  routing to the account view).
 - Cross-module surface: `Modules/Counterparties/Public/Contracts/CounterpartyResolver`
   is the new Public contract; `Modules/Ledger`, `Modules/Recurring`,
-  `Modules/Chains` consume it via DI
+  `Modules/Chains` consume it via DI.
+- **Privacy rule for `personal` type**: IBAN never appears in lists,
+  search results, URLs, or page titles — only in the profile body
+  behind an "Show IBAN" toggle. The toggle is user-preference-scoped.
+  Slugs for personal counterparties use the display name only (no
+  IBAN-derived suffix).
+- **Dependency**: this feature DEPENDS on Phase 16.1.2.1's
+  `known_counterparty_ibans` landing first (parallel session is
+  working on it). Plan 17-06 must wait.
+
+### K. Install-bypass UX in README (NEW — implied by no-signing decision)
+
+With no Apple Developer ID and no Azure Trusted Signing, every user
+hits an OS security warning on first launch. The README must walk
+them through it kindly, not assume technical literacy.
+
+- **macOS section**: screenshot of the "beatrax.app cannot be opened
+  because the developer cannot be verified" dialog → instruct
+  right-click → Open → "Open Anyway"; OR the Terminal one-liner
+  `xattr -d com.apple.quarantine /Applications/beatrax.app`. Frame
+  it as "Like most independent macOS apps" — link to a brief
+  explanation of why we don't pay $99/yr for an Apple cert.
+- **Windows section**: screenshot of the "Windows protected your PC"
+  SmartScreen dialog → instruct "More info" → "Run anyway". Frame
+  similarly.
+- **Linux section**: standard `.AppImage` install + `chmod +x` +
+  double-click; `.deb` via `sudo dpkg -i`.
+- **Verification section** for users who want assurance: every
+  release publishes SHA-256 checksums + an Ed25519-signed manifest;
+  link to the verification script (lives at `.docs/runbooks/verify-release.md`).
+
+This is a meaningful README investment — the install section is
+typically the deciding factor in whether a curious visitor becomes
+a user.
 
 ### J. GitHub security walkthrough (NEW — item #8)
 
@@ -245,6 +345,47 @@ Phase 17 does NOT ship:
 
 <decisions>
 ## Implementation Decisions
+
+### Amendment overrides (2026-05-27 evening)
+
+The following amendments override earlier decisions. Where an earlier
+decision is contradicted, the amendment wins.
+
+- **A-01 (overrides D-05, D-06, D-07, D-08): No paid signing certs.**
+  The `NATIVEPHP_USE_DEVELOPER_ID` env-var switch + the two new prebuild
+  hooks (`nativephp_inject_developer_id.php`,
+  `nativephp_inject_windows_signing.php`) are NOT built. Existing
+  `scripts/nativephp_force_adhoc_signing.php` stays as the sole signing
+  hook — always-on. Windows builds are unsigned. No Pest tests for the
+  unbuilt hooks.
+- **A-02 (overrides D-09, D-10): No notarization.** No notarytool step
+  in `release.yml`. No 45-min timeout to budget. The macOS job is:
+  checkout → setup PHP → composer install → ad-hoc-sign (existing
+  hook) → smoke test → upload artifact. ~10-15 min per platform job.
+- **A-03 (overrides D-50's `signing-prod` environment): No
+  `signing-prod` GitHub Environment.** No signing secrets to gate.
+  Skip the Environment-creation step in the GitHub security walkthrough.
+  Repo settings + branch protection + secret scanning + Dependabot +
+  CodeQL still apply.
+- **A-04 (amends D-43..D-48): Counterparty scope = everything.** See
+  Section I above for the five-type taxonomy + the resolution chain.
+  D-43..D-48 hold for the merchant type; they expand per the new
+  taxonomy for the other four types. D-48's specific performance
+  budget is dropped (user said "idc"); planner picks.
+- **A-05 (new): README install-bypass UX is a first-class deliverable.**
+  See Section K above. Plan 17-07 (community docs) grows to include
+  the macOS / Windows / Linux install-bypass sections.
+- **A-06 (new): Auto-update Ed25519 + SHA-512 verification is the SOLE
+  binary-integrity signal.** With no OS signing, the in-bundle
+  verification is load-bearing, not belt-and-braces. `electron-updater`
+  configured with `disableDifferentialDownload: true` on macOS.
+- **A-07 (new): Repo `nightworksio/beatrax` already exists (private)** —
+  origin remote is set. The `.planning/` history purge happens against
+  the local + force-pushes to the private origin. The repo stays
+  private until Plan 17-19 (first public release) flips visibility.
+- **A-08 (new): Counterparty feature DEPENDS on Phase 16.1.2.1's
+  `known_counterparty_ibans` table.** Plan 17-06 starts only after
+  the parallel 16.1.2.1 session lands.
 
 ### Versioning Policy (item #1)
 
@@ -709,10 +850,12 @@ No external ADRs — every architectural decision lives in `.planning/`
   `chore(17-closeout): …`, etc. — replace original Phase 17's
   `chore(17-cicd): …` once the rename takes effect.
 
-### Proposed execution order (high-level suggestion for planner)
+### Proposed execution order (high-level suggestion for planner; revised per 2026-05-27 evening amendments)
 
-Phase 17 is huge. A sensible plan grouping (the planner refines into
-PLAN files):
+Phase 17 is huge. A sensible plan grouping (planner refines into PLAN
+files). Note: Plan 17-03 (signing hooks) is REMOVED per A-01. Plans
+17-04 and 17-05 shrink per A-02 + A-06. Plan 17-06 (counterparties)
+expands per A-04 + waits per A-08.
 
 1. **Plan 17-01: Versioning + tag cleanup** (D-16..D-18). Delete old
    tags; flip `config/nativephp.php` default to `0.0.0-dev`; update
@@ -720,51 +863,78 @@ PLAN files):
    `.docs/cicd/release-cadence.md`. Sets the stage.
 2. **Plan 17-02: PR-gate matrix widen** (CI-01). Trivial; ci.yml's
    `php` matrix `['8.4']` → `['8.4', '8.5']`; verify both axes green.
-3. **Plan 17-03: Signing hooks** (D-05..D-08). Three Pest tests + the
-   env-var switch + two new prebuild hooks.
-4. **Plan 17-04: release.yml + smoke test** (CI-02..CI-06, D-09..D-15).
-   Full release workflow; new `/health` route; per-platform smoke;
-   gitleaks; CODEOWNERS; `.env.bundled`; APP_KEY sentinel.
-5. **Plan 17-05: Auto-update plumbing** (UPDATE-01..UPDATE-04,
-   D-19..D-22). `ElectronUpdateChannel`; Ed25519 manifest signing in
-   release.yml + verification in-bundle; banner UX.
-6. **Plan 17-06: Counterparty module** (D-43..D-48). Module skeleton +
-   schema migration + resolver + `ResolveCounterpartyStage` + index
-   page + profile page + cross-module wiring.
-7. **Plan 17-07: Community docs at repo root** (D-23..D-25). LICENSE,
-   NOTICE.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md,
-   README rewrite, brand exports.
+3. **Plan 17-04: release.yml + smoke test** (CI-02, CI-05, CI-06,
+   D-11..D-15). Full release workflow; new `/health` route; per-platform
+   smoke (with `xattr -d com.apple.quarantine` for macOS smoke launch);
+   gitleaks; CODEOWNERS; `.env.bundled`; APP_KEY sentinel. **No
+   signing/notarization steps per A-01 + A-02.** Existing
+   `nativephp_force_adhoc_signing.php` runs unchanged on every build.
+4. **Plan 17-05: Auto-update plumbing** (UPDATE-01..UPDATE-04,
+   D-19..D-22, A-06). `ElectronUpdateChannel`; Ed25519 manifest
+   signing in release.yml + verification in-bundle; SHA-512 binary
+   verification; `electron-updater` configured with
+   `disableDifferentialDownload: true` on macOS; banner UX.
+5. **Plan 17-06: Counterparty module — Wave 1** (D-43..D-48, A-04, A-08).
+   **Blocked on Phase 16.1.2.1 parallel session landing.** Module
+   skeleton + schema migration (with `type` enum) + base
+   `CounterpartyResolver` + `ResolveCounterpartyStage` in
+   ImportPipeline + Pest tests for the 7-step resolution chain.
+6. **Plan 17-06b: Counterparty UI + cross-module wiring — Wave 2**
+   (A-04). `/counterparties` index page with type-filter chips +
+   `/counterparties/{slug}` profile pages (type-aware shape) +
+   transaction-row click-through + sidebar nav entry +
+   `CounterpartyGarbageCollectorJob` (per D-45) + cross-module DI
+   consumption (Ledger / Recurring / Chains). Privacy-default behavior
+   for `personal` type (IBAN-hidden toggle).
+7. **Plan 17-07: Community docs at repo root + install-bypass UX**
+   (D-23..D-25, A-05). LICENSE, NOTICE.md, SECURITY.md, CONTRIBUTING.md,
+   CODE_OF_CONDUCT.md, README rewrite, brand exports. **README
+   install section includes the macOS/Windows/Linux Gatekeeper
+   /SmartScreen bypass walkthroughs per Section K.**
 8. **Plan 17-08: `.docs/` folder skeleton + initial ADRs** (D-31..D-34,
-   D-38 prep). Tree structure + index files + ~10 graduated ADRs from
-   PROJECT.md Key Decisions.
-9. **Plan 17-09: `.docs/` feature pages** (D-34). One subdir per module
-   with `architecture.md` / `code.md` / `specs.md` / `how-to-test.md`.
-10. **Plan 17-10: GSD redaction sweep + arch invariant** (REL-05, D-27).
+   D-38 prep). Tree structure + index files + ~10-15 graduated ADRs
+   from PROJECT.md Key Decisions + the load-bearing decisions
+   accumulated in v0.x phases.
+9. **Plan 17-09a: `.docs/features/` template + first 6 modules** (D-34).
+   `features/_template/` + `auth/`, `core/`, `desktop/`, `ledger/`,
+   `import/`, `ingestion/` — four files each.
+10. **Plan 17-09b: `.docs/features/` remaining 11 modules** (D-34).
+    `categorization/`, `chains/`, `community/`, `counterparties/`,
+    `dev-mode/`, `drift-alerts/`, `email-scan/`, `forecasting/`,
+    `onboarding/`, `receipts/`, `recurring/`. Four files each.
+11. **Plan 17-10: GSD redaction sweep + arch invariant** (REL-05, D-27).
     Find + purge GSD references from runtime; add `noGsdLeakage` arch
     test.
-11. **Plan 17-11: Renderer-JSON audit + secrets registry** (REL-07,
+12. **Plan 17-11: Renderer-JSON audit + secrets registry** (REL-07,
     D-29). Add `SecretsColumnRegistry`; add arch invariant; fix any
     findings.
-12. **Plan 17-12: Deep modules review** (REL-06, D-28). REVIEW-DEEP.md;
+13. **Plan 17-12: Deep modules review** (REL-06, D-28). REVIEW-DEEP.md;
     composer-require-checker; cross-module hygiene fixes.
-13. **Plan 17-13: "Where is my data?" page + export-everything**
+14. **Plan 17-13: "Where is my data?" page + export-everything**
     (REL-08, D-30).
-14. **Plan 17-14: Skill rename** (D-40..D-42). Sketch-findings skill
+15. **Plan 17-14: Skill rename** (D-40..D-42). Sketch-findings skill
     rename, CLAUDE.md update.
-15. **Plan 17-15: GitHub repo settings walkthrough** (D-49..D-50).
-    Interactive session; capture in `.docs/cicd/branch-protection.md`
-    + `.docs/runbooks/repo-security-setup.md`.
-16. **Plan 17-16: `.planning/` graduation pass** (D-38). Walk
+16. **Plan 17-15: GitHub repo settings walkthrough** (D-49..D-50, A-03,
+    A-07). Interactive session against the existing
+    `nightworksio/beatrax` (private) repo; capture in
+    `.docs/cicd/branch-protection.md` + `.docs/runbooks/repo-security-setup.md`.
+    **No `signing-prod` environment to create.**
+17. **Plan 17-16: `.planning/` graduation pass** (D-38). Walk
     `.planning/` and move worth-keeping artifacts to `.docs/`. PRE-PURGE.
-17. **Plan 17-17: `.planning/` history purge** (D-35..D-37). DESTRUCTIVE.
-    Requires explicit user confirmation in-session. Run on a fresh
-    clone. Then add `.planning/` to `.gitignore`.
-18. **Plan 17-18: v1.1 milestone setup** (D-39). GitHub Milestone +
+18. **Plan 17-17: `.planning/` history purge** (D-35..D-37, A-07).
+    DESTRUCTIVE. Requires explicit user confirmation in-session.
+    Sequence: rewrite local history via `git filter-repo --path .planning
+    --invert-paths` → add `.planning/` to `.gitignore` → force-push to
+    private origin (still safe — repo is private). Working tree retains
+    `.planning/` for ongoing local GSD work.
+19. **Plan 17-18: v1.1 milestone setup** (D-39). GitHub Milestone +
     issues + `.docs/roadmap-v1.1.md`.
-19. **Plan 17-19: First public release (`v0.1.0` or `v0.1.0-rc.1`)**.
-    Trigger release.yml end-to-end. Verify smoke + notarization +
-    publish. Validate auto-update channel reads correctly.
-20. **Plan 17-20: v1.0.0 graduation** (D-18). The explicit ship moment.
+20. **Plan 17-19: First release + flip visibility to public** (`v0.1.0`
+    or `v0.1.0-rc.1`). Trigger release.yml end-to-end. Verify smoke +
+    publish. Validate auto-update channel reads correctly. **Then flip
+    repo visibility private → public** (Settings → Danger Zone → Change
+    visibility). Make a Discussions post welcoming the world.
+21. **Plan 17-20: v1.0.0 graduation** (D-18). The explicit ship moment.
     User-triggered; not automated. Final tag, final draft → published.
 
 ### Performance / scope notes
