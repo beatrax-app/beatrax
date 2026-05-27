@@ -302,6 +302,43 @@ Plans:
 
 - [x] 16.1.2-05-PLAN.md — FirstImportStep commit-path regression tests (commit-everything, rollback-on-throw, stale-id filter)
 
+### Phase 16.1.2.1: Chain detection structural fix + default auto-categorization seed (INSERTED)
+
+**Goal:** Make the post-import enrichment pipeline actually produce results — both chain links AND categorized transactions — instead of leaving every imported row uncategorized and unchained. Closes six structural gaps surfaced during Phase 16 UAT.
+
+**Chain detection (evidence: `.planning/debug/chains-never-detected.md`):**
+
+1. Add a known-counterparty-IBAN alias bridge so ASN rows pointing at PayPal SARL (`LU89751000135104200E`) and ICS Cards at ABN AMRO (`NL08ABNA0526650664`) are recognised as cross-account hops to the user's synthetic-IBAN PayPal/ICS accounts. The alias bridge is consulted from TWO call sites: `ClassifyTransactionType::run()` step 2 (retypes ASN rows from `expense` → `transfer_out`) AND `PairTransferCandidates::handle()` partner-account lookup (falls back to the alias when the literal `accounts.iban === counterparty_iban` lookup misses, so both legs of a funding hop pair).
+2. Extend `Modules/Ingestion/Public/Paypal/PaypalCsvEventTypeMap` so "Bankstorting" / "General Withdrawal" / "Transfer to bank" parent events produce `transfer_in` rows on the PayPal account.
+3. Replace the one-shot `2026_05_16_010004_backpopulate_card_statements_from_statement_summaries` migration as the sole `card_statements` insert site by adding a per-import upsert path co-located with the post-import boundary that already dispatches the chain job.
+4. Rewire `IcsSettlementResolver::resolveForUser()` (Option B — chosen for ledger purity + single-source-of-truth alias bridge + adapter scope discipline) so its candidate iteration is the ASN-side `transfer_out` rows whose `counterparty_iban` resolves via the alias bridge to an `ics_card`-kind account, matched against the open card_statement on that ICS account. No virtual ICS-side `transfer_in` synthesis.
+
+**Default auto-categorization (evidence: `.planning/phases/16.1.2.1-…/SEED-RULES.md`):**
+
+5. Ship a default `categorization_rules` seed set covering universal NL/global merchants — streaming, cloud/AI subscriptions, utilities, telco, groceries, food delivery, public transport, EV charging, insurance, donations, cash withdrawals, taxes, and ICS-iDEAL internal transfer markers — so a fresh first import doesn't land 100% of rows in triage. Explicitly excludes personal identifiers (employer names, pensions, family P2P) — those stay user-authored. The ≥40% gate is asserted against a live-distribution-sampled fixture (top-100 counterparty distribution from the live snapshot, anonymised where personal), not a hand-built 10-row table.
+
+**After this phase** the `/chains/review` page must show real PayPal funding chains (ASN debit ↔ PayPal Bankstorting funding leg, both paired via `pair_transaction_id`) and real ICS iDEAL settlement chains (ASN debit ↔ ICS monthly statement aggregate, written as `chain_links` of `kind='ics_bulk_settle'`) for fixture imports; and a fresh import of mixed ASN + PayPal + ICS data must auto-categorize ≥40% of rows (Netflix, Google Payments, Thuisbezorgd, Flink, KPN, KOSTEN KASOPNAME, etc.) leaving only personal identifiers in triage. All gaps proven by end-to-end Pest tests with NO manually-injected unrealistic rows.
+
+**Requirements**: gap-1-iban-alias-bridge, gap-1b-pair-detection-iban-alias, gap-2-paypal-funding-leg-mapping, gap-3-card-statements-upsert-path, gap-3b-ics-settlement-chain-end-to-end, gap-4-seed-categorization-rules (synthetic — evidence: `.planning/debug/chains-never-detected.md` + `.planning/phases/16.1.2.1-…/SEED-RULES.md`)
+**Depends on:** Phase 16.1.2
+**Plans:** 5 plans
+
+Plans:
+
+**Wave 1** *(parallel — file-independent foundations)*
+
+- [ ] 16.1.2.1-01-PLAN.md — Default categorization-rule seed set (gap-4): per-user seeder + UserInstalled listener + native-PHP rule fixture sourced from SEED-RULES.md + firstOrCreate semantics lock + live-distribution-sampled ≥40% gate fixture + end-to-end import-categorization Pest coverage
+- [ ] 16.1.2.1-02-PLAN.md — PayPal funding-leg event-type mapping (gap-2): extend `PaypalCsvEventTypeMap` with `Bankstorting` / `General Withdrawal` / `Transfer to bank` parent entries → `transfer_in`; unit tests assert both `MissingPaypalTransactionTypeMapException` (transactionType) and `UnknownPaypalEventTypeException` (classify) narrowest types
+- [ ] 16.1.2.1-03-PLAN.md — Known-counterparty-IBAN alias bridge foundation (gap-1): `known_counterparty_ibans` table + Eloquent model + per-user idempotent seeder (PayPal LU IBAN → `paypal` kind, ICS NL ABN AMRO IBAN → `ics_card` kind) + UserInstalled listener + `Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban` Public contract + `KnownCounterpartyIbanResolver` concrete implementation + provider bindings + seeder + resolver unit tests
+
+**Wave 2** *(depends on 16.1.2.1-02 + 16.1.2.1-03 — both consumers consult the Plan 03 contract, and the end-to-end pair test consumes Plan 02's PayPal `transfer_in` mapping)*
+
+- [ ] 16.1.2.1-04-PLAN.md — Alias-bridge consumer wiring (gap-1 + gap-1b): `ClassifyTransactionType::run()` step 2 consults `ResolvesKnownCounterpartyIban` BEFORE the literal-equality fallback (gap-1 classifier); `PairTransferCandidates::handle()` partner-account lookup falls back to the same contract when the literal `accounts.iban === counterparty_iban` lookup misses (gap-1b — closes Blocker 2 from plan-checker); end-to-end Pest proving ASN debit→`transfer_out` + PayPal Bankstorting→`transfer_in` + bidirectional `pair_transaction_id`
+
+**Wave 3** *(depends on 16.1.2.1-03 + 16.1.2.1-04 — needs the Public contract from 03 AND the ASN `transfer_out` rows that 04's classifier produces)*
+
+- [ ] 16.1.2.1-05-PLAN.md — `card_statements` per-import upsert path + IcsSettlementResolver Option-B rewire (gap-3 + gap-3b): new `UpsertsCardStatements` Public contract + `CardStatementUpserter` service wired into `ConfirmImport` post-commit AS FIRST ACTION inside the existing `if (dispatchChain && (inserted > 0 || enriched > 0))` block; IcsSettlementResolver candidate-iteration rewired to ASN-side `transfer_out` rows resolved via the alias bridge to `ics_card`-kind accounts; end-to-end Pest writing `chain_links` of `kind='ics_bulk_settle'` from a real ASN row + ICS card_statement + ICS expenses with NO manually-injected unrealistic rows (closes Blocker 1 from plan-checker)
+
 ### Phase 17: CI/CD Pipeline + Code Signing
 
 **Goal**: Every PR runs the full quality gate (Larastan L10 strict + Pint + Pest) on both PHP 8.4 and 8.5 axes via `.github/workflows/ci.yml`; pushing a `v*` tag triggers `.github/workflows/release.yml` which builds + signs + notarizes installers on macOS 14 + Windows 2025 + Ubuntu 24.04 runners and publishes them as GitHub Release assets via `softprops/action-gh-release v2`.
@@ -393,6 +430,7 @@ Plans:
 | 15. Desktop Shell (NativePHP Integration) | 7/7 | Complete    | 2026-05-23 |
 | 16. Developer Mode UI | 9/9 | Complete   | 2026-05-24 |
 | 16.1. First-run wizard + rename + payment-type + crowd corpus + OAuth re-consent + Aliases settings | 8/8 | Complete   | 2026-05-25 |
+| 16.1.2.1. Chain detection structural fix + default auto-categorization seed | 0/5 | Planned | - |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |
 | 19. Public Release Boundary | 0/0 | Not started | - |

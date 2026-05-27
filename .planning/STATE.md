@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
-stopped_at: Phase 16.1.2 complete
-last_updated: "2026-05-27T15:32:00.000Z"
-last_activity: 2026-05-27 -- Quick task 260527-o5b complete (restored Import\Internal arch boundary)
+stopped_at: Phase 16.1.2 context gathered
+last_updated: "2026-05-27T15:43:47.326Z"
+last_activity: 2026-05-27 -- Phase 16.1.2 complete (5/5 plans, verifier PASS)
 progress:
-  total_phases: 13
+  total_phases: 14
   completed_phases: 8
   total_plans: 53
   completed_plans: 53
@@ -68,6 +68,10 @@ Last activity: 2026-05-27 -- Phase 16.1.2 complete (5/5 plans, verifier PASS)
 | Phase 15 P04 | 24 | - tasks | - files |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 16.1.2.1 inserted after Phase 16.1.2: Chain detection structural fix — cross-account hop classification + PayPal funding-leg mapping + card_statements upsert path (URGENT)
 
 ### Decisions
 
