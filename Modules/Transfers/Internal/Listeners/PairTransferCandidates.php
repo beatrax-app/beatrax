@@ -6,6 +6,7 @@ namespace Modules\Transfers\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Import\Public\Events\TransactionImported;
 use RuntimeException;
 
@@ -21,7 +22,12 @@ use RuntimeException;
  *     on $user->id)
  *   - counterparty_iban matches one of the user's own Account.iban rows
  *     (synthetic IBANs `'ICS-CARD'` and `'PAYPAL'` participate as
- *      ordinary Account.iban values)
+ *      ordinary Account.iban values) OR resolves to the user's own
+ *      Account via `ResolvesKnownCounterpartyIban` (the known-
+ *      counterparty-IBAN alias bridge that maps real institution IBANs
+ *      such as PayPal SARL Luxembourg's `LU89751000135104200E` or ICS
+ *      at ABN AMRO's `NL08ABNA0526650664` to the user's synthetic-IBAN
+ *      accounts of the matching kind)
  *   - amount equal-and-opposite, same currency
  *   - booked_at within ±WINDOW_DAYS calendar days
  *   - both legs typed transfer_in / transfer_out
@@ -62,6 +68,7 @@ final class PairTransferCandidates
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
+        private readonly ResolvesKnownCounterpartyIban $aliasResolver,
     ) {}
 
     public function handle(TransactionImported $event): void
@@ -101,17 +108,32 @@ final class PairTransferCandidates
         $connection = $this->db->connection();
 
         // Look up the partner account by IBAN — scoped to the same
-        // user. Raw query builder per the staticMethod.dynamicCall
-        // rule.
+        // user. Two-arm consult: Arm A (literal) matches one of the
+        // user's own Account.iban rows directly; Arm B (alias
+        // bridge) resolves real institution IBANs to the user's own
+        // synthetic-IBAN account via `ResolvesKnownCounterpartyIban`.
+        // Raw query builder per the staticMethod.dynamicCall rule.
         $partnerAccountRow = $connection
             ->table('accounts')
             ->where('user_id', $user->id)
             ->where('iban', $tx->counterparty_iban)
             ->first(['id']);
-        if ($partnerAccountRow === null) {
-            return;
+
+        if ($partnerAccountRow !== null) {
+            $partnerAccountId = self::toInt($partnerAccountRow->id ?? null);
+        } else {
+            // Arm B — alias bridge: real institution IBAN -> user's
+            // own synthetic-IBAN account. Resolves the cross-account-
+            // hop case where the source statement reports the
+            // institution's real IBAN (e.g. PayPal SARL Luxembourg's
+            // `LU89751000135104200E`) but the matching partner
+            // account uses a synthetic own-IBAN literal (`'PAYPAL'`).
+            $aliasAccount = $this->aliasResolver->resolveAccount($tx->counterparty_iban, $user->id);
+            if ($aliasAccount === null) {
+                return;
+            }
+            $partnerAccountId = $aliasAccount->id;
         }
-        $partnerAccountId = self::toInt($partnerAccountRow->id ?? null);
 
         // Normalise to whole-day boundaries so the window is symmetric
         // ±WINDOW_DAYS calendar days regardless of the row's time-of-day

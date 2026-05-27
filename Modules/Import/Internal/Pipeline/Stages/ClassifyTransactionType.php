@@ -6,6 +6,7 @@ namespace Modules\Import\Internal\Pipeline\Stages;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -30,12 +31,20 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  *      pair-detection has no opinion on them.
  *
  *   2. Cross-account-IBAN check (universal across source formats). When
- *      `$tx->counterpartyIban` is non-null AND matches one of the user's
- *      OWN Account.iban rows (excluding the row's own account), the row
- *      is a transfer leg. Sign-of-amount picks the direction: negative →
- *      transfer_out, positive → transfer_in. The Account query filters
- *      by `$user->id` so a counterparty IBAN that happens to belong to a
- *      different user's account never triggers a flip.
+ *      `$tx->counterpartyIban` is non-null the stage consults the alias
+ *      bridge first (Arm A — `ResolvesKnownCounterpartyIban` maps real
+ *      institution IBANs such as PayPal SARL Luxembourg's
+ *      `LU89751000135104200E` or ICS at ABN AMRO's
+ *      `NL08ABNA0526650664` to the user's own synthetic-IBAN account of
+ *      the matching kind). If the alias arm resolves an account that
+ *      differs from the row's own account, the row is a transfer leg.
+ *      Falling back to Arm B — literal own-account-IBAN equality —
+ *      catches bank-to-bank transfers between two of the user's
+ *      Account.iban rows that share the same literal IBAN convention
+ *      (e.g. two ASN accounts). Sign-of-amount picks the direction:
+ *      negative → transfer_out, positive → transfer_in. Both arms
+ *      filter by `$user->id` so a counterparty IBAN that happens to
+ *      belong to a different user's account never triggers a flip.
  *
  *   3. PayPal source-format event-type map. Fires when
  *      `rawPayload.format === 'paypal-csv'`. Reads the FIRST event's
@@ -64,6 +73,7 @@ final class ClassifyTransactionType
     public function __construct(
         private readonly PaypalCsvEventTypeMap $eventTypes,
         private readonly DatabaseManager $db,
+        private readonly ResolvesKnownCounterpartyIban $aliasResolver,
     ) {}
 
     public function run(CanonicalTransaction $tx, User $user): CanonicalTransaction
@@ -75,11 +85,28 @@ final class ClassifyTransactionType
 
         // Step 2 — cross-account-IBAN check (every source format).
         //
+        // Two-arm consult: the alias bridge (Arm A) resolves real
+        // institution IBANs that appear on the ASN side of a cross-
+        // account hop to the user's own synthetic-IBAN account; the
+        // literal own-IBAN match (Arm B) catches bank-to-bank
+        // transfers between two of the user's accounts whose
+        // Account.iban values literally match the counterparty IBAN.
+        // Both arms scope by `$user->id` so cross-user counterparties
+        // never trigger a flip.
+        //
         // Raw Query Builder count() (rather than Eloquent's static
         // exists()) keeps Larastan strict happy with the same
         // staticMethod.dynamicCall posture PreviewWizard::needsIcsAccountName
         // uses for the same predicate shape.
         if ($tx->counterpartyIban !== null && $tx->counterpartyIban !== '') {
+            // Arm A — alias bridge: real institution IBAN -> user's
+            // own synthetic-IBAN account whose kind matches the alias.
+            $aliasAccount = $this->aliasResolver->resolveAccount($tx->counterpartyIban, $user->id);
+            if ($aliasAccount !== null && $aliasAccount->id !== $tx->accountId) {
+                return $tx->withType($tx->amountMinor < 0 ? 'transfer_out' : 'transfer_in');
+            }
+
+            // Arm B — literal own-IBAN match.
             $isOwnAccount = $this->db->connection()
                 ->table('accounts')
                 ->where('user_id', $user->id)
