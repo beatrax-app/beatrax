@@ -6,9 +6,11 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\DatabaseManager;
+use Modules\Categorization\Database\Seeders\DefaultCategoryTreeSeeder;
 use Modules\Chains\Database\Seeders\Demo\DemoChainsSeeder;
 use Modules\Counterparties\Database\Seeders\Demo\DemoCounterpartiesSeeder;
 use Modules\Forecasting\Database\Seeders\Demo\DemoForecastSeeder;
+use Modules\Ledger\Database\Seeders\CurrenciesSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoAccountsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoTransactionsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoUsersSeeder;
@@ -47,6 +49,8 @@ final class DemoSeedCommand extends Command
 
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly CurrenciesSeeder $currencies,
+        private readonly DefaultCategoryTreeSeeder $categories,
         private readonly DemoUsersSeeder $users,
         private readonly DemoAccountsSeeder $accounts,
         private readonly DemoTransactionsSeeder $transactions,
@@ -63,6 +67,17 @@ final class DemoSeedCommand extends Command
         if ($this->option('reset') === true) {
             $this->resetDemoData();
         }
+
+        // Reference-data prerequisites the demo dataset assumes are
+        // already populated by the production install flow. Calling
+        // them explicitly here makes the demo seeder safe to run
+        // against a freshly-migrated database that has never been
+        // through `php artisan beatrax:install` — every seeder is
+        // idempotent so re-running over a populated install is a
+        // no-op for these rows.
+        $this->line('Ensuring reference data (currencies + default category tree)…');
+        $this->currencies->run();
+        $this->categories->run();
 
         $this->line('Seeding demo users…');
         $userMap = $this->users->run();
