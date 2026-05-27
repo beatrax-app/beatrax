@@ -269,6 +269,24 @@ it('openCandidateCount returns count of state=candidate chain_links for the user
     expect($this->query->openCandidateCount($this->user))->toBe(2);
 });
 
+it('candidatesForReview excludes hint rows whose to_transaction_id is NULL', function (): void {
+    // Actionable candidate — should appear.
+    $tx1 = clqTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'A', 'a', '2026-05-10', 'h1', 1);
+    $tx2 = clqTx($this->user, $this->asn, $this->run, 1000, 'transfer_in', 'B', 'b', '2026-05-10', 'h2', 2);
+    clqSeedLink($this->db, $this->user, (int) $tx1->id, (int) $tx2->id, 'paypal_funding', 'candidate', '0.900', 'auto', ['signature_hash' => 'sig-actionable']);
+
+    // Hint row — exceeded-tolerance ics_bulk_settle with NULL endpoint.
+    // The schema's NULL-endpoint trigger permits this row to live in
+    // candidate state, but its Confirm / Reject buttons would crash
+    // the SQL trigger. candidatesForReview must filter it out.
+    $tx3 = clqTx($this->user, $this->paypal, $this->run, -500, 'expense', 'C', 'c', '2026-05-11', 'h3', 3);
+    clqSeedLink($this->db, $this->user, (int) $tx3->id, null, 'ics_bulk_settle', 'candidate', '0.950', 'auto', ['tolerance_used' => 'exceeded', 'signature_hash' => 'sig-hint']);
+
+    $rows = $this->query->candidatesForReview($this->user);
+    expect($rows)->toHaveCount(1);
+    expect($rows[0]->kind)->toBe('paypal_funding');
+});
+
 it('candidatesForReview returns ChainLinkRow rows sorted by confidence desc', function (): void {
     $tx1 = clqTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'A', 'a', '2026-05-10', 'i1', 1);
     $tx2 = clqTx($this->user, $this->asn, $this->run, 1000, 'transfer_in', 'B', 'b', '2026-05-10', 'i2', 2);

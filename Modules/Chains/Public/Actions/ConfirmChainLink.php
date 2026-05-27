@@ -6,6 +6,7 @@ namespace Modules\Chains\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -65,6 +66,19 @@ final class ConfirmChainLink
             // ModelNotFoundException that the framework converts at the
             // router but bare unit tests would not see.
             throw new NotFoundHttpException('Chain link not found.');
+        }
+
+        if ($link->to_transaction_id === null) {
+            // Hint-shaped rows (exceeded-tolerance ics_bulk_settle
+            // candidates + funded_by_card_hint / refund_of_hint kinds)
+            // are permitted to carry a NULL endpoint only while in
+            // candidate state. The schema's
+            // chain_links_to_transaction_id_check_update trigger
+            // refuses to flip state='confirmed' on these rows because
+            // the carve-out depends on state='candidate'. Trip the
+            // typed exception BEFORE the save so the caller renders
+            // a user-readable error instead of an SQLSTATE 23000.
+            throw ChainLinkRequiresConcretePartnerException::from($link);
         }
 
         $this->db->connection()->transaction(function () use ($link, $user): void {

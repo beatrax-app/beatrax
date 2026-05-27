@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
+use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 
@@ -54,14 +55,35 @@ final class ChainReviewQueue extends Component
      */
     public ?string $cursorConfidence = null;
 
+    /**
+     * Transient error banner. Populated when an action raises the
+     * typed {@see ChainLinkRequiresConcretePartnerException} (the
+     * user tried to confirm or reject a hint-shaped candidate whose
+     * `to_transaction_id` is NULL); the blade view renders this
+     * string in a rose-tinted notice above the queue. A subsequent
+     * confirm/reject call clears it before re-attempting, so the
+     * banner stays scoped to the most recent failure.
+     */
+    public ?string $actionError = null;
+
     public function confirm(int $chainLinkId, CurrentUser $currentUser, ConfirmChainLink $confirm): void
     {
-        ($confirm)($chainLinkId, $currentUser->user());
+        $this->actionError = null;
+        try {
+            ($confirm)($chainLinkId, $currentUser->user());
+        } catch (ChainLinkRequiresConcretePartnerException) {
+            $this->actionError = 'This candidate is a hint — open it to attach the matching transaction before confirming.';
+        }
     }
 
     public function reject(int $chainLinkId, CurrentUser $currentUser, RejectChainLink $reject): void
     {
-        ($reject)($chainLinkId, $currentUser->user());
+        $this->actionError = null;
+        try {
+            ($reject)($chainLinkId, $currentUser->user());
+        } catch (ChainLinkRequiresConcretePartnerException) {
+            $this->actionError = 'This candidate is a hint — open it to attach the matching transaction before rejecting.';
+        }
     }
 
     public function loadMore(int $nextCursorId, ?string $nextCursorConfidence = null): void
