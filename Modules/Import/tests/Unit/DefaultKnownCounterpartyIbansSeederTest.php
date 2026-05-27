@@ -85,3 +85,43 @@ it('seeds independently for two users', function (): void {
     expect(KnownCounterpartyIban::query()->where('user_id', $userA->id)->count())->toBe(2);
     expect(KnownCounterpartyIban::query()->where('user_id', $userB->id)->count())->toBe(2);
 });
+
+it('seeds user B correctly even when an HTTP request is actingAs(user A) — withoutGlobalScopes bypasses the UserScope cross-user filter', function (): void {
+    // Regression for WR-01. The KnownCounterpartyIban model uses
+    // BelongsToUser, which applies UserScope. Under an HTTP-
+    // authenticated context the scope adds
+    // `where('user_id', auth()->id())` to every query. Calling
+    // `firstOrCreate(['user_id' => $userB->id, ...])` then ANDs
+    // the user_id filter for user B with the scope's filter for
+    // user A — the lookup returns zero rows, firstOrCreate
+    // attempts an INSERT, and the per-user UNIQUE constraint on
+    // (user_id, real_iban) violates as soon as a second pass
+    // runs. Calling withoutGlobalScopes() drops the scope so the
+    // explicit user_id filter is the only one in play and the
+    // seeder is context-independent.
+    $userA = makeUser('seeder-scope-a');
+    $userB = makeUser('seeder-scope-b');
+
+    /** @var App\Models\User $userAAuth */
+    $userAAuth = App\Models\User::query()->findOrFail($userA->id);
+    test()->actingAs($userAAuth);
+
+    $seeder = app(DefaultKnownCounterpartyIbansSeeder::class);
+
+    // First pass — runs under authenticated context for user A,
+    // seeds rows for user B. The verification queries also drop
+    // the global scope so the assertions see the actual row state
+    // rather than the auth()-filtered subset (the UserScope on
+    // BelongsToUser would otherwise mask user B's rows from the
+    // actingAs(userA) caller).
+    $seeder->run($userB);
+    expect(KnownCounterpartyIban::withoutGlobalScopes()->where('user_id', $userB->id)->count())->toBe(2);
+    expect(KnownCounterpartyIban::withoutGlobalScopes()->where('user_id', $userA->id)->count())->toBe(0);
+
+    // Second pass — must remain idempotent (no UNIQUE-constraint
+    // violation, no duplicate rows for user B, still zero for
+    // user A).
+    $seeder->run($userB);
+    expect(KnownCounterpartyIban::withoutGlobalScopes()->where('user_id', $userB->id)->count())->toBe(2);
+    expect(KnownCounterpartyIban::withoutGlobalScopes()->where('user_id', $userA->id)->count())->toBe(0);
+});
