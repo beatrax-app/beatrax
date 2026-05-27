@@ -44,6 +44,16 @@
         </p>
     </header>
 
+    @if ($actionError)
+        <div
+            class="mb-6 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200"
+            role="status"
+            data-testid="chain-review-action-error"
+        >
+            {{ $actionError }}
+        </div>
+    @endif
+
     @if (count($candidates) === 0)
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Nothing to review</h2>

@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
+use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -192,4 +193,28 @@ it('raises NotFoundHttpException on cross-user invocation (404)', function (): v
 
     expect(fn () => ($this->reject)($linkId, $this->user))
         ->toThrow(NotFoundHttpException::class);
+});
+
+it('throws ChainLinkRequiresConcretePartnerException when rejecting a hint row with NULL to_transaction_id', function (): void {
+    $from = rclTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'rh1', 1);
+    $this->db->connection()->table('chain_links')->insert([
+        'user_id' => $this->user->id,
+        'from_transaction_id' => $from->id,
+        'to_transaction_id' => null,
+        'kind' => 'ics_bulk_settle',
+        'state' => 'candidate',
+        'confidence' => '0.900',
+        'resolver' => 'auto',
+        'evidence' => json_encode(['tolerance_used' => 'exceeded', 'signature_hash' => 'sig-rhint']),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+    $hintId = (int) $this->db->connection()->table('chain_links')->max('id');
+
+    expect(fn () => ($this->reject)($hintId, $this->user))
+        ->toThrow(ChainLinkRequiresConcretePartnerException::class);
+
+    /** @var ChainLink $unchanged */
+    $unchanged = ChainLink::query()->findOrFail($hintId);
+    expect($unchanged->state)->toBe('candidate');
 });

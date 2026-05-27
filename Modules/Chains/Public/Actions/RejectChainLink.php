@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chains\Public\Actions;
 
 use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -48,6 +49,17 @@ final class RejectChainLink
             // same 404 at the router, but explicit throwing keeps the
             // action's signature self-documenting.
             throw new NotFoundHttpException('Chain link not found.');
+        }
+
+        if ($link->to_transaction_id === null) {
+            // Symmetric guard with ConfirmChainLink: hint-shaped rows
+            // permit a NULL endpoint only while state='candidate'; the
+            // chain_links_to_transaction_id_check_update trigger
+            // refuses to flip state='rejected' on these rows. Trip
+            // the typed exception BEFORE the save so the caller
+            // surfaces a user-readable message instead of an
+            // SQLSTATE 23000 integrity-constraint violation.
+            throw ChainLinkRequiresConcretePartnerException::from($link);
         }
 
         $link->state = 'rejected';

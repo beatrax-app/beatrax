@@ -237,9 +237,19 @@ final class ChainLinkQuery
         ?string $cursorConfidence = null,
         int $limit = 26,
     ): array {
+        // Hint-shaped rows (exceeded-tolerance ics_bulk_settle
+        // candidates + funded_by_card_hint / refund_of_hint kinds)
+        // carry `to_transaction_id IS NULL` and CANNOT be confirmed
+        // or rejected via the queue's buttons — the schema's
+        // chain_links_to_transaction_id_check_* triggers refuse the
+        // state flip. Filter them out at the query layer so the
+        // review queue only surfaces actionable rows; a future
+        // dedicated hint-resolution UI can pull them via a separate
+        // method.
         $query = $this->db->connection()->table('chain_links')
             ->where('user_id', $user->id)
             ->where('state', 'candidate')
+            ->whereNotNull('to_transaction_id')
             ->orderByDesc('confidence')
             ->orderByDesc('id')
             ->limit($limit);

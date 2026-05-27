@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Actions\ConfirmChainLink;
+use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -252,4 +253,35 @@ it('whereJsonContains finds the signature on this SQLite build', function (): vo
     $auto = ChainLink::query()->findOrFail($autoId);
     expect($auto->state)->toBe('confirmed');
     expect($auto->resolver)->toBe('rule');
+});
+
+it('throws ChainLinkRequiresConcretePartnerException when confirming a hint row with NULL to_transaction_id', function (): void {
+    // Build the canonical exceeded-tolerance ics_bulk_settle hint
+    // shape that lives with `to_transaction_id IS NULL`. The schema's
+    // chain_links_to_transaction_id_check_update trigger refuses the
+    // state flip, so the action must guard BEFORE save() and produce
+    // a typed exception the caller can render as a user-readable
+    // notice — never a raw SQLSTATE 23000.
+    $from = cclTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'h1', 1);
+    $this->db->connection()->table('chain_links')->insert([
+        'user_id' => $this->user->id,
+        'from_transaction_id' => $from->id,
+        'to_transaction_id' => null,
+        'kind' => 'ics_bulk_settle',
+        'state' => 'candidate',
+        'confidence' => '0.900',
+        'resolver' => 'auto',
+        'evidence' => json_encode(['tolerance_used' => 'exceeded', 'signature_hash' => 'sig-hint']),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+    $hintId = (int) $this->db->connection()->table('chain_links')->max('id');
+
+    expect(fn () => ($this->confirm)($hintId, $this->user))
+        ->toThrow(ChainLinkRequiresConcretePartnerException::class);
+
+    // State must NOT have flipped — the guard fires before save().
+    /** @var ChainLink $unchanged */
+    $unchanged = ChainLink::query()->findOrFail($hintId);
+    expect($unchanged->state)->toBe('candidate');
 });
