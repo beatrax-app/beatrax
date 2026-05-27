@@ -14,9 +14,12 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
+use Modules\Chains\Internal\Resolvers\RetypeByAliasResolver;
+use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
 /**
  * The first queued job in the project. Runs both Phase 5 resolvers
@@ -92,6 +95,9 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
     public function handle(
         DatabaseManager $db,
         Clock $clock,
+        RetypeByAliasResolver $retypeResolver,
+        PairsTransferLegs $pairer,
+        UpsertsCardStatements $cardStatementUpserter,
         IcsSettlementResolver $icsResolver,
         PaypalFundingResolver $paypalResolver,
     ): void {
@@ -114,6 +120,39 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
             ->table('chain_links')
             ->where('user_id', $this->userId)
             ->count();
+
+        // Healing passes — must run BEFORE the chain resolvers because
+        // the downstream resolvers iterate `transfer_out` / `transfer_in`
+        // rows AND read from `card_statements`. Without these three
+        // passes the wizard-order race + the per-import card-statement
+        // upsert race leave the ledger in a state where chain resolvers
+        // iterate empty sets.
+        //
+        //   1. UpsertsCardStatements::upsertForUser — promotes every
+        //      ICS-kind statement_summaries row for the user into a
+        //      card_statements row, independent of import_run_id.
+        //      Catches up legacy installs whose ConfirmImport path
+        //      missed the per-import upsert (rolled-back transaction,
+        //      pre-Phase-16.1.2.1 builds, or a stale packaged-app
+        //      bundle that shipped without the Stage A unconditional
+        //      call). Idempotent via the UNIQUE constraint inside
+        //      insertOrIgnore.
+        //
+        //   2. RetypeByAliasResolver — flips `expense` / `income` rows
+        //      whose counterparty_iban resolves through
+        //      `known_counterparty_ibans` to one of the user's own
+        //      accounts. Idempotent + self-healing for late-added aliases.
+        //
+        //   3. PairsTransferLegs::pairOrphansForUser — pairs any
+        //      transfer leg whose partner is now persisted but never
+        //      went through the per-row `TransactionImported` listener
+        //      (which is the only path the legacy preview-import flow
+        //      had for closing pair_transaction_id). The retyped rows
+        //      above are the canonical case; legacy installs may also
+        //      have orphans from before this code shipped.
+        $cardStatementUpserter->upsertForUser($user);
+        $retypeResolver->resolveForUser($user);
+        $pairer->pairOrphansForUser($user);
 
         $icsResolver->resolveForUser($user);
         $paypalResolver->resolveForUser($user);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -61,38 +62,88 @@ final class CardStatementUpserter implements UpsertsCardStatements
 
     public function upsertForImportRun(int $importRunId, User $user): int
     {
-        $connection = $this->db->connection();
+        /** @var list<\stdClass> $rows */
+        $rows = $this->buildCandidatesQuery($user)
+            ->where('statement_summaries.import_run_id', $importRunId)
+            ->get()
+            ->values()
+            ->all();
 
-        $candidates = $connection
+        return $this->promoteCandidates($rows, $user);
+    }
+
+    public function upsertForUser(User $user): int
+    {
+        // User-scoped backfill — drops the import_run_id predicate.
+        // A statement_summary that already has a matching card_statements
+        // row is short-circuited by the UNIQUE
+        // (user_id, account_id, period_start, period_end) constraint
+        // inside insertOrIgnore — so the cost of "re-scanning every
+        // ICS statement_summary on every chain pass" is bounded by the
+        // user's lifetime ICS import count (typically dozens), not the
+        // chain dispatch frequency. Cheap enough that gating it on a
+        // pre-check would add latency rather than save it.
+        /** @var list<\stdClass> $rows */
+        $rows = $this->buildCandidatesQuery($user)->get()->values()->all();
+
+        return $this->promoteCandidates($rows, $user);
+    }
+
+    /**
+     * Shared base query: ICS-kind statement_summaries for the user, with
+     * the fields needed by promoteCandidates(). Callers narrow further
+     * by import_run_id (per-import path) or leave it open (backfill).
+     */
+    private function buildCandidatesQuery(User $user): Builder
+    {
+        return $this->db->connection()
             ->table('statement_summaries')
             ->join('accounts', 'accounts.id', '=', 'statement_summaries.account_id')
             ->where('statement_summaries.user_id', $user->id)
-            ->where('statement_summaries.import_run_id', $importRunId)
             ->where('accounts.kind', 'ics_card')
             ->select(
                 'statement_summaries.account_id',
+                'statement_summaries.import_run_id',
                 'statement_summaries.period_start',
                 'statement_summaries.period_end',
                 'statement_summaries.closing_balance_minor',
-            )
-            ->get();
+            );
+    }
 
-        if ($candidates->isEmpty()) {
+    /**
+     * Promote each candidate row into card_statements via insertOrIgnore.
+     * Idempotency is delegated to the UNIQUE
+     * (user_id, account_id, period_start, period_end) constraint — a
+     * re-run with the same candidate set returns 0.
+     *
+     * @param  list<\stdClass>  $candidates  raw query-builder rows
+     *                                       carrying account_id,
+     *                                       import_run_id,
+     *                                       period_start, period_end,
+     *                                       closing_balance_minor
+     */
+    private function promoteCandidates(array $candidates, User $user): int
+    {
+        if ($candidates === []) {
             return 0;
         }
 
         $now = $this->clock->now()->toDateTimeString();
+        $connection = $this->db->connection();
         $inserted = 0;
 
         foreach ($candidates as $row) {
-            if ($row->period_start === null || $row->period_end === null) {
+            $periodStart = self::nullableProp($row, 'period_start');
+            $periodEnd = self::nullableProp($row, 'period_end');
+            if ($periodStart === null || $periodEnd === null) {
                 // card_statements UNIQUE requires both boundaries; the
                 // back-population migration drops these too (same
                 // invariant — see 2026_05_16_010004).
                 continue;
             }
 
-            $closing = is_numeric($row->closing_balance_minor) ? (int) $row->closing_balance_minor : 0;
+            $closing = self::intProp($row, 'closing_balance_minor');
+            $importRunId = self::intProp($row, 'import_run_id');
 
             // `insertOrIgnore` returns the number of rows actually
             // inserted (0 when the UNIQUE constraint short-circuits,
@@ -102,10 +153,10 @@ final class CardStatementUpserter implements UpsertsCardStatements
             // statement.
             $inserted += $connection->table('card_statements')->insertOrIgnore([
                 'user_id' => $user->id,
-                'account_id' => $row->account_id,
+                'account_id' => self::intProp($row, 'account_id'),
                 'import_run_id' => $importRunId,
-                'period_start' => $row->period_start,
-                'period_end' => $row->period_end,
+                'period_start' => $periodStart,
+                'period_end' => $periodEnd,
                 'total_amount_minor' => $closing,
                 'open_balance_minor' => abs($closing),
                 'state' => 'open',
@@ -115,5 +166,40 @@ final class CardStatementUpserter implements UpsertsCardStatements
         }
 
         return $inserted;
+    }
+
+    /**
+     * Read a property off a raw query-builder stdClass row, returning
+     * its string representation or null. Defensive against the
+     * stdClass property-access lint without losing strict typing.
+     */
+    private static function nullableProp(\stdClass $row, string $name): ?string
+    {
+        if (! property_exists($row, $name)) {
+            return null;
+        }
+        /** @var mixed $value */
+        $value = $row->$name;
+        if ($value === null) {
+            return null;
+        }
+
+        return is_scalar($value) ? (string) $value : null;
+    }
+
+    /**
+     * Numeric coercion for raw query-builder column values. Matches the
+     * shape used elsewhere in the codebase so the strict-rules
+     * `cast.int` lint stays satisfied.
+     */
+    private static function intProp(\stdClass $row, string $name): int
+    {
+        if (! property_exists($row, $name)) {
+            return 0;
+        }
+        /** @var mixed $value */
+        $value = $row->$name;
+
+        return is_numeric($value) ? (int) $value : 0;
     }
 }
