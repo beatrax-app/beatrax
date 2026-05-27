@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
@@ -136,6 +137,49 @@ final class ArtisanRunnerPage extends Component
 
         $runId = $spawner->start($command, $args, $user->id(), 'safe');
         $this->dispatch('toast', message: 'Started '.$command.' (run '.$runId.')');
+    }
+
+    /**
+     * Browser-event sink for palette-driven spawns.
+     *
+     * When the operator is already on /dev/artisan and picks a
+     * SAFE-tier command from the command palette, the client-side
+     * `palette()` Alpine factory in `resources/js/palette.js`
+     * dispatches the `spawn-command` Livewire event with the
+     * resolved name + args + tier. Before this listener existed,
+     * that dispatch had no sink — the palette modal closed and
+     * nothing happened (the user-visible symptom: "executing an
+     * artisan command does nothing, just quits the modal"). The
+     * off-page fallback path (window.location.href to
+     * /dev/artisan?spawn=<name>) routed through mount(), which is
+     * why running the same command from the doctor screen or a
+     * cold-load to /dev/artisan worked while on-page picks did
+     * not.
+     *
+     * Routes through spawn() so the SAFE-vs-DESTRUCTIVE registry
+     * check + the toast-on-unknown path stay in one place. The
+     * payload's `args` and `tier` are reserved for future palette
+     * shapes that pre-fill an arg form — today the palette only
+     * dispatches SAFE-tier names with no args.
+     *
+     * @param  array<string, mixed>  $args
+     */
+    #[On('spawn-command')]
+    public function onSpawnCommand(
+        string $name,
+        array $args,
+        string $tier,
+        CommandSpawner $spawner,
+        CurrentUser $user,
+        DevCommandRegistry $registry,
+    ): void {
+        // `$tier` is informational only — the authoritative tier
+        // lookup happens inside spawn() via the registry, so a
+        // hostile dispatch that claims `tier: 'safe'` for a
+        // destructive command still routes through the triple-gate.
+        unset($tier);
+
+        $this->spawn($name, $args, $spawner, $user, $registry);
     }
 
     /**

@@ -233,6 +233,35 @@ it('spawn() on the runner page invokes the spawner and registers a run record fo
     expect($messages)->not->toBeEmpty();
 });
 
+it('onSpawnCommand() listener routes a palette-dispatched spawn through the same SAFE-tier path as spawn()', function (): void {
+    // Locks the bug fix for "executing an artisan command does nothing,
+    // just quits the modal". The palette's client-side `palette()`
+    // factory dispatches `spawn-command` when the operator picks a
+    // 'dev' row while ON /dev/artisan. Before this listener existed,
+    // the event had no sink and the spawn was silently dropped.
+    $user = runnerDeveloper('runner-palette-listener-safe');
+
+    Livewire::actingAs($user)
+        ->test(ArtisanRunnerPage::class)
+        ->dispatch('spawn-command', name: 'cache:clear', args: [], tier: 'safe')
+        ->assertDispatched('toast');
+});
+
+it('onSpawnCommand() listener routes a DESTRUCTIVE name to the triple-gate (defence-in-depth — claimed tier is ignored)', function (): void {
+    // The client-side dispatcher attaches `tier: 'safe'` to every
+    // palette pick because the JSON registry only ever exposes
+    // safe-tier rows. A hostile client could still inject a
+    // destructive command name with `tier: 'safe'`; the listener
+    // routes through spawn(), which authoritatively re-checks the
+    // registry and opens the triple-gate.
+    $user = runnerDeveloper('runner-palette-listener-destructive');
+
+    Livewire::actingAs($user)
+        ->test(ArtisanRunnerPage::class)
+        ->dispatch('spawn-command', name: 'db:restore', args: ['from' => '/tmp/x'], tier: 'safe')
+        ->assertDispatched('triple-gate:open');
+});
+
 it('spawn() routes a DESTRUCTIVE command to the triple-gate instead of spawning it', function (): void {
     $user = runnerDeveloper('runner-spawn-destructive');
 
