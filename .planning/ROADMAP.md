@@ -368,7 +368,7 @@ Plans:
   16. v1.0.0 graduation tag pushed by EXPLICIT user invocation only (per D-18) — first stable release published; auto-update banner detects + verifies v1.0.0 on existing v0.x installs
 
 **UI hint**: yes
-**Plans:** 16 plans
+**Plans:** 22 plans (16 original + 6 split-products from revision iteration 1)
 
 Plans:
 
@@ -376,36 +376,48 @@ Plans:
 
 - [ ] 17-01-PLAN.md — Versioning baseline + release-cadence.md + delete legacy tags (D-01..04 + D-16..18)
 - [ ] 17-02-PLAN.md — PR-gate matrix widen 8.4 → 8.4+8.5 + SHA-pin every third-party GitHub Action (CI-01)
-- [ ] 17-05-PLAN.md — Counterparties backend: module scaffolding + schema + 7-step resolver + ImportPipeline stage + GC job + module boundary arch invariant (A-04 + A-08 + D-43..D-48)
+- [ ] 17-04a-PLAN.md — user_preferences foundation table (shared dependency for Plans 17-04 + 17-06b)
+- [ ] 17-05a-PLAN.md — Counterparties backend scaffold: module + schema + 7-step resolver + 14 unit tests (A-04 + A-08 + D-43..D-48)
 - [ ] 17-07-PLAN.md — LICENSE + NOTICE + SECURITY + CONTRIBUTING + CODE_OF_CONDUCT + README rewrite with install-bypass walkthroughs + brand exports (REL-01..04 + A-05)
-- [ ] 17-08-PLAN.md — noGsdLeakage + SecretsColumnRegistry + noSecretsInLivewireSnapshot arch invariants (REL-05 + REL-07 + D-27 + D-29)
+- [ ] 17-08-PLAN.md — noGsdLeakage (with .docs/ scan extension) + SecretsColumnRegistry + noSecretsInLivewireSnapshot arch invariants (REL-05 + REL-07 + D-27 + D-29)
 
 **Wave 2** *(depends on Wave 1)*
 
-- [ ] 17-03-PLAN.md — release.yml + per-platform smoke + /health endpoint + first-launch APP_KEY sentinel + .env.bundled + CODEOWNERS + gitleaks (CI-02 + CI-05 + CI-06)
-- [ ] 17-06-PLAN.md — Counterparties UI: 3 routes + 5 type-aware profile bodies + triage with keyboard handlers + sidebar + cross-module transaction-row click-through (A-04 + UI-SPEC.md)
+- [ ] 17-03-PLAN.md — release.yml + per-platform smoke (with app_version assertion) + /health endpoint + first-launch APP_KEY sentinel + .env.bundled + CODEOWNERS + gitleaks (CI-02 + CI-05 + CI-06)
+- [ ] 17-05b-PLAN.md — Counterparties backend wiring: ResolveCounterpartyStage + ImportPipeline integration + GC job + boundary arch invariant + Feature test
+- [ ] 17-06a-PLAN.md — Counterparty UI shell: CSS components + 8 x-components + sidebar additions (A-04 + UI-SPEC.md + sketch-findings skill)
+- [ ] 17-09b-PLAN.md — .docs/ tree skeleton: 8 00-index.md files + cicd/local_development/runbooks/legal content (D-31..D-32 + narrower .docs/ scan)
+- [ ] 17-11-PLAN.md — Deep modules review + composer-require-checker + REVIEW-DEEP.md actioned in-phase (REL-06 + D-28)
 
 **Wave 3** *(depends on Wave 2)*
 
-- [ ] 17-04-PLAN.md — Auto-update: ElectronUpdateChannel + Ed25519 manifest signing in release.yml + SHA-512 binary verification + banner UX + skipVersion persistence + Settings docs (UPDATE-01..04 + A-06 + D-19..22)
+- [ ] 17-04-PLAN.md — Auto-update: ElectronUpdateChannel (PUBLIC key in config/auto_update.php via DI) + Ed25519 manifest signing + SHA-512 verification + post-publish verify job + banner UX + skipVersion persistence (UPDATE-01..04 + A-06 + D-19..22 + RESEARCH Q7 RESOLVED)
+- [ ] 17-06b-PLAN.md — Counterparty Livewire pages: 3 routes + 5 type-aware profile bodies + triage with keyboard handlers + counterparty_index_view migration (A-04 + UI-SPEC.md)
+- [ ] 17-09a-PLAN.md — /help/data-locations page + Pest test (REL-08 + D-30)
+- [ ] 17-09c-PLAN.md — 10 ADRs + 5 architecture topics + features/_template (D-32..D-34)
+- [ ] 17-12-PLAN.md — GitHub repo settings interactive walkthrough + capture in branch-protection.md + repo-security-setup.md + issue/PR templates (D-49 + D-50 + A-03)
 
-**Wave 4** *(depends on 17-04 + 17-05 + 17-08)*
+**Wave 4** *(depends on Wave 3)*
 
-- [ ] 17-09-PLAN.md — /help/data-locations page + .docs/ tree skeleton + 10 ADRs + architecture topics + features/_template + runbooks (REL-08 + D-30 + D-31..D-34 + D-38 prep)
+- [ ] 17-06c-PLAN.md — Cross-module transaction-row click-through wiring across Ledger / Recurring / Chains / Categorization (D-46)
 
 **Wave 5** *(depends on Wave 4)*
 
 - [ ] 17-10-PLAN.md — Per-module documentation: 17 modules × 4 files = 68 docs (D-34 + full coverage per A-04)
-- [ ] 17-11-PLAN.md — Deep modules review + composer-require-checker + REVIEW-DEEP.md actioned in-phase (REL-06 + D-28)
 
 **Wave 6** *(depends on Wave 5 — closeout sequence STRICT order)*
 
-- [ ] 17-12-PLAN.md — GitHub repo settings interactive walkthrough + capture in branch-protection.md + repo-security-setup.md + issue/PR templates (D-49 + D-50 + A-03)
 - [ ] 17-13-PLAN.md — Final .planning/ graduation pass (D-38; pre-purge safety net)
+
+**Wave 7** *(depends on Wave 6)*
+
 - [ ] 17-14-PLAN.md — DESTRUCTIVE: .planning/ git-history purge via `git filter-repo` + `.planning/` to `.gitignore` + force-push to private origin + sketch-findings skill rename (D-35..D-37 + D-40..D-42 + A-07)
+
+**Wave 8** *(depends on Wave 7)*
+
 - [ ] 17-15-PLAN.md — First release on v0.1.0-rc.1 + v1.1 milestone setup + repo visibility flip private → public + welcome Discussions post (D-39 + A-07 + Section J + new gap-first-release)
 
-**Wave 7** *(depends on EVERY prior plan + user-triggered — D-18 explicit graduation)*
+**Wave 9** *(depends on EVERY prior plan + user-triggered — D-18 explicit graduation)*
 
 - [ ] 17-16-PLAN.md — v1.0.0 graduation: user-invoked stable release tag + DRAFT → published promotion + auto-update verification (D-18 — ONLY this plan touches v1.0.0)
 
