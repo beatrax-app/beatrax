@@ -12,6 +12,21 @@ use Modules\Ledger\Models\Category;
 
 uses(RefreshDatabase::class);
 
+/**
+ * Expected fixture row count, computed once from the canonical
+ * default-categorization-rules.php so every assertion below uses the
+ * same source of truth. Avoids the magic-number drift where a
+ * fixture shrink to 79 rows silently passes a hardcoded `>=80`
+ * floor (and masks the regression).
+ */
+function fixtureRuleCount(): int
+{
+    /** @var list<array{category: string, field: string, match: string, value: string}> $fixture */
+    $fixture = require base_path('Modules/Categorization/Database/Seeders/default-categorization-rules.php');
+
+    return count($fixture);
+}
+
 beforeEach(function (): void {
     // The rule seeder resolves category_id by slug from the global
     // category tree, so the tree seeder must run first in every test.
@@ -27,8 +42,7 @@ beforeEach(function (): void {
 it('seeds at least the fixture-defined rule count scoped to the user', function (): void {
     $this->app->make(DefaultCategorizationRuleSeeder::class)->run($this->user);
 
-    /** @var int $expectedCount */
-    $expectedCount = count(require base_path('Modules/Categorization/Database/Seeders/default-categorization-rules.php'));
+    $expectedCount = fixtureRuleCount();
 
     $actualCount = CategorizationRule::withoutGlobalScopes()
         ->where('user_id', $this->user->id)
@@ -105,7 +119,7 @@ it('produces a per-user rule set scoped to the second user when re-run', functio
         ->where('user_id', $secondUser->id)
         ->count();
 
-    expect($firstUserCount)->toBeGreaterThanOrEqual(80)
+    expect($firstUserCount)->toBe(fixtureRuleCount())
         ->and($secondUserCount)->toBe($firstUserCount);
 });
 
@@ -172,5 +186,5 @@ it('runs from the beatrax:install command via the UserInstalled listener end-to-
     expect($exit)->toBe(0);
 
     $ruleCount = CategorizationRule::withoutGlobalScopes()->count();
-    expect($ruleCount)->toBeGreaterThanOrEqual(80);
+    expect($ruleCount)->toBe(fixtureRuleCount());
 });

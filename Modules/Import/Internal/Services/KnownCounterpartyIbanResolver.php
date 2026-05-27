@@ -22,6 +22,16 @@ use Modules\Ledger\Models\Account;
  *    consumers receive a typed Account object with `kind`, `iban`,
  *    `id` directly available — no second query in downstream code.
  *
+ * Multi-account-per-kind disambiguation: the schema permits N
+ * accounts per kind per user (e.g. a future ABN AMRO migration on
+ * the same instance where the user owns two `bank`-kind accounts,
+ * or a joint-account variant). The resolver picks the lowest-id
+ * account via `orderBy('id')` for deterministic, schema-portable
+ * behaviour across SQLite versions. Pinning the alias to a
+ * specific Account.id at seed time would be a stronger contract
+ * but requires a migration extension — deferred until the
+ * multi-account-per-kind scenario actually lands in the product.
+ *
  * Cross-user isolation is enforced by an explicit
  * `where('user_id', $userId)` filter on both queries. The
  * `BelongsToUser` global scope on the Eloquent model is a secondary
@@ -49,9 +59,23 @@ final class KnownCounterpartyIbanResolver implements ResolvesKnownCounterpartyIb
             return null;
         }
 
-        return Account::query()
+        // Disambiguation: raw query builder returns the lowest-id
+        // matching account; the Eloquent `find($id)` then hydrates
+        // the full model. The two-step shape sidesteps Larastan's
+        // `staticMethod.dynamicCall` lint on Eloquent's `orderBy()`
+        // while still returning the typed Account model the
+        // contract promises.
+        $accountId = $this->db->connection()
+            ->table('accounts')
             ->where('user_id', $userId)
             ->where('kind', $alias)
-            ->first();
+            ->orderBy('id')
+            ->value('id');
+
+        if (! is_numeric($accountId)) {
+            return null;
+        }
+
+        return Account::query()->find((int) $accountId);
     }
 }

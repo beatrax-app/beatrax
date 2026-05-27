@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Models\ChainResolutionRun;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
@@ -34,20 +35,32 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
  * land enrichments and an enrichment failure cannot land inserts —
  * confirm is atomic across both halves.
  *
- * AFTER the transaction commits the action runs the post-commit block
- * gated on `$result->inserted > 0 || $result->enriched > 0` — re-
- * confirms and zero-row previews short-circuit. Inside that block:
+ * AFTER the transaction commits the action runs a two-stage post-commit
+ * block. Re-confirms (status='confirmed' short-circuit above) skip the
+ * block entirely.
  *
- *   1. `UpsertsCardStatements::upsertForImportRun(...)` promotes every
- *      ICS-kind `statement_summaries` row written under this import_run
- *      into a `card_statements` row (positive open_balance, state=open).
- *      The upsert MUST run BEFORE the chain dispatcher so the
- *      `IcsSettlementResolver` pass sees fresh card_statements rows.
- *   2. A `pending` `chain_resolution_runs` row is inserted so the
- *      wizard's wire:poll has a row to display on its first tick.
- *   3. `ResolveChainLinksJob` is dispatched for the chain resolver.
- *   4. `DispatchesRecurringDetection` is invoked for the recurring
- *      series sweep.
+ *   Stage A — always runs when `$dispatchChain` is true, regardless
+ *   of the recorder counts:
+ *     1. `UpsertsCardStatements::upsertForImportRun(...)` promotes
+ *        every ICS-kind `statement_summaries` row written under this
+ *        import_run into a `card_statements` row (positive
+ *        open_balance, state=open). The upsert is idempotent — its
+ *        UNIQUE constraint is keyed by
+ *        (user_id, account_id, period_start, period_end) so re-
+ *        running for an all-fingerprint-duplicates import produces
+ *        zero inserts, and re-running after a manually-deleted
+ *        card_statements row recovers it. Decoupling from the
+ *        inserted/enriched gate is what makes that recovery
+ *        possible.
+ *
+ *   Stage B — gated on `$result->inserted > 0 || $result->enriched > 0`
+ *   because the chain resolver + recurring sweep have nothing to do
+ *   when no canonical rows changed:
+ *     2. A `pending` `chain_resolution_runs` row is inserted so the
+ *        wizard's wire:poll has a row to display on its first tick.
+ *     3. `ResolveChainLinksJob` is dispatched for the chain resolver.
+ *     4. `DispatchesRecurringDetection` is invoked for the recurring
+ *        series sweep.
  *
  * Dispatching INSIDE the closure would let the queue worker pick up
  * the job before SQLite commits, letting it read stale state.
@@ -186,34 +199,52 @@ final class ConfirmImport implements ConfirmsImports
         // commit. They dispatch ONCE themselves after their own transaction
         // returns. The default `true` preserves the legacy single-run
         // behaviour for every existing caller.
-        if ($dispatchChain && ($result->inserted > 0 || $result->enriched > 0)) {
-            // Promote every ICS-kind statement_summaries row written
-            // under this import_run into a card_statements row before
-            // the chain dispatcher fires. The ICS settlement resolver
-            // reads `card_statements` to match ASN→ICS bulk-iDEAL
-            // settlements against the open statement, so the upsert
-            // MUST precede the dispatch — otherwise the worker would
-            // see an empty card_statements table for the user's fresh
-            // ICS import and write no chain_links.
+        if ($dispatchChain) {
+            // Stage A — always promote every ICS-kind
+            // statement_summaries row written under this import_run
+            // into a card_statements row. The upserter is idempotent
+            // (its UNIQUE constraint is keyed by
+            // (user_id, account_id, period_start, period_end), so a
+            // re-import where every transaction is a fingerprint-
+            // duplicate still produces a fresh card_statements row
+            // when the matching one was manually deleted). The
+            // upsert MUST precede the chain dispatcher so the
+            // IcsSettlementResolver pass sees fresh card_statements
+            // rows; decoupling it from the
+            // inserted/enriched gate is what makes the
+            // missing-card_statements recovery path work.
             $this->cardStatementUpserter->upsertForImportRun($importRunId, $user);
 
-            $now = $this->clock->now()->toDateTimeString();
-            $this->db->connection()->table('chain_resolution_runs')->insert([
-                'user_id' => $user->id,
-                'status' => 'pending',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-            $this->chainDispatcher->dispatchForUser($user->id);
+            // Stage B — chain + recurring dispatch only fires when
+            // the recorder or enrichment writers actually changed
+            // ledger state. A true no-op confirm (every row already
+            // in the ledger, nothing to enrich) skips the dispatches
+            // because the workers have no new work to do.
+            if ($result->inserted > 0 || $result->enriched > 0) {
+                // ChainResolutionRun is treated as a Public model
+                // surface for cross-module reads/writes (the
+                // wizard's wire:poll consumes the same table via
+                // its own query). Eloquent here so any future
+                // cast / boot / default added to the model lands
+                // automatically instead of silently NULL via a
+                // raw insert.
+                ChainResolutionRun::query()->create([
+                    'user_id' => $user->id,
+                    'status' => 'pending',
+                ]);
+                $this->chainDispatcher->dispatchForUser($user->id);
 
-            // Recurring-series detection sweep. Same post-commit gate as the
-            // chain resolver above (inserts/enrichments only) and the same
-            // outside-the-transaction position to avoid the stale-read
-            // pitfall. The job's per-user `ShouldBeUniqueUntilProcessing`
-            // lock collapses this dispatch with a same-user re-detect click
-            // on `/recurring` and with the daily scheduled sweep into a
-            // single queued pass.
-            $this->recurringDispatcher->dispatchForUser($user->id);
+                // Recurring-series detection sweep. Same post-commit
+                // gate as the chain resolver above (inserts /
+                // enrichments only) and the same outside-the-
+                // transaction position to avoid the stale-read
+                // pitfall. The job's per-user
+                // ShouldBeUniqueUntilProcessing lock collapses this
+                // dispatch with a same-user re-detect click on
+                // `/recurring` and with the daily scheduled sweep
+                // into a single queued pass.
+                $this->recurringDispatcher->dispatchForUser($user->id);
+            }
         }
 
         return $result;

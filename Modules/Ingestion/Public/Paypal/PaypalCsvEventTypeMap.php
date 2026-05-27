@@ -76,7 +76,15 @@ final class PaypalCsvEventTypeMap
             'Transfer to bank' => 'parent',
 
             // Forward-compatibility — EN forms that PayPal often
-            // leaves un-localised. Filtered at the adapter boundary.
+            // leaves un-localised in NL exports. Filtered at the
+            // adapter boundary. NOTE: these live under the 'nl' key
+            // so the forward-compat coverage is partial — an
+            // English-only export (no 'en' key in MAP) raises
+            // UnknownPaypalEventTypeException for these same
+            // strings. When non-NL locale support ships, move the
+            // four EN skips into a `_global` fallback bucket that
+            // classify() checks after the language-specific lookup
+            // misses, so EN exports also benefit.
             'Hold' => 'skip',
             'Authorization' => 'skip',
             'Reserve' => 'skip',
@@ -123,6 +131,27 @@ final class PaypalCsvEventTypeMap
 
     public function transactionType(string $eventType, string $language): string
     {
+        // Two distinct miss conditions, two distinct exception types.
+        //
+        //  - Event type not present in MAP at all (or unknown
+        //    language): a user-data condition — PayPal has shipped an
+        //    event-type string we have not catalogued yet. Raise the
+        //    broader UnknownPaypalEventTypeException so callers that
+        //    want to fall through to the amount-sign default can
+        //    catch it.
+        //
+        //  - Event type present in MAP (as `parent`) but missing
+        //    from TRANSACTION_TYPE: a code-internal inconsistency —
+        //    the two tables must stay in lock-step. Raise the
+        //    narrower MissingPaypalTransactionTypeMapException so
+        //    the catch-site surfaces the developer bug at parse
+        //    time rather than silently falling through.
+        if (! isset(self::MAP[$language][$eventType])) {
+            throw new UnknownPaypalEventTypeException(
+                "PayPal CSV parent event type '{$eventType}' for language '{$language}' is not catalogued in PaypalCsvEventTypeMap::MAP. PayPal may have shipped a new event-type string — file an issue with the redacted CSV."
+            );
+        }
+
         if (! isset(self::TRANSACTION_TYPE[$language][$eventType])) {
             throw new MissingPaypalTransactionTypeMapException(
                 "PayPal CSV parent event type '{$eventType}' for language '{$language}' has no Transaction::TYPES mapping. This is a code-internal inconsistency: every event type classified as 'parent' in MAP must have a corresponding TRANSACTION_TYPE entry."

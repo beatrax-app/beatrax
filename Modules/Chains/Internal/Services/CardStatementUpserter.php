@@ -36,11 +36,11 @@ use Modules\Core\Public\Contracts\Clock;
  *      Existing rows' `state` column is preserved — a card_statement
  *      that the state machine moved away from `open` does NOT get
  *      reset by the upserter.
- *   4. Return the count of rows actually inserted (delta between the
- *      pre-call and post-call card_statements counts for this import
- *      run + user). The delta is computed in PHP rather than relying
- *      on the driver-reported affected-row count so the count stays
- *      portable across SQLite and MySQL.
+ *   4. Return the count of rows actually inserted. `insertOrIgnore`
+ *      returns the driver-reported affected-row count, which Laravel
+ *      normalises to an integer across SQLite and MySQL — summing
+ *      those return values is the canonical count without the cost
+ *      of two extra COUNT queries.
  *
  * The `closing_balance_minor` sign convention matches the one the
  * 2026_05_16_010004 back-population migration uses: closing balance is
@@ -81,13 +81,8 @@ final class CardStatementUpserter implements UpsertsCardStatements
             return 0;
         }
 
-        $countBefore = $connection
-            ->table('card_statements')
-            ->where('user_id', $user->id)
-            ->where('import_run_id', $importRunId)
-            ->count();
-
         $now = $this->clock->now()->toDateTimeString();
+        $inserted = 0;
 
         foreach ($candidates as $row) {
             if ($row->period_start === null || $row->period_end === null) {
@@ -99,7 +94,13 @@ final class CardStatementUpserter implements UpsertsCardStatements
 
             $closing = is_numeric($row->closing_balance_minor) ? (int) $row->closing_balance_minor : 0;
 
-            $connection->table('card_statements')->insertOrIgnore([
+            // `insertOrIgnore` returns the number of rows actually
+            // inserted (0 when the UNIQUE constraint short-circuits,
+            // 1 when the row is new). Summing the per-row return
+            // value gives the same count the previous COUNT(*)
+            // diff produced, with one fewer round trip per
+            // statement.
+            $inserted += $connection->table('card_statements')->insertOrIgnore([
                 'user_id' => $user->id,
                 'account_id' => $row->account_id,
                 'import_run_id' => $importRunId,
@@ -113,12 +114,6 @@ final class CardStatementUpserter implements UpsertsCardStatements
             ]);
         }
 
-        $countAfter = $connection
-            ->table('card_statements')
-            ->where('user_id', $user->id)
-            ->where('import_run_id', $importRunId)
-            ->count();
-
-        return $countAfter - $countBefore;
+        return $inserted;
     }
 }

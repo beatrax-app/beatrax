@@ -151,7 +151,51 @@ it('pairs ASN transfer_out with PayPal transfer_in via alias fallback when PayPa
     expect($paypal->pair_transaction_id)->toBe($asnLeg->id);
 });
 
-it('pairs the inverse direction too — PayPal side firing first is a no-op and the ASN side closes the pair', function (): void {
+it('pairs when the ASN-side leg lands strictly BEFORE the PayPal-side leg — reverse alias lookup closes the pair', function (): void {
+    // Regression for the ordering-dependent half-state where the ASN
+    // side persisted first (with its real institution counterparty
+    // IBAN) but found no partner because the PayPal side had not yet
+    // arrived, and then the PayPal side persisted second (with its
+    // empty counterparty_iban) and previously short-circuited rather
+    // than running the reverse alias lookup. The pair MUST close on
+    // the PayPal-side fire.
+    $asnLeg = aliasPairTx($this->user, $this->bank, $this->importRun, [
+        'type' => 'transfer_out',
+        'amount_minor' => -7777,
+        'settled_amount_minor' => -7777,
+        'counterparty_iban' => 'LU89751000135104200E',
+    ]);
+
+    // ASN first — its alias-resolved partner account is PayPal but no
+    // PayPal-side leg exists yet, so the listener writes nothing.
+    $this->events->dispatch(new TransactionImported($asnLeg, $this->user));
+
+    /** @var Transaction $asnAfterFirst */
+    $asnAfterFirst = Transaction::query()->findOrFail($asnLeg->id);
+    expect($asnAfterFirst->pair_transaction_id)->toBeNull();
+
+    // PayPal second — empty counterparty_iban, but the reverse alias
+    // lookup builds the candidate IBAN set
+    // {'PAYPAL', 'LU89751000135104200E'} (own iban + every alias whose
+    // target_account_kind === 'paypal') and finds the now-persisted
+    // ASN partner.
+    $paypalLeg = aliasPairTx($this->user, $this->paypal, $this->importRun, [
+        'type' => 'transfer_in',
+        'amount_minor' => 7777,
+        'settled_amount_minor' => 7777,
+        'counterparty_iban' => '',
+    ]);
+    $this->events->dispatch(new TransactionImported($paypalLeg, $this->user));
+
+    /** @var Transaction $asn */
+    $asn = Transaction::query()->findOrFail($asnLeg->id);
+    /** @var Transaction $paypal */
+    $paypal = Transaction::query()->findOrFail($paypalLeg->id);
+    expect($asn->pair_transaction_id)->toBe($paypalLeg->id);
+    expect($paypal->pair_transaction_id)->toBe($asnLeg->id);
+});
+
+it('pairs symmetrically when PayPal-side leg fires first AND both rows are already persisted — reverse alias lookup closes the pair immediately', function (): void {
     $asnLeg = aliasPairTx($this->user, $this->bank, $this->importRun, [
         'type' => 'transfer_out',
         'amount_minor' => -2500,
@@ -166,16 +210,14 @@ it('pairs the inverse direction too — PayPal side firing first is a no-op and 
     ]);
 
     // PayPal first — its counterparty_iban is empty so the listener
-    // short-circuits and writes nothing. Then ASN fires; the alias
-    // bridge resolves the partner account and the listener pairs
-    // both legs symmetrically.
+    // runs the reverse alias lookup. The ASN partner is ALREADY
+    // persisted (both rows exist via Transaction::create() before
+    // either event fires — this mirrors the canonical in-batch shape
+    // RecordTransactions produces inside its outer DB transaction),
+    // so the reverse lookup finds it and the pair closes on this
+    // single dispatch. A subsequent ASN-side dispatch is then a
+    // defensive no-op because the row is already paired.
     $this->events->dispatch(new TransactionImported($paypalLeg, $this->user));
-
-    /** @var Transaction $paypalAfterFirst */
-    $paypalAfterFirst = Transaction::query()->findOrFail($paypalLeg->id);
-    expect($paypalAfterFirst->pair_transaction_id)->toBeNull();
-
-    $this->events->dispatch(new TransactionImported($asnLeg, $this->user));
 
     /** @var Transaction $asn */
     $asn = Transaction::query()->findOrFail($asnLeg->id);
@@ -183,6 +225,16 @@ it('pairs the inverse direction too — PayPal side firing first is a no-op and 
     $paypal = Transaction::query()->findOrFail($paypalLeg->id);
     expect($asn->pair_transaction_id)->toBe($paypalLeg->id);
     expect($paypal->pair_transaction_id)->toBe($asnLeg->id);
+
+    // ASN-side re-fire is a no-op because both rows are already paired.
+    $this->events->dispatch(new TransactionImported($asn, $this->user));
+
+    /** @var Transaction $asnAfter */
+    $asnAfter = Transaction::query()->findOrFail($asnLeg->id);
+    /** @var Transaction $paypalAfter */
+    $paypalAfter = Transaction::query()->findOrFail($paypalLeg->id);
+    expect($asnAfter->pair_transaction_id)->toBe($paypalLeg->id);
+    expect($paypalAfter->pair_transaction_id)->toBe($asnLeg->id);
 });
 
 it('falls back to alias bridge ONLY when literal lookup misses', function (): void {
