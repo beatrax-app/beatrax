@@ -42,7 +42,7 @@ jobs:
             TZ: Europe/Amsterdam
         steps:
             - name: Check out the source
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Set up PHP
               uses: shivammathur/setup-php@v2
