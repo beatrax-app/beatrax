@@ -137,17 +137,38 @@ it('keeps the child-fee classification for the localised Bankstorting-naar-PP-re
     expect($this->map->classify('Bankstorting naar PP-rekening', 'nl'))->toBe('child-fee');
 })->group('phase-4');
 
-// Exception narrowest-type contract — `classify()` raises the broad
-// supertype, `transactionType()` raises the narrower subtype.
-// `MissingPaypalTransactionTypeMapException` extends
-// `UnknownPaypalEventTypeException`, so we assert the narrowest type
-// explicitly per the contract described in the exception PHPDoc.
+// Exception narrowest-type contract — the two miss conditions raise
+// distinct exception types so the ClassifyTransactionType pipeline
+// stage can catch them separately:
+//
+//   - Event type not present in MAP at all → user-data condition →
+//     raise the broader UnknownPaypalEventTypeException.
+//   - Event type present in MAP (as `parent`) but missing from
+//     TRANSACTION_TYPE → code-internal inconsistency → raise the
+//     narrower MissingPaypalTransactionTypeMapException (which
+//     extends UnknownPaypalEventTypeException).
 it('throws the broad UnknownPaypalEventTypeException from classify() for an event type missing from MAP', function (): void {
     expect(fn () => $this->map->classify('Some Bogus Event Type That Is Not In The Map', 'nl'))
         ->toThrow(UnknownPaypalEventTypeException::class);
 })->group('phase-4');
 
-it('throws the narrower MissingPaypalTransactionTypeMapException from transactionType() for an event type missing from TRANSACTION_TYPE', function (): void {
+it('throws the broad UnknownPaypalEventTypeException from transactionType() for an event type missing from MAP', function (): void {
+    // The narrower MissingPaypalTransactionTypeMapException is
+    // reserved for the case where the event type IS in MAP (as
+    // `parent`) but absent from TRANSACTION_TYPE — a developer-
+    // facing inconsistency, not a user-data condition.
     expect(fn () => $this->map->transactionType('Some Bogus Event Type That Is Not In The Map', 'nl'))
-        ->toThrow(MissingPaypalTransactionTypeMapException::class);
+        ->toThrow(UnknownPaypalEventTypeException::class);
+
+    // And specifically NOT the narrower subtype — the test pins the
+    // hierarchy so a future regression that conflates the two
+    // exception types trips this assertion.
+    try {
+        $this->map->transactionType('Some Bogus Event Type That Is Not In The Map', 'nl');
+        expect(true)->toBeFalse(); // unreachable — the call must throw
+    } catch (MissingPaypalTransactionTypeMapException) {
+        expect(true)->toBeFalse(); // narrower exception is the wrong type for this case
+    } catch (UnknownPaypalEventTypeException) {
+        expect(true)->toBeTrue();
+    }
 })->group('phase-4');
