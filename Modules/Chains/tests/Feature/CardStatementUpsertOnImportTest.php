@@ -83,10 +83,20 @@ it('re-confirming the same import_run does NOT duplicate card_statements rows', 
     expect($countAfterSecond)->toBe($countAfterFirst);
 });
 
-it('zero-row ConfirmImport (no inserts and no enrichments) does NOT call the upserter', function (): void {
-    // Bind a counting spy on the Public contract. The spy implements
-    // the contract and wraps the concrete implementation; it
-    // increments a public counter on every upsertForImportRun() call.
+it('re-confirming an already-confirmed import_run short-circuits via the status=confirmed path and never calls the upserter', function (): void {
+    // The action's first early-return runs when ImportRun.status is
+    // already `confirmed`; it returns an idempotent zero-action
+    // result and skips the post-commit block entirely. This test
+    // pins that invariant via a counting spy on the upserter — the
+    // spy's call count must stay at zero across the re-confirm.
+    //
+    // NOTE: a zero-inserts / zero-enrichments confirm whose
+    // ImportRun is NOT yet `confirmed` DOES call the upserter (the
+    // upserter is idempotent and Stage A of the post-commit block
+    // is no longer gated on the recorder counts — that recovery
+    // path lets a re-import refill a manually-deleted
+    // card_statements row). The `status=confirmed` short-circuit is
+    // the only path that bypasses Stage A.
     $spy = new class($this->app->make(CardStatementUpserter::class)) implements UpsertsCardStatements
     {
         public int $callCount = 0;
@@ -102,9 +112,6 @@ it('zero-row ConfirmImport (no inserts and no enrichments) does NOT call the ups
     };
     $this->app->instance(UpsertsCardStatements::class, $spy);
 
-    // Build an ImportRun whose status is already `confirmed` — the
-    // idempotent short-circuit returns zero inserted / zero enriched
-    // and never reaches the post-commit block.
     $run = ImportRun::query()->create([
         'user_id' => $this->fixtureUser->id,
         'source_format' => 'ics-pdf',
@@ -121,6 +128,6 @@ it('zero-row ConfirmImport (no inserts and no enrichments) does NOT call the ups
     ($this->confirmer)($run->id, $this->fixtureUser);
 
     expect($spy->callCount)->toBe(0);
-    // Sanity — no card_statements rows landed via this no-op confirm.
+    // Sanity — no card_statements rows landed via the re-confirm.
     expect(CardStatement::query()->where('user_id', $this->fixtureUser->id)->count())->toBe(0);
 });
