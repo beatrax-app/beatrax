@@ -17,6 +17,7 @@ use Modules\Chains\Models\ChainResolutionRun;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -144,22 +145,44 @@ it('handle() runs both resolvers and transitions chain_resolution_runs from runn
             'fingerprint_version' => 3,
         ]);
     }
+
+    // ASN bank account + alias bridge so the bulk-iDEAL transfer_out
+    // resolves to the user's ics_card via ResolvesKnownCounterpartyIban.
+    $bankAccount = Account::query()->create([
+        'user_id' => $this->user->id,
+        'name' => 'ASN job bank',
+        'slug' => 'asn-job-bank',
+        'kind' => 'bank',
+        'iban' => 'NL57ASNB0123456789',
+        'default_currency' => 'EUR',
+    ]);
+    app(DefaultKnownCounterpartyIbansSeeder::class)->run($this->user);
+    $asnRun = ImportRun::query()->create([
+        'user_id' => $this->user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/asn-job.csv',
+        'sha256' => str_repeat('a', 64),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
+    ]);
+
     Transaction::query()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->icsAccount->id,
-        'type' => 'transfer_in',
+        'account_id' => $bankAccount->id,
+        'type' => 'transfer_out',
         'posted_at' => '2026-05-29',
         'booked_at' => '2026-05-29 12:00:00',
         'value_date' => '2026-05-29',
-        'amount_minor' => $totalMinor,
+        'amount_minor' => -$totalMinor,
         'currency' => 'EUR',
-        'settled_amount_minor' => $totalMinor,
+        'settled_amount_minor' => -$totalMinor,
         'settled_currency' => 'EUR',
+        'counterparty_iban' => 'NL08ABNA0526650664',
         'counterparty_name' => 'ASN Bulk',
         'counterparty_normalized' => 'asn-bulk',
         'normalization_version' => 1,
-        'source_format' => 'ics-pdf',
-        'import_run_id' => $this->run->id,
+        'source_format' => 'asn-csv',
+        'import_run_id' => $asnRun->id,
         'source_row_index' => 9999,
         'fingerprint' => str_pad('tjob', 64, 't', STR_PAD_LEFT),
         'fingerprint_version' => 3,
