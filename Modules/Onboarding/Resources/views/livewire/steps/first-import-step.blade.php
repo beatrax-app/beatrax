@@ -156,7 +156,7 @@
             <button
                 type="button"
                 class="commit-btn-primary"
-                wire:click="commit"
+                wire:click="commitEverything"
                 @if ($commitDisabled) aria-disabled="true" disabled @endif
             >
                 {{ $commitButtonLabel }}

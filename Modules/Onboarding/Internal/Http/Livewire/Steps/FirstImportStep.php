@@ -48,7 +48,7 @@ use Throwable;
  *   3. One commit footer with the live deduplicated counter + a
  *      single "Commit everything (N transactions) →" primary CTA.
  *
- * `commit()` wraps every `ConfirmImport(..., dispatchChain: false)`
+ * `commitEverything()` wraps every `ConfirmImport(..., dispatchChain: false)`
  * call AND every `accounts.starting_balance_*` UPDATE in a single
  * `DB::transaction()`. On success the step dispatches chain
  * resolution + recurring detection ONCE post-transaction (mirroring
@@ -68,7 +68,7 @@ final class FirstImportStep extends Component
     /**
      * Per-account user confirmations the child cards have aggregated
      * via the `starting-balance.confirmed` event listener. Keyed by
-     * `accountId`. The commit() action writes each entry to
+     * `accountId`. The commitEverything() action writes each entry to
      * `accounts.starting_balance_minor` + `accounts.starting_balance_date`
      * inside the outer transaction.
      *
@@ -104,8 +104,8 @@ final class FirstImportStep extends Component
     public string $commitError = '';
 
     /**
-     * True while the commit() action is executing — disables the
-     * primary CTA and swaps its label to "Committing…".
+     * True while the commitEverything() action is executing — disables
+     * the primary CTA and swaps its label to "Committing…".
      */
     public bool $isCommitting = false;
 
@@ -162,7 +162,7 @@ final class FirstImportStep extends Component
      * (Confirm pill, Save inside the editor, or a conflict-resolution
      * pick). The payload's `accountId` is the load-bearing
      * scope-write — we never trust the caller's accountId on UPDATE;
-     * the `commit()` action carries the `where('user_id', $user->id)`
+     * the `commitEverything()` action carries the `where('user_id', $user->id)`
      * filter so a tampered child dispatch cannot leak a write to a
      * sibling user's account row.
      */
@@ -192,7 +192,7 @@ final class FirstImportStep extends Component
     }
 
     /**
-     * Atomic commit — wraps every stashed ImportRun's
+     * Atomic commit-everything — wraps every stashed ImportRun's
      * `ConfirmImport(..., dispatchChain: false)` call AND every
      * `accounts.starting_balance_*` UPDATE in a single DB
      * transaction. After the transaction returns successfully, the
@@ -203,8 +203,13 @@ final class FirstImportStep extends Component
      * On any throwable the transaction rolls back, the rose error
      * surfaces inline, and the step stays where it is (no state
      * change to wizard_progress, no chain dispatch).
+     *
+     * Method name avoids the literal `commit` because Livewire 3
+     * reserves `$commit` as a magic state-sync action; a wire:click
+     * pointing at a method literally named `commit` resolves to the
+     * magic no-op and never reaches user code.
      */
-    public function commit(
+    public function commitEverything(
         DatabaseManager $db,
         ConfirmsImports $confirmImport,
         CurrentUser $currentUser,
@@ -221,10 +226,7 @@ final class FirstImportStep extends Component
         try {
             $user = $currentUser->user();
 
-            // Diagnostic: log every commit invocation so /dev/logs shows
-            // when the wire:click reaches the server. Helps diagnose
-            // "Commit button does nothing" reports without DevTools.
-            $logger->info('FirstImportStep: commit() invoked.', [
+            $logger->info('FirstImportStep: commitEverything() invoked.', [
                 'user_id' => $user->id,
                 'balance_confirmations' => count($this->balanceConfirmations),
             ]);
@@ -333,7 +335,6 @@ final class FirstImportStep extends Component
         DetectStartingBalancesQuery $detectBalances,
         CurrentUser $currentUser,
         DatabaseManager $db,
-        LoggerInterface $logger,
     ): View {
         $user = $currentUser->user();
 
@@ -355,36 +356,6 @@ final class FirstImportStep extends Component
         // the accounts table now so the blade stays free of
         // cross-module queries.
         $this->accountMeta = $this->loadAccountMeta($user->id, $db, $this->startingBalances);
-
-        // Diagnostic: log render-time button-gating state. Pairs with the
-        // commit() invocation log so "commit button does nothing" reports
-        // can be narrowed to (a) button disabled at render (no ready
-        // section) vs (b) click never reaches the server (front-end /
-        // Livewire wiring) vs (c) click reaches server but commit() returns
-        // early (Nothing-to-commit branch).
-        $sectionDigests = [];
-        $hasAnyReady = false;
-        foreach ($this->preview->sections as $section) {
-            $sectionDigests[] = sprintf(
-                '%s=%s/%d',
-                $section->sourceFormat,
-                $section->status,
-                $section->totalRows,
-            );
-            if ($section->status === 'ready') {
-                $hasAnyReady = true;
-            }
-        }
-        $logger->info('FirstImportStep: render', [
-            'user_id' => $user->id,
-            'stashedImportRunIds' => $this->stashedImportRunIds,
-            'sections' => $sectionDigests,
-            'dedupedTotalCount' => $this->preview->dedupedTotalCount,
-            'hasAnyReadySection' => $hasAnyReady,
-            'isCommitting' => $this->isCommitting,
-            'commitDisabled' => $this->isCommitting || ! $hasAnyReady,
-            'startingBalancesCount' => count($this->startingBalances),
-        ]);
 
         return $views->make('onboarding::livewire.steps.first-import-step', [
             'preview' => $this->preview,
