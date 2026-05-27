@@ -15,6 +15,7 @@
 /storage/app/private
 /storage/app/public
 /storage/app/dev_mode
+/storage/app/inbox
 /storage/framework/cache/*
 !/storage/framework/cache/.gitignore
 /storage/framework/sessions/*
