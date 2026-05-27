@@ -43,9 +43,11 @@ final class RecurringReviewPage extends Component
      * Selected series ids for the bulk-action bar. The Blade view
      * renders a checkbox alongside each row; the sticky action bar
      * surfaces only when the list is non-empty and calls
-     * `bulkApprove()` / `bulkReject()`.
+     * `bulkApprove()` / `bulkReject()`. Values arrive from HTML
+     * checkbox `value=""` attributes, which Livewire deserializes as
+     * strings — the bulk handlers cast to int before dispatching.
      *
-     * @var array<int, int>
+     * @var array<int, int|string>
      */
     public array $selectedIds = [];
 
@@ -106,7 +108,8 @@ final class RecurringReviewPage extends Component
     {
         $user = $currentUser->user();
         $applied = 0;
-        foreach ($this->selectedIds as $id) {
+        foreach ($this->selectedIds as $rawId) {
+            $id = (int) $rawId;
             if ($id <= 0) {
                 continue;
             }
@@ -129,7 +132,8 @@ final class RecurringReviewPage extends Component
     {
         $user = $currentUser->user();
         $applied = 0;
-        foreach ($this->selectedIds as $id) {
+        foreach ($this->selectedIds as $rawId) {
+            $id = (int) $rawId;
             if ($id <= 0) {
                 continue;
             }

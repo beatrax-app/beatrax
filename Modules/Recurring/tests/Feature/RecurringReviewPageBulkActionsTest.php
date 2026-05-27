@@ -128,6 +128,28 @@ it('skips foreign-user ids silently — only the caller`s rows flip (bulk-approv
     expect($approvedForeign)->toBe(0);
 })->group('bulk-approve-skips-foreign-user-ids');
 
+it('coerces string ids from the wire payload before dispatching the action (bulk-approve-accepts-string-ids)', function (): void {
+    // Real browser payload: HTML checkbox `value=""` attributes
+    // round-trip through Livewire as strings, not ints. The bulk
+    // handlers must coerce before calling the int-typed Public
+    // Action — regression for TypeError seen in prod.
+    $stringIds = [];
+    for ($i = 0; $i < 3; $i++) {
+        $stringIds[] = (string) rrbSeries($this->user, 'pending', 'rrb::str::'.$i, 'str-'.$i)->id;
+    }
+
+    Livewire::actingAs($this->user)
+        ->test(RecurringReviewPage::class)
+        ->set('selectedIds', $stringIds)
+        ->call('bulkApprove');
+
+    $approved = RecurringSeries::query()
+        ->where('user_id', $this->user->id)
+        ->where('state', 'approved')
+        ->count();
+    expect($approved)->toBe(3);
+})->group('bulk-approve-accepts-string-ids');
+
 it('renders the sticky action bar markup only when selectedIds is non-empty (bulk-action-bar-renders-only-when-selection-non-empty)', function (): void {
     $series = rrbSeries($this->user, 'pending', 'rrb::bar', 'bar-row');
 
