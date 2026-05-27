@@ -23,6 +23,7 @@ use Modules\DevMode\Internal\CommandRegistry;
 use Modules\DevMode\Internal\Console\PruneDevAuditCommand;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
+use Modules\DevMode\Internal\Http\Livewire\CommandArgPromptModal;
 use Modules\DevMode\Internal\Http\Livewire\CommandPaletteModal;
 use Modules\DevMode\Internal\Http\Livewire\DevOverviewPage;
 use Modules\DevMode\Internal\Http\Livewire\DoctorPanelPage;
@@ -618,6 +619,7 @@ final class DevModeServiceProvider extends ServiceProvider
         // so ⌘K / Ctrl+K fires `palette:open` from anywhere in the
         // app.
         $livewire->component('dev.command-palette-modal', CommandPaletteModal::class);
+        $livewire->component('dev.command-arg-prompt-modal', CommandArgPromptModal::class);
 
         // Register the queue-worker heartbeat via the
         // QueueManager::looping(closure) form. The event-listener

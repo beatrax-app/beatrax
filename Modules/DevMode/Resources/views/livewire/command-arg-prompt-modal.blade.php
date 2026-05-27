@@ -1,0 +1,138 @@
+{{-- Arg-prompt modal for SAFE-tier artisan commands with required
+     or optional arguments. The palette dispatches `command-args:prompt`
+     when an operator picks a 'dev' row whose CommandSpec carries
+     argsSchema; the runner page's fallback modal does the same.
+     Both surfaces converge here so there's a single arg-entry form
+     in the project rather than two parallel implementations.
+
+     Stable Flux modal name (`command-args`) — the component's open()
+     listener dispatches `modal-show` with that literal name, mirroring
+     the chain-drawer fix that removed the Alpine-vs-wire race. --}}
+<div>
+    <flux:modal name="command-args" class="md:w-lg">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Run a command</flux:heading>
+                @if ($spec !== null)
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <span class="font-mono">{{ $spec->name }}</span>
+                        @if ($spec->description !== null && $spec->description !== '')
+                            — {{ $spec->description }}
+                        @endif
+                    </p>
+                @endif
+            </div>
+
+            @if ($submitError !== '')
+                <div
+                    class="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200"
+                    role="alert"
+                    data-testid="command-arg-prompt-error"
+                >
+                    {{ $submitError }}
+                </div>
+            @endif
+
+            @if ($spec === null)
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                    Pick a command from the palette to see its arguments.
+                </p>
+            @elseif (count($argSchema) === 0)
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                    This command takes no arguments — submit to run it.
+                </p>
+            @else
+                @php
+                    $missingRequired = false;
+                    foreach ($argSchema as $arg) {
+                        if (! in_array('required', $arg->rules, true)) {
+                            continue;
+                        }
+                        $val = $values[$arg->name] ?? null;
+                        if ($val === null || $val === '' || $val === []) {
+                            $missingRequired = true;
+                            break;
+                        }
+                    }
+                @endphp
+
+                <div class="space-y-4" data-testid="command-arg-prompt-fields">
+                    @foreach ($argSchema as $idx => $arg)
+                        @php
+                            $isRequired = in_array('required', $arg->rules, true);
+                            $fieldId = 'arg-field-'.$arg->name;
+                        @endphp
+                        <div class="space-y-1.5">
+                            <label
+                                for="{{ $fieldId }}"
+                                class="block text-sm font-medium text-slate-900 dark:text-slate-100"
+                            >
+                                {{ $arg->label !== '' ? $arg->label : $arg->name }}
+                                @if ($isRequired)
+                                    <span class="text-rose-600 dark:text-rose-400" aria-label="required">*</span>
+                                @endif
+                            </label>
+
+                            @if ($arg->type === 'boolean')
+                                <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                    <input
+                                        id="{{ $fieldId }}"
+                                        type="checkbox"
+                                        wire:model.live="values.{{ $arg->name }}"
+                                        @if ($idx === 0) x-init="$nextTick(() => $el.focus())" @endif
+                                        class="rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:bg-slate-900 dark:border-slate-700"
+                                        data-testid="arg-input-{{ $arg->name }}"
+                                    />
+                                    <span>Enable</span>
+                                </label>
+                            @elseif ($arg->type === 'select' && is_array($arg->options))
+                                <select
+                                    id="{{ $fieldId }}"
+                                    wire:model.live="values.{{ $arg->name }}"
+                                    @if ($idx === 0) x-init="$nextTick(() => $el.focus())" @endif
+                                    class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:ring-slate-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                    data-testid="arg-input-{{ $arg->name }}"
+                                >
+                                    <option value="">— select —</option>
+                                    @foreach ($arg->options as $optValue => $optLabel)
+                                        <option value="{{ $optValue }}">{{ $optLabel }}</option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <input
+                                    id="{{ $fieldId }}"
+                                    type="text"
+                                    wire:model.live="values.{{ $arg->name }}"
+                                    @if ($arg->placeholder !== null) placeholder="{{ $arg->placeholder }}" @endif
+                                    @if ($idx === 0) x-init="$nextTick(() => $el.focus())" x-on:keydown.enter.prevent="$wire.submit()" @endif
+                                    class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:ring-slate-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500"
+                                    data-testid="arg-input-{{ $arg->name }}"
+                                />
+                            @endif
+
+                            @if ($arg->helpText !== null && $arg->helpText !== '')
+                                <p class="text-xs text-slate-500 dark:text-slate-400">{{ $arg->helpText }}</p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button
+                    type="button"
+                    wire:click="cancel"
+                    class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                    data-testid="command-arg-prompt-cancel"
+                >Cancel</button>
+                <button
+                    type="button"
+                    wire:click="submit"
+                    @if (isset($missingRequired) && $missingRequired) disabled aria-disabled="true" @endif
+                    class="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+                    data-testid="command-arg-prompt-submit"
+                >Run command</button>
+            </div>
+        </div>
+    </flux:modal>
+</div>
