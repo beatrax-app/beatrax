@@ -1,6 +1,6 @@
 <aside wire:name="core.app-sidebar" class="side" aria-label="Primary" style="--side-w: 248px;">
     <div class="side-brand">
-        <span class="logo" aria-hidden="true">b</span>
+        <img src="https://beatrax.test/build/assets/logo-DEpTnGRK.svg" alt="beatrax" width="24" height="24" class="logo logo-svg" />
         <span>beatrax</span>
         <span class="version-chip">v2.0.0-dev</span>
     </div>
@@ -35,7 +35,18 @@
         <span class="ic" aria-hidden="true">↻</span>
         Recurring
     </a>
-    <a href="https://beatrax.test/chains/review" class="side-item ">
+    
+    <a href="/counterparties" class="side-item ">
+        <span class="ic" aria-hidden="true">◉</span>
+        Counterparties
+    </a>
+    
+    <a href="/counterparties/triage" class="side-item ">
+        <span class="ic" aria-hidden="true">❋</span>
+        Triage
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
+    
+    <a href="https://beatrax.test/chains" class="side-item ">
         <span class="ic" aria-hidden="true">⇉</span>
         Chains
     </a>
