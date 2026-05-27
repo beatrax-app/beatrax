@@ -20,9 +20,11 @@ use Modules\Chains\Internal\Listeners\CreateChainLinkFromHint;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
 use Modules\Chains\Internal\Services\BusChainResolutionDispatcher;
+use Modules\Chains\Internal\Services\CardStatementUpserter;
 use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
+use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\Clock;
@@ -63,6 +65,13 @@ use Modules\Receipts\Public\Events\ChainHintDetected;
  * (`ChainLinkQuery`, `CardStatementQuery`) and the Public action
  * classes (`ConfirmChainLink`, `RejectChainLink`) the review-queue +
  * chain-drawer UI consumes.
+ *
+ * The `UpsertsCardStatements` Public contract binds to
+ * `CardStatementUpserter` and is consumed by
+ * `Modules\Import\Public\Actions\ConfirmImport` at the post-commit
+ * boundary, BEFORE the chain dispatcher fires, so the resolver
+ * pass sees fresh card_statements rows for every ICS PDF the user
+ * just imported.
  */
 final class ChainsServiceProvider extends ServiceProvider
 {
@@ -74,6 +83,8 @@ final class ChainsServiceProvider extends ServiceProvider
         $this->app->singleton(PaypalFundingResolver::class);
         $this->app->singleton(ResolveChainLinksJob::class);
         $this->app->singleton(DispatchesChainResolution::class, BusChainResolutionDispatcher::class);
+        $this->app->bind(UpsertsCardStatements::class, CardStatementUpserter::class);
+        $this->app->singleton(CardStatementUpserter::class);
 
         // Phase 7 Wave 2 — listener that consumes the Receipts module's
         // ChainHintDetected event and INSERTs a candidate chain_links
