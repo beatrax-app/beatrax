@@ -157,16 +157,26 @@ final class DevModeServiceProvider extends ServiceProvider
                 label: 'Show config',
                 tier: 'safe',
                 argsSchema: [
+                    // Laravel's ConfigShowCommand signature is
+                    // `config:show {config}` — the positional argument
+                    // is REQUIRED. An earlier registry draft marked it
+                    // `nullable` with "leave blank to dump every config
+                    // key", which was wrong: a no-arg invocation made
+                    // Symfony Console abort with
+                    // "Not enough arguments (missing: \"config\")".
+                    // The spawn-time required-arg guard now refuses
+                    // to spawn this command without a value; the
+                    // help-text reflects the correct contract.
                     new ArgSpec(
-                        name: 'name',
+                        name: 'config',
                         label: 'Config key',
                         type: 'text',
-                        rules: ['nullable', 'string', 'max:255'],
-                        placeholder: 'app.name (optional)',
-                        helpText: 'Leave blank to dump every config key.',
+                        rules: ['required', 'string', 'max:255'],
+                        placeholder: 'app.name',
+                        helpText: 'The config file or dotted key to print, e.g. `app` or `database.connections.sqlite`.',
                     ),
                 ],
-                description: 'Print the value at the given dotted config key (or the full tree).',
+                description: 'Print the value at the given dotted config key.',
             ),
             new CommandSpec(
                 name: 'view:clear',

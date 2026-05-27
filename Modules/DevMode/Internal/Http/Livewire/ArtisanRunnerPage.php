@@ -20,6 +20,7 @@ use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
+use Modules\DevMode\Public\Dto\ArgSpec;
 
 /**
  * `/dev/artisan` runner page.
@@ -135,8 +136,68 @@ final class ArtisanRunnerPage extends Component
             return;
         }
 
+        // Pre-spawn required-arg guard.
+        //
+        // Several SAFE-tier registry entries declare arguments whose
+        // Laravel-command-side signature is REQUIRED (e.g.
+        // `config:show {config}`). The palette pick path dispatches
+        // `spawn-command` with `args: []`, so without this guard the
+        // spawner builds `php artisan config:show` (no args) and
+        // Symfony Console aborts with "Not enough arguments
+        // (missing: \"config\")". The error landed in the production
+        // log without any surface visible to the operator — the
+        // user-visible symptom was "the modal just closes and
+        // nothing happens".
+        //
+        // Validate against the schema before spawning: if any arg
+        // whose rules contain 'required' is absent (or present but
+        // null / empty-string), refuse and surface a toast naming
+        // the missing key(s). The future arg-prompt modal will
+        // intercept earlier on the palette path; until then, the
+        // toast tells the operator exactly what's missing so they
+        // can re-pick from /dev/artisan's fallback modal (which is
+        // also a future arg-form surface) or use the CLI.
+        $missing = $this->missingRequiredArgs($spec->argsSchema, $args);
+        if ($missing !== []) {
+            $this->dispatch(
+                'toast',
+                message: sprintf(
+                    "Can't run %s — needs %s: %s",
+                    $command,
+                    count($missing) === 1 ? 'argument' : 'arguments',
+                    implode(', ', $missing),
+                ),
+            );
+
+            return;
+        }
+
         $runId = $spawner->start($command, $args, $user->id(), 'safe');
         $this->dispatch('toast', message: 'Started '.$command.' (run '.$runId.')');
+    }
+
+    /**
+     * Return the list of arg labels whose `rules` contain 'required'
+     * and whose value is missing or empty in the supplied args map.
+     *
+     * @param  list<ArgSpec>  $schema
+     * @param  array<string, mixed>  $args
+     * @return list<string>
+     */
+    private function missingRequiredArgs(array $schema, array $args): array
+    {
+        $missing = [];
+        foreach ($schema as $arg) {
+            if (! in_array('required', $arg->rules, true)) {
+                continue;
+            }
+            $value = $args[$arg->name] ?? null;
+            if ($value === null || $value === '' || $value === []) {
+                $missing[] = $arg->label !== '' ? $arg->label : $arg->name;
+            }
+        }
+
+        return $missing;
     }
 
     /**
