@@ -233,6 +233,47 @@ it('spawn() on the runner page invokes the spawner and registers a run record fo
     expect($messages)->not->toBeEmpty();
 });
 
+it('spawn() refuses to spawn a SAFE-tier command whose required args are missing and surfaces a clear toast', function (): void {
+    // Pre-spawn required-arg guard. Locks the fix for the silent-
+    // failure user report — picking config:show from the palette
+    // used to fire `php artisan config:show` with no args; Symfony
+    // Console aborted with "Not enough arguments (missing:
+    // \"config\")" and the only surface for the failure was the
+    // production log. The guard now refuses to spawn and toasts
+    // the missing arg name, so the operator knows immediately
+    // what's wrong.
+    $user = runnerDeveloper('runner-required-arg-guard');
+
+    Livewire::actingAs($user)
+        ->test(ArtisanRunnerPage::class)
+        ->call('spawn', 'config:show', [])
+        ->assertDispatched(
+            'toast',
+            fn (string $event, array $params) => isset($params['message'])
+                && is_string($params['message'])
+                && str_contains($params['message'], 'config:show')
+                && str_contains($params['message'], 'Config key'),
+        );
+});
+
+it('spawn() proceeds when every required arg has a value', function (): void {
+    if (! extension_loaded('posix')) {
+        $this->markTestSkipped('posix extension required for spawn-then-tail');
+    }
+
+    $user = runnerDeveloper('runner-required-arg-supplied');
+
+    Livewire::actingAs($user)
+        ->test(ArtisanRunnerPage::class)
+        ->call('spawn', 'config:show', ['config' => 'app'])
+        ->assertDispatched(
+            'toast',
+            fn (string $event, array $params) => isset($params['message'])
+                && is_string($params['message'])
+                && str_starts_with($params['message'], 'Started config:show'),
+        );
+});
+
 it('onSpawnCommand() listener routes a palette-dispatched spawn through the same SAFE-tier path as spawn()', function (): void {
     // Locks the bug fix for "executing an artisan command does nothing,
     // just quits the modal". The palette's client-side `palette()`
