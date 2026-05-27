@@ -93,19 +93,37 @@ export const palette = (registry, recent) => ({
     },
     dispatchEntry(item) {
         if (item.source === 'dev' && item.name) {
-            // The palette dispatches the spawn intent only — the arg
-            // form lives on /dev/artisan. DESTRUCTIVE-tier commands
-            // never reach this branch (the server-side JSON-emit
-            // filter excludes them; the runner page owns destructive
-            // execution through the triple-gate).
+            // DESTRUCTIVE-tier commands never reach this branch (the
+            // server-side JSON-emit filter excludes them; the runner
+            // page owns destructive execution through the triple-
+            // gate).
             //
-            // When the operator is ON /dev/artisan, the runner page
-            // is mounted and listens for the spawn-command event.
-            // When they are anywhere else, dispatching first and then
-            // navigating loses the dispatch (Livewire unmounts before
-            // the runner page hydrates). Instead, navigate to
-            // /dev/artisan?spawn=<name> and let the runner page's
-            // mount() consume the query param.
+            // Two SAFE-tier sub-paths:
+            //
+            //   1. Command HAS args (the CommandSpec carries an
+            //      argsSchema, surfaced as `hasArgs: true` on the
+            //      registry JSON) → open the arg-prompt modal so
+            //      the operator fills the form before the spawn
+            //      fires. The modal is mounted globally and listens
+            //      for `command-args:prompt` from every layout.
+            //
+            //   2. Command has NO args → dispatch `spawn-command`
+            //      directly. The runner page's onSpawnCommand
+            //      listener fires the actual spawn when ON
+            //      /dev/artisan; off-page, fall through to the
+            //      ?spawn= navigation so the runner page's mount()
+            //      consumes the intent.
+            if (item.hasArgs) {
+                if (window.Livewire) {
+                    window.Livewire.dispatch('command-args:prompt', {
+                        name: item.name,
+                        tier: item.tier || 'safe',
+                        prefill: item.resolvedArgs || {},
+                    });
+                }
+                return;
+            }
+
             const onRunnerPage = typeof window !== 'undefined'
                 && window.location.pathname.startsWith('/dev/artisan');
 

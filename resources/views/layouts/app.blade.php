@@ -148,6 +148,14 @@
                 see the labels.
             --}}
             @livewire('dev.command-palette-modal')
+            {{-- Arg-prompt modal for SAFE-tier commands with args
+                 (config:show, beatrax:reset-password, etc.). The
+                 palette dispatches `command-args:prompt` when the
+                 picked command's CommandSpec carries argsSchema;
+                 the form submits as `spawn-command` so the runner
+                 page's onSpawnCommand listener fires the actual
+                 spawn.  --}}
+            @livewire('dev.command-arg-prompt-modal')
         @endauth
         @guest
             @yield('content')

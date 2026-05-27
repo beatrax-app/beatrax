@@ -159,7 +159,7 @@ final class CommandPaletteModal extends Component
      * top of the EnsureDeveloperMode middleware on the routes
      * themselves.
      *
-     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, keywords: list<string>}>
+     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
      */
     public function buildRegistry(
         CurrentUser $user,
@@ -191,6 +191,7 @@ final class CommandPaletteModal extends Component
                 'handler' => null,
                 'name' => null,
                 'tier' => null,
+                'hasArgs' => false,
                 'keywords' => $entry->keywords,
             ];
         }
@@ -201,7 +202,16 @@ final class CommandPaletteModal extends Component
             // disasters; they remain reachable via the per-row
             // Re-run affordance on the artisan timeline, which
             // routes through the triple-gate.
+            //
+            // `hasArgs` lets the client-side dispatcher in palette.js
+            // choose between direct-spawn (no args) and the arg-prompt
+            // modal (any args at all — required OR optional, since
+            // the user might still want to fill an optional value).
+            // Computed server-side so the per-row bool is on the
+            // registry JSON the client already receives — no extra
+            // round trip.
             foreach ($commands->safe() as $spec) {
+                $hasArgs = count($spec->argsSchema) > 0;
                 $registry[] = [
                     'id' => 'dev.cmd.'.$spec->name,
                     'label' => 'Run '.$spec->name,
@@ -209,9 +219,10 @@ final class CommandPaletteModal extends Component
                     'hint' => $spec->label,
                     'source' => 'dev',
                     'url' => null,
-                    'handler' => 'spawn-command',
+                    'handler' => $hasArgs ? 'command-args:prompt' : 'spawn-command',
                     'name' => $spec->name,
                     'tier' => 'safe',
+                    'hasArgs' => $hasArgs,
                     'keywords' => [$spec->label, $spec->description ?? ''],
                 ];
             }
@@ -228,6 +239,7 @@ final class CommandPaletteModal extends Component
                 'handler' => $action->handlerEvent,
                 'name' => null,
                 'tier' => null,
+                'hasArgs' => false,
                 'keywords' => $action->keywords,
             ];
         }

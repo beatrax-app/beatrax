@@ -185,6 +185,13 @@
              resolved through. --}}
         @livewire('dev.command-palette-modal')
 
+        {{-- Arg-prompt modal for SAFE-tier commands with args.
+             Listens for `command-args:prompt` — palette picks for
+             commands with argsSchema dispatch that event instead of
+             `spawn-command` so the operator fills the form before
+             the spawn fires. --}}
+        @livewire('dev.command-arg-prompt-modal')
+
         @livewireScripts
         @fluxScripts
     </body>
