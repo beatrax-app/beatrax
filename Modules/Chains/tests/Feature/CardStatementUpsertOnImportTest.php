@@ -109,6 +109,11 @@ it('re-confirming an already-confirmed import_run short-circuits via the status=
 
             return $this->inner->upsertForImportRun($importRunId, $user);
         }
+
+        public function upsertForUser(User $user): int
+        {
+            return $this->inner->upsertForUser($user);
+        }
     };
     $this->app->instance(UpsertsCardStatements::class, $spy);
 

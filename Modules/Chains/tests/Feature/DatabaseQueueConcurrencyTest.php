@@ -10,13 +10,16 @@ use Illuminate\Support\Facades\Cache;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
+use Modules\Chains\Internal\Resolvers\RetypeByAliasResolver;
 use Modules\Chains\Models\CardStatement;
 use Modules\Chains\Models\ChainResolutionRun;
+use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
 /*
  * SC2 — proves the shipped `database` queue + cache-lock slice keeps
@@ -169,6 +172,9 @@ it('writes exactly one chain_resolution_runs row when handle runs once', functio
     $job->handle(
         $this->app->make(DatabaseManager::class),
         $this->app->make(Clock::class),
+        $this->app->make(RetypeByAliasResolver::class),
+        $this->app->make(PairsTransferLegs::class),
+        $this->app->make(UpsertsCardStatements::class),
         $this->app->make(IcsSettlementResolver::class),
         $this->app->make(PaypalFundingResolver::class),
     );
