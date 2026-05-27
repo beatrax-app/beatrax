@@ -20,9 +20,9 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
  *
  *  2. The `skipRest` action marks every non-`done` row `skipped` and
  *     redirects to `/`. A user who has already done `welcome` and
- *     `connect-bank` keeps those rows intact; the remaining four
- *     (connect-card, connect-email, first-import, done) all flip to
- *     `skipped` in one call.
+ *     `connect-bank` keeps those rows intact; the remaining five
+ *     (connect-paypal, connect-card, connect-email, first-import, done)
+ *     all flip to `skipped` in one call.
  *
  *  3. The `skip` handler is a no-op on non-skippable steps (welcome,
  *     first-import, done) — the WizardStepRegistry's `isSkippable`
@@ -53,7 +53,7 @@ it('advances past a skippable step and marks the wizard_progress row as skipped'
     Livewire::test(SetupWizard::class)
         ->assertSet('currentStepKey', 'connect-bank')
         ->dispatch('wizard.step.skipped')
-        ->assertSet('currentStepKey', 'connect-card');
+        ->assertSet('currentStepKey', 'connect-paypal');
 
     $status = DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
@@ -64,9 +64,10 @@ it('advances past a skippable step and marks the wizard_progress row as skipped'
 });
 
 it('marks every non-done step skipped and redirects to / when skipRest is called', function (): void {
-    // User has finished welcome + connect-bank; the remaining four
-    // rows (connect-card, connect-email, first-import, done) should
-    // all flip to skipped when the user hits "Resume later →".
+    // User has finished welcome + connect-bank; the remaining five
+    // rows (connect-paypal, connect-card, connect-email, first-import,
+    // done) should all flip to skipped when the user hits "Resume
+    // later →".
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
         ->where('step_key', 'welcome')
@@ -77,7 +78,7 @@ it('marks every non-done step skipped and redirects to / when skipRest is called
         ->update(['status' => 'done']);
 
     Livewire::test(SetupWizard::class)
-        ->assertSet('currentStepKey', 'connect-card')
+        ->assertSet('currentStepKey', 'connect-paypal')
         ->call('skipRest')
         ->assertRedirect('/');
 
@@ -95,7 +96,7 @@ it('marks every non-done step skipped and redirects to / when skipRest is called
         ->pluck('step_key')
         ->all();
     sort($skippedRows);
-    expect($skippedRows)->toBe(['connect-card', 'connect-email', 'done', 'first-import']);
+    expect($skippedRows)->toBe(['connect-card', 'connect-email', 'connect-paypal', 'done', 'first-import']);
 });
 
 it('is a no-op on non-skippable steps', function (): void {
