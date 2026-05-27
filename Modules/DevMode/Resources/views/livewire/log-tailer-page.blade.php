@@ -99,7 +99,7 @@
             </template>
             <template x-for="line in visibleLines" :key="line.id">
                 <div
-                    class="cursor-pointer border-l-2 border-b border-b-slate-800/60 hover:bg-slate-900/60"
+                    class="group cursor-pointer border-l-2 border-b border-b-slate-800/60 hover:bg-slate-900/60"
                     x-bind:class="severityRule(line.severity)"
                     x-on:click="toggleExpand(line)"
                     x-bind:data-severity="line.severity"
@@ -119,6 +119,36 @@
                             class="ml-2 text-[10px] text-slate-300 rounded bg-slate-700 px-1.5 py-0.5 shrink-0 tabular-nums"
                             x-text="'×' + line.count"
                         ></span>
+                        {{-- Row actions: copy + dismiss. Visible on hover or
+                             when the row is expanded so the row chrome stays
+                             quiet at rest. stop.prevent on each click so the
+                             button does not also toggle the expand handler
+                             that lives on the row container. --}}
+                        <div
+                            class="shrink-0 ml-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+                            x-bind:class="line.expanded ? 'opacity-100' : ''"
+                        >
+                            <button
+                                type="button"
+                                x-on:click.stop.prevent="copyLine(line)"
+                                x-bind:title="line.copiedAt ? 'Copied' : 'Copy full entry'"
+                                x-bind:aria-label="line.copiedAt ? 'Copied to clipboard' : 'Copy log entry'"
+                                class="rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-300 hover:bg-slate-700 hover:text-slate-100"
+                                data-testid="log-copy-button"
+                            >
+                                <span x-text="line.copiedAt ? '✓' : 'Copy'"></span>
+                            </button>
+                            <button
+                                type="button"
+                                x-on:click.stop.prevent="dismissLine(line)"
+                                title="Dismiss from view (does not modify the log file)"
+                                aria-label="Dismiss log entry from view"
+                                class="rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-400 hover:bg-rose-900/40 hover:text-rose-300"
+                                data-testid="log-dismiss-button"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
                     </div>
                     <template x-if="line.expanded && line.continuation">
                         <div class="pl-[208px] pr-3 pb-2 text-[10.5px] text-slate-400 whitespace-pre-wrap break-words" x-text="line.continuation"></div>
@@ -292,6 +322,11 @@
                         continuation: '',
                         count: 1,
                         expanded: false,
+                        // null until the user clicks Copy — then a timestamp
+                        // that the button uses to flip its label to ✓ for
+                        // ~1.5s before reverting. Per-line so multiple
+                        // adjacent copies don't collide.
+                        copiedAt: null,
                     };
                 },
 
@@ -367,6 +402,64 @@
 
                 toggleExpand(line) {
                     line.expanded = !line.expanded;
+                },
+
+                // Build a plain-text version of the entry suitable for
+                // pasting into a chat / bug report. Includes the
+                // continuation block (stack trace, JSON payload) when
+                // present, so a single click captures the full failure
+                // context, not just the headline.
+                renderLineForClipboard(line) {
+                    const head = '[' + line.timestamp + '] '
+                        + line.channel + '.' + line.severity + ': '
+                        + (line.message || line.raw);
+                    return line.continuation
+                        ? head + '\n' + line.continuation
+                        : head;
+                },
+
+                async copyLine(line) {
+                    const text = this.renderLineForClipboard(line);
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            await navigator.clipboard.writeText(text);
+                        } else {
+                            // Fallback for old Electron / non-secure contexts:
+                            // a temporary textarea + execCommand('copy').
+                            // The packaged app runs file:// in some webview
+                            // contexts where navigator.clipboard is gated.
+                            const ta = document.createElement('textarea');
+                            ta.value = text;
+                            ta.style.position = 'fixed';
+                            ta.style.opacity = '0';
+                            document.body.appendChild(ta);
+                            ta.focus();
+                            ta.select();
+                            try { document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+                        }
+                        line.copiedAt = Date.now();
+                        // Revert the ✓ label after the user has had time
+                        // to register it. Captured `line` reference is the
+                        // same object Alpine renders, so the assignment
+                        // triggers a re-render.
+                        setTimeout(() => { line.copiedAt = null; }, 1500);
+                    } catch (e) {
+                        this.statusMessage = 'Copy failed: ' + (e && e.message ? e.message : 'clipboard unavailable');
+                    }
+                },
+
+                // Hide-from-view only. The on-disk log file is untouched —
+                // this is a client-side buffer prune so a noisy row can be
+                // cleared from a screenshare without scrolling past it. A
+                // fresh poll that re-fetches the same offset will NOT
+                // resurrect the row because the tail offset advances; the
+                // row reappears only on an explicit page reload that
+                // restarts the buffer from scratch.
+                dismissLine(line) {
+                    const idx = this.buffer.findIndex((l) => l.id === line.id);
+                    if (idx >= 0) {
+                        this.buffer.splice(idx, 1);
+                    }
                 },
             }));
         });
