@@ -137,6 +137,29 @@ it('emits a /dev/logs deep-link href with severity + contains query parameters',
     expect($entries[0]['href'])->toContain('cannot');
 });
 
+it('href contains filter NEVER includes the ellipsis truncation suffix (user-reported regression)', function (): void {
+    // User report: "click on an error on the dev overview does not
+    // show the record properly because it includes the truncate
+    // characters, so the search fails (the …)".
+    //
+    // The displayed message excerpt uses '…' to signal truncation,
+    // but the URL's `contains` filter is a literal substring match
+    // against the source log line at /dev/logs. '…' never appears
+    // in the source — appending it to the href silently makes the
+    // deep-link return zero rows.
+    $longMessage = str_repeat('lorem ', 60); // ~360 chars
+    $reader = readerWithLogFixture('[2026-05-24 12:00:01] local.ERROR: '.$longMessage.PHP_EOL);
+
+    $entries = $reader->recent(5);
+
+    expect($entries)->toHaveCount(1);
+    // The display message MUST end in '…' (truncation indicator).
+    expect($entries[0]['message'])->toEndWith('…');
+    // The href contains value MUST NOT contain the ellipsis at all.
+    expect($entries[0]['href'])->not->toContain('%E2%80%A6'); // urlencoded '…'
+    expect($entries[0]['href'])->not->toContain('…');
+});
+
 it('drops lines that do not match the Laravel log format when no preceding entry exists to fold into', function (): void {
     $reader = readerWithLogFixture(
         'junk line at the start'.PHP_EOL.
