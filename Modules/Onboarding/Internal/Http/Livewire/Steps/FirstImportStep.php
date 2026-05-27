@@ -29,13 +29,13 @@ use Throwable;
  * This step renders a single "review everything we found, then commit"
  * page. On mount it reads
  * the ImportRun ids the connector steps stashed into
- * `wizard_progress.data` (the bank step writes one int, the card step
- * writes an int array; PayPal will land alongside when that connector
- * ships) and feeds the union into `BuildConsolidatedPreviewQuery`,
- * which applies the user-id boundary + stale + already-confirmed
- * filters and groups survivors by source format. The step also feeds
- * the same id list into `DetectStartingBalancesQuery` to surface a
- * `StartingBalanceCandidate` per detected account.
+ * `wizard_progress.data` (the bank step writes one int, the PayPal step
+ * writes one int, the card step writes an int array) and feeds the
+ * union into `BuildConsolidatedPreviewQuery`, which applies the user-id
+ * boundary + stale + already-confirmed filters and groups survivors by
+ * source format. The step also feeds the same id list into
+ * `DetectStartingBalancesQuery` to surface a `StartingBalanceCandidate`
+ * per detected account.
  *
  * The body renders:
  *
@@ -334,7 +334,7 @@ final class FirstImportStep extends Component
      * `wizard_progress.data` for the current user, union the int +
      * int-array values into a single deduplicated list of ImportRun
      * ids, and preserve insertion order so the consolidated preview
-     * orders bank → ICS card → PayPal sections deterministically.
+     * orders sections bank → PayPal → ICS card → email deterministically.
      *
      * Uses raw `DatabaseManager::table()` rather than
      * `WizardProgress::query()` so the explicit user-scope filter is
@@ -349,8 +349,8 @@ final class FirstImportStep extends Component
         $rows = $db->connection()
             ->table('wizard_progress')
             ->where('user_id', $userId)
-            ->whereIn('step_key', ['connect-bank', 'connect-card', 'connect-email'])
-            ->orderByRaw("CASE step_key WHEN 'connect-bank' THEN 1 WHEN 'connect-card' THEN 2 ELSE 3 END")
+            ->whereIn('step_key', ['connect-bank', 'connect-paypal', 'connect-card', 'connect-email'])
+            ->orderByRaw("CASE step_key WHEN 'connect-bank' THEN 1 WHEN 'connect-paypal' THEN 2 WHEN 'connect-card' THEN 3 ELSE 4 END")
             ->get(['step_key', 'data']);
 
         $ids = [];
@@ -367,6 +367,11 @@ final class FirstImportStep extends Component
             $bankId = $decoded['bank_import_run_id'] ?? null;
             if (is_int($bankId) && $bankId > 0) {
                 $ids[] = $bankId;
+            }
+
+            $paypalId = $decoded['paypal_import_run_id'] ?? null;
+            if (is_int($paypalId) && $paypalId > 0) {
+                $ids[] = $paypalId;
             }
 
             $cardIds = $decoded['card_import_run_ids'] ?? null;
