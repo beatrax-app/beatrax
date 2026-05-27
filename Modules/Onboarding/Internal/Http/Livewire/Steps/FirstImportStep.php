@@ -333,6 +333,7 @@ final class FirstImportStep extends Component
         DetectStartingBalancesQuery $detectBalances,
         CurrentUser $currentUser,
         DatabaseManager $db,
+        LoggerInterface $logger,
     ): View {
         $user = $currentUser->user();
 
@@ -354,6 +355,36 @@ final class FirstImportStep extends Component
         // the accounts table now so the blade stays free of
         // cross-module queries.
         $this->accountMeta = $this->loadAccountMeta($user->id, $db, $this->startingBalances);
+
+        // Diagnostic: log render-time button-gating state. Pairs with the
+        // commit() invocation log so "commit button does nothing" reports
+        // can be narrowed to (a) button disabled at render (no ready
+        // section) vs (b) click never reaches the server (front-end /
+        // Livewire wiring) vs (c) click reaches server but commit() returns
+        // early (Nothing-to-commit branch).
+        $sectionDigests = [];
+        $hasAnyReady = false;
+        foreach ($this->preview->sections as $section) {
+            $sectionDigests[] = sprintf(
+                '%s=%s/%d',
+                $section->sourceFormat,
+                $section->status,
+                $section->totalRows,
+            );
+            if ($section->status === 'ready') {
+                $hasAnyReady = true;
+            }
+        }
+        $logger->info('FirstImportStep: render', [
+            'user_id' => $user->id,
+            'stashedImportRunIds' => $this->stashedImportRunIds,
+            'sections' => $sectionDigests,
+            'dedupedTotalCount' => $this->preview->dedupedTotalCount,
+            'hasAnyReadySection' => $hasAnyReady,
+            'isCommitting' => $this->isCommitting,
+            'commitDisabled' => $this->isCommitting || ! $hasAnyReady,
+            'startingBalancesCount' => count($this->startingBalances),
+        ]);
 
         return $views->make('onboarding::livewire.steps.first-import-step', [
             'preview' => $this->preview,
