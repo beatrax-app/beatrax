@@ -7,6 +7,7 @@ namespace Modules\Categorization\Providers;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Categorization\Database\Seeders\DefaultCategorizationRuleSeeder;
 use Modules\Categorization\Internal\Http\Livewire\CategorizationProvenancePanel;
 use Modules\Categorization\Internal\Http\Livewire\CorrectionDivergenceToast;
 use Modules\Categorization\Internal\Http\Livewire\InlineCategoryPicker;
@@ -14,6 +15,7 @@ use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
 use Modules\Categorization\Internal\Http\Livewire\RulesPage;
 use Modules\Categorization\Internal\Http\Livewire\TriageInbox;
 use Modules\Categorization\Internal\Listeners\MerchantMemoryWriter;
+use Modules\Categorization\Internal\Listeners\SeedDefaultCategorizationRules;
 use Modules\Categorization\Internal\Listeners\SeedDefaultCategoryTree;
 use Modules\Categorization\Internal\Pipeline\ApplyAutoCategoryStage;
 use Modules\Categorization\Internal\Services\RuleEvaluator;
@@ -37,8 +39,12 @@ use Modules\Core\Public\Events\UserInstalled;
  *   default implementation (routes writes through Ledger's
  *   `UpdatesTransactionCategory`).
  * - registers `UncategorizedTriageQuery` as a stateless singleton.
- * - listens for `UserInstalled` and seeds the default category tree
- *   without coupling Core to Categorization.
+ * - listens for `UserInstalled` and runs two seeders in order:
+ *   `SeedDefaultCategoryTree` (global default categories,
+ *   `user_id = NULL`) followed by `SeedDefaultCategorizationRules`
+ *   (per-user universal-merchant rule set keyed off the just-seeded
+ *   categories). The category tree precedes the rule seeder so every
+ *   rule's category slug resolves at insert time.
  * - registers the two Livewire components rendered on `/uncategorized`
  *   and inside the `/transactions` rows.
  * - loads migrations, routes, and views.
@@ -62,6 +68,7 @@ final class CategorizationServiceProvider extends ServiceProvider
         // avoids a fresh container resolution per TransactionCategorized
         // dispatch and matches the binding pattern other listeners use.
         $this->app->singleton(MerchantMemoryWriter::class);
+        $this->app->singleton(DefaultCategorizationRuleSeeder::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
@@ -72,6 +79,7 @@ final class CategorizationServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'categorization');
 
         $events->listen(UserInstalled::class, SeedDefaultCategoryTree::class);
+        $events->listen(UserInstalled::class, SeedDefaultCategorizationRules::class);
         $events->listen(TransactionCategorized::class, [MerchantMemoryWriter::class, 'handle']);
 
         $livewire->component('categorization.triage-inbox', TriageInbox::class);
