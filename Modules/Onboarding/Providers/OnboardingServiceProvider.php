@@ -13,6 +13,7 @@ use Modules\Onboarding\Internal\Http\Livewire\StartingBalanceCard;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectBankStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectCardStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectEmailStep;
+use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectPaypalStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\DoneStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\FirstImportStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\WelcomeStep;
@@ -35,10 +36,10 @@ use Modules\Onboarding\Public\Services\WizardProgressQuery;
  *  - registers the `onboarding::` Blade view namespace so the wizard's
  *    blade views can extend the wizard layout.
  *  - registers the SetupWizard parent + WelcomeStep + DoneStep Livewire
- *    components AND the four connector-step Livewire components
- *    (connect-bank, connect-card, connect-email, first-import) plus
- *    the StartingBalanceCard child component under the
- *    `onboarding.*` alias namespace.
+ *    components AND the five connector-step Livewire components
+ *    (connect-bank, connect-paypal, connect-card, connect-email,
+ *    first-import) plus the StartingBalanceCard child component under
+ *    the `onboarding.*` alias namespace.
  */
 final class OnboardingServiceProvider extends ServiceProvider
 {
@@ -70,6 +71,7 @@ final class OnboardingServiceProvider extends ServiceProvider
         $livewire->component('onboarding.steps.welcome-step', WelcomeStep::class);
         $livewire->component('onboarding.steps.done-step', DoneStep::class);
         $livewire->component('onboarding.steps.connect-bank-step', ConnectBankStep::class);
+        $livewire->component('onboarding.steps.connect-paypal-step', ConnectPaypalStep::class);
         $livewire->component('onboarding.steps.connect-card-step', ConnectCardStep::class);
         $livewire->component('onboarding.steps.connect-email-step', ConnectEmailStep::class);
         $livewire->component('onboarding.steps.first-import-step', FirstImportStep::class);

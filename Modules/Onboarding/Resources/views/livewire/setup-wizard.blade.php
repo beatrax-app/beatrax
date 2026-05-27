@@ -6,13 +6,13 @@
     nested Livewire component so each step owns its own state without
     contaminating the parent.
 
-    The wizard registers six step keys: two static bookend steps
-    (welcome + done) and four connector steps (connect-bank,
-    connect-card, connect-email, first-import). Each step is mounted
-    as a Livewire component via the $currentStepKey switch below; a
-    user landing on a step whose component is not yet registered
-    sees a coherent "step pending" placeholder rather than a mount
-    exception.
+    The wizard registers seven step keys: two static bookend steps
+    (welcome + done) and five connector steps (connect-bank,
+    connect-paypal, connect-card, connect-email, first-import). Each
+    step is mounted as a Livewire component via the $currentStepKey
+    switch below; a user landing on a step whose component is not yet
+    registered sees a coherent "step pending" placeholder rather than
+    a mount exception.
 
     The progress strip is rendered server-side from $progress (built
     by WizardProgressQuery::list) so its order matches WizardStep
@@ -102,6 +102,10 @@
 
                     @case ('connect-bank')
                         <livewire:onboarding.steps.connect-bank-step :key="'connect-bank'" />
+                        @break
+
+                    @case ('connect-paypal')
+                        <livewire:onboarding.steps.connect-paypal-step :key="'connect-paypal'" />
                         @break
 
                     @case ('connect-card')
