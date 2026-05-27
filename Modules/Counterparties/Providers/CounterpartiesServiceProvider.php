@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Modules\Counterparties\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Modules\Counterparties\Internal\Pipeline\ResolveCounterpartyStage;
 use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
+use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 
 /**
  * Wires the Counterparties module:
@@ -16,6 +18,11 @@ use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
  *    cross-module consumers (ImportPipeline, Ledger, Recurring,
  *    Chains, Categorization) inject the interface and share one
  *    instance per request / job.
+ *  - binds the `ResolvesCounterparties` Public pipeline contract to
+ *    its `ResolveCounterpartyStage` implementation. ImportPipeline
+ *    consumes the contract so the Public/Internal boundary stays
+ *    intact — the per-module arch invariant blocks any reach from
+ *    `Modules\Import` into `Modules\Counterparties\Internal`.
  *  - loads the module's migrations so `counterparties` + the
  *    additive `transactions.counterparty_id` column materialise on
  *    `php artisan migrate`.
@@ -34,6 +41,7 @@ final class CounterpartiesServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(CounterpartyResolver::class, CounterpartyResolverService::class);
+        $this->app->singleton(ResolvesCounterparties::class, ResolveCounterpartyStage::class);
     }
 
     public function boot(): void
