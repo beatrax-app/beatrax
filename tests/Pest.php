@@ -26,6 +26,7 @@ foreach (
         'Modules/Chains' => Modules\Chains\Tests\TestCase::class,
         'Modules/Community' => Modules\Community\Tests\TestCase::class,
         'Modules/Core' => Modules\Core\Tests\TestCase::class,
+        'Modules/Counterparties' => Modules\Counterparties\Tests\TestCase::class,
         'Modules/Desktop' => Modules\Desktop\Tests\TestCase::class,
         'Modules/DevMode' => Modules\DevMode\Tests\TestCase::class,
         'Modules/DriftAlerts' => Modules\DriftAlerts\Tests\TestCase::class,
