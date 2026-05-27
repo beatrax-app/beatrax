@@ -27,6 +27,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | GitHub Issues URL
+    |--------------------------------------------------------------------------
+    |
+    | The URL the setup-wizard footer's "Need help?" link launches in the
+    | system browser via `OpenExternalUrlAction`. Set via
+    | `BEATRAX_GITHUB_ISSUES_URL` in .env. The fallback points at the
+    | canonical bundled repository's issues page so a fresh install
+    | launches a working URL with no env override.
+    |
+    */
+
+    'github_issues_url' => env(
+        'BEATRAX_GITHUB_ISSUES_URL',
+        'https://github.com/nightworksio/beatrax/issues',
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
     | Bundled corpus YAML asset paths
     |--------------------------------------------------------------------------
     |
