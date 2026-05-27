@@ -1,0 +1,97 @@
+{{-- /chains/hints — dedicated review surface for hint-shaped chain_links.
+     Mirrors the calm aesthetic of /chains/review (Linear/Notion-ish);
+     adds a per-kind label and an evidence summary list since hints
+     never carry a "to" side. --}}
+@php
+    $kindLabel = static function (string $kind): string {
+        return match ($kind) {
+            'ics_bulk_settle' => 'Bulk iDEAL settlement (out of tolerance)',
+            'funded_by_card_hint' => 'Funded by card (hint)',
+            'refund_of_hint' => 'Refund (hint)',
+            default => $kind,
+        };
+    };
+    $locale = ($user ?? null)?->locale ?? 'nl_NL';
+    $fmt = static fn ($money) => $money->format($locale === 'nl_NL' ? 'nl_NL' : 'en_US');
+@endphp
+
+<div class="mx-auto max-w-5xl px-4 py-12">
+    <header class="mb-8">
+        <div class="flex items-baseline justify-between gap-4">
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Hints</h1>
+            <a
+                href="{{ route('chains.review') }}"
+                class="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            >← Back to review queue</a>
+        </div>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Candidates a matcher emitted without a matching partner. Each hint either resolves itself on the next chain pass, or you can dismiss it here once you've decided it isn't going to.
+        </p>
+    </header>
+
+    @if ($statusMessage)
+        <div
+            class="mb-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200"
+            role="status"
+            data-testid="chain-hints-status"
+        >
+            {{ $statusMessage }}
+        </div>
+    @endif
+
+    @if (count($hints) === 0)
+        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700" data-testid="chain-hints-empty">
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No hints to triage</h2>
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                When a matcher surfaces a chain it couldn't auto-resolve, it'll show up here.
+            </p>
+        </div>
+    @else
+        <ul class="space-y-4" data-testid="chain-hints-list">
+            @foreach ($hints as $hint)
+                <li
+                    class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700"
+                    data-testid="chain-hint-row-{{ $hint->chainLinkId }}"
+                >
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                                {{ $kindLabel($hint->kind) }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-900 dark:text-slate-100">
+                                <span>{{ $hint->fromCounterparty ?: '(no counterparty)' }}</span>
+                                <span
+                                    class="ml-2 text-slate-500 dark:text-slate-400"
+                                    style="font-variant-numeric: tabular-nums;"
+                                >{{ $fmt($hint->fromAmount) }}</span>
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                {{ $hint->fromAccountName ?: '(unknown account)' }} ·
+                                {{ $hint->fromPostedAt->format('d M Y') }}
+                            </p>
+                            @if (count($hint->evidenceLines) > 0)
+                                <ul class="mt-3 space-y-0.5 text-xs text-slate-600 dark:text-slate-400">
+                                    @foreach ($hint->evidenceLines as $line)
+                                        <li class="flex items-start gap-1.5">
+                                            <span aria-hidden="true" class="mt-1 inline-block h-1 w-1 rounded-full bg-slate-400 dark:bg-slate-500"></span>
+                                            <span>{{ $line }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </div>
+                        <div class="flex shrink-0 items-center">
+                            <button
+                                type="button"
+                                wire:click="dismiss({{ $hint->chainLinkId }})"
+                                aria-label="Dismiss hint {{ $hint->chainLinkId }}"
+                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
+                                data-testid="chain-hint-dismiss-{{ $hint->chainLinkId }}"
+                            >Dismiss</button>
+                        </div>
+                    </div>
+                </li>
+            @endforeach
+        </ul>
+    @endif
+</div>

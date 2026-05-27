@@ -104,9 +104,14 @@ final class ChainReviewQueue extends Component
             cursorConfidence: $this->cursorConfidence,
             limit: 26,
         );
+        // Cheap pre-render badge — surfaces the link to /chains/hints
+        // only when the user actually has hints to triage. Avoids
+        // polluting the queue header with a dead link.
+        $hintCount = $query->hintCount($user);
 
         $view = $views->make('chains::livewire.chain-review-queue', [
             'candidates' => $candidates,
+            'hintCount' => $hintCount,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

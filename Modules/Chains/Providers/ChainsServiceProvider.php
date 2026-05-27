@@ -14,6 +14,7 @@ use Livewire\LivewireManager;
 use Modules\Chains\Internal\CardStatementStateMachine;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Internal\Http\Livewire\ChainDrawer;
+use Modules\Chains\Internal\Http\Livewire\ChainHintsQueue;
 use Modules\Chains\Internal\Http\Livewire\ChainReviewQueue;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Listeners\CreateChainLinkFromHint;
@@ -117,6 +118,7 @@ final class ChainsServiceProvider extends ServiceProvider
         // CHN-04). Plan 05-05b adds the `/chains/review` page SFC.
         $livewire->component('chains.chain-drawer', ChainDrawer::class);
         $livewire->component('chains.chain-review-queue', ChainReviewQueue::class);
+        $livewire->component('chains.chain-hints-queue', ChainHintsQueue::class);
 
         $this->registerJobFailedListener($events);
         $this->registerTopNavBadgeComposer();

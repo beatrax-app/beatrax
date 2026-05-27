@@ -7,6 +7,8 @@ namespace Modules\Chains\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Modules\Chains\Public\Actions\DismissChainLinkHint;
+use Modules\Chains\Public\Dto\ChainLinkHintRow;
 use Modules\Chains\Public\Dto\ChainLinkRow;
 use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
@@ -278,6 +280,59 @@ final class ChainLinkQuery
     }
 
     /**
+     * Hint queue — the complement of {@see candidatesForReview()}.
+     *
+     * Returns every `state='candidate'` chain_link with
+     * `to_transaction_id IS NULL` (the schema-permitted hint shape).
+     * These rows cannot be confirmed or rejected via the standard
+     * Confirm / Reject buttons because the chain_links_to_transaction_id_check_*
+     * triggers refuse any state-flip without a concrete endpoint.
+     * The dedicated hints surface lets the user dismiss them
+     * (hard-delete via {@see DismissChainLinkHint})
+     * after inspecting what made the matcher emit them.
+     *
+     * Sorted by `created_at DESC` so the freshest hints surface
+     * first (a new receipt scan or chain pass that produced hints
+     * is typically what the user wants to triage). Cross-user
+     * isolation via the `user_id` predicate.
+     *
+     * @return list<ChainLinkHintRow>
+     */
+    public function hintsForReview(User $user): array
+    {
+        $rows = $this->db->connection()->table('chain_links')
+            ->where('user_id', $user->id)
+            ->where('state', 'candidate')
+            ->whereNull('to_transaction_id')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $result[] = $this->makeChainLinkHintRow($row, $user);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Count hint rows for the given user — cheap pre-render badge
+     * source. Implemented separately from {@see hintsForReview()} so
+     * the review-queue surface can show "N hints awaiting review"
+     * without paying the per-row from-transaction lookup cost.
+     */
+    public function hintCount(User $user): int
+    {
+        return $this->db->connection()->table('chain_links')
+            ->where('user_id', $user->id)
+            ->where('state', 'candidate')
+            ->whereNull('to_transaction_id')
+            ->count();
+    }
+
+    /**
      * D-91 confidence-tier mapping.
      */
     private function confidenceTier(string $state, string $resolver, float $confidence): string
@@ -414,6 +469,108 @@ final class ChainLinkQuery
         }
 
         return self::toString($row->name);
+    }
+
+    private function makeChainLinkHintRow(stdClass $row, User $user): ChainLinkHintRow
+    {
+        $fromTxId = self::toInt($row->from_transaction_id ?? null);
+        $fromCounterparty = '';
+        $fromAmountMinor = 0;
+        $fromCurrency = 'EUR';
+        $fromPostedAt = '1970-01-01';
+        $fromAccountId = 0;
+        $fromRow = $this->db->connection()->table('transactions')
+            ->where('id', $fromTxId)
+            ->where('user_id', $user->id)
+            ->first([
+                'account_id',
+                'counterparty_name',
+                'settled_amount_minor',
+                'settled_currency',
+                'posted_at',
+            ]);
+        if ($fromRow !== null) {
+            $fromAccountId = self::toInt($fromRow->account_id ?? null);
+            $fromCounterparty = self::toString($fromRow->counterparty_name ?? null);
+            $fromAmountMinor = self::toInt($fromRow->settled_amount_minor ?? null);
+            $cur = self::toString($fromRow->settled_currency ?? null);
+            $fromCurrency = $cur !== '' ? $cur : 'EUR';
+            $fromPostedAt = self::toString($fromRow->posted_at ?? null);
+            if ($fromPostedAt === '') {
+                $fromPostedAt = '1970-01-01';
+            }
+        }
+
+        $evidenceLines = $this->summariseHintEvidence(
+            self::toString($row->kind ?? null),
+            self::toString($row->evidence ?? null),
+            $fromCurrency,
+        );
+
+        return new ChainLinkHintRow(
+            chainLinkId: self::toInt($row->id),
+            kind: self::toString($row->kind ?? null),
+            confidence: self::toFloat($row->confidence ?? null),
+            fromTransactionId: $fromTxId,
+            fromCounterparty: $fromCounterparty,
+            fromAmount: Money::ofMinor($fromAmountMinor, $fromCurrency),
+            fromPostedAt: CarbonImmutable::parse($fromPostedAt),
+            fromAccountName: $this->resolveAccountName($fromAccountId, $user),
+            evidenceLines: $evidenceLines,
+        );
+    }
+
+    /**
+     * Render a hint row's `evidence` JSON as human-readable bullets.
+     * Per-kind formatting keeps the user-facing copy concise — the
+     * full JSON is still accessible via the transaction detail page
+     * for diagnostic deep-dives.
+     *
+     * @return list<string>
+     */
+    private function summariseHintEvidence(string $kind, string $evidenceJson, string $currency): array
+    {
+        if ($evidenceJson === '') {
+            return [];
+        }
+        $evidence = json_decode($evidenceJson, true);
+        if (! is_array($evidence)) {
+            return [];
+        }
+
+        $lines = [];
+
+        if ($kind === 'ics_bulk_settle') {
+            $tolerance = $evidence['tolerance_used'] ?? null;
+            if (is_string($tolerance) && $tolerance !== '') {
+                $lines[] = 'Tolerance: '.$tolerance;
+            }
+            $delta = $evidence['unaccounted_delta_minor'] ?? null;
+            if (is_numeric($delta)) {
+                $deltaInt = (int) $delta;
+                $lines[] = 'Unaccounted delta: '.Money::ofMinor($deltaInt, $currency)->format('en_US');
+            }
+            $covered = $evidence['covered_count'] ?? null;
+            if (is_numeric($covered)) {
+                $lines[] = 'Covered transactions: '.(int) $covered;
+            }
+            $stmt = $evidence['statement_id'] ?? null;
+            if (is_numeric($stmt)) {
+                $lines[] = 'Card statement #'.(int) $stmt;
+            }
+        } elseif ($kind === 'funded_by_card_hint') {
+            $last4 = $evidence['card_last_four'] ?? null;
+            if (is_string($last4) && $last4 !== '') {
+                $lines[] = 'Card ending in '.$last4;
+            }
+        } elseif ($kind === 'refund_of_hint') {
+            $ref = $evidence['original_reference_id'] ?? null;
+            if (is_string($ref) && $ref !== '') {
+                $lines[] = 'Original order ref: '.$ref;
+            }
+        }
+
+        return $lines;
     }
 
     private static function toInt(mixed $value): int
