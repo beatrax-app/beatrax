@@ -6,14 +6,24 @@ namespace Modules\Desktop\Internal\Native;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migrator;
+use Modules\Core\Public\Bootstrap\EnsureAppKey;
 use Modules\Core\Public\Services\UserDataPathService;
 
 /**
- * First-launch DB bootstrap (D-21 / D-22 / D-23).
+ * First-launch DB bootstrap with chained idempotent steps.
  *
  * Runs the framework migration runner once per launch — idempotent when
- * no migrations are pending, which lets later auto-update plans (Phase 18)
- * ship new migrations that absorb cleanly on the next boot.
+ * no migrations are pending, which lets later migrations absorb cleanly
+ * on the next boot — and then ensures the install's `APP_KEY` exists
+ * via the sentinel-driven `EnsureAppKey` action. Both steps are safe to
+ * re-invoke on every launch; the migrator's own `run()` is a no-op when
+ * nothing is pending and `EnsureAppKey` short-circuits once its sentinel
+ * file is present.
+ *
+ * The chain runs APP_KEY generation immediately AFTER migrations so the
+ * shipped `cache_locks` and `oauth_secrets` tables exist before the
+ * encrypter ever needs to write into them; any future "encrypt-on-store"
+ * step further down the chain therefore boots with a valid key.
  *
  * The shipped bundle holds its SQLite file under the
  * `UserDataPathService`-resolved path (NATIVEPHP_STORAGE_PATH-rooted in
@@ -22,12 +32,12 @@ use Modules\Core\Public\Services\UserDataPathService;
  * the `noStoragePathHardCodedOutsideUserDataPathService` arch invariant
  * forbids it.
  *
- * Fresh-install detection (D-22) reports whether any user exists after
+ * Fresh-install detection reports whether any user exists after
  * migrations have run — a zero-user post-migration state is the signal
  * for the desktop module's welcome screen to short-circuit into `/signup`.
  *
- * No global helpers / facade calls — `Migrator` and `UserDataPathService`
- * arrive through the constructor.
+ * No global helpers / facade calls — every collaborator arrives through
+ * the constructor.
  */
 final class FirstLaunchBootstrap
 {
@@ -35,6 +45,7 @@ final class FirstLaunchBootstrap
         private readonly Migrator $migrator,
         private readonly UserDataPathService $paths,
         private readonly DatabaseManager $db,
+        private readonly EnsureAppKey $ensureAppKey,
     ) {}
 
     /**
@@ -77,10 +88,12 @@ final class FirstLaunchBootstrap
     }
 
     /**
-     * Run every pending migration. Idempotent — when nothing is pending
-     * the migrator's own `run()` is a no-op. When the repository does
-     * not yet exist it is created first; the migrator can then record
-     * the first run.
+     * Run every pending migration, then ensure the install's APP_KEY is
+     * present. Both steps are idempotent — the migrator's `run()` is a
+     * no-op when nothing is pending, and `EnsureAppKey::run()` early-
+     * returns when its sentinel file already exists. When the migrations
+     * repository does not yet exist it is created first so the migrator
+     * can record the first run.
      */
     public function runPendingMigrations(): void
     {
@@ -89,6 +102,8 @@ final class FirstLaunchBootstrap
         }
 
         $this->migrator->run($this->migrationPaths());
+
+        $this->ensureAppKey->run();
     }
 
     /**

@@ -11,6 +11,7 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Bootstrap\EnsureAppKey;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
@@ -35,6 +36,7 @@ it('reports pending migrations when at least one is not yet run', function (): v
         $migrator,
         $this->app->make(UserDataPathService::class),
         $this->app->make(DatabaseManager::class),
+        $this->app->make(EnsureAppKey::class),
     );
 
     // Drop the migrations repository so every migration on disk counts as
@@ -95,6 +97,7 @@ it('runs pending migrations by delegating to the framework Migrator', function (
         $spy,
         $this->app->make(UserDataPathService::class),
         $this->app->make(DatabaseManager::class),
+        $this->app->make(EnsureAppKey::class),
     );
     $bootstrap->runPendingMigrations();
 
@@ -111,6 +114,7 @@ it('is a no-op when no migrations are pending (idempotent)', function (): void {
         $migrator,
         $this->app->make(UserDataPathService::class),
         $this->app->make(DatabaseManager::class),
+        $this->app->make(EnsureAppKey::class),
     );
 
     // RefreshDatabase has already migrated, so this is the post-bootstrap state.
@@ -130,6 +134,7 @@ it('detects a fresh install when no users exist', function (): void {
         $this->app->make(Migrator::class),
         $this->app->make(UserDataPathService::class),
         $this->app->make(DatabaseManager::class),
+        $this->app->make(EnsureAppKey::class),
     );
 
     // RefreshDatabase leaves the schema in place with zero users.
@@ -143,6 +148,7 @@ it('does not detect a fresh install when at least one user exists', function ():
         $this->app->make(Migrator::class),
         $this->app->make(UserDataPathService::class),
         $this->app->make(DatabaseManager::class),
+        $this->app->make(EnsureAppKey::class),
     );
 
     User::query()->create([
@@ -161,6 +167,7 @@ it('resolves the SQLite database path via UserDataPathService', function (): voi
         $this->app->make(Migrator::class),
         $this->app->make(UserDataPathService::class),
         $this->app->make(DatabaseManager::class),
+        $this->app->make(EnsureAppKey::class),
     );
 
     // The bootstrap must report the same canonical path UserDataPathService
