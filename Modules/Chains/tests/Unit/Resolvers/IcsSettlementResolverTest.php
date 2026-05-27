@@ -10,6 +10,7 @@ use Modules\Chains\Models\CardStatement;
 use Modules\Chains\Models\CardStatementCredit;
 use Modules\Chains\Models\ChainLink;
 use Modules\Core\Models\User;
+use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -77,25 +78,31 @@ function seedIcsExpenses(User $user, Account $icsAccount, ImportRun $run, int $c
 }
 
 /**
- * Seed an ASN→ICS transfer_in row with the requested settled amount.
+ * Seed an ASN-side `transfer_out` row whose counterparty IBAN is the
+ * ICS institution IBAN (alias-bridged to the user's ics_card account
+ * by `DefaultKnownCounterpartyIbansSeeder`). settled_amount_minor is
+ * negative (money leaving the bank); the resolver inverts the sign at
+ * the algorithm boundary so the rest of the math runs in the positive
+ * ICS-side convention.
  */
-function seedTransferIn(User $user, Account $icsAccount, ImportRun $run, int $settledMinor, string $postedAt = '2026-05-29'): Transaction
+function seedTransferIn(User $user, Account $bank, ImportRun $run, int $settledMinor, string $postedAt = '2026-05-29'): Transaction
 {
     return Transaction::query()->create([
         'user_id' => $user->id,
-        'account_id' => $icsAccount->id,
-        'type' => 'transfer_in',
+        'account_id' => $bank->id,
+        'type' => 'transfer_out',
         'posted_at' => $postedAt,
         'booked_at' => $postedAt.' 12:00:00',
         'value_date' => $postedAt,
-        'amount_minor' => $settledMinor,
+        'amount_minor' => -$settledMinor,
         'currency' => 'EUR',
-        'settled_amount_minor' => $settledMinor,
+        'settled_amount_minor' => -$settledMinor,
         'settled_currency' => 'EUR',
-        'counterparty_name' => 'ASN Bulk Transfer',
-        'counterparty_normalized' => 'asn-bulk-transfer',
+        'counterparty_iban' => 'NL08ABNA0526650664',
+        'counterparty_name' => 'ICS Bulk Settlement',
+        'counterparty_normalized' => 'ics-bulk-settlement',
         'normalization_version' => 1,
-        'source_format' => 'ics-pdf',
+        'source_format' => 'asn-csv',
         'import_run_id' => $run->id,
         'source_row_index' => 9999,
         'fingerprint' => str_pad('tin', 64, 't', STR_PAD_LEFT),
@@ -124,11 +131,37 @@ beforeEach(function (): void {
         'default_currency' => 'EUR',
     ]);
 
+    // ASN bank account where the bulk-iDEAL transfer_out actually
+    // posts. The resolver's candidate-iteration is the ASN side now;
+    // the ICS settlement only appears on this account in the ledger.
+    $this->bankAccount = Account::query()->create([
+        'user_id' => $this->user->id,
+        'name' => 'ASN bank fixture',
+        'slug' => 'asn-bank-fixture',
+        'kind' => 'bank',
+        'iban' => 'NL57ASNB0123456789',
+        'default_currency' => 'EUR',
+    ]);
+
+    // Seed the canonical alias rows (LU…E → paypal, NL08ABNA… →
+    // ics_card). The resolver consults this bridge to map the ASN
+    // transfer_out's counterparty IBAN to the user's ics_card account.
+    app(DefaultKnownCounterpartyIbansSeeder::class)->run($this->user);
+
     $this->run = ImportRun::query()->create([
         'user_id' => $this->user->id,
         'source_format' => 'ics-pdf',
         'raw_file_path' => '/tmp/ics-resolver.pdf',
         'sha256' => str_repeat('r', 64),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
+    ]);
+
+    $this->asnRun = ImportRun::query()->create([
+        'user_id' => $this->user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/ics-resolver-asn.csv',
+        'sha256' => str_repeat('a', 64),
         'uploaded_at' => CarbonImmutable::now(),
         'status' => 'previewed',
     ]);
@@ -169,7 +202,7 @@ it('decomposes ICS bulk-iDEAL settlement per D-97 tolerance arms', function (
     int $expectedCreditRows,
     string $expectedToleranceUsed,
 ): void {
-    seedTransferIn($this->user, $this->icsAccount, $this->run, $settledMinor);
+    seedTransferIn($this->user, $this->bankAccount, $this->asnRun, $settledMinor);
 
     $this->resolver->resolveForUser($this->user);
 
@@ -223,7 +256,7 @@ it('decomposes ICS bulk-iDEAL settlement per D-97 tolerance arms', function (
 })->with('bulk_settle_variants');
 
 it('is idempotent — re-running resolveForUser produces zero additional chain_links', function (): void {
-    seedTransferIn($this->user, $this->icsAccount, $this->run, 84732);
+    seedTransferIn($this->user, $this->bankAccount, $this->asnRun, 84732);
 
     $this->resolver->resolveForUser($this->user);
     $countAfterFirst = ChainLink::query()->where('user_id', $this->user->id)->count();
@@ -236,7 +269,7 @@ it('is idempotent — re-running resolveForUser produces zero additional chain_l
 });
 
 it('keeps rejected pairs rejected on re-run (pair-uniqueness pre-insert guard)', function (): void {
-    seedTransferIn($this->user, $this->icsAccount, $this->run, 84732);
+    seedTransferIn($this->user, $this->bankAccount, $this->asnRun, 84732);
 
     $this->resolver->resolveForUser($this->user);
 
@@ -259,7 +292,7 @@ it('keeps rejected pairs rejected on re-run (pair-uniqueness pre-insert guard)',
 });
 
 it('does NOT mutate transactions rows (D-84 invariant)', function (): void {
-    $transfer = seedTransferIn($this->user, $this->icsAccount, $this->run, 84732);
+    $transfer = seedTransferIn($this->user, $this->bankAccount, $this->asnRun, 84732);
 
     $transferUpdatedBefore = $transfer->fresh()->updated_at;
     /** @var Transaction $sampleExpense */
@@ -310,7 +343,7 @@ it('isolates the resolver by user — other users are untouched', function (): v
         'state' => 'open',
     ]);
 
-    seedTransferIn($this->user, $this->icsAccount, $this->run, 84732);
+    seedTransferIn($this->user, $this->bankAccount, $this->asnRun, 84732);
 
     $this->resolver->resolveForUser($this->user);
 
@@ -320,7 +353,7 @@ it('isolates the resolver by user — other users are untouched', function (): v
 
 it('handles refund-after-close per D-98', function (): void {
     // Stage 1: settle the May statement cleanly.
-    seedTransferIn($this->user, $this->icsAccount, $this->run, 84732);
+    seedTransferIn($this->user, $this->bankAccount, $this->asnRun, 84732);
     $this->resolver->resolveForUser($this->user);
 
     /** @var CardStatement $may */

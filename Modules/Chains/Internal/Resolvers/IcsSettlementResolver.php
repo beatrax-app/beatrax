@@ -12,26 +12,42 @@ use Modules\Chains\Internal\CardStatementStateMachine;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
+use Modules\Ledger\Models\Account;
 use Modules\Transfers\Public\Services\PairLookup;
 use stdClass;
 
 /**
- * Decomposes one ASN→ICS bulk-iDEAL `transfer_in` into the per-expense
- * `chain_links` rows that explain which ICS purchases the bulk
- * settlement actually paid.
+ * Decomposes the ASN-side `transfer_out` that funds an ICS bulk-iDEAL
+ * settlement into the per-expense `chain_links` rows that explain
+ * which ICS purchases the bulk settlement actually paid.
  *
- * Algorithm (RESEARCH § Pattern 4 + D-97 + D-98):
+ * ## Algorithm
  *
- *   For each unresolved transfer_in T against an ICS-kind Account:
- *     1. Find a candidate open / partially_settled card_statement S
- *        within ±PERIOD_WINDOW_DAYS of T.posted_at whose total falls
- *        within the ±€5 OR ±2% tolerance of T's settled amount.
- *     2. Pull every expense row E inside S's period that doesn't yet
- *        carry a confirmed ics_bulk_settle chain_link.
+ * The ICS-side leg of an ASN→ICS iDEAL settlement exists ONLY as a
+ * statement-level `card_statements` row, not as a per-row transaction:
+ * the Mijn ICS PDF does not carry a per-row settlement entry — the
+ * bulk settlement only exists on the ASN side as a single
+ * `transfer_out` against the ICS institution's IBAN
+ * (NL08ABNA0526650664). The resolver therefore iterates the ASN-side
+ * `transfer_out` rows directly and uses the alias bridge
+ * (`ResolvesKnownCounterpartyIban`) to find the matching ICS account,
+ * then matches against the open `card_statements` on that account:
+ *
+ *   For each unresolved ASN-side `transfer_out` T whose
+ *   counterparty_iban resolves via `ResolvesKnownCounterpartyIban` to
+ *   an `ics_card`-kind Account A:
+ *     1. Find a candidate open / partially_settled `card_statements`
+ *        row S on A within ±PERIOD_WINDOW_DAYS of T.posted_at.
+ *     2. Pull every `expense` row E inside S's period on A that
+ *        doesn't yet carry a confirmed ics_bulk_settle chain_link.
  *     3. Subtract any prior credit carried into S from
- *        card_statement_credits.
+ *        `card_statement_credits`.
  *     4. Compute the unaccounted delta:
- *          delta = sum(E.settled) - prior_credits - T.settled
+ *          delta = sum(E.settled) - prior_credits - T.settled_magnitude
+ *        (the magnitude is taken because T.settled_amount_minor is
+ *        negative on the ASN side — money leaving — while the
+ *        algorithm operates in the positive ICS-side sign convention).
  *     5. If |delta| ≤ tolerance — write N confirmed chain_links (one
  *        per E_i) and call the state machine to transition the card
  *        statement. If the resulting state is `overpaid`, emit a
@@ -43,11 +59,13 @@ use stdClass;
  *   After the main pass, walk every `refund` row that posted inside a
  *   closed (settled / overpaid) statement and chain it back to the
  *   original purchase plus emit a card_statement_credits row of
- *   reason='refund_after_close' (D-98).
+ *   reason='refund_after_close'. The refund pass stays ICS-side
+ *   because the Mijn ICS PDF DOES carry per-row refund entries — only
+ *   the bulk-settlement entry is absent from the ICS side.
  *
- * D-84 architectural invariant: this resolver writes to chain_links,
- * card_statements (via CardStatementStateMachine), and
- * card_statement_credits only. It NEVER mutates `transactions`. The
+ * The resolver writes to chain_links, card_statements (via
+ * CardStatementStateMachine), and card_statement_credits only. It
+ * NEVER mutates `transactions`. The
  * BoundaryArchTest::noResolverWritesTransactions rule binds the
  * invariant at CI time.
  *
@@ -97,6 +115,7 @@ final class IcsSettlementResolver
         // is locked.
         private readonly PairLookup $pairLookup,
         private readonly ChainLinkInsertHelper $inserter,
+        private readonly ResolvesKnownCounterpartyIban $aliasResolver,
     ) {}
 
     /**
@@ -130,9 +149,10 @@ final class IcsSettlementResolver
     {
         $connection = $this->db->connection();
 
-        // Pick up unresolved ASN→ICS transfer_in rows. The left join
-        // on chain_links filters out transfers that already carry a
-        // confirmed bulk-settle row (Pattern 4 step 1 prerequisite).
+        // Pick up unresolved ASN-side `transfer_out` rows pointing at
+        // the user's ICS institution IBAN. The left join on chain_links
+        // filters out transfers that already carry a confirmed bulk-
+        // settle row.
         $candidateTransfers = $connection
             ->table('transactions')
             ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
@@ -143,13 +163,15 @@ final class IcsSettlementResolver
                     ->where('chain_links.state', '=', 'confirmed');
             })
             ->where('transactions.user_id', $user->id)
-            ->where('accounts.kind', 'ics_card')
-            ->where('transactions.type', 'transfer_in')
+            ->where('accounts.kind', 'bank')
+            ->where('transactions.type', 'transfer_out')
+            ->whereNotNull('transactions.counterparty_iban')
             ->whereNull('chain_links.id')
             ->orderBy('transactions.posted_at')
             ->get([
                 'transactions.id as tx_id',
-                'transactions.account_id as account_id',
+                'transactions.account_id as bank_account_id',
+                'transactions.counterparty_iban as counterparty_iban',
                 'transactions.settled_amount_minor as settled_amount_minor',
                 'transactions.amount_minor as amount_minor',
                 'transactions.posted_at as posted_at',
@@ -158,12 +180,22 @@ final class IcsSettlementResolver
 
         foreach ($candidateTransfers as $transfer) {
             /** @var stdClass $transfer */
-            $this->resolveOne($transfer, $user);
+            $counterpartyIban = self::toString($transfer->counterparty_iban ?? null);
+            $aliasAccount = $this->aliasResolver->resolveAccount($counterpartyIban, $user->id);
+            if ($aliasAccount === null || $aliasAccount->kind !== 'ics_card') {
+                // Not an ASN→ICS hop — skip. Other transfer_out rows
+                // (e.g. bank-to-bank transfers between two of the
+                // user's accounts, ASN→PayPal funding) are not the
+                // bulk-settle pattern and have their own resolvers.
+                continue;
+            }
+            $this->resolveOne($transfer, $aliasAccount, $user);
         }
 
-        // Refund-after-close pass (D-98). Runs after the main pass so
-        // any refund whose chained-back link was just written by step
-        // 2/4/5 above gets skipped here.
+        // Refund-after-close pass. Runs after the main pass so any
+        // refund whose chained-back link was just written above gets
+        // skipped here. The refund pass stays ICS-side because the
+        // Mijn ICS PDF DOES carry per-row refund entries.
         $this->resolveRefundsAfterClose($user);
     }
 
@@ -172,14 +204,23 @@ final class IcsSettlementResolver
      * compute the tolerance arm, and either confirm + apply the
      * settlement or write a single candidate row for the review queue.
      *
+     * The candidate transfer is an ASN-side `transfer_out` with a
+     * negative `settled_amount_minor` (money leaving the bank); the
+     * algorithm operates in the positive (ICS-side) sign convention,
+     * so the magnitude is taken on entry. The statement lookup runs
+     * against the alias-resolved `ics_card` Account where the
+     * card_statement actually lives, NOT against the ASN account
+     * where the transfer_out sits.
+     *
      * @param  stdClass  $transfer  Raw row from the candidate-transfer query.
+     * @param  Account  $icsAccount  Alias-resolved ICS account.
      */
-    private function resolveOne(stdClass $transfer, User $user): void
+    private function resolveOne(stdClass $transfer, Account $icsAccount, User $user): void
     {
         $connection = $this->db->connection();
         $transferId = self::toInt($transfer->tx_id ?? null);
-        $accountId = self::toInt($transfer->account_id ?? null);
-        $settled = self::toInt($transfer->settled_amount_minor ?? null);
+        $accountId = $icsAccount->id;
+        $settled = abs(self::toInt($transfer->settled_amount_minor ?? null));
         $postedAt = self::toString($transfer->posted_at ?? null);
 
         $statement = $this->findCandidateStatement($accountId, $settled, $postedAt, $user);
@@ -529,7 +570,7 @@ final class IcsSettlementResolver
 
     /**
      * Sum of all card_statement_credits.amount_minor rows pointing AT
-     * this statement (i.e. credits previously carried forward into it).
+     * this statement (i.e. credits already carried forward into it).
      */
     private function priorCreditsMinor(int $statementId, User $user): int
     {
