@@ -13,6 +13,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Actions\DiscardImport;
+use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
@@ -58,13 +59,6 @@ final class PreviewWizard extends Component
      * literal is unambiguous regardless of the user.
      */
     private const ICS_OWN_IBAN = 'ICS-CARD';
-
-    /**
-     * Synthetic own-IBAN literal used for every PayPal import. Same
-     * scoping shape as ICS_OWN_IBAN — the PaypalCsvAdapter emits this
-     * literal and the AccountResolver scopes by `(iban, user_id)`.
-     */
-    private const PAYPAL_OWN_IBAN = 'PAYPAL';
 
     public int $importRunId = 0;
 
@@ -324,6 +318,7 @@ final class PreviewWizard extends Component
     public function savePaypalAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
+        EnsurePaypalAccountAction $ensurePaypal,
     ): void {
         $this->resetErrorBag('paypalAccountName');
 
@@ -339,14 +334,7 @@ final class PreviewWizard extends Component
 
         $user = $currentUser->user();
 
-        Account::query()->create([
-            'user_id' => $user->id,
-            'name' => $trimmed,
-            'slug' => $slugBody.'-paypal',
-            'kind' => 'paypal',
-            'iban' => self::PAYPAL_OWN_IBAN,
-            'default_currency' => 'EUR',
-        ]);
+        ($ensurePaypal)($user, nameOverride: $trimmed, slugBodyOverride: $slugBody);
 
         /** @var ImportRun $importRun */
         $importRun = ImportRun::query()
