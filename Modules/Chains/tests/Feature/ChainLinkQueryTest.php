@@ -190,6 +190,46 @@ it('forTransaction walks BOTH directions — rooting on the funder side surfaces
     expect($tree->nodes[1]->kind)->toBe('paypal_funding');
 });
 
+it('allChainsForUser returns every non-rejected chain_link with both endpoints hydrated, sorted by recency', function (): void {
+    // Newest first — order by created_at DESC.
+    $f1 = clqTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'Older', 'older', '2026-05-10', 'all1', 1);
+    $t1 = clqTx($this->user, $this->asn, $this->run, -1000, 'transfer_out', 'PayPal SARL', 'p-sarl-1', '2026-05-10', 'all2', 2);
+    $f2 = clqTx($this->user, $this->paypal, $this->run, -1500, 'expense', 'Newer', 'newer', '2026-05-11', 'all3', 3);
+    $t2 = clqTx($this->user, $this->asn, $this->run, -1500, 'transfer_out', 'PayPal SARL', 'p-sarl-2', '2026-05-11', 'all4', 4);
+
+    clqSeedLink($this->db, $this->user, (int) $f1->id, (int) $t1->id, 'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => 'all-sig-1']);
+    // Sleep wouldn't help — created_at is set per insert. Force the
+    // ordering by explicitly bumping the second link's timestamps in
+    // a follow-up update to guarantee deterministic ordering.
+    clqSeedLink($this->db, $this->user, (int) $f2->id, (int) $t2->id, 'paypal_funding', 'candidate', '0.900', 'auto', ['signature_hash' => 'all-sig-2']);
+    $this->db->connection()->table('chain_links')
+        ->whereJsonContains('evidence->signature_hash', 'all-sig-2')
+        ->update(['created_at' => '2026-05-20 12:00:00']);
+    $this->db->connection()->table('chain_links')
+        ->whereJsonContains('evidence->signature_hash', 'all-sig-1')
+        ->update(['created_at' => '2026-05-15 12:00:00']);
+
+    // A rejected link must NOT appear.
+    $f3 = clqTx($this->user, $this->paypal, $this->run, -800, 'expense', 'Rejected', 'r', '2026-05-09', 'all5', 5);
+    $t3 = clqTx($this->user, $this->asn, $this->run, -800, 'transfer_out', 'PayPal SARL', 'p-sarl-3', '2026-05-09', 'all6', 6);
+    clqSeedLink($this->db, $this->user, (int) $f3->id, (int) $t3->id, 'paypal_funding', 'rejected', '1.000', 'auto', ['signature_hash' => 'all-sig-rej']);
+
+    // A NULL-endpoint hint must NOT appear (overview is for concrete chains).
+    $f4 = clqTx($this->user, $this->paypal, $this->run, -200, 'expense', 'Hint', 'h', '2026-05-12', 'all7', 7);
+    clqSeedLink($this->db, $this->user, (int) $f4->id, null, 'ics_bulk_settle', 'candidate', '0.900', 'auto', ['tolerance_used' => 'exceeded', 'signature_hash' => 'all-sig-hint']);
+
+    $rows = $this->query->allChainsForUser($this->user);
+
+    expect($rows)->toHaveCount(2);
+    // Newest first.
+    expect($rows[0]->fromCounterparty)->toBe('Newer');
+    expect($rows[0]->state)->toBe('candidate');
+    expect($rows[0]->fromTransactionId)->toBe((int) $f2->id);
+    expect($rows[0]->toTransactionId)->toBe((int) $t2->id);
+    expect($rows[1]->fromCounterparty)->toBe('Older');
+    expect($rows[1]->state)->toBe('confirmed');
+});
+
 it('hasChainForTransaction returns true for either leg of a chain_link', function (): void {
     $paypalExpense = clqTx($this->user, $this->paypal, $this->run, -1500, 'expense', 'Netflix', 'netflix', '2026-05-10', 'hc1', 1);
     $asnTransfer = clqTx($this->user, $this->asn, $this->run, -1500, 'transfer_out', 'PayPal SARL', 'paypal-sarl', '2026-05-10', 'hc2', 2);

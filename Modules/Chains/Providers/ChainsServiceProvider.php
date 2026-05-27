@@ -16,6 +16,7 @@ use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Internal\Http\Livewire\ChainDrawer;
 use Modules\Chains\Internal\Http\Livewire\ChainHintsQueue;
 use Modules\Chains\Internal\Http\Livewire\ChainReviewQueue;
+use Modules\Chains\Internal\Http\Livewire\ChainsIndex;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Listeners\CreateChainLinkFromHint;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
@@ -119,6 +120,7 @@ final class ChainsServiceProvider extends ServiceProvider
         $livewire->component('chains.chain-drawer', ChainDrawer::class);
         $livewire->component('chains.chain-review-queue', ChainReviewQueue::class);
         $livewire->component('chains.chain-hints-queue', ChainHintsQueue::class);
+        $livewire->component('chains.chains-index', ChainsIndex::class);
 
         $this->registerJobFailedListener($events);
         $this->registerTopNavBadgeComposer();
