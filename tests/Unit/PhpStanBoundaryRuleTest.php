@@ -4,8 +4,20 @@ declare(strict_types=1);
 
 use Symfony\Component\Process\Process;
 
+/*
+ * Spawning PHPStan via Symfony Process inherits the parent's
+ * `memory_limit` ini setting on the child (PHP's default is 128M).
+ * PHPStan's `--memory-limit=1G` CLI flag is parsed by PHPStan AFTER
+ * the PHP runtime has already bounded the heap at 128M, so the
+ * `Modules` walk OOMs on parallel CI runs before PHPStan can raise
+ * the bound. Prepending `php -d memory_limit=2G` lifts the child's
+ * heap budget at the runtime layer, eliminating the intermittent
+ * OOM seen during Plan 17-08 baseline.
+ */
 it('emits a BoundaryRule error on the bad fixture', function (): void {
     $process = new Process([
+        PHP_BINARY,
+        '-d', 'memory_limit=2G',
         base_path('vendor/bin/phpstan'),
         'analyse',
         '--configuration='.base_path('phpstan-fixtures.neon'),
@@ -23,6 +35,8 @@ it('emits a BoundaryRule error on the bad fixture', function (): void {
 
 it('emits zero errors on the good fixture', function (): void {
     $process = new Process([
+        PHP_BINARY,
+        '-d', 'memory_limit=2G',
         base_path('vendor/bin/phpstan'),
         'analyse',
         '--configuration='.base_path('phpstan-fixtures.neon'),
@@ -40,6 +54,8 @@ it('emits zero errors on the good fixture', function (): void {
 
 it('passes against empty module skeletons at level max', function (): void {
     $process = new Process([
+        PHP_BINARY,
+        '-d', 'memory_limit=2G',
         base_path('vendor/bin/phpstan'),
         'analyse',
         'Modules',
