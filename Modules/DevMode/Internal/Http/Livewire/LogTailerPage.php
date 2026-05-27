@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Modules\DevMode\Internal\Logging\LogFileStats;
 
 /**
  * /dev/logs page — live tail of the daily-rotated Laravel log file
@@ -53,17 +54,73 @@ final class LogTailerPage extends Component
     #[Url(as: 'contains')]
     public string $contains = '';
 
-    public function render(ViewFactory $views): View
+    /**
+     * Empty today's daily log file to zero bytes. Preserves the inode
+     * so the LogStreamController's poll loop sees the size shrink via
+     * its `?since` past-current-size branch and signals reset to the
+     * Alpine ring buffer. After truncation the listener Blade
+     * dispatches a `logs:truncated` browser event so the client also
+     * zeros its locally cached `offset` + line buffer immediately
+     * (without waiting for the next poll round-trip).
+     */
+    public function truncate(LogFileStats $stats): void
+    {
+        $freed = $stats->truncateToday();
+
+        $this->dispatch(
+            'toast',
+            message: $freed > 0
+                ? sprintf('Log truncated — freed %s.', self::humanBytes($freed))
+                : 'Nothing to truncate.',
+        );
+        $this->dispatch('logs:truncated');
+    }
+
+    public function render(ViewFactory $views, LogFileStats $stats): View
     {
         $severityList = array_values(array_filter(
             array_map('trim', explode(',', $this->severities)),
             static fn (string $s): bool => $s !== '',
         ));
 
+        // Initial stats snapshot so the chip labels + totals strip
+        // render correctly on first paint, before the JS stats poll
+        // has fired. The Alpine x-data overwrites these as soon as
+        // the first /dev/logs/stats response lands.
+        $today = $stats->forToday();
+        $allFiles = $stats->allFiles();
+
         return $views->make('dev::livewire.log-tailer-page', [
             'severityList' => $severityList,
             'channel' => $this->channel,
             'contains' => $this->contains,
+            'initialStats' => [
+                'today' => $today,
+                'allFiles' => $allFiles,
+            ],
         ]);
+    }
+
+    /**
+     * Compact KB/MB/GB renderer for the toast message. Mirrors the
+     * client-side humanBytes() in the blade so a 0-byte freed message
+     * never reaches the operator (handled upstream by the "Nothing to
+     * truncate" branch).
+     */
+    private static function humanBytes(int $bytes): string
+    {
+        if ($bytes < 1024) {
+            return $bytes.' B';
+        }
+        $kb = $bytes / 1024;
+        if ($kb < 1024) {
+            return number_format($kb, 1).' KB';
+        }
+        $mb = $kb / 1024;
+        if ($mb < 1024) {
+            return number_format($mb, 1).' MB';
+        }
+
+        return number_format($mb / 1024, 2).' GB';
     }
 }

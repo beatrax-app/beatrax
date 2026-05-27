@@ -1,9 +1,22 @@
 <div class="p-8 space-y-4" data-testid="log-tailer-page">
-    <header class="space-y-1">
-        <h1 class="text-xl font-semibold text-[var(--color-text)]">Logs</h1>
-        <p class="text-sm text-[var(--color-text-muted)]">
-            Live tail of the current day's Laravel log file with belt-and-braces on-write + on-stream redaction.
-        </p>
+    <header class="flex items-start justify-between gap-4">
+        <div class="space-y-1">
+            <h1 class="text-xl font-semibold text-[var(--color-text)]">Logs</h1>
+            <p class="text-sm text-[var(--color-text-muted)]">
+                Live tail of the current day's Laravel log file with belt-and-braces on-write + on-stream redaction.
+            </p>
+        </div>
+        <button
+            type="button"
+            wire:click="truncate"
+            wire:confirm="Truncate today's log file? This cannot be undone."
+            class="shrink-0 inline-flex items-center gap-1.5 rounded border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950"
+            data-testid="log-truncate-button"
+            title="Empty today's log file (preserves the inode so the tailer resumes cleanly)"
+        >
+            <span aria-hidden="true">⌫</span>
+            <span>Truncate</span>
+        </button>
     </header>
 
     @php
@@ -26,11 +39,14 @@
         x-data="logTailer({
             pollUrl: '{{ route('dev.logs.poll') }}',
             contextUrl: '{{ route('dev.logs.context') }}',
+            statsUrl: '{{ route('dev.logs.stats') }}',
             initialSeverities: @js($severityList),
             initialContains: @js($contains),
             initialChannel: @js($channel),
+            initialStats: @js($initialStats),
         })"
         x-init="start()"
+        x-on:logs-truncated.window="handleTruncated()"
         class="space-y-3"
     >
         {{-- Filter row --}}
@@ -42,9 +58,16 @@
                         x-on:click="toggleSeverity('{{ $sev }}')"
                         x-bind:aria-pressed="severities.has('{{ $sev }}') ? 'true' : 'false'"
                         x-bind:class="severities.has('{{ $sev }}') ? 'border-slate-900 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'"
-                        class="inline-flex items-center rounded border px-2 py-1 text-[10.5px] font-medium uppercase tracking-wide"
+                        class="inline-flex items-center gap-1.5 rounded border px-2 py-1 text-[10.5px] font-medium uppercase tracking-wide"
                         data-severity-chip="{{ $sev }}"
-                    >{{ $sev }}</button>
+                    >
+                        <span>{{ $sev }}</span>
+                        <span
+                            class="tabular-nums opacity-70"
+                            x-text="formatCount(stats.today.perSeverity['{{ $sev }}'] ?? 0)"
+                            data-testid="severity-count-{{ $sev }}"
+                        ></span>
+                    </button>
                 @endforeach
             </div>
 
@@ -157,8 +180,28 @@
             </template>
         </div>
 
-        <div class="text-xs text-[var(--color-text-muted)]">
-            Showing <span x-text="visibleLines.length"></span> of <span x-text="totalReceived"></span> received lines (buffer capped at 10,000).
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]" data-testid="log-totals-strip">
+            <span>
+                Showing <span class="tabular-nums" x-text="visibleLines.length"></span> of
+                <span class="tabular-nums" x-text="totalReceived"></span> received (buffer cap 10k)
+            </span>
+            <span aria-hidden="true">·</span>
+            <span data-testid="log-total-lines">
+                <span class="tabular-nums" x-text="stats.today.totalLines.toLocaleString()"></span>
+                <template x-if="stats.today.capped">
+                    <span class="text-amber-600 dark:text-amber-400">+</span>
+                </template>
+                lines today
+            </span>
+            <span aria-hidden="true">·</span>
+            <span data-testid="log-today-size">
+                <span x-text="humanBytes(stats.today.sizeBytes)"></span> today
+            </span>
+            <span aria-hidden="true">·</span>
+            <span data-testid="log-all-size">
+                <span x-text="humanBytes(stats.allFiles.totalBytes)"></span> across
+                <span class="tabular-nums" x-text="stats.allFiles.count"></span> daily files
+            </span>
         </div>
     </div>
 </div>
@@ -177,6 +220,7 @@
             Alpine.data('logTailer', (opts) => ({
                 pollUrl: opts.pollUrl,
                 contextUrl: opts.contextUrl,
+                statsUrl: opts.statsUrl,
                 severities: new Set(opts.initialSeverities || []),
                 contains: opts.initialContains || '',
                 channelFilter: opts.initialChannel || '',
@@ -195,9 +239,20 @@
                 pollTimer: null,
                 pollAbort: null,
                 POLL_INTERVAL_MS: 1000,
+                // Stats polling — slower cadence because the O(N) parse
+                // server-side is not free. 3s feels live without burning
+                // the file-walker on every keystroke.
+                stats: opts.initialStats || {
+                    today: { sizeBytes: 0, totalLines: 0, perSeverity: {}, capped: false },
+                    allFiles: { count: 0, totalBytes: 0 },
+                },
+                statsTimer: null,
+                statsAbort: null,
+                STATS_INTERVAL_MS: 3000,
 
                 start() {
                     this.pollNow();
+                    this.refreshStats();
                 },
 
                 // Alpine teardown hook — fires when the component root is
@@ -214,6 +269,14 @@
                     if (this.pollAbort) {
                         try { this.pollAbort.abort(); } catch (e) {}
                         this.pollAbort = null;
+                    }
+                    if (this.statsTimer) {
+                        clearTimeout(this.statsTimer);
+                        this.statsTimer = null;
+                    }
+                    if (this.statsAbort) {
+                        try { this.statsAbort.abort(); } catch (e) {}
+                        this.statsAbort = null;
                     }
                 },
 
@@ -460,6 +523,78 @@
                     if (idx >= 0) {
                         this.buffer.splice(idx, 1);
                     }
+                },
+
+                // Stats poller — runs on its own slower timer so the
+                // O(N) file parse cost does not piggy-back on the 1 Hz
+                // tail poll.
+                async refreshStats() {
+                    if (this.statsTimer) {
+                        clearTimeout(this.statsTimer);
+                        this.statsTimer = null;
+                    }
+                    this.statsAbort = new AbortController();
+                    try {
+                        const res = await fetch(this.statsUrl, {
+                            headers: { 'Accept': 'application/json' },
+                            signal: this.statsAbort.signal,
+                        });
+                        if (!res.ok) { throw new Error('stats-not-ok'); }
+                        const body = await res.json();
+                        if (body && typeof body === 'object') {
+                            this.stats = body;
+                        }
+                    } catch (e) {
+                        if (e && e.name === 'AbortError') { return; }
+                        // Stats failures are non-fatal — the tail keeps
+                        // flowing, the chip counts simply stop updating
+                        // until the next refresh succeeds. No status
+                        // message: the operator would see it spam on
+                        // every retry under a flaky network.
+                    } finally {
+                        this.statsAbort = null;
+                    }
+                    this.statsTimer = setTimeout(() => this.refreshStats(), this.STATS_INTERVAL_MS);
+                },
+
+                // Truncate-button handler. Livewire fires the server-side
+                // truncate, then dispatches a `logs:truncated` window
+                // event we listen to here. Zero the local cursor + buffer
+                // immediately so the operator sees the visual reset
+                // without waiting for the next tail-poll round-trip.
+                handleTruncated() {
+                    this.buffer = [];
+                    this.totalReceived = 0;
+                    this.offset = 0;
+                    this.inode = null;
+                    this.statusMessage = '';
+                    this.refreshStats();
+                    if (!this.paused) {
+                        this.pollNow();
+                    }
+                },
+
+                // Compact count renderer for severity chips — keeps the
+                // chip narrow when counts grow into the thousands
+                // ("1.2k", "5.4M") rather than expanding the row.
+                formatCount(n) {
+                    if (typeof n !== 'number' || !isFinite(n) || n < 0) { return '0'; }
+                    if (n < 1000) { return String(n); }
+                    if (n < 1000000) { return (n / 1000).toFixed(n < 10000 ? 1 : 0) + 'k'; }
+                    return (n / 1000000).toFixed(1) + 'M';
+                },
+
+                // Mirrors the server-side LogTailerPage::humanBytes() so
+                // the truncate toast wording and the totals-strip render
+                // use the same units.
+                humanBytes(bytes) {
+                    if (typeof bytes !== 'number' || !isFinite(bytes) || bytes <= 0) { return '0 B'; }
+                    if (bytes < 1024) { return bytes + ' B'; }
+                    const kb = bytes / 1024;
+                    if (kb < 1024) { return kb.toFixed(1) + ' KB'; }
+                    const mb = kb / 1024;
+                    if (mb < 1024) { return mb.toFixed(1) + ' MB'; }
+                    return (mb / 1024).toFixed(2) + ' GB';
                 },
             }));
         });

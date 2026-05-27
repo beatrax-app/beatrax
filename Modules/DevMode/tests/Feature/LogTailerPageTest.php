@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
 
 /*
  * /dev/logs page rendering invariants.
@@ -108,4 +111,46 @@ it('renders an empty-state cursor for the empty scrollback', function (): void {
 
     expect($html)->toContain('Waiting for log lines');
     expect($html)->toContain('cursor-blink');
+});
+
+it('renders the truncate button, totals strip, and stats URL on /dev/logs', function (): void {
+    $user = logTailerUser('log-tailer-totals');
+
+    $response = $this->actingAs($user)->get('/dev/logs');
+
+    $response->assertOk();
+    $html = (string) $response->getContent();
+
+    expect($html)->toContain('data-testid="log-truncate-button"');
+    expect($html)->toContain('data-testid="log-totals-strip"');
+    expect($html)->toContain('/dev/logs/stats');
+});
+
+it('truncate() empties today\'s log file and dispatches the logs:truncated reset event', function (): void {
+    // Sandbox the log path so we don't smash the dev's real log file.
+    $sandboxRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-truncate-'.bin2hex(random_bytes(6));
+    putenv('NATIVEPHP_STORAGE_PATH='.$sandboxRoot);
+
+    $path = UserDataPathService::dailyLogFile();
+    @mkdir(dirname($path), 0755, true);
+    file_put_contents($path, str_repeat('y', 8192));
+    expect(filesize($path))->toBe(8192);
+
+    $user = logTailerUser('log-tailer-truncate');
+
+    Livewire::actingAs($user)
+        ->test(LogTailerPage::class)
+        ->call('truncate')
+        ->assertDispatched('logs:truncated')
+        ->assertDispatched(
+            'toast',
+            fn (string $event, array $params) => is_string($params['message'] ?? null)
+                && str_contains($params['message'], 'Log truncated'),
+        );
+
+    clearstatcache(true, $path);
+    expect(filesize($path))->toBe(0);
+    expect(is_file($path))->toBeTrue();
+
+    putenv('NATIVEPHP_STORAGE_PATH');
 });

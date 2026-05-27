@@ -9,6 +9,7 @@ use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Logging\LogFileStats;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Process\FileTailer;
 use SplFileObject;
@@ -60,6 +61,7 @@ final readonly class LogStreamController
         private FileTailer $tailer,
         private RedactSecretsProcessor $processor,
         private ValidatorFactory $validator,
+        private LogFileStats $stats,
     ) {}
 
     /**
@@ -198,6 +200,35 @@ final readonly class LogStreamController
             'radius' => $radius,
             'lines' => $out,
             'total' => $total,
+        ]);
+    }
+
+    /**
+     * GET /dev/logs/stats — counts per severity + totals + sizes for
+     * the Log Tailer's chip labels and bottom-strip readout. The page
+     * polls this on a slower cadence (3s) than the main 1s tail poll
+     * so the O(N) file parse cost only fires when the operator is
+     * looking — never per byte.
+     */
+    public function stats(): JsonResponse
+    {
+        $today = $this->stats->forToday();
+        $all = $this->stats->allFiles();
+
+        return new JsonResponse([
+            'today' => [
+                'path' => $today['path'],
+                'exists' => $today['exists'],
+                'sizeBytes' => $today['sizeBytes'],
+                'totalLines' => $today['totalLines'],
+                'parsedLines' => $today['parsedLines'],
+                'perSeverity' => $today['perSeverity'],
+                'capped' => $today['capped'],
+            ],
+            'allFiles' => [
+                'count' => $all['count'],
+                'totalBytes' => $all['totalBytes'],
+            ],
         ]);
     }
 
