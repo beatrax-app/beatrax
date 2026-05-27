@@ -13,12 +13,12 @@ use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
+use Modules\Import\Tests\Support\PreviewSeedHelper;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\FirstImportStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
-use Modules\Onboarding\Tests\Support\PreviewSeedHelper;
 
 uses(RefreshDatabase::class);
 
