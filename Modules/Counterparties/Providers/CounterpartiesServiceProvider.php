@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Counterparties\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\Compilers\BladeCompiler;
 use Modules\Counterparties\Internal\Pipeline\ResolveCounterpartyStage;
 use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
@@ -30,8 +31,12 @@ use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
  *    currently a no-op placeholder; the UI surfaces (`/counterparties`,
  *    `/counterparties/triage`, `/counterparties/{slug}`) land in the
  *    follow-up plan.
- *  - loads the module's view namespace `counterparties::` so the
- *    follow-up plan's Blade views resolve symbolically.
+ *  - loads the module's view namespace `counterparties::` so module-
+ *    scoped Blade views resolve symbolically.
+ *  - registers the `counterparties` Blade component namespace so the
+ *    8 anonymous components under `Resources/views/components/*.blade.php`
+ *    are addressable as `<x-counterparties::type-chip />`,
+ *    `<x-counterparties::cp-card />`, etc. across the app.
  *
  * No Livewire components are registered yet; the follow-up plan owns
  * the index / profile / triage Livewire surface.
@@ -44,7 +49,7 @@ final class CounterpartiesServiceProvider extends ServiceProvider
         $this->app->singleton(ResolvesCounterparties::class, ResolveCounterpartyStage::class);
     }
 
-    public function boot(): void
+    public function boot(BladeCompiler $blade): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
 
@@ -57,5 +62,17 @@ final class CounterpartiesServiceProvider extends ServiceProvider
         if (is_dir($viewsPath)) {
             $this->loadViewsFrom($viewsPath, 'counterparties');
         }
+
+        /*
+         * Anonymous Blade components live as `.blade.php` files inside
+         * Resources/views/components/. The loadViewsFrom call above
+         * already makes `<x-counterparties::*>` resolve against that
+         * path; the explicit componentNamespace registration here
+         * mirrors the documented Laravel convention for module-provided
+         * anonymous component libraries and is the single source the
+         * Counterparty UI shell, profile, and triage surfaces resolve
+         * against.
+         */
+        $blade->componentNamespace('Modules\\Counterparties\\Resources\\views\\components', 'counterparties');
     }
 }

@@ -7,6 +7,7 @@
      * @var string $accountCaption
      * @var int $queueCount
      * @var int|null $workerSecondsAgo
+     * @var int|null $unknownCount  Count populated from injected service when available; NULL-tolerant — badge stays hidden when 0.
      *
      * Active-state helper — mirrors TopNav's `$isActive` lambda
      * (pre-rewrite analog) so route-driven highlighting reads from
@@ -14,6 +15,7 @@
      * helper.
      */
     $isActive = static fn (string $path): string => $currentPath === $path ? 'active' : '';
+    $unknownCounterpartyCount = $unknownCount ?? 0;
 @endphp
 
 <aside class="side" aria-label="Primary" style="--side-w: 248px;">
@@ -52,6 +54,36 @@
     <a href="{{ route('recurring.index') }}" class="side-item {{ $isActive('/recurring') }}">
         <span class="ic" aria-hidden="true">↻</span>
         Recurring
+    </a>
+    {{--
+        Counterparties index — the type-aware "who am I transacting
+        with?" surface. The hard-coded path is intentional for this
+        UI-shell-only wave: the matching Livewire page (and named
+        route) lands in the follow-up plan; until then the link
+        routes to a 404, which is acceptable.
+    --}}
+    <a href="/counterparties" class="side-item {{ $isActive('/counterparties') }}">
+        <span class="ic" aria-hidden="true">◉</span>
+        Counterparties
+    </a>
+    {{--
+        Counterparty triage queue — focused single-card surface for
+        labelling unknown counterparties. Carries an amber count badge
+        when there are unknowns to identify; hidden when zero so the
+        sidebar stays calm. Count populated from the injected
+        unknown-counterparty query when available; renders nothing
+        until then.
+    --}}
+    <a href="/counterparties/triage" class="side-item {{ $isActive('/counterparties/triage') }}">
+        <span class="ic" aria-hidden="true">❋</span>
+        Triage
+        @if ($unknownCounterpartyCount > 0)
+            <span
+                class="side-badge"
+                style="background: var(--color-amber-bg); color: var(--color-amber); font-weight: 600;"
+                aria-label="{{ $unknownCounterpartyCount }} unknown counterparties awaiting triage"
+            >{{ $unknownCounterpartyCount }}</span>
+        @endif
     </a>
     {{-- The sidebar entry points at the /chains overview (all chains)
          rather than the /chains/review queue (candidates only) so the

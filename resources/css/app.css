@@ -1670,3 +1670,742 @@ td.date,
         cursor: not-allowed;
     }
 }
+
+/*
+ * Counterparty surface primitives — the visual vocabulary shared
+ * across `/counterparties`, `/counterparties/{slug}`, and
+ * `/counterparties/triage`. Every token below resolves from the
+ * existing `@theme` block; the single load-bearing exception is the
+ * personal-type pink (`#fce7f3` / `#be185d` / `#831843`) which is
+ * hard-coded by design — the visual differentiation signals "this is
+ * personal, treated differently" before the user reads the privacy
+ * banner copy, and the privacy semantics must not leak elsewhere via
+ * an abstracted token.
+ *
+ * Every selector below has a dark-mode flip in the matching `.dark`
+ * companion block — light + dark are first-class.
+ */
+@layer components {
+    /* ─── Per-type tokens ────────────────────────────────────────── */
+
+    .t-merchant {
+        background: var(--color-blue-bg);
+        color: var(--color-blue);
+        border-color: color-mix(in srgb, var(--color-blue) 24%, transparent);
+    }
+
+    .t-personal {
+        background: #fce7f3;
+        color: #be185d;
+        border-color: color-mix(in srgb, #be185d 24%, transparent);
+    }
+
+    .t-bank {
+        background: var(--color-amber-bg);
+        color: var(--color-amber);
+        border-color: color-mix(in srgb, var(--color-amber) 24%, transparent);
+    }
+
+    .t-gov {
+        background: #e2e8f0;
+        color: #334155;
+        border-color: #cbd5e1;
+    }
+
+    .t-self {
+        background: var(--color-surface-2);
+        color: var(--color-text-muted);
+        border-color: var(--color-border);
+    }
+
+    .t-unknown {
+        background: transparent;
+        color: var(--color-text-muted);
+        border: 1px dashed var(--color-border-strong);
+    }
+
+    /* ─── Type chip base ─────────────────────────────────────────── */
+
+    .type-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: var(--radius-full);
+        font-size: 10.5px;
+        font-weight: 500;
+        border: 1px solid;
+        white-space: nowrap;
+    }
+
+    /* ─── Counterparty card (index cards view) ───────────────────── */
+
+    .cp-card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        padding: var(--space-4);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        transition: var(--tx-quick);
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .cp-card:hover {
+        background: var(--color-surface-2);
+        border-color: var(--color-border-strong);
+    }
+
+    .cp-card.unknown {
+        border-style: dashed;
+        background: transparent;
+    }
+
+    .cp-head {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+
+    .cp-stats {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .cp-stats .label {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .cp-stats .value {
+        font-size: var(--text-md);
+        font-weight: 600;
+        color: var(--color-text);
+    }
+
+    .cp-spark {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 24px;
+    }
+
+    .cp-spark .bar {
+        flex: 1 1 auto;
+        min-width: 0;
+        background: var(--color-blue);
+        opacity: 0.6;
+        border-radius: 1px;
+    }
+
+    .cp-spark .bar.last {
+        opacity: 1;
+    }
+
+    .cp-recent {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    /* ─── View toggle (Cards / List segmented) ───────────────────── */
+
+    .view-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0;
+        padding: 2px;
+        background: var(--color-surface-2);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+    }
+
+    .view-toggle button {
+        padding: 4px 10px;
+        border: 0;
+        background: transparent;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .view-toggle button.active {
+        background: var(--color-text);
+        color: var(--color-text-inverse);
+        font-weight: 600;
+    }
+
+    /* ─── Filter chips (type filter row) ─────────────────────────── */
+
+    .filter-chips {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+    }
+
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: 4px var(--space-2);
+        border-radius: var(--radius-full);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .chip:hover {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+    }
+
+    .chip[aria-pressed="true"] {
+        background: var(--color-text);
+        color: var(--color-text-inverse);
+        border-color: var(--color-text);
+    }
+
+    .chip-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .chip-count {
+        font-variant-numeric: tabular-nums;
+        opacity: 0.8;
+    }
+
+    .dot-merchant { background: var(--color-blue); }
+    .dot-personal { background: #be185d; }
+    .dot-bank { background: var(--color-amber); }
+    .dot-gov { background: #334155; }
+    .dot-self { background: var(--color-text-faint); }
+    .dot-unknown { background: var(--color-border-strong); }
+
+    /* ─── Frame primitives (profile Overview sections) ───────────── */
+
+    .frame {
+        padding: var(--space-4);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: var(--color-surface);
+    }
+
+    .frame-tight {
+        padding: var(--space-3);
+    }
+
+    .frame.surface {
+        background: var(--color-surface-2);
+    }
+
+    /* ─── Recurring badge cards (Overview recurring section) ─────── */
+
+    .recur-card {
+        padding: var(--space-3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+    }
+
+    .recur-cadence {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .recur-cadence.amber {
+        color: var(--color-amber);
+    }
+
+    /* ─── Chain flow (compact funding-chain viz) ─────────────────── */
+
+    .chain-flow {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+    }
+
+    .chain-node {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: 4px var(--space-2);
+        border-radius: var(--radius-md);
+        background: var(--color-surface-2);
+        border: 1px solid var(--color-border);
+        font-size: var(--text-xs);
+        color: var(--color-text);
+    }
+
+    .chain-arrow {
+        color: var(--color-text-faint);
+        font-size: var(--text-sm);
+    }
+
+    .node-glyph {
+        display: inline-grid;
+        place-items: center;
+        width: 16px;
+        height: 16px;
+        border-radius: var(--radius-sm);
+        font-size: 10px;
+        font-weight: 600;
+    }
+
+    .node-glyph.asn {
+        background: var(--color-amber-bg);
+        color: var(--color-amber);
+    }
+
+    .node-glyph.ics {
+        background: var(--color-blue-bg);
+        color: var(--color-blue);
+    }
+
+    .node-glyph.paypal {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .node-glyph.merchant {
+        background: var(--color-blue-bg);
+        color: var(--color-blue);
+    }
+
+    .node-glyph.bank {
+        background: var(--color-amber-bg);
+        color: var(--color-amber);
+    }
+
+    /* ─── Fee bars (bank-type profile) ───────────────────────────── */
+
+    .fee-bar-row {
+        display: grid;
+        grid-template-columns: 120px 1fr 80px;
+        align-items: center;
+        gap: var(--space-3);
+        padding: 6px 0;
+    }
+
+    .fee-label {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+    }
+
+    .fee-bar-track {
+        background: var(--color-surface-2);
+        border-radius: var(--radius-full);
+        height: 6px;
+        overflow: hidden;
+    }
+
+    .fee-bar-fill {
+        background: var(--color-amber);
+        height: 100%;
+        border-radius: var(--radius-full);
+    }
+
+    .fee-total {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-sm);
+        text-align: right;
+        color: var(--color-text);
+    }
+
+    /* ─── Privacy banner (personal profile — load-bearing pink) ──── */
+
+    .privacy-banner {
+        background: #fce7f3;
+        color: #831843;
+        border: 1px solid color-mix(in srgb, #be185d 24%, transparent);
+        border-radius: var(--radius-md);
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-sm);
+        line-height: 1.5;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+
+    /* ─── IBAN reveal row ────────────────────────────────────────── */
+
+    .iban-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-2) 0;
+    }
+
+    .iban-label {
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-text-muted);
+        font-weight: 600;
+        min-width: 60px;
+    }
+
+    .iban-hidden {
+        font-family: var(--font-mono);
+        letter-spacing: 0.4em;
+        color: var(--color-text-faint);
+        font-size: var(--text-sm);
+    }
+
+    /* ─── Tax-year cards (government profile) ────────────────────── */
+
+    .tax-year-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-4);
+        margin-bottom: var(--space-6);
+    }
+
+    .tax-year-card {
+        padding: var(--space-4);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: var(--color-surface);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+    }
+
+    .tax-year-card.current {
+        border-color: var(--color-text);
+        background: var(--color-surface-2);
+    }
+
+    /* ─── Self-account stub ──────────────────────────────────────── */
+
+    .self-stub {
+        max-width: 640px;
+        margin: 60px auto;
+        padding: var(--space-10) var(--space-6);
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-4);
+    }
+
+    .stub-icon {
+        font-size: 48px;
+        line-height: 1;
+        color: var(--color-text-faint);
+    }
+
+    .stub-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        margin-top: var(--space-2);
+    }
+
+    /* ─── Triage queue card ──────────────────────────────────────── */
+
+    .triage-shell {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+    }
+
+    .triage-card {
+        padding: 28px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+    }
+
+    .triage-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--space-4);
+    }
+
+    .triage-iban {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-md);
+        color: var(--color-text);
+        letter-spacing: 0.08em;
+    }
+
+    .triage-meta {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .triage-section {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+    }
+
+    .triage-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+    }
+
+    /* ─── Suggestion banner (confidence-based) ───────────────────── */
+
+    .suggestion {
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-md);
+        background: var(--color-emerald-bg);
+        color: var(--color-emerald);
+        border: 1px solid color-mix(in srgb, var(--color-emerald) 24%, transparent);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        font-size: var(--text-sm);
+    }
+
+    .suggestion.medium {
+        background: var(--color-amber-bg);
+        color: var(--color-amber);
+        border-color: color-mix(in srgb, var(--color-amber) 24%, transparent);
+    }
+
+    .suggestion.low {
+        background: var(--color-surface-2);
+        color: var(--color-text-muted);
+        border-color: var(--color-border);
+    }
+
+    /* ─── Progress bar (triage progress) ─────────────────────────── */
+
+    .progress-bar {
+        height: 6px;
+        background: var(--color-surface-2);
+        border-radius: var(--radius-full);
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--color-emerald);
+        border-radius: var(--radius-full);
+        transition: width 240ms var(--ease-smooth);
+    }
+
+    /* ─── /help/data-locations layout ────────────────────────────── */
+
+    .help-locations {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-6);
+    }
+
+    .help-locations .path-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-3);
+        background: var(--color-surface-2);
+        border-radius: var(--radius-md);
+    }
+
+    .help-locations .path-mono {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-family: var(--font-mono);
+        font-size: var(--text-sm);
+        color: var(--color-text);
+        overflow-wrap: anywhere;
+    }
+
+    .help-locations .copy-path-btn {
+        padding: 4px var(--space-2);
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+        color: var(--color-text-muted);
+        border-radius: var(--radius-sm);
+        font-size: var(--text-xs);
+        cursor: pointer;
+        transition: var(--tx-quick);
+    }
+
+    .help-locations .copy-path-btn:hover {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+    }
+}
+
+/*
+ * Dark-mode flips for the Counterparty surface primitives. The
+ * per-type tokens inherit their surface backgrounds + foregrounds from
+ * the existing `.dark` `@theme` overrides (the blue/amber state tokens
+ * already flip). The personal pink is the one exception: a darker
+ * pink surface + lighter foreground keeps the privacy semantics
+ * legible against the slate-950 page wash without losing the "this is
+ * personal" colour signal.
+ */
+@layer components {
+    .dark .t-personal {
+        background: rgba(190, 24, 93, 0.18);
+        color: #fda4af;
+        border-color: color-mix(in srgb, #fda4af 30%, transparent);
+    }
+
+    .dark .t-gov {
+        background: var(--color-surface-2);
+        color: var(--color-text-muted);
+        border-color: var(--color-border);
+    }
+
+    .dark .cp-card {
+        background: var(--color-surface);
+        border-color: var(--color-border);
+    }
+
+    .dark .cp-card:hover {
+        background: var(--color-surface-2);
+        border-color: var(--color-border-strong);
+    }
+
+    .dark .cp-spark .bar {
+        background: var(--color-blue);
+    }
+
+    .dark .view-toggle {
+        background: var(--color-surface-2);
+        border-color: var(--color-border);
+    }
+
+    .dark .view-toggle button.active {
+        background: var(--color-text);
+        color: var(--color-text-inverse);
+    }
+
+    .dark .chip {
+        background: var(--color-surface);
+        border-color: var(--color-border);
+        color: var(--color-text-muted);
+    }
+
+    .dark .chip[aria-pressed="true"] {
+        background: var(--color-text);
+        color: var(--color-text-inverse);
+        border-color: var(--color-text);
+    }
+
+    .dark .dot-personal { background: #fda4af; }
+    .dark .dot-gov { background: var(--color-text-faint); }
+
+    .dark .frame,
+    .dark .recur-card,
+    .dark .tax-year-card,
+    .dark .triage-card {
+        background: var(--color-surface);
+        border-color: var(--color-border);
+    }
+
+    .dark .frame.surface {
+        background: var(--color-surface-2);
+    }
+
+    .dark .tax-year-card.current {
+        border-color: var(--color-text);
+        background: var(--color-surface-2);
+    }
+
+    .dark .chain-node {
+        background: var(--color-surface-2);
+        border-color: var(--color-border);
+        color: var(--color-text);
+    }
+
+    .dark .node-glyph.paypal {
+        background: rgba(96, 165, 250, 0.18);
+        color: #93c5fd;
+    }
+
+    .dark .fee-bar-track {
+        background: var(--color-surface-2);
+    }
+
+    .dark .privacy-banner {
+        background: rgba(190, 24, 93, 0.18);
+        color: #fbcfe8;
+        border-color: color-mix(in srgb, #fda4af 30%, transparent);
+    }
+
+    .dark .iban-hidden {
+        color: var(--color-text-faint);
+    }
+
+    .dark .suggestion {
+        background: var(--color-emerald-bg);
+        color: var(--color-emerald);
+        border-color: color-mix(in srgb, var(--color-emerald) 30%, transparent);
+    }
+
+    .dark .suggestion.medium {
+        background: var(--color-amber-bg);
+        color: var(--color-amber);
+        border-color: color-mix(in srgb, var(--color-amber) 30%, transparent);
+    }
+
+    .dark .suggestion.low {
+        background: var(--color-surface-2);
+        color: var(--color-text-muted);
+        border-color: var(--color-border);
+    }
+
+    .dark .progress-bar {
+        background: var(--color-surface-2);
+    }
+
+    .dark .help-locations .path-row {
+        background: var(--color-surface-2);
+    }
+
+    .dark .help-locations .copy-path-btn {
+        background: var(--color-surface);
+        border-color: var(--color-border);
+        color: var(--color-text-muted);
+    }
+
+    .dark .help-locations .copy-path-btn:hover {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+    }
+}
