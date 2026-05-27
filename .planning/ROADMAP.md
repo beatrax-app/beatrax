@@ -278,7 +278,7 @@ Plans:
 **Goal:** Close the remaining UAT polish items left open after 16.1.1 — add a PayPal CSV step to the SetupWizard so the connector trio (bank, card, PayPal) is complete before FirstImportStep, let the user expand any preview section beyond the 5-row sample, tighten the starting-balance / preview visual layout per UAT feedback, and back-fill the three missing FirstImportStep commit-path regression tests called for in Plan 07b. Result: a first-run wizard that covers every funding source the user actually has and a preview that scales past 5 rows.
 **Slug:** `16.1.2-paypal-wizard-step-preview-pagination-visual-polish-regression-tests`
 **Depends on:** Phase 16.1.1
-**Plans:** 1/5 plans executed
+**Plans:** 2/5 plans executed
 
 Plans:
 
@@ -288,7 +288,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 16.1.2-02-PLAN.md — PayPal connector wizard step (`ConnectPaypalStep` + WizardStepRegistry order change + FirstImportStep stash read for `paypal_import_run_id`)
+- [x] 16.1.2-02-PLAN.md — PayPal connector wizard step (`ConnectPaypalStep` + WizardStepRegistry order change + FirstImportStep stash read for `paypal_import_run_id`)
 
 **Wave 3** *(blocked on Wave 2 — file-overlap on FirstImportStep.php)*
 
