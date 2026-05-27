@@ -430,7 +430,7 @@ Plans:
 | 15. Desktop Shell (NativePHP Integration) | 7/7 | Complete    | 2026-05-23 |
 | 16. Developer Mode UI | 9/9 | Complete   | 2026-05-24 |
 | 16.1. First-run wizard + rename + payment-type + crowd corpus + OAuth re-consent + Aliases settings | 8/8 | Complete   | 2026-05-25 |
-| 16.1.2.1. Chain detection structural fix + default auto-categorization seed | 5/5 | Complete   | 2026-05-27 |
+| 16.1.2.1. Chain detection structural fix + default auto-categorization seed | 5/5 | Complete    | 2026-05-27 |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |
 | 19. Public Release Boundary | 0/0 | Not started | - |

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
-status: executing
+status: ready_to_plan
 stopped_at: Phase 17 UI-SPEC approved
 last_updated: "2026-05-27T18:01:59.733Z"
 last_activity: 2026-05-27 -- Phase 16.1.2.1 execution started
 progress:
   total_phases: 14
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 58
   completed_plans: 57
-  percent: 98
+  percent: 64
 ---
 
 # Project State
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 16.1.2.1 (chain-detection-structural-fix-cross-account-hop-classificat) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 16.1.2.1
-Last activity: 2026-05-27 -- Phase 16.1.2.1 execution started
+Phase: 17
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-05-27
 
 ## Performance Metrics
 
 **Velocity (v1.0 baseline):**
 
-- Total plans completed: 97 (v1.0 close)
+- Total plans completed: 102 (v1.0 close)
 - v2.0 plans completed: 0
 - Total execution time: —
 
@@ -57,6 +57,7 @@ Last activity: 2026-05-27 -- Phase 16.1.2.1 execution started
 | 14 | 3 | - | - |
 | 15 | 7 | - | - |
 | 16.1.1 | 10 | - | - |
+| 16.1.2.1 | 5 | - | - |
 
 *Updated after each plan completion*
 | Phase 15 P01 | 205m | 4 tasks | 30 files |
