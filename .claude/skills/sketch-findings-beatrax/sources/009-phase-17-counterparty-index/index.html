@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sketch 009 · Counterparty index · Phase 17</title>
+  <link rel="stylesheet" href="../themes/default.css" />
+  <style>
+    /* ─────────────────────────────────────────────────────────────
+       Sketch 009 — /counterparties index page
+       Content: 14 mixed counterparties (merchant/personal/bank/gov/
+                self/unknown) for type-chip color contrast + edge cases.
+       ───────────────────────────────────────────────────────────── */
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans); color: var(--color-text);
+      background: var(--color-bg-subtle);
+      font-size: var(--text-base); line-height: 1.5;
+      padding-top: 48px;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ─── App shell ─── */
+    .app-shell { display: grid; grid-template-columns: 232px 1fr; min-height: calc(100vh - 48px); }
+    .sidebar { background: var(--color-bg-subtle); border-right: 1px solid var(--color-border); padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 48px; height: calc(100vh - 48px); overflow-y: auto; }
+    .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px 14px; border-bottom: 1px solid var(--color-border); margin-bottom: 12px; }
+    .brand-mark { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text-muted) 100%); color: var(--color-bg); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+    .brand-name { font-weight: 600; font-size: var(--text-md); }
+    .brand-version { font-size: 10px; color: var(--color-text-faint); background: var(--color-surface-2); padding: 2px 5px; border-radius: 3px; font-family: var(--font-mono); margin-left: 6px; }
+    .nav-section { margin-top: 14px; }
+    .nav-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); padding: 0 8px 6px; font-weight: 600; }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 5px; font-size: var(--text-sm); color: var(--color-text-muted); cursor: pointer; transition: var(--tx-quick); }
+    .nav-item:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .nav-item.active { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-xs); font-weight: 500; }
+    .nav-item .icon { width: 14px; opacity: 0.7; }
+    .nav-item .badge { margin-left: auto; font-size: 10px; background: var(--color-surface-2); padding: 1px 6px; border-radius: 8px; font-family: var(--font-mono); color: var(--color-text-muted); }
+
+    /* ─── Main ─── */
+    .main { background: var(--color-bg); padding: 28px 40px 60px; min-height: 100%; }
+
+    .page-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+    .page-title { font-size: var(--text-2xl); font-weight: 600; letter-spacing: -0.015em; margin: 0 0 4px; }
+    .page-sub { color: var(--color-text-muted); font-size: var(--text-sm); }
+    .page-sub strong { color: var(--color-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .search-box {
+      flex: 1; min-width: 200px; max-width: 340px;
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 12px; background: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+    }
+    .search-box:focus-within { border-color: var(--color-text-muted); box-shadow: var(--shadow-xs); }
+    .search-box input { border: none; outline: none; background: transparent; flex: 1; font-family: inherit; font-size: inherit; color: inherit; }
+    .search-box input::placeholder { color: var(--color-text-faint); }
+    .search-box .icon { color: var(--color-text-faint); font-size: 13px; }
+    .search-box .kbd { font-family: var(--font-mono); font-size: 10px; padding: 1px 5px; border-radius: 3px; background: var(--color-surface-2); color: var(--color-text-faint); border: 1px solid var(--color-border); }
+
+    .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 11px; border-radius: var(--radius-full);
+      font-size: var(--text-xs); font-weight: 500;
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      color: var(--color-text-muted); cursor: pointer; transition: var(--tx-quick);
+      font-family: inherit;
+    }
+    .chip:hover { color: var(--color-text); border-color: var(--color-border-strong); }
+    .chip.active { background: var(--color-text); color: var(--color-bg); border-color: var(--color-text); }
+    .chip .chip-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .chip .chip-count { font-family: var(--font-mono); font-size: 10px; padding: 1px 5px; border-radius: 8px; background: var(--color-surface-2); color: var(--color-text-muted); margin-left: 2px; font-weight: 400; }
+    .chip.active .chip-count { background: rgba(255,255,255,0.15); color: var(--color-bg); }
+
+    /* Type chip colors (consistent across variants) */
+    .t-merchant { background: var(--color-blue-bg); color: var(--color-blue); border-color: color-mix(in srgb, var(--color-blue) 24%, transparent); }
+    .t-personal { background: #fce7f3; color: #be185d; border-color: color-mix(in srgb, #be185d 24%, transparent); }
+    .t-bank { background: var(--color-amber-bg); color: var(--color-amber); border-color: color-mix(in srgb, var(--color-amber) 24%, transparent); }
+    .t-gov { background: #e2e8f0; color: #334155; border-color: #cbd5e1; }
+    .t-self { background: var(--color-surface-2); color: var(--color-text-muted); border-color: var(--color-border); }
+    .t-unknown { background: transparent; color: var(--color-text-muted); border: 1px dashed var(--color-border-strong); }
+
+    .dot-merchant { background: var(--color-blue); }
+    .dot-personal { background: #be185d; }
+    .dot-bank { background: var(--color-amber); }
+    .dot-gov { background: #334155; }
+    .dot-self { background: var(--color-text-faint); }
+    .dot-unknown { background: transparent; border: 1px dashed var(--color-text-muted); }
+
+    .sort-link { font-size: var(--text-xs); color: var(--color-text-muted); margin-left: auto; cursor: pointer; }
+    .sort-link:hover { color: var(--color-text); }
+
+    /* Avatar */
+    .avatar {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: grid; place-items: center;
+      font-weight: 600; font-size: var(--text-sm); color: white;
+      flex: none;
+    }
+    .avatar.sm { width: 28px; height: 28px; font-size: 12px; border-radius: 6px; }
+    .avatar.lg { width: 44px; height: 44px; font-size: var(--text-md); border-radius: 10px; }
+    .avatar.unknown {
+      background: transparent; color: var(--color-text-muted);
+      border: 1px dashed var(--color-border-strong);
+    }
+
+    /* ─── VARIANT A — Dense Linear list ──────────────────────── */
+    .v-a .list { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+    .v-a .list-row {
+      display: grid; grid-template-columns: 32px 1fr auto 130px auto;
+      gap: 14px; align-items: center; padding: 11px 16px;
+      border-bottom: 1px solid var(--color-border);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .v-a .list-row:last-child { border-bottom: none; }
+    .v-a .list-row:hover { background: var(--color-surface-2); }
+    .v-a .list-row .name-col { min-width: 0; }
+    .v-a .list-row .name { font-size: var(--text-sm); font-weight: 500; }
+    .v-a .list-row .name-sub { font-size: 11px; color: var(--color-text-muted); margin-top: 1px; font-variant-numeric: tabular-nums; }
+    .v-a .list-row .total { text-align: right; font-variant-numeric: tabular-nums; font-size: var(--text-sm); font-weight: 500; }
+    .v-a .list-row .total-sub { font-size: 10px; color: var(--color-text-faint); margin-top: 1px; font-variant-numeric: tabular-nums; }
+    .v-a .list-row .actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.1s; }
+    .v-a .list-row:hover .actions { opacity: 1; }
+    .v-a .list-row .actions button { background: transparent; border: 1px solid var(--color-border); padding: 3px 7px; border-radius: 4px; cursor: pointer; font-size: 11px; color: var(--color-text-muted); font-family: inherit; }
+    .v-a .list-row .actions button:hover { color: var(--color-text); background: var(--color-surface); }
+
+    .list-section-head {
+      padding: 12px 16px 8px; font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--color-text-faint); font-weight: 600;
+      background: var(--color-bg-subtle); border-bottom: 1px solid var(--color-border);
+    }
+
+    /* ─── VARIANT B — Card grid ──────────────────────────────── */
+    .v-b .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .v-b .cp-card {
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg); padding: 14px;
+      cursor: pointer; transition: var(--tx-quick);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .v-b .cp-card:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-sm); }
+    .v-b .cp-card .cp-head { display: flex; align-items: center; gap: 10px; }
+    .v-b .cp-card .cp-head .cp-name { font-size: var(--text-md); font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .v-b .cp-card .cp-stats { display: flex; gap: 16px; }
+    .v-b .cp-card .cp-stats div { flex: 1; }
+    .v-b .cp-card .cp-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-faint); font-weight: 500; margin-bottom: 2px; }
+    .v-b .cp-card .cp-stat-value { font-size: var(--text-md); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .v-b .cp-card .cp-spark { height: 28px; display: flex; align-items: flex-end; gap: 2px; padding-top: 6px; border-top: 1px solid var(--color-border); }
+    .v-b .cp-card .cp-spark span { flex: 1; background: var(--color-blue); border-radius: 2px 2px 0 0; opacity: 0.6; }
+    .v-b .cp-card .cp-spark span:last-child { opacity: 1; }
+    .v-b .cp-card .cp-recent { font-size: 11px; color: var(--color-text-muted); display: flex; justify-content: space-between; gap: 8px; }
+    .v-b .cp-card .cp-recent .desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .v-b .cp-card .cp-recent .amt { font-variant-numeric: tabular-nums; flex: none; }
+    .v-b .cp-card.unknown { border-style: dashed; background: var(--color-bg-subtle); }
+    .v-b .cp-card.unknown .cp-stat-value { color: var(--color-text-muted); }
+
+    /* ─── VARIANT C — Ledger table ───────────────────────────── */
+    .v-c .ledger {
+      width: 100%; background: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+      overflow: hidden; border-collapse: separate; border-spacing: 0;
+      font-size: var(--text-sm); font-variant-numeric: tabular-nums;
+    }
+    .v-c .ledger thead th {
+      text-align: left; font-weight: 500; color: var(--color-text-muted);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+      padding: 10px 12px; border-bottom: 1px solid var(--color-border);
+      background: var(--color-bg-subtle); cursor: pointer; user-select: none;
+    }
+    .v-c .ledger thead th:hover { color: var(--color-text); }
+    .v-c .ledger thead th.sorted { color: var(--color-text); }
+    .v-c .ledger thead th .sort-arrow { font-size: 9px; margin-left: 3px; }
+    .v-c .ledger thead th.right { text-align: right; }
+    .v-c .ledger tbody td { padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .v-c .ledger tbody tr:last-child td { border-bottom: none; }
+    .v-c .ledger tbody tr { cursor: pointer; }
+    .v-c .ledger tbody tr:hover td { background: var(--color-surface-2); }
+    .v-c .ledger .name-cell { display: flex; align-items: center; gap: 10px; }
+    .v-c .ledger .name-cell .name { font-weight: 500; }
+    .v-c .ledger .right { text-align: right; }
+    .v-c .ledger .muted { color: var(--color-text-muted); font-size: 11px; }
+    .v-c .ledger .checkbox-cell { width: 28px; text-align: center; }
+    .v-c .ledger .checkbox-cell input { margin: 0; }
+    .v-c .bulk-actions { display: none; padding: 8px 14px; background: var(--color-text); color: var(--color-bg); border-radius: var(--radius-md); margin-bottom: 12px; align-items: center; gap: 14px; font-size: var(--text-sm); }
+    .v-c .bulk-actions.visible { display: flex; }
+    .v-c .bulk-actions button { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: var(--text-xs); font-family: inherit; }
+    .v-c .bulk-actions button:hover { background: rgba(255,255,255,0.2); }
+
+    /* ─── Type chip (shared) ─── */
+    .type-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-full); font-size: 10px; font-weight: 500; border: 1px solid transparent; white-space: nowrap; }
+
+    /* ─── VARIANT D — Synthesis (cards default + list toggle) ── */
+    .v-d .view-toggle {
+      display: inline-flex; background: var(--color-surface-2);
+      border-radius: var(--radius-md); padding: 2px;
+      border: 1px solid var(--color-border);
+    }
+    .v-d .view-toggle button {
+      padding: 4px 10px; font-size: var(--text-xs); font-weight: 500;
+      background: transparent; border: none; color: var(--color-text-muted);
+      border-radius: var(--radius-sm); cursor: pointer; transition: var(--tx-quick);
+      font-family: inherit; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .v-d .view-toggle button:hover { color: var(--color-text); }
+    .v-d .view-toggle button.active { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-xs); }
+    .v-d .view-toggle .icon { font-size: 13px; line-height: 1; }
+
+    .v-d .cards-view, .v-d .list-view { display: none; }
+    .v-d .cards-view.active, .v-d .list-view.active { display: block; }
+    .v-d .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .v-d .cp-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px; cursor: pointer; transition: var(--tx-quick); display: flex; flex-direction: column; gap: 10px; }
+    .v-d .cp-card:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-sm); }
+    .v-d .cp-card .cp-head { display: flex; align-items: center; gap: 10px; }
+    .v-d .cp-card .cp-head .cp-name { font-size: var(--text-md); font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .v-d .cp-card .cp-stats { display: flex; gap: 16px; }
+    .v-d .cp-card .cp-stats div { flex: 1; }
+    .v-d .cp-card .cp-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-faint); font-weight: 500; margin-bottom: 2px; }
+    .v-d .cp-card .cp-stat-value { font-size: var(--text-md); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .v-d .cp-card .cp-spark { height: 28px; display: flex; align-items: flex-end; gap: 2px; padding-top: 6px; border-top: 1px solid var(--color-border); }
+    .v-d .cp-card .cp-spark span { flex: 1; background: var(--color-blue); border-radius: 2px 2px 0 0; opacity: 0.6; }
+    .v-d .cp-card .cp-spark span:last-child { opacity: 1; }
+    .v-d .cp-card .cp-recent { font-size: 11px; color: var(--color-text-muted); display: flex; justify-content: space-between; gap: 8px; }
+    .v-d .cp-card .cp-recent .desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .v-d .cp-card .cp-recent .amt { font-variant-numeric: tabular-nums; flex: none; }
+    .v-d .cp-card.unknown { border-style: dashed; background: var(--color-bg-subtle); }
+    .v-d .cp-card.unknown .cp-stat-value { color: var(--color-text-muted); }
+
+    .v-d .list { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+    .v-d .list-row { display: grid; grid-template-columns: 32px 1fr auto 130px auto; gap: 14px; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--color-border); cursor: pointer; transition: background 0.1s; }
+    .v-d .list-row:last-child { border-bottom: none; }
+    .v-d .list-row:hover { background: var(--color-surface-2); }
+    .v-d .list-row .name-col { min-width: 0; }
+    .v-d .list-row .name { font-size: var(--text-sm); font-weight: 500; }
+    .v-d .list-row .name-sub { font-size: 11px; color: var(--color-text-muted); margin-top: 1px; font-variant-numeric: tabular-nums; }
+    .v-d .list-row .total { text-align: right; font-variant-numeric: tabular-nums; font-size: var(--text-sm); font-weight: 500; }
+    .v-d .list-row .total-sub { font-size: 10px; color: var(--color-text-faint); margin-top: 1px; font-variant-numeric: tabular-nums; }
+    .v-d .list-row .actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.1s; }
+    .v-d .list-row:hover .actions { opacity: 1; }
+    .v-d .list-row .actions button { background: transparent; border: 1px solid var(--color-border); padding: 3px 7px; border-radius: 4px; cursor: pointer; font-size: 11px; color: var(--color-text-muted); font-family: inherit; }
+    .v-d .list-row .actions button:hover { color: var(--color-text); background: var(--color-surface); }
+
+    /* ─── Variant chrome ─── */
+    #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: 8px 16px; display: flex; gap: 6px; align-items: center; font-family: var(--font-sans); box-shadow: var(--shadow-sm); }
+    #variant-nav .label { font-size: var(--text-xs); color: var(--color-text-faint); margin-right: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .variant-tab { padding: 5px 12px; font-size: var(--text-xs); background: transparent; border: 1px solid transparent; color: var(--color-text-muted); border-radius: var(--radius-sm); cursor: pointer; transition: var(--tx-quick); font-family: inherit; }
+    .variant-tab:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .variant-tab.active { background: var(--color-text); color: var(--color-bg); border-color: var(--color-text); font-weight: 500; }
+    .variant { display: none; }
+    .variant.active { display: block; }
+
+    #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(15, 23, 42, 0.84); color: #f1f5f9; padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; display: flex; gap: 10px; align-items: center; backdrop-filter: blur(6px); }
+    #sketch-tools:hover { opacity: 1; }
+    #sketch-tools select, #sketch-tools button { background: rgba(255,255,255,0.06); color: #f1f5f9; border: 1px solid rgba(255,255,255,0.12); border-radius: 5px; padding: 3px 7px; font-size: 11px; cursor: pointer; font-family: inherit; }
+    #sketch-tools button:hover { background: rgba(255,255,255,0.16); }
+    #sketch-tools .vp-active { background: rgba(255,255,255,0.22); }
+
+    #toast { position: fixed; bottom: 60px; right: 16px; z-index: 9997; background: var(--color-text); color: var(--color-bg); padding: 8px 14px; border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(8px); transition: opacity 0.2s ease, transform 0.2s ease; pointer-events: none; }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    .viewport-clamp { max-width: var(--vp, none); margin: 0 auto; transition: max-width 0.2s ease; }
+  </style>
+</head>
+<body>
+
+<nav id="variant-nav">
+  <span class="label">Sketch 009</span>
+  <button class="variant-tab" data-target="a" onclick="showVariant('a', this)">A · Dense Linear list</button>
+  <button class="variant-tab" data-target="b" onclick="showVariant('b', this)">B · Card grid</button>
+  <button class="variant-tab" data-target="c" onclick="showVariant('c', this)">C · Ledger table</button>
+  <button class="variant-tab active" data-target="d" onclick="showVariant('d', this)">D · Synthesis: cards (default) + list toggle ★ Selected</button>
+</nav>
+
+<div class="viewport-clamp">
+
+<!-- Shared sidebar -->
+<template id="sidebar-tmpl">
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark">B</div>
+    <div class="brand-name">beatrax<span class="brand-version">v0.1.0</span></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">This month</div>
+    <div class="nav-item"><span class="icon">◐</span> Dashboard</div>
+    <div class="nav-item"><span class="icon">↻</span> Recurring <span class="badge">14</span></div>
+    <div class="nav-item"><span class="icon">⤵</span> Triage <span class="badge">7</span></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Money</div>
+    <div class="nav-item"><span class="icon">⊟</span> Transactions</div>
+    <div class="nav-item"><span class="icon">⟿</span> Chains</div>
+    <div class="nav-item"><span class="icon">⟁</span> Forecast</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Categorization</div>
+    <div class="nav-item"><span class="icon">◆</span> Categories</div>
+    <div class="nav-item active"><span class="icon">⊙</span> Counterparties <span class="badge">328</span></div>
+    <div class="nav-item"><span class="icon">⌥</span> Aliases</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Tools</div>
+    <div class="nav-item"><span class="icon">⚙</span> Settings</div>
+    <div class="nav-item"><span class="icon">⌘</span> Command palette</div>
+  </div>
+</aside>
+</template>
+
+<!-- Shared filter chips template -->
+<template id="filter-chips-tmpl">
+<div class="filter-chips">
+  <button class="chip active">All <span class="chip-count">328</span></button>
+  <button class="chip"><span class="chip-dot dot-merchant"></span> Merchants <span class="chip-count">241</span></button>
+  <button class="chip"><span class="chip-dot dot-personal"></span> Personal <span class="chip-count">12</span></button>
+  <button class="chip"><span class="chip-dot dot-bank"></span> Banks <span class="chip-count">4</span></button>
+  <button class="chip"><span class="chip-dot dot-gov"></span> Government <span class="chip-count">7</span></button>
+  <button class="chip"><span class="chip-dot dot-self"></span> Self <span class="chip-count">3</span></button>
+  <button class="chip"><span class="chip-dot dot-unknown"></span> Unknown <span class="chip-count">61</span></button>
+</div>
+</template>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT A — Dense Linear list
+     One row per counterparty. Avatar + name + type chip + meta +
+     12mo total. Hover actions. Grouped section heads optional.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-a" id="variant-a">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Counterparties</h1>
+          <div class="page-sub"><strong>328</strong> entities transact with you · <strong>61</strong> need identification</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="icon">⌕</span>
+          <input type="text" placeholder="Search by name, alias, or IBAN…" />
+          <span class="kbd">/</span>
+        </div>
+        <div data-include="filter-chips"></div>
+        <span class="sort-link">Sort: <strong style="color: var(--color-text)">Total 12mo ↓</strong></span>
+      </div>
+
+      <div class="list">
+        <div class="list-row">
+          <div class="avatar" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">A</div>
+          <div class="name-col">
+            <div class="name">Albert Heijn</div>
+            <div class="name-sub">147 transactions · last seen yesterday</div>
+          </div>
+          <span class="type-chip t-merchant"><span class="chip-dot dot-merchant"></span> Merchant</span>
+          <div>
+            <div class="total">− € 4 218.40</div>
+            <div class="total-sub">avg / mo € 351.53</div>
+          </div>
+          <div class="actions">
+            <button>↗</button><button>⋯</button>
+          </div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar" style="background: linear-gradient(135deg, #be123c 0%, #881337 100%);">N</div>
+          <div class="name-col">
+            <div class="name">Netflix</div>
+            <div class="name-sub">12 transactions · monthly subscription · funded via ICS</div>
+          </div>
+          <span class="type-chip t-merchant"><span class="chip-dot dot-merchant"></span> Merchant</span>
+          <div>
+            <div class="total">− € 167.88</div>
+            <div class="total-sub">€ 13.99 × 12</div>
+          </div>
+          <div class="actions"><button>↗</button><button>⋯</button></div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar" style="background: linear-gradient(135deg, #ff9900 0%, #ff7a00 100%);">A</div>
+          <div class="name-col">
+            <div class="name">Amazon</div>
+            <div class="name-sub">12 transactions · 5 aliases · funded via ICS &amp; PayPal</div>
+          </div>
+          <span class="type-chip t-merchant"><span class="chip-dot dot-merchant"></span> Merchant</span>
+          <div>
+            <div class="total">− € 1 247.84</div>
+            <div class="total-sub">↑ 18 % vs prior 12mo</div>
+          </div>
+          <div class="actions"><button>↗</button><button>⋯</button></div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);">K</div>
+          <div class="name-col">
+            <div class="name">KPN</div>
+            <div class="name-sub">12 transactions · monthly direct debit</div>
+          </div>
+          <span class="type-chip t-merchant"><span class="chip-dot dot-merchant"></span> Merchant</span>
+          <div>
+            <div class="total">− € 685.20</div>
+            <div class="total-sub">€ 57.10 / mo</div>
+          </div>
+          <div class="actions"><button>↗</button><button>⋯</button></div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar" style="background: linear-gradient(135deg, #64748b 0%, #334155 100%);">B</div>
+          <div class="name-col">
+            <div class="name">Belastingdienst</div>
+            <div class="name-sub">9 payments · 1 pending € 480 due 30 Jun</div>
+          </div>
+          <span class="type-chip t-gov"><span class="chip-dot dot-gov"></span> Government</span>
+          <div>
+            <div class="total">− € 5 960.50</div>
+            <div class="total-sub">3 tax years</div>
+          </div>
+          <div class="actions"><button>↗</button><button>⋯</button></div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">B</div>
+          <div class="name-col">
+            <div class="name">Bol.com</div>
+            <div class="name-sub">23 transactions · funded mixed PayPal &amp; ICS</div>
+          </div>
+          <span class="type-chip t-merchant"><span class="chip-dot dot-merchant"></span> Merchant</span>
+          <div>
+            <div class="total">− € 612.40</div>
+            <div class="total-sub">↓ 4 %</div>
+          </div>
+          <div class="actions"><button>↗</button><button>⋯</button></div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">M</div>
+          <div class="name-col">
+            <div class="name">Mama</div>
+            <div class="name-sub">7 transfers · net + € 420 received · IBAN hidden</div>
+          </div>
+          <span class="type-chip t-personal"><span class="chip-dot dot-personal"></span> Personal</span>
+          <div>
+            <div class="total" style="color: var(--color-emerald)">+ € 420.00</div>
+            <div class="total-sub">€ 580 in − € 160 out</div>
+          </div>
+          <div class="actions"><button>↗</button><button>⋯</button></div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);">A</div>
+          <div class="name-col">
+            <div class="name">ASN Bank <span style="color: var(--color-text-muted); font-weight: 400">· fees &amp; interest</span></div>
+            <div class="name-sub">28 entries · monthly fees + quarterly interest</div>
+          </div>
+          <span class="type-chip t-bank"><span class="chip-dot dot-bank"></span> Bank</span>
+          <div>
+            <div class="total">− € 84.20</div>
+            <div class="total-sub">net of € 12.75 interest</div>
+          </div>
+          <div class="actions"><button>↗</button><button>⋯</button></div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">S</div>
+          <div class="name-col">
+            <div class="name">Sara <span style="color: var(--color-text-muted); font-weight: 400">· partner</span></div>
+            <div class="name-sub">38 transfers · rent splits + groceries · IBAN hidden</div>
+          </div>
+          <span class="type-chip t-personal"><span class="chip-dot dot-personal"></span> Personal</span>
+          <div>
+            <div class="total">− € 2 240.00</div>
+            <div class="total-sub">€ 280 in − € 2 520 out</div>
+          </div>
+          <div class="actions"><button>↗</button><button>⋯</button></div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar unknown sm" style="font-size: 11px;">?</div>
+          <div class="name-col">
+            <div class="name" style="font-style: italic; color: var(--color-text-muted)">NL ·· INGB ···· ···· 47</div>
+            <div class="name-sub">3 transactions · awaiting identification · description: "MOLLIE B.V. iD-DE74"</div>
+          </div>
+          <span class="type-chip t-unknown">⚠ Unknown</span>
+          <div>
+            <div class="total">− € 142.00</div>
+            <div class="total-sub">over 3 months</div>
+          </div>
+          <div class="actions"><button style="border-color: var(--color-text); color: var(--color-text);">Label this</button></div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar" style="background: linear-gradient(135deg, #003087 0%, #001f5e 100%);">P</div>
+          <div class="name-col">
+            <div class="name">PayPal <span style="color: var(--color-text-muted); font-weight: 400">· your account</span></div>
+            <div class="name-sub">18 cross-account legs · this is your linked PayPal</div>
+          </div>
+          <span class="type-chip t-self"><span class="chip-dot dot-self"></span> Self</span>
+          <div>
+            <div class="total" style="color: var(--color-text-muted)">routing only</div>
+            <div class="total-sub" style="color: var(--color-text-faint)">no spend / no income</div>
+          </div>
+          <div class="actions"><button>Open account →</button></div>
+        </div>
+
+        <div class="list-row">
+          <div class="avatar unknown sm" style="font-size: 11px;">?</div>
+          <div class="name-col">
+            <div class="name" style="font-style: italic; color: var(--color-text-muted)">NL ·· RABO ···· ···· 92</div>
+            <div class="name-sub">1 transaction · description: "ZIGGO SERVICES"</div>
+          </div>
+          <span class="type-chip t-unknown">⚠ Unknown</span>
+          <div>
+            <div class="total">− € 67.50</div>
+            <div class="total-sub">last week</div>
+          </div>
+          <div class="actions"><button style="border-color: var(--color-text); color: var(--color-text);">Label this</button></div>
+        </div>
+
+        <div style="padding: 16px; text-align: center; font-size: var(--text-xs); color: var(--color-text-muted);">
+          Showing 12 of 328 · <a style="color: var(--color-text); cursor: pointer; text-decoration: underline">Load 25 more</a>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT B — Card grid
+     One card per counterparty. 3-col grid. Avatar + name + type chip +
+     12mo total + mini sparkline + 1 recent line.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-b" id="variant-b">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Counterparties</h1>
+          <div class="page-sub"><strong>328</strong> entities · <strong>61</strong> need identification</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="icon">⌕</span>
+          <input type="text" placeholder="Search…" />
+          <span class="kbd">/</span>
+        </div>
+        <div data-include="filter-chips"></div>
+        <span class="sort-link">Sort: <strong style="color: var(--color-text)">Total 12mo ↓</strong></span>
+      </div>
+
+      <div class="card-grid">
+        <div class="cp-card">
+          <div class="cp-head">
+            <div class="avatar sm" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">A</div>
+            <div class="cp-name">Albert Heijn</div>
+            <span class="type-chip t-merchant">Merchant</span>
+          </div>
+          <div class="cp-stats">
+            <div><div class="cp-stat-label">12 mo</div><div class="cp-stat-value">− € 4 218</div></div>
+            <div><div class="cp-stat-label">Avg / mo</div><div class="cp-stat-value">€ 352</div></div>
+          </div>
+          <div class="cp-spark"><span style="height: 60%"></span><span style="height: 70%"></span><span style="height: 50%"></span><span style="height: 80%"></span><span style="height: 65%"></span><span style="height: 90%"></span><span style="height: 75%"></span><span style="height: 85%"></span><span style="height: 70%"></span><span style="height: 95%"></span><span style="height: 80%"></span><span style="height: 100%"></span></div>
+          <div class="cp-recent"><span class="desc">23 May · Pickup boodschappen</span><span class="amt">− € 67.40</span></div>
+        </div>
+
+        <div class="cp-card">
+          <div class="cp-head">
+            <div class="avatar sm" style="background: linear-gradient(135deg, #be123c 0%, #881337 100%);">N</div>
+            <div class="cp-name">Netflix</div>
+            <span class="type-chip t-merchant">Merchant</span>
+          </div>
+          <div class="cp-stats">
+            <div><div class="cp-stat-label">12 mo</div><div class="cp-stat-value">− € 168</div></div>
+            <div><div class="cp-stat-label">Cadence</div><div class="cp-stat-value" style="color: var(--color-emerald); font-size: var(--text-sm)">↻ monthly</div></div>
+          </div>
+          <div class="cp-spark"><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span></div>
+          <div class="cp-recent"><span class="desc">02 May · Netflix.com subscription</span><span class="amt">− € 13.99</span></div>
+        </div>
+
+        <div class="cp-card">
+          <div class="cp-head">
+            <div class="avatar sm" style="background: linear-gradient(135deg, #ff9900 0%, #ff7a00 100%);">A</div>
+            <div class="cp-name">Amazon</div>
+            <span class="type-chip t-merchant">Merchant</span>
+          </div>
+          <div class="cp-stats">
+            <div><div class="cp-stat-label">12 mo</div><div class="cp-stat-value">− € 1 248</div></div>
+            <div><div class="cp-stat-label">Δ vs prior</div><div class="cp-stat-value" style="color: var(--color-rose); font-size: var(--text-sm)">↑ 18 %</div></div>
+          </div>
+          <div class="cp-spark"><span style="height: 40%"></span><span style="height: 50%"></span><span style="height: 30%"></span><span style="height: 90%"></span><span style="height: 60%"></span><span style="height: 75%"></span><span style="height: 55%"></span><span style="height: 65%"></span><span style="height: 80%"></span><span style="height: 70%"></span><span style="height: 100%"></span><span style="height: 85%"></span></div>
+          <div class="cp-recent"><span class="desc">23 May · Kitchen scales</span><span class="amt">− € 24.95</span></div>
+        </div>
+
+        <div class="cp-card">
+          <div class="cp-head">
+            <div class="avatar sm" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);">K</div>
+            <div class="cp-name">KPN</div>
+            <span class="type-chip t-merchant">Merchant</span>
+          </div>
+          <div class="cp-stats">
+            <div><div class="cp-stat-label">12 mo</div><div class="cp-stat-value">− € 685</div></div>
+            <div><div class="cp-stat-label">Cadence</div><div class="cp-stat-value" style="color: var(--color-emerald); font-size: var(--text-sm)">↻ monthly</div></div>
+          </div>
+          <div class="cp-spark"><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span></div>
+          <div class="cp-recent"><span class="desc">15 May · Mobiel + internet</span><span class="amt">− € 57.10</span></div>
+        </div>
+
+        <div class="cp-card">
+          <div class="cp-head">
+            <div class="avatar sm" style="background: linear-gradient(135deg, #64748b 0%, #334155 100%);">B</div>
+            <div class="cp-name">Belastingdienst</div>
+            <span class="type-chip t-gov">Government</span>
+          </div>
+          <div class="cp-stats">
+            <div><div class="cp-stat-label">2026 YTD</div><div class="cp-stat-value">− € 2 140</div></div>
+            <div><div class="cp-stat-label">Pending</div><div class="cp-stat-value" style="color: var(--color-amber); font-size: var(--text-sm)">⚠ € 480</div></div>
+          </div>
+          <div class="cp-spark"><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 100%"></span><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 60%"></span><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 30%"></span><span style="height: 90%"></span></div>
+          <div class="cp-recent"><span class="desc">12 Apr · Inkomstenbelasting Q1</span><span class="amt">− € 1 240.00</span></div>
+        </div>
+
+        <div class="cp-card">
+          <div class="cp-head">
+            <div class="avatar sm" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">M</div>
+            <div class="cp-name">Mama</div>
+            <span class="type-chip t-personal">Personal</span>
+          </div>
+          <div class="cp-stats">
+            <div><div class="cp-stat-label">Net</div><div class="cp-stat-value" style="color: var(--color-emerald)">+ € 420</div></div>
+            <div><div class="cp-stat-label">Transfers</div><div class="cp-stat-value">7</div></div>
+          </div>
+          <div class="cp-spark"><span style="height: 100%; background: var(--color-emerald)"></span><span style="height: 30%"></span><span style="height: 0%"></span><span style="height: 30%"></span><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 100%; background: var(--color-emerald)"></span><span style="height: 30%"></span><span style="height: 0%"></span><span style="height: 30%"></span><span style="height: 0%"></span><span style="height: 0%"></span></div>
+          <div class="cp-recent"><span class="desc">09 May · "thanks for the babysit"</span><span class="amt" style="color: var(--color-emerald)">+ € 40.00</span></div>
+        </div>
+
+        <div class="cp-card unknown">
+          <div class="cp-head">
+            <div class="avatar sm unknown" style="font-size: 11px;">?</div>
+            <div class="cp-name" style="font-style: italic; font-weight: 500; color: var(--color-text-muted);">NL ·· INGB ···· 47</div>
+            <span class="type-chip t-unknown">Unknown</span>
+          </div>
+          <div class="cp-stats">
+            <div><div class="cp-stat-label">3 months</div><div class="cp-stat-value">− € 142</div></div>
+            <div><div class="cp-stat-label">Hint</div><div class="cp-stat-value" style="font-size: 11px; font-family: var(--font-mono); color: var(--color-text-muted)">MOLLIE iD-DE74</div></div>
+          </div>
+          <button style="background: transparent; border: 1px dashed var(--color-text-muted); color: var(--color-text); border-radius: 4px; padding: 6px; font-size: var(--text-xs); cursor: pointer; font-family: inherit;">❋ Label this counterparty</button>
+        </div>
+
+        <div class="cp-card">
+          <div class="cp-head">
+            <div class="avatar sm" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);">A</div>
+            <div class="cp-name">ASN Bank · fees</div>
+            <span class="type-chip t-bank">Bank</span>
+          </div>
+          <div class="cp-stats">
+            <div><div class="cp-stat-label">12 mo</div><div class="cp-stat-value">− € 84</div></div>
+            <div><div class="cp-stat-label">Interest</div><div class="cp-stat-value" style="color: var(--color-emerald); font-size: var(--text-sm)">+ € 13</div></div>
+          </div>
+          <div class="cp-spark"><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 80%"></span><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 80%"></span><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 80%"></span></div>
+          <div class="cp-recent"><span class="desc">01 May · Maandelijkse kosten</span><span class="amt">− € 3.25</span></div>
+        </div>
+
+        <div class="cp-card">
+          <div class="cp-head">
+            <div class="avatar sm" style="background: linear-gradient(135deg, #003087 0%, #001f5e 100%);">P</div>
+            <div class="cp-name">PayPal · self</div>
+            <span class="type-chip t-self">Self</span>
+          </div>
+          <div class="cp-stats">
+            <div><div class="cp-stat-label">Legs</div><div class="cp-stat-value">18</div></div>
+            <div><div class="cp-stat-label">Routing</div><div class="cp-stat-value" style="color: var(--color-text-muted); font-size: var(--text-sm)">your account</div></div>
+          </div>
+          <button style="background: var(--color-primary); color: var(--color-primary-text); border: none; border-radius: 4px; padding: 6px; font-size: var(--text-xs); cursor: pointer; font-family: inherit;">Open account view →</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT C — Ledger table
+     Spreadsheet-feeling. Sortable columns. Checkbox-per-row for
+     bulk actions. Most familiar to power users.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-c" id="variant-c">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Counterparties</h1>
+          <div class="page-sub"><strong>328</strong> entities · <strong>61</strong> need identification</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="icon">⌕</span>
+          <input type="text" placeholder="Search by name, alias, or IBAN…" />
+          <span class="kbd">/</span>
+        </div>
+        <div data-include="filter-chips"></div>
+      </div>
+
+      <div class="bulk-actions" id="bulk-actions">
+        <span><span id="bulk-count">2</span> selected</span>
+        <button>Set category…</button>
+        <button>Merge into…</button>
+        <button>Export CSV</button>
+        <button style="background: rgba(255, 100, 100, 0.2); border-color: rgba(255, 100, 100, 0.4);">Mark as ignored</button>
+        <button style="margin-left: auto; background: transparent; border-color: transparent;" onclick="document.getElementById('bulk-actions').classList.remove('visible'); document.querySelectorAll('.v-c input[type=checkbox]').forEach(c => c.checked = false);">Clear</button>
+      </div>
+
+      <table class="ledger">
+        <thead>
+          <tr>
+            <th class="checkbox-cell"><input type="checkbox" onchange="toggleAll(this)" /></th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Aliases</th>
+            <th class="right">Tx</th>
+            <th class="right sorted">12 mo total <span class="sort-arrow">↓</span></th>
+            <th class="right">Avg / mo</th>
+            <th class="right">Last seen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">A</div><span class="name">Albert Heijn</span></div></td><td><span class="type-chip t-merchant">Merchant</span></td><td class="muted">AH · AH BIO · AH TO GO</td><td class="right">147</td><td class="right" style="font-weight: 500;">− € 4 218.40</td><td class="right muted">€ 351.53</td><td class="right muted">yesterday</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm" style="background: linear-gradient(135deg, #64748b 0%, #334155 100%);">B</div><span class="name">Belastingdienst</span></div></td><td><span class="type-chip t-gov">Government</span></td><td class="muted">+ Min. Financiën</td><td class="right">9</td><td class="right" style="font-weight: 500;">− € 5 960.50</td><td class="right muted">—</td><td class="right muted">12 Apr</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">S</div><span class="name">Sara · partner</span></div></td><td><span class="type-chip t-personal">Personal</span></td><td class="muted" style="font-style: italic">— hidden —</td><td class="right">38</td><td class="right" style="font-weight: 500;">− € 2 240.00</td><td class="right muted">€ 186.67</td><td class="right muted">2 days ago</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm" style="background: linear-gradient(135deg, #ff9900 0%, #ff7a00 100%);">A</div><span class="name">Amazon</span></div></td><td><span class="type-chip t-merchant">Merchant</span></td><td class="muted">AMZN Mktp NL · +3 more</td><td class="right">12</td><td class="right" style="font-weight: 500;">− € 1 247.84</td><td class="right muted">€ 103.99</td><td class="right muted">4 days ago</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);">K</div><span class="name">KPN</span></div></td><td><span class="type-chip t-merchant">Merchant</span></td><td class="muted">KPN B.V.</td><td class="right">12</td><td class="right" style="font-weight: 500;">− € 685.20</td><td class="right muted">€ 57.10</td><td class="right muted">15 May</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">B</div><span class="name">Bol.com</span></div></td><td><span class="type-chip t-merchant">Merchant</span></td><td class="muted">BOL.COM B.V.</td><td class="right">23</td><td class="right" style="font-weight: 500;">− € 612.40</td><td class="right muted">€ 51.03</td><td class="right muted">19 May</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">M</div><span class="name">Mama</span></div></td><td><span class="type-chip t-personal">Personal</span></td><td class="muted" style="font-style: italic">— hidden —</td><td class="right">7</td><td class="right" style="font-weight: 500; color: var(--color-emerald)">+ € 420.00</td><td class="right muted">—</td><td class="right muted">18 days ago</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm" style="background: linear-gradient(135deg, #be123c 0%, #881337 100%);">N</div><span class="name">Netflix</span></div></td><td><span class="type-chip t-merchant">Merchant</span></td><td class="muted">Netflix.com</td><td class="right">12</td><td class="right" style="font-weight: 500;">− € 167.88</td><td class="right muted">€ 13.99</td><td class="right muted">02 May</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm unknown" style="font-size: 11px;">?</div><span class="name" style="font-style: italic; color: var(--color-text-muted)">NL ·· INGB ···· 47</span></div></td><td><span class="type-chip t-unknown">Unknown</span></td><td class="muted">desc: MOLLIE iD-DE74</td><td class="right">3</td><td class="right" style="font-weight: 500;">− € 142.00</td><td class="right muted">—</td><td class="right muted">9 days ago</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);">A</div><span class="name">ASN Bank · fees &amp; interest</span></div></td><td><span class="type-chip t-bank">Bank</span></td><td class="muted">ASN Bank N.V.</td><td class="right">28</td><td class="right" style="font-weight: 500;">− € 84.20</td><td class="right muted">€ 7.02</td><td class="right muted">01 May</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm" style="background: linear-gradient(135deg, #003087 0%, #001f5e 100%);">P</div><span class="name">PayPal · your account</span></div></td><td><span class="type-chip t-self">Self</span></td><td class="muted">+ PayPal (Europe)</td><td class="right">18</td><td class="right muted" style="font-style: italic">routing only</td><td class="right muted">—</td><td class="right muted">10 May</td></tr>
+          <tr><td class="checkbox-cell"><input type="checkbox" onchange="updateBulk()" /></td><td><div class="name-cell"><div class="avatar sm unknown" style="font-size: 11px;">?</div><span class="name" style="font-style: italic; color: var(--color-text-muted)">NL ·· RABO ···· 92</span></div></td><td><span class="type-chip t-unknown">Unknown</span></td><td class="muted">desc: ZIGGO SERVICES</td><td class="right">1</td><td class="right" style="font-weight: 500;">− € 67.50</td><td class="right muted">—</td><td class="right muted">last week</td></tr>
+        </tbody>
+      </table>
+      <div style="padding: 12px 0; text-align: center; font-size: var(--text-xs); color: var(--color-text-muted);">
+        12 of 328 · <a style="color: var(--color-text); cursor: pointer; text-decoration: underline">Load 25 more</a>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT D — Synthesis: cards (default) + list toggle
+     Same toolbar + chips as A/B. Adds a Cards/List view-mode toggle
+     on the right. Cards view default; List view a tap away.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-d active" id="variant-d">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Counterparties</h1>
+          <div class="page-sub"><strong>328</strong> entities · <strong>61</strong> need identification</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="icon">⌕</span>
+          <input type="text" placeholder="Search by name, alias, or IBAN…" />
+          <span class="kbd">/</span>
+        </div>
+        <div data-include="filter-chips"></div>
+        <div class="view-toggle" style="margin-left: auto;">
+          <button class="active" data-view="cards" onclick="setViewMode('cards', this)"><span class="icon">▦</span> Cards</button>
+          <button data-view="list" onclick="setViewMode('list', this)"><span class="icon">≡</span> List</button>
+        </div>
+        <span class="sort-link" style="margin-left: 0;">Sort: <strong style="color: var(--color-text)">Total 12mo ↓</strong></span>
+      </div>
+
+      <!-- Cards view (default) -->
+      <div class="cards-view active">
+        <div class="card-grid">
+          <div class="cp-card">
+            <div class="cp-head">
+              <div class="avatar sm" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">A</div>
+              <div class="cp-name">Albert Heijn</div>
+              <span class="type-chip t-merchant">Merchant</span>
+            </div>
+            <div class="cp-stats">
+              <div><div class="cp-stat-label">12 mo</div><div class="cp-stat-value">− € 4 218</div></div>
+              <div><div class="cp-stat-label">Avg / mo</div><div class="cp-stat-value">€ 352</div></div>
+            </div>
+            <div class="cp-spark"><span style="height: 60%"></span><span style="height: 70%"></span><span style="height: 50%"></span><span style="height: 80%"></span><span style="height: 65%"></span><span style="height: 90%"></span><span style="height: 75%"></span><span style="height: 85%"></span><span style="height: 70%"></span><span style="height: 95%"></span><span style="height: 80%"></span><span style="height: 100%"></span></div>
+            <div class="cp-recent"><span class="desc">23 May · Pickup boodschappen</span><span class="amt">− € 67.40</span></div>
+          </div>
+          <div class="cp-card">
+            <div class="cp-head">
+              <div class="avatar sm" style="background: linear-gradient(135deg, #be123c 0%, #881337 100%);">N</div>
+              <div class="cp-name">Netflix</div>
+              <span class="type-chip t-merchant">Merchant</span>
+            </div>
+            <div class="cp-stats">
+              <div><div class="cp-stat-label">12 mo</div><div class="cp-stat-value">− € 168</div></div>
+              <div><div class="cp-stat-label">Cadence</div><div class="cp-stat-value" style="color: var(--color-emerald); font-size: var(--text-sm)">↻ monthly</div></div>
+            </div>
+            <div class="cp-spark"><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span></div>
+            <div class="cp-recent"><span class="desc">02 May · Netflix.com subscription</span><span class="amt">− € 13.99</span></div>
+          </div>
+          <div class="cp-card">
+            <div class="cp-head">
+              <div class="avatar sm" style="background: linear-gradient(135deg, #ff9900 0%, #ff7a00 100%);">A</div>
+              <div class="cp-name">Amazon</div>
+              <span class="type-chip t-merchant">Merchant</span>
+            </div>
+            <div class="cp-stats">
+              <div><div class="cp-stat-label">12 mo</div><div class="cp-stat-value">− € 1 248</div></div>
+              <div><div class="cp-stat-label">Δ vs prior</div><div class="cp-stat-value" style="color: var(--color-rose); font-size: var(--text-sm)">↑ 18 %</div></div>
+            </div>
+            <div class="cp-spark"><span style="height: 40%"></span><span style="height: 50%"></span><span style="height: 30%"></span><span style="height: 90%"></span><span style="height: 60%"></span><span style="height: 75%"></span><span style="height: 55%"></span><span style="height: 65%"></span><span style="height: 80%"></span><span style="height: 70%"></span><span style="height: 100%"></span><span style="height: 85%"></span></div>
+            <div class="cp-recent"><span class="desc">23 May · Kitchen scales</span><span class="amt">− € 24.95</span></div>
+          </div>
+          <div class="cp-card">
+            <div class="cp-head">
+              <div class="avatar sm" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);">K</div>
+              <div class="cp-name">KPN</div>
+              <span class="type-chip t-merchant">Merchant</span>
+            </div>
+            <div class="cp-stats">
+              <div><div class="cp-stat-label">12 mo</div><div class="cp-stat-value">− € 685</div></div>
+              <div><div class="cp-stat-label">Cadence</div><div class="cp-stat-value" style="color: var(--color-emerald); font-size: var(--text-sm)">↻ monthly</div></div>
+            </div>
+            <div class="cp-spark"><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span><span style="height: 100%"></span></div>
+            <div class="cp-recent"><span class="desc">15 May · Mobiel + internet</span><span class="amt">− € 57.10</span></div>
+          </div>
+          <div class="cp-card">
+            <div class="cp-head">
+              <div class="avatar sm" style="background: linear-gradient(135deg, #64748b 0%, #334155 100%);">B</div>
+              <div class="cp-name">Belastingdienst</div>
+              <span class="type-chip t-gov">Government</span>
+            </div>
+            <div class="cp-stats">
+              <div><div class="cp-stat-label">2026 YTD</div><div class="cp-stat-value">− € 2 140</div></div>
+              <div><div class="cp-stat-label">Pending</div><div class="cp-stat-value" style="color: var(--color-amber); font-size: var(--text-sm)">⚠ € 480</div></div>
+            </div>
+            <div class="cp-spark"><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 100%"></span><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 60%"></span><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 30%"></span><span style="height: 90%"></span></div>
+            <div class="cp-recent"><span class="desc">12 Apr · Inkomstenbelasting Q1</span><span class="amt">− € 1 240.00</span></div>
+          </div>
+          <div class="cp-card">
+            <div class="cp-head">
+              <div class="avatar sm" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">M</div>
+              <div class="cp-name">Mama</div>
+              <span class="type-chip t-personal">Personal</span>
+            </div>
+            <div class="cp-stats">
+              <div><div class="cp-stat-label">Net</div><div class="cp-stat-value" style="color: var(--color-emerald)">+ € 420</div></div>
+              <div><div class="cp-stat-label">Transfers</div><div class="cp-stat-value">7</div></div>
+            </div>
+            <div class="cp-spark"><span style="height: 100%; background: var(--color-emerald)"></span><span style="height: 30%"></span><span style="height: 0%"></span><span style="height: 30%"></span><span style="height: 0%"></span><span style="height: 0%"></span><span style="height: 100%; background: var(--color-emerald)"></span><span style="height: 30%"></span><span style="height: 0%"></span><span style="height: 30%"></span><span style="height: 0%"></span><span style="height: 0%"></span></div>
+            <div class="cp-recent"><span class="desc">09 May · "thanks for the babysit"</span><span class="amt" style="color: var(--color-emerald)">+ € 40.00</span></div>
+          </div>
+          <div class="cp-card unknown">
+            <div class="cp-head">
+              <div class="avatar sm unknown" style="font-size: 11px;">?</div>
+              <div class="cp-name" style="font-style: italic; font-weight: 500; color: var(--color-text-muted);">NL ·· INGB ···· 47</div>
+              <span class="type-chip t-unknown">Unknown</span>
+            </div>
+            <div class="cp-stats">
+              <div><div class="cp-stat-label">3 months</div><div class="cp-stat-value">− € 142</div></div>
+              <div><div class="cp-stat-label">Hint</div><div class="cp-stat-value" style="font-size: 11px; font-family: var(--font-mono); color: var(--color-text-muted)">MOLLIE iD-DE74</div></div>
+            </div>
+            <button style="background: transparent; border: 1px dashed var(--color-text-muted); color: var(--color-text); border-radius: 4px; padding: 6px; font-size: var(--text-xs); cursor: pointer; font-family: inherit;">❋ Label this counterparty</button>
+          </div>
+          <div class="cp-card">
+            <div class="cp-head">
+              <div class="avatar sm" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);">A</div>
+              <div class="cp-name">ASN Bank · fees</div>
+              <span class="type-chip t-bank">Bank</span>
+            </div>
+            <div class="cp-stats">
+              <div><div class="cp-stat-label">12 mo</div><div class="cp-stat-value">− € 84</div></div>
+              <div><div class="cp-stat-label">Interest</div><div class="cp-stat-value" style="color: var(--color-emerald); font-size: var(--text-sm)">+ € 13</div></div>
+            </div>
+            <div class="cp-spark"><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 80%"></span><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 80%"></span><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 50%"></span><span style="height: 80%"></span></div>
+            <div class="cp-recent"><span class="desc">01 May · Maandelijkse kosten</span><span class="amt">− € 3.25</span></div>
+          </div>
+          <div class="cp-card">
+            <div class="cp-head">
+              <div class="avatar sm" style="background: linear-gradient(135deg, #003087 0%, #001f5e 100%);">P</div>
+              <div class="cp-name">PayPal · self</div>
+              <span class="type-chip t-self">Self</span>
+            </div>
+            <div class="cp-stats">
+              <div><div class="cp-stat-label">Legs</div><div class="cp-stat-value">18</div></div>
+              <div><div class="cp-stat-label">Routing</div><div class="cp-stat-value" style="color: var(--color-text-muted); font-size: var(--text-sm)">your account</div></div>
+            </div>
+            <button style="background: var(--color-primary); color: var(--color-primary-text); border: none; border-radius: 4px; padding: 6px; font-size: var(--text-xs); cursor: pointer; font-family: inherit;">Open account view →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- List view (toggled) -->
+      <div class="list-view">
+        <div class="list">
+          <div class="list-row">
+            <div class="avatar" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">A</div>
+            <div class="name-col"><div class="name">Albert Heijn</div><div class="name-sub">147 transactions · last seen yesterday</div></div>
+            <span class="type-chip t-merchant"><span class="chip-dot dot-merchant"></span> Merchant</span>
+            <div><div class="total">− € 4 218.40</div><div class="total-sub">avg / mo € 351.53</div></div>
+            <div class="actions"><button>↗</button><button>⋯</button></div>
+          </div>
+          <div class="list-row">
+            <div class="avatar" style="background: linear-gradient(135deg, #64748b 0%, #334155 100%);">B</div>
+            <div class="name-col"><div class="name">Belastingdienst</div><div class="name-sub">9 payments · 1 pending € 480 due 30 Jun</div></div>
+            <span class="type-chip t-gov"><span class="chip-dot dot-gov"></span> Government</span>
+            <div><div class="total">− € 5 960.50</div><div class="total-sub">3 tax years</div></div>
+            <div class="actions"><button>↗</button><button>⋯</button></div>
+          </div>
+          <div class="list-row">
+            <div class="avatar" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">S</div>
+            <div class="name-col"><div class="name">Sara <span style="color: var(--color-text-muted); font-weight: 400">· partner</span></div><div class="name-sub">38 transfers · rent splits + groceries · IBAN hidden</div></div>
+            <span class="type-chip t-personal"><span class="chip-dot dot-personal"></span> Personal</span>
+            <div><div class="total">− € 2 240.00</div><div class="total-sub">€ 280 in − € 2 520 out</div></div>
+            <div class="actions"><button>↗</button><button>⋯</button></div>
+          </div>
+          <div class="list-row">
+            <div class="avatar" style="background: linear-gradient(135deg, #ff9900 0%, #ff7a00 100%);">A</div>
+            <div class="name-col"><div class="name">Amazon</div><div class="name-sub">12 transactions · 5 aliases · funded via ICS &amp; PayPal</div></div>
+            <span class="type-chip t-merchant"><span class="chip-dot dot-merchant"></span> Merchant</span>
+            <div><div class="total">− € 1 247.84</div><div class="total-sub">↑ 18 % vs prior 12mo</div></div>
+            <div class="actions"><button>↗</button><button>⋯</button></div>
+          </div>
+          <div class="list-row">
+            <div class="avatar" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);">K</div>
+            <div class="name-col"><div class="name">KPN</div><div class="name-sub">12 transactions · monthly direct debit</div></div>
+            <span class="type-chip t-merchant"><span class="chip-dot dot-merchant"></span> Merchant</span>
+            <div><div class="total">− € 685.20</div><div class="total-sub">€ 57.10 / mo</div></div>
+            <div class="actions"><button>↗</button><button>⋯</button></div>
+          </div>
+          <div class="list-row">
+            <div class="avatar" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">B</div>
+            <div class="name-col"><div class="name">Bol.com</div><div class="name-sub">23 transactions · funded mixed PayPal &amp; ICS</div></div>
+            <span class="type-chip t-merchant"><span class="chip-dot dot-merchant"></span> Merchant</span>
+            <div><div class="total">− € 612.40</div><div class="total-sub">↓ 4 %</div></div>
+            <div class="actions"><button>↗</button><button>⋯</button></div>
+          </div>
+          <div class="list-row">
+            <div class="avatar" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">M</div>
+            <div class="name-col"><div class="name">Mama</div><div class="name-sub">7 transfers · net + € 420 received · IBAN hidden</div></div>
+            <span class="type-chip t-personal"><span class="chip-dot dot-personal"></span> Personal</span>
+            <div><div class="total" style="color: var(--color-emerald)">+ € 420.00</div><div class="total-sub">€ 580 in − € 160 out</div></div>
+            <div class="actions"><button>↗</button><button>⋯</button></div>
+          </div>
+          <div class="list-row">
+            <div class="avatar" style="background: linear-gradient(135deg, #be123c 0%, #881337 100%);">N</div>
+            <div class="name-col"><div class="name">Netflix</div><div class="name-sub">12 transactions · monthly subscription · funded via ICS</div></div>
+            <span class="type-chip t-merchant"><span class="chip-dot dot-merchant"></span> Merchant</span>
+            <div><div class="total">− € 167.88</div><div class="total-sub">€ 13.99 × 12</div></div>
+            <div class="actions"><button>↗</button><button>⋯</button></div>
+          </div>
+          <div class="list-row">
+            <div class="avatar" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);">A</div>
+            <div class="name-col"><div class="name">ASN Bank <span style="color: var(--color-text-muted); font-weight: 400">· fees &amp; interest</span></div><div class="name-sub">28 entries · monthly fees + quarterly interest</div></div>
+            <span class="type-chip t-bank"><span class="chip-dot dot-bank"></span> Bank</span>
+            <div><div class="total">− € 84.20</div><div class="total-sub">net of € 12.75 interest</div></div>
+            <div class="actions"><button>↗</button><button>⋯</button></div>
+          </div>
+          <div class="list-row">
+            <div class="avatar unknown sm" style="font-size: 11px;">?</div>
+            <div class="name-col"><div class="name" style="font-style: italic; color: var(--color-text-muted)">NL ·· INGB ···· ···· 47</div><div class="name-sub">3 transactions · awaiting identification · description: "MOLLIE B.V. iD-DE74"</div></div>
+            <span class="type-chip t-unknown">⚠ Unknown</span>
+            <div><div class="total">− € 142.00</div><div class="total-sub">over 3 months</div></div>
+            <div class="actions"><button style="border-color: var(--color-text); color: var(--color-text);">Label this</button></div>
+          </div>
+          <div class="list-row">
+            <div class="avatar" style="background: linear-gradient(135deg, #003087 0%, #001f5e 100%);">P</div>
+            <div class="name-col"><div class="name">PayPal <span style="color: var(--color-text-muted); font-weight: 400">· your account</span></div><div class="name-sub">18 cross-account legs · this is your linked PayPal</div></div>
+            <span class="type-chip t-self"><span class="chip-dot dot-self"></span> Self</span>
+            <div><div class="total" style="color: var(--color-text-muted)">routing only</div><div class="total-sub" style="color: var(--color-text-faint)">no spend / no income</div></div>
+            <div class="actions"><button>Open account →</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 16px 0 0; text-align: center; font-size: var(--text-xs); color: var(--color-text-muted);">
+        Showing 11 of 328 · <a style="color: var(--color-text); cursor: pointer; text-decoration: underline">Load 25 more</a>
+      </div>
+    </main>
+  </div>
+</section>
+
+</div><!-- /viewport-clamp -->
+
+<div id="sketch-tools">
+  <select id="theme-switcher" onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Light</option>
+  </select>
+  <button id="dark-toggle" onclick="toggleDark()">🌙 Dark</button>
+  <button class="vp-btn vp-active" data-vp="none" onclick="setViewport(this, null)">Full</button>
+  <button class="vp-btn" data-vp="1440" onclick="setViewport(this, 1440)">1440</button>
+  <button class="vp-btn" data-vp="1280" onclick="setViewport(this, 1280)">1280</button>
+  <button class="vp-btn" data-vp="1024" onclick="setViewport(this, 1024)">1024</button>
+</div>
+
+<div id="toast">Saved</div>
+
+<script>
+  // Inject templates
+  const sidebarHTML = document.getElementById('sidebar-tmpl').innerHTML;
+  const chipsHTML = document.getElementById('filter-chips-tmpl').innerHTML;
+  document.querySelectorAll('aside.sidebar[data-include="sidebar"]').forEach(el => { el.outerHTML = sidebarHTML; });
+  document.querySelectorAll('[data-include="filter-chips"]').forEach(el => { el.outerHTML = chipsHTML; });
+
+  // Filter chips clickable (toggle active across one variant's chip row at a time)
+  document.querySelectorAll('.filter-chips').forEach(group => {
+    group.addEventListener('click', e => {
+      if (!e.target.closest('.chip')) return;
+      group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      e.target.closest('.chip').classList.add('active');
+    });
+  });
+
+  function showVariant(id, btn) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('variant-' + id).classList.add('active');
+    document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  function toggleDark() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    document.getElementById('dark-toggle').textContent = isDark ? '☀ Light' : '🌙 Dark';
+  }
+  function setViewport(btn, px) {
+    document.querySelectorAll('.vp-btn').forEach(b => b.classList.remove('vp-active'));
+    btn.classList.add('vp-active');
+    document.querySelector('.viewport-clamp').style.setProperty('--vp', px ? px + 'px' : 'none');
+  }
+  function toggleAll(master) {
+    document.querySelectorAll('.v-c tbody input[type=checkbox]').forEach(c => c.checked = master.checked);
+    updateBulk();
+  }
+  function updateBulk() {
+    const count = document.querySelectorAll('.v-c tbody input[type=checkbox]:checked').length;
+    const bar = document.getElementById('bulk-actions');
+    if (count > 0) {
+      bar.classList.add('visible');
+      document.getElementById('bulk-count').textContent = count;
+    } else {
+      bar.classList.remove('visible');
+    }
+  }
+  let toastTimer;
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+  }
+  function setViewMode(mode, btn) {
+    document.querySelectorAll('.v-d .view-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.v-d .cards-view, .v-d .list-view').forEach(v => v.classList.remove('active'));
+    document.querySelector('.v-d .' + mode + '-view').classList.add('active');
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input, textarea, select')) return;
+    const map = { '1': 'a', '2': 'b', '3': 'c', '4': 'd' };
+    const id = map[e.key];
+    if (id) {
+      const btn = document.querySelector('.variant-tab[data-target="' + id + '"]');
+      if (btn) showVariant(id, btn);
+    }
+  });
+</script>
+
+</body>
+</html>

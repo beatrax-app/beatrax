@@ -321,3 +321,148 @@ overview reads as a console inside an otherwise calm room.
 - `./.claude/skills/sketch-findings-diederik/sources/001-phase-16-developer-mode/README.md`
 - `./.planning/sketches/WRAP-UP-SUMMARY.md`
 - `CLAUDE.md` — auto-load routing line appended
+
+---
+
+## Session 4 — 2026-05-27 (Phase 17 counterparty surfaces + skill rename diederik → beatrax)
+
+**Sketches processed:** 4 (007, 008, 009, 010)
+**Design areas added:** 2 (Counterparty profiles · Counterparty index & triage)
+**Skill renamed:** `sketch-findings-diederik` → **`sketch-findings-beatrax`** (per Phase 17 D-40..D-42; brand alignment with composer.json + nightworksio/beatrax repo)
+**Skill output (rename + append):** `./.claude/skills/sketch-findings-beatrax/`
+
+### Included Sketches
+
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 007 | phase-17-counterparty-profile-shape-merchant | C — tabbed surface (`Overview · Transactions · Chains · Aliases`); Overview is a 2-col grid with categories+recurring left, recent-activity+funding-chain summary right | Counterparty profiles |
+| 008 | phase-17-counterparty-profile-type-variants | all four — 007C shape flexes; per-type hero stats; tab bar varies (Chains dropped for non-merchants, `Tax years` gained for gov); privacy-first defaults for personal (banner + IBAN-hidden); self-account is a stub-redirect | Counterparty profiles |
+| 009 | phase-17-counterparty-index | D synthesis — cards-by-default + dense-list toggle via `Cards | List` segmented widget in toolbar; sparklines in cards give 12mo at-a-glance signal; ledger/bulk-edit variant C dropped | Counterparty index & triage |
+| 010 | phase-17-identify-unknown-flow | B — single dedicated `/counterparties/triage` queue with confidence-based suggestion banner ("Looks like Ziggo — confidence high" + reasoning), progress bar, keyboard-first (`Y`/`N`/`S`/`→`); modal + inline-editor patterns rejected | Counterparty index & triage |
+
+### Excluded Sketches
+
+_None._
+
+### Design Direction (Phase 17 counterparty)
+
+**Same calm-slate room, with a new type-color language.** The five
+counterparty types (merchant blue, personal pink, bank amber,
+government slate, self gray) plus the dashed-border unknown fallback
+give every counterparty surface a consistent visual key. The profile
+page uses the **007C tabbed surface** as the canonical shape and
+flexes per-type via tab-bar variation + hero-stat composition —
+crucially, **Chains tab is dropped for every non-merchant type** with
+a tab-note explaining why ("— no funding chains for personal contacts").
+**Personal counterparties get privacy-first defaults**: a pink-tinted
+banner at the top + IBAN hidden behind a "Show IBAN" button + categories
+replaced with user-authored purpose tags. **Government counterparties
+get a full-width 3-year tax-year card row** above the Overview grid
+(2026 YTD / 2025 final / 2024) with the current year card emphasized
+and a pending-assessment chip when applicable. **Self-account
+counterparties are stub-redirect pages** that route to the Accounts
+view rather than rendering a real profile.
+
+The **counterparty index** ships as **cards-by-default with a
+`Cards | List` toggle** in the toolbar. Cards include a 12-month
+sparkline + recent-activity preview; list rows are dense Linear-style.
+The toolbar also hosts the **type-filter chip row** (same dot+count
+language used across the app's filter UIs) and a search box with a
+`/` keyboard shortcut hint.
+
+For unknown counterparties, **a single dedicated `/counterparties/triage`
+queue** replaces the more obvious "contextual modal" or "inline editor"
+patterns. The queue is keyboard-first (`Y`/`N`/`S`/`→`), focuses on one
+unknown at a time with a confidence-based suggestion banner that
+surfaces reasoning ("Mollie iDEAL processor on the same IBAN; Ziggo
+uses Mollie for most NL collections"), and has a progress bar with
+ETA. Every "Label this counterparty" CTA elsewhere in the app routes
+here — no modal, no inline editor.
+
+### Key Decisions (Phase 17)
+
+#### Type taxonomy & color language (007, 008)
+
+- Five types + one unknown fallback. Type chip colors are reused
+  identically across profile pages, index cards/list, filter chips,
+  and triage banners — one color system, multiple surfaces.
+- Personal pink (`#fce7f3` bg / `#be185d` text) is intentionally warmer
+  than the other types to read as "human, not commercial."
+- Unknown uses dashed-border treatment everywhere (chip, avatar, card)
+  to communicate "incomplete state" visually.
+
+#### Profile shape (007 winner C → 008 confirmation)
+
+- **Tabbed surface** beats stacked-single-column and 2-col body. Each
+  detail (Transactions / Chains / Aliases) gets a dedicated page so
+  the Overview can stay focused.
+- **Overview tab is a 2-col grid** — categories+recurring left,
+  recent-activity+funding-chain-summary right. Each summary block
+  has a "Open Chains →" / "See all 12 →" link that programmatically
+  switches the tab.
+- **Per-type hero stat composition** — merchant gets 12mo+avg/mo;
+  personal gets net-received; bank gets 12mo+net-of-interest; gov
+  gets YTD+last-final-year; self is minimal.
+
+#### Privacy-first for personal (008 A)
+
+- **Privacy banner** above the hero on `#fce7f3` background — sets
+  the expectation immediately.
+- **IBAN hidden by default** — `····  ····  ····  ····` with a
+  `Show IBAN` toggle that auto-hides on page leave.
+- **Purpose tags replace categories** — P2P transfers don't fit
+  spending categories. Tags are user-authored: `birthday`, `rent split`,
+  `groceries shared`, with count badges.
+
+#### Index composition (009 D synthesis)
+
+- **Cards-default** for discovery (sparkline + recent activity reveal
+  cadence at a glance).
+- **List-toggle** for density (Linear-style rows, hover-reveal actions).
+- **`Cards | List` segmented control** in toolbar between the chip row
+  and the sort link.
+- **Ledger/bulk-edit dropped** — bulk operations belong in Dev Mode if
+  ever needed (Phase 17 D-43..D-48 do not include user-facing bulk).
+
+#### Triage flow (010 B)
+
+- **Single path, not three**. A's modal + C's inline editor both
+  rejected. All "Label this" CTAs route to `/counterparties/triage`.
+- **Confidence-based suggestion** with reasoning surfaced — builds
+  trust in the suggestion engine.
+- **Keyboard-first ergonomics** — `Y`/`N`/`S`/`→` shortcuts shown in
+  the action footer.
+- **Two escape valves** — "Mark as ignored" (permanent) and
+  "Skip for now" (resurfaces in next session).
+- **Sidebar Triage badge** uses amber when count > 0 — combined
+  count for transaction-level + counterparty-level pending.
+
+### Skill rename (Phase 17 D-40..D-42)
+
+- Directory renamed `sketch-findings-diederik` → `sketch-findings-beatrax`
+- SKILL.md frontmatter `name:` + `description:` updated
+- SKILL.md context block updated to "## Project: beatrax"
+- CLAUDE.md routing line updated to reference the new skill name
+- All existing references + sources preserved unchanged (only the
+  enclosing directory + a few labels changed); 8 prior reference
+  files + 6 prior source-sketch directories carry over as-is.
+
+### Theme
+
+No new theme tokens. The four new sketches use only the existing slate
+palette + emerald/amber/rose/blue state palette + the per-type chip
+colors which are derived from the same token system. `default.css`
+unchanged.
+
+### Files Written
+
+- `./.claude/skills/sketch-findings-beatrax/` (renamed from `sketch-findings-diederik/`)
+- `./.claude/skills/sketch-findings-beatrax/SKILL.md` (updated — name/description/context/findings_index/usage_guidance/metadata)
+- `./.claude/skills/sketch-findings-beatrax/references/counterparty-profiles.md` (new)
+- `./.claude/skills/sketch-findings-beatrax/references/counterparty-index-and-triage.md` (new)
+- `./.claude/skills/sketch-findings-beatrax/sources/007-phase-17-counterparty-profile-shape-merchant/` (new)
+- `./.claude/skills/sketch-findings-beatrax/sources/008-phase-17-counterparty-profile-type-variants/` (new)
+- `./.claude/skills/sketch-findings-beatrax/sources/009-phase-17-counterparty-index/` (new)
+- `./.claude/skills/sketch-findings-beatrax/sources/010-phase-17-identify-unknown-flow/` (new)
+- `./.planning/sketches/WRAP-UP-SUMMARY.md` (appended)
+- `CLAUDE.md` — auto-load routing line updated to reference renamed skill

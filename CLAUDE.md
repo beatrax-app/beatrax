@@ -195,7 +195,7 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills
 
-- **Sketch findings for diederik** (design decisions, CSS patterns, visual direction from sketch experiments) → `Skill("sketch-findings-diederik")`. Auto-load when implementing Phase 16+ UI surfaces, adding new authenticated app pages, extending the ⌘K palette / Dev Console, building any wizard / onboarding / setup flow, touching the import preview table or `/triage` row, or building any settings section that exposes a corpus toggle.
+- **Sketch findings for beatrax** (design decisions, CSS patterns, visual direction from sketch experiments) → `Skill("sketch-findings-beatrax")`. Auto-load when implementing Phase 16+ UI surfaces, adding new authenticated app pages, extending the ⌘K palette / Dev Console, building any wizard / onboarding / setup flow, touching the import preview table or `/triage` row, building any settings section that exposes a corpus toggle, OR building any Phase 17 counterparty surface (`/counterparties` index, `/counterparties/{slug}` profile, `/counterparties/triage` queue, type-chip / type-color language).
 <!-- GSD:skills-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->
