@@ -15,7 +15,7 @@ use Modules\Transfers\Public\Services\PairLookup;
 use stdClass;
 
 /**
- * PayPal funding-chain resolver — two arms.
+ * PayPal funding-chain resolver — three arms.
  *
  *   1. Deterministic arm — inspect the row's stored raw payload (the
  *      PayPal Activity Download event tape) for "Bankstorting" /
@@ -25,11 +25,28 @@ use stdClass;
  *      within ±DATE_WINDOW_DAYS, write a confirmed chain_link with
  *      confidence=1.0, resolver='auto'.
  *
- *   2. Fuzzy arm — when arm 1 misses, score candidate `transfer_in`
- *      rows by a weighted blend of Levenshtein-normalised merchant
- *      similarity (0.5) + amount-band similarity (0.3) + date-window
- *      similarity (0.2). The best score ≥ FUZZY_MIN_CONFIDENCE
- *      surfaces as state='candidate', confidence ∈ [0.6, 0.99].
+ *   2. ASN-direct arm — handles the empirical Activity Download shape
+ *      where the funding-leg `Bankstorting` row is ABSENT from the
+ *      PayPal CSV (the user's CSV ships only outgoing merchant
+ *      payments, not the SEPA-pull deposits that funded them). Pairs
+ *      the PayPal `expense` row directly against an ASN-side
+ *      `transfer_out` whose counterparty_iban alias-resolves through
+ *      `known_counterparty_ibans` to one of the user's `paypal`-kind
+ *      accounts — same settled amount, ±DATE_WINDOW_DAYS. Unique
+ *      match: state='confirmed', confidence=1.0; ambiguous (≥2
+ *      candidates inside the window): state='candidate',
+ *      confidence=ASN_DIRECT_AMBIGUOUS_CONFIDENCE. The arm only
+ *      considers ASN rows not already cited as the `to` side of
+ *      another `paypal_funding` chain_link, so two same-amount
+ *      same-day PayPal expenses cannot both claim a single ASN
+ *      debit.
+ *
+ *   3. Fuzzy arm — when arms 1 and 2 miss, score candidate
+ *      `transfer_in` rows by a weighted blend of Levenshtein-
+ *      normalised merchant similarity (0.5) + amount-band similarity
+ *      (0.3) + date-window similarity (0.2). The best score ≥
+ *      FUZZY_MIN_CONFIDENCE surfaces as state='candidate',
+ *      confidence ∈ [0.6, 0.99].
  *
  * `signature_hash` (D-88) = sha256(`counterparty_normalized` + '|' +
  * funding-account IBAN). Both arms compute and persist it in
@@ -69,6 +86,24 @@ final class PaypalFundingResolver
 
     /** Ceiling below 1.0 for fuzzy candidates (1.0 is reserved for deterministic). */
     public const FUZZY_MAX_CONFIDENCE = 0.99;
+
+    /**
+     * Confidence written when the ASN-direct arm finds exactly one
+     * ASN-side `transfer_out` matching the PayPal expense's settled
+     * amount inside the date window. Matches the deterministic arm's
+     * 1.000 because the match is structurally unambiguous for the
+     * user (single PayPal expense + single ASN debit of equal amount
+     * within ±3 days).
+     */
+    private const ASN_DIRECT_UNIQUE_CONFIDENCE = '1.000';
+
+    /**
+     * Confidence written when the ASN-direct arm finds ≥2 ASN-side
+     * `transfer_out` candidates inside the date window. The closest by
+     * booked_at wins but the link drops to `state='candidate'` so the
+     * user sees the ambiguity in the review queue.
+     */
+    private const ASN_DIRECT_AMBIGUOUS_CONFIDENCE = '0.900';
 
     /**
      * Event types whose memo cells are scanned for a destination IBAN
@@ -163,6 +198,13 @@ final class PaypalFundingResolver
                 continue;
             }
 
+            $link = $this->asnDirectMatch($row, $user);
+            if ($link !== null) {
+                $this->inserter->insertIfNotExists($link, $user);
+
+                continue;
+            }
+
             $link = $this->fuzzyMatch($row, $user);
             if ($link !== null) {
                 $this->inserter->insertIfNotExists($link, $user);
@@ -238,6 +280,151 @@ final class PaypalFundingResolver
         }
 
         return null;
+    }
+
+    /**
+     * ASN-direct arm. Pairs a PayPal `expense` directly with the ASN-
+     * side `transfer_out` that funded it, in the empirical Activity-
+     * Download shape where the funding-leg `Bankstorting` row is
+     * absent from the PayPal CSV.
+     *
+     * Match predicates (all required, all per-user):
+     *
+     *   1. The PayPal expense's `settled_amount_minor` matches an
+     *      ASN-side `transfer_out`'s `settled_amount_minor` exactly
+     *      (same negative-signed integer — both rows are "money
+     *      leaving an account").
+     *
+     *   2. The ASN row's `counterparty_iban` is present in
+     *      `known_counterparty_ibans` for the user with
+     *      `target_account_kind='paypal'` (alias bridge — the real
+     *      institution IBAN like `LU89751000135104200E` is mapped to
+     *      the synthetic `'PAYPAL'` Account.iban literal at install
+     *      time by the DefaultKnownCounterpartyIbansSeeder).
+     *
+     *   3. The ASN row's `booked_at` is within ±DATE_WINDOW_DAYS of
+     *      the PayPal expense's `booked_at`. SEPA debits typically
+     *      lag the originating PayPal payment by 0–2 days; the
+     *      window is symmetric to absorb adapter book-time
+     *      conventions (ASN at 12:00, PayPal at startOfDay).
+     *
+     *   4. The ASN row is not already cited as the `to` side of
+     *      another `paypal_funding` chain_link in state `confirmed`
+     *      or `candidate`. This 1:1 enforcement keeps two same-day
+     *      same-amount PayPal expenses from both claiming a single
+     *      ASN debit (the closest-by-date one wins; the other falls
+     *      through to the fuzzy arm).
+     *
+     * Result:
+     *
+     *   - Exactly one candidate inside the window →
+     *     state='confirmed', confidence=ASN_DIRECT_UNIQUE_CONFIDENCE
+     *     (1.000). The match is structurally unambiguous.
+     *
+     *   - ≥2 candidates → state='candidate',
+     *     confidence=ASN_DIRECT_AMBIGUOUS_CONFIDENCE (0.900). The
+     *     closest by booked_at wins; the user reviews the link.
+     *
+     *   - Zero candidates → null (fall through to fuzzy arm).
+     *
+     * Cross-user safety: every predicate joins/scopes on `user_id`.
+     * Idempotency: re-running picks up zero new ASN rows because the
+     * outer chain_links left-join in `resolveForUser` excludes PayPal
+     * expenses already carrying a `paypal_funding` link.
+     *
+     * @return ?array<string, mixed>
+     */
+    private function asnDirectMatch(stdClass $row, User $user): ?array
+    {
+        $settledMinor = self::toInt($row->settled_amount_minor ?? null);
+        if ($settledMinor === 0) {
+            return null;
+        }
+
+        $bookedAtRaw = self::toString($row->booked_at ?? null);
+        if ($bookedAtRaw === '') {
+            return null;
+        }
+        $center = CarbonImmutable::parse($bookedAtRaw);
+        $windowStart = $center->subDays(self::DATE_WINDOW_DAYS)->startOfDay()->toDateTimeString();
+        $windowEnd = $center->addDays(self::DATE_WINDOW_DAYS)->endOfDay()->toDateTimeString();
+
+        // Pull every ASN-side candidate inside the date + amount + alias
+        // gate. limit(2) is intentional — the arm only needs to know
+        // "0", "1", or "≥2"; the closest by booked_at is already the
+        // first row thanks to the orderByRaw clause.
+        //
+        // The left-join on chain_links is the 1:1 enforcement: an ASN
+        // row already cited as `to_transaction_id` on another
+        // `paypal_funding` link in a non-rejected state is excluded
+        // from the candidate set. A rejected link does NOT exclude —
+        // the per-pair pre-insert guard in ChainLinkInsertHelper still
+        // suppresses re-proposal of the same (from, to, kind, user)
+        // tuple, so a rejected pair stays rejected.
+        $candidates = $this->db->connection()
+            ->table('transactions as tx')
+            ->join('known_counterparty_ibans as kci', function ($join) use ($user): void {
+                /** @var JoinClause $join */
+                $join->on('kci.real_iban', '=', 'tx.counterparty_iban')
+                    ->where('kci.user_id', '=', $user->id)
+                    ->where('kci.target_account_kind', '=', 'paypal');
+            })
+            ->leftJoin('chain_links as existing', function ($join): void {
+                /** @var JoinClause $join */
+                $join->on('existing.to_transaction_id', '=', 'tx.id')
+                    ->where('existing.kind', '=', 'paypal_funding')
+                    ->whereIn('existing.state', ['confirmed', 'candidate']);
+            })
+            ->where('tx.user_id', $user->id)
+            ->where('tx.type', 'transfer_out')
+            ->where('tx.settled_amount_minor', $settledMinor)
+            ->whereBetween('tx.booked_at', [$windowStart, $windowEnd])
+            ->whereNull('existing.id')
+            ->orderByRaw('ABS(julianday(tx.booked_at) - julianday(?))', [$center->toDateTimeString()])
+            ->limit(2)
+            ->get([
+                'tx.id as candidate_id',
+                'tx.booked_at as candidate_booked_at',
+                'tx.counterparty_iban as candidate_iban',
+            ]);
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        /** @var stdClass $closest */
+        $closest = $candidates->first();
+        $partnerId = self::toInt($closest->candidate_id ?? null);
+        if ($partnerId === 0) {
+            return null;
+        }
+        $partnerIban = self::toString($closest->candidate_iban ?? null);
+        $ambiguous = $candidates->count() > 1;
+
+        $bookedCarbon = CarbonImmutable::parse(self::toString($closest->candidate_booked_at ?? null));
+        $dateDeltaDays = abs((int) $bookedCarbon->diffInDays($center, false));
+
+        return [
+            'from_transaction_id' => self::toInt($row->tx_id ?? null),
+            'to_transaction_id' => $partnerId,
+            'kind' => 'paypal_funding',
+            'state' => $ambiguous ? 'candidate' : 'confirmed',
+            'confidence' => $ambiguous
+                ? self::ASN_DIRECT_AMBIGUOUS_CONFIDENCE
+                : self::ASN_DIRECT_UNIQUE_CONFIDENCE,
+            'resolver' => 'auto',
+            'evidence' => [
+                'matched_via' => 'asn_alias_amount_date',
+                'matched_iban' => $partnerIban,
+                'matched_amount_minor' => $settledMinor,
+                'date_delta_days' => $dateDeltaDays,
+                'ambiguous_candidates' => $ambiguous ? $candidates->count() : null,
+                'signature_hash' => $this->signatureHash(
+                    self::toString($row->counterparty_normalized ?? null),
+                    $partnerIban,
+                ),
+            ],
+        ];
     }
 
     /**
