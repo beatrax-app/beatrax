@@ -197,6 +197,9 @@ final class DemoSeedCommand extends Command
             $connection->table('counterparties')
                 ->whereIn('user_id', $demoUserIds)
                 ->delete();
+            $connection->table('merchant_aliases')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
             $connection->table('accounts')
                 ->whereIn('user_id', $demoUserIds)
                 ->delete();
