@@ -23,6 +23,7 @@ final class WizardStepRegistry
     private const STEPS = [
         'welcome',
         'connect-bank',
+        'connect-paypal',
         'connect-card',
         'connect-email',
         'first-import',
@@ -32,6 +33,7 @@ final class WizardStepRegistry
     /** @var list<string> */
     private const SKIPPABLE = [
         'connect-bank',
+        'connect-paypal',
         'connect-card',
         'connect-email',
     ];
