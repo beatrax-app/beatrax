@@ -52,7 +52,36 @@
                     @foreach ($page->rows as $row)
                         <tr>
                             <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
-                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
+                            {{-- Counterparty is the drill-in affordance —
+                                 wire:navigate keeps the SPA-style transition
+                                 the rest of the app uses; underline-on-hover
+                                 keeps the row chrome quiet at rest. From the
+                                 detail page the "View chain" button surfaces
+                                 the cross-account chain drawer. The chain-
+                                 link badge appears next to rows that are
+                                 already part of a confirmed/candidate
+                                 chain_link, so the user knows which rows
+                                 lead somewhere when they click.  --}}
+                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
+                                <a
+                                    href="{{ route('transactions.show', ['transactionId' => $row->id]) }}"
+                                    wire:navigate
+                                    class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                    data-testid="tx-row-link-{{ $row->id }}"
+                                >{{ $row->counterpartyName ?? '—' }}</a>
+                                @if (isset(($chainTxIds ?? [])[$row->id]))
+                                    <span
+                                        class="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
+                                        title="Part of a chain — open this row to view"
+                                        data-testid="tx-row-chain-badge-{{ $row->id }}"
+                                    >
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 015.656 5.656l-3 3a4 4 0 01-5.656-5.656M10.172 13.828a4 4 0 01-5.656-5.656l3-3a4 4 0 015.656 5.656"/>
+                                        </svg>
+                                        chain
+                                    </span>
+                                @endif
+                            </td>
                             <td class="px-4 py-2 text-slate-500 dark:text-slate-400">
                                 @livewire(
                                     'categorization.inline-category-picker',
