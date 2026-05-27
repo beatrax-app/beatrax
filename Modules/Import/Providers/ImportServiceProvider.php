@@ -8,18 +8,22 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Events\UserInstalled;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
+use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Import\Internal\Http\Livewire\ImportResults;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Import\Internal\Listeners\HandleFileOpenedFromOs;
+use Modules\Import\Internal\Listeners\SeedDefaultKnownCounterpartyIbans;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Pipeline\Stages\PaymentTypeClassifierStage;
 use Modules\Import\Internal\Services\AliasYamlExporter;
 use Modules\Import\Internal\Services\AliasYamlImporter;
+use Modules\Import\Internal\Services\KnownCounterpartyIbanResolver;
 use Modules\Import\Internal\Services\LongestCommonPrefix;
 use Modules\Import\Public\Actions\ApplyEnrichments;
 use Modules\Import\Public\Actions\ConfirmImport;
@@ -31,6 +35,7 @@ use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\DetectsStartingBalance;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\PaymentTypeHinter;
+use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Import\Public\Services\AliasMatchPreviewQuery;
@@ -72,6 +77,14 @@ use Modules\Import\Public\Services\PatternGeneralizer;
  *    plus shipping the class — the aggregator and any consumers stay
  *    untouched. `class_exists()` gates every singleton + tag call so a
  *    missing class does not abort container resolution.
+ *  - ResolvesKnownCounterpartyIban → KnownCounterpartyIbanResolver
+ *    bridges the real institution IBAN that appears on the ASN side
+ *    of a cross-account hop (PayPal Luxembourg, ICS at ABN AMRO) to
+ *    the user's own synthetic-IBAN account of the matching kind.
+ *    The `SeedDefaultKnownCounterpartyIbans` listener subscribes to
+ *    the `UserInstalled` event so a freshly installed user receives
+ *    the two seeded institution-IBAN aliases (PayPal Luxembourg →
+ *    paypal kind, ICS at ABN AMRO → ics_card kind) automatically.
  */
 final class ImportServiceProvider extends ServiceProvider
 {
@@ -118,10 +131,13 @@ final class ImportServiceProvider extends ServiceProvider
         $this->app->bind(ConfirmsImports::class, ConfirmImport::class);
         $this->app->bind(NamesAccounts::class, AccountNamer::class);
         $this->app->bind(AppliesEnrichments::class, ApplyEnrichments::class);
+        $this->app->bind(ResolvesKnownCounterpartyIban::class, KnownCounterpartyIbanResolver::class);
 
         $this->app->singleton(ImportPipeline::class);
         $this->app->singleton(PreviewCache::class);
         $this->app->singleton(HandleFileOpenedFromOs::class);
+        $this->app->singleton(KnownCounterpartyIbanResolver::class);
+        $this->app->singleton(DefaultKnownCounterpartyIbansSeeder::class);
 
         // Merchant-alias collaborators. The resolver is stateless and
         // read-only; the generalizer is pure; the preview query and
@@ -213,5 +229,11 @@ final class ImportServiceProvider extends ServiceProvider
         // store; the user then lands on the Desktop staging page bound
         // to the file.
         $events->listen(FileOpenedFromOs::class, [HandleFileOpenedFromOs::class, 'handle']);
+
+        // Freshly installed users receive the two seeded institution-IBAN
+        // aliases (PayPal Luxembourg → paypal kind, ICS at ABN AMRO →
+        // ics_card kind). The listener resolves the User from the event's
+        // int `userId` payload and the seeder is idempotent on re-runs.
+        $events->listen(UserInstalled::class, SeedDefaultKnownCounterpartyIbans::class);
     }
 }
