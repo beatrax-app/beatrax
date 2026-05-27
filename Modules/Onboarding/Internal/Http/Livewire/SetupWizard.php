@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Onboarding\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Onboarding\Internal\Services\ResumeStepResolver;
@@ -255,6 +257,26 @@ final class SetupWizard extends Component
         // RedirectResponse return is dropped by Livewire's action
         // dispatcher.
         return $this->redirect('/');
+    }
+
+    /**
+     * Launches the project's GitHub issues page in the system browser
+     * for the wizard footer's "Need help?" affordance. Wired to a
+     * `wire:click.prevent` so Electron does not navigate the wizard
+     * window away from `/setup-wizard`. The URL is sourced from
+     * `community.github_issues_url` (env-overridable) and validated
+     * through `OpenExternalUrlAction`'s https + host allow-list before
+     * it reaches NativePHP's shell contract.
+     */
+    public function openHelp(
+        OpenExternalUrlAction $opener,
+        ConfigRepository $config,
+    ): void {
+        $url = $config->get('community.github_issues_url');
+        if (! is_string($url) || $url === '') {
+            return;
+        }
+        $opener($url);
     }
 
     public function render(ViewFactory $views): View

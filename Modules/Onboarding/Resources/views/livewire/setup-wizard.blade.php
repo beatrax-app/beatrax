@@ -143,7 +143,14 @@
             <span class="privacy-pill-dot" aria-hidden="true"></span>
             Your data stays on this computer
         </span>
-        <a class="wiz-help-link" href="#" aria-label="Open help">
+        <a
+            class="wiz-help-link"
+            href="{{ config('community.github_issues_url') }}"
+            wire:click.prevent="openHelp"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open the beatrax issues page on GitHub"
+        >
             Need help?
         </a>
     </footer>
