@@ -11,8 +11,8 @@ use Modules\Core\Models\User;
  * Feature coverage for the post-signup redirect to the first-run setup
  * wizard: the Livewire signup component submits valid credentials and
  * the resulting redirect lands on /setup, the UserInstalled listener
- * chain seeds exactly the six wizard_progress rows for the new user, and
- * the user is logged in.
+ * chain seeds exactly the seven wizard_progress rows for the new user
+ * (one per step in WizardStepRegistry::STEPS), and the user is logged in.
  */
 
 it('redirects to the setup-wizard route after a successful signup', function (): void {
@@ -29,7 +29,7 @@ it('redirects to the setup-wizard route after a successful signup', function ():
     $user = User::query()->where('username', 'wizard-user')->first();
     expect($user)->not->toBeNull();
 
-    expect(DB::table('wizard_progress')->where('user_id', $user->id)->count())->toBe(6);
+    expect(DB::table('wizard_progress')->where('user_id', $user->id)->count())->toBe(7);
 
     $this->assertAuthenticatedAs($user);
 });
