@@ -53,7 +53,12 @@
         <span class="ic" aria-hidden="true">↻</span>
         Recurring
     </a>
-    <a href="{{ route('chains.review') }}" class="side-item {{ $isActive('/chains/review') }}">
+    {{-- The sidebar entry points at the /chains overview (all chains)
+         rather than the /chains/review queue (candidates only) so the
+         primary discovery surface is "what chains do I have?" rather
+         than "what's awaiting triage?". The overview header links to
+         the review queue and the hints surface in turn. --}}
+    <a href="{{ route('chains.index') }}" class="side-item {{ $isActive('/chains') }}">
         <span class="ic" aria-hidden="true">⇉</span>
         Chains
     </a>

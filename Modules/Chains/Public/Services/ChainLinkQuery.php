@@ -175,6 +175,42 @@ final class ChainLinkQuery
     }
 
     /**
+     * Overview list of every non-rejected chain_link the user owns,
+     * sorted by recency. One row per link with both legs' display
+     * data (counterparty + settled amount + posted_at + account
+     * name) so the `/chains` index can render a calm scrolling list
+     * without per-row drill-down. Used by the ChainsIndex Livewire
+     * SFC (`/chains`); cross-user scoped via `user_id`.
+     *
+     * Cost: one chain_links query bounded by $limit, plus one
+     * transactions read per visible row (2 endpoints × N rows is
+     * batched into a single IN(...) lookup by the iterator). Default
+     * $limit of 50 covers the typical single-user month at a glance;
+     * pagination is a future iteration.
+     *
+     * @return list<ChainLinkRow>
+     */
+    public function allChainsForUser(User $user, int $limit = 50): array
+    {
+        $rows = $this->db->connection()->table('chain_links')
+            ->where('user_id', $user->id)
+            ->whereIn('state', ['confirmed', 'candidate'])
+            ->whereNotNull('to_transaction_id')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $result[] = $this->makeChainLinkRow($row, $user);
+        }
+
+        return $result;
+    }
+
+    /**
      * Cheap boolean — does this transaction participate in any
      * chain_link (as `from` OR `to`) in a non-rejected state? Used
      * by the transaction-detail page to gate the "View chain"
@@ -484,8 +520,10 @@ final class ChainLinkQuery
             kind: self::toString($row->kind),
             state: self::toString($row->state),
             confidence: self::toFloat($row->confidence ?? null),
+            fromTransactionId: self::toInt($row->from_transaction_id ?? null),
             fromCounterparty: $fromCounterparty,
             fromAmount: Money::ofMinor($fromAmountMinor, $fromCurrency),
+            toTransactionId: self::toInt($row->to_transaction_id ?? null),
             toCounterparty: $toCounterparty,
             toAmount: Money::ofMinor($toAmountMinor, $toCurrency),
             fromPostedAt: CarbonImmutable::parse($fromPostedAt),
