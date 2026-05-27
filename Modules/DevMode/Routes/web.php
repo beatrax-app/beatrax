@@ -72,6 +72,7 @@ Route::middleware(['web', 'auth', 'ensureDeveloperMode'])
         Route::get('/logs', LogTailerPage::class)->name('dev.logs');
         Route::get('/logs/poll', [LogStreamController::class, 'poll'])->name('dev.logs.poll');
         Route::get('/logs/context', [LogStreamController::class, 'context'])->name('dev.logs.context');
+        Route::get('/logs/stats', [LogStreamController::class, 'stats'])->name('dev.logs.stats');
 
         // Queue inspector. Three sub-routes back the same Livewire
         // component; the bare /dev/queue URL redirects to the

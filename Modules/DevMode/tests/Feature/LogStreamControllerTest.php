@@ -70,6 +70,42 @@ it('returns 404 from /dev/logs/poll for a non-developer (EnsureDeveloperMode gat
     $response->assertNotFound();
 });
 
+it('returns 404 from /dev/logs/stats for a non-developer (EnsureDeveloperMode gate)', function (): void {
+    logStreamUser('logs-stats-seed', true);
+    $user = logStreamUser('logs-stats-nondev', false);
+
+    $response = $this->actingAs($user)->getJson('/dev/logs/stats');
+
+    $response->assertNotFound();
+});
+
+it('returns per-severity counts + total lines + sizes from /dev/logs/stats for a developer', function (): void {
+    $user = logStreamUser('logs-stats-developer');
+    $body = implode("\n", [
+        '[2026-05-28 10:00:00] local.INFO: alpha',
+        '[2026-05-28 10:00:01] local.INFO: beta',
+        '[2026-05-28 10:00:02] local.WARNING: gamma',
+        '[2026-05-28 10:00:03] local.ERROR: delta',
+    ])."\n";
+    $path = ensureDailyLogFile($body);
+
+    $response = $this->actingAs($user)->getJson('/dev/logs/stats');
+
+    $response->assertOk();
+    $response->assertJsonPath('today.exists', true);
+    $response->assertJsonPath('today.sizeBytes', strlen($body));
+    $response->assertJsonPath('today.totalLines', 4);
+    $response->assertJsonPath('today.parsedLines', 4);
+    $response->assertJsonPath('today.perSeverity.INFO', 2);
+    $response->assertJsonPath('today.perSeverity.WARNING', 1);
+    $response->assertJsonPath('today.perSeverity.ERROR', 1);
+    $response->assertJsonPath('today.perSeverity.DEBUG', 0);
+    $response->assertJsonPath('allFiles.count', 1);
+    $response->assertJsonPath('allFiles.totalBytes', strlen($body));
+
+    expect($path)->toBeFile();
+});
+
 it('returns the new chunk + newOffset + inode from /dev/logs/poll for a developer', function (): void {
     $user = logStreamUser('logs-poll-developer');
     $body = "[2026-05-24 10:00:00] local.INFO: line one\n[2026-05-24 10:00:01] local.WARNING: line two\n";
