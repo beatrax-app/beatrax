@@ -9,6 +9,8 @@ use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
@@ -107,8 +109,11 @@ final class CommandArgPromptModal extends Component
         $this->dispatch('modal-show', name: 'command-args');
     }
 
-    public function submit(DevCommandRegistry $registry): void
-    {
+    public function submit(
+        DevCommandRegistry $registry,
+        CommandSpawner $spawner,
+        CurrentUser $user,
+    ): void {
         $this->submitError = '';
 
         try {
@@ -167,17 +172,20 @@ final class CommandArgPromptModal extends Component
             $args[$arg->name] = $value;
         }
 
-        // Same event the palette already uses for no-arg commands.
-        // ArtisanRunnerPage::onSpawnCommand listens and routes
-        // through spawn(), where the required-arg guard is a third
-        // line of defense.
-        $this->dispatch(
-            'spawn-command',
-            name: $this->command,
-            args: $args,
-            tier: 'safe',
-        );
+        // Spawn directly via the CommandSpawner. The earlier draft
+        // dispatched `spawn-command` and relied on
+        // ArtisanRunnerPage::onSpawnCommand to perform the actual
+        // run, which silently failed whenever the operator opened
+        // the modal from any page other than /dev/artisan — the
+        // runner page was the SOLE listener for that event and was
+        // not mounted on /dev/logs, /dev/queue, etc. (user-visible
+        // symptom: "submit does nothing, no console / network
+        // errors"). Driving the spawner here means the modal works
+        // identically from every surface that mounts it.
+        $command = $this->command;
+        $runId = $spawner->start($command, $args, $user->id(), 'safe');
 
+        $this->dispatch('toast', message: 'Started '.$command.' (run '.$runId.')');
         $this->dispatch('modal-close', name: 'command-args');
 
         $this->values = [];
