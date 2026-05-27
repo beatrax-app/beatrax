@@ -1,15 +1,22 @@
 # Diederik PR gate — quality-check workflow.
 #
-# SKELETON. The full multi-axis CI matrix (PHP 8.4 + 8.5, all gates, plus
-# code-signing + release jobs) is the scope of Phase 17 (CI-01). This file
-# is the Phase 15 PKG-07 deliverable: prove that Larastan L10 strict +
-# Laravel Pint + Pest all pass on PHP 8.4 — the version `nativephp/php-bin`
-# ships inside the desktop bundle.
+# Runs Laravel Pint (--test), Larastan level 10 strict, and the full Pest
+# suite on every pull request and on every push to `main`. Two PHP axes
+# always run in parallel:
 #
-# Phase 17 will extend the `php` axis below to `['8.4', '8.5']` and add
-# the build / release / signing jobs. The single-axis shape here is
-# chosen so Phase 17 needs only to append entries to the matrix, never
-# to rewrite the workflow.
+#   - 8.4 — the version `nativephp/php-bin` bundles inside the shipped
+#           desktop build; the gates must be honest on that exact runtime.
+#   - 8.5 — the developer's local dev box; keeps the project honest about
+#           the newer runtime so divergence is caught at PR time.
+#
+# `fail-fast: false` is intentional — both axes always report, so a
+# regression that only surfaces on one runtime is never hidden by the
+# other finishing first.
+#
+# Every third-party action is pinned to a full 40-char commit SHA with
+# the human-readable tag retained as an inline comment for legibility.
+# Tag-only references are a supply-chain risk: mutable tags can be
+# repointed at malicious commits without the workflow file changing.
 
 name: ci
 
@@ -27,13 +34,10 @@ jobs:
         name: quality (PHP ${{ matrix.php }})
         runs-on: ubuntu-latest
         timeout-minutes: 15
-        # PHP 8.4 is the version `nativephp/php-bin` bundles into the
-        # desktop build, so the gates must be honest on that exact
-        # runtime. Phase 17 widens this matrix to include 8.5.
         strategy:
             fail-fast: false
             matrix:
-                php: ['8.4']
+                php: ['8.4', '8.5']
         env:
             # The app is timezone-pinned to Europe/Amsterdam across every
             # module (recurring detection, drift alerts, forecasting all
@@ -42,10 +46,10 @@ jobs:
             TZ: Europe/Amsterdam
         steps:
             - name: Check out the source
-              uses: actions/checkout@v4
+              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
             - name: Set up PHP
-              uses: shivammathur/setup-php@v2
+              uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2
               with:
                   php-version: ${{ matrix.php }}
                   # Extensions the framework + project use. `ext-imap` is
@@ -57,7 +61,7 @@ jobs:
                   tools: composer:v2
 
             - name: Cache Composer packages
-              uses: actions/cache@v4
+              uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
               with:
                   path: ~/.composer/cache
                   key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
