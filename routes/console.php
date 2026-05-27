@@ -8,6 +8,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\Schedule;
 use Modules\Core\Models\User;
+use Modules\Counterparties\Internal\Jobs\CounterpartyGarbageCollectorJob;
 use Modules\DriftAlerts\Internal\Jobs\RevivedExpiredDriftSnoozesJob;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
@@ -265,3 +266,29 @@ Schedule::command('db:backup --force')
     ->name('db.backup-daily')
     ->dailyAt('03:00')
     ->withoutOverlapping(60);
+
+// Daily counterparty garbage-collector sweep: dispatches a per-user
+// CounterpartyGarbageCollectorJob at 04:00 Europe/Amsterdam — one
+// hour after the daily backup so a freshly-pruned counterparty set
+// is captured in the next morning's backup snapshot. The job's
+// ShouldBeUniqueUntilProcessing lock keyed on userId collapses a
+// same-day re-dispatch into a single queued pass; the orphan
+// predicate keeps counterparties with recent transactions or an
+// alias anchor.
+//
+// Closure DI mirrors the email-scan + receipts + recurring entries
+// above — Bus Dispatcher resolved through the container; no facade
+// reaches into module code. Method order .name() BEFORE
+// .dailyAt('04:00')->timezone('Europe/Amsterdam')
+// ->withoutOverlapping(30) matches the existing entries' shape so
+// CallbackEvent's description-required guard reads the description
+// before withoutOverlapping consumes it.
+Schedule::call(function (Dispatcher $bus): void {
+    User::query()->lazyById(100)->each(function (User $user) use ($bus): void {
+        $bus->dispatch(new CounterpartyGarbageCollectorJob($user->id));
+    });
+})
+    ->name('counterparties.gc')
+    ->dailyAt('04:00')
+    ->timezone('Europe/Amsterdam')
+    ->withoutOverlapping(30);

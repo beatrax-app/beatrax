@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\SafeTrace;
+use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
@@ -57,6 +58,7 @@ final class ImportPipeline
         private readonly ClassifyTransactionType $classifier,
         private readonly PaymentTypeClassifierStage $paymentTypeClassifier,
         private readonly AppliesAutoCategory $autoCategory,
+        private readonly ResolvesCounterparties $resolveCounterparty,
         private readonly FingerprintStage $fingerprint,
         private readonly SourceAdapterRegistry $adapters,
         private readonly RecordsStatementSummary $statementSummaries,
@@ -132,6 +134,15 @@ final class ImportPipeline
                     $normalized = $this->paymentTypeClassifier->run($normalized, $user, $sourceFormat);
                     $autoOutcome = $this->autoCategory->apply($normalized, $user);
                     $normalized = $autoOutcome->canonical;
+                    // ResolveCounterpartyStage sits between auto-category
+                    // application and the FingerprintStage post-commit
+                    // boundary so the resolved counterparty_id rides
+                    // along on the canonical row that eventually hits
+                    // RecordTransactions. The Public contract resolves
+                    // through DI; the Internal implementation walks the
+                    // seven-step precedence chain and upserts the
+                    // matching `counterparties` row.
+                    $normalized = $this->resolveCounterparty->run($normalized, $user);
                 } catch (Throwable $e) {
                     // Log every per-row failure with the full stack
                     // trace so a developer can open /dev/logs and see
