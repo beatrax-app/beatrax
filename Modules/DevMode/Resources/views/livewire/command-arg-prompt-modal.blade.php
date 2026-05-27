@@ -80,7 +80,7 @@
                                         type="checkbox"
                                         wire:model.live="values.{{ $arg->name }}"
                                         @if ($idx === 0) x-init="$nextTick(() => $el.focus())" @endif
-                                        class="rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:bg-slate-900 dark:border-slate-700"
+                                        class="rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                                         data-testid="arg-input-{{ $arg->name }}"
                                     />
                                     <span>Enable</span>
