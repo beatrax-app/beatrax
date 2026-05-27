@@ -1,9 +1,10 @@
 {{--
-    Connect-paypal step — wizard step 3. PayPal exports one CSV format
-    (Activity Download), so the step accepts a single CSV via a
-    single-file drop zone. A single format chip names the only choice;
-    a four-tile mini-step row mirrors the PayPal portal export path
-    (Log in → Activity → Download → CSV).
+    Connect-paypal step — wizard step 3. PayPal's per-event export is
+    "Rapport Transactiegegevens" (Transaction Details Report), so the
+    step accepts a single CSV via a single-file drop zone. A single
+    format chip names the only choice; a four-tile mini-step row
+    mirrors the PayPal portal export path (Log in → custom statements
+    → Betalingen tab → Rapport Transactiegegevens).
 
     Submission delegates to the existing `RunsImports` pipeline with
     `paypal-csv` as the format key — the same path the PaypalCsvAdapter
@@ -13,9 +14,10 @@
     into `wizard_progress.data['paypal_import_run_id']` (single int)
     for the consolidated preview screen to read back.
 
-    Balance Reconciliation Reports are explicitly rejected upstream
-    (`UnsupportedPaypalCsvShapeException`); the friendly toast surfaces
-    inline below the drop zone alongside any other parse-time failure.
+    Saldorapport (Balance Reconciliation Report) CSVs are explicitly
+    rejected upstream (`UnsupportedPaypalCsvShapeException`); the
+    friendly toast surfaces inline below the drop zone alongside any
+    other parse-time failure.
 --}}
 <section class="wiz-step wiz-step-connect-paypal" aria-labelledby="wiz-connect-paypal-h1">
     <p class="wiz-eyebrow">💸 Step 3 — Your PayPal account</p>
@@ -23,14 +25,14 @@
         Connect your PayPal account
     </h1>
     <p class="wiz-lede">
-        Drop your PayPal Activity Download CSV. Balance Reconciliation Reports won't work — we need Activity.
+        Drop your PayPal <em>Rapport Transactiegegevens</em> CSV (the per-transaction details export). The Saldorapport balance report won't work — we need per-event data.
     </p>
 
     <div class="mini-steps">
         <x-onboarding::mini-step glyph="🔐" label="Log in" sub="paypal.com" state="done" />
-        <x-onboarding::mini-step glyph="📑" label="Open activity" sub="Reports → Activity" state="done" />
+        <x-onboarding::mini-step glyph="📑" label="Custom statements" sub="Aangepast → Betalingen" state="done" />
         <x-onboarding::mini-step glyph="📅" label="Pick a range" sub="Last 12 months" state="now" />
-        <x-onboarding::mini-step glyph="⬇️" label="Download" sub="CSV (.csv)" state="upcoming" />
+        <x-onboarding::mini-step glyph="⬇️" label="Download" sub="Rapport Transactiegegevens (CSV)" state="upcoming" />
     </div>
 
     <div class="format-chips" aria-label="PayPal exports as CSV only">
@@ -40,7 +42,7 @@
 
     <x-onboarding::drop-zone
         wire-model="activityCsv"
-        lead="Drop your PayPal Activity CSV here"
+        lead="Drop your Rapport Transactiegegevens CSV here"
         sublink="or browse for a file"
         glyph="📥"
         accept=".csv"

@@ -8,13 +8,14 @@ use Modules\Import\Public\Contracts\RunsImports;
  * End-to-end pipeline regression test for the PayPal CSV upload path.
  *
  * Locks two invariants for the wizard:
- *  - Uploading a PayPal Activity Download CSV produces a non-empty
- *    preview, none of whose rows carry status='error'. Pins the
- *    happy-path contract against future parser / sniffer refactors.
- *  - Uploading a PayPal Balance Reconciliation Report CSV (the
- *    wrong export type) produces a single ERROR row whose message
- *    points the user at the right export menu — not a generic
- *    'language profile not supported' message.
+ *  - Uploading a PayPal Rapport Transactiegegevens (Transaction Details
+ *    Report) CSV produces a non-empty preview, none of whose rows carry
+ *    status='error'. Pins the happy-path contract against future parser
+ *    / sniffer refactors.
+ *  - Uploading a PayPal Saldorapport (Balance Reconciliation Report)
+ *    CSV — the wrong export type — produces a single ERROR row whose
+ *    message points the user at Rapport Transactiegegevens — not a
+ *    generic 'language profile not supported' message.
  */
 
 beforeEach(function (): void {
@@ -22,7 +23,7 @@ beforeEach(function (): void {
     $this->importer = $this->app->make(RunsImports::class);
 });
 
-it('parses the redacted PayPal Activity Download fixture and produces at least one non-error preview row', function (): void {
+it('parses the redacted PayPal Rapport Transactiegegevens fixture and produces at least one non-error preview row', function (): void {
     $fixture = base_path('Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv');
 
     $result = $this->importer->runFromUpload(
@@ -36,7 +37,7 @@ it('parses the redacted PayPal Activity Download fixture and produces at least o
     expect(array_filter($result->rows, fn ($r) => $r->status === 'error'))->toBe([]);
 })->group('phase-16.1.1');
 
-it('surfaces an actionable single-row preview error when the user uploads a PayPal Balance Reconciliation Report by mistake', function (): void {
+it('surfaces an actionable single-row preview error when the user uploads a PayPal Saldorapport by mistake', function (): void {
     $tmp = tempnam(sys_get_temp_dir(), 'paypal-brr-regression-').'.csv';
     file_put_contents(
         $tmp,
@@ -57,7 +58,7 @@ it('surfaces an actionable single-row preview error when the user uploads a PayP
 
         expect(count($result->rows))->toBe(1);
         expect($result->rows[0]->status)->toBe('error');
-        expect($result->rows[0]->error)->toContain('Activity Download');
+        expect($result->rows[0]->error)->toContain('Rapport Transactiegegevens');
     } finally {
         @unlink($tmp);
     }

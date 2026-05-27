@@ -133,15 +133,15 @@ final class HeaderSniffer
     }
 
     /**
-     * Validates that the path looks like a PayPal "Activity Download"
-     * CSV — `.csv` extension AND a header row whose token set matches
-     * one of the registered language profiles.
+     * Validates that the path looks like a PayPal `Rapport Transactiegegevens`
+     * (Transaction Details Report) CSV — `.csv` extension AND a header
+     * row whose token set matches one of the registered language profiles.
      *
      * Unlike `sniffAsnCsv()`, this method does NOT enforce a fixed
      * column count: PayPal exports vary in column count across language
      * profiles and across export-format revisions. The header-token
      * signature (a discriminator subset of the locale's expected
-     * columns) is sufficient to distinguish a PayPal Activity Download
+     * columns) is sufficient to distinguish a per-event PayPal CSV
      * from any other CSV.
      *
      * Two failure modes carry typed exceptions so the wizard can render
@@ -149,19 +149,20 @@ final class HeaderSniffer
      * mismatch:
      *
      *  - `UnsupportedPaypalCsvShapeException` when the first cell is one
-     *    of the Balance Reconciliation Report record-type tokens
-     *    (`RH`, `RD`, `RF`). That export is in scope as a PayPal CSV but
-     *    has a completely different column shape, so the user gets an
-     *    actionable hint to re-download the Activity Download instead.
+     *    of the `Saldorapport` (Balance Reconciliation Report) record-
+     *    type tokens (`RH`, `RD`, `RF`). That export is in scope as a
+     *    PayPal CSV but has a completely different column shape, so the
+     *    user gets an actionable hint to re-download the per-transaction
+     *    Rapport Transactiegegevens instead.
      *  - `UnsupportedPaypalCsvLanguageException` when the header tokens
-     *    match the Activity Download shape but no registered language
-     *    profile recognises them ("supported locales: nl").
+     *    match the per-event shape but no registered language profile
+     *    recognises them ("supported locales: nl").
      */
     private function sniffPaypalCsv(string $path, string $head): SniffResult
     {
         if (preg_match('/\.csv$/i', $path) !== 1) {
             throw new SniffMismatchException(
-                "That file doesn't look like a CSV. Drop in the PayPal Activity Download CSV you downloaded from the PayPal portal."
+                "That file doesn't look like a CSV. In the PayPal portal, open the custom statements view, switch to the Betalingen tab, and download Rapport Transactiegegevens as CSV."
             );
         }
 
@@ -172,18 +173,20 @@ final class HeaderSniffer
 
         $columns = str_getcsv($firstLine, PaypalCsvLanguageProfile::DELIMITER, '"', '');
 
-        // Reject the Balance Reconciliation Report export before the
-        // language-profile check. BRR rows are prefixed by record-type
-        // tokens (`RH` = Report Header, `RD` = Report Data header,
-        // `RF` = Report Footer) which never appear as a column name in
-        // the Activity Download. Detecting that prefix lets us surface
-        // a precise "download the right export" hint instead of the
-        // confusing "language profile not supported" fallback.
+        // Reject the Saldorapport (Balance Reconciliation Report) export
+        // before the language-profile check. Saldorapport rows are
+        // prefixed by record-type tokens (`RH` = Report Header,
+        // `RD` = Report Data header, `RF` = Report Footer) which never
+        // appear as a column name in Rapport Transactiegegevens.
+        // Detecting that prefix lets us surface a precise "download the
+        // right export" hint instead of the confusing "language profile
+        // not supported" fallback.
         $firstCell = trim($columns[0] ?? '');
         if (in_array($firstCell, ['RH', 'RD', 'RF'], strict: true)) {
             throw new UnsupportedPaypalCsvShapeException(
-                'This looks like a PayPal Balance Reconciliation Report CSV, not the Activity Download. '
-                .'In the PayPal portal, open Activity → Statements → Activity Download (CSV) and re-export.'
+                'This looks like a PayPal Saldorapport (balance reconciliation report). '
+                .'We need the per-transaction Rapport Transactiegegevens instead — in the PayPal portal, '
+                .'open the custom statements view, switch to the Betalingen tab, and pick Rapport Transactiegegevens.'
             );
         }
         // Trim each token so the language-profile detection compares
