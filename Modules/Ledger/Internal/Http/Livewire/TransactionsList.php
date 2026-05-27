@@ -6,6 +6,8 @@ namespace Modules\Ledger\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -74,6 +76,7 @@ final class TransactionsList extends Component
         CurrentUser $currentUser,
         TransactionListQuery $listQuery,
         ViewFactory $views,
+        DatabaseManager $db,
     ): View {
         $user = $currentUser->user();
 
@@ -91,10 +94,45 @@ final class TransactionsList extends Component
             ? $listQuery->fullHistory($user, cursorId: $this->cursorId, cursorPostedAt: $this->cursorPostedAt, currency: $queryCurrency)
             : $listQuery->recent($user, daysBack: 90, cursorId: $this->cursorId, cursorPostedAt: $this->cursorPostedAt, currency: $queryCurrency);
 
+        // Per-row chain-presence lookup — derives an array<int, true>
+        // keyed by transaction id covering EVERY row on the current
+        // page. Used by the blade to render a tiny chain indicator
+        // next to counterparties that are part of a confirmed or
+        // candidate chain_link, so the user knows which rows are
+        // worth drilling into. One UNION query per page render scoped
+        // to the visible row ids; cost stays O(page size) rather than
+        // O(ledger size). The lookup hits chain_links on EITHER side
+        // (from_transaction_id OR to_transaction_id) because the chain
+        // drawer is reachable from both legs of a pair.
+        $rowIds = array_map(static fn ($row): int => $row->id, $page->rows);
+        $chainTxIds = [];
+        if ($rowIds !== []) {
+            $matches = $db->connection()->table('chain_links')
+                ->where('user_id', $user->id)
+                ->whereIn('state', ['confirmed', 'candidate'])
+                ->where(function (Builder $q) use ($rowIds): void {
+                    $q->whereIn('from_transaction_id', $rowIds)
+                        ->orWhereIn('to_transaction_id', $rowIds);
+                })
+                ->select(['from_transaction_id', 'to_transaction_id'])
+                ->get();
+            foreach ($matches as $m) {
+                $fromId = is_numeric($m->from_transaction_id) ? (int) $m->from_transaction_id : 0;
+                $toId = is_numeric($m->to_transaction_id ?? null) ? (int) $m->to_transaction_id : 0;
+                if ($fromId !== 0) {
+                    $chainTxIds[$fromId] = true;
+                }
+                if ($toId !== 0) {
+                    $chainTxIds[$toId] = true;
+                }
+            }
+        }
+
         return $views->make('ledger::livewire.transactions-list', [
             'page' => $page,
             'fullHistory' => $this->fullHistory,
             'currency' => $this->currency,
+            'chainTxIds' => $chainTxIds,
         ]);
     }
 }
