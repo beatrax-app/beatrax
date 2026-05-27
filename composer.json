@@ -16,6 +16,7 @@
         "google/apiclient": "^2.19",
         "laravel/fortify": "^1.21",
         "laravel/framework": "^13.0",
+        "laravel/tinker": "^3.0",
         "league/csv": "^9.28",
         "league/oauth2-client": "^2.9",
         "league/oauth2-google": "^5.0",
@@ -27,6 +28,7 @@
         "spatie/laravel-activitylog": "^5.0",
         "spatie/laravel-data": "^4.0",
         "spatie/pdf-to-text": "^1.0",
+        "symfony/yaml": "^8.0",
         "thenetworg/oauth2-azure": "^2.2",
         "zbateson/mail-mime-parser": "^4.0"
     },
