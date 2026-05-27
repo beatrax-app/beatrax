@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
+use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
@@ -312,5 +313,63 @@ it('keeps a negative non-transfer row as expense (NormalizeStage default unchang
 
     $result = $this->stage->run($tx, $this->primaryUser);
 
+    expect($result->type)->toBe('expense');
+});
+
+it('re-throws MissingPaypalTransactionTypeMapException when transactionType() reports a code-internal inconsistency', function (): void {
+    // `'Bankstorting naar PP-rekening'` is mapped as `child-fee` in
+    // MAP — it exists in MAP but deliberately has no TRANSACTION_TYPE
+    // entry. Calling transactionType() against it triggers the
+    // narrower MissingPaypalTransactionTypeMapException, which
+    // signals a code-internal inconsistency (in practice: a future
+    // `parent` MAP entry whose TRANSACTION_TYPE row was forgotten).
+    // The catch ordering in ClassifyTransactionType MUST surface
+    // this as a hard failure rather than swallowing it via the
+    // supertype catch and falling through to the amount-sign
+    // default. The runtime can drive the child-fee event type
+    // here because rawPayload.events[0].type is whatever string the
+    // adapter put there — a regression in event-rollup logic could
+    // surface child-fee rows here, and the listener MUST scream.
+    $tx = classifyCanonical([
+        'accountId' => $this->asnAccount->id,
+        'type' => 'expense',
+        'amountMinor' => -1234,
+        'settledAmountMinor' => -1234,
+        'counterpartyIban' => null,
+        'sourceFormat' => 'paypal-csv',
+        'rawPayload' => [
+            'format' => 'paypal-csv',
+            'language' => 'nl',
+            'events' => [['type' => 'Bankstorting naar PP-rekening']],
+        ],
+    ]);
+
+    expect(fn () => $this->stage->run($tx, $this->primaryUser))
+        ->toThrow(MissingPaypalTransactionTypeMapException::class);
+});
+
+it('still swallows UnknownPaypalEventTypeException and falls through to the subtractive default for an unmapped parent event type', function (): void {
+    // An event type that does not exist in MAP at all raises the
+    // broader UnknownPaypalEventTypeException (user-data condition).
+    // The stage MUST catch it and let the amount-sign default
+    // classify the row rather than aborting the import.
+    $tx = classifyCanonical([
+        'accountId' => $this->asnAccount->id,
+        'type' => 'expense',
+        'amountMinor' => -789,
+        'settledAmountMinor' => -789,
+        'counterpartyIban' => null,
+        'sourceFormat' => 'paypal-csv',
+        'rawPayload' => [
+            'format' => 'paypal-csv',
+            'language' => 'nl',
+            'events' => [['type' => 'Some Event Type PayPal Has Not Shipped Yet']],
+        ],
+    ]);
+
+    $result = $this->stage->run($tx, $this->primaryUser);
+
+    // Subtractive default keeps the row at `expense` (negative
+    // amount, not transfer / refund / fee, not income).
     expect($result->type)->toBe('expense');
 });

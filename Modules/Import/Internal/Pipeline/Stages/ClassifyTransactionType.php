@@ -7,6 +7,7 @@ namespace Modules\Import\Internal\Pipeline\Stages;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
+use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException;
 use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -140,14 +141,26 @@ final class ClassifyTransactionType
                     $mappedType = $this->eventTypes->transactionType($parentEventType, $language);
 
                     return $tx->withType($mappedType);
+                } catch (MissingPaypalTransactionTypeMapException $missing) {
+                    // Code-internal inconsistency — an event type
+                    // classified as `parent` in MAP has no
+                    // corresponding TRANSACTION_TYPE entry. Re-throw
+                    // so the developer sees it fail at parse time
+                    // rather than silently misclassifying via the
+                    // amount-sign default. The exception extends
+                    // UnknownPaypalEventTypeException so legacy
+                    // callers that catch the supertype still catch
+                    // it, but the narrower clause MUST come first.
+                    throw $missing;
                 } catch (UnknownPaypalEventTypeException) {
-                    // Unknown parent event type OR missing TRANSACTION_TYPE
-                    // mapping — fall through to the subtractive default.
-                    // The adapter would have raised a typed exception at
-                    // parse time when the event was genuinely unmappable;
-                    // here we treat unmapped parent types as "use the
-                    // amount-sign default" rather than hard-aborting the
-                    // import.
+                    // Unknown parent event type — user-data condition
+                    // (PayPal shipped a string we have not mapped
+                    // yet). Fall through to the subtractive default.
+                    // The adapter would have raised a typed
+                    // exception at parse time when the event was
+                    // genuinely unmappable upstream; here we treat
+                    // it as "use the amount-sign default" rather
+                    // than hard-aborting the import.
                 }
             }
         }
