@@ -8,6 +8,7 @@ use Modules\Categorization\Providers\CategorizationServiceProvider;
 use Modules\Chains\Providers\ChainsServiceProvider;
 use Modules\Community\Providers\CommunityServiceProvider;
 use Modules\Core\Providers\CoreServiceProvider;
+use Modules\Counterparties\Providers\CounterpartiesServiceProvider;
 use Modules\Desktop\Providers\DesktopServiceProvider;
 use Modules\DevMode\Providers\DevModeServiceProvider;
 use Modules\DriftAlerts\Providers\DriftAlertsServiceProvider;
@@ -44,4 +45,5 @@ return array_values(array_filter([
     DevModeServiceProvider::class,
     OnboardingServiceProvider::class,
     CommunityServiceProvider::class,
+    CounterpartiesServiceProvider::class,
 ]));

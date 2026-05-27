@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/counterparties",
+    "description": "Counterparties module — canonical entities the user transacts with (merchants, personal, banks, government, self-account routes).",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Counterparties\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Counterparties\\Tests\\": "tests/"
+        }
+    }
+}

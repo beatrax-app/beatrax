@@ -15,6 +15,7 @@
             <directory>Modules/Import/tests/Unit</directory>
             <directory>Modules/Categorization/tests/Unit</directory>
             <directory>Modules/Community/tests/Unit</directory>
+            <directory>Modules/Counterparties/tests/Unit</directory>
             <directory>Modules/DriftAlerts/tests/Unit</directory>
             <directory>Modules/Transfers/tests/Unit</directory>
             <directory>Modules/Receipts/tests/Unit</directory>
@@ -31,6 +32,7 @@
             <directory>Modules/Import/tests/Feature</directory>
             <directory>Modules/Categorization/tests/Feature</directory>
             <directory>Modules/Community/tests/Feature</directory>
+            <directory>Modules/Counterparties/tests/Feature</directory>
             <directory>Modules/DriftAlerts/tests/Feature</directory>
             <directory>Modules/Transfers/tests/Feature</directory>
             <directory>Modules/Receipts/tests/Feature</directory>
