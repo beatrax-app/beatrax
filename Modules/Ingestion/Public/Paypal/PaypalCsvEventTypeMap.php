@@ -30,10 +30,21 @@ use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
  * Map entries are language-keyed; the adapter looks up via the
  * detected language code from `PaypalCsvLanguageProfile::detected()`.
  *
- * The NL entries cover the five observed event types plus four EN
- * forward-compatible skips for Hold / Authorization / Reserve /
- * Reversal — PayPal frequently ships those strings un-localised
- * (`Reference Txn ID` is similarly un-localised in NL exports).
+ * The NL entries cover the observed expense / child-event types AND
+ * the three funding-leg parent event types (`Bankstorting`,
+ * `General Withdrawal`, `Transfer to bank`) that share their vocabulary
+ * with `PaypalFundingResolver::FUNDING_EVENT_TYPES`. The funding-leg
+ * trio classifies as `parent` and resolves to `transfer_in`, so an
+ * ASN→PayPal top-up surfaces as the PayPal-side `transfer_in` leg that
+ * `PairTransferCandidates` matches against the ASN-side
+ * `transfer_out`. Four EN forward-compatible skips for Hold /
+ * Authorization / Reserve / Reversal stay un-localised — PayPal
+ * frequently ships those strings in English regardless of locale.
+ *
+ * The standalone `Bankstorting` parent and the localised `Bankstorting
+ * naar PP-rekening` child are two distinct PayPal event-type literals:
+ * the parent is a direct top-up canonical row, the child is a funding-
+ * source enrichment that rides under a purchase parent in the rollup.
  *
  * Any event type encountered that is NOT in the map raises
  * `UnknownPaypalEventTypeException` — silent mis-classification is
@@ -55,6 +66,15 @@ final class PaypalCsvEventTypeMap
             'Algemene kaartstorting' => 'child-fee',
             'Algemene valutaomrekening' => 'child-fx',
 
+            // Funding-leg parents — standalone top-up ASN→PayPal events.
+            // Distinct from the `Bankstorting naar PP-rekening` child-fee
+            // entry above; PayPal ships these three strings un-localised
+            // and they share their vocabulary with
+            // `PaypalFundingResolver::FUNDING_EVENT_TYPES`.
+            'Bankstorting' => 'parent',
+            'General Withdrawal' => 'parent',
+            'Transfer to bank' => 'parent',
+
             // Forward-compatibility — EN forms that PayPal often
             // leaves un-localised. Filtered at the adapter boundary.
             'Hold' => 'skip',
@@ -74,12 +94,19 @@ final class PaypalCsvEventTypeMap
      */
     private const TRANSACTION_TYPE = [
         'nl' => [
-            // Both observed parent event types map to 'expense'.
-            // Refund / withdrawal / transfer NL strings will be added
-            // here when their corresponding parent event types are
-            // observed in a real export.
+            // Both observed purchase-parent event types map to 'expense'.
+            // Refund NL strings will be added when their corresponding
+            // parent event types are observed in a real export.
             'Vooraf goedgekeurde betaling – rekening betaald door gebruiker' => 'expense',
             'Express Checkout-betaling' => 'expense',
+
+            // Funding-leg parents map to 'transfer_in' so the PayPal
+            // side of an ASN→PayPal top-up surfaces as the transfer leg
+            // `PairTransferCandidates` matches against the ASN-side
+            // `transfer_out`.
+            'Bankstorting' => 'transfer_in',
+            'General Withdrawal' => 'transfer_in',
+            'Transfer to bank' => 'transfer_in',
         ],
     ];
 
