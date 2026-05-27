@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Models\ChainResolutionRun;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
@@ -220,12 +221,16 @@ final class ConfirmImport implements ConfirmsImports
             // in the ledger, nothing to enrich) skips the dispatches
             // because the workers have no new work to do.
             if ($result->inserted > 0 || $result->enriched > 0) {
-                $now = $this->clock->now()->toDateTimeString();
-                $this->db->connection()->table('chain_resolution_runs')->insert([
+                // ChainResolutionRun is treated as a Public model
+                // surface for cross-module reads/writes (the
+                // wizard's wire:poll consumes the same table via
+                // its own query). Eloquent here so any future
+                // cast / boot / default added to the model lands
+                // automatically instead of silently NULL via a
+                // raw insert.
+                ChainResolutionRun::query()->create([
                     'user_id' => $user->id,
                     'status' => 'pending',
-                    'created_at' => $now,
-                    'updated_at' => $now,
                 ]);
                 $this->chainDispatcher->dispatchForUser($user->id);
 
