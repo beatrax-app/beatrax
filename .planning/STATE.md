@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
 stopped_at: Phase 16.1.2 complete
-last_updated: "2026-05-27T02:30:00.000Z"
-last_activity: 2026-05-27 -- Phase 16.1.2 complete (5/5 plans, verifier PASS)
+last_updated: "2026-05-27T15:32:00.000Z"
+last_activity: 2026-05-27 -- Quick task 260527-o5b complete (restored Import\Internal arch boundary)
 progress:
   total_phases: 13
   completed_phases: 8
@@ -143,6 +143,14 @@ Items acknowledged at v1.0 milestone close on 2026-05-19. Carried forward into v
 | verification_gap | 11-VERIFICATION.md | human_needed | 2026-05-19 | Phase 20 |
 | seed | SEED-001-public-release-milestone | activated | 2026-05-19 | v2.0 milestone (Phases 12–21) |
 | deferred_with_trigger | ING-09 PayPal Reporting API | deferred | v1.0 → v2.0 | Out of scope (trigger: PayPal Business upgrade) |
+
+## Quick Tasks Completed
+
+Out-of-phase fixes tracked separately from the milestone roadmap.
+
+| Quick ID | Slug | Date | Commit | Summary |
+|----------|------|------|--------|---------|
+| 260527-o5b | restore-import-internal-boundary-by-relo | 2026-05-27 | 8f9877b | Relocated PreviewSeedHelper from Onboarding\Tests\Support to Import\Tests\Support so its PreviewCache import becomes intra-module; restored BoundaryArchTest invariant without an allow-list carve-out. 5 gates PASS (composer dump-autoload, pest BoundaryArch, 4 affected feature suites, pint --test, phpstan full-tree). |
 
 ## Session Continuity
 
