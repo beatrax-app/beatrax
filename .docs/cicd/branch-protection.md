@@ -11,7 +11,7 @@
 
 `main` (unchanged).
 
-## Posture chosen (per Phase 17 CONTEXT.md D-50)
+## Posture chosen
 
 **Light, solo-friendly:** linear history + required status checks + signed
 commits, but admin can push directly to main without a PR-of-one

@@ -186,7 +186,7 @@ it('catches synthetic offenders injected into runtime + .docs/ scans', function 
         expect(preg_match($docsPattern, $docsContents))->toBe(1);
 
         // Phase-number form must NOT trigger the narrower docs scan.
-        $phaseLine = "This decision graduated from Phase 17 (D-23).";
+        $phaseLine = 'This decision graduated from Phase 17 (D-23).';
         expect(preg_match($docsPattern, $phaseLine))->toBe(0);
     } finally {
         if (file_exists($runtimeFixture)) {
