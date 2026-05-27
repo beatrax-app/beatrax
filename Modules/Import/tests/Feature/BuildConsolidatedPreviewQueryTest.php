@@ -264,3 +264,105 @@ it('respects the user_id boundary — runs owned by another user are never retur
     expect($batch->sections[0]->importRunIds)->toBe([$aliceRun]);
     expect($batch->dedupedTotalCount)->toBe(1);
 })->group('phase-16.1.1');
+
+/*
+ * Per-section row-cap override coverage.
+ *
+ * `BuildConsolidatedPreviewQuery::build()` accepts a third named
+ * argument `array<string, int> $sectionLimitOverrides`. When present,
+ * a section whose `source_format` is keyed in the map renders up to
+ * the override row count instead of the default `SAMPLE_ROW_LIMIT`
+ * (5). Sections absent from the map keep the 5-row default. Non-
+ * positive overrides (≤ 0) are silently ignored as a server-side
+ * clamp against a tampered wire-click payload.
+ */
+
+/**
+ * Repeat a single PreviewRowDto fixture `$rowCount` times and feed
+ * them into the PreviewCache for the given ImportRun. Mirrors the
+ * existing `seedConsolidatedPreview()` helper but lets the caller
+ * pick an arbitrary row count without listing each status literal.
+ */
+function seedConsolidatedPreviewRows(int $importRunId, int $rowCount): void
+{
+    $statuses = array_fill(0, $rowCount, 'new');
+    seedConsolidatedPreview($importRunId, $statuses);
+}
+
+it('defaults to SAMPLE_ROW_LIMIT when no sectionLimitOverrides supplied', function (): void {
+    $run = seedConsolidatedRun($this->userA->id, 'asn-csv');
+    seedConsolidatedPreviewRows($run, 30);
+
+    /** @var BuildConsolidatedPreviewQuery $query */
+    $query = $this->app->make(BuildConsolidatedPreviewQuery::class);
+
+    $batch = $query->build([$run], $this->userA);
+
+    expect($batch->sections)->toHaveCount(1);
+    expect($batch->sections[0]->sampleRows)->toHaveCount(5);
+    expect($batch->sections[0]->totalRows)->toBe(30);
+})->group('phase-16.1.2');
+
+it('honors per-section overrides via the sectionLimitOverrides array', function (): void {
+    $bankRun = seedConsolidatedRun($this->userA->id, 'asn-csv');
+    seedConsolidatedPreviewRows($bankRun, 30);
+
+    $cardRun = seedConsolidatedRun($this->userA->id, 'ics-pdf');
+    seedConsolidatedPreviewRows($cardRun, 20);
+
+    /** @var BuildConsolidatedPreviewQuery $query */
+    $query = $this->app->make(BuildConsolidatedPreviewQuery::class);
+
+    $batch = $query->build(
+        [$bankRun, $cardRun],
+        $this->userA,
+        sectionLimitOverrides: ['asn-csv' => 25],
+    );
+
+    $bySource = [];
+    foreach ($batch->sections as $section) {
+        $bySource[$section->sourceFormat] = $section;
+    }
+
+    expect($bySource['asn-csv']->sampleRows)->toHaveCount(25);
+    expect($bySource['ics-pdf']->sampleRows)->toHaveCount(5); // default unchanged
+})->group('phase-16.1.2');
+
+it('clamps the override naturally when it exceeds the section totalRows', function (): void {
+    $run = seedConsolidatedRun($this->userA->id, 'asn-csv');
+    seedConsolidatedPreviewRows($run, 10);
+
+    /** @var BuildConsolidatedPreviewQuery $query */
+    $query = $this->app->make(BuildConsolidatedPreviewQuery::class);
+
+    $batch = $query->build(
+        [$run],
+        $this->userA,
+        sectionLimitOverrides: ['asn-csv' => 999],
+    );
+
+    expect($batch->sections)->toHaveCount(1);
+    expect($batch->sections[0]->sampleRows)->toHaveCount(10);
+})->group('phase-16.1.2');
+
+it('ignores non-positive overrides and falls back to the default 5-row cap', function (): void {
+    $run = seedConsolidatedRun($this->userA->id, 'asn-csv');
+    seedConsolidatedPreviewRows($run, 30);
+
+    /** @var BuildConsolidatedPreviewQuery $query */
+    $query = $this->app->make(BuildConsolidatedPreviewQuery::class);
+
+    $zeroBatch = $query->build(
+        [$run],
+        $this->userA,
+        sectionLimitOverrides: ['asn-csv' => 0],
+    );
+    $negativeBatch = $query->build(
+        [$run],
+        $this->userA,
+        sectionLimitOverrides: ['asn-csv' => -5],
+    );
+
+    expect($zeroBatch->sections[0]->sampleRows)->toHaveCount(5);
+    expect($negativeBatch->sections[0]->sampleRows)->toHaveCount(5);
+})->group('phase-16.1.2');

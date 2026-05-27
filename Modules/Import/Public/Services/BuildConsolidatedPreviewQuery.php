@@ -79,9 +79,15 @@ final readonly class BuildConsolidatedPreviewQuery
      * filters described in the class doc.
      *
      * @param  list<int>  $importRunIds
+     * @param  array<string, int>  $sectionLimitOverrides  Per-`source_format`
+     *                                                     override of the default `SAMPLE_ROW_LIMIT` (5); absent sections keep
+     *                                                     the 5-row default; non-positive values are ignored.
      */
-    public function build(array $importRunIds, User $user): ConsolidatedPreviewBatch
-    {
+    public function build(
+        array $importRunIds,
+        User $user,
+        array $sectionLimitOverrides = [],
+    ): ConsolidatedPreviewBatch {
         if ($importRunIds === []) {
             return new ConsolidatedPreviewBatch(
                 sections: [],
@@ -117,7 +123,8 @@ final readonly class BuildConsolidatedPreviewQuery
         $totalNew = 0;
         $totalDuplicate = 0;
         foreach ($orderedFormats as $format) {
-            [$section, $sectionDuplicateCount] = $this->buildSection($format, $groupedIds[$format]);
+            $override = $sectionLimitOverrides[$format] ?? null;
+            [$section, $sectionDuplicateCount] = $this->buildSection($format, $groupedIds[$format], $override);
             $sections[] = $section;
             $totalNew += $section->totalRows;
             $totalDuplicate += $sectionDuplicateCount;
@@ -180,15 +187,19 @@ final readonly class BuildConsolidatedPreviewQuery
      * ENRICHED dispositions for `totalRows` (both statuses result in
      * a write when the user commits: NEW inserts, ENRICHED updates),
      * counts DUPLICATE dispositions for the returned `$duplicateCount`,
-     * takes the first `SAMPLE_ROW_LIMIT` rows for `sampleRows`, and
-     * derives the section status from cache hits. All counts are
-     * produced from a single cache read per run, eliminating the
-     * TTL-expiry race a second read would introduce.
+     * takes the first `SAMPLE_ROW_LIMIT` rows (or `$override` rows when
+     * the caller supplied a positive per-section override) for
+     * `sampleRows`, and derives the section status from cache hits.
+     * All counts are produced from a single cache read per run,
+     * eliminating the TTL-expiry race a second read would introduce.
      *
      * @param  list<int>  $importRunIds
+     * @param  ?int  $override  When non-null and positive, replaces the
+     *                          default `SAMPLE_ROW_LIMIT` slice size for this section only.
+     *                          Non-positive values fall through to the default 5-row cap.
      * @return array{0: ConsolidatedPreviewSection, 1: int}
      */
-    private function buildSection(string $sourceFormat, array $importRunIds): array
+    private function buildSection(string $sourceFormat, array $importRunIds, ?int $override = null): array
     {
         $allRows = [];
         $committableRowCount = 0;
@@ -214,8 +225,10 @@ final readonly class BuildConsolidatedPreviewQuery
 
         $status = $this->resolveSectionStatus($hasCacheMiss, $allRows);
 
+        $limit = ($override !== null && $override > 0) ? $override : self::SAMPLE_ROW_LIMIT;
+
         /** @var list<PreviewRowDto> $sampleRows */
-        $sampleRows = array_slice($allRows, 0, self::SAMPLE_ROW_LIMIT);
+        $sampleRows = array_slice($allRows, 0, $limit);
 
         return [
             new ConsolidatedPreviewSection(
