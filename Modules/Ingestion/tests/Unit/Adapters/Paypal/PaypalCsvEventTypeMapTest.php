@@ -79,3 +79,75 @@ it('throws MissingPaypalTransactionTypeMapException for a non-parent event type 
     expect(fn () => $this->map->transactionType('Bankstorting naar PP-rekening', 'nl'))
         ->toThrow(MissingPaypalTransactionTypeMapException::class);
 })->group('phase-4');
+
+/*
+ * Funding-leg coverage. The three event types below are the canonical
+ * funding-event vocabulary shared with
+ * `PaypalFundingResolver::FUNDING_EVENT_TYPES`. Each must classify as
+ * 'parent' (so the rollup walker creates a canonical row for the
+ * standalone ASN→PayPal top-up) and resolve to 'transfer_in' (so
+ * downstream PairTransferCandidates can match it to the ASN-side
+ * transfer_out).
+ *
+ * The companion regression-guard cases pin the existing 'expense'
+ * mappings so the funding-leg additions do not silently regress the
+ * purchase-event arm.
+ */
+
+it('classifies Bankstorting (standalone funding parent) as parent', function (): void {
+    expect($this->map->classify('Bankstorting', 'nl'))->toBe('parent');
+})->group('phase-4');
+
+it('classifies General Withdrawal as parent', function (): void {
+    expect($this->map->classify('General Withdrawal', 'nl'))->toBe('parent');
+})->group('phase-4');
+
+it('classifies Transfer to bank as parent', function (): void {
+    expect($this->map->classify('Transfer to bank', 'nl'))->toBe('parent');
+})->group('phase-4');
+
+it('resolves Bankstorting to transfer_in via transactionType()', function (): void {
+    expect($this->map->transactionType('Bankstorting', 'nl'))->toBe('transfer_in');
+})->group('phase-4');
+
+it('resolves General Withdrawal to transfer_in via transactionType()', function (): void {
+    expect($this->map->transactionType('General Withdrawal', 'nl'))->toBe('transfer_in');
+})->group('phase-4');
+
+it('resolves Transfer to bank to transfer_in via transactionType()', function (): void {
+    expect($this->map->transactionType('Transfer to bank', 'nl'))->toBe('transfer_in');
+})->group('phase-4');
+
+// Regression guards — the funding-leg additions must not shadow the
+// existing purchase-event mappings.
+it('preserves the expense mapping for the NL pre-approved-billing parent', function (): void {
+    expect($this->map->transactionType('Vooraf goedgekeurde betaling – rekening betaald door gebruiker', 'nl'))->toBe('expense');
+})->group('phase-4');
+
+it('preserves the expense mapping for Express Checkout-betaling', function (): void {
+    expect($this->map->transactionType('Express Checkout-betaling', 'nl'))->toBe('expense');
+})->group('phase-4');
+
+it('keeps the child-fee classification for the localised Bankstorting-naar-PP-rekening child row', function (): void {
+    // The standalone 'Bankstorting' parent and the child-fee
+    // 'Bankstorting naar PP-rekening' are two distinct PayPal event-type
+    // literals. The funding-leg additions must NOT collapse them — the
+    // child variant remains 'child-fee' and continues to ride under its
+    // parent in the rollup walker.
+    expect($this->map->classify('Bankstorting naar PP-rekening', 'nl'))->toBe('child-fee');
+})->group('phase-4');
+
+// Exception narrowest-type contract — `classify()` raises the broad
+// supertype, `transactionType()` raises the narrower subtype.
+// `MissingPaypalTransactionTypeMapException` extends
+// `UnknownPaypalEventTypeException`, so we assert the narrowest type
+// explicitly per the contract described in the exception PHPDoc.
+it('throws the broad UnknownPaypalEventTypeException from classify() for an event type missing from MAP', function (): void {
+    expect(fn () => $this->map->classify('Some Bogus Event Type That Is Not In The Map', 'nl'))
+        ->toThrow(UnknownPaypalEventTypeException::class);
+})->group('phase-4');
+
+it('throws the narrower MissingPaypalTransactionTypeMapException from transactionType() for an event type missing from TRANSACTION_TYPE', function (): void {
+    expect(fn () => $this->map->transactionType('Some Bogus Event Type That Is Not In The Map', 'nl'))
+        ->toThrow(MissingPaypalTransactionTypeMapException::class);
+})->group('phase-4');
