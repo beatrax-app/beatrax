@@ -14,7 +14,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Account;
-use Modules\Transfers\Public\Services\PairLookup;
 use stdClass;
 
 /**
@@ -105,35 +104,9 @@ final class IcsSettlementResolver
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly CardStatementStateMachine $stateMachine,
-        // PairLookup is injected because the interfaces section of the
-        // plan locks the constructor signature for downstream waves —
-        // the refund-after-close cross-pair sanity check + Wave 3's
-        // PayPal funder lookup share this read-side API. Wave 2 keeps
-        // the property on the type signature; the
-        // `pairLookupAvailable()` helper is the canonical reader so
-        // PHPStan's onlyWritten check stays satisfied while the wiring
-        // is locked.
-        private readonly PairLookup $pairLookup,
         private readonly ChainLinkInsertHelper $inserter,
         private readonly ResolvesKnownCounterpartyIban $aliasResolver,
     ) {}
-
-    /**
-     * Defensive accessor that confirms the PairLookup collaborator was
-     * wired. Reading the property here keeps phpstan's onlyWritten
-     * lint quiet while the full algorithm matures — the real consumers
-     * ship in later waves (refund-after-close cross-account sanity
-     * check + Wave 3 PayPal funder lookup).
-     *
-     * @internal Implementation detail.
-     */
-    public function pairLookupAvailable(): bool
-    {
-        // Read the property explicitly so PHPStan sees it as used; the
-        // public method allows external callers (Wave 3 tests) to
-        // assert wiring without reaching into private state.
-        return get_class($this->pairLookup) === PairLookup::class;
-    }
 
     /**
      * Run the bulk-settle decomposition pass for one user.
@@ -223,7 +196,7 @@ final class IcsSettlementResolver
         $settled = abs(self::toInt($transfer->settled_amount_minor ?? null));
         $postedAt = self::toString($transfer->posted_at ?? null);
 
-        $statement = $this->findCandidateStatement($accountId, $settled, $postedAt, $user);
+        $statement = $this->findCandidateStatement($accountId, $postedAt, $user);
         if ($statement === null) {
             // Half-state. Statement may roll in on a future import; the
             // next resolver pass will pick this transfer up again.
@@ -493,13 +466,9 @@ final class IcsSettlementResolver
      * the user judges, not the raw statement-total / transfer-amount
      * difference.
      */
-    private function findCandidateStatement(int $accountId, int $settled, string $postedAt, User $user): ?stdClass
+    private function findCandidateStatement(int $accountId, string $postedAt, User $user): ?stdClass
     {
         $connection = $this->db->connection();
-        // $settled accepted for future signature stability (e.g.
-        // tie-breakers that prefer the closer-matching total when
-        // periods tie); unreferenced in the period-only matcher.
-        unset($settled);
 
         // Compute the period_end window in PHP rather than relying on
         // SQLite's date() arithmetic — keeps the resolver portable to
@@ -523,12 +492,21 @@ final class IcsSettlementResolver
                 'period_end',
             ]);
 
+        // Compare distances in seconds (Carbon's float-precision diff)
+        // rather than integer days. Integer-day truncation collapsed
+        // sub-day-distinct candidates to the same bucket and let the
+        // SQL orderBy('id') tiebreak pick the older row even when a
+        // newer-id row was actually closer to the transfer's
+        // posted_at. The seconds-precision compare keeps the
+        // closest-period-end semantic precise; PHP_FLOAT_MAX is the
+        // ceiling sentinel so the float comparison stays correct
+        // for the very first row in the loop.
         $best = null;
-        $bestDistance = PHP_INT_MAX;
+        $bestDistance = PHP_FLOAT_MAX;
         foreach ($rows as $row) {
             /** @var stdClass $row */
             $periodEnd = CarbonImmutable::parse(self::toString($row->period_end ?? null));
-            $distance = abs((int) $periodEnd->diffInDays($posted, true));
+            $distance = abs($periodEnd->diffInSeconds($posted, true));
             if ($distance < $bestDistance) {
                 $best = $row;
                 $bestDistance = $distance;
