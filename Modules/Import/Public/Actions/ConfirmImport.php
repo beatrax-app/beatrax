@@ -6,6 +6,7 @@ namespace Modules\Import\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
+use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Internal\Pipeline\PreviewCache;
@@ -33,18 +34,28 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
  * land enrichments and an enrichment failure cannot land inserts —
  * confirm is atomic across both halves.
  *
- * AFTER the transaction commits the action inserts a `pending`
- * chain_resolution_runs row and dispatches `ResolveChainLinksJob` so
- * the chain resolver pass runs against the freshly-committed state.
- * The dispatch is gated on `$result->inserted > 0 || $result->enriched
- * > 0` — re-confirms and zero-row previews short-circuit. Dispatching
- * INSIDE the closure would let the queue worker pick up the job before
- * SQLite commits, letting it read stale state.
+ * AFTER the transaction commits the action runs the post-commit block
+ * gated on `$result->inserted > 0 || $result->enriched > 0` — re-
+ * confirms and zero-row previews short-circuit. Inside that block:
+ *
+ *   1. `UpsertsCardStatements::upsertForImportRun(...)` promotes every
+ *      ICS-kind `statement_summaries` row written under this import_run
+ *      into a `card_statements` row (positive open_balance, state=open).
+ *      The upsert MUST run BEFORE the chain dispatcher so the
+ *      `IcsSettlementResolver` pass sees fresh card_statements rows.
+ *   2. A `pending` `chain_resolution_runs` row is inserted so the
+ *      wizard's wire:poll has a row to display on its first tick.
+ *   3. `ResolveChainLinksJob` is dispatched for the chain resolver.
+ *   4. `DispatchesRecurringDetection` is invoked for the recurring
+ *      series sweep.
+ *
+ * Dispatching INSIDE the closure would let the queue worker pick up
+ * the job before SQLite commits, letting it read stale state.
  *
  * Re-confirming an already-confirmed run returns a zero-action result
  * built from the persisted counts, so a refresh/back-button in the
  * wizard cannot double-import or double-enrich. The early-return
- * path skips the chain-resolver dispatch entirely.
+ * path skips the post-commit block entirely (no upsert, no dispatch).
  */
 final class ConfirmImport implements ConfirmsImports
 {
@@ -56,6 +67,7 @@ final class ConfirmImport implements ConfirmsImports
         private readonly Clock $clock,
         private readonly DispatchesChainResolution $chainDispatcher,
         private readonly DispatchesRecurringDetection $recurringDispatcher,
+        private readonly UpsertsCardStatements $cardStatementUpserter,
     ) {}
 
     public function __invoke(int $importRunId, User $user, bool $dispatchChain = true): ImportConfirmResult
@@ -175,6 +187,16 @@ final class ConfirmImport implements ConfirmsImports
         // returns. The default `true` preserves the legacy single-run
         // behaviour for every existing caller.
         if ($dispatchChain && ($result->inserted > 0 || $result->enriched > 0)) {
+            // Promote every ICS-kind statement_summaries row written
+            // under this import_run into a card_statements row before
+            // the chain dispatcher fires. The ICS settlement resolver
+            // reads `card_statements` to match ASN→ICS bulk-iDEAL
+            // settlements against the open statement, so the upsert
+            // MUST precede the dispatch — otherwise the worker would
+            // see an empty card_statements table for the user's fresh
+            // ICS import and write no chain_links.
+            $this->cardStatementUpserter->upsertForImportRun($importRunId, $user);
+
             $now = $this->clock->now()->toDateTimeString();
             $this->db->connection()->table('chain_resolution_runs')->insert([
                 'user_id' => $user->id,
