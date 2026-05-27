@@ -66,6 +66,11 @@ function aliasIcsExpense(
 /**
  * Seed an ASN-side `transfer_out` row pointing at the alias-bridged
  * counterparty IBAN.
+ *
+ * `$rowIndex` varies the fingerprint base so a single test can
+ * persist multiple transfer_out rows without colliding on the
+ * `transactions.fingerprint` UNIQUE constraint — mirrors the
+ * `aliasIcsExpense` helper's per-row index pattern.
  */
 function aliasAsnTransferOut(
     User $user,
@@ -74,6 +79,7 @@ function aliasAsnTransferOut(
     int $absMinor,
     string $counterpartyIban,
     string $postedAt,
+    int $rowIndex = 1,
 ): Transaction {
     return Transaction::query()->create([
         'user_id' => $user->id,
@@ -92,8 +98,8 @@ function aliasAsnTransferOut(
         'normalization_version' => 1,
         'source_format' => 'asn-csv',
         'import_run_id' => $run->id,
-        'source_row_index' => 9999,
-        'fingerprint' => str_pad('atc', 64, 'a', STR_PAD_LEFT),
+        'source_row_index' => 9000 + $rowIndex,
+        'fingerprint' => str_pad('atc'.$rowIndex, 64, 'a', STR_PAD_LEFT),
         'fingerprint_version' => 3,
     ]);
 }
