@@ -69,7 +69,6 @@ it('Test 1 — prunes a Counterparty with zero recent transactions AND zero merc
     // Sanity: row exists pre-prune.
     expect(DB::table('counterparties')->where('id', $orphanId)->count())->toBe(1);
 
-    $job = $this->app->make(CounterpartyGarbageCollectorJob::class);
     $job = new CounterpartyGarbageCollectorJob($user->id);
     $job->handle($this->app->make(DatabaseManager::class));
 
@@ -80,7 +79,9 @@ it('Test 2 — does NOT prune a Counterparty with a transaction in the last 365 
     $user = makeGcUser('gc-test-2');
     $aliveId = makeGcCounterparty($user->id, 'active-merchant', 'Active Merchant');
 
-    // Seed an account + a recent transaction that pins the counterparty.
+    // Seed an account + an import_run + a recent transaction that
+    // pins the counterparty. The import_runs FK is `constrained()` so
+    // a non-existent run id fails the insert; seed one explicitly.
     $accountId = DB::table('accounts')->insertGetId([
         'user_id' => $user->id,
         'name' => 'gc-test-2-account',
@@ -88,6 +89,17 @@ it('Test 2 — does NOT prune a Counterparty with a transaction in the last 365 
         'kind' => 'bank',
         'iban' => 'NL00BANK0000000002',
         'default_currency' => 'EUR',
+        'created_at' => now()->toDateTimeString(),
+        'updated_at' => now()->toDateTimeString(),
+    ]);
+    $runId = DB::table('import_runs')->insertGetId([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => 'storage/app/imports/gc-test-2.csv',
+        'sha256' => str_repeat('b', 64),
+        'uploaded_at' => now()->toDateTimeString(),
+        'confirmed_at' => now()->toDateTimeString(),
+        'status' => 'confirmed',
         'created_at' => now()->toDateTimeString(),
         'updated_at' => now()->toDateTimeString(),
     ]);
@@ -112,7 +124,7 @@ it('Test 2 — does NOT prune a Counterparty with a transaction in the last 365 
         'counterparty_id' => $aliveId,
         'auto_category_provenance' => null,
         'source_format' => 'asn-csv',
-        'import_run_id' => 0,
+        'import_run_id' => $runId,
         'source_row_index' => 0,
         'source_ref' => null,
         'raw_payload' => null,
