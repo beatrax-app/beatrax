@@ -75,6 +75,7 @@
             "Modules\\Onboarding\\Tests\\": "Modules/Onboarding/tests/",
             "Modules\\Categorization\\Tests\\": "Modules/Categorization/tests/",
             "Modules\\Chains\\Tests\\": "Modules/Chains/tests/",
+            "Modules\\Counterparties\\Tests\\": "Modules/Counterparties/tests/",
             "Modules\\Community\\Tests\\": "Modules/Community/tests/",
             "Modules\\DriftAlerts\\Tests\\": "Modules/DriftAlerts/tests/",
             "Modules\\EmailScan\\Tests\\": "Modules/EmailScan/tests/",
