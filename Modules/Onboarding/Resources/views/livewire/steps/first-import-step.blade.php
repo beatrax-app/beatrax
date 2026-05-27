@@ -61,7 +61,7 @@
 @endphp
 <section class="wiz-step wiz-step-first-import" aria-labelledby="wiz-first-import-h1">
     <x-onboarding::wiz-card :wide="true">
-        <p class="wiz-eyebrow">📥 Step 5 — Review everything we found</p>
+        <p class="wiz-eyebrow">📥 Step 5 — Review &amp; commit</p>
         <h1 id="wiz-first-import-h1" class="wiz-h1">
             Review everything we found
         </h1>
@@ -77,15 +77,15 @@
                 Nothing to review yet. Drop a statement on the earlier steps to see your transactions here.
             </p>
         @else
-            <div class="preview-sections-stack">
-                @foreach ($preview->sections as $section)
+            @foreach ($preview->sections as $section)
+                <section class="source-subcard {{ $section->status === 'empty' ? 'empty' : '' }}">
                     <x-onboarding::consolidated-preview-section :section="$section" />
-                @endforeach
-            </div>
+                </section>
+            @endforeach
         @endif
 
         @if ($detectedCount > 0)
-            <section class="starting-balance-section">
+            <section class="balance-section-subcard">
                 <p class="preview-section-eyebrow">
                     🧮 STARTING BALANCES ·
                     <span class="tabular-nums">{{ $detectedCount }}</span>
@@ -153,16 +153,14 @@
                 <span class="tabular-nums">{{ $preview->alreadyImportedCount }}</span>
                 already imported
             </p>
-            <x-onboarding::wiz-actions>
-                <button
-                    type="button"
-                    class="pill-btn-primary"
-                    wire:click="commit"
-                    @if ($commitDisabled) aria-disabled="true" disabled @endif
-                >
-                    {{ $commitButtonLabel }}
-                </button>
-            </x-onboarding::wiz-actions>
+            <button
+                type="button"
+                class="commit-btn-primary"
+                wire:click="commit"
+                @if ($commitDisabled) aria-disabled="true" disabled @endif
+            >
+                {{ $commitButtonLabel }}
+            </button>
         </div>
     </x-onboarding::wiz-card>
 </section>
