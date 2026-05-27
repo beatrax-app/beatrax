@@ -1,0 +1,11 @@
+{
+    "name": "Counterparties",
+    "alias": "counterparties",
+    "description": "Canonical entities the user transacts with — merchants, personal P2P, banks, government, and self-account routes — surfaced through the Public CounterpartyResolver contract.",
+    "keywords": ["counterparties", "merchants", "resolver"],
+    "priority": 6,
+    "providers": [
+        "Modules\\Counterparties\\Providers\\CounterpartiesServiceProvider"
+    ],
+    "files": []
+}
