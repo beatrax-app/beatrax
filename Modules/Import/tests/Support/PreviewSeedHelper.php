@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Onboarding\Tests\Support;
+namespace Modules\Import\Tests\Support;
 
 use Carbon\CarbonImmutable;
 use Modules\Import\Internal\Pipeline\PreviewCache;
