@@ -230,3 +230,59 @@ it('keeps anonymised personal-identifier rows uncategorised', function (): void 
         expect($outcome->canonical->autoCategoryProvenance)->toBeNull();
     }
 });
+
+it('every personal-identifier-prefix fixture row stays uncategorised under the seed rules (fixture-vs-rules consistency)', function (): void {
+    // Regression for WR-06. The 40% ratio gate alone cannot detect a
+    // contributor adding a categorisable rule whose value collides
+    // with an `EMPLOYER_` / `FAMILY_` / `P2P_` anonymisation prefix
+    // — the only signal would be a quiet ratio drop. This test
+    // walks every fixture row whose counterparty starts with one of
+    // the documented personal-identifier prefixes and asserts the
+    // ApplyAutoCategoryStage leaves it uncategorised. A future
+    // contributor that adds a seed rule for "EMPLOYER" trips this
+    // assertion immediately at CI time.
+    /** @var list<array{counterparty: string, description: string}> $fixture */
+    $fixture = require base_path('Modules/Categorization/tests/Fixtures/seed-rules-live-distribution.php');
+
+    $personalPrefixes = ['EMPLOYER_', 'FAMILY_', 'P2P_'];
+
+    $stage = $this->app->make(ApplyAutoCategoryStage::class);
+
+    $personalRows = [];
+    foreach ($fixture as $row) {
+        foreach ($personalPrefixes as $prefix) {
+            if (str_starts_with($row['counterparty'], $prefix)) {
+                $personalRows[] = $row;
+                break;
+            }
+        }
+    }
+
+    // Sanity — the fixture documents EMPLOYER_, FAMILY_, P2P_,
+    // EMPLOYER_PENSION_, and P2P_BUDGET_ prefixes; the loop above
+    // must find at least one fixture row per prefix family, else
+    // the fixture (or the anonymisation scheme) has drifted.
+    expect($personalRows)->not->toBeEmpty();
+
+    $rowIndex = 1000;
+    foreach ($personalRows as $personalRow) {
+        $canonical = buildCanonical(
+            userId: $this->user->id,
+            accountId: $this->account->id,
+            importRunId: $this->importRun->id,
+            rowIndex: $rowIndex++,
+            counterparty: $personalRow['counterparty'],
+            description: $personalRow['description'],
+        );
+
+        $outcome = $stage->apply($canonical, $this->user);
+
+        expect($outcome->canonical->categoryId)
+            ->toBeNull(sprintf(
+                'Personal-identifier-prefix row "%s" (description "%s") was categorised — a seed rule has drifted and now collides with the anonymisation scheme.',
+                $personalRow['counterparty'],
+                $personalRow['description'],
+            ));
+        expect($outcome->canonical->autoCategoryProvenance)->toBeNull();
+    }
+});
