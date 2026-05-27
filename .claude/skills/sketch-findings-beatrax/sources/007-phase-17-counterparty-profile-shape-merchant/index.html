@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sketch 007 · Counterparty profile shape (merchant) · Phase 17</title>
+  <link rel="stylesheet" href="../themes/default.css" />
+  <style>
+    /* ─────────────────────────────────────────────────────────────
+       Sketch 007 — counterparty profile shape (merchant baseline)
+       Content: Amazon (merchant) — rich aliases, ICS funding chain,
+                ~12 tx across 3mo, mix of recurring + one-off, multi-FX.
+       ───────────────────────────────────────────────────────────── */
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      color: var(--color-text);
+      background: var(--color-bg-subtle);
+      font-size: var(--text-base);
+      line-height: 1.5;
+      padding-top: 48px; /* room for variant-nav */
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ─── App shell (slim sidebar, established by sketch 001) ──── */
+    .app-shell { display: grid; grid-template-columns: 232px 1fr; min-height: calc(100vh - 48px); }
+    .sidebar {
+      background: var(--color-bg-subtle);
+      border-right: 1px solid var(--color-border);
+      padding: 16px 12px;
+      display: flex; flex-direction: column; gap: 4px;
+      position: sticky; top: 48px; height: calc(100vh - 48px); overflow-y: auto;
+    }
+    .sidebar-brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 8px 14px; border-bottom: 1px solid var(--color-border);
+      margin-bottom: 12px;
+    }
+    .brand-mark {
+      width: 26px; height: 26px; border-radius: 7px;
+      background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text-muted) 100%);
+      color: var(--color-bg); display: grid; place-items: center;
+      font-weight: 700; font-size: 14px;
+    }
+    .brand-name { font-weight: 600; font-size: var(--text-md); }
+    .brand-version {
+      font-size: 10px; color: var(--color-text-faint);
+      background: var(--color-surface-2); padding: 2px 5px; border-radius: 3px;
+      font-family: var(--font-mono); margin-left: 6px;
+    }
+    .nav-section { margin-top: 14px; }
+    .nav-section-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--color-text-faint); padding: 0 8px 6px; font-weight: 600;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 6px 8px; border-radius: 5px;
+      font-size: var(--text-sm); color: var(--color-text-muted);
+      cursor: pointer; transition: var(--tx-quick);
+    }
+    .nav-item:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .nav-item.active {
+      background: var(--color-surface); color: var(--color-text);
+      box-shadow: var(--shadow-xs); font-weight: 500;
+    }
+    .nav-item .icon { width: 14px; opacity: 0.7; }
+    .nav-item .badge {
+      margin-left: auto; font-size: 10px;
+      background: var(--color-surface-2); padding: 1px 6px; border-radius: 8px;
+      font-family: var(--font-mono); color: var(--color-text-muted);
+    }
+    .nav-item.active .badge { background: var(--color-surface-2); }
+
+    /* ─── Main content area ────────────────────────────────────── */
+    .main {
+      background: var(--color-bg);
+      padding: 28px 40px 60px;
+      min-height: 100%;
+    }
+    .breadcrumb {
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      margin-bottom: 18px;
+    }
+    .breadcrumb a:hover { color: var(--color-text); }
+    .breadcrumb .sep { margin: 0 6px; color: var(--color-text-faint); }
+
+    /* ─── Hero — used by all variants, sized differently ─────── */
+    .hero {
+      display: flex; align-items: flex-start; gap: 20px;
+      padding-bottom: 24px; border-bottom: 1px solid var(--color-border);
+      margin-bottom: 28px;
+    }
+    .hero-avatar {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: linear-gradient(135deg, #ff9900 0%, #ff7a00 100%);
+      color: white; display: grid; place-items: center;
+      font-weight: 700; font-size: 22px; flex: none;
+    }
+    .hero-main { flex: 1; min-width: 0; }
+    .hero-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+    .hero-title {
+      font-size: var(--text-2xl); font-weight: 600;
+      letter-spacing: -0.015em; margin: 0;
+    }
+    .type-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: var(--radius-full);
+      font-size: 11px; font-weight: 500;
+      background: var(--color-blue-bg); color: var(--color-blue);
+      border: 1px solid color-mix(in srgb, var(--color-blue) 24%, transparent);
+    }
+    .type-chip.personal { background: #fce7f3; color: #be185d; border-color: color-mix(in srgb, #be185d 24%, transparent); }
+    .type-chip.bank { background: var(--color-amber-bg); color: var(--color-amber); border-color: color-mix(in srgb, var(--color-amber) 24%, transparent); }
+    .hero-meta { color: var(--color-text-muted); font-size: var(--text-sm); }
+    .hero-meta .dot { display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: var(--color-text-faint); margin: 0 8px; vertical-align: middle; }
+
+    .hero-stats { display: flex; gap: 32px; flex: none; padding-left: 8px; border-left: 1px solid var(--color-border); }
+    .hero-stat-label { font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; margin-bottom: 4px; }
+    .hero-stat-value { font-size: var(--text-xl); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+    .hero-stat-sub { font-size: 11px; color: var(--color-text-faint); margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .hero-stat-delta {
+      display: inline-flex; align-items: center; gap: 3px; font-size: 11px;
+      font-weight: 500; margin-left: 6px;
+    }
+    .hero-stat-delta.up { color: var(--color-rose); }
+    .hero-stat-delta.down { color: var(--color-emerald); }
+
+    .hero-actions { display: flex; gap: 6px; align-items: center; align-self: flex-start; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface); color: var(--color-text);
+      font-size: var(--text-sm); font-weight: 500; cursor: pointer;
+      transition: var(--tx-quick); font-family: inherit;
+    }
+    .btn:hover { background: var(--color-surface-2); }
+    .btn-primary { background: var(--color-primary); color: var(--color-primary-text); border-color: var(--color-primary); }
+    .btn-primary:hover { opacity: 0.92; background: var(--color-primary); }
+    .btn-ghost { background: transparent; border-color: transparent; color: var(--color-text-muted); padding: 5px 8px; }
+    .btn-ghost:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .btn-icon { padding: 5px 8px; }
+
+    /* Section primitives (reused across variants) */
+    .section { margin-top: 28px; }
+    .section-head {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: var(--text-md); font-weight: 600;
+      letter-spacing: -0.005em; margin: 0;
+    }
+    .section-title-sub {
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      font-weight: 400; margin-left: 6px;
+    }
+    .section-link {
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      cursor: pointer;
+    }
+    .section-link:hover { color: var(--color-text); }
+
+    /* Frame block (reused — bg-subtle on light, surface on dark) */
+    .frame {
+      border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+      background: var(--color-bg-subtle); padding: 16px;
+    }
+    .frame-tight { padding: 12px 14px; }
+    .frame.surface { background: var(--color-surface); }
+
+    /* ─── Aliases ──────────────────────────────────────────────── */
+    .alias-row {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    }
+    .alias-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: var(--radius-full);
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      font-family: var(--font-mono);
+    }
+    .alias-chip.primary { color: var(--color-text); font-weight: 500; border-color: var(--color-border-strong); }
+    .alias-chip .x { color: var(--color-text-faint); cursor: pointer; font-size: 11px; padding-left: 2px; }
+    .alias-chip .x:hover { color: var(--color-rose); }
+    .alias-add {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: var(--radius-full);
+      background: transparent; border: 1px dashed var(--color-border-strong);
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      cursor: pointer; font-family: inherit;
+    }
+    .alias-add:hover { color: var(--color-text); border-color: var(--color-text); }
+
+    /* ─── Category breakdown bar ───────────────────────────────── */
+    .cat-bar {
+      display: flex; height: 8px; border-radius: var(--radius-full);
+      overflow: hidden; background: var(--color-surface);
+    }
+    .cat-bar div { background: var(--color-text-muted); }
+    .cat-bar .c-1 { background: #2563eb; }
+    .cat-bar .c-2 { background: #059669; }
+    .cat-bar .c-3 { background: #d97706; }
+    .cat-bar .c-4 { background: #94a3b8; }
+    .cat-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: var(--text-xs); color: var(--color-text-muted); }
+    .cat-legend .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+    .cat-legend .pct { color: var(--color-text); font-weight: 500; margin-left: 4px; font-variant-numeric: tabular-nums; }
+
+    /* ─── Recurring cards ──────────────────────────────────────── */
+    .recur-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .recur-card {
+      padding: 12px 14px; border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-surface);
+    }
+    .recur-card.single-col { grid-column: 1 / -1; }
+    .recur-title { font-size: var(--text-sm); font-weight: 500; margin: 0 0 4px; }
+    .recur-meta { font-size: var(--text-xs); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+    .recur-cadence {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 10px;
+      padding: 2px 7px; border-radius: var(--radius-full);
+      background: var(--color-emerald-bg); color: var(--color-emerald);
+      margin-left: 6px; font-weight: 500;
+    }
+
+    /* ─── Funding chain flow ───────────────────────────────────── */
+    .chain-flow {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      font-size: var(--text-sm);
+    }
+    .chain-node {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border-radius: var(--radius-md);
+      background: var(--color-surface); border: 1px solid var(--color-border);
+    }
+    .chain-node .node-glyph {
+      width: 18px; height: 18px; border-radius: 4px;
+      display: grid; place-items: center; font-size: 10px; color: white; font-weight: 600;
+    }
+    .chain-node .node-glyph.asn { background: #1e40af; }
+    .chain-node .node-glyph.ics { background: #7c3aed; }
+    .chain-node .node-glyph.amz { background: #ff9900; }
+    .chain-node .node-glyph.paypal { background: #003087; }
+    .chain-node .node-label { font-weight: 500; }
+    .chain-node .node-sub { color: var(--color-text-muted); font-size: 11px; font-family: var(--font-mono); }
+    .chain-arrow { color: var(--color-text-faint); font-size: 14px; }
+    .chain-meta { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 8px; font-variant-numeric: tabular-nums; }
+
+    /* ─── Transactions table ───────────────────────────────────── */
+    .tx-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+    .tx-table thead th {
+      text-align: left; font-weight: 500; color: var(--color-text-muted);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+      padding: 8px 10px; border-bottom: 1px solid var(--color-border);
+      background: var(--color-bg);
+    }
+    .tx-table tbody td {
+      padding: 10px; border-bottom: 1px solid var(--color-border);
+      vertical-align: middle;
+    }
+    .tx-table tbody tr:hover td { background: var(--color-surface-2); }
+    .tx-date { color: var(--color-text-muted); font-size: var(--text-xs); white-space: nowrap; }
+    .tx-amount { font-weight: 500; text-align: right; white-space: nowrap; }
+    .tx-amount-sub { font-size: 10px; color: var(--color-text-faint); font-weight: 400; display: block; margin-top: 1px; }
+    .tx-account {
+      display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--color-text-muted);
+    }
+    .tx-account .glyph { width: 13px; height: 13px; border-radius: 3px; display: grid; place-items: center; font-size: 8px; color: white; font-weight: 700; }
+
+    /* Payment-type chip (sketch 004 winner) */
+    .ptype {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 7px; border-radius: var(--radius-full);
+      font-size: 10px; font-weight: 500;
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      color: var(--color-text-muted); font-family: var(--font-mono);
+    }
+    .ptype-pin { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+    .ptype-online { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
+    .ptype-recurring { background: #d1fae5; color: #047857; border-color: #a7f3d0; }
+    .ptype-transfer { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+
+    .cat-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: var(--radius-full);
+      font-size: 10px; font-weight: 500;
+      background: var(--color-surface-2); color: var(--color-text-muted);
+    }
+    .cat-chip .swatch { width: 7px; height: 7px; border-radius: 50%; }
+
+    /* ─── Variant A — Stacked single column ───────────────────── */
+    .v-a .main { max-width: 920px; margin: 0 auto; }
+    .v-a .hero { padding-bottom: 28px; }
+
+    /* ─── Variant B — Hero + 2-col body ───────────────────────── */
+    .v-b .v-body { display: grid; grid-template-columns: 320px 1fr; gap: 28px; align-items: start; }
+    .v-b .v-body .section:first-child { margin-top: 0; }
+    .v-b .v-aside .section { margin-top: 20px; }
+    .v-b .v-aside .recur-grid { grid-template-columns: 1fr; }
+
+    /* ─── Variant C — Tabbed ──────────────────────────────────── */
+    .v-c .hero { padding-bottom: 18px; margin-bottom: 0; border-bottom: none; }
+    .v-c .tab-bar {
+      display: flex; gap: 4px; border-bottom: 1px solid var(--color-border);
+      margin-bottom: 24px;
+    }
+    .v-c .tab {
+      padding: 8px 14px; font-size: var(--text-sm); font-weight: 500;
+      color: var(--color-text-muted); cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: var(--tx-quick); background: transparent; border-left: none; border-right: none; border-top: none;
+      font-family: inherit;
+    }
+    .v-c .tab:hover { color: var(--color-text); }
+    .v-c .tab.active { color: var(--color-text); border-bottom-color: var(--color-primary); }
+    .v-c .tab .count {
+      font-size: 10px; padding: 1px 6px; border-radius: 8px;
+      background: var(--color-surface-2); color: var(--color-text-muted);
+      font-family: var(--font-mono); margin-left: 5px; font-weight: 400;
+    }
+    .v-c .tab.active .count { background: var(--color-text); color: var(--color-bg); }
+    .v-c .tab-panel { display: none; }
+    .v-c .tab-panel.active { display: block; }
+    .v-c .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .v-c .overview-grid > div .section:first-child { margin-top: 0; }
+
+    /* ─── Variant tab bar + tools (standard sketch chrome) ─────── */
+    #variant-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: 8px 16px; display: flex; gap: 6px; align-items: center;
+      font-family: var(--font-sans); box-shadow: var(--shadow-sm);
+    }
+    #variant-nav .label {
+      font-size: var(--text-xs); color: var(--color-text-faint);
+      margin-right: 8px; letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .variant-tab {
+      padding: 5px 12px; font-size: var(--text-xs);
+      background: transparent; border: 1px solid transparent;
+      color: var(--color-text-muted);
+      border-radius: var(--radius-sm); cursor: pointer; transition: var(--tx-quick);
+      font-family: inherit;
+    }
+    .variant-tab:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .variant-tab.active { background: var(--color-text); color: var(--color-bg); border-color: var(--color-text); font-weight: 500; }
+    .variant { display: none; }
+    .variant.active { display: block; }
+
+    #sketch-tools {
+      position: fixed; bottom: 12px; right: 12px; z-index: 9999;
+      font-family: system-ui; font-size: 12px;
+      background: rgba(15, 23, 42, 0.84); color: #f1f5f9;
+      padding: 8px 12px; border-radius: 8px;
+      opacity: 0.4; transition: opacity 0.2s;
+      display: flex; gap: 10px; align-items: center; backdrop-filter: blur(6px);
+    }
+    #sketch-tools:hover { opacity: 1; }
+    #sketch-tools select,
+    #sketch-tools button {
+      background: rgba(255,255,255,0.06); color: #f1f5f9;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 5px; padding: 3px 7px; font-size: 11px;
+      cursor: pointer; font-family: inherit;
+    }
+    #sketch-tools button:hover { background: rgba(255,255,255,0.16); }
+    #sketch-tools .vp-active { background: rgba(255,255,255,0.22); }
+
+    #toast {
+      position: fixed; bottom: 60px; right: 16px; z-index: 9997;
+      background: var(--color-text); color: var(--color-bg);
+      padding: 8px 14px; border-radius: var(--radius-md);
+      font-size: var(--text-sm); box-shadow: var(--shadow-lg);
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.2s ease, transform 0.2s ease; pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    .viewport-clamp { max-width: var(--vp, none); margin: 0 auto; transition: max-width 0.2s ease; }
+  </style>
+</head>
+<body>
+
+<!-- ─── Variant tab bar ─────────────────────────────────────── -->
+<nav id="variant-nav">
+  <span class="label">Sketch 007</span>
+  <button class="variant-tab active" data-target="a" onclick="showVariant('a', this)">A · Stacked single column</button>
+  <button class="variant-tab" data-target="b" onclick="showVariant('b', this)">B · Hero + 2-col body</button>
+  <button class="variant-tab" data-target="c" onclick="showVariant('c', this)">C · Tabbed surface ★ Selected</button>
+</nav>
+
+<div class="viewport-clamp">
+
+<!-- ════════════════════════════════════════════════════════════════
+     SIDEBAR (shared, slim, established by sketch 001)
+     Rendered once per variant to keep the room visible.
+     ════════════════════════════════════════════════════════════════ -->
+<template id="sidebar-tmpl">
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark">B</div>
+    <div class="brand-name">beatrax<span class="brand-version">v0.1.0</span></div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">This month</div>
+    <div class="nav-item"><span class="icon">◐</span> Dashboard</div>
+    <div class="nav-item"><span class="icon">↻</span> Recurring <span class="badge">14</span></div>
+    <div class="nav-item"><span class="icon">⤵</span> Triage <span class="badge">7</span></div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Money</div>
+    <div class="nav-item"><span class="icon">⊟</span> Transactions</div>
+    <div class="nav-item"><span class="icon">⟿</span> Chains</div>
+    <div class="nav-item"><span class="icon">⟁</span> Forecast</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Categorization</div>
+    <div class="nav-item"><span class="icon">◆</span> Categories</div>
+    <div class="nav-item active"><span class="icon">⊙</span> Counterparties <span class="badge">328</span></div>
+    <div class="nav-item"><span class="icon">⌥</span> Aliases</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Tools</div>
+    <div class="nav-item"><span class="icon">⚙</span> Settings</div>
+    <div class="nav-item"><span class="icon">⌘</span> Command palette</div>
+  </div>
+</aside>
+</template>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT A — Stacked single column
+     Linear-style. Everything stacks. ~920px max-width.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-a active" id="variant-a">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="breadcrumb">
+        <a>Counterparties</a><span class="sep">/</span><span>Amazon</span>
+      </div>
+
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-avatar">A</div>
+        <div class="hero-main">
+          <div class="hero-title-row">
+            <h1 class="hero-title">Amazon</h1>
+            <span class="type-chip">⊙ Merchant</span>
+          </div>
+          <div class="hero-meta">
+            12 transactions over the last 3 months
+            <span class="dot"></span>last seen 4 days ago
+            <span class="dot"></span>funded via ICS Cards
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-label">12-month total</div>
+            <div class="hero-stat-value">€ 1 247.84 <span class="hero-stat-delta up">↑ 18 %</span></div>
+            <div class="hero-stat-sub">vs prior 12mo: € 1 057.40</div>
+          </div>
+          <div>
+            <div class="hero-stat-label">Average / month</div>
+            <div class="hero-stat-value">€ 103.99</div>
+            <div class="hero-stat-sub">across 9 active months</div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-icon" title="Edit display name">✎</button>
+          <button class="btn">Set category…</button>
+        </div>
+      </div>
+
+      <!-- Aliases -->
+      <div class="section">
+        <div class="section-head">
+          <h2 class="section-title">Aliases <span class="section-title-sub">5 names map here</span></h2>
+          <span class="section-link">Manage in Settings →</span>
+        </div>
+        <div class="alias-row">
+          <span class="alias-chip primary">Amazon</span>
+          <span class="alias-chip">AMAZON EU SARL <span class="x">×</span></span>
+          <span class="alias-chip">AMAZON.NL <span class="x">×</span></span>
+          <span class="alias-chip">AMZN Mktp NL <span class="x">×</span></span>
+          <span class="alias-chip">Amazon Payments <span class="x">×</span></span>
+          <button class="alias-add">+ Add alias</button>
+        </div>
+      </div>
+
+      <!-- Category breakdown -->
+      <div class="section">
+        <div class="section-head">
+          <h2 class="section-title">Categories <span class="section-title-sub">last 12 months</span></h2>
+        </div>
+        <div class="cat-bar">
+          <div class="c-1" style="width: 44%"></div>
+          <div class="c-2" style="width: 28%"></div>
+          <div class="c-3" style="width: 18%"></div>
+          <div class="c-4" style="width: 10%"></div>
+        </div>
+        <div class="cat-legend">
+          <span><span class="swatch" style="background: #2563eb"></span>Household <span class="pct">44 %</span></span>
+          <span><span class="swatch" style="background: #059669"></span>Books &amp; media <span class="pct">28 %</span></span>
+          <span><span class="swatch" style="background: #d97706"></span>Electronics <span class="pct">18 %</span></span>
+          <span><span class="swatch" style="background: #94a3b8"></span>Other <span class="pct">10 %</span></span>
+        </div>
+      </div>
+
+      <!-- Recurring -->
+      <div class="section">
+        <div class="section-head">
+          <h2 class="section-title">Recurring patterns <span class="section-title-sub">2 detected</span></h2>
+        </div>
+        <div class="recur-grid">
+          <div class="recur-card">
+            <div class="recur-title">Amazon Prime <span class="recur-cadence">↻ yearly</span></div>
+            <div class="recur-meta">€ 49.90 · next due 14 Sep 2026</div>
+          </div>
+          <div class="recur-card">
+            <div class="recur-title">Kindle Unlimited <span class="recur-cadence">↻ monthly</span></div>
+            <div class="recur-meta">€ 9.99 · next due 02 Jun 2026</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Funding chain -->
+      <div class="section">
+        <div class="section-head">
+          <h2 class="section-title">Funding chain</h2>
+          <span class="section-link">See all chains →</span>
+        </div>
+        <div class="frame frame-tight">
+          <div class="chain-flow">
+            <div class="chain-node">
+              <span class="node-glyph asn">A</span>
+              <span class="node-label">ASN Bank</span>
+              <span class="node-sub">NL12 ASNB ····</span>
+            </div>
+            <span class="chain-arrow">→</span>
+            <div class="chain-node">
+              <span class="node-glyph ics">I</span>
+              <span class="node-label">ICS Cards</span>
+              <span class="node-sub">····3741</span>
+            </div>
+            <span class="chain-arrow">→</span>
+            <div class="chain-node">
+              <span class="node-glyph amz">A</span>
+              <span class="node-label">Amazon</span>
+            </div>
+          </div>
+          <div class="chain-meta">Monthly iDEAL settlement from ASN clears the ICS card · last 27 Apr · € 184.30 (covered 5 Amazon charges)</div>
+        </div>
+      </div>
+
+      <!-- Transactions -->
+      <div class="section">
+        <div class="section-head">
+          <h2 class="section-title">Transactions <span class="section-title-sub">12 total</span></h2>
+          <span class="section-link">Export CSV</span>
+        </div>
+        <table class="tx-table">
+          <thead>
+            <tr><th>Date</th><th>Description</th><th>Type</th><th>Account</th><th>Category</th><th style="text-align: right">Amount</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="tx-date">23 May 2026</td><td>AMAZON.NL · Kitchen scales</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #2563eb"></span>Household</span></td><td class="tx-amount">€ 24.95</td></tr>
+            <tr><td class="tx-date">17 May 2026</td><td>AMZN Mktp NL · Cable organizer</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #d97706"></span>Electronics</span></td><td class="tx-amount">€ 12.40</td></tr>
+            <tr><td class="tx-date">10 May 2026</td><td>Amazon Payments · PayPal funded</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #003087">P</span>PayPal</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 18.99 <span class="tx-amount-sub">$ 20.50</span></td></tr>
+            <tr><td class="tx-date">02 May 2026</td><td>Kindle Unlimited subscription</td><td><span class="ptype ptype-recurring">↻ recurring</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 9.99</td></tr>
+            <tr><td class="tx-date">28 Apr 2026</td><td>AMAZON.NL · Office chair</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #2563eb"></span>Household</span></td><td class="tx-amount">€ 189.00</td></tr>
+            <tr><td class="tx-date">21 Apr 2026</td><td>AMAZON EU SARL · USB-C hub</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #d97706"></span>Electronics</span></td><td class="tx-amount">€ 42.50</td></tr>
+            <tr><td class="tx-date">15 Apr 2026</td><td>Amazon · Paperback book</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 16.80</td></tr>
+            <tr><td class="tx-date">02 Apr 2026</td><td>Kindle Unlimited subscription</td><td><span class="ptype ptype-recurring">↻ recurring</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 9.99</td></tr>
+            <tr><td class="tx-date">26 Mar 2026</td><td>AMAZON.NL · Bedsheets</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #2563eb"></span>Household</span></td><td class="tx-amount">€ 56.20</td></tr>
+            <tr><td colspan="6" style="text-align: center; padding: 16px;"><button class="btn btn-ghost" onclick="loadMore(this, 3)">Load more (3 remaining)</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT B — Hero + 2-col body
+     Hero full-width. Left aside (320px): aliases / category / recurring
+     / funding chain. Right (1fr): transaction list.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-b" id="variant-b">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="breadcrumb">
+        <a>Counterparties</a><span class="sep">/</span><span>Amazon</span>
+      </div>
+
+      <!-- Hero (compact) -->
+      <div class="hero">
+        <div class="hero-avatar">A</div>
+        <div class="hero-main">
+          <div class="hero-title-row">
+            <h1 class="hero-title">Amazon</h1>
+            <span class="type-chip">⊙ Merchant</span>
+          </div>
+          <div class="hero-meta">
+            12 transactions over 3 months
+            <span class="dot"></span>last seen 4 days ago
+            <span class="dot"></span>funded via ICS Cards
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-label">12-month total</div>
+            <div class="hero-stat-value">€ 1 247.84 <span class="hero-stat-delta up">↑ 18 %</span></div>
+          </div>
+          <div>
+            <div class="hero-stat-label">Avg / month</div>
+            <div class="hero-stat-value">€ 103.99</div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-icon" title="Edit display name">✎</button>
+          <button class="btn">Set category…</button>
+        </div>
+      </div>
+
+      <!-- Two-column body -->
+      <div class="v-body">
+        <!-- Left aside -->
+        <div class="v-aside">
+          <div class="section">
+            <div class="section-head">
+              <h2 class="section-title">Aliases</h2>
+              <span class="section-link">5</span>
+            </div>
+            <div class="alias-row">
+              <span class="alias-chip primary">Amazon</span>
+              <span class="alias-chip">AMAZON EU SARL <span class="x">×</span></span>
+              <span class="alias-chip">AMAZON.NL <span class="x">×</span></span>
+              <span class="alias-chip">AMZN Mktp NL <span class="x">×</span></span>
+              <span class="alias-chip">Amazon Payments <span class="x">×</span></span>
+              <button class="alias-add">+ Add</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <h2 class="section-title">Categories</h2>
+              <span class="section-link">12 mo</span>
+            </div>
+            <div class="cat-bar">
+              <div class="c-1" style="width: 44%"></div>
+              <div class="c-2" style="width: 28%"></div>
+              <div class="c-3" style="width: 18%"></div>
+              <div class="c-4" style="width: 10%"></div>
+            </div>
+            <div class="cat-legend">
+              <span><span class="swatch" style="background: #2563eb"></span>Household <span class="pct">44 %</span></span>
+              <span><span class="swatch" style="background: #059669"></span>Books &amp; media <span class="pct">28 %</span></span>
+              <span><span class="swatch" style="background: #d97706"></span>Electronics <span class="pct">18 %</span></span>
+              <span><span class="swatch" style="background: #94a3b8"></span>Other <span class="pct">10 %</span></span>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <h2 class="section-title">Recurring</h2>
+              <span class="section-link">2</span>
+            </div>
+            <div class="recur-grid">
+              <div class="recur-card">
+                <div class="recur-title">Amazon Prime <span class="recur-cadence">↻ yearly</span></div>
+                <div class="recur-meta">€ 49.90 · next 14 Sep</div>
+              </div>
+              <div class="recur-card">
+                <div class="recur-title">Kindle Unlimited <span class="recur-cadence">↻ monthly</span></div>
+                <div class="recur-meta">€ 9.99 · next 02 Jun</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <h2 class="section-title">Funding chain</h2>
+              <span class="section-link">→</span>
+            </div>
+            <div class="frame frame-tight">
+              <div class="chain-flow" style="font-size: 11px;">
+                <div class="chain-node">
+                  <span class="node-glyph asn">A</span>
+                  <span class="node-label">ASN</span>
+                </div>
+                <span class="chain-arrow">→</span>
+                <div class="chain-node">
+                  <span class="node-glyph ics">I</span>
+                  <span class="node-label">ICS ··3741</span>
+                </div>
+                <span class="chain-arrow">→</span>
+                <div class="chain-node">
+                  <span class="node-glyph amz">A</span>
+                  <span class="node-label">Amazon</span>
+                </div>
+              </div>
+              <div class="chain-meta">Last settlement 27 Apr · € 184.30</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right main: transactions -->
+        <div>
+          <div class="section" style="margin-top: 0;">
+            <div class="section-head">
+              <h2 class="section-title">Transactions <span class="section-title-sub">12 total</span></h2>
+              <span class="section-link">Export CSV</span>
+            </div>
+            <table class="tx-table">
+              <thead>
+                <tr><th>Date</th><th>Description</th><th>Type</th><th>Account</th><th>Category</th><th style="text-align: right">Amount</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="tx-date">23 May 2026</td><td>AMAZON.NL · Kitchen scales</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #2563eb"></span>Household</span></td><td class="tx-amount">€ 24.95</td></tr>
+                <tr><td class="tx-date">17 May 2026</td><td>AMZN Mktp NL · Cable organizer</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #d97706"></span>Electronics</span></td><td class="tx-amount">€ 12.40</td></tr>
+                <tr><td class="tx-date">10 May 2026</td><td>Amazon Payments · PayPal funded</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #003087">P</span>PayPal</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 18.99 <span class="tx-amount-sub">$ 20.50</span></td></tr>
+                <tr><td class="tx-date">02 May 2026</td><td>Kindle Unlimited subscription</td><td><span class="ptype ptype-recurring">↻ recurring</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 9.99</td></tr>
+                <tr><td class="tx-date">28 Apr 2026</td><td>AMAZON.NL · Office chair</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #2563eb"></span>Household</span></td><td class="tx-amount">€ 189.00</td></tr>
+                <tr><td class="tx-date">21 Apr 2026</td><td>AMAZON EU SARL · USB-C hub</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #d97706"></span>Electronics</span></td><td class="tx-amount">€ 42.50</td></tr>
+                <tr><td class="tx-date">15 Apr 2026</td><td>Amazon · Paperback book</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 16.80</td></tr>
+                <tr><td class="tx-date">02 Apr 2026</td><td>Kindle Unlimited subscription</td><td><span class="ptype ptype-recurring">↻ recurring</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 9.99</td></tr>
+                <tr><td class="tx-date">26 Mar 2026</td><td>AMAZON.NL · Bedsheets</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #2563eb"></span>Household</span></td><td class="tx-amount">€ 56.20</td></tr>
+                <tr><td colspan="6" style="text-align: center; padding: 16px;"><button class="btn btn-ghost" onclick="loadMore(this, 3)">Load more (3 remaining)</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT C — Tabbed surface
+     Compact hero. Tab bar with Overview / Transactions / Chains / Aliases.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-c" id="variant-c">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="breadcrumb">
+        <a>Counterparties</a><span class="sep">/</span><span>Amazon</span>
+      </div>
+
+      <!-- Compact hero -->
+      <div class="hero">
+        <div class="hero-avatar">A</div>
+        <div class="hero-main">
+          <div class="hero-title-row">
+            <h1 class="hero-title">Amazon</h1>
+            <span class="type-chip">⊙ Merchant</span>
+          </div>
+          <div class="hero-meta">12 tx · last 4 days ago · funded via ICS Cards</div>
+        </div>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-label">12-month total</div>
+            <div class="hero-stat-value">€ 1 247.84</div>
+          </div>
+          <div>
+            <div class="hero-stat-label">Avg / month</div>
+            <div class="hero-stat-value">€ 103.99</div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-icon">✎</button>
+        </div>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        <button class="tab active" data-tab="overview" onclick="showTab('overview', this)">Overview</button>
+        <button class="tab" data-tab="transactions" onclick="showTab('transactions', this)">Transactions <span class="count">12</span></button>
+        <button class="tab" data-tab="chains" onclick="showTab('chains', this)">Chains <span class="count">2</span></button>
+        <button class="tab" data-tab="aliases" onclick="showTab('aliases', this)">Aliases <span class="count">5</span></button>
+      </div>
+
+      <!-- Overview tab (default) -->
+      <div class="tab-panel active" id="tab-overview">
+        <div class="overview-grid">
+          <div>
+            <div class="section">
+              <div class="section-head">
+                <h2 class="section-title">Categories <span class="section-title-sub">12 mo</span></h2>
+              </div>
+              <div class="cat-bar">
+                <div class="c-1" style="width: 44%"></div>
+                <div class="c-2" style="width: 28%"></div>
+                <div class="c-3" style="width: 18%"></div>
+                <div class="c-4" style="width: 10%"></div>
+              </div>
+              <div class="cat-legend">
+                <span><span class="swatch" style="background: #2563eb"></span>Household <span class="pct">44 %</span></span>
+                <span><span class="swatch" style="background: #059669"></span>Books &amp; media <span class="pct">28 %</span></span>
+                <span><span class="swatch" style="background: #d97706"></span>Electronics <span class="pct">18 %</span></span>
+                <span><span class="swatch" style="background: #94a3b8"></span>Other <span class="pct">10 %</span></span>
+              </div>
+            </div>
+            <div class="section">
+              <div class="section-head">
+                <h2 class="section-title">Recurring patterns</h2>
+              </div>
+              <div class="recur-grid">
+                <div class="recur-card single-col">
+                  <div class="recur-title">Amazon Prime <span class="recur-cadence">↻ yearly</span></div>
+                  <div class="recur-meta">€ 49.90 · next due 14 Sep 2026</div>
+                </div>
+                <div class="recur-card single-col">
+                  <div class="recur-title">Kindle Unlimited <span class="recur-cadence">↻ monthly</span></div>
+                  <div class="recur-meta">€ 9.99 · next due 02 Jun 2026</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="section">
+              <div class="section-head">
+                <h2 class="section-title">Recent activity</h2>
+                <span class="section-link" onclick="showTab('transactions', document.querySelector('.tab[data-tab=transactions]'))">See all 12 →</span>
+              </div>
+              <div class="frame frame-tight" style="padding: 4px 0;">
+                <table class="tx-table">
+                  <tbody>
+                    <tr><td class="tx-date" style="padding-left: 14px">23 May</td><td>AMAZON.NL · Kitchen scales</td><td class="tx-amount" style="padding-right: 14px">€ 24.95</td></tr>
+                    <tr><td class="tx-date" style="padding-left: 14px">17 May</td><td>AMZN Mktp · Cable organizer</td><td class="tx-amount" style="padding-right: 14px">€ 12.40</td></tr>
+                    <tr><td class="tx-date" style="padding-left: 14px">10 May</td><td>Amazon Payments · PayPal</td><td class="tx-amount" style="padding-right: 14px">€ 18.99</td></tr>
+                    <tr><td class="tx-date" style="padding-left: 14px">02 May</td><td>Kindle Unlimited <span class="ptype ptype-recurring" style="margin-left: 4px">↻</span></td><td class="tx-amount" style="padding-right: 14px">€ 9.99</td></tr>
+                    <tr><td class="tx-date" style="padding-left: 14px; border-bottom: none">28 Apr</td><td style="border-bottom: none">AMAZON.NL · Office chair</td><td class="tx-amount" style="padding-right: 14px; border-bottom: none">€ 189.00</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="section">
+              <div class="section-head">
+                <h2 class="section-title">Funding chain</h2>
+                <span class="section-link" onclick="showTab('chains', document.querySelector('.tab[data-tab=chains]'))">Open Chains →</span>
+              </div>
+              <div class="frame frame-tight">
+                <div class="chain-flow" style="font-size: var(--text-sm);">
+                  <div class="chain-node">
+                    <span class="node-glyph asn">A</span>
+                    <span class="node-label">ASN Bank</span>
+                  </div>
+                  <span class="chain-arrow">→</span>
+                  <div class="chain-node">
+                    <span class="node-glyph ics">I</span>
+                    <span class="node-label">ICS ··3741</span>
+                  </div>
+                  <span class="chain-arrow">→</span>
+                  <div class="chain-node">
+                    <span class="node-glyph amz">A</span>
+                    <span class="node-label">Amazon</span>
+                  </div>
+                </div>
+                <div class="chain-meta">Last settlement 27 Apr · € 184.30 covered 5 charges</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transactions tab -->
+      <div class="tab-panel" id="tab-transactions">
+        <table class="tx-table">
+          <thead>
+            <tr><th>Date</th><th>Description</th><th>Type</th><th>Account</th><th>Category</th><th style="text-align: right">Amount</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="tx-date">23 May 2026</td><td>AMAZON.NL · Kitchen scales</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #2563eb"></span>Household</span></td><td class="tx-amount">€ 24.95</td></tr>
+            <tr><td class="tx-date">17 May 2026</td><td>AMZN Mktp NL · Cable organizer</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #d97706"></span>Electronics</span></td><td class="tx-amount">€ 12.40</td></tr>
+            <tr><td class="tx-date">10 May 2026</td><td>Amazon Payments · PayPal funded</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #003087">P</span>PayPal</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 18.99 <span class="tx-amount-sub">$ 20.50</span></td></tr>
+            <tr><td class="tx-date">02 May 2026</td><td>Kindle Unlimited subscription</td><td><span class="ptype ptype-recurring">↻ recurring</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 9.99</td></tr>
+            <tr><td class="tx-date">28 Apr 2026</td><td>AMAZON.NL · Office chair</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #2563eb"></span>Household</span></td><td class="tx-amount">€ 189.00</td></tr>
+            <tr><td class="tx-date">21 Apr 2026</td><td>AMAZON EU SARL · USB-C hub</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #d97706"></span>Electronics</span></td><td class="tx-amount">€ 42.50</td></tr>
+            <tr><td class="tx-date">15 Apr 2026</td><td>Amazon · Paperback book</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 16.80</td></tr>
+            <tr><td class="tx-date">02 Apr 2026</td><td>Kindle Unlimited subscription</td><td><span class="ptype ptype-recurring">↻ recurring</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #059669"></span>Books &amp; media</span></td><td class="tx-amount">€ 9.99</td></tr>
+            <tr><td class="tx-date">26 Mar 2026</td><td>AMAZON.NL · Bedsheets</td><td><span class="ptype ptype-online">⌘ online</span></td><td><span class="tx-account"><span class="glyph" style="background: #7c3aed">I</span>ICS ··3741</span></td><td><span class="cat-chip"><span class="swatch" style="background: #2563eb"></span>Household</span></td><td class="tx-amount">€ 56.20</td></tr>
+            <tr><td colspan="6" style="text-align: center; padding: 16px;"><button class="btn btn-ghost" onclick="loadMore(this, 3)">Load more (3 remaining)</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Chains tab -->
+      <div class="tab-panel" id="tab-chains">
+        <div class="frame">
+          <h3 style="margin: 0 0 12px; font-size: var(--text-md);">Active funding chain</h3>
+          <div class="chain-flow">
+            <div class="chain-node">
+              <span class="node-glyph asn">A</span>
+              <span class="node-label">ASN Bank</span>
+              <span class="node-sub">NL12 ASNB ····</span>
+            </div>
+            <span class="chain-arrow">→</span>
+            <div class="chain-node">
+              <span class="node-glyph ics">I</span>
+              <span class="node-label">ICS Cards</span>
+              <span class="node-sub">····3741</span>
+            </div>
+            <span class="chain-arrow">→</span>
+            <div class="chain-node">
+              <span class="node-glyph amz">A</span>
+              <span class="node-label">Amazon</span>
+            </div>
+          </div>
+          <div class="chain-meta">Monthly iDEAL settlement from ASN clears the ICS card. Last 27 Apr: € 184.30 covered 5 Amazon charges.</div>
+        </div>
+
+        <div class="frame" style="margin-top: 12px;">
+          <h3 style="margin: 0 0 12px; font-size: var(--text-md);">PayPal funding (occasional)</h3>
+          <div class="chain-flow">
+            <div class="chain-node">
+              <span class="node-glyph asn">A</span>
+              <span class="node-label">ASN Bank</span>
+            </div>
+            <span class="chain-arrow">→</span>
+            <div class="chain-node">
+              <span class="node-glyph paypal">P</span>
+              <span class="node-label">PayPal</span>
+            </div>
+            <span class="chain-arrow">→</span>
+            <div class="chain-node">
+              <span class="node-glyph amz">A</span>
+              <span class="node-label">Amazon</span>
+            </div>
+          </div>
+          <div class="chain-meta">1 of 12 charges in last 3 months · last 10 May: € 18.99 ($ 20.50)</div>
+        </div>
+      </div>
+
+      <!-- Aliases tab -->
+      <div class="tab-panel" id="tab-aliases">
+        <div class="frame">
+          <div class="alias-row">
+            <span class="alias-chip primary">Amazon</span>
+            <span class="alias-chip">AMAZON EU SARL <span class="x">×</span></span>
+            <span class="alias-chip">AMAZON.NL <span class="x">×</span></span>
+            <span class="alias-chip">AMZN Mktp NL <span class="x">×</span></span>
+            <span class="alias-chip">Amazon Payments <span class="x">×</span></span>
+            <button class="alias-add">+ Add alias</button>
+          </div>
+          <p style="margin: 16px 0 0; font-size: var(--text-xs); color: var(--color-text-muted);">
+            New transactions matching any of these names will be assigned to <strong>Amazon</strong>.
+            Click × to remove an alias; transactions won't be re-attributed unless re-imported.
+          </p>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+</div><!-- /viewport-clamp -->
+
+<!-- ─── Sketch tools toolbar ────────────────────────────────── -->
+<div id="sketch-tools">
+  <select id="theme-switcher" onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Light</option>
+  </select>
+  <button id="dark-toggle" onclick="toggleDark()">🌙 Dark</button>
+  <button class="vp-btn vp-active" data-vp="none" onclick="setViewport(this, null)">Full</button>
+  <button class="vp-btn" data-vp="1440" onclick="setViewport(this, 1440)">1440</button>
+  <button class="vp-btn" data-vp="1280" onclick="setViewport(this, 1280)">1280</button>
+  <button class="vp-btn" data-vp="1024" onclick="setViewport(this, 1024)">1024</button>
+</div>
+
+<div id="toast">Saved</div>
+
+<script>
+  // Clone the sidebar template into every variant's slot
+  const sidebarHTML = document.getElementById('sidebar-tmpl').innerHTML;
+  document.querySelectorAll('aside.sidebar[data-include="sidebar"]').forEach(el => {
+    el.outerHTML = sidebarHTML;
+  });
+
+  function showVariant(id, btn) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('variant-' + id).classList.add('active');
+    document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function showTab(name, btn) {
+    document.querySelectorAll('.v-c .tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelectorAll('.v-c .tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function toggleDark() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    document.getElementById('dark-toggle').textContent = isDark ? '☀ Light' : '🌙 Dark';
+  }
+
+  function setViewport(btn, px) {
+    document.querySelectorAll('.vp-btn').forEach(b => b.classList.remove('vp-active'));
+    btn.classList.add('vp-active');
+    const wrap = document.querySelector('.viewport-clamp');
+    wrap.style.setProperty('--vp', px ? px + 'px' : 'none');
+  }
+
+  function loadMore(el, remaining) {
+    const next = Math.max(0, remaining - 3);
+    if (next === 0) {
+      el.outerHTML = '<span style="color: var(--color-text-faint); font-size: var(--text-xs);">All transactions shown</span>';
+    } else {
+      el.textContent = 'Load more (' + next + ' remaining)';
+    }
+    toast('Loaded more');
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+  }
+
+  // Keyboard nav: 1-3 switch variants
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input, textarea, select')) return;
+    const map = { '1': 'a', '2': 'b', '3': 'c' };
+    const id = map[e.key];
+    if (id) {
+      const btn = document.querySelector('.variant-tab[data-target="' + id + '"]');
+      if (btn) showVariant(id, btn);
+    }
+  });
+</script>
+
+</body>
+</html>
