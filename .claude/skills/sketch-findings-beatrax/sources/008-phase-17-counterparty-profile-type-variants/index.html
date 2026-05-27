@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sketch 008 · Counterparty profile · type variants · Phase 17</title>
+  <link rel="stylesheet" href="../themes/default.css" />
+  <style>
+    /* ─────────────────────────────────────────────────────────────
+       Sketch 008 — type-aware profile variants
+       Inherits the 007C tabbed shape. Variants ARE the four types:
+       A: personal (Mama)        — privacy defaults, no recurring/chain
+       B: bank (ASN Bank fees)   — fee-type aggregation, no chain
+       C: government (Belasting) — tax-year breakdown headline, no chain
+       D: self_account (PayPal)  — stub redirect to account view
+       ───────────────────────────────────────────────────────────── */
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      color: var(--color-text);
+      background: var(--color-bg-subtle);
+      font-size: var(--text-base); line-height: 1.5;
+      padding-top: 48px;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ─── App shell ─── */
+    .app-shell { display: grid; grid-template-columns: 232px 1fr; min-height: calc(100vh - 48px); }
+    .sidebar {
+      background: var(--color-bg-subtle);
+      border-right: 1px solid var(--color-border);
+      padding: 16px 12px;
+      display: flex; flex-direction: column; gap: 4px;
+      position: sticky; top: 48px; height: calc(100vh - 48px); overflow-y: auto;
+    }
+    .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px 14px; border-bottom: 1px solid var(--color-border); margin-bottom: 12px; }
+    .brand-mark { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text-muted) 100%); color: var(--color-bg); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+    .brand-name { font-weight: 600; font-size: var(--text-md); }
+    .brand-version { font-size: 10px; color: var(--color-text-faint); background: var(--color-surface-2); padding: 2px 5px; border-radius: 3px; font-family: var(--font-mono); margin-left: 6px; }
+    .nav-section { margin-top: 14px; }
+    .nav-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); padding: 0 8px 6px; font-weight: 600; }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 5px; font-size: var(--text-sm); color: var(--color-text-muted); cursor: pointer; transition: var(--tx-quick); }
+    .nav-item:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .nav-item.active { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-xs); font-weight: 500; }
+    .nav-item .icon { width: 14px; opacity: 0.7; }
+    .nav-item .badge { margin-left: auto; font-size: 10px; background: var(--color-surface-2); padding: 1px 6px; border-radius: 8px; font-family: var(--font-mono); color: var(--color-text-muted); }
+
+    /* ─── Main content ─── */
+    .main { background: var(--color-bg); padding: 28px 40px 60px; min-height: 100%; }
+    .breadcrumb { font-size: var(--text-xs); color: var(--color-text-muted); margin-bottom: 18px; }
+    .breadcrumb a:hover { color: var(--color-text); }
+    .breadcrumb .sep { margin: 0 6px; color: var(--color-text-faint); }
+
+    /* ─── Hero (shared shape) ─── */
+    .hero {
+      display: flex; align-items: flex-start; gap: 20px;
+      padding-bottom: 18px;
+    }
+    .hero-avatar { width: 56px; height: 56px; border-radius: 12px; color: white; display: grid; place-items: center; font-weight: 700; font-size: 22px; flex: none; }
+    .hero-avatar.personal { background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); }
+    .hero-avatar.bank { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); }
+    .hero-avatar.gov { background: linear-gradient(135deg, #64748b 0%, #334155 100%); }
+    .hero-avatar.self { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); }
+    .hero-main { flex: 1; min-width: 0; }
+    .hero-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+    .hero-title { font-size: var(--text-2xl); font-weight: 600; letter-spacing: -0.015em; margin: 0; }
+    .type-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: var(--radius-full); font-size: 11px; font-weight: 500; border: 1px solid transparent; }
+    .type-chip.merchant { background: var(--color-blue-bg); color: var(--color-blue); border-color: color-mix(in srgb, var(--color-blue) 24%, transparent); }
+    .type-chip.personal { background: #fce7f3; color: #be185d; border-color: color-mix(in srgb, #be185d 24%, transparent); }
+    .type-chip.bank { background: var(--color-amber-bg); color: var(--color-amber); border-color: color-mix(in srgb, var(--color-amber) 24%, transparent); }
+    .type-chip.gov { background: #e2e8f0; color: #334155; border-color: #cbd5e1; }
+    .type-chip.self { background: var(--color-surface-2); color: var(--color-text-muted); border-color: var(--color-border); }
+    .hero-meta { color: var(--color-text-muted); font-size: var(--text-sm); }
+    .hero-meta .dot { display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: var(--color-text-faint); margin: 0 8px; vertical-align: middle; }
+    .hero-stats { display: flex; gap: 32px; flex: none; padding-left: 8px; border-left: 1px solid var(--color-border); }
+    .hero-stat-label { font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; margin-bottom: 4px; }
+    .hero-stat-value { font-size: var(--text-xl); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+    .hero-stat-sub { font-size: 11px; color: var(--color-text-faint); margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .hero-stat-delta { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+    .hero-stat-delta.up { color: var(--color-rose); }
+    .hero-stat-delta.down { color: var(--color-emerald); }
+    .hero-actions { display: flex; gap: 6px; align-items: center; align-self: flex-start; }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); font-weight: 500; cursor: pointer; transition: var(--tx-quick); font-family: inherit; }
+    .btn:hover { background: var(--color-surface-2); }
+    .btn-primary { background: var(--color-primary); color: var(--color-primary-text); border-color: var(--color-primary); }
+    .btn-primary:hover { opacity: 0.92; background: var(--color-primary); }
+    .btn-ghost { background: transparent; border-color: transparent; color: var(--color-text-muted); padding: 5px 8px; }
+    .btn-ghost:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .btn-icon { padding: 5px 8px; }
+
+    /* ─── Tab bar (007C shape) ─── */
+    .tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--color-border); margin-bottom: 24px; }
+    .tab { padding: 8px 14px; font-size: var(--text-sm); font-weight: 500; color: var(--color-text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: var(--tx-quick); background: transparent; border-left: none; border-right: none; border-top: none; font-family: inherit; }
+    .tab:hover { color: var(--color-text); }
+    .tab.active { color: var(--color-text); border-bottom-color: var(--color-primary); }
+    .tab .count { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--color-surface-2); color: var(--color-text-muted); font-family: var(--font-mono); margin-left: 5px; font-weight: 400; }
+    .tab.active .count { background: var(--color-text); color: var(--color-bg); }
+    .tab-note { font-size: 10px; color: var(--color-text-faint); margin-left: auto; align-self: center; font-style: italic; }
+
+    /* ─── Section primitives ─── */
+    .section { margin-top: 24px; }
+    .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+    .section-title { font-size: var(--text-md); font-weight: 600; letter-spacing: -0.005em; margin: 0; }
+    .section-title-sub { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: 400; margin-left: 6px; }
+    .section-link { font-size: var(--text-xs); color: var(--color-text-muted); cursor: pointer; }
+    .section-link:hover { color: var(--color-text); }
+
+    .frame { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-subtle); padding: 16px; }
+    .frame-tight { padding: 12px 14px; }
+
+    .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .overview-grid > div .section:first-child { margin-top: 0; }
+
+    /* ─── Cat bar + legend ─── */
+    .cat-bar { display: flex; height: 8px; border-radius: var(--radius-full); overflow: hidden; background: var(--color-surface); }
+    .cat-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: var(--text-xs); color: var(--color-text-muted); }
+    .cat-legend .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+    .cat-legend .pct { color: var(--color-text); font-weight: 500; margin-left: 4px; font-variant-numeric: tabular-nums; }
+
+    /* ─── Recurring cards ─── */
+    .recur-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .recur-card { padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+    .recur-title { font-size: var(--text-sm); font-weight: 500; margin: 0 0 4px; }
+    .recur-meta { font-size: var(--text-xs); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+    .recur-cadence { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 7px; border-radius: var(--radius-full); background: var(--color-emerald-bg); color: var(--color-emerald); margin-left: 6px; font-weight: 500; }
+    .recur-cadence.amber { background: var(--color-amber-bg); color: var(--color-amber); }
+
+    .tx-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+    .tx-table tbody td { padding: 8px 10px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .tx-table tbody tr:last-child td { border-bottom: none; }
+    .tx-date { color: var(--color-text-muted); font-size: var(--text-xs); white-space: nowrap; }
+    .tx-amount { font-weight: 500; text-align: right; white-space: nowrap; }
+    .tx-amount.in { color: var(--color-emerald); }
+    .tx-amount.out { color: var(--color-text); }
+
+    /* ─── Privacy: IBAN-hidden toggle ─── */
+    .iban-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .iban-row .iban-label { font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+    .iban-row .iban-value { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text); letter-spacing: 0.02em; }
+    .iban-row .iban-hidden { font-family: var(--font-mono); color: var(--color-text-faint); letter-spacing: 0.4em; }
+    .iban-row .btn { margin-left: auto; }
+    .privacy-banner { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fce7f3; border: 1px solid #fbcfe8; border-radius: var(--radius-md); font-size: var(--text-xs); color: #831843; margin-bottom: 16px; }
+    .privacy-banner .icon { font-size: 13px; }
+
+    /* ─── P2P direction summary (personal) ─── */
+    .p2p-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .p2p-card { padding: 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+    .p2p-card .p2p-label { font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; margin-bottom: 6px; }
+    .p2p-card .p2p-value { font-size: var(--text-xl); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .p2p-card .p2p-value.in { color: var(--color-emerald); }
+    .p2p-card .p2p-value.out { color: var(--color-text); }
+    .p2p-card .p2p-sub { font-size: 11px; color: var(--color-text-faint); margin-top: 2px; }
+
+    /* ─── Purpose tags (personal — replaces categories) ─── */
+    .tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: var(--radius-full); background: var(--color-surface-2); font-size: var(--text-xs); color: var(--color-text-muted); }
+    .tag-chip .count { font-family: var(--font-mono); color: var(--color-text-faint); font-size: 10px; }
+    .tag-chip.add { background: transparent; border: 1px dashed var(--color-border-strong); cursor: pointer; }
+    .tag-chip.add:hover { color: var(--color-text); border-color: var(--color-text); }
+
+    /* ─── Tax-year breakdown (government) ─── */
+    .tax-years { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .tax-year-card { padding: 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+    .tax-year-card.current { border-color: var(--color-text); border-width: 1.5px; box-shadow: var(--shadow-xs); }
+    .tax-year-card .year-label { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: 500; }
+    .tax-year-card .year-label.current { color: var(--color-text); font-weight: 600; }
+    .tax-year-card .year-total { font-size: var(--text-lg); font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .tax-year-card .year-count { font-size: 11px; color: var(--color-text-faint); margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .tax-year-card .year-pending { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; padding: 2px 7px; border-radius: var(--radius-full); background: var(--color-amber-bg); color: var(--color-amber); margin-top: 8px; font-weight: 500; }
+
+    /* ─── Self-account stub ─── */
+    .self-stub {
+      max-width: 640px; margin: 60px auto;
+      text-align: center; padding: 40px;
+      border: 1px dashed var(--color-border-strong); border-radius: var(--radius-xl);
+      background: var(--color-bg-subtle);
+    }
+    .self-stub .stub-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
+    .self-stub h2 { font-size: var(--text-xl); margin: 0 0 8px; font-weight: 600; }
+    .self-stub p { color: var(--color-text-muted); margin: 0 0 24px; font-size: var(--text-sm); line-height: 1.6; }
+    .self-stub .stub-actions { display: flex; gap: 8px; justify-content: center; }
+    .self-recent { max-width: 640px; margin: 0 auto; margin-top: 32px; }
+    .self-recent .section-head { margin-bottom: 10px; }
+
+    /* Bank fee bar — horizontal mini bars per fee type */
+    .fee-bars { display: flex; flex-direction: column; gap: 8px; }
+    .fee-bar-row { display: grid; grid-template-columns: 130px 1fr 70px; gap: 12px; align-items: center; font-size: var(--text-sm); }
+    .fee-bar-row .fee-label { color: var(--color-text); }
+    .fee-bar-row .fee-bar-track { height: 6px; background: var(--color-surface); border-radius: var(--radius-full); overflow: hidden; }
+    .fee-bar-row .fee-bar-fill { height: 100%; background: var(--color-amber); border-radius: var(--radius-full); }
+    .fee-bar-row .fee-total { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+
+    /* ─── Variant chrome ─── */
+    #variant-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+      background: var(--color-surface); border-bottom: 1px solid var(--color-border);
+      padding: 8px 16px; display: flex; gap: 6px; align-items: center;
+      font-family: var(--font-sans); box-shadow: var(--shadow-sm);
+    }
+    #variant-nav .label { font-size: var(--text-xs); color: var(--color-text-faint); margin-right: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .variant-tab { padding: 5px 12px; font-size: var(--text-xs); background: transparent; border: 1px solid transparent; color: var(--color-text-muted); border-radius: var(--radius-sm); cursor: pointer; transition: var(--tx-quick); font-family: inherit; }
+    .variant-tab:hover { color: var(--color-text); background: var(--color-surface-2); }
+    .variant-tab.active { background: var(--color-text); color: var(--color-bg); border-color: var(--color-text); font-weight: 500; }
+    .variant { display: none; }
+    .variant.active { display: block; }
+
+    #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(15, 23, 42, 0.84); color: #f1f5f9; padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; display: flex; gap: 10px; align-items: center; backdrop-filter: blur(6px); }
+    #sketch-tools:hover { opacity: 1; }
+    #sketch-tools select, #sketch-tools button { background: rgba(255,255,255,0.06); color: #f1f5f9; border: 1px solid rgba(255,255,255,0.12); border-radius: 5px; padding: 3px 7px; font-size: 11px; cursor: pointer; font-family: inherit; }
+    #sketch-tools button:hover { background: rgba(255,255,255,0.16); }
+    #sketch-tools .vp-active { background: rgba(255,255,255,0.22); }
+
+    #toast { position: fixed; bottom: 60px; right: 16px; z-index: 9997; background: var(--color-text); color: var(--color-bg); padding: 8px 14px; border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(8px); transition: opacity 0.2s ease, transform 0.2s ease; pointer-events: none; }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    .viewport-clamp { max-width: var(--vp, none); margin: 0 auto; transition: max-width 0.2s ease; }
+  </style>
+</head>
+<body>
+
+<nav id="variant-nav">
+  <span class="label">Sketch 008</span>
+  <button class="variant-tab active" data-target="a" onclick="showVariant('a', this)">A · Personal (Mama) ★</button>
+  <button class="variant-tab" data-target="b" onclick="showVariant('b', this)">B · Bank (ASN fees) ★</button>
+  <button class="variant-tab" data-target="c" onclick="showVariant('c', this)">C · Government (Belastingdienst) ★</button>
+  <button class="variant-tab" data-target="d" onclick="showVariant('d', this)">D · Self-account (PayPal) ★</button>
+</nav>
+
+<div class="viewport-clamp">
+
+<!-- Shared sidebar template -->
+<template id="sidebar-tmpl">
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark">B</div>
+    <div class="brand-name">beatrax<span class="brand-version">v0.1.0</span></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">This month</div>
+    <div class="nav-item"><span class="icon">◐</span> Dashboard</div>
+    <div class="nav-item"><span class="icon">↻</span> Recurring <span class="badge">14</span></div>
+    <div class="nav-item"><span class="icon">⤵</span> Triage <span class="badge">7</span></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Money</div>
+    <div class="nav-item"><span class="icon">⊟</span> Transactions</div>
+    <div class="nav-item"><span class="icon">⟿</span> Chains</div>
+    <div class="nav-item"><span class="icon">⟁</span> Forecast</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Categorization</div>
+    <div class="nav-item"><span class="icon">◆</span> Categories</div>
+    <div class="nav-item active"><span class="icon">⊙</span> Counterparties <span class="badge">328</span></div>
+    <div class="nav-item"><span class="icon">⌥</span> Aliases</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Tools</div>
+    <div class="nav-item"><span class="icon">⚙</span> Settings</div>
+    <div class="nav-item"><span class="icon">⌘</span> Command palette</div>
+  </div>
+</aside>
+</template>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT A — Personal (Mama)
+     Privacy-first defaults. IBAN hidden. No recurring/chain sections.
+     P2P direction summary + purpose tags instead of categories.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-a active" id="variant-a">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="breadcrumb"><a>Counterparties</a><span class="sep">/</span><a>Personal</a><span class="sep">/</span><span>Mama</span></div>
+
+      <div class="privacy-banner">
+        <span class="icon">🔒</span>
+        <span>This is a personal contact. IBAN and personal details are hidden by default and never shared in exports.</span>
+      </div>
+
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-avatar personal">M</div>
+        <div class="hero-main">
+          <div class="hero-title-row">
+            <h1 class="hero-title">Mama</h1>
+            <span class="type-chip personal">👤 Personal</span>
+          </div>
+          <div class="hero-meta">7 transfers over the last 12 months<span class="dot"></span>last seen 18 days ago</div>
+        </div>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-label">Net received</div>
+            <div class="hero-stat-value" style="color: var(--color-emerald)">+ € 420.00</div>
+            <div class="hero-stat-sub">€ 580 in − € 160 out</div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-icon" title="Edit display name">✎</button>
+        </div>
+      </div>
+
+      <!-- Tabs (no Chains for personal type) -->
+      <div class="tab-bar">
+        <button class="tab active">Overview</button>
+        <button class="tab">Transfers <span class="count">7</span></button>
+        <button class="tab">Aliases <span class="count">2</span></button>
+        <span class="tab-note">— no funding chains for personal contacts</span>
+      </div>
+
+      <div class="overview-grid">
+        <!-- Left col -->
+        <div>
+          <div class="section">
+            <div class="section-head"><h2 class="section-title">Direction summary <span class="section-title-sub">last 12 mo</span></h2></div>
+            <div class="p2p-grid">
+              <div class="p2p-card">
+                <div class="p2p-label">↓ Received</div>
+                <div class="p2p-value in">€ 580.00</div>
+                <div class="p2p-sub">4 transfers</div>
+              </div>
+              <div class="p2p-card">
+                <div class="p2p-label">↑ Sent</div>
+                <div class="p2p-value out">€ 160.00</div>
+                <div class="p2p-sub">3 transfers</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head"><h2 class="section-title">Purpose tags</h2><span class="section-link">Manage →</span></div>
+            <div class="tag-row">
+              <span class="tag-chip">birthday <span class="count">2</span></span>
+              <span class="tag-chip">rent split <span class="count">3</span></span>
+              <span class="tag-chip">groceries shared <span class="count">1</span></span>
+              <span class="tag-chip">other <span class="count">1</span></span>
+              <button class="tag-chip add">+ Add tag</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head"><h2 class="section-title">Contact details</h2><span class="section-link">Edit →</span></div>
+            <div class="iban-row">
+              <div>
+                <div class="iban-label" style="margin-bottom: 2px">IBAN</div>
+                <div class="iban-hidden">····  ····  ····  ····</div>
+              </div>
+              <button class="btn" onclick="this.previousElementSibling.querySelector('.iban-hidden').className='iban-value'; this.previousElementSibling.querySelector('.iban-value').textContent='NL · ·· INGB ···· ···· 12'; this.textContent='Hide IBAN'; this.onclick=null; toast('IBAN shown — auto-hides on page leave');">Show IBAN</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right col -->
+        <div>
+          <div class="section">
+            <div class="section-head">
+              <h2 class="section-title">Recent transfers</h2>
+              <span class="section-link">See all 7 →</span>
+            </div>
+            <div class="frame frame-tight" style="padding: 4px 0;">
+              <table class="tx-table">
+                <tbody>
+                  <tr><td class="tx-date" style="padding-left: 14px">09 May 2026</td><td>"thanks for the babysit!" <span class="tag-chip" style="margin-left: 6px">other</span></td><td class="tx-amount in" style="padding-right: 14px">+ € 40.00</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">26 Apr 2026</td><td>rent split april <span class="tag-chip" style="margin-left: 6px">rent split</span></td><td class="tx-amount out" style="padding-right: 14px">− € 60.00</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">12 Apr 2026</td><td>birthday 🎂 <span class="tag-chip" style="margin-left: 6px">birthday</span></td><td class="tx-amount in" style="padding-right: 14px">+ € 250.00</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">26 Mar 2026</td><td>rent split march <span class="tag-chip" style="margin-left: 6px">rent split</span></td><td class="tx-amount out" style="padding-right: 14px">− € 60.00</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">15 Mar 2026</td><td>groceries last week <span class="tag-chip" style="margin-left: 6px">groceries shared</span></td><td class="tx-amount out" style="padding-right: 14px">− € 40.00</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="frame frame-tight" style="background: transparent; border-style: dashed;">
+              <div style="font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.6;">
+                <strong style="color: var(--color-text)">No recurring detected.</strong> Personal transfers rarely follow a strict cadence — even regular rent splits may shift dates. Add a purpose tag to track patterns yourself.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT B — Bank (ASN Bank fees & interest)
+     Fee-type aggregation. YTD comparison. No funding chain.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-b" id="variant-b">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="breadcrumb"><a>Counterparties</a><span class="sep">/</span><a>Banks</a><span class="sep">/</span><span>ASN Bank (fees &amp; interest)</span></div>
+
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-avatar bank">A</div>
+        <div class="hero-main">
+          <div class="hero-title-row">
+            <h1 class="hero-title">ASN Bank</h1>
+            <span class="type-chip bank">🏦 Bank · fees &amp; interest</span>
+          </div>
+          <div class="hero-meta">acting as counterparty for account fees, ATM withdrawals, FX conversion, interest<span class="dot"></span>28 entries over the last 12 months</div>
+        </div>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-label">12-month total</div>
+            <div class="hero-stat-value">− € 84.20 <span class="hero-stat-delta down">↓ 7 %</span></div>
+            <div class="hero-stat-sub">vs prior 12mo: − € 90.50</div>
+          </div>
+          <div>
+            <div class="hero-stat-label">Net of interest</div>
+            <div class="hero-stat-value">− € 71.45</div>
+            <div class="hero-stat-sub">interest earned: € 12.75</div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-icon" title="Edit display name">✎</button>
+        </div>
+      </div>
+
+      <!-- Tabs (no Chains for bank type) -->
+      <div class="tab-bar">
+        <button class="tab active">Overview</button>
+        <button class="tab">Entries <span class="count">28</span></button>
+        <button class="tab">Aliases <span class="count">3</span></button>
+        <span class="tab-note">— bank-fee counterparty doesn't generate funding chains</span>
+      </div>
+
+      <div class="overview-grid">
+        <!-- Left col: fee-type aggregation -->
+        <div>
+          <div class="section">
+            <div class="section-head">
+              <h2 class="section-title">Fee &amp; income breakdown <span class="section-title-sub">12 mo</span></h2>
+            </div>
+            <div class="frame frame-tight">
+              <div class="fee-bars">
+                <div class="fee-bar-row">
+                  <span class="fee-label">Account fee</span>
+                  <div class="fee-bar-track"><div class="fee-bar-fill" style="width: 100%"></div></div>
+                  <span class="fee-total">− € 39.00</span>
+                </div>
+                <div class="fee-bar-row">
+                  <span class="fee-label">ATM withdrawal</span>
+                  <div class="fee-bar-track"><div class="fee-bar-fill" style="width: 38%"></div></div>
+                  <span class="fee-total">− € 15.00</span>
+                </div>
+                <div class="fee-bar-row">
+                  <span class="fee-label">FX conversion</span>
+                  <div class="fee-bar-track"><div class="fee-bar-fill" style="width: 32%"></div></div>
+                  <span class="fee-total">− € 12.45</span>
+                </div>
+                <div class="fee-bar-row">
+                  <span class="fee-label">Card replacement</span>
+                  <div class="fee-bar-track"><div class="fee-bar-fill" style="width: 13%"></div></div>
+                  <span class="fee-total">− € 5.00</span>
+                </div>
+                <div class="fee-bar-row">
+                  <span class="fee-label" style="color: var(--color-emerald); font-weight: 500">↓ Interest income</span>
+                  <div class="fee-bar-track"><div class="fee-bar-fill" style="width: 33%; background: var(--color-emerald)"></div></div>
+                  <span class="fee-total" style="color: var(--color-emerald)">+ € 12.75</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head"><h2 class="section-title">Recurring fees <span class="section-title-sub">2 detected</span></h2></div>
+            <div class="recur-grid">
+              <div class="recur-card">
+                <div class="recur-title">Maandelijkse rekeningkosten <span class="recur-cadence amber">↻ monthly</span></div>
+                <div class="recur-meta">− € 3.25 · next due 01 Jun 2026</div>
+              </div>
+              <div class="recur-card">
+                <div class="recur-title">Kwartaalrente <span class="recur-cadence">↻ quarterly</span></div>
+                <div class="recur-meta">+ € 3.20 avg · next due 30 Jun 2026</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right col: recent activity -->
+        <div>
+          <div class="section">
+            <div class="section-head">
+              <h2 class="section-title">Recent activity</h2>
+              <span class="section-link">See all 28 →</span>
+            </div>
+            <div class="frame frame-tight" style="padding: 4px 0;">
+              <table class="tx-table">
+                <tbody>
+                  <tr><td class="tx-date" style="padding-left: 14px">01 May 2026</td><td>Maandelijkse rekeningkosten</td><td class="tx-amount out" style="padding-right: 14px">− € 3.25</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">19 Apr 2026</td><td>KOSTEN KASOPNAME · Amsterdam</td><td class="tx-amount out" style="padding-right: 14px">− € 2.50</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">02 Apr 2026</td><td>FX toeslag · USD aankoop</td><td class="tx-amount out" style="padding-right: 14px">− € 1.85</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">01 Apr 2026</td><td>Maandelijkse rekeningkosten</td><td class="tx-amount out" style="padding-right: 14px">− € 3.25</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">31 Mar 2026</td><td>Kwartaalrente Q1 2026</td><td class="tx-amount in" style="padding-right: 14px">+ € 3.40</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="frame frame-tight" style="background: transparent; border-style: dashed;">
+              <div style="font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.6;">
+                <strong style="color: var(--color-text)">Fees only.</strong> This profile aggregates ASN Bank acting as a counterparty (charging fees, paying interest). For the account balance &amp; statement view, open <a style="color: var(--color-text); text-decoration: underline">Accounts → ASN Bank</a>.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT C — Government (Belastingdienst)
+     Tax-year breakdown headline. Tax-type categories. No chain.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-c" id="variant-c">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="breadcrumb"><a>Counterparties</a><span class="sep">/</span><a>Government</a><span class="sep">/</span><span>Belastingdienst</span></div>
+
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-avatar gov">B</div>
+        <div class="hero-main">
+          <div class="hero-title-row">
+            <h1 class="hero-title">Belastingdienst</h1>
+            <span class="type-chip gov">⚖ Government</span>
+          </div>
+          <div class="hero-meta">9 payments over the last 3 tax years<span class="dot"></span>last seen 12 Apr 2026<span class="dot"></span>1 assessment pending</div>
+        </div>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-label">2026 YTD</div>
+            <div class="hero-stat-value">− € 2 140.00</div>
+            <div class="hero-stat-sub">2 payments · 1 pending € 480</div>
+          </div>
+          <div>
+            <div class="hero-stat-label">2025 final</div>
+            <div class="hero-stat-value">− € 3 820.50</div>
+            <div class="hero-stat-sub">vs 2024: − € 4 110.00</div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-icon" title="Edit display name">✎</button>
+        </div>
+      </div>
+
+      <!-- Tabs (no Chains for government type) -->
+      <div class="tab-bar">
+        <button class="tab active">Overview</button>
+        <button class="tab">Payments <span class="count">9</span></button>
+        <button class="tab">Tax years <span class="count">3</span></button>
+        <button class="tab">Aliases <span class="count">2</span></button>
+        <span class="tab-note">— no funding chains for government counterparties</span>
+      </div>
+
+      <!-- Tax-year row (headline) -->
+      <div class="section" style="margin-top: 0;">
+        <div class="section-head"><h2 class="section-title">Tax-year breakdown</h2></div>
+        <div class="tax-years">
+          <div class="tax-year-card current">
+            <div class="year-label current">2026 (YTD)</div>
+            <div class="year-total">€ 2 140.00</div>
+            <div class="year-count">2 payments · 1 pending</div>
+            <div class="year-pending">⚠ Aanslag IB 2025 due 30 Jun 2026 · € 480</div>
+          </div>
+          <div class="tax-year-card">
+            <div class="year-label">2025</div>
+            <div class="year-total">€ 3 820.50</div>
+            <div class="year-count">4 payments · settled</div>
+          </div>
+          <div class="tax-year-card">
+            <div class="year-label">2024</div>
+            <div class="year-total">€ 4 110.00</div>
+            <div class="year-count">3 payments · settled</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overview-grid" style="margin-top: 24px;">
+        <!-- Left col: tax-type breakdown -->
+        <div>
+          <div class="section" style="margin-top: 0;">
+            <div class="section-head"><h2 class="section-title">By tax type <span class="section-title-sub">2026 YTD</span></h2></div>
+            <div class="cat-bar">
+              <div style="background: #be123c; width: 58%"></div>
+              <div style="background: #b45309; width: 24%"></div>
+              <div style="background: #64748b; width: 12%"></div>
+              <div style="background: #94a3b8; width: 6%"></div>
+            </div>
+            <div class="cat-legend">
+              <span><span class="swatch" style="background: #be123c"></span>Inkomstenbelasting <span class="pct">58 %</span></span>
+              <span><span class="swatch" style="background: #b45309"></span>BTW (kwartaal) <span class="pct">24 %</span></span>
+              <span><span class="swatch" style="background: #64748b"></span>Motorrijtuigenbelasting <span class="pct">12 %</span></span>
+              <span><span class="swatch" style="background: #94a3b8"></span>Toeslagen terug <span class="pct">6 %</span></span>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head"><h2 class="section-title">Recurring assessments</h2></div>
+            <div class="recur-grid">
+              <div class="recur-card">
+                <div class="recur-title">Motorrijtuigenbelasting <span class="recur-cadence">↻ quarterly</span></div>
+                <div class="recur-meta">€ 84.00 · next due 28 Jul 2026</div>
+              </div>
+              <div class="recur-card">
+                <div class="recur-title">BTW-aangifte <span class="recur-cadence">↻ quarterly</span></div>
+                <div class="recur-meta">~ € 520.00 avg · next due 31 Jul 2026</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right col: recent payments -->
+        <div>
+          <div class="section" style="margin-top: 0;">
+            <div class="section-head">
+              <h2 class="section-title">Recent payments</h2>
+              <span class="section-link">See all 9 →</span>
+            </div>
+            <div class="frame frame-tight" style="padding: 4px 0;">
+              <table class="tx-table">
+                <tbody>
+                  <tr><td class="tx-date" style="padding-left: 14px">12 Apr 2026</td><td>Inkomstenbelasting Q1 2026</td><td class="tx-amount out" style="padding-right: 14px">− € 1 240.00</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">28 Apr 2026</td><td>Motorrijtuigenbelasting Q2 2026</td><td class="tx-amount out" style="padding-right: 14px">− € 84.00</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">15 Jan 2026</td><td>BTW Q4 2025</td><td class="tx-amount out" style="padding-right: 14px">− € 816.00</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">28 Dec 2025</td><td>Motorrijtuigenbelasting Q4 2025</td><td class="tx-amount out" style="padding-right: 14px">− € 84.00</td></tr>
+                  <tr><td class="tx-date" style="padding-left: 14px">14 Oct 2025</td><td>BTW Q3 2025</td><td class="tx-amount out" style="padding-right: 14px">− € 728.00</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     VARIANT D — Self-account (PayPal as counterparty)
+     Stub redirect to the account view + recent cross-account context.
+     ════════════════════════════════════════════════════════════════ -->
+<section class="variant v-d" id="variant-d">
+  <div class="app-shell">
+    <aside class="sidebar" data-include="sidebar"></aside>
+    <main class="main">
+      <div class="breadcrumb"><a>Counterparties</a><span class="sep">/</span><a>Self</a><span class="sep">/</span><span>PayPal (your account)</span></div>
+
+      <!-- Minimal hero -->
+      <div class="hero">
+        <div class="hero-avatar self">P</div>
+        <div class="hero-main">
+          <div class="hero-title-row">
+            <h1 class="hero-title">PayPal (your account)</h1>
+            <span class="type-chip self">↻ Your own account</span>
+          </div>
+          <div class="hero-meta">internal cross-account transfers · IBAN matches your linked PayPal account</div>
+        </div>
+      </div>
+
+      <!-- Stub redirect -->
+      <div class="self-stub">
+        <div class="stub-icon">↻</div>
+        <h2>This isn't really a counterparty</h2>
+        <p>
+          PayPal appears here because it shows up in your transactions as the funding leg between accounts.
+          But it's <strong>your own account</strong>, not someone you transact with.<br>
+          Open the account view for balance, statements, and full transaction history.
+        </p>
+        <div class="stub-actions">
+          <button class="btn btn-primary" onclick="toast('→ Accounts / PayPal')">Open PayPal account view →</button>
+          <button class="btn">Hide from this list</button>
+        </div>
+      </div>
+
+      <!-- Context: recent cross-account legs -->
+      <div class="self-recent">
+        <div class="section-head"><h2 class="section-title">Recent cross-account legs <span class="section-title-sub">just for context</span></h2></div>
+        <div class="frame frame-tight" style="padding: 4px 0;">
+          <table class="tx-table">
+            <tbody>
+              <tr><td class="tx-date" style="padding-left: 14px">10 May 2026</td><td>ASN → PayPal · funded an Amazon charge</td><td class="tx-amount out" style="padding-right: 14px">€ 18.99</td></tr>
+              <tr><td class="tx-date" style="padding-left: 14px">28 Apr 2026</td><td>ASN → PayPal · Bol.com order</td><td class="tx-amount out" style="padding-right: 14px">€ 47.50</td></tr>
+              <tr><td class="tx-date" style="padding-left: 14px">03 Apr 2026</td><td>PayPal → ASN · refund withdrawal</td><td class="tx-amount in" style="padding-right: 14px">€ 22.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+</div><!-- /viewport-clamp -->
+
+<!-- Toolbar -->
+<div id="sketch-tools">
+  <select id="theme-switcher" onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Light</option>
+  </select>
+  <button id="dark-toggle" onclick="toggleDark()">🌙 Dark</button>
+  <button class="vp-btn vp-active" data-vp="none" onclick="setViewport(this, null)">Full</button>
+  <button class="vp-btn" data-vp="1440" onclick="setViewport(this, 1440)">1440</button>
+  <button class="vp-btn" data-vp="1280" onclick="setViewport(this, 1280)">1280</button>
+  <button class="vp-btn" data-vp="1024" onclick="setViewport(this, 1024)">1024</button>
+</div>
+
+<div id="toast">Saved</div>
+
+<script>
+  const sidebarHTML = document.getElementById('sidebar-tmpl').innerHTML;
+  document.querySelectorAll('aside.sidebar[data-include="sidebar"]').forEach(el => { el.outerHTML = sidebarHTML; });
+
+  function showVariant(id, btn) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('variant-' + id).classList.add('active');
+    document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  function toggleDark() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    document.getElementById('dark-toggle').textContent = isDark ? '☀ Light' : '🌙 Dark';
+  }
+  function setViewport(btn, px) {
+    document.querySelectorAll('.vp-btn').forEach(b => b.classList.remove('vp-active'));
+    btn.classList.add('vp-active');
+    document.querySelector('.viewport-clamp').style.setProperty('--vp', px ? px + 'px' : 'none');
+  }
+  let toastTimer;
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input, textarea, select')) return;
+    const map = { '1': 'a', '2': 'b', '3': 'c', '4': 'd' };
+    const id = map[e.key];
+    if (id) {
+      const btn = document.querySelector('.variant-tab[data-target="' + id + '"]');
+      if (btn) showVariant(id, btn);
+    }
+  });
+</script>
+
+</body>
+</html>
