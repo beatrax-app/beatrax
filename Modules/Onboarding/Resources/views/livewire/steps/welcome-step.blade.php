@@ -13,7 +13,7 @@
 <section class="wiz-step wiz-step-welcome" aria-labelledby="wiz-welcome-h1">
     <p class="wiz-eyebrow">Welcome</p>
     <h1 id="wiz-welcome-h1" class="wiz-h1">
-        Let's get diederik to know your money.
+        Let's get beatrax to know your money.
     </h1>
     <p class="wiz-lede">
         About 5 minutes. Nothing leaves this computer — everything you connect
