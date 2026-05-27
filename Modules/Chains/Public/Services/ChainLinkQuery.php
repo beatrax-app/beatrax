@@ -88,10 +88,24 @@ final class ChainLinkQuery
         $visited = [$rootId => true];
         $depth = 0;
 
+        // The walker follows chain_links in BOTH directions from the
+        // root transaction. The original implementation only walked
+        // forward (`from_transaction_id → to_transaction_id`), which
+        // was correct for the ICS bulk-settle pattern where the user
+        // typically opens the drawer on the ICS card-statement side
+        // (the `from`). For paypal_funding it was wrong half the
+        // time: clicking the ASN funding row (the `to` side) found
+        // nothing because no chain_link has `from_transaction_id =
+        // ASN_id`. Walking both directions means the drawer surfaces
+        // the full chain regardless of which leg the user opened it
+        // on.
         while ($frontier !== [] && $depth < self::MAX_DEPTH) {
             $links = $this->db->connection()->table('chain_links')
                 ->where('user_id', $user->id)
-                ->whereIn('from_transaction_id', $frontier)
+                ->where(function (Builder $q) use ($frontier): void {
+                    $q->whereIn('from_transaction_id', $frontier)
+                        ->orWhereIn('to_transaction_id', $frontier);
+                })
                 ->whereIn('state', ['confirmed', 'candidate'])
                 ->orderByDesc('confidence')
                 ->get();
@@ -102,21 +116,28 @@ final class ChainLinkQuery
                 // Issue #10 fix: exceeded-tolerance ICS bulk-settle
                 // candidates carry to_transaction_id=NULL. Skip the
                 // NULL leg in the walker; the candidate still
-                // surfaces in candidatesForReview() for the user to
+                // surfaces in hintsForReview() for the user to
                 // resolve.
                 if ($link->to_transaction_id === null) {
                     continue;
                 }
 
+                $fromId = self::toInt($link->from_transaction_id);
                 $toId = self::toInt($link->to_transaction_id);
-                if (isset($visited[$toId])) {
+                // The "partner" relative to the current frontier is
+                // the OTHER side of the link. If the link's `from` is
+                // on the frontier (forward walk), the partner is
+                // `to`; otherwise (backward walk) the partner is
+                // `from`.
+                $partnerId = isset($visited[$fromId]) ? $toId : $fromId;
+                if (isset($visited[$partnerId])) {
                     continue;
                 }
-                $visited[$toId] = true;
-                $nextFrontier[] = $toId;
+                $visited[$partnerId] = true;
+                $nextFrontier[] = $partnerId;
 
-                $toRow = $this->db->connection()->table('transactions')
-                    ->where('id', $toId)
+                $partnerRow = $this->db->connection()->table('transactions')
+                    ->where('id', $partnerId)
                     ->where('user_id', $user->id)
                     ->first([
                         'id', 'counterparty_name',
@@ -124,7 +145,7 @@ final class ChainLinkQuery
                         'settled_amount_minor', 'settled_currency',
                         'booked_at', 'account_id',
                     ]);
-                if ($toRow === null) {
+                if ($partnerRow === null) {
                     continue;
                 }
 
@@ -135,7 +156,7 @@ final class ChainLinkQuery
                 );
 
                 $nodes[] = $this->makeNode(
-                    $toRow,
+                    $partnerRow,
                     self::toInt($link->id),
                     self::toString($link->kind),
                     $confidenceTier,
@@ -151,6 +172,25 @@ final class ChainLinkQuery
             rootTransactionId: $rootId,
             nodes: $nodes,
         );
+    }
+
+    /**
+     * Cheap boolean — does this transaction participate in any
+     * chain_link (as `from` OR `to`) in a non-rejected state? Used
+     * by the transaction-detail page to gate the "View chain"
+     * trigger so it only renders for rows that actually have
+     * something behind the click.
+     */
+    public function hasChainForTransaction(int $transactionId, User $user): bool
+    {
+        return $this->db->connection()->table('chain_links')
+            ->where('user_id', $user->id)
+            ->whereIn('state', ['confirmed', 'candidate'])
+            ->where(function (Builder $q) use ($transactionId): void {
+                $q->where('from_transaction_id', $transactionId)
+                    ->orWhere('to_transaction_id', $transactionId);
+            })
+            ->exists();
     }
 
     /**

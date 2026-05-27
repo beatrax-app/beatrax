@@ -12,6 +12,7 @@ use Livewire\Component;
 use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Events\CategorizationDiverged;
+use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -220,22 +221,28 @@ final class TransactionDetail extends Component
         );
     }
 
-    public function render(CurrentUser $currentUser, ViewFactory $views): View
-    {
+    public function render(
+        CurrentUser $currentUser,
+        ViewFactory $views,
+        ChainLinkQuery $chainQuery,
+    ): View {
         $transaction = Transaction::query()
             ->where('id', $this->transactionId)
             ->where('user_id', $currentUser->user()->id)
             ->firstOrFail();
 
-        // Chain drill-down drawer: the "View chain" button renders
-        // whenever the resolver has run at least once for the user
-        // (ChainLinkQuery::forTransaction returns a non-null ChainTree
-        // even when it contains only the root). The detail page is
-        // user-scoped via `firstOrFail()` and the chain-tree query is
-        // wired, so the button is available on every detail page the
-        // user can see; the drawer renders empty / pre-mount states
-        // when no chain exists yet.
-        $chainAvailable = true;
+        // Chain drill-down drawer: gate the "View chain" button on
+        // whether this transaction actually participates in any
+        // chain_link (either side, non-rejected state). Previously
+        // the button rendered unconditionally — every transaction
+        // showed it, including rows with zero chain coverage, and
+        // the drawer would just say "No funding chain found". The
+        // gate moves that signal to the row level where the user
+        // can see it before clicking.
+        $chainAvailable = $chainQuery->hasChainForTransaction(
+            $this->transactionId,
+            $currentUser->user(),
+        );
 
         $view = $views->make('ledger::livewire.transaction-detail', [
             'transaction' => $transaction,

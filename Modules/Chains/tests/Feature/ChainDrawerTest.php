@@ -296,7 +296,17 @@ it('renders the Flux modal flyout markup (first project use)', function (): void
 });
 
 it('TransactionDetail page renders the "View chain" button that dispatches chain-drawer:open', function (): void {
+    // Seed a chain_link so hasChainForTransaction() returns true and
+    // the gate exposes the "View chain" button. The earlier draft
+    // rendered the button unconditionally — a real bug surfaced by
+    // user testing: every row showed "View chain" even when the
+    // drawer would just say "No funding chain found". The gate now
+    // hides the button when no chain exists; the test seeds a real
+    // link so the asserted markup actually renders.
     $tx = cdrTx($this->user, $this->paypal, $this->run, -1500, 'expense', 'Netflix', '2026-05-10', 'i1', 1);
+    $funder = cdrTx($this->user, $this->asn, $this->run, -1500, 'transfer_out', 'PayPal SARL', '2026-05-10', 'i2', 2);
+    cdrLink($this->db, $this->user, (int) $tx->id, (int) $funder->id,
+        'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => 'i-sig']);
 
     $response = $this->actingAs($this->user)->get(route('transactions.show', $tx->id));
 
@@ -307,6 +317,20 @@ it('TransactionDetail page renders the "View chain" button that dispatches chain
     // verbatim so a future refactor that drops the event name trips
     // immediately.
     $response->assertSee('chain-drawer:open', false);
+});
+
+it('TransactionDetail page hides the "View chain" button when the transaction has no chain_link', function (): void {
+    // Symmetric coverage of the gate: a row with zero chain coverage
+    // must NOT show the button. Previously the button rendered for
+    // every transaction; this test locks the gate so a regression
+    // brings the noisy "No funding chain found" empty drawer back.
+    $tx = cdrTx($this->user, $this->paypal, $this->run, -1500, 'expense', 'Solo', '2026-05-10', 'j1', 1);
+
+    $response = $this->actingAs($this->user)->get(route('transactions.show', $tx->id));
+
+    $response->assertOk();
+    $response->assertDontSee('View chain', false);
+    $response->assertDontSee('chain-drawer:open', false);
 });
 
 it('chain-node.blade.php partial declares explicit @props([\'node\', \'fanoutPage\']) (issue #13 fix)', function (): void {

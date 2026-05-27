@@ -167,6 +167,51 @@ it('forTransaction assembles top-down chain tree (root → funder)', function ()
     expect($tree->nodes[1]->confidenceTier)->toBe('Deterministic');
 });
 
+it('forTransaction walks BOTH directions — rooting on the funder side surfaces the funded transaction', function (): void {
+    // Locks the bidirectional-walker fix. The chain_link's `from` is
+    // the PayPal expense and `to` is the ASN funder. Pre-fix, rooting
+    // the walker on the ASN side (the `to`) returned only the root
+    // node because the walker only followed forward edges. Post-fix,
+    // the walker also follows reverse edges and surfaces the PayPal
+    // expense as the partner node.
+    $paypalExpense = clqTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', 'spotify', '2026-05-10', 'bd1', 1);
+    $asnTransfer = clqTx($this->user, $this->asn, $this->run, -2500, 'transfer_out', 'PayPal SARL', 'paypal-sarl', '2026-05-10', 'bd2', 2);
+    clqSeedLink(
+        $this->db, $this->user, (int) $paypalExpense->id, (int) $asnTransfer->id,
+        'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => 'bd-h1'],
+    );
+
+    // Root on the ASN side (the link's `to`).
+    $tree = $this->query->forTransaction((int) $asnTransfer->id, $this->user);
+
+    expect($tree->nodes)->toHaveCount(2);
+    expect($tree->nodes[0]->transactionId)->toBe((int) $asnTransfer->id);
+    expect($tree->nodes[1]->transactionId)->toBe((int) $paypalExpense->id);
+    expect($tree->nodes[1]->kind)->toBe('paypal_funding');
+});
+
+it('hasChainForTransaction returns true for either leg of a chain_link', function (): void {
+    $paypalExpense = clqTx($this->user, $this->paypal, $this->run, -1500, 'expense', 'Netflix', 'netflix', '2026-05-10', 'hc1', 1);
+    $asnTransfer = clqTx($this->user, $this->asn, $this->run, -1500, 'transfer_out', 'PayPal SARL', 'paypal-sarl', '2026-05-10', 'hc2', 2);
+    $orphan = clqTx($this->user, $this->paypal, $this->run, -800, 'expense', 'Orphan', 'orphan', '2026-05-11', 'hc3', 3);
+
+    clqSeedLink($this->db, $this->user, (int) $paypalExpense->id, (int) $asnTransfer->id,
+        'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => 'hc-h1']);
+
+    expect($this->query->hasChainForTransaction((int) $paypalExpense->id, $this->user))->toBeTrue();
+    expect($this->query->hasChainForTransaction((int) $asnTransfer->id, $this->user))->toBeTrue();
+    expect($this->query->hasChainForTransaction((int) $orphan->id, $this->user))->toBeFalse();
+});
+
+it('hasChainForTransaction ignores rejected chain_links', function (): void {
+    $paypalExpense = clqTx($this->user, $this->paypal, $this->run, -1500, 'expense', 'Rejected', 'r', '2026-05-10', 'hcr1', 1);
+    $asnTransfer = clqTx($this->user, $this->asn, $this->run, -1500, 'transfer_out', 'PayPal SARL', 'p-sarl', '2026-05-10', 'hcr2', 2);
+    clqSeedLink($this->db, $this->user, (int) $paypalExpense->id, (int) $asnTransfer->id,
+        'paypal_funding', 'rejected', '1.000', 'auto', ['signature_hash' => 'hcr-h1']);
+
+    expect($this->query->hasChainForTransaction((int) $paypalExpense->id, $this->user))->toBeFalse();
+});
+
 it('forTransaction maps confidence tiers per D-91', function (): void {
     $paypalExpense = clqTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', 'spotify', '2026-05-10', 'b1', 1);
     $asnA = clqTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'A', 'a', '2026-05-10', 'b2', 2);
