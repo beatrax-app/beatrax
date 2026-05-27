@@ -3,7 +3,14 @@
 declare(strict_types=1);
 
 use Livewire\Component;
+use Modules\Auth\Internal\Http\Livewire\AddUserPage;
+use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
+use Modules\Auth\Internal\Http\Livewire\LoginPage;
+use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
+use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
+use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Core\Public\Services\SecretsColumnRegistry;
+use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Tests\Contracts\Fixtures\Livewire\SyntheticListenerViolator;
 use Tests\Contracts\Fixtures\Livewire\SyntheticPublicPropertyViolator;
 use Tests\Contracts\Fixtures\Livewire\SyntheticQueryStringViolator;
@@ -54,7 +61,7 @@ it('exposes the documented secret columns via SecretsColumnRegistry::columns()',
 });
 
 it('keeps the static accessor and the DI-shim instance method in sync', function (): void {
-    $registry = new SecretsColumnRegistry();
+    $registry = new SecretsColumnRegistry;
 
     expect($registry->all())->toBe(SecretsColumnRegistry::columns());
 });
@@ -69,21 +76,21 @@ it('does not allow production Livewire components to expose registry columns via
         // Every entry must name a user-input field where the value
         // serialised into the wire snapshot is the user's own input,
         // not stored data the app would otherwise keep private.
-        \Modules\Auth\Internal\Http\Livewire\LoginPage::class => [
+        LoginPage::class => [
             // `$password` binds the password the user is typing into
             // the sign-in field. The wire snapshot carries the same
             // characters the browser DOM already shows; no stored
             // credential is exposed.
             'password',
         ],
-        \Modules\Auth\Internal\Http\Livewire\SignupPage::class => [
+        SignupPage::class => [
             // `$password` + `$passwordConfirmation` capture the
             // password the first-launch user is choosing. Same
             // reasoning as LoginPage — user input, not stored value.
             'password',
             'passwordConfirmation',
         ],
-        \Modules\Auth\Internal\Http\Livewire\ChangePasswordPage::class => [
+        ChangePasswordPage::class => [
             // `$currentPassword` + `$newPassword` + `$newPasswordConfirmation`
             // collect the change-password form input. The hashed
             // version reaches the DB only after the action method
@@ -93,14 +100,30 @@ it('does not allow production Livewire components to expose registry columns via
             'newPassword',
             'newPasswordConfirmation',
         ],
-        \Modules\Auth\Internal\Http\Livewire\ManageUserPage::class => [
+        ManageUserPage::class => [
             // `$newPartnerPassword` is the password the admin sets
             // on behalf of the partner; the partner is forced to
             // change it on next sign-in. User-input field, not a
             // stored-secret echo.
             'newPartnerPassword',
         ],
-        \Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal::class => [
+        AddUserPage::class => [
+            // `$initialPassword` + `$initialPasswordConfirmation`
+            // capture the admin-typed initial password for a newly-
+            // created partner. The partner is forced to change it on
+            // first sign-in. User-input field, not stored data.
+            'initialPassword',
+            'initialPasswordConfirmation',
+        ],
+        ResetPasswordPage::class => [
+            // `$newPassword` + `$newPasswordConfirmation` collect the
+            // recovery-code-driven password reset input. The page
+            // clears the fields after any error so plaintext never
+            // re-enters the snapshot — user-input only.
+            'newPassword',
+            'newPasswordConfirmation',
+        ],
+        OAuthClientWizardModal::class => [
             // `$clientSecret` is the BYO-OAuth client secret the user
             // pastes into the wizard. The wire snapshot carries form
             // input, not a value pulled from oauth_secrets — the
