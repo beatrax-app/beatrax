@@ -339,85 +339,75 @@ Plans:
 
 - [x] 16.1.2.1-05-PLAN.md — `card_statements` per-import upsert path + IcsSettlementResolver Option-B rewire (gap-3 + gap-3b): new `UpsertsCardStatements` Public contract + `CardStatementUpserter` service wired into `ConfirmImport` post-commit AS FIRST ACTION inside the existing `if (dispatchChain && (inserted > 0 || enriched > 0))` block; IcsSettlementResolver candidate-iteration rewired to ASN-side `transfer_out` rows resolved via the alias bridge to `ics_card`-kind accounts; end-to-end Pest writing `chain_links` of `kind='ics_bulk_settle'` from a real ASN row + ICS card_statement + ICS expenses with NO manually-injected unrealistic rows (closes Blocker 1 from plan-checker)
 
-### Phase 17: CI/CD Pipeline + Code Signing
+### Phase 17: v1.0.0 Public Release Closeout (RESHAPED 2026-05-27 — absorbs Phases 18 + 19 + 20 + 21 + new Counterparties feature)
 
-**Goal**: Every PR runs the full quality gate (Larastan L10 strict + Pint + Pest) on both PHP 8.4 and 8.5 axes via `.github/workflows/ci.yml`; pushing a `v*` tag triggers `.github/workflows/release.yml` which builds + signs + notarizes installers on macOS 14 + Windows 2025 + Ubuntu 24.04 runners and publishes them as GitHub Release assets via `softprops/action-gh-release v2`.
-**Slug:** `17-cicd-pipeline-code-signing`
+**Goal**: Take the v0.x preview series to a public v1.0.0 release on a public `nightworksio/beatrax` repo: PR-gate matrix widened to PHP 8.4 + 8.5; tag-triggered release.yml producing macOS ad-hoc-signed + Windows unsigned + Linux unsigned installers (no paid signing certs per A-01); Ed25519 manifest signing + SHA-512 binary verification as the SOLE auto-update integrity signal (A-06); a new `Modules/Counterparties/` bounded module covering 5 entity types (merchant / personal / bank / government / self_account) with type-aware profile pages + a focused triage queue; Hippocratic License 3.0 + community docs + README rewrite with install-bypass walkthroughs; `.docs/` tree mirroring happklaar/happklaar; full per-module documentation across 17 modules; GSD-leakage + renderer-JSON-leakage arch invariants; deep modules code review; `.planning/` git-history purge before going public; v1.1 milestone setup for deferred work; first v0.x release + visibility flip private → public; explicit user-triggered v1.0.0 graduation.
+
+**Slug:** `17-ci-cd-pipeline-code-signing`
 **Mode:** mvp
-**Depends on**: Phase 15 (build target must exist) + Phase 16 (internal dev build must be smoke-testable)
-**Requirements**: CI-01, CI-02, CI-03, CI-04, CI-05, CI-06
+**Depends on**: Phase 15 (build target) + Phase 16 (internal dev build) + Phase 16.1.2.1 (known_counterparty_ibans table for the alias bridge — landed)
+**Requirements**: CI-01, CI-02, CI-05, CI-06, UPDATE-01, UPDATE-02, UPDATE-03, UPDATE-04, REL-01, REL-02, REL-03, REL-04, REL-05, REL-06, REL-07, REL-08 (NOTE: CI-03 + CI-04 dropped per A-01 no-paid-signing; UAT-01..03 and BETA-01..04 from former Phases 20/21 are DELETED — formal UAT and beta cycle dropped per D-51)
+
 **Success Criteria** (what must be TRUE):
 
-  1. A PR that introduces a Larastan L10 strict violation, a Pint formatting drift, or a failing Pest test fails CI on `ubuntu-latest` with `TZ=Europe/Amsterdam` on both PHP 8.4 + 8.5 axes; a green PR proves the gate runs across both axes
-  2. Pushing tag `v2.0.0-beta.1` triggers `release.yml`; the macOS job produces a signed + notarized `.dmg` via `apple-actions/import-codesign-certs v7.0.0` + Apple notarytool with stapling; the Windows job produces a signed `.msi/.exe` via `Azure/trusted-signing-action v2.0.0`; the Linux job produces unsigned `.AppImage` + `.deb`; first-launch smoke test passes on each platform
-  3. GitHub Encrypted Secrets are configured under a `signing-prod` environment with branch restrictions; CODEOWNERS protects `.github/workflows/`; `pull_request_target`-safe handling proves fork PRs cannot exfiltrate signing certificates; gitleaks scan runs on every PR with a known-bad fixture causing failure
-  4. First-launch on a fresh machine regenerates `APP_KEY` via `php artisan key:generate --force` (sentinel-absent triggers it); `.env.bundled` template contains no real secrets; first-launch encryption-key generation for `oauth_secrets` succeeds
-
-**Plans**: TBD
-
-### Phase 18: Auto-Update Plumbing
-
-**Goal**: A running diederik install detects when a newer version is available on GitHub Releases, downloads it in the background with Ed25519 signature verification, and prompts the user to "Restart to install" or "Skip this version"; tampering with the published manifest causes verification to fail before any binary executes.
-**Slug:** `18-auto-update-plumbing`
-**Mode:** mvp
-**Depends on**: Phase 17 (signed update artifacts must exist for `electron-updater` to verify)
-**Requirements**: UPDATE-01, UPDATE-02, UPDATE-03, UPDATE-04
-**Success Criteria** (what must be TRUE):
-
-  1. Bumping the app version, tagging `v2.0.1`, and waiting for `release.yml` to publish results in an existing `v2.0.0` install showing a non-dismissable `SystemAlertsBanner` saying "Update available — install on next launch" within 4 hours of release
-  2. A Pest test that tampers with a signed `latest.yml` manifest (flips one byte) proves `ElectronUpdateChannel` rejects the download via Ed25519 signature verification; there is no unsigned auto-update code path anywhere
-  3. The user can click "Skip this version" and the banner does not re-appear for that version; the user can click "Restart" and `electron-updater.quitAndInstall()` completes the upgrade with the new binary running last-route resume; an "you're on an old version" prompt fires after 30 days on a stale install
-  4. First-install-can't-auto-update behavior is documented on a Settings page so beta partners know to grab v2.0.1 manually after v2.0.0
-
-**Plans**: TBD
-
-### Phase 19: Public Release Boundary
-
-**Goal**: The repository is publishable — license + legal docs + brand + redaction + deep cross-module review all complete; cloning the public repo on a fresh machine and following the README installs and launches diederik with no leaked planning artifacts, no secret-table renderer leaks, and a calm Linear/Notion-style README hero built around the supplied SVG.
-**Slug:** `19-public-release-boundary`
-**Mode:** mvp
-**Depends on**: Phases 12–18 (every prior deliverable must be in place to audit, redact, license, and document)
-**Requirements**: REL-01, REL-02, REL-03, REL-04, REL-05, REL-06, REL-07, REL-08
-**Success Criteria** (what must be TRUE):
-
-  1. `LICENSE` contains the verbatim Hippocratic License 3.0 text; `composer.json` declares `"license": "Hippocratic-3.0"` SPDX identifier; `NOTICE.md` explains the source-available / not-OSI-approved trade-off; README clearly says "source-available", not "open source"
-  2. `SECURITY.md` documents the vulnerability-reporting policy + scope + safe-harbor; `CONTRIBUTING.md` documents the DI rule + arch tests + branch + PR conventions; `CODE_OF_CONDUCT.md` is Contributor Covenant 2.1
-  3. README hero uses the supplied SVG (committed at `resources/brand/logo.svg`) + "What is diederik?" / "Who is this for?" / per-platform install instructions / screenshots of dashboard / chains / forecast / dev console / multi-user; PNG exports (`logo-512.png`, macOS `.icns`, Windows `.ico`, Linux PNG-512) are committed for installer bundles + favicon
-  4. `BoundaryArchTest::noGsdLeakage` is green — no `.planning/` / `PLAN.md` / `RESEARCH.md` / `D-NNN` / GSD phase codenames in runtime code, comments, views, error messages, log lines, route names, or view-data keys; arch test prevents regression
-  5. The deep Modules code review across all 14 modules (11 existing + 3 new: Auth + Desktop + DevMode) produces a `REVIEW-DEEP.md` actioned in the same phase — cross-module boundary hygiene + DI compliance + dead code + perf smells + composer dep analyzer all clean
-  6. The renderer-JSON audit confirms every Livewire component's public properties / `$listeners` / `$queryString` are free of `oauth_secrets` / hidden-column / cross-user-id leak; "Where is my data?" docs page renders in-app and on README; one-click export-everything ZIP produces a portable archive of canonical SQLite + brand assets + user-data dir contents
+  1. A PR on PHP 8.4 OR 8.5 that breaks Larastan L10 strict / Pint / Pest fails CI; a green PR proves both axes
+  2. Pushing tag `v0.1.0-rc.1` triggers `release.yml` end-to-end — gate (PHP 8.4 + 8.5) → 3 parallel platform builds (macOS-14 + Windows-2025 + Ubuntu-24.04) with ad-hoc-signed macOS + unsigned Windows + unsigned Linux artifacts → smoke test (curl /health) → publish via `softprops/action-gh-release v2.6.2` with Ed25519-signed `latest.yml`
+  3. CODEOWNERS protects `.github/workflows/`; gitleaks runs on every PR with a synthetic-secret fixture proving the gate fails; release.yml triggers ONLY on `push: tags: [v*]` so fork PRs cannot reach the signing context
+  4. First-launch on a fresh install regenerates `APP_KEY` via sentinel-absent triggering `key:generate --force`; `.env.bundled` template contains no real secrets
+  5. ElectronUpdateChannel verifies Ed25519 manifest signature + SHA-512 binary hash on every auto-update; a Pest test that flips one byte of `latest.yml` proves verification fails; banner UX surfaces `update.available` / `update.stale` (after 30 days) / `update.critical` with per-user `skipVersion` persistence
+  6. `LICENSE` is verbatim Hippocratic 3.0; `NOTICE.md` explains source-available / not-OSI-approved; README hero uses logo.svg + What/Who/Install (with verbatim macOS Gatekeeper + Windows SmartScreen + Linux install-bypass walkthroughs per A-05) / Screenshots
+  7. `Modules/Counterparties/` bounded module ships with 7-step resolver chain (self_account → known_counterparty_iban → merchant → personal → government → bank-fee → unknown), `/counterparties` index with type-filter chips, `/counterparties/{slug}` type-aware profile (5 variants + unknown fallback + self_account stub), `/counterparties/triage` focused queue with Y/N/S/→/Esc keyboard handlers; personal-IBAN privacy default (IBAN never in slug/URL/title/lists)
+  8. `noGsdLeakage` arch invariant green — zero `.planning/` / `PLAN.md` / `RESEARCH.md` / `D-NNN` / `gsd[-_]` in runtime code; `noSecretsInLivewireSnapshot` arch invariant green — zero SecretsColumnRegistry entries in any Livewire public property / `$listeners` / `$queryString`
+  9. `REVIEW-DEEP.md` documents the deep modules review across all 17 modules; every BLOCKER finding fixed; composer-require-checker clean
+  10. `/help/data-locations` renders resolved paths from UserDataPathService + copy-to-clipboard + export-everything CTA gated on Dev Mode (per D-30 — export action reuses existing Dev Mode pattern)
+  11. `.docs/` tree exists mirroring happklaar structure: 10+ ADRs + 5 architecture topics + 17 per-module feature directories (4 files each) + cicd/ + local_development/ + runbooks/ + legal/
+  12. `.planning/` purged from git history via `git filter-repo --path .planning --invert-paths`; `.planning/` added to `.gitignore`; sketch-findings skill renamed diederik → beatrax (project-level + user-level + CLAUDE.md update)
+  13. GitHub repo settings configured per the walkthrough captures: branch protection on main + secret scanning + Dependabot + CodeQL + signed commits + private vulnerability reporting; Wiki off / Projects off / Discussions on
+  14. v1.1 GitHub Milestone exists with 5+ seed issues covering deferred items (counterparty polish, OS Keychain, SMTP reset, WebAuthn, partner-sharing, Sentry decision, Pulse evaluation)
+  15. First release-pipeline run on v0.1.0-rc.1 (or v0.1.0) completes; repo visibility flips private → public; welcome Discussions post lands in Announcements
+  16. v1.0.0 graduation tag pushed by EXPLICIT user invocation only (per D-18) — first stable release published; auto-update banner detects + verifies v1.0.0 on existing v0.x installs
 
 **UI hint**: yes
-**Plans**: TBD
+**Plans:** 16 plans
 
-### Phase 20: v1.0 UAT Close-Out
+Plans:
 
-**Goal**: Every deferred v1.0 UAT scenario and `human_needed` verification artifact is walked through with real ASN + ICS + PayPal + Gmail data; bugs found during walk-through are either fixed (with regression coverage) or converted to known-issues with tracked workarounds, so the beta partner starts from a known-good baseline.
-**Slug:** `20-v1-uat-close-out`
-**Mode:** mvp
-**Depends on**: Phase 19 (the public-release boundary must be defined so UAT bugs are categorised against the right surface)
-**Requirements**: UAT-01, UAT-02, UAT-03
-**Success Criteria** (what must be TRUE):
+**Wave 1** *(parallel — foundation + independent workstreams)*
 
-  1. All 25 deferred UAT scenarios across Phases 03 / 04 / 06 / 08 / 11 are walked through with real data and each result is recorded as `resolved` or `known-issue-with-workaround`; the 5 + 2 + 8 + 3 + 7 split in [STATE.md → Deferred Items](STATE.md) is fully closed out
-  2. The 3 `human_needed` verification artifacts (Phases 03 / 08 / 11) are resolved with documented evidence written back into the original phase verification files
-  3. Every bug found during UAT walk-through that turns into a code fix is accompanied by a Pest regression test that fails on the pre-fix codebase and passes on the post-fix codebase; the project test count grows by at least the number of fixes
+- [ ] 17-01-PLAN.md — Versioning baseline + release-cadence.md + delete legacy tags (D-01..04 + D-16..18)
+- [ ] 17-02-PLAN.md — PR-gate matrix widen 8.4 → 8.4+8.5 + SHA-pin every third-party GitHub Action (CI-01)
+- [ ] 17-05-PLAN.md — Counterparties backend: module scaffolding + schema + 7-step resolver + ImportPipeline stage + GC job + module boundary arch invariant (A-04 + A-08 + D-43..D-48)
+- [ ] 17-07-PLAN.md — LICENSE + NOTICE + SECURITY + CONTRIBUTING + CODE_OF_CONDUCT + README rewrite with install-bypass walkthroughs + brand exports (REL-01..04 + A-05)
+- [ ] 17-08-PLAN.md — noGsdLeakage + SecretsColumnRegistry + noSecretsInLivewireSnapshot arch invariants (REL-05 + REL-07 + D-27 + D-29)
 
-**Plans**: TBD
+**Wave 2** *(depends on Wave 1)*
 
-### Phase 21: Invite-Only Beta Cycle
+- [ ] 17-03-PLAN.md — release.yml + per-platform smoke + /health endpoint + first-launch APP_KEY sentinel + .env.bundled + CODEOWNERS + gitleaks (CI-02 + CI-05 + CI-06)
+- [ ] 17-06-PLAN.md — Counterparties UI: 3 routes + 5 type-aware profile bodies + triage with keyboard handlers + sidebar + cross-module transaction-row click-through (A-04 + UI-SPEC.md)
 
-**Goal**: The partner and 1-2 other beta testers install diederik on their own macOS / Windows machines, run fresh-account onboarding end-to-end (signup + OAuth + first import + chain resolve + dashboard), and use the app daily for 1-2 weeks; collected feedback feeds blocker fixes and a final go/no-go decision on opening the repo publicly.
-**Slug:** `21-invite-only-beta-cycle`
-**Mode:** mvp
-**Depends on**: Phase 20 (known-good baseline) + Phases 17 + 18 (signed installers + auto-update for blocker-fix rollout during the cycle)
-**Requirements**: BETA-01, BETA-02, BETA-03, BETA-04
-**Success Criteria** (what must be TRUE):
+**Wave 3** *(depends on Wave 2)*
 
-  1. At least one beta tester (the partner) completes fresh-account onboarding on macOS and one on Windows — signup + OAuth + first ASN/ICS import + chain resolve + dashboard renders correctly without developer intervention; Linux beta is optional
-  2. OAuth callback validation passes on the partner's actual browsers (Chrome / Edge / Safari); NativePHP first-run permission prompts (Notifications, file access) are validated and documented
-  3. Every beta tester has an in-app "Send feedback" link wired to a GitHub Issues template; 1-2 weeks of daily-use feedback is collected per tester and triaged into blocker / non-blocker queues
-  4. A `BETA-GO-NOGO.md` artifact records the decision-gate review: blocker fixes shipped + remaining-known-issues list + the explicit decision to either open the repo publicly OR run another beta round
+- [ ] 17-04-PLAN.md — Auto-update: ElectronUpdateChannel + Ed25519 manifest signing in release.yml + SHA-512 binary verification + banner UX + skipVersion persistence + Settings docs (UPDATE-01..04 + A-06 + D-19..22)
+
+**Wave 4** *(depends on 17-04 + 17-05 + 17-08)*
+
+- [ ] 17-09-PLAN.md — /help/data-locations page + .docs/ tree skeleton + 10 ADRs + architecture topics + features/_template + runbooks (REL-08 + D-30 + D-31..D-34 + D-38 prep)
+
+**Wave 5** *(depends on Wave 4)*
+
+- [ ] 17-10-PLAN.md — Per-module documentation: 17 modules × 4 files = 68 docs (D-34 + full coverage per A-04)
+- [ ] 17-11-PLAN.md — Deep modules review + composer-require-checker + REVIEW-DEEP.md actioned in-phase (REL-06 + D-28)
+
+**Wave 6** *(depends on Wave 5 — closeout sequence STRICT order)*
+
+- [ ] 17-12-PLAN.md — GitHub repo settings interactive walkthrough + capture in branch-protection.md + repo-security-setup.md + issue/PR templates (D-49 + D-50 + A-03)
+- [ ] 17-13-PLAN.md — Final .planning/ graduation pass (D-38; pre-purge safety net)
+- [ ] 17-14-PLAN.md — DESTRUCTIVE: .planning/ git-history purge via `git filter-repo` + `.planning/` to `.gitignore` + force-push to private origin + sketch-findings skill rename (D-35..D-37 + D-40..D-42 + A-07)
+- [ ] 17-15-PLAN.md — First release on v0.1.0-rc.1 + v1.1 milestone setup + repo visibility flip private → public + welcome Discussions post (D-39 + A-07 + Section J + new gap-first-release)
+
+**Wave 7** *(depends on EVERY prior plan + user-triggered — D-18 explicit graduation)*
+
+- [ ] 17-16-PLAN.md — v1.0.0 graduation: user-invoked stable release tag + DRAFT → published promotion + auto-update verification (D-18 — ONLY this plan touches v1.0.0)
 
 ## Progress
 
@@ -431,8 +421,4 @@ Plans:
 | 16. Developer Mode UI | 9/9 | Complete   | 2026-05-24 |
 | 16.1. First-run wizard + rename + payment-type + crowd corpus + OAuth re-consent + Aliases settings | 8/8 | Complete   | 2026-05-25 |
 | 16.1.2.1. Chain detection structural fix + default auto-categorization seed | 5/5 | Complete    | 2026-05-27 |
-| 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
-| 18. Auto-Update Plumbing | 0/0 | Not started | - |
-| 19. Public Release Boundary | 0/0 | Not started | - |
-| 20. v1.0 UAT Close-Out | 0/0 | Not started | - |
-| 21. Invite-Only Beta Cycle | 0/0 | Not started | - |
+| 17. v1.0.0 Public Release Closeout (absorbs 18 + 19 + 20 + 21 + Counterparties) | 0/16 | Not started | - |

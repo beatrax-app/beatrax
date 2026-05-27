@@ -1209,42 +1209,49 @@ Each `[ASSUMED]` claim is captured here so the planner can decide whether to (a)
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should Ed25519 signing happen in PHP (composer step in CI) or Node (electron-builder afterPack hook)?**
    - What we know: PHP's `sodium_*` is sufficient; ElectronSafeUpdater uses Node-side `@noble/ed25519`.
    - What's unclear: easier to integrate with the existing release.yml shape if it's PHP (no extra setup-node step); easier to integrate with electron-updater verification if it's Node (same toolchain).
    - Recommendation: PHP signing in `scripts/sign_update_manifest.php`, called from a release.yml step after artifact download; verification in PHP in `ElectronUpdateChannel`. Single language, single trust surface.
+   - **Resolution:** PHP. Use `sodium_crypto_sign_detached()` in a release.yml step that shells into PHP via inline `php -r`. This keeps the release pipeline single-language and lets the verify path (`ElectronUpdateChannel::verifyManifest()`) mirror the sign path one-to-one in the same module. No setup-node step is required for the publish job.
 
 2. **Does the smoke test need to assert anything beyond HTTP 200 + correct JSON shape?**
    - What we know: D-13 + D-14 specify HTTP `/health` probe; D-15 says failure fails the whole release.
    - What's unclear: whether to assert `app_version === tag-without-v` (verifies D-03 tag-as-source-of-truth), and whether to assert `php_version` starts with `8.4` or `8.5` per the bundled runtime.
    - Recommendation: assert both. Both are mechanically simple and catch real regressions (version-injection bug, wrong PHP bundle shipped).
+   - **Resolution:** YES. Extend the smoke step in release.yml to assert BOTH `.status=="ok"` AND `.app_version == ${GITHUB_REF_NAME#v}`. The version assertion verifies the tag-as-source-of-truth pattern (D-03) end-to-end. PHP-version assertion is left to Claude's discretion since the bundled runtime is pinned via `nativephp/php-bin`. Plan 17-03 owns this change.
 
 3. **What's the `electron-updater` `channel` value mapping to `v0.x-rc.N` vs `v0.x` tags?**
    - What we know: D-04 specifies two channels (`stable` + `preview`); RC tags publish immediately to preview.
    - What's unclear: how `softprops/action-gh-release`'s `prerelease: true` interacts with electron-updater's `channel` discovery. Does electron-updater treat `prerelease` releases as the `beta` channel by default? Or do we need explicit `channel` config in `electron-builder.mjs`'s `publish` block?
    - Recommendation: Plan 17-04 + Plan 17-05 verify by tagging `v0.1.0-rc.1` first and observing electron-updater behavior; document in `.docs/cicd/release-cadence.md`.
+   - **Resolution:** Set `channel: 'preview'` for RC tags via `dev-app-update.yml` (and the matching GitHub Releases `prerelease: true` flag set by softprops/action-gh-release). Stable channel resolves `latest.yml`; preview channel resolves `beta.yml` (electron-updater's standard preview-channel filename). Plan 17-04 owns the electron-builder + electron-updater config changes; Plan 17-01's release-cadence.md documents the channel mapping for users.
 
 4. **Should the GSD-leakage arch test (`noGsdLeakage`) also scan `.docs/` content?**
    - What we know: `.docs/` is committed and public-visible.
    - What's unclear: whether ADRs in `.docs/adr/` SHOULD mention historical phase codenames (for traceability) or NEVER (for hygiene).
    - Recommendation: scan `.docs/` for `.planning/` and `PLAN.md` (these are gitignored, must not leak), but ALLOW phase numbers + "GSD" mentions (it's documentation, not runtime code). Plan 17-08 + Plan 17-10 coordinate the test regex.
+   - **Resolution:** YES with a narrower pattern set. Extend `noGsdLeakage` to ALSO walk `.docs/`, scanning ONLY for `.planning/`, `PLAN.md`, `RESEARCH.md`, `CONTEXT.md`, and `gsd[-_]` (the gitignored-artifact + workflow-vocabulary subset). Phase number mentions (`Phase 17`, `D-01`, etc.) are ALLOWED in `.docs/` because graduated ADRs may legitimately reference the phase that produced them. Plan 17-08 owns this scan extension; Plan 17-09 + 17-10 + 17-13 rely on the extended scan for doc-hygiene verification.
 
 5. **What's the right release-asset naming convention?**
    - What we know: existing builds produce `<name>-<version>-<platform>.<ext>` per electron-builder default.
    - What's unclear: whether to standardize as `beatrax-0.1.0-mac-arm64.dmg` + `beatrax-0.1.0-mac-x64.dmg` for both Apple Silicon + Intel, or only Apple Silicon (since the bundled PHP is universal binary).
    - Recommendation: ship both arch slices on macOS unless `nativephp/php-bin` is confirmed universal. Plan 17-04 verifies.
+   - **Resolution:** `beatrax-{version}-{platform}-{arch}.{ext}` (e.g., `beatrax-0.1.0-macos-arm64.dmg`, `beatrax-0.1.0-windows-x64.exe`, `beatrax-0.1.0-linux-amd64.AppImage`). Arch slices for the first public release: **macOS arm64 only** (no x64 — modern Macs are Apple Silicon; Intel users can run via Rosetta until demand drives an explicit x64 slice), **Windows x64 only**, **Linux amd64 only** (no arm). Adding additional arch slices is a v1.1 candidate. Plan 17-03 owns the `electron-builder.mjs` `artifactName` template.
 
 6. **Is `gh release view` the right verification step for "did the release publish correctly?" in the smoke flow?**
    - What we know: smoke test launches the bundled app and curls `/health`.
    - What's unclear: post-publish, do we have a job that verifies the published release is downloadable + the latest.yml + .sig are accessible via the GitHub CDN URL?
    - Recommendation: add a Job 4 "post-publish verify" that runs after the publish job, downloads the release artifacts via `gh release download`, and re-runs Ed25519 verification on the published manifest. Catches publish-time corruption.
+   - **Resolution:** YES. Add a `verify-published` job to `release.yml` running AFTER the `publish` job. The job: (1) `gh release download $GITHUB_REF_NAME --dir verify/`, (2) re-runs `sodium_crypto_sign_verify_detached` on the downloaded `latest.yml` against the in-bundle public key + the downloaded `latest.yml.sig`, (3) fails the workflow if verification fails. This catches CDN corruption / partial uploads / signing-but-not-publishing race conditions before users hit them. Plan 17-04 owns the job addition.
 
 7. **What hosts the Ed25519 public key?**
    - What we know: public half is committed; private half is in a GitHub repo secret.
    - What's unclear: WHERE in the repo the public key lives. Options: hardcoded in `config/nativephp.php`, in a dedicated `config/auto_update.php`, or in a const in `ElectronUpdateChannel` itself.
    - Recommendation: dedicated `config/auto_update.php` with `'publisher_public_key_hex'` key. Easier to discover; gives the planner a clear "this is where the trust anchor lives" file.
+   - **Resolution:** `config/auto_update.php` with key `'publisher_public_key_hex'`. `ElectronUpdateChannel` accepts `Illuminate\Contracts\Config\Repository $config` via constructor DI and reads the key via `$config->get('auto_update.publisher_public_key_hex')`. This: (a) makes the trust anchor file-discoverable (`grep -r publisher_public_key_hex config/` is one hit), (b) keeps the service testable (config can be overridden in tests via `Config::set()` analog — though tests use the injected $config directly per DI-only rule), (c) lets future key rotation land as a config diff rather than a class-constant edit. Plan 17-04 owns the config + DI wiring.
 
 ---
 
