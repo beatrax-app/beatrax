@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Public Release — Desktop Packaging, Multi-User, Developer Mode
 status: executing
 stopped_at: Phase 16.1.2 context gathered
-last_updated: "2026-05-27T15:43:47.326Z"
-last_activity: 2026-05-27 -- Phase 16.1.2 complete (5/5 plans, verifier PASS)
+last_updated: "2026-05-27T17:04:02.930Z"
+last_activity: 2026-05-27 -- Phase 16.1.2.1 execution started
 progress:
   total_phases: 14
   completed_phases: 8
-  total_plans: 53
+  total_plans: 58
   completed_plans: 53
-  percent: 100
+  percent: 91
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-**Current focus:** Phase 17 — CI/CD Pipeline + Code Signing (next)
+**Current focus:** Phase 16.1.2.1 — chain-detection-structural-fix-cross-account-hop-classificat
 
 ## Current Position
 
-Phase: 17
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-27 -- Phase 16.1.2 complete (5/5 plans, verifier PASS)
+Phase: 16.1.2.1 (chain-detection-structural-fix-cross-account-hop-classificat) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 16.1.2.1
+Last activity: 2026-05-27 -- Phase 16.1.2.1 execution started
 
 ## Performance Metrics
 

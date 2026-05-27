@@ -321,15 +321,15 @@ Plans:
 
 **Requirements**: gap-1-iban-alias-bridge, gap-1b-pair-detection-iban-alias, gap-2-paypal-funding-leg-mapping, gap-3-card-statements-upsert-path, gap-3b-ics-settlement-chain-end-to-end, gap-4-seed-categorization-rules (synthetic — evidence: `.planning/debug/chains-never-detected.md` + `.planning/phases/16.1.2.1-…/SEED-RULES.md`)
 **Depends on:** Phase 16.1.2
-**Plans:** 5 plans
+**Plans:** 3/5 plans executed
 
 Plans:
 
 **Wave 1** *(parallel — file-independent foundations)*
 
-- [ ] 16.1.2.1-01-PLAN.md — Default categorization-rule seed set (gap-4): per-user seeder + UserInstalled listener + native-PHP rule fixture sourced from SEED-RULES.md + firstOrCreate semantics lock + live-distribution-sampled ≥40% gate fixture + end-to-end import-categorization Pest coverage
-- [ ] 16.1.2.1-02-PLAN.md — PayPal funding-leg event-type mapping (gap-2): extend `PaypalCsvEventTypeMap` with `Bankstorting` / `General Withdrawal` / `Transfer to bank` parent entries → `transfer_in`; unit tests assert both `MissingPaypalTransactionTypeMapException` (transactionType) and `UnknownPaypalEventTypeException` (classify) narrowest types
-- [ ] 16.1.2.1-03-PLAN.md — Known-counterparty-IBAN alias bridge foundation (gap-1): `known_counterparty_ibans` table + Eloquent model + per-user idempotent seeder (PayPal LU IBAN → `paypal` kind, ICS NL ABN AMRO IBAN → `ics_card` kind) + UserInstalled listener + `Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban` Public contract + `KnownCounterpartyIbanResolver` concrete implementation + provider bindings + seeder + resolver unit tests
+- [x] 16.1.2.1-01-PLAN.md — Default categorization-rule seed set (gap-4): per-user seeder + UserInstalled listener + native-PHP rule fixture sourced from SEED-RULES.md + firstOrCreate semantics lock + live-distribution-sampled ≥40% gate fixture + end-to-end import-categorization Pest coverage
+- [x] 16.1.2.1-02-PLAN.md — PayPal funding-leg event-type mapping (gap-2): extend `PaypalCsvEventTypeMap` with `Bankstorting` / `General Withdrawal` / `Transfer to bank` parent entries → `transfer_in`; unit tests assert both `MissingPaypalTransactionTypeMapException` (transactionType) and `UnknownPaypalEventTypeException` (classify) narrowest types
+- [x] 16.1.2.1-03-PLAN.md — Known-counterparty-IBAN alias bridge foundation (gap-1): `known_counterparty_ibans` table + Eloquent model + per-user idempotent seeder (PayPal LU IBAN → `paypal` kind, ICS NL ABN AMRO IBAN → `ics_card` kind) + UserInstalled listener + `Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban` Public contract + `KnownCounterpartyIbanResolver` concrete implementation + provider bindings + seeder + resolver unit tests
 
 **Wave 2** *(depends on 16.1.2.1-02 + 16.1.2.1-03 — both consumers consult the Plan 03 contract, and the end-to-end pair test consumes Plan 02's PayPal `transfer_in` mapping)*
 
@@ -430,7 +430,7 @@ Plans:
 | 15. Desktop Shell (NativePHP Integration) | 7/7 | Complete    | 2026-05-23 |
 | 16. Developer Mode UI | 9/9 | Complete   | 2026-05-24 |
 | 16.1. First-run wizard + rename + payment-type + crowd corpus + OAuth re-consent + Aliases settings | 8/8 | Complete   | 2026-05-25 |
-| 16.1.2.1. Chain detection structural fix + default auto-categorization seed | 0/5 | Planned | - |
+| 16.1.2.1. Chain detection structural fix + default auto-categorization seed | 3/5 | In Progress|  |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |
 | 19. Public Release Boundary | 0/0 | Not started | - |
