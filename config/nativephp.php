@@ -93,6 +93,33 @@ return [
         'content',
         'node_modules',
         '*/tests',
+
+        // The `nativephp/` working dir at the project root holds every
+        // prior `php artisan native:build` output (the full Electron
+        // distribution under `nativephp/electron/dist/<arch>/beatrax.app/`).
+        // Without this exclude, the copy walker descends into the
+        // previous build's app bundle — a near-complete recursive copy
+        // of the project — and the build appears to hang while it
+        // shuffles ~6 GB of stale electron output into the new build
+        // directory. Gitignored at the repo level for the same reason;
+        // mirror that here so the copy step skips it too.
+        'nativephp',
+
+        // Claude Code worktrees. The `.claude/worktrees/agent-*/`
+        // directories are independent git worktrees of the full repo —
+        // each one carries its OWN `vendor/`, `nativephp/`, and
+        // `node_modules/` tree. Six concurrent agent worktrees can
+        // easily reach 3 GB and the copy walker has no reason to fold
+        // them into the production bundle.
+        '.claude',
+        // Belt-and-braces: also drop any `.claude/` that ended up
+        // nested inside `vendor/nativephp/desktop/resources/build/app/`
+        // from a previous build attempt that ran without this exclude
+        // in place. PHP's fnmatch defaults to no FNM_PATHNAME, so `*`
+        // matches across slashes — `*/.claude` matches `vendor/.claude`,
+        // `vendor/nativephp/desktop/resources/build/app/.claude`, etc.
+        '*/.claude',
+
         // NOTE: `bootstrap/cache/*.php` are intentionally NOT excluded here.
         // Laravel's PackageManifest requires `bootstrap/cache/` to already
         // exist and be writable -- it does not create the directory. The
