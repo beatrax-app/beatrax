@@ -20,10 +20,10 @@
       - error    — at least one contributing run's cache was missing
                    / expired; section body shows a rose-tinted "Try a
                    different file" prompt.
-      - filtered — the wizard removed the section (D-10 stale window
-                   or already-confirmed-elsewhere). Reserved for
-                   future per-section opt-outs; renders the muted
-                   "we left it out" note.
+      - filtered — the wizard removed the section (stale window or
+                   already-confirmed-elsewhere). Reserved for future
+                   per-section opt-outs; renders the muted "we left
+                   it out" note.
 
     Props:
       :section — the ConsolidatedPreviewSection DTO instance.
@@ -141,10 +141,23 @@
                 @endforeach
             </tbody>
         </table>
-        @if ($section->totalRows > count($section->sampleRows))
-            <p class="preview-section-more">
-                {{ count($section->sampleRows) }} rows shown · {{ $section->totalRows - count($section->sampleRows) }} more
-            </p>
+        @php
+            $shownCount = count($section->sampleRows);
+            $remaining = max(0, $section->totalRows - $shownCount);
+        @endphp
+
+        @if ($remaining > 0)
+            <div class="preview-section-more-actions">
+                <button
+                    type="button"
+                    class="preview-section-load-more"
+                    wire:click="loadMoreRows('{{ $section->sourceFormat }}')"
+                >
+                    Load more ({{ $remaining }} remaining)
+                </button>
+            </div>
+        @elseif ($shownCount > 0 && $section->totalRows > 0)
+            <p class="preview-section-more">{{ $shownCount }} rows shown</p>
         @endif
     @endif
 </section>
