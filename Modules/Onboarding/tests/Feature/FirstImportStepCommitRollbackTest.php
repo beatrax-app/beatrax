@@ -130,7 +130,7 @@ it('rolls back all writes when ConfirmsImports throws mid-commit', function (): 
             (string) $bankAccount->id => ['minor' => 100000, 'date' => '2026-04-30'],
             (string) $cardAccount->id => ['minor' => 50000, 'date' => '2026-04-30'],
         ])
-        ->call('commit');
+        ->call('commitEverything');
 
     $component->assertNotDispatched('wizard.step.completed');
 
