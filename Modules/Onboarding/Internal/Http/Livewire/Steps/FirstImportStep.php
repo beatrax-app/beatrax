@@ -119,12 +119,25 @@ final class FirstImportStep extends Component
      */
     public array $stashedImportRunIds = [];
 
+    /**
+     * Per-section row caps the user has expanded past the default
+     * `SAMPLE_ROW_LIMIT` (5) via the "Load more (N remaining)" footer
+     * button. Keyed by `source_format` value (`'asn-camt053'`,
+     * `'ics-pdf'`, `'paypal-csv'`, …); the value is the absolute row
+     * cap the section should render (5, 30, 55, 80, …). Sections
+     * absent from this map use the default 5-row cap.
+     *
+     * @var array<string, int>
+     */
+    public array $expandedRowCount = [];
+
     public function mount(): void
     {
         $this->balanceConfirmations = [];
         $this->commitError = '';
         $this->isCommitting = false;
         $this->stashedImportRunIds = [];
+        $this->expandedRowCount = [];
     }
 
     /**
@@ -160,6 +173,22 @@ final class FirstImportStep extends Component
             'minor' => $minor,
             'date' => $date,
         ];
+    }
+
+    /**
+     * Expand one preview section by another 25-row chunk. The next
+     * render() pass passes `$expandedRowCount` into
+     * BuildConsolidatedPreviewQuery as the per-section override map,
+     * so only the requested section grows. Idempotent past the
+     * section's totalRows: the query clamps the slice server-side
+     * (via array_slice) and the blade footer hides the button when
+     * remaining hits zero.
+     */
+    public function loadMoreRows(string $sourceFormat): void
+    {
+        $current = $this->expandedRowCount[$sourceFormat]
+            ?? BuildConsolidatedPreviewQuery::SAMPLE_ROW_LIMIT;
+        $this->expandedRowCount[$sourceFormat] = $current + 25;
     }
 
     /**
@@ -308,7 +337,11 @@ final class FirstImportStep extends Component
         $user = $currentUser->user();
 
         $this->stashedImportRunIds = $this->resolveStashedImportRunIds($user->id, $db);
-        $this->preview = $buildPreview->build($this->stashedImportRunIds, $user);
+        $this->preview = $buildPreview->build(
+            $this->stashedImportRunIds,
+            $user,
+            sectionLimitOverrides: $this->expandedRowCount,
+        );
 
         // The detector aggregator returns a flat list with one entry per
         // (account, winning candidate) pair. When the aggregator surfaces
