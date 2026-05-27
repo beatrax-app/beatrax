@@ -101,8 +101,17 @@ final readonly class RecentLogEntriesReader
         $out = [];
         foreach ($recent as $entry) {
             $scrubbed = $this->scrubber->scrub($entry['message']);
-            $excerpt = $this->truncate($scrubbed, self::EXCERPT_MAX);
-            $hrefContains = $this->truncate($scrubbed, self::HREF_CONTAINS_MAX);
+            $excerpt = $this->truncate($scrubbed, self::EXCERPT_MAX, appendEllipsis: true);
+            // The href's `contains` filter is a literal substring
+            // match against the source log line at /dev/logs. The
+            // user-facing excerpt above appends '…' on truncation;
+            // the href substring must NOT — '…' never appears in
+            // the source data and the search would silently return
+            // zero rows when the link is clicked. (User report:
+            // "click on an error on the dev overview does not show
+            // the record properly because it includes the truncate
+            // characters, so the search fails (the …)".)
+            $hrefContains = $this->truncate($scrubbed, self::HREF_CONTAINS_MAX, appendEllipsis: false);
             $out[] = [
                 'timestamp' => $entry['timestamp'],
                 'severity' => $entry['severity'],
@@ -138,17 +147,31 @@ final readonly class RecentLogEntriesReader
     }
 
     /**
-     * Truncate a string to `max` characters with an ellipsis when
-     * the input was longer. Multi-line input is collapsed to a
-     * single line first so the dashboard row stays one line tall.
+     * Truncate a string to `max` characters. Multi-line input is
+     * collapsed to a single line first so the dashboard row stays
+     * one line tall.
+     *
+     * @param  bool  $appendEllipsis  When true, replace the final
+     *                                character on truncation with
+     *                                '…' so the user-facing excerpt
+     *                                signals "more here". When false,
+     *                                the truncated prefix is returned
+     *                                verbatim — required for the
+     *                                deep-link href whose `contains`
+     *                                filter is a literal substring
+     *                                match against the source line.
      */
-    private function truncate(string $value, int $max): string
+    private function truncate(string $value, int $max, bool $appendEllipsis): string
     {
         $single = trim(preg_replace('/\s+/', ' ', $value) ?? $value);
         if (mb_strlen($single) <= $max) {
             return $single;
         }
 
-        return mb_substr($single, 0, $max - 1).'…';
+        if ($appendEllipsis) {
+            return mb_substr($single, 0, $max - 1).'…';
+        }
+
+        return mb_substr($single, 0, $max);
     }
 }
