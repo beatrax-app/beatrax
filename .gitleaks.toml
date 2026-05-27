@@ -1,0 +1,16 @@
+# gitleaks configuration for beatrax.
+#
+# Extends the gitleaks default ruleset with one project-specific
+# allowlist entry: the bundled .env template ships intentional
+# placeholder values for every env key the bundled desktop build
+# reads. The default ruleset would otherwise flag the `APP_KEY=`
+# placeholder line as a generic-key candidate.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow the bundled .env template — placeholder values only."
+paths = [
+    '''^\.env\.bundled$''',
+]

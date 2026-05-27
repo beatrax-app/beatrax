@@ -8,8 +8,17 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Controllers\HealthController;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
+
+// Auth-free liveness probe. Registered outside the `web` middleware group
+// so the `EnsureDatabaseReady` first-launch gate (appended to `web` in
+// `bootstrap/app.php`) does not redirect pre-migration probes to the
+// setup route. External callers reach this endpoint over localhost only;
+// the response shape is a fixed four-key JSON object with no timestamp
+// so equality assertions remain stable across calls.
+Route::get('/health', HealthController::class)->name('core.health');
 
 Route::middleware(['web', 'auth'])->group(static function (): void {
     Route::get('/', static function (
