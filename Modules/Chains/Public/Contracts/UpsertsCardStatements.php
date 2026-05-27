@@ -42,4 +42,19 @@ interface UpsertsCardStatements
      * card_statements rows actually inserted (0 on a no-op re-run).
      */
     public function upsertForImportRun(int $importRunId, User $user): int;
+
+    /**
+     * User-scoped backfill — promote every still-unpromoted ICS
+     * statement_summaries row for the user into a card_statements row,
+     * independent of import_run_id. Consumed by the chain-resolution
+     * job's healing pass so a packaged-app install whose ConfirmImport
+     * path missed the per-import upsert (rolled-back transaction, race
+     * with chain dispatch, legacy data from a pre-Phase-16.1.2.1 build)
+     * catches up on the next chain pass without a manual artisan call.
+     *
+     * Same idempotency contract as `upsertForImportRun`: insertOrIgnore
+     * against the same UNIQUE constraint, existing rows' `state`
+     * column preserved. Returns the count of newly-inserted rows.
+     */
+    public function upsertForUser(User $user): int;
 }

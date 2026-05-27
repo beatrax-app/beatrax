@@ -7,14 +7,17 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
+use Modules\Chains\Internal\Resolvers\RetypeByAliasResolver;
 use Modules\Chains\Models\CardStatement;
 use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
 /*
  * Phase 5 idempotency contract.
@@ -145,14 +148,17 @@ it('re-running the resolver job produces zero additional chain_links', function 
     $clock = $this->app->make(Clock::class);
     $ics = $this->app->make(IcsSettlementResolver::class);
     $paypal = $this->app->make(PaypalFundingResolver::class);
+    $retype = $this->app->make(RetypeByAliasResolver::class);
+    $pairer = $this->app->make(PairsTransferLegs::class);
+    $upserter = $this->app->make(UpsertsCardStatements::class);
 
     $job = new ResolveChainLinksJob($user->id);
-    $job->handle($db, $clock, $ics, $paypal);
+    $job->handle($db, $clock, $retype, $pairer, $upserter, $ics, $paypal);
     $countAfterFirst = ChainLink::query()->where('user_id', $user->id)->count();
     expect($countAfterFirst)->toBe(5);
 
     $job = new ResolveChainLinksJob($user->id);
-    $job->handle($db, $clock, $ics, $paypal);
+    $job->handle($db, $clock, $retype, $pairer, $upserter, $ics, $paypal);
     $countAfterSecond = ChainLink::query()->where('user_id', $user->id)->count();
 
     expect($countAfterSecond)->toBe($countAfterFirst);

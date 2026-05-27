@@ -11,16 +11,19 @@ use Illuminate\Support\Facades\Queue;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
+use Modules\Chains\Internal\Resolvers\RetypeByAliasResolver;
 use Modules\Chains\Models\CardStatement;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Models\ChainResolutionRun;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
+use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
 /*
  * Wave 2 coverage for the ResolveChainLinksJob lifecycle. Covers:
@@ -202,6 +205,9 @@ it('handle() runs both resolvers and transitions chain_resolution_runs from runn
     $job->handle(
         $this->app->make(DatabaseManager::class),
         $this->app->make(Clock::class),
+        $this->app->make(RetypeByAliasResolver::class),
+        $this->app->make(PairsTransferLegs::class),
+        $this->app->make(UpsertsCardStatements::class),
         $this->app->make(IcsSettlementResolver::class),
         $this->app->make(PaypalFundingResolver::class),
     );
