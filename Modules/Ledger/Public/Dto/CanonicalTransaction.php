@@ -33,6 +33,16 @@ use Spatie\LaravelData\Data;
  * null so legacy call-sites (raw row reconstruction in
  * FingerprintRederiveService, test fixtures, NormalizeStage's first
  * pass before classification) compile and run unchanged.
+ *
+ * `counterpartyId` is the FK onto `counterparties.id` the
+ * ResolveCounterpartyStage stamps onto every row after the resolver
+ * upserts the matching Counterparty. Stays null for the self_account
+ * branch (the resolver short-circuits without writing a row) and for
+ * the pathological branch where the source row carries no name, no
+ * IBAN, and no description. Persisted to the `transactions.counterparty_id`
+ * column via `toAttributes()`; intentionally NOT part of the
+ * fingerprint tuple so re-resolving a row against an updated
+ * counterparty model never invalidates a historical fingerprint.
  */
 final class CanonicalTransaction extends Data
 {
@@ -65,6 +75,7 @@ final class CanonicalTransaction extends Data
         public readonly ?array $rawPayload = null,
         public readonly ?array $autoCategoryProvenance = null,
         public readonly ?PaymentType $paymentType = null,
+        public readonly ?int $counterpartyId = null,
     ) {}
 
     /**
@@ -101,6 +112,7 @@ final class CanonicalTransaction extends Data
             rawPayload: $this->rawPayload,
             autoCategoryProvenance: $this->autoCategoryProvenance,
             paymentType: $this->paymentType,
+            counterpartyId: $this->counterpartyId,
         );
     }
 
@@ -137,6 +149,7 @@ final class CanonicalTransaction extends Data
             rawPayload: $this->rawPayload,
             autoCategoryProvenance: $this->autoCategoryProvenance,
             paymentType: $this->paymentType,
+            counterpartyId: $this->counterpartyId,
         );
     }
 
@@ -174,6 +187,7 @@ final class CanonicalTransaction extends Data
             rawPayload: $this->rawPayload,
             autoCategoryProvenance: $provenance,
             paymentType: $this->paymentType,
+            counterpartyId: $this->counterpartyId,
         );
     }
 
@@ -210,6 +224,47 @@ final class CanonicalTransaction extends Data
             rawPayload: $this->rawPayload,
             autoCategoryProvenance: $this->autoCategoryProvenance,
             paymentType: $paymentType,
+            counterpartyId: $this->counterpartyId,
+        );
+    }
+
+    /**
+     * Immutable clone-with-override for `counterpartyId`. The
+     * `ResolveCounterpartyStage` uses this to stamp the FK that points
+     * at the upserted `counterparties` row onto every canonical
+     * transaction. Pass `null` to leave the FK unset — the
+     * `self_account` branch (the user's own account legs) does exactly
+     * that, since the resolver short-circuits without writing a
+     * counterparty row.
+     */
+    public function withCounterpartyId(?int $counterpartyId): self
+    {
+        return new self(
+            userId: $this->userId,
+            accountId: $this->accountId,
+            type: $this->type,
+            postedAt: $this->postedAt,
+            bookedAt: $this->bookedAt,
+            valueDate: $this->valueDate,
+            amountMinor: $this->amountMinor,
+            currency: $this->currency,
+            settledAmountMinor: $this->settledAmountMinor,
+            settledCurrency: $this->settledCurrency,
+            fxRateUsed: $this->fxRateUsed,
+            counterpartyName: $this->counterpartyName,
+            counterpartyIban: $this->counterpartyIban,
+            counterpartyNormalized: $this->counterpartyNormalized,
+            normalizationVersion: $this->normalizationVersion,
+            description: $this->description,
+            categoryId: $this->categoryId,
+            sourceFormat: $this->sourceFormat,
+            importRunId: $this->importRunId,
+            sourceRowIndex: $this->sourceRowIndex,
+            sourceRef: $this->sourceRef,
+            rawPayload: $this->rawPayload,
+            autoCategoryProvenance: $this->autoCategoryProvenance,
+            paymentType: $this->paymentType,
+            counterpartyId: $counterpartyId,
         );
     }
 
@@ -242,6 +297,7 @@ final class CanonicalTransaction extends Data
             'normalization_version' => $this->normalizationVersion,
             'description' => $this->description,
             'category_id' => $this->categoryId,
+            'counterparty_id' => $this->counterpartyId,
             'auto_category_provenance' => $this->autoCategoryProvenance === null
                 ? null
                 : json_encode($this->autoCategoryProvenance, JSON_THROW_ON_ERROR),

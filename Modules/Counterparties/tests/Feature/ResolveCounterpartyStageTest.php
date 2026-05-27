@@ -6,8 +6,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
+use Modules\Counterparties\Internal\Pipeline\ResolveCounterpartyStage;
+use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
+use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Events\CounterpartyResolved;
+use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
+use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\Account;
@@ -267,9 +272,24 @@ it('Test 4 — re-importing the same fixture does NOT create duplicate counterpa
 });
 
 it('Test 5 — CounterpartyResolved event fires for every materialised counterparty', function (): void {
+    // Fake the dispatcher BEFORE resolving any service that captures
+    // the Dispatcher through DI. The CounterpartyResolverService and
+    // the ResolveCounterpartyStage are bound as singletons on the
+    // Counterparties service provider; once they construct they
+    // cache the original Dispatcher and bypass the faked one. Flush
+    // any cached singletons that capture the Dispatcher so the next
+    // `app->make()` rebuilds them against the faked dispatcher.
     Event::fake([CounterpartyResolved::class]);
+    $this->app->forgetInstance(CounterpartyResolver::class);
+    $this->app->forgetInstance(CounterpartyResolverService::class);
+    $this->app->forgetInstance(ResolvesCounterparties::class);
+    $this->app->forgetInstance(ResolveCounterpartyStage::class);
+    $this->app->forgetInstance(ImportPipeline::class);
+    $this->app->forgetInstance(RunsImports::class);
 
-    $this->importer->runAndConfirm(
+    $importer = $this->app->make(RunsImports::class);
+
+    $importer->runAndConfirm(
         $this->fixturePath,
         'asn-csv',
         $this->user,
