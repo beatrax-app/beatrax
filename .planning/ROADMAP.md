@@ -321,7 +321,7 @@ Plans:
 
 **Requirements**: gap-1-iban-alias-bridge, gap-1b-pair-detection-iban-alias, gap-2-paypal-funding-leg-mapping, gap-3-card-statements-upsert-path, gap-3b-ics-settlement-chain-end-to-end, gap-4-seed-categorization-rules (synthetic — evidence: `.planning/debug/chains-never-detected.md` + `.planning/phases/16.1.2.1-…/SEED-RULES.md`)
 **Depends on:** Phase 16.1.2
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 
 Plans:
 
@@ -337,7 +337,7 @@ Plans:
 
 **Wave 3** *(depends on 16.1.2.1-03 + 16.1.2.1-04 — needs the Public contract from 03 AND the ASN `transfer_out` rows that 04's classifier produces)*
 
-- [ ] 16.1.2.1-05-PLAN.md — `card_statements` per-import upsert path + IcsSettlementResolver Option-B rewire (gap-3 + gap-3b): new `UpsertsCardStatements` Public contract + `CardStatementUpserter` service wired into `ConfirmImport` post-commit AS FIRST ACTION inside the existing `if (dispatchChain && (inserted > 0 || enriched > 0))` block; IcsSettlementResolver candidate-iteration rewired to ASN-side `transfer_out` rows resolved via the alias bridge to `ics_card`-kind accounts; end-to-end Pest writing `chain_links` of `kind='ics_bulk_settle'` from a real ASN row + ICS card_statement + ICS expenses with NO manually-injected unrealistic rows (closes Blocker 1 from plan-checker)
+- [x] 16.1.2.1-05-PLAN.md — `card_statements` per-import upsert path + IcsSettlementResolver Option-B rewire (gap-3 + gap-3b): new `UpsertsCardStatements` Public contract + `CardStatementUpserter` service wired into `ConfirmImport` post-commit AS FIRST ACTION inside the existing `if (dispatchChain && (inserted > 0 || enriched > 0))` block; IcsSettlementResolver candidate-iteration rewired to ASN-side `transfer_out` rows resolved via the alias bridge to `ics_card`-kind accounts; end-to-end Pest writing `chain_links` of `kind='ics_bulk_settle'` from a real ASN row + ICS card_statement + ICS expenses with NO manually-injected unrealistic rows (closes Blocker 1 from plan-checker)
 
 ### Phase 17: CI/CD Pipeline + Code Signing
 
@@ -430,7 +430,7 @@ Plans:
 | 15. Desktop Shell (NativePHP Integration) | 7/7 | Complete    | 2026-05-23 |
 | 16. Developer Mode UI | 9/9 | Complete   | 2026-05-24 |
 | 16.1. First-run wizard + rename + payment-type + crowd corpus + OAuth re-consent + Aliases settings | 8/8 | Complete   | 2026-05-25 |
-| 16.1.2.1. Chain detection structural fix + default auto-categorization seed | 4/5 | In Progress|  |
+| 16.1.2.1. Chain detection structural fix + default auto-categorization seed | 5/5 | Complete   | 2026-05-27 |
 | 17. CI/CD Pipeline + Code Signing | 0/0 | Not started | - |
 | 18. Auto-Update Plumbing | 0/0 | Not started | - |
 | 19. Public Release Boundary | 0/0 | Not started | - |
