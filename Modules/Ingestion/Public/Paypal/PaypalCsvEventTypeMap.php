@@ -76,7 +76,15 @@ final class PaypalCsvEventTypeMap
             'Transfer to bank' => 'parent',
 
             // Forward-compatibility — EN forms that PayPal often
-            // leaves un-localised. Filtered at the adapter boundary.
+            // leaves un-localised in NL exports. Filtered at the
+            // adapter boundary. NOTE: these live under the 'nl' key
+            // so the forward-compat coverage is partial — an
+            // English-only export (no 'en' key in MAP) raises
+            // UnknownPaypalEventTypeException for these same
+            // strings. When non-NL locale support ships, move the
+            // four EN skips into a `_global` fallback bucket that
+            // classify() checks after the language-specific lookup
+            // misses, so EN exports also benefit.
             'Hold' => 'skip',
             'Authorization' => 'skip',
             'Reserve' => 'skip',
