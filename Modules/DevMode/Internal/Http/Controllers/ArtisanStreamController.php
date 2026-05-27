@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Process\FileTailer;
+use Modules\DevMode\Internal\Process\ProcessLiveness;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -23,8 +24,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * The loop:
  *   - clearstatcache + fseek + fread up to 65 536 bytes per tick.
  *   - Emit `id: <offset>\ndata: {"line":"..."}\n\n` for each chunk.
- *   - posix_kill($pid, 0) liveness check; if the process is gone,
- *     emit `event: done\ndata: {"exit":...}\n\n` and break.
+ *   - {@see ProcessLiveness::isAlive()} liveness check; if the process
+ *     is gone, emit `event: done\ndata: {"exit":...}\n\n` and break.
+ *     The helper hides the posix-vs-shell_exec fallback so the loop
+ *     stays portable across the dev-box and packaged-app PHP runtimes
+ *     (the latter ships without ext-posix).
  *   - usleep(150_000) between ticks (~6.7 ticks/s; well under the
  *     SSE per-event budget).
  *
@@ -55,6 +59,7 @@ final readonly class ArtisanStreamController
         private RunRegistry $registry,
         private FileTailer $tailer,
         private FinalizeRunAudit $finalize,
+        private ProcessLiveness $liveness,
     ) {}
 
     public function __invoke(
@@ -78,6 +83,7 @@ final readonly class ArtisanStreamController
         $registry = $this->registry;
         $tailer = $this->tailer;
         $finalize = $this->finalize;
+        $liveness = $this->liveness;
 
         $response = new StreamedResponse(static function () use (
             $record,
@@ -86,6 +92,7 @@ final readonly class ArtisanStreamController
             $tailer,
             $runIdLocal,
             $finalize,
+            $liveness,
         ): void {
             @ini_set('output_buffering', '0');
             @ini_set('zlib.output_compression', '0');
@@ -111,12 +118,15 @@ final readonly class ArtisanStreamController
                     @flush();
                 }
 
-                // Liveness check via posix_kill(pid, 0). If the
+                // Liveness check via ProcessLiveness::isAlive(). If the
                 // process is gone, the spawner-detached child has
                 // finished — emit the terminal `done` event with
                 // whatever exit code we can recover (best-effort; the
                 // audit pipeline reads the exit code authoritatively).
-                if (! posix_kill($record->pid, 0)) {
+                // The helper prefers posix_kill($pid, 0) and falls back
+                // to `kill -0` shell_exec on builds without ext-posix
+                // (the shipped NativePHP Mac PHP binary omits posix).
+                if (! $liveness->isAlive($record->pid)) {
                     // Read once more in case the child wrote a final
                     // chunk between the previous tail and the exit.
                     $finalChunk = $tailer->tailOnce($record->outPath, $offset);
