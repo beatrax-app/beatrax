@@ -23,8 +23,14 @@
 <div class="wiz-page">
     <header class="wiz-top" aria-label="Setup wizard header">
         <div class="wiz-brand">
-            <span class="wiz-brand-mark" aria-hidden="true">d</span>
-            <span class="wiz-brand-name">diederik</span>
+            <img
+                src="{{ Vite::asset('resources/brand/logo.svg') }}"
+                alt="beatrax"
+                width="22"
+                height="22"
+                class="wiz-brand-mark logo-svg"
+            />
+            <span class="wiz-brand-name">beatrax</span>
         </div>
 
         <nav class="wiz-dots" aria-label="Setup progress">

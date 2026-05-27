@@ -10,7 +10,7 @@
 <section class="wiz-step wiz-step-done" aria-labelledby="wiz-done-h1">
     <p class="wiz-eyebrow">Done</p>
     <h1 id="wiz-done-h1" class="wiz-h1">
-        diederik knows your money.
+        beatrax knows your money.
     </h1>
     <p class="wiz-lede">
         Your data is ready. Here's what to do next.
