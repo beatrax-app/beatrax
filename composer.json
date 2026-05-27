@@ -44,6 +44,7 @@
         "larastan/larastan": "^3.0",
         "laravel/horizon": "^5.46",
         "laravel/pint": "^1.18",
+        "maglnet/composer-require-checker": "^4",
         "mockery/mockery": "^1.6",
         "pestphp/pest": "^4.0",
         "pestphp/pest-plugin-arch": "^4.0",
