@@ -11,6 +11,7 @@ use Modules\Chains\Models\CardStatement;
 use Modules\Chains\Models\ChainLink;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -47,11 +48,32 @@ function seedIdempotencyFixture(): array
         'iban' => 'ICS-CARD',
         'default_currency' => 'EUR',
     ]);
+    $bankAccount = Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'ASN idempotency',
+        'slug' => 'asn-idempotency',
+        'kind' => 'bank',
+        'iban' => 'NL57ASNB0123456789',
+        'default_currency' => 'EUR',
+    ]);
+
+    // Seed the alias bridge so the ASN transfer_out's counterparty
+    // IBAN (NL08ABNA…) resolves to the user's ics_card account.
+    app(DefaultKnownCounterpartyIbansSeeder::class)->run($user);
+
     $run = ImportRun::query()->create([
         'user_id' => $user->id,
         'source_format' => 'ics-pdf',
         'raw_file_path' => '/tmp/idem.pdf',
         'sha256' => str_repeat('i', 64),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
+    ]);
+    $asnRun = ImportRun::query()->create([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/idem-asn.csv',
+        'sha256' => str_repeat('j', 64),
         'uploaded_at' => CarbonImmutable::now(),
         'status' => 'previewed',
     ]);
@@ -79,22 +101,25 @@ function seedIdempotencyFixture(): array
             'fingerprint_version' => 3,
         ]);
     }
+    // ASN-side transfer_out (the bulk-iDEAL settlement). counterparty
+    // IBAN alias-resolves to the user's ics_card account.
     Transaction::query()->create([
         'user_id' => $user->id,
-        'account_id' => $icsAccount->id,
-        'type' => 'transfer_in',
+        'account_id' => $bankAccount->id,
+        'type' => 'transfer_out',
         'posted_at' => '2026-04-28',
         'booked_at' => '2026-04-28 12:00:00',
         'value_date' => '2026-04-28',
-        'amount_minor' => 5000,
+        'amount_minor' => -5000,
         'currency' => 'EUR',
-        'settled_amount_minor' => 5000,
+        'settled_amount_minor' => -5000,
         'settled_currency' => 'EUR',
+        'counterparty_iban' => 'NL08ABNA0526650664',
         'counterparty_name' => 'ASN Bulk Idem',
         'counterparty_normalized' => 'asn-bulk-idem',
         'normalization_version' => 1,
-        'source_format' => 'ics-pdf',
-        'import_run_id' => $run->id,
+        'source_format' => 'asn-csv',
+        'import_run_id' => $asnRun->id,
         'source_row_index' => 999,
         'fingerprint' => str_pad('idmt', 64, 'y', STR_PAD_LEFT),
         'fingerprint_version' => 3,
