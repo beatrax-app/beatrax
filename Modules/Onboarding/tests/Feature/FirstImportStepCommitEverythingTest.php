@@ -143,7 +143,7 @@ it('commits every stashed ImportRun and writes starting balances atomically', fu
             (string) $bankAccount->id => ['minor' => 100000, 'date' => '2026-04-30'],
             (string) $cardAccount->id => ['minor' => 50000, 'date' => '2026-04-30'],
         ])
-        ->call('commit')
+        ->call('commitEverything')
         ->assertDispatched('wizard.step.completed');
 
     // The recorder saw both stashed run ids, in the canonical bank → card

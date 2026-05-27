@@ -120,7 +120,7 @@ it('does not call ConfirmsImports for stale import runs (regression-locks BuildC
 
     Livewire::test(FirstImportStep::class)
         ->set('balanceConfirmations', [(string) $cardAccount->id => ['minor' => 0, 'date' => '2026-04-30']])
-        ->call('commit');
+        ->call('commitEverything');
 
     expect($recorder->received)->toBe([$freshRunId]);
 });
