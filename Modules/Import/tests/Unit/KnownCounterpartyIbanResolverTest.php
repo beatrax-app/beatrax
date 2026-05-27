@@ -121,6 +121,53 @@ it('returns null on empty or whitespace IBAN', function (): void {
     expect($resolver->resolveAccount('   ', $world['user']->id))->toBeNull();
 });
 
+it('returns the lowest-id account when the user owns two accounts of the alias target kind', function (): void {
+    // Multi-account-per-kind scenario: the schema permits N accounts
+    // per kind per user, and the resolver must disambiguate
+    // deterministically. The contract is lowest-id wins; this test
+    // pins that invariant so future SQLite or storage-engine changes
+    // cannot silently flip the resolution.
+    $user = User::query()->create([
+        'username' => 'resolver-multi-bank',
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+    ]);
+
+    // Two `bank`-kind accounts on the same user. The first row
+    // created has the lowest id and must win the disambiguation.
+    $firstBank = Account::create([
+        'user_id' => $user->id,
+        'name' => 'First ASN',
+        'slug' => 'resolver-multi-bank-first',
+        'kind' => 'bank',
+        'iban' => 'NL57ASNB0123450000',
+        'default_currency' => 'EUR',
+    ]);
+    Account::create([
+        'user_id' => $user->id,
+        'name' => 'Second ABN',
+        'slug' => 'resolver-multi-bank-second',
+        'kind' => 'bank',
+        'iban' => 'NL00ABNA0000000000',
+        'default_currency' => 'EUR',
+    ]);
+
+    // Alias whose target_account_kind is `bank` — both accounts above
+    // qualify; the resolver must pick the lowest-id one.
+    KnownCounterpartyIban::query()->create([
+        'user_id' => $user->id,
+        'real_iban' => 'NL99THIRD0000000000',
+        'target_account_kind' => 'bank',
+        'notes' => 'Fictional third-party institution that aliases to bank.',
+    ]);
+
+    $resolver = app(ResolvesKnownCounterpartyIban::class);
+    $resolved = $resolver->resolveAccount('NL99THIRD0000000000', $user->id);
+
+    expect($resolved)->not->toBeNull();
+    expect($resolved->id)->toBe($firstBank->id);
+});
+
 it('per-user scoping — user As alias does not resolve for user B', function (): void {
     seedUserWithAccounts('resolver-scope-a', runAliasSeeder: true);
     $worldB = seedUserWithAccounts('resolver-scope-b', runAliasSeeder: false);
