@@ -92,6 +92,28 @@ xattr -d com.apple.quarantine /Applications/beatrax.app
 > Developer ID — we don't pay Apple $99/year just to avoid the
 > first-launch dialog. [Why we made this choice →](.docs/legal/license-rationale.md#no-paid-signing)
 
+#### Intel Macs (x86_64)
+
+The prebuilt installer ships an **Apple Silicon (arm64) DMG only**.
+GitHub's hosted macOS runners are all Apple Silicon now, and building
+an Intel bundle there under Rosetta 2 emulation routinely overruns the
+job timeout. Until that changes, Intel Mac users build from source:
+
+```sh
+git clone git@github.com:nightworksio/beatrax.git
+cd beatrax
+composer install
+npm ci
+cp .env.example .env
+php artisan key:generate
+php artisan native:install --publish --no-interaction --force
+php artisan native:build mac x64
+# Installer lands at nativephp/electron/dist/beatrax-<version>-x64.dmg
+```
+
+Full local-dev prerequisites (Herd, Node 20+, PHP 8.5) are in
+[.docs/local_development/setup.md](.docs/local_development/setup.md).
+
 ### Installing on Windows
 
 beatrax is an independent app. Windows SmartScreen will warn you the

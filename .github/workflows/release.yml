@@ -120,22 +120,20 @@ jobs:
               run: php artisan test
 
     build-macos:
-        # macOS DMG packaging is the slowest leg in the matrix —
-        # each arch's electron-builder pass takes 6–10 min wall-
-        # clock (framework copy + ad-hoc sign + DMG creation +
-        # DMG sign). Building both archs in a single job
-        # serialised them under one 30-min budget; the matrix
-        # below fans them out as two parallel jobs, each with a
-        # tighter 20-min budget. `fail-fast: false` keeps an
-        # arm64 failure from killing an otherwise-green x64.
-        name: build (macOS, ${{ matrix.arch }})
+        # macOS Intel (x64) is intentionally skipped from the
+        # prebuilt installer pipeline. GitHub deprecated all
+        # native macOS-Intel hosted runners earlier this year,
+        # so an x64 leg on macos-14 (Apple Silicon) has to run
+        # @electron/rebuild under Rosetta 2 — observed wall-clock
+        # is 18–25+ min vs ~9 min native arm64, and the silent
+        # subprocesses regularly trip the job timeout. Intel Mac
+        # users build from source per the README's
+        # "Installing on macOS" section. arm64 is the only
+        # prebuilt arch shipped from CI.
+        name: build (macOS, arm64)
         needs: gate
         runs-on: macos-14
         timeout-minutes: 20
-        strategy:
-            fail-fast: false
-            matrix:
-                arch: [x64, arm64]
         steps:
             - name: Check out the source
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -166,7 +164,7 @@ jobs:
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
-            - name: Build the macOS bundle (${{ matrix.arch }})
+            - name: Build the macOS bundle (arm64)
               env:
                   NATIVEPHP_APP_VERSION: ${{ github.ref_name }}
               run: |
@@ -174,12 +172,12 @@ jobs:
                   # Strip the leading `v` so the bundle's reported version
                   # matches the tag without the prefix (v0.1.0 → 0.1.0).
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
-                  php artisan native:build mac ${{ matrix.arch }}
+                  php artisan native:build mac arm64
 
-            - name: Upload macOS artifacts (${{ matrix.arch }})
+            - name: Upload macOS artifacts (arm64)
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
-                  name: macos-${{ matrix.arch }}
+                  name: macos-arm64
                   path: nativephp/electron/dist/*.dmg
                   if-no-files-found: error
 
