@@ -64,26 +64,60 @@
                             <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                 {{ $kindLabel($chain->kind) }}
                             </p>
+                            {{-- Each leg's counterparty NAME links to
+                                 the counterparty profile (D-46). The
+                                 transaction-detail drill-in is still
+                                 reachable from the date row beneath
+                                 (and from the chain drawer triggered
+                                 on the detail page). When a leg lacks
+                                 a resolved counterparty slug, the name
+                                 renders as plain text instead of a
+                                 dead-end link. --}}
                             <p class="mt-1 text-sm text-slate-900 dark:text-slate-100">
-                                <a
-                                    href="{{ route('transactions.show', ['transactionId' => $chain->fromTransactionId]) }}"
-                                    wire:navigate
-                                    class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
-                                >{{ $chain->fromCounterparty ?: '(no counterparty)' }}</a>
+                                @if ($chain->fromCounterpartySlug !== null)
+                                    <a
+                                        href="{{ route('counterparties.profile', ['slug' => $chain->fromCounterpartySlug]) }}"
+                                        wire:navigate
+                                        class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                        data-testid="chains-index-from-counterparty-link-{{ $chain->chainLinkId }}"
+                                    >{{ $chain->fromCounterparty ?: '(no counterparty)' }}</a>
+                                @else
+                                    <span data-testid="chains-index-from-counterparty-text-{{ $chain->chainLinkId }}">{{ $chain->fromCounterparty ?: '(no counterparty)' }}</span>
+                                @endif
                                 <span
                                     class="ml-2 text-slate-500 dark:text-slate-400"
                                     style="font-variant-numeric: tabular-nums;"
                                 >{{ $fmt($chain->fromAmount) }}</span>
                                 <span aria-hidden="true" class="mx-2 text-slate-400 dark:text-slate-500">←</span>
-                                <a
-                                    href="{{ route('transactions.show', ['transactionId' => $chain->toTransactionId]) }}"
-                                    wire:navigate
-                                    class="text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                                >{{ $chain->toCounterparty ?: '(no counterparty)' }}</a>
+                                @if ($chain->toCounterpartySlug !== null)
+                                    <a
+                                        href="{{ route('counterparties.profile', ['slug' => $chain->toCounterpartySlug]) }}"
+                                        wire:navigate
+                                        class="text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                                        data-testid="chains-index-to-counterparty-link-{{ $chain->chainLinkId }}"
+                                    >{{ $chain->toCounterparty ?: '(no counterparty)' }}</a>
+                                @else
+                                    <span data-testid="chains-index-to-counterparty-text-{{ $chain->chainLinkId }}">{{ $chain->toCounterparty ?: '(no counterparty)' }}</span>
+                                @endif
                                 <span
                                     class="ml-2 text-slate-500 dark:text-slate-400"
                                     style="font-variant-numeric: tabular-nums;"
                                 >{{ $fmt($chain->toAmount) }}</span>
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                <a
+                                    href="{{ route('transactions.show', ['transactionId' => $chain->fromTransactionId]) }}"
+                                    wire:navigate
+                                    class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                    data-testid="chains-index-from-tx-link-{{ $chain->chainLinkId }}"
+                                >Open from-row</a>
+                                <span aria-hidden="true" class="mx-1">·</span>
+                                <a
+                                    href="{{ route('transactions.show', ['transactionId' => $chain->toTransactionId]) }}"
+                                    wire:navigate
+                                    class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                    data-testid="chains-index-to-tx-link-{{ $chain->chainLinkId }}"
+                                >Open to-row</a>
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                 {{ $chain->fromPostedAt->format('d M Y') }} → {{ $chain->toPostedAt->format('d M Y') }}

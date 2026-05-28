@@ -66,15 +66,7 @@ final class ChainLinkQuery
 
     public function forTransaction(int $transactionId, User $user): ChainTree
     {
-        $rootRow = $this->db->connection()->table('transactions')
-            ->where('id', $transactionId)
-            ->where('user_id', $user->id)
-            ->first([
-                'id', 'counterparty_name',
-                'amount_minor', 'currency',
-                'settled_amount_minor', 'settled_currency',
-                'booked_at', 'account_id',
-            ]);
+        $rootRow = $this->fetchTransactionDisplayRow($transactionId, $user);
 
         if ($rootRow === null) {
             throw new NotFoundHttpException('Transaction not found.');
@@ -136,15 +128,7 @@ final class ChainLinkQuery
                 $visited[$partnerId] = true;
                 $nextFrontier[] = $partnerId;
 
-                $partnerRow = $this->db->connection()->table('transactions')
-                    ->where('id', $partnerId)
-                    ->where('user_id', $user->id)
-                    ->first([
-                        'id', 'counterparty_name',
-                        'amount_minor', 'currency',
-                        'settled_amount_minor', 'settled_currency',
-                        'booked_at', 'account_id',
-                    ]);
+                $partnerRow = $this->fetchTransactionDisplayRow($partnerId, $user);
                 if ($partnerRow === null) {
                     continue;
                 }
@@ -434,6 +418,7 @@ final class ChainLinkQuery
             $currency = 'EUR';
         }
         $amountMinor = self::toInt($row->settled_amount_minor ?? $row->amount_minor ?? null);
+        $counterpartySlug = self::extractCounterpartySlug($row);
 
         return new ChainTreeNode(
             transactionId: self::toInt($row->id),
@@ -445,7 +430,53 @@ final class ChainLinkQuery
             kind: $kind,
             confidenceTier: $tier,
             children: [],
+            counterpartySlug: $counterpartySlug,
         );
+    }
+
+    /**
+     * Fetch the per-transaction display payload used by the drawer's
+     * root + partner nodes. Joins `counterparties` so the resolved-
+     * counterparty slug travels alongside the rest of the row data,
+     * keeping the drawer render path free of N+1 lookups.
+     */
+    private function fetchTransactionDisplayRow(int $transactionId, User $user): ?stdClass
+    {
+        $row = $this->db->connection()->table('transactions')
+            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
+            ->where('transactions.id', $transactionId)
+            ->where('transactions.user_id', $user->id)
+            ->select([
+                'transactions.id',
+                'transactions.counterparty_name',
+                'transactions.amount_minor',
+                'transactions.currency',
+                'transactions.settled_amount_minor',
+                'transactions.settled_currency',
+                'transactions.booked_at',
+                'transactions.account_id',
+                'counterparties.slug as counterparty_slug',
+            ])
+            ->first();
+
+        return $row instanceof stdClass ? $row : null;
+    }
+
+    /**
+     * Extract a non-empty counterparty slug from a joined display row.
+     * An empty slug (the resolver convention for self-account rows) or
+     * a missing column both collapse to null so the consumer can fall
+     * back to plain-text rendering instead of generating a dead-end
+     * `/counterparties/` URL.
+     */
+    private static function extractCounterpartySlug(stdClass $row): ?string
+    {
+        if (! property_exists($row, 'counterparty_slug') || $row->counterparty_slug === null) {
+            return null;
+        }
+        $slug = self::toString($row->counterparty_slug);
+
+        return $slug === '' ? null : $slug;
     }
 
     private function makeChainLinkRow(stdClass $row, User $user): ChainLinkRow
@@ -469,15 +500,19 @@ final class ChainLinkQuery
         $fromAmountMinor = 0;
         $fromCurrency = 'EUR';
         $fromPostedAt = '1970-01-01';
+        $fromCounterpartySlug = null;
         $fromRow = $this->db->connection()->table('transactions')
-            ->where('id', $row->from_transaction_id)
-            ->where('user_id', $user->id)
-            ->first([
-                'counterparty_name',
-                'settled_amount_minor',
-                'settled_currency',
-                'posted_at',
-            ]);
+            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
+            ->where('transactions.id', $row->from_transaction_id)
+            ->where('transactions.user_id', $user->id)
+            ->select([
+                'transactions.counterparty_name',
+                'transactions.settled_amount_minor',
+                'transactions.settled_currency',
+                'transactions.posted_at',
+                'counterparties.slug as counterparty_slug',
+            ])
+            ->first();
         if ($fromRow !== null) {
             $fromCounterparty = self::toString($fromRow->counterparty_name ?? null);
             $fromAmountMinor = self::toInt($fromRow->settled_amount_minor ?? null);
@@ -487,22 +522,27 @@ final class ChainLinkQuery
             if ($fromPostedAt === '') {
                 $fromPostedAt = '1970-01-01';
             }
+            $fromCounterpartySlug = self::extractCounterpartySlug($fromRow);
         }
 
         $toCounterparty = '';
         $toAmountMinor = 0;
         $toCurrency = 'EUR';
         $toPostedAt = '1970-01-01';
+        $toCounterpartySlug = null;
         if ($row->to_transaction_id !== null) {
             $toRow = $this->db->connection()->table('transactions')
-                ->where('id', $row->to_transaction_id)
-                ->where('user_id', $user->id)
-                ->first([
-                    'counterparty_name',
-                    'settled_amount_minor',
-                    'settled_currency',
-                    'posted_at',
-                ]);
+                ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
+                ->where('transactions.id', $row->to_transaction_id)
+                ->where('transactions.user_id', $user->id)
+                ->select([
+                    'transactions.counterparty_name',
+                    'transactions.settled_amount_minor',
+                    'transactions.settled_currency',
+                    'transactions.posted_at',
+                    'counterparties.slug as counterparty_slug',
+                ])
+                ->first();
             if ($toRow !== null) {
                 $toCounterparty = self::toString($toRow->counterparty_name ?? null);
                 $toAmountMinor = self::toInt($toRow->settled_amount_minor ?? null);
@@ -512,6 +552,7 @@ final class ChainLinkQuery
                 if ($toPostedAt === '') {
                     $toPostedAt = '1970-01-01';
                 }
+                $toCounterpartySlug = self::extractCounterpartySlug($toRow);
             }
         }
 
@@ -529,6 +570,8 @@ final class ChainLinkQuery
             fromPostedAt: CarbonImmutable::parse($fromPostedAt),
             toPostedAt: CarbonImmutable::parse($toPostedAt),
             confirmsRemaining: $confirmsRemaining,
+            fromCounterpartySlug: $fromCounterpartySlug,
+            toCounterpartySlug: $toCounterpartySlug,
         );
     }
 
@@ -557,16 +600,20 @@ final class ChainLinkQuery
         $fromCurrency = 'EUR';
         $fromPostedAt = '1970-01-01';
         $fromAccountId = 0;
+        $fromCounterpartySlug = null;
         $fromRow = $this->db->connection()->table('transactions')
-            ->where('id', $fromTxId)
-            ->where('user_id', $user->id)
-            ->first([
-                'account_id',
-                'counterparty_name',
-                'settled_amount_minor',
-                'settled_currency',
-                'posted_at',
-            ]);
+            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
+            ->where('transactions.id', $fromTxId)
+            ->where('transactions.user_id', $user->id)
+            ->select([
+                'transactions.account_id',
+                'transactions.counterparty_name',
+                'transactions.settled_amount_minor',
+                'transactions.settled_currency',
+                'transactions.posted_at',
+                'counterparties.slug as counterparty_slug',
+            ])
+            ->first();
         if ($fromRow !== null) {
             $fromAccountId = self::toInt($fromRow->account_id ?? null);
             $fromCounterparty = self::toString($fromRow->counterparty_name ?? null);
@@ -577,6 +624,7 @@ final class ChainLinkQuery
             if ($fromPostedAt === '') {
                 $fromPostedAt = '1970-01-01';
             }
+            $fromCounterpartySlug = self::extractCounterpartySlug($fromRow);
         }
 
         $evidenceLines = $this->summariseHintEvidence(
@@ -595,6 +643,7 @@ final class ChainLinkQuery
             fromPostedAt: CarbonImmutable::parse($fromPostedAt),
             fromAccountName: $this->resolveAccountName($fromAccountId, $user),
             evidenceLines: $evidenceLines,
+            fromCounterpartySlug: $fromCounterpartySlug,
         );
     }
 

@@ -18,6 +18,12 @@ use Spatie\LaravelData\Data;
  * `$confirmsRemaining` is the auto-promotion hint — once the user
  * has confirmed two same-signature candidates, the third confirmation
  * promotes the signature to auto-confirm via `resolver='rule'`.
+ *
+ * `$fromCounterpartySlug` / `$toCounterpartySlug` carry the resolved-
+ * counterparty slug for each endpoint's counterparty-name click-through
+ * anchor that routes to `counterparties.profile`. NULL when the
+ * corresponding transaction has no resolved counterparty — the Blade
+ * then renders the counterparty name as plain text instead of a link.
  */
 final class ChainLinkRow extends Data
 {
@@ -35,5 +41,7 @@ final class ChainLinkRow extends Data
         public readonly CarbonImmutable $fromPostedAt,
         public readonly CarbonImmutable $toPostedAt,
         public readonly int $confirmsRemaining,
+        public readonly ?string $fromCounterpartySlug = null,
+        public readonly ?string $toCounterpartySlug = null,
     ) {}
 }

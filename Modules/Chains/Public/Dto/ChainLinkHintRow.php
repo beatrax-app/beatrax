@@ -47,5 +47,6 @@ final class ChainLinkHintRow extends Data
         public readonly CarbonImmutable $fromPostedAt,
         public readonly string $fromAccountName,
         public readonly array $evidenceLines,
+        public readonly ?string $fromCounterpartySlug = null,
     ) {}
 }

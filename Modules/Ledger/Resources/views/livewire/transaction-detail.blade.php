@@ -34,7 +34,18 @@
             <dl class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div class="space-y-1">
                     <dt class="text-sm text-slate-500 dark:text-slate-400">Counterparty</dt>
-                    <dd class="text-sm text-slate-900 dark:text-slate-100">{{ $transaction->counterparty_name ?? '—' }}</dd>
+                    <dd class="text-sm text-slate-900 dark:text-slate-100">
+                        @if ($transaction->counterparty !== null && $transaction->counterparty->slug !== '')
+                            <a
+                                href="{{ route('counterparties.profile', ['slug' => $transaction->counterparty->slug]) }}"
+                                wire:navigate
+                                class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                data-testid="tx-detail-counterparty-link"
+                            >{{ $transaction->counterparty_name ?? '—' }}</a>
+                        @else
+                            <span data-testid="tx-detail-counterparty-text">{{ $transaction->counterparty_name ?? '—' }}</span>
+                        @endif
+                    </dd>
                 </div>
 
                 <div class="space-y-1">
