@@ -13,6 +13,10 @@
   <img alt="Status: pre-1.0" src="https://img.shields.io/badge/status-v0.x-orange.svg">
 </p>
 
+<p align="center">
+  <strong>🇬🇧 English</strong> · <a href=".docs/translations/readme/nl-NL.md">🇳🇱 Nederlands</a>
+</p>
+
 ## What is beatrax?
 
 beatrax is a local-only personal finance dashboard that pulls together
