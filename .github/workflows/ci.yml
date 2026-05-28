@@ -48,6 +48,13 @@ jobs:
             - name: Check out the source
               uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
+            - name: Install poppler-utils (pdftotext)
+              # The receipt-extraction pipeline shells out to `pdftotext`
+              # from poppler-utils. The GitHub-hosted `ubuntu-latest`
+              # image does not ship the package; install it explicitly
+              # so PDF-fingerprint tests do not throw PdfExtractionFailed.
+              run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends poppler-utils
+
             - name: Set up PHP
               uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2
               with:
