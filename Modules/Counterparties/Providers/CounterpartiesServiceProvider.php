@@ -6,6 +6,10 @@ namespace Modules\Counterparties\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\Compilers\BladeCompiler;
+use Livewire\LivewireManager;
+use Modules\Counterparties\Internal\Http\Livewire\CounterpartyIndex;
+use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
+use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 use Modules\Counterparties\Internal\Pipeline\ResolveCounterpartyStage;
 use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
@@ -37,9 +41,10 @@ use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
  *    8 anonymous components under `Resources/views/components/*.blade.php`
  *    are addressable as `<x-counterparties::type-chip />`,
  *    `<x-counterparties::cp-card />`, etc. across the app.
- *
- * No Livewire components are registered yet; the follow-up plan owns
- * the index / profile / triage Livewire surface.
+ *  - registers the three Livewire pages — `counterparties.index`,
+ *    `counterparties.profile`, `counterparties.triage` — so the
+ *    routes file's class-string bindings (`CounterpartyIndex::class`
+ *    et al.) resolve through Livewire's component registry.
  */
 final class CounterpartiesServiceProvider extends ServiceProvider
 {
@@ -49,7 +54,7 @@ final class CounterpartiesServiceProvider extends ServiceProvider
         $this->app->singleton(ResolvesCounterparties::class, ResolveCounterpartyStage::class);
     }
 
-    public function boot(BladeCompiler $blade): void
+    public function boot(BladeCompiler $blade, LivewireManager $livewire): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
 
@@ -74,5 +79,9 @@ final class CounterpartiesServiceProvider extends ServiceProvider
          * against.
          */
         $blade->componentNamespace('Modules\\Counterparties\\Resources\\views\\components', 'counterparties');
+
+        $livewire->component('counterparties.index', CounterpartyIndex::class);
+        $livewire->component('counterparties.profile', CounterpartyProfile::class);
+        $livewire->component('counterparties.triage', CounterpartyTriage::class);
     }
 }

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 
 /**
  * Persistent left sidebar (Phase 16 D-05). Rendered from
@@ -57,6 +58,7 @@ final class AppSidebar extends Component
         CacheRepository $cache,
         DatabaseManager $db,
         Clock $clock,
+        CounterpartyTriageQueue $triage,
     ): View {
         $user = $currentUser->user();
         $isDeveloper = $user->is_developer === true;
@@ -89,6 +91,7 @@ final class AppSidebar extends Component
             'accountCaption' => $isDeveloper ? 'developer · local' : 'local',
             'queueCount' => $queueCount,
             'workerSecondsAgo' => $workerSecondsAgo,
+            'unknownCount' => $triage->unknownCountForUser($user),
         ]);
     }
 
