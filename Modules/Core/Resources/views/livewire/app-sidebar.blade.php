@@ -7,7 +7,7 @@
      * @var string $accountCaption
      * @var int $queueCount
      * @var int|null $workerSecondsAgo
-     * @var int|null $unknownCount  Count populated from injected service when available; NULL-tolerant — badge stays hidden when 0.
+     * @var int $unknownCount  Live count from CounterpartyTriageQueue; badge stays hidden when 0.
      *
      * Active-state helper — mirrors TopNav's `$isActive` lambda
      * (pre-rewrite analog) so route-driven highlighting reads from
@@ -15,7 +15,7 @@
      * helper.
      */
     $isActive = static fn (string $path): string => $currentPath === $path ? 'active' : '';
-    $unknownCounterpartyCount = $unknownCount ?? 0;
+    $unknownCounterpartyCount = $unknownCount;
 @endphp
 
 <aside class="side" aria-label="Primary" style="--side-w: 248px;">
@@ -57,12 +57,10 @@
     </a>
     {{--
         Counterparties index — the type-aware "who am I transacting
-        with?" surface. The hard-coded path is intentional for this
-        UI-shell-only wave: the matching Livewire page (and named
-        route) lands in the follow-up plan; until then the link
-        routes to a 404, which is acceptable.
+        with?" surface. Resolves to the named route
+        `counterparties.index` shipped with 17-06b.
     --}}
-    <a href="/counterparties" class="side-item {{ $isActive('/counterparties') }}">
+    <a href="{{ route('counterparties.index') }}" class="side-item {{ $isActive('/counterparties') }}">
         <span class="ic" aria-hidden="true">◉</span>
         Counterparties
     </a>
@@ -71,10 +69,9 @@
         labelling unknown counterparties. Carries an amber count badge
         when there are unknowns to identify; hidden when zero so the
         sidebar stays calm. Count populated from the injected
-        unknown-counterparty query when available; renders nothing
-        until then.
+        CounterpartyTriageQueue read query.
     --}}
-    <a href="/counterparties/triage" class="side-item {{ $isActive('/counterparties/triage') }}">
+    <a href="{{ route('counterparties.triage') }}" class="side-item {{ $isActive('/counterparties/triage') }}">
         <span class="ic" aria-hidden="true">❋</span>
         Triage
         @if ($unknownCounterpartyCount > 0)
