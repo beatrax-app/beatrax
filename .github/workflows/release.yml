@@ -457,14 +457,16 @@ jobs:
               uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
               with:
                   tag_name: ${{ github.ref_name }}
-                  # Stable tags (v*.*.*) create a draft Release that a
-                  # human must explicitly publish. Any tag carrying a
-                  # semver prerelease suffix (-beta, -rc.1, -alpha.2,
-                  # …) publishes immediately to the preview channel —
-                  # the hyphen after the version triple is semver 2.0's
-                  # marker for a prerelease, so `contains('-')` is the
-                  # right detection rule.
-                  draft: ${{ !contains(github.ref_name, '-') }}
+                  # The repo has "immutable releases" enabled, which
+                  # rejects asset uploads after a Release transitions
+                  # to published. softprops uploads its asset list
+                  # AFTER the Release is created, so a non-draft
+                  # create fails immediately. Always create as draft
+                  # here, then the next step flips prerelease tags
+                  # (anything with a `-` suffix) to a published
+                  # prerelease via `gh release edit`. Stable tags
+                  # stay as draft so a human can review + publish.
+                  draft: true
                   prerelease: ${{ contains(github.ref_name, '-') }}
                   # Every platform artifact PLUS the Ed25519 detached
                   # signature for each publisher manifest. Installed
@@ -473,6 +475,21 @@ jobs:
                   files: |
                       artifacts/**/*
                       artifacts/**/latest*.yml.sig
+
+            - name: Flip prerelease draft to published
+              if: contains(github.ref_name, '-')
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  # Convert the draft Release softprops just created
+                  # into a published prerelease. Assets land while the
+                  # Release is still a draft (which immutable-releases
+                  # allows); publishing here only flips the visibility
+                  # bit, no asset upload happens.
+                  gh release edit "${{ github.ref_name }}" \
+                      --repo "${{ github.repository }}" \
+                      --draft=false
 
     verify-published:
         name: verify published
