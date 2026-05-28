@@ -10,7 +10,11 @@ whether it was built by CI or by a developer's local `php artisan native:build`.
 |---|---|---|
 | `.github/workflows/ci.yml` | Every `pull_request` and every push to `main` | Quality gate: Larastan level 10 strict + Laravel Pint + Pest, across the PHP 8.4 + PHP 8.5 matrix |
 | `.github/workflows/release.yml` | `push: tags: [v*]` only | Re-runs the quality gate, builds three platform installers in parallel, signs the update manifest with Ed25519, publishes the GitHub Release |
-| `.github/workflows/security.yml` | Every `pull_request` and every push to `main` | Runs gitleaks against the diff to catch accidentally-committed secrets before merge |
+
+Secret-scanning is handled by GitHub's repo-level **secret scanning** + **push
+protection** features (enabled in Settings → Code security), not a workflow.
+That covers every push and PR against the canonical provider patterns; the
+repo holds no project-specific high-entropy tokens that need a custom rule.
 
 `release.yml` triggers **only** on tag push. It never runs on `pull_request_target` —
 that combination is the canonical fork-PR secret-exfiltration pattern, and the project's

@@ -173,10 +173,10 @@ and any per-user encrypted column is trivially decryptable across machines.
 - The first-launch bootstrap regenerates `APP_KEY` per install and writes
   the active `.env` to `Application::storagePath()`, not into the read-only
   bundle root.
-- CI runs `gitleaks` over the bundle before publishing — any high-entropy
-  string triggers a hard fail.
-- The release workflow's bundle step explicitly excludes `.env*` from the
-  packaged source.
+- GitHub's repo-level secret scanning + push protection guard the source
+  tree against accidentally-committed provider tokens; the release
+  workflow's bundle step explicitly excludes `.env*` from the packaged
+  source so even build-time defaults never reach the published archive.
 
 ## Public-release boundary
 

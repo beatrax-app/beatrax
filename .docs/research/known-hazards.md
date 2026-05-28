@@ -326,7 +326,8 @@ path leaks financial history to a sync provider.
   path. The setup guide is explicit.
 - `.env` chmods to 0600 at install time.
 - The pre-push hook scans for high-entropy strings + known secret
-  patterns; CI runs `gitleaks` on every PR.
+  patterns; GitHub's repo-level secret scanning + push protection cover
+  the canonical provider tokens at the platform layer.
 - OAuth secrets land in the `oauth_secrets` table encrypted by `APP_KEY`,
   keyed by `user_id`. Each user's tokens are unreadable from another user's
   session (verified by an arch invariant against any direct read of the

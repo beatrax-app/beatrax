@@ -56,8 +56,7 @@ cat <<'EOF' > /tmp/main-ruleset.json
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
           { "context": "quality (PHP 8.4)" },
-          { "context": "quality (PHP 8.5)" },
-          { "context": "gitleaks" }
+          { "context": "quality (PHP 8.5)" }
         ]
       }
     }
@@ -66,6 +65,10 @@ cat <<'EOF' > /tmp/main-ruleset.json
 EOF
 gh api -X POST repos/nightworksio/beatrax/rulesets --input /tmp/main-ruleset.json
 ```
+
+Secret-scanning is provided by the repo-level GitHub feature (Settings →
+Code security → Secret scanning + Push protection); no custom workflow is
+gated by this ruleset.
 
 ### Rules enforced
 
@@ -104,9 +107,12 @@ external contributors arrive so admins still go through PRs.
 |---|---|---|---|
 | `quality (PHP 8.4)` | `.github/workflows/ci.yml` | `quality` (matrix `php: 8.4`) | Pint, Larastan L10 strict, Pest full suite on PHP 8.4 — the runtime `nativephp/php-bin` ships |
 | `quality (PHP 8.5)` | `.github/workflows/ci.yml` | `quality` (matrix `php: 8.5`) | Same gates on the next supported PHP — catches forward-compat breakage early |
-| `gitleaks` | `.github/workflows/security.yml` | `gitleaks` | Secret-scan every PR + push for leaked credentials |
 
-The ruleset references all three contexts already, so the gates become
+Secret-scanning runs at the repo-platform level (GitHub Secret Scanning +
+Push Protection), not as a status check. Findings surface in the Security
+tab and can block pushes that introduce a recognised provider token.
+
+The ruleset references both contexts already, so the gates become
 enforced the moment the matching workflows merge.
 
 ## Repository settings
