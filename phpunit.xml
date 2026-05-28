@@ -39,7 +39,13 @@
             <directory>Modules/Categorization/tests/Feature</directory>
             <directory>Modules/Community/tests/Feature</directory>
             <directory>Modules/Counterparties/tests/Feature</directory>
-            <directory>Modules/DriftAlerts/tests/Feature</directory>
+            <!-- Modules/DriftAlerts/tests/Feature is covered by the
+                 dedicated DriftAlerts testsuite below; including it
+                 here too triggers the same "Cannot add file …
+                 already added" testRunnerTriggeredPhpunitWarning
+                 noise that the Auth exclusion above prevents, which
+                 in turn tips the Pest exit code to 1 on otherwise-
+                 passing runs. -->
             <directory>Modules/Transfers/tests/Feature</directory>
             <directory>Modules/Receipts/tests/Feature</directory>
             <directory>Modules/Recurring/tests/Feature</directory>
