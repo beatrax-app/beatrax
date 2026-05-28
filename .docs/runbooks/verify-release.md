@@ -58,8 +58,8 @@ gh release view v${VERSION} --json body --jq '.body' \
 ```
 
 If the project ever rotates the publisher key, both the in-bundle constant and the
-release-page footer move in lockstep — see the rotation procedure in
-[`../adr/`](../adr/) (lands in a follow-up pass).
+release-page footer move in lockstep — see the [Architecture Decision Records](../adr/)
+for the related publisher-trust decisions.
 
 ### Step 2 — Download the manifest and signature
 

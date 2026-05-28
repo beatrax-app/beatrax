@@ -1,0 +1,176 @@
+# Module boundaries
+
+beatrax is structured as eighteen bounded modules under `Modules/`. Each module
+owns a slice of the domain, exposes a narrow public surface, and is forbidden
+from reaching into another module's internals. This document names the
+modules, describes the shape of the boundary, and lists the arch invariants
+that enforce it.
+
+The choice to use `nwidart/laravel-modules` as the structural carrier is
+recorded in [ADR 0001](../adr/0001-modular-architecture.md). The DI-only rule
+that operates inside each module is recorded in
+[ADR 0002](../adr/0002-di-only-rule.md). This file describes the layout those
+two decisions produced.
+
+## The modules
+
+| Module | What it owns |
+| --- | --- |
+| `Auth` | Username/password auth, recovery codes, OAuth-secret repository, owner-resets-partner flow, the `force_password_change` posture |
+| `Categorization` | Rule-based auto-categorization, per-user merchant memory, the categorization-rules CRUD surface, the receipt-vs-statement enrichment conflict resolver |
+| `Chains` | PayPal→funder + ICS bulk-iDEAL settlement chain resolution, the `chain_links` ledger, the per-user `ShouldBeUniqueUntilProcessing` resolver job |
+| `Community` | Optional community-merchant-mapping dataset opt-in toggles + corpus distribution |
+| `Core` | Users + sessions + system alerts + user preferences; the `BelongsToUser` trait; the `diederik:doctor` and `db:backup` console commands |
+| `Counterparties` | Counterparty resolution pipeline + index/profile/triage surfaces (`/counterparties`) |
+| `Desktop` | NativePHP shell glue — the entire `Native\Laravel\*` import surface lives here and nowhere else |
+| `DevMode` | Developer-mode gate + dev-console pages (logs, queue, audit, doctor, palette) |
+| `DriftAlerts` | Drift detection over recurring series, drift-alert state machine, acknowledge/snooze/what-if-cancel actions |
+| `EmailScan` | Gmail + Microsoft Graph OAuth, per-inbox UID-resume scan state, the inbox-scan state machine, `.eml`/`.mbox` drop-in |
+| `Forecasting` | 30/60/90-day cash-flow projections, scenario mutations (non-persistent), R-7 percentile bands, shortfall windows |
+| `Import` | The ImportPipeline orchestrator + per-format adapters (ASN CSV/CAMT/MT940, ICS PDF, PayPal CSV), the preview wizard |
+| `Ingestion` | The canonical-transaction DTO + source-adapter registry + statement-summary writer + account-resolver contract |
+| `Ledger` | Transactions, accounts, categories, merchants, import runs, currencies, statement summaries — the canonical store |
+| `Onboarding` | First-run wizard progress tracking + the multi-step onboarding flow |
+| `Receipts` | Receipt-vs-statement matching (PayPal/ICS/Google-Play receipt parsers), the file-imports table, the matcher-key indexing |
+| `Recurring` | Recurring-series detection (any cadence), the always-suggest-never-auto-apply state machine, the per-series acknowledgement |
+| `Transfers` | Self-transfer detection across accounts, transfer-pair resolution |
+
+## The Public / Internal / Models split
+
+Every module has a fixed directory layout:
+
+```
+Modules/<Name>/
+├── Public/         ← contracts, DTOs, events, facades other modules MAY import
+│   ├── Contracts/  ← interfaces the module's owners promise to keep stable
+│   ├── Dto/        ← spatie/laravel-data DTOs other modules consume
+│   ├── Events/     ← events other modules MAY listen for
+│   └── Services/   ← concrete services other modules MAY inject
+├── Internal/       ← actions, jobs, listeners, parsers, pipeline stages — NEVER imported elsewhere
+│   ├── Actions/
+│   ├── Console/
+│   ├── Http/
+│   ├── Jobs/
+│   ├── Listeners/
+│   ├── Pipeline/
+│   └── ...
+├── Models/         ← Eloquent models; other modules MAY use directly (see ADR 0002)
+├── Database/
+│   ├── Migrations/
+│   ├── Seeders/
+│   └── Factories/
+├── Routes/         ← web.php / api.php — each module owns its own URL surface
+├── Resources/      ← views, lang files, brand assets owned by the module
+├── Providers/      ← the module's service provider (wires DI bindings, registers schedules, boots Livewire components)
+└── tests/          ← Unit/, Feature/, Contracts/, Arch/ — module-owned, run by the same Pest CLI
+```
+
+The rule is simple: a module MAY import from another module's `Public/` and
+`Models/` namespaces; a module MAY NOT import from another module's `Internal/`
+namespace. Cross-module behaviour goes through the importing module's
+`Public/Contracts/`: it declares the interface; the owning module implements
+it; the binding is wired in the owning module's service provider.
+
+A worked example: the `Import` module needs to apply auto-categorization to
+a freshly-parsed canonical transaction. `Import` declares no Categorization
+internals; it injects the `AppliesAutoCategory` contract from
+`Modules\Categorization\Public\Contracts\` and calls its `apply()` method.
+`Categorization` implements that contract inside
+`Modules/Categorization/Internal/Pipeline/ApplyAutoCategoryStage.php`. The
+import pipeline never knows or cares which class implements the contract; the
+arch tests guarantee `Import` never reaches into `Categorization/Internal/`
+directly.
+
+## The arch invariants that hold the line
+
+`tests/Contracts/BoundaryArchTest.php` ships twenty-nine arch invariants
+specifically guarding the module-boundary contract. Selected examples:
+
+- **`noResolverWritesTransactions`** — files under
+  `Modules/Chains/Internal/Resolvers/` cannot write the `transactions` table.
+  Chain resolution operates over read-only `transactions` queries and writes
+  only to its own `chain_links` ledger.
+- **`noTransactionWritesFromEmailScan`** — `Modules/EmailScan/` cannot write
+  the `transactions` table. Email scanning produces inbox-message rows;
+  promotion to transactions happens through the explicit `Receipts` →
+  `Ingestion` → `Ledger` path.
+- **`noTransactionWritesFromRecurring`** — `Modules/Recurring/` only reads
+  `transactions`. The detector emits suggestion rows on its own table.
+- **`noTransactionWritesFromForecasting`** — `Modules/Forecasting/` only
+  reads `transactions`, `recurring_series`, `card_statements`,
+  `chain_links`, and `drift_alerts`. Forecast runs write only to their own
+  `forecast_runs` + `forecast_scenario_mutations` tables.
+- **`noOtherInboxScanStateMutator`** — `inbox_scan_state` mutations go
+  through `InboxScanStateMachine` only. Same shape applies to
+  `recurring_series.state`, `drift_alerts.state`, and `card_statements.state`.
+- **`noAuthFacadeOrHelper`** — the `Auth` facade and `auth()`/`session()`
+  helpers are forbidden across `Modules/*` outside an explicit allow-list.
+  This enforces [ADR 0002](../adr/0002-di-only-rule.md).
+- **`noFacadeCallsFromCoreConsoleCommands`** /
+  **`noLaravelGlobalHelpersInCoreConsoleCommands`** — even the
+  Console-bootstrap layer respects the DI-only rule.
+- **`noHorizonImportsInShippedBuildCode`** — Horizon imports are restricted
+  to one allow-listed provider that guards itself with the
+  `BEATRAX_RUNTIME=herd` runtime check (see
+  [ADR 0007](../adr/0007-database-queue-driver.md)).
+- **`noNativePhpImportsOutsideDesktopModule`** — `Native\Laravel\*` and
+  `Native\Desktop\*` symbols are forbidden outside `Modules/Desktop/`.
+- **`noShellContractOutsideAllowList`** — the narrower
+  `Native\Desktop\Contracts\Shell` import is restricted to one allow-listed
+  action plus a single fallback.
+- **`noStoragePathHardCodedOutsideUserDataPathService`** — raw `storage_path()`
+  / `database_path()` literals are forbidden outside `UserDataPathService`,
+  which is what makes the per-OS user-data-directory paths
+  (see [ADR 0006](../adr/0006-nativephp-desktop-shell.md)) work.
+- **`paymentTypeHinterContract`** — every `*Hinter` class under
+  `Modules/Import/Internal/Parsers/` must implement the `PaymentTypeHinter`
+  contract; this is the per-adapter extension hook for the
+  classifier stage.
+- **`noMerchantAliasesQueryWithoutUserIdFilter`** — every raw query against
+  `merchant_aliases` must carry an explicit `where('user_id', $userId)`
+  filter. This is the BelongsToUser arch invariant the trait cannot enforce
+  (raw queries bypass Eloquent scopes); see
+  [ADR 0008](../adr/0008-multi-user-belongstouser.md).
+- **`everyDevModeRouteAppliesEnsureDeveloperModeMiddleware`** — every route
+  under `/dev/*` must carry the `ensureDeveloperMode` middleware.
+- **`darkCompanionUtilitiesOnThemedViews`** — every `bg-white` or
+  `text-slate-900` Tailwind utility in a themed module view must carry a
+  matching `dark:` companion class.
+
+A violation of any invariant fails the Pest run, which fails the PR gate.
+The full list lives in `tests/Contracts/BoundaryArchTest.php`; the file is
+the load-bearing safety net for the entire module structure.
+
+## Events as the second boundary path
+
+Where a contract would be too narrow — when one module reacts to a thing
+another module does, rather than calling it — the modules use Laravel
+events. The owning module raises an event from its `Public/Events/`
+namespace; any other module's `Internal/Listeners/` may listen.
+
+Examples:
+
+- `Modules\Ingestion\Public\Events\StatementSummaryRecorded` — raised by
+  Ledger after a CAMT/MT940 statement-summary row lands; the Chains
+  resolver listens to schedule chain-resolution for the affected user.
+- `Modules\Auth\Public\Events\UserPasswordChanged` — raised on a successful
+  password change; the session middleware listens to invalidate competing
+  sessions for the same user.
+
+Events stay in `Public/Events/` because they are part of the module's public
+surface — once another module listens for one, removing it is a breaking
+change.
+
+## Where to look next
+
+- [Ingestion pipeline](ingestion-pipeline.md) — the end-to-end flow from
+  raw source file to canonical `Transaction` row, crossing the
+  `Import` → `Ingestion` → `Ledger` modules and the `Categorization`
+  + `Counterparties` boundaries.
+- [Chain resolution](chain-resolution.md) — the read-mostly resolver that
+  reaches across `Ledger`, `Counterparties`, and `Chains` without writing
+  outside its own `chain_links` table.
+- [Categorization](categorization.md) — the categorizer's two-pass shape
+  (rule-based + per-user memory) plus the ≥40% confidence gate.
+- [Data model](data-model.md) — the table-level ERD that the modules
+  collectively own.
