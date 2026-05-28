@@ -67,7 +67,10 @@ it('skips pending steps that appear before a later-pending step when earlier one
     /** @var ResumeStepResolver $resolver */
     $resolver = $this->app->make(ResumeStepResolver::class);
 
-    expect($resolver->resolve($this->user->id))->toBe('connect-card');
+    // Registry order is welcome → connect-bank → connect-paypal → … so
+    // after marking welcome=done + connect-bank=skipped, the next still-
+    // pending step is connect-paypal.
+    expect($resolver->resolve($this->user->id))->toBe('connect-paypal');
 });
 
 it('returns the empty-string sentinel when every step is done or skipped', function (): void {

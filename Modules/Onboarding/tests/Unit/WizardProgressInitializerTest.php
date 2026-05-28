@@ -6,14 +6,20 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
+use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 
 uses(RefreshDatabase::class);
 
 /*
- * Unit coverage for WizardProgressInitializer: the seeder that lands the
- * six wizard_progress rows for a freshly-installed user, and the
- * idempotency guard that lets re-fires from a UserInstalled listener
- * never duplicate or overwrite already-progressed steps.
+ * Unit coverage for WizardProgressInitializer: the seeder that lands one
+ * wizard_progress row per step the WizardStepRegistry enumerates for a
+ * freshly-installed user, and the idempotency guard that lets re-fires
+ * from a UserInstalled listener never duplicate or overwrite already-
+ * progressed steps. Step set is currently 7 entries
+ * (welcome / connect-bank / connect-paypal / connect-card /
+ * connect-email / first-import / done) — the assertions read the
+ * registry rather than hard-coding the expected count, so future
+ * connector additions don't trip this test.
  */
 
 beforeEach(function (): void {
@@ -24,39 +30,39 @@ beforeEach(function (): void {
     ]);
 });
 
-it('seeds exactly six wizard_progress rows in pending status', function (): void {
+it('seeds one wizard_progress row per registry step in pending status', function (): void {
     /** @var WizardProgressInitializer $initializer */
     $initializer = $this->app->make(WizardProgressInitializer::class);
+    /** @var WizardStepRegistry $registry */
+    $registry = $this->app->make(WizardStepRegistry::class);
+    $expectedSteps = $registry->steps();
 
     $initializer->initialize($this->user->id);
 
     $rows = DB::table('wizard_progress')->where('user_id', $this->user->id)->get();
 
-    expect($rows)->toHaveCount(6);
+    expect($rows)->toHaveCount(count($expectedSteps));
 
     foreach ($rows as $row) {
         expect($row->status)->toBe('pending');
     }
 
     $stepKeys = $rows->pluck('step_key')->sort()->values()->all();
-    expect($stepKeys)->toBe([
-        'connect-bank',
-        'connect-card',
-        'connect-email',
-        'done',
-        'first-import',
-        'welcome',
-    ]);
+    $expectedSorted = collect($expectedSteps)->sort()->values()->all();
+    expect($stepKeys)->toBe($expectedSorted);
 });
 
-it('is idempotent — re-fire still produces exactly six rows', function (): void {
+it('is idempotent — re-fire still produces one row per registry step', function (): void {
     /** @var WizardProgressInitializer $initializer */
     $initializer = $this->app->make(WizardProgressInitializer::class);
+    /** @var WizardStepRegistry $registry */
+    $registry = $this->app->make(WizardStepRegistry::class);
+    $expectedCount = count($registry->steps());
 
     $initializer->initialize($this->user->id);
     $initializer->initialize($this->user->id);
 
-    expect(DB::table('wizard_progress')->where('user_id', $this->user->id)->count())->toBe(6);
+    expect(DB::table('wizard_progress')->where('user_id', $this->user->id)->count())->toBe($expectedCount);
 });
 
 it('does not overwrite a step that has already progressed past pending', function (): void {
