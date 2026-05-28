@@ -118,7 +118,13 @@ it('renders Section 3 "Deleting your data" verbatim with the no-telemetry line',
     $component->assertSeeText('To remove beatrax and every trace of your data');
     $component->assertSeeText('Drag beatrax to the Trash');
     $component->assertSeeText('Delete the folders listed above');
-    $component->assertSeeText("There's no telemetry to opt out of and no remote account to close.");
+
+    // Livewire's assertSeeText HTML-escapes the needle by default
+    // (turning the apostrophe into `&#039;`) before searching the
+    // stripped-tags haystack, which still contains the raw `'`
+    // character. Pass `escape: false` so the assertion compares the
+    // literal needle against the rendered text.
+    $component->assertSeeText("There's no telemetry to opt out of and no remote account to close.", escape: false);
 });
 
 it('resolves paths only through the authenticated user (cross-user safety)', function (): void {
