@@ -142,6 +142,18 @@ jobs:
             - name: Install npm dependencies
               run: npm ci
 
+            - name: Stage NativePHP electron scaffold + app .env
+              # `nativephp/electron/` is gitignored — the desktop build's
+              # prebuild hooks (patch-imports, inject-tray) need it on
+              # disk first, and the bundler copies the project `.env`
+              # into `vendor/nativephp/desktop/resources/build/app/.env`
+              # so the packaged runtime has a base config to load.
+              run: |
+                  set -euo pipefail
+                  cp .env.example .env
+                  php artisan key:generate --ansi
+                  php artisan native:install --publish --no-interaction --force
+
             - name: Build the macOS bundle
               env:
                   NATIVEPHP_APP_VERSION: ${{ github.ref_name }}
@@ -200,15 +212,31 @@ jobs:
               uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2
               with:
                   php-version: '8.4'
-                  extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
+                  # Windows additions: ext-zip + ext-sodium are needed
+                  # by nativephp/desktop and the libsodium-backed
+                  # auto-update signing. ext-pcntl + ext-posix are
+                  # POSIX-only and cannot be installed on Windows; we
+                  # tell composer to ignore those platform requirements
+                  # below since the desktop runtime does not invoke the
+                  # signal-handled queue worker on this platform.
+                  extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json, zip, sodium
                   coverage: none
                   tools: composer:v2
 
             - name: Install Composer dependencies
-              run: composer install --prefer-dist --no-interaction --no-progress
+              shell: bash
+              run: composer install --prefer-dist --no-interaction --no-progress --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
 
             - name: Install npm dependencies
               run: npm ci
+
+            - name: Stage NativePHP electron scaffold + app .env
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  cp .env.example .env
+                  php artisan key:generate --ansi
+                  php artisan native:install --publish --no-interaction --force
 
             - name: Build the Windows bundle
               shell: bash
@@ -272,6 +300,13 @@ jobs:
 
             - name: Install npm dependencies
               run: npm ci
+
+            - name: Stage NativePHP electron scaffold + app .env
+              run: |
+                  set -euo pipefail
+                  cp .env.example .env
+                  php artisan key:generate --ansi
+                  php artisan native:install --publish --no-interaction --force
 
             - name: Build the Linux bundle
               env:
