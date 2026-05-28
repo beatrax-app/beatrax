@@ -101,3 +101,80 @@ that point, not before.
 
 Classic protection requires Pro/paid on private repos AND is being phased
 out by GitHub in favor of rulesets. Skipped entirely.
+
+## Branch protection: main (full enumeration)
+
+Once the ruleset above is applied, the following rules govern every push
+to `main`:
+
+| Rule | Setting | Notes |
+|---|---|---|
+| Require pull request before merging | Optional (admin bypass on) | Solo posture per D-50; tighten when external contributors arrive |
+| Require approvals | 0 (or 1 with a second account) | Self-merge allowed when CI is green |
+| Dismiss stale approvals on new commits | ON | Standard hygiene |
+| Require status checks to pass | ON | See "Status checks required" table below |
+| Require branches up to date before merging | ON | Forces a rebase against `main` before merge |
+| Require signed commits | ON | All commits to `main` carry a verified signature |
+| Require linear history | ON | Squash + rebase only; no merge commits |
+| Restrict force-push | Blocked for everyone | `non_fast_forward` rule — even admins must use a fresh branch |
+| Restrict deletion | Blocked for everyone | `deletion` rule — `main` cannot be deleted |
+| Auto-delete merged head branches | ON | Repo-level setting (separate from ruleset) |
+
+## Status checks required
+
+| Status check context | Workflow file | Job | Purpose |
+|---|---|---|---|
+| `quality (PHP 8.4)` | `.github/workflows/ci.yml` | `quality` (matrix `php: 8.4`) | Pint, Larastan L10 strict, Pest full suite on PHP 8.4 — the runtime `nativephp/php-bin` ships |
+| `quality (PHP 8.5)` | `.github/workflows/ci.yml` | `quality` (matrix `php: 8.5`) | Same gates on the next supported PHP — catches forward-compat breakage early |
+| `gitleaks` | `.github/workflows/security.yml` | `gitleaks` | Secret-scan every PR + push for leaked credentials |
+
+The matrix axis `[8.4, 8.5]` lands in Plan 17-02; the `gitleaks` job in
+Plan 17-03. The ruleset above already references all three contexts so
+the moment those workflows merge, the gates become enforced.
+
+## Repository settings
+
+| Setting | Value | Where |
+|---|---|---|
+| Default branch | `main` | Settings → General |
+| Auto-delete merged head branches | ON | Settings → General → Pull Requests |
+| Merge commits | OFF | Settings → General → Pull Requests |
+| Squash merging | ON | Settings → General → Pull Requests |
+| Rebase merging | ON | Settings → General → Pull Requests |
+| Wiki | OFF | Settings → General → Features (docs live in `.docs/`) |
+| Projects | OFF | Settings → General → Features (Issues + Milestones cover planning) |
+| Discussions | ON | Settings → General → Features (Q&A, Show & Tell, Announcements + default General) |
+| Issues | ON | Settings → General → Features |
+| Secret scanning | ON (public-only) | Settings → Code security and analysis |
+| Push protection | ON (public-only) | Settings → Code security and analysis |
+| Dependabot alerts | ON | Settings → Code security and analysis |
+| Dependabot security updates | ON | Settings → Code security and analysis |
+| Dependabot version updates | ON | `.github/dependabot.yml` (composer + npm + github-actions, weekly) |
+| Code scanning (CodeQL default) | ON (public-only) | Settings → Code security and analysis |
+| Private vulnerability reporting | ON (public-only) | Settings → Code security and analysis |
+
+Public-only items light up automatically after Plan 17-15's visibility
+flip — see `../runbooks/repo-security-setup.md` for the apply order.
+
+## Repository metadata
+
+| Field | Value |
+|---|---|
+| Description | "Local-first personal finance dashboard that resolves cross-account routing chains across banking, ICS Cards, PayPal, and Google Play." |
+| Homepage | Not set (no project domain yet) |
+| Topics (13) | `camt053`, `desktop-app`, `dutch-banks`, `hippocratic-license`, `laravel`, `livewire`, `local-first`, `nativephp`, `personal-finance`, `php`, `sepa`, `sqlite`, `tailwindcss` |
+| Social preview image | `resources/brand/social-preview-1280.png` (uploaded via UI once Plan 17-04 commits the asset) |
+
+## Cross-references
+
+- `../runbooks/repo-security-setup.md` — step-by-step reproduction
+  walkthrough with the matching `gh` recipes.
+- `release-cadence.md` (lands with Plan 17-01) — how the protected `main`
+  branch interacts with the SemVer + release-branch cadence.
+- `release-workflow.md` (lands with Plan 17-09b) — how the release
+  pipeline reads `main`, builds the tagged artefacts, and respects the
+  `required_signatures` rule.
+- `../../.github/CODEOWNERS` (lands with Plan 17-03) — required reviewers
+  for `/.github/workflows/` once the ruleset enforces PR review.
+- `../../.github/dependabot.yml` — the version-update config that
+  Dependabot reads weekly.
