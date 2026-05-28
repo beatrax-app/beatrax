@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DevMode\Internal\Audit;
 
 use Carbon\CarbonInterface;
+use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -38,11 +39,15 @@ use Spatie\Activitylog\Support\ActivityLogger;
  */
 final readonly class SpatieAuditWriter implements AuditWriter
 {
+    /** Custom dev_mode_audit table the package migration creates. */
+    private const AUDIT_TABLE = 'dev_mode_audit';
+
     public function __construct(
         private CurrentUser $currentUser,
         private Clock $clock,
         private RedactionExcerptCap $cap,
         private ActivityLogger $logger,
+        private DatabaseManager $db,
     ) {}
 
     /**
@@ -58,8 +63,9 @@ final readonly class SpatieAuditWriter implements AuditWriter
         ?int $exitCode,
         string $stdoutExcerpt,
         string $errorExcerpt,
+        ?string $runId = null,
     ): void {
-        $this->dispatch(AuditEvent::CommandExecuted, $callerUserId, [
+        $properties = [
             'command' => $command,
             'args' => $args,
             'tier' => $tier,
@@ -68,7 +74,73 @@ final readonly class SpatieAuditWriter implements AuditWriter
             'error_excerpt' => $this->cap->apply($errorExcerpt),
             'started_at' => $startedAt->toIso8601String(),
             'finished_at' => $finishedAt?->toIso8601String(),
-        ]);
+        ];
+        if ($runId !== null && $runId !== '') {
+            $properties['run_id'] = $runId;
+        }
+
+        $this->dispatch(AuditEvent::CommandExecuted, $callerUserId, $properties);
+    }
+
+    public function finalizeCommandRun(
+        string $runId,
+        CarbonInterface $finishedAt,
+        ?int $exitCode,
+        string $stdoutExcerpt,
+        string $errorExcerpt,
+        bool $cancelled,
+    ): bool {
+        if ($runId === '') {
+            return false;
+        }
+
+        $connection = $this->db->connection();
+        $row = $connection->table(self::AUDIT_TABLE)
+            ->where('log_name', 'dev_mode')
+            ->where('properties->run_id', $runId)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($row === null) {
+            return false;
+        }
+
+        $idRaw = get_object_vars($row)['id'] ?? null;
+        if (! is_int($idRaw)) {
+            return false;
+        }
+
+        $propertiesRaw = get_object_vars($row)['properties'] ?? null;
+        $existing = [];
+        if (is_string($propertiesRaw)) {
+            $decoded = json_decode($propertiesRaw, true);
+            if (is_array($decoded)) {
+                /** @var array<string, mixed> $decoded */
+                $existing = $decoded;
+            }
+        }
+
+        $existingArgsRaw = $existing['args'] ?? [];
+        /** @var array<string, mixed> $existingArgs */
+        $existingArgs = is_array($existingArgsRaw) ? $existingArgsRaw : [];
+        if ($cancelled) {
+            $existingArgs['__cancelled'] = true;
+        }
+
+        $existing['args'] = $existingArgs;
+        $existing['exit_code'] = $exitCode;
+        $existing['stdout_excerpt'] = $this->cap->apply($stdoutExcerpt);
+        $existing['error_excerpt'] = $this->cap->apply($errorExcerpt);
+        $existing['finished_at'] = $finishedAt->toIso8601String();
+
+        $connection->table(self::AUDIT_TABLE)
+            ->where('id', $idRaw)
+            ->update([
+                'properties' => json_encode($existing),
+                'updated_at' => $this->clock->now()->toDateTimeString(),
+            ]);
+
+        return true;
     }
 
     /**
@@ -126,23 +198,30 @@ final readonly class SpatieAuditWriter implements AuditWriter
     }
 
     /**
-     * Returns the User model when the authenticated user matches the
-     * callerUserId, the int id otherwise (so a background job that
-     * passes a foreign user id still writes a row with a usable
-     * `causer_id`).
+     * Returns the User model for the caller. Prefers the authenticated
+     * user when ids match; otherwise looks up the user by id. Returns
+     * null when no matching user exists so spatie's causerResolver
+     * doesn't blow up on a synthetic id (test fixtures, deleted-user
+     * audit rows) — a missing causer is preferable to losing the
+     * audit row entirely.
      */
-    private function resolveCauser(int $callerUserId): User|int|null
+    private function resolveCauser(int $callerUserId): ?User
     {
         try {
-            $user = $this->currentUser->user();
+            $authed = $this->currentUser->user();
+            if ($authed->getKey() === $callerUserId) {
+                return $authed;
+            }
         } catch (NotAuthenticatedException) {
-            return $callerUserId > 0 ? $callerUserId : null;
+            // Fall through to the lookup path.
         }
 
-        if ($user->getKey() === $callerUserId) {
-            return $user;
+        if ($callerUserId <= 0) {
+            return null;
         }
 
-        return $callerUserId > 0 ? $callerUserId : null;
+        $found = User::query()->find($callerUserId);
+
+        return $found instanceof User ? $found : null;
     }
 }

@@ -7,6 +7,7 @@ namespace Modules\DevMode\Internal\Process;
 use Illuminate\Support\Str;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
@@ -61,6 +62,7 @@ final readonly class CommandSpawner
         private RunRegistry $registry,
         private Clock $clock,
         private DevCommandRegistry $commands,
+        private AuditWriter $audit,
     ) {}
 
     /**
@@ -91,15 +93,37 @@ final readonly class CommandSpawner
 
         $pid = $this->spawnDetached($shellCommand);
 
+        $startedAt = $this->clock->now();
+
         $this->registry->store(
             runId: $runId,
             pid: $pid,
             command: $command,
             args: $args,
-            startedAt: $this->clock->now(),
+            startedAt: $startedAt,
             callerUserId: $callerUserId,
             tier: $tier,
             outPath: $outPath,
+        );
+
+        // Eager audit row — written with exit_code=null + finished_at=null so
+        // the /dev/artisan timeline reflects the spawn immediately rather
+        // than waiting for someone to open the SSE stream. {@see
+        // FinalizeRunAudit} updates the same row in place (located via
+        // properties.run_id) when the stream's done event fires; the
+        // RunCard's live-stream attaches to the SSE for any row whose
+        // exit_code is still null.
+        $this->audit->recordCommandRun(
+            command: $command,
+            args: $args,
+            tier: $tier,
+            callerUserId: $callerUserId,
+            startedAt: $startedAt,
+            finishedAt: null,
+            exitCode: null,
+            stdoutExcerpt: '',
+            errorExcerpt: '',
+            runId: $runId,
         );
 
         return $runId;

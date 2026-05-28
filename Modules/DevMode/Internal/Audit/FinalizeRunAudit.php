@@ -66,6 +66,27 @@ final readonly class FinalizeRunAudit
             $effectiveExit = -15; // negative SIGTERM number convention
         }
 
+        // Update path — CommandSpawner now writes an eager audit row
+        // with exit_code=null at spawn time, so finalize is a
+        // properties-merge on the existing row located by run_id.
+        // Falls through to the legacy append-only path for any run
+        // whose eager row never made it (concrete AuditWriter binding
+        // missing, in-flight migration, etc.) so the audit trail
+        // still captures the fact-of-run rather than silently
+        // dropping it.
+        $updated = $this->audit->finalizeCommandRun(
+            runId: $runId,
+            finishedAt: $finishedAt,
+            exitCode: $effectiveExit,
+            stdoutExcerpt: $excerpt,
+            errorExcerpt: '',
+            cancelled: $cancelled,
+        );
+
+        if ($updated) {
+            return;
+        }
+
         $this->audit->recordCommandRun(
             command: $record->command,
             args: array_merge($record->args, $cancelled ? ['__cancelled' => true] : []),
@@ -76,6 +97,7 @@ final readonly class FinalizeRunAudit
             exitCode: $effectiveExit,
             stdoutExcerpt: $excerpt,
             errorExcerpt: '',
+            runId: $runId,
         );
     }
 

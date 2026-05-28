@@ -10,6 +10,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\QueueManager;
@@ -310,6 +311,7 @@ final class DevModeServiceProvider extends ServiceProvider
             $app->make(RunRegistry::class),
             $app->make(Clock::class),
             $app->make(DevCommandRegistry::class),
+            $app->make(AuditWriter::class),
         ));
 
         // Concrete NavigationRegistry binding. The full roster of
@@ -530,6 +532,7 @@ final class DevModeServiceProvider extends ServiceProvider
             $app->make(Clock::class),
             $app->make(RedactionExcerptCap::class),
             $app->make(ActivityLogger::class),
+            $app->make(DatabaseManager::class),
         ));
 
         $this->app->singleton(FinalizeRunAudit::class, static fn (Application $app): FinalizeRunAudit => new FinalizeRunAudit(
