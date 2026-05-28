@@ -248,6 +248,25 @@
         >Manage aliases →</a>
     </section>
 
+    {{-- About updates.
+
+         beatrax auto-updates once installed; the very first install
+         must be grabbed manually from the GitHub releases page. The
+         link routes through OpenExternalUrlAction so the URL passes
+         the https + github.com allow-list before NativePHP's shell
+         contract opens the system browser. --}}
+    <section class="space-y-2" id="about-updates">
+        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">About updates</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+            beatrax updates itself automatically once installed. After installing the very first version, future versions arrive via an in-app banner — you don't need to revisit GitHub. If a future update ever fails to apply, you can always re-download the latest installer manually from the releases page.
+        </p>
+        <button
+            type="button"
+            wire:click="openReleasesPage"
+            class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+        >Open releases page →</button>
+    </section>
+
     {{-- First-run tour.
 
          Re-launches the setup wizard at any time. The `force=1` query
