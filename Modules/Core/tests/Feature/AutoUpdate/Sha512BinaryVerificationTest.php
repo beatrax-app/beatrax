@@ -35,8 +35,8 @@ function makeChannelForSha512(): ElectronUpdateChannel
 
     return new ElectronUpdateChannel(
         $db,
-        new NullLogger(),
-        new SystemClock(),
+        new NullLogger,
+        new SystemClock,
         $config,
     );
 }
@@ -68,7 +68,7 @@ function makeChannelWithFrozenClock(CarbonImmutable $now): ElectronUpdateChannel
 
     return new ElectronUpdateChannel(
         $db,
-        new NullLogger(),
+        new NullLogger,
         $clock,
         $config,
     );
@@ -150,8 +150,8 @@ it('reports the channel name from the injected config Repository', function (): 
 
     $channel = new ElectronUpdateChannel(
         $db,
-        new NullLogger(),
-        new SystemClock(),
+        new NullLogger,
+        new SystemClock,
         $config,
     );
 
@@ -169,8 +169,8 @@ it('defaults the channel to "stable" when no update_channel value is configured'
 
     $channel = new ElectronUpdateChannel(
         $db,
-        new NullLogger(),
-        new SystemClock(),
+        new NullLogger,
+        new SystemClock,
         $config,
     );
 
