@@ -76,11 +76,33 @@
                 <li class="rounded-lg border border-slate-200 bg-slate-50 p-4 opacity-90 dark:bg-slate-900 dark:border-slate-700">
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0 flex-1">
+                            {{-- Each leg's counterparty name links to
+                                 its profile when the row has been
+                                 resolved by the CounterpartyResolver
+                                 chain; plain text otherwise. --}}
                             <p class="text-sm text-slate-900 dark:text-slate-100">
-                                <span>{{ $row->fromCounterparty }}</span>
+                                @if ($row->fromCounterpartySlug !== null)
+                                    <a
+                                        href="{{ route('counterparties.profile', ['slug' => $row->fromCounterpartySlug]) }}"
+                                        wire:navigate
+                                        class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                        data-testid="chain-review-from-counterparty-link-{{ $row->chainLinkId }}"
+                                    >{{ $row->fromCounterparty }}</a>
+                                @else
+                                    <span data-testid="chain-review-from-counterparty-text-{{ $row->chainLinkId }}">{{ $row->fromCounterparty }}</span>
+                                @endif
                                 <span class="text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->fromAmount) }}</span>
                                 <span aria-hidden="true" class="mx-1 text-slate-500 dark:text-slate-400">←</span>
-                                <span>{{ $row->toCounterparty }}</span>
+                                @if ($row->toCounterpartySlug !== null)
+                                    <a
+                                        href="{{ route('counterparties.profile', ['slug' => $row->toCounterpartySlug]) }}"
+                                        wire:navigate
+                                        class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                        data-testid="chain-review-to-counterparty-link-{{ $row->chainLinkId }}"
+                                    >{{ $row->toCounterparty }}</a>
+                                @else
+                                    <span data-testid="chain-review-to-counterparty-text-{{ $row->chainLinkId }}">{{ $row->toCounterparty }}</span>
+                                @endif
                                 <span class="text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->toAmount) }}</span>
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">

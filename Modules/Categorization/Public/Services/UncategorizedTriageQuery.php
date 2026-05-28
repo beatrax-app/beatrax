@@ -31,28 +31,35 @@ final class UncategorizedTriageQuery
 
     public function for(User $user, int $limit = 50, ?int $cursorId = null, ?string $cursorPostedAt = null): TriageBatch
     {
+        // Left-join `counterparties` so each row carries its resolved
+        // counterparty slug in a single query (no N+1 expansion across
+        // the triage page render). Rows with counterparty_id NULL
+        // yield NULL on the joined slug and the Blade falls back to
+        // plain-text rendering of the counterparty name.
         $query = $this->db->connection()
             ->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereNull('category_id')
-            ->orderByDesc('posted_at')
-            ->orderByDesc('id')
+            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
+            ->where('transactions.user_id', $user->id)
+            ->whereNull('transactions.category_id')
+            ->orderByDesc('transactions.posted_at')
+            ->orderByDesc('transactions.id')
             ->select([
-                'id',
-                'posted_at',
-                'booked_at',
-                'counterparty_name',
-                'amount_minor',
-                'currency',
-                'description',
+                'transactions.id',
+                'transactions.posted_at',
+                'transactions.booked_at',
+                'transactions.counterparty_name',
+                'transactions.amount_minor',
+                'transactions.currency',
+                'transactions.description',
+                'counterparties.slug as counterparty_slug',
             ])
             ->limit($limit + 1);
 
         if ($cursorId !== null) {
             if ($cursorPostedAt === null) {
-                $query->where('id', '<', $cursorId);
+                $query->where('transactions.id', '<', $cursorId);
             } else {
-                $query->whereRaw('(posted_at, id) < (?, ?)', [$cursorPostedAt, $cursorId]);
+                $query->whereRaw('(transactions.posted_at, transactions.id) < (?, ?)', [$cursorPostedAt, $cursorId]);
             }
         }
 
@@ -86,6 +93,15 @@ final class UncategorizedTriageQuery
         $description = $row->description === null
             ? null
             : self::toString($row->description);
+        $counterpartySlug = property_exists($row, 'counterparty_slug') && $row->counterparty_slug !== null
+            ? self::toString($row->counterparty_slug)
+            : null;
+        // An empty slug yields no profile-page target; defensive-cast
+        // it to null so the Blade falls back to plain text instead of
+        // emitting a /counterparties/ dead-end URL.
+        if ($counterpartySlug === '') {
+            $counterpartySlug = null;
+        }
 
         return new TriageRow(
             transactionId: self::toInt($row->id),
@@ -94,6 +110,7 @@ final class UncategorizedTriageQuery
             amountMinor: self::toInt($row->amount_minor),
             currency: self::toString($row->currency),
             description: $description,
+            counterpartySlug: $counterpartySlug,
         );
     }
 

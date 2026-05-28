@@ -122,6 +122,7 @@ final class TransactionListQuery
             $amountMinorColumn,
             $currencyColumn,
             'categories.name as category_name',
+            'counterparties.slug as counterparty_slug',
         ];
 
         if ($currency === null) {
@@ -129,9 +130,15 @@ final class TransactionListQuery
             $select[] = 'transactions.settled_currency as secondary_currency';
         }
 
+        // Left-join `counterparties` so each row carries its resolved
+        // counterparty slug in a single query (no N+1 expansion across
+        // the page render). Rows without a resolved counterparty
+        // (counterparty_id IS NULL) yield NULL on the joined slug and
+        // the Blade falls back to plain-text rendering.
         $query = $this->db->connection()
             ->table('transactions')
             ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
+            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
             ->where('transactions.user_id', $user->id)
             ->orderByDesc('transactions.posted_at')
             ->orderByDesc('transactions.id')
@@ -197,6 +204,19 @@ final class TransactionListQuery
         $categoryId = $row->category_id === null ? null : self::toInt($row->category_id);
         $categoryName = $row->category_name === null ? null : self::toString($row->category_name);
         $counterpartyName = $row->counterparty_name === null ? null : self::toString($row->counterparty_name);
+        $counterpartySlug = property_exists($row, 'counterparty_slug') && $row->counterparty_slug !== null
+            ? self::toString($row->counterparty_slug)
+            : null;
+        // A row with an empty slug carries no profile-page target —
+        // self_account rows are the only documented producer today
+        // (the resolver intentionally writes no counterparties row for
+        // them, but a future GC-orphan edge could surface an empty
+        // slug). Treat empty as "no slug" so the Blade falls back to
+        // plain text instead of generating a `/counterparties/`
+        // dead-end URL.
+        if ($counterpartySlug === '') {
+            $counterpartySlug = null;
+        }
 
         $displayCurrency = self::toString($row->display_currency);
         $secondaryAmount = null;
@@ -218,6 +238,7 @@ final class TransactionListQuery
             categoryName: $categoryName,
             amount: Money::ofMinor(self::toInt($row->display_minor), $displayCurrency),
             secondaryAmount: $secondaryAmount,
+            counterpartySlug: $counterpartySlug,
         );
     }
 
