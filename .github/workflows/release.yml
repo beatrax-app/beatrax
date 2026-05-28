@@ -22,6 +22,23 @@
 # can be repointed at malicious commits without the workflow file
 # changing. The trigger is `push: tags: [v*]` only — never
 # pull_request_target — so fork PRs cannot reach this workflow.
+#
+# Auto-update integrity chain:
+#   1. macOS builds register the `nativephp_inject_macos_update_settings`
+#      prebuild hook so the generated electron-builder config carries
+#      `disableDifferentialDownload: true` — full-binary auto-update
+#      bypasses OS-signature validation that ad-hoc-signed bundles
+#      would otherwise fail.
+#   2. The publish job signs the publisher manifests (`latest.yml` +
+#      per-platform variants) with the Ed25519 private key sourced from
+#      the `ED25519_PRIVATE_KEY` repo secret; the matching public hex
+#      lives in `config/auto_update.php` so installed bundles verify
+#      the signature via `sodium_crypto_sign_verify_detached` on every
+#      poll.
+#   3. The verify-published job re-downloads the published manifests
+#      and re-runs the Ed25519 verification — catches CDN partial-
+#      upload races and silently-skipped upload steps before a release
+#      goes "green" to humans while broken in flight.
 
 name: release
 
@@ -276,10 +293,47 @@ jobs:
             - name: Check out the source
               uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
+            - name: Set up PHP (libsodium for manifest signing)
+              uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2
+              with:
+                  php-version: '8.4'
+                  extensions: mbstring, sodium
+                  coverage: none
+                  tools: composer:v2
+
             - name: Download every platform's artifacts
               uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
               with:
                   path: artifacts
+
+            - name: Sign latest.yml with Ed25519
+              env:
+                  ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
+              run: |
+                  set -euo pipefail
+                  # Locate every publisher manifest electron-updater
+                  # produced. `actions/download-artifact` flattens each
+                  # platform under `artifacts/<name>/`, so the find pass
+                  # picks up `latest.yml` / `latest-mac.yml` /
+                  # `latest-linux.yml` regardless of where they landed.
+                  # The matching `latest.yml.sig` / `latest-mac.yml.sig`
+                  # / `latest-linux.yml.sig` siblings are written in
+                  # place next to each manifest.
+                  mapfile -t MANIFESTS < <(find artifacts -name 'latest*.yml' -type f)
+                  if [ "${#MANIFESTS[@]}" -eq 0 ]; then
+                      echo "No publisher manifests found under artifacts/ — nothing to sign."
+                      exit 1
+                  fi
+                  for manifest in "${MANIFESTS[@]}"; do
+                      echo "Signing ${manifest}"
+                      php -r '
+                          $body = file_get_contents($argv[1]);
+                          if ($body === false) { fwrite(STDERR, "could not read " . $argv[1]); exit(1); }
+                          $secret = sodium_hex2bin(getenv("ED25519_PRIVATE_KEY"));
+                          $sig = sodium_crypto_sign_detached($body, $secret);
+                          file_put_contents($argv[1] . ".sig", bin2hex($sig));
+                      ' -- "$manifest"
+                  done
 
             - name: Publish the GitHub Release
               uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2.6.2
@@ -290,5 +344,72 @@ jobs:
                   # publish immediately to the preview channel.
                   draft: ${{ !contains(github.ref_name, '-rc') }}
                   prerelease: ${{ contains(github.ref_name, '-rc') }}
+                  # Every platform artifact PLUS the Ed25519 detached
+                  # signature for each publisher manifest. Installed
+                  # bundles fetch the matching `.sig` alongside the
+                  # manifest and verify before any download proceeds.
                   files: |
                       artifacts/**/*
+                      artifacts/**/latest*.yml.sig
+
+    verify-published:
+        name: verify published
+        needs: publish
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - name: Check out the source
+              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+            - name: Set up PHP (libsodium for manifest verification)
+              uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2
+              with:
+                  php-version: '8.4'
+                  extensions: mbstring, sodium
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Download published manifests + signatures
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  mkdir -p verify
+                  gh release download "${{ github.ref_name }}" \
+                      --dir verify \
+                      --pattern 'latest*.yml' \
+                      --pattern 'latest*.yml.sig'
+
+            - name: Re-verify every published manifest with sodium_crypto_sign_verify_detached
+              run: |
+                  set -euo pipefail
+                  # Read the publisher public hex from the committed
+                  # config file — the source of truth installed bundles
+                  # verify against. A simple grep avoids booting the
+                  # framework just to read one config value.
+                  PUBLIC_HEX=$(grep -oE "'[0-9a-f]{64}'" config/auto_update.php | head -1 | tr -d "'")
+                  if [ -z "$PUBLIC_HEX" ]; then
+                      echo "Could not extract publisher_public_key_hex from config/auto_update.php"
+                      exit 1
+                  fi
+                  mapfile -t MANIFESTS < <(find verify -name 'latest*.yml' -not -name '*.sig' -type f)
+                  if [ "${#MANIFESTS[@]}" -eq 0 ]; then
+                      echo "No published manifests downloaded — verification cannot run."
+                      exit 1
+                  fi
+                  for manifest in "${MANIFESTS[@]}"; do
+                      sig_file="${manifest}.sig"
+                      if [ ! -f "$sig_file" ]; then
+                          echo "Missing signature for ${manifest}"
+                          exit 1
+                      fi
+                      echo "Verifying ${manifest}"
+                      PUBLIC_HEX="$PUBLIC_HEX" php -r '
+                          $body = file_get_contents($argv[1]);
+                          $sigHex = trim((string) file_get_contents($argv[1] . ".sig"));
+                          $public = sodium_hex2bin(getenv("PUBLIC_HEX"));
+                          $sig = sodium_hex2bin($sigHex);
+                          exit(sodium_crypto_sign_verify_detached($sig, $body, $public) ? 0 : 1);
+                      ' -- "$manifest"
+                  done
+                  echo "Every published manifest verifies cleanly against the embedded publisher public key."
