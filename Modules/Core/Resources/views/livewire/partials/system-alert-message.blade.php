@@ -14,6 +14,51 @@
     Blade change.
 --}}
 @switch ($alert->kind)
+    @case ('update.available')
+        @php
+            $metadata = is_array($alert->metadata) ? $alert->metadata : [];
+            $latestVersion = isset($metadata['latestVersion']) && is_string($metadata['latestVersion'])
+                ? $metadata['latestVersion']
+                : null;
+        @endphp
+        @if ($latestVersion !== null)
+            Update available — beatrax {{ $latestVersion }} is ready. It will install on next launch.
+        @else
+            {{ $alert->message }}
+        @endif
+        @break
+    @case ('update.stale')
+        @php
+            $metadata = is_array($alert->metadata) ? $alert->metadata : [];
+            $currentVersion = isset($metadata['currentVersion']) && is_string($metadata['currentVersion'])
+                ? $metadata['currentVersion']
+                : null;
+            $latestVersion = isset($metadata['latestVersion']) && is_string($metadata['latestVersion'])
+                ? $metadata['latestVersion']
+                : null;
+        @endphp
+        @if ($currentVersion !== null && $latestVersion !== null)
+            You're on version {{ $currentVersion }} — version {{ $latestVersion }} has been available for 30 days. Update now.
+        @else
+            {{ $alert->message }}
+        @endif
+        @break
+    @case ('update.critical')
+        @php
+            $metadata = is_array($alert->metadata) ? $alert->metadata : [];
+            $newVersion = isset($metadata['newVersion']) && is_string($metadata['newVersion'])
+                ? $metadata['newVersion']
+                : null;
+            $summary = isset($metadata['summary']) && is_string($metadata['summary'])
+                ? $metadata['summary']
+                : null;
+        @endphp
+        @if ($newVersion !== null && $summary !== null)
+            Critical update available — version {{ $newVersion }} fixes {{ $summary }}. Install as soon as possible.
+        @else
+            {{ $alert->message }}
+        @endif
+        @break
     @case ('backup_corrupt')
         @php
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];

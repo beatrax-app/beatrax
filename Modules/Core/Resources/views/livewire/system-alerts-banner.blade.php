@@ -13,6 +13,13 @@
     direct string occurrences in source — no `border-{tier}-500`
     interpolation, no PurgeCSS safelist comments.
 
+    Per-row actions are factored into `partials/system-alert-actions`
+    so the auto-update kinds can render multi-button rows
+    (Install / Skip / Release notes for `update.available`; Update
+    now / Remind me later for `update.stale`; Install on next launch
+    only for `update.critical`) without duplicating the layout across
+    the three severity branches.
+
     Every interpolation uses Blade {{ }} default escaping. Unescaped
     output (raw-output Blade) is forbidden in this view —
     system_alerts.message may carry operator-controlled text that we
@@ -33,14 +40,7 @@
                             </p>
                         </div>
                         <div class="shrink-0">
-                            <button
-                                type="button"
-                                wire:click="acknowledge({{ $alert->id }})"
-                                wire:loading.attr="disabled"
-                                wire:target="acknowledge({{ $alert->id }})"
-                                aria-label="Mark system alert #{{ $alert->id }} as resolved"
-                                class="rounded bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-600 px-3 py-1.5 text-sm font-medium dark:hover:bg-rose-400 dark:bg-rose-500"
-                            >Mark as resolved</button>
+                            @include('core::livewire.partials.system-alert-actions', ['alert' => $alert])
                         </div>
                     </div>
                 </div>
@@ -57,14 +57,7 @@
                             </p>
                         </div>
                         <div class="shrink-0">
-                            <button
-                                type="button"
-                                wire:click="acknowledge({{ $alert->id }})"
-                                wire:loading.attr="disabled"
-                                wire:target="acknowledge({{ $alert->id }})"
-                                aria-label="Mark system alert #{{ $alert->id }} as resolved"
-                                class="rounded bg-slate-100 text-slate-700 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                            >Mark as resolved</button>
+                            @include('core::livewire.partials.system-alert-actions', ['alert' => $alert])
                         </div>
                     </div>
                 </div>
@@ -81,14 +74,7 @@
                             </p>
                         </div>
                         <div class="shrink-0">
-                            <button
-                                type="button"
-                                wire:click="acknowledge({{ $alert->id }})"
-                                wire:loading.attr="disabled"
-                                wire:target="acknowledge({{ $alert->id }})"
-                                aria-label="Mark system alert #{{ $alert->id }} as resolved"
-                                class="rounded bg-slate-100 text-slate-700 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                            >Mark as resolved</button>
+                            @include('core::livewire.partials.system-alert-actions', ['alert' => $alert])
                         </div>
                     </div>
                 </div>
