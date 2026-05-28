@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
 use Modules\Core\Public\Services\SystemClock;
 use Psr\Log\NullLogger;
@@ -38,8 +40,8 @@ function makeChannelWithPublicKeyHex(string $publicKeyHex): ElectronUpdateChanne
 
     return new ElectronUpdateChannel(
         $db,
-        new NullLogger(),
-        new SystemClock(),
+        new NullLogger,
+        new SystemClock,
         $config,
     );
 }
@@ -113,4 +115,126 @@ it('returns false on malformed signature length without throwing to callers', fu
     $channel = makeChannelWithPublicKeyHex($fixture['public_hex']);
 
     expect($channel->verifyManifest($manifestBody, 'not-a-valid-signature'))->toBeFalse();
+});
+
+it('poll() returns null and logs at warning level when the fetched manifest signature does not verify', function (): void {
+    $fixture = generateEd25519Fixture();
+    $manifestBody = "version: 0.1.1-rc.1\nsha512: deadbeef\n";
+    $goodSignature = sodium_crypto_sign_detached($manifestBody, $fixture['secret']);
+    $tamperedSig = ($goodSignature[0] === "\x00" ? "\x01" : "\x00").substr($goodSignature, 1);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $logger = new class extends NullLogger
+    {
+        /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
+        public array $messages = [];
+
+        public function warning(string|Stringable $message, array $context = []): void
+        {
+            $this->messages[] = ['level' => 'warning', 'message' => (string) $message, 'context' => $context];
+        }
+    };
+    $config = new Repository([
+        'auto_update' => [
+            'publisher_public_key_hex' => $fixture['public_hex'],
+            'update_channel' => 'stable',
+        ],
+    ]);
+
+    $channel = new ElectronUpdateChannel($db, $logger, new SystemClock, $config);
+
+    $fetcher = new class($manifestBody, $tamperedSig) implements PublisherManifestFetcher
+    {
+        public function __construct(
+            private readonly string $body,
+            private readonly string $signature,
+        ) {}
+
+        public function fetch(string $channel): ?array
+        {
+            return [
+                'body' => $this->body,
+                'signature' => $this->signature,
+                'latest_version' => '0.1.1-rc.1',
+                'sha512_hex' => str_repeat('0', 128),
+                'published_at' => CarbonImmutable::now(),
+            ];
+        }
+    };
+
+    expect($channel->poll($fetcher))->toBeNull();
+    expect($logger->messages)->not->toBeEmpty();
+    expect($logger->messages[0]['message'])->toContain('invalid Ed25519 signature');
+});
+
+it('poll() returns null without warning when the fetcher reports no update is available', function (): void {
+    $fixture = generateEd25519Fixture();
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $config = new Repository([
+        'auto_update' => [
+            'publisher_public_key_hex' => $fixture['public_hex'],
+            'update_channel' => 'stable',
+        ],
+    ]);
+
+    $channel = new ElectronUpdateChannel($db, new NullLogger, new SystemClock, $config);
+
+    $fetcher = new class implements PublisherManifestFetcher
+    {
+        public function fetch(string $channel): ?array
+        {
+            return null;
+        }
+    };
+
+    expect($channel->poll($fetcher))->toBeNull();
+});
+
+it('poll() returns a populated DTO when the fetched manifest verifies cleanly', function (): void {
+    $fixture = generateEd25519Fixture();
+    $manifestBody = "version: 0.1.1-rc.1\nsha512: feedface\n";
+    $signature = sodium_crypto_sign_detached($manifestBody, $fixture['secret']);
+    $publishedAt = CarbonImmutable::create(2026, 6, 1, 12, 0, 0);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $config = new Repository([
+        'auto_update' => [
+            'publisher_public_key_hex' => $fixture['public_hex'],
+            'update_channel' => 'preview',
+        ],
+    ]);
+
+    $channel = new ElectronUpdateChannel($db, new NullLogger, new SystemClock, $config);
+
+    $fetcher = new class($manifestBody, $signature, $publishedAt) implements PublisherManifestFetcher
+    {
+        public function __construct(
+            private readonly string $body,
+            private readonly string $signature,
+            private readonly CarbonImmutable $publishedAt,
+        ) {}
+
+        public function fetch(string $channel): ?array
+        {
+            return [
+                'body' => $this->body,
+                'signature' => $this->signature,
+                'latest_version' => '0.1.1-rc.1',
+                'sha512_hex' => str_repeat('a', 128),
+                'published_at' => $this->publishedAt,
+            ];
+        }
+    };
+
+    $dto = $channel->poll($fetcher);
+
+    expect($dto)->not->toBeNull();
+    expect($dto?->latestVersion)->toBe('0.1.1-rc.1');
+    expect($dto?->sha512Hex)->toBe(str_repeat('a', 128));
+    expect($dto?->publishedAt->equalTo($publishedAt))->toBeTrue();
+    expect($dto?->channel)->toBe('preview');
 });
