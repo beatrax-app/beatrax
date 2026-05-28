@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
+use Modules\Counterparties\Models\Counterparty;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Internal\Casts\MoneyMinorCast;
 
@@ -36,6 +37,7 @@ use Modules\Ledger\Internal\Casts\MoneyMinorCast;
  * @property int $normalization_version
  * @property string|null $description
  * @property int|null $category_id
+ * @property int|null $counterparty_id
  * @property array<string, mixed>|null $auto_category_provenance
  * @property string $source_format
  * @property int $import_run_id
@@ -71,7 +73,7 @@ final class Transaction extends Model
         'amount_minor', 'currency',
         'settled_amount_minor', 'settled_currency', 'fx_rate_used',
         'counterparty_name', 'counterparty_iban', 'counterparty_normalized', 'normalization_version',
-        'description', 'category_id', 'auto_category_provenance',
+        'description', 'category_id', 'counterparty_id', 'auto_category_provenance',
         'source_format', 'import_run_id', 'source_row_index', 'source_ref',
         'raw_payload',
         'enriched_from',
@@ -118,6 +120,27 @@ final class Transaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * The resolved counterparty for this transaction. Populated by the
+     * `ResolveCounterpartyStage` Import-pipeline stage (Plan 17-05b) via
+     * the `CounterpartyResolver` 7-step chain. NULL for rows that pre-
+     * date the resolver, rows the resolver couldn't materialise (self-
+     * account branch, or pathological rows carrying no IBAN / name /
+     * description), or rows whose linked counterparty was pruned by the
+     * future garbage-collector job.
+     *
+     * Consumers rendering counterparty-name affordances (the four
+     * transaction-row surfaces in Ledger / Categorization / Chains)
+     * eager-load this relation via `->with('counterparty')` to prevent
+     * N+1 query expansion on list-render paths.
+     *
+     * @return BelongsTo<Counterparty, $this>
+     */
+    public function counterparty(): BelongsTo
+    {
+        return $this->belongsTo(Counterparty::class);
     }
 
     /**
