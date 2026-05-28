@@ -22,7 +22,15 @@
     <div class="side-brand">
         <img src="{{ Vite::asset('resources/brand/logo.svg') }}" alt="beatrax" width="24" height="24" class="logo logo-svg" />
         <span>beatrax</span>
-        <span class="version-chip">v2.0.0-dev</span>
+        {{--
+            Version chip reads from `config/nativephp.php#version`, which
+            is the single source of truth Plan 17-01 (versioning baseline)
+            locked in. The `v` prefix is hard-coded since the config holds
+            the bare SemVer; the chip stays the only place that prepends
+            it so a future migration to a leading-zero scheme touches one
+            line instead of every release artefact.
+        --}}
+        <span class="version-chip">v{{ config('nativephp.version') }}</span>
     </div>
 
     <div class="side-search" role="search">
