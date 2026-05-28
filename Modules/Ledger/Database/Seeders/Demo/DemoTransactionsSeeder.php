@@ -43,6 +43,13 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
  *   - Transfer pairs (the monthly ASN→PayPal top-up that funds online
  *     spending) are linked via `pair_transaction_id` after both legs
  *     land, exactly mirroring the production Layer-1 pair detector.
+ *   - The dataset covers EVERY value of `Transaction::TYPES` (expense,
+ *     income, transfer_out, transfer_in, fee, refund, adjustment) with
+ *     at least two rows per type, and EVERY value of `PaymentType` (pin,
+ *     online, transfer, direct_debit, cash, fee, refund, unknown) with
+ *     at least two rows per chip. The chip strips on /transactions and
+ *     /community/mystery-merchants therefore render with full diversity
+ *     on a fresh demo install — no chip class is missing data.
  */
 final class DemoTransactionsSeeder
 {
@@ -673,19 +680,73 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Occasional Bol.com refund — exercises the refund type.
+        // Bol.com + Coolblue refunds — two rows so the `refund` type
+        // and the `Refund` PaymentType chip both have multiple
+        // datapoints to render against.
         $refundsCategory = $this->categoryId('income-refunds');
-        $refundDate = $windowStart->addDays(35);
-        if ($refundDate->lessThanOrEqualTo($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+        $refundRows = [
+            ['day' => 35, 'amount' => 1250, 'description' => 'Retour Bol.com', 'merchant' => 'Bol.com'],
+            ['day' => 62, 'amount' => 3499, 'description' => 'Retour Coolblue', 'merchant' => 'Coolblue'],
+        ];
+        foreach ($refundRows as $refund) {
+            $date = $windowStart->addDays($refund['day']);
+            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+                continue;
+            }
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
                 'type' => 'refund',
-                'amountMinor' => 1250,
-                'description' => 'Retour Bol.com',
-                'counterpartyName' => 'Bol.com',
+                'amountMinor' => $refund['amount'],
+                'description' => $refund['description'],
+                'counterpartyName' => $refund['merchant'],
                 'counterpartyIban' => null,
-                'date' => $refundDate,
+                'date' => $date,
                 'paymentType' => PaymentType::Refund,
                 'categoryId' => $refundsCategory,
+            ]);
+        }
+
+        // PayPal cross-currency conversion fee — two rows so the `fee`
+        // type + `Fee` PaymentType chip both have data to render against
+        // on the /transactions list.
+        foreach ([29, 73] as $dayOffset) {
+            $date = $windowStart->addDays($dayOffset);
+            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+                continue;
+            }
+            $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
+                'type' => 'fee',
+                'amountMinor' => -150,
+                'description' => 'PayPal conversion fee',
+                'counterpartyName' => 'PayPal',
+                'counterpartyIban' => null,
+                'date' => $date,
+                'paymentType' => PaymentType::Fee,
+                'categoryId' => null,
+            ]);
+        }
+
+        // PayPal balance adjustment — two rows: one positive (PayPal
+        // gives store credit after a chargeback) and one negative (PayPal
+        // claws back a previously-applied promo). Exercises the
+        // `adjustment` type chip + the `Unknown` PaymentType fallback.
+        $adjustmentRows = [
+            ['day' => 21, 'amount' => 500, 'description' => 'PayPal goodwill credit'],
+            ['day' => 64, 'amount' => -750, 'description' => 'PayPal promo clawback'],
+        ];
+        foreach ($adjustmentRows as $row) {
+            $date = $windowStart->addDays($row['day']);
+            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+                continue;
+            }
+            $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
+                'type' => 'adjustment',
+                'amountMinor' => $row['amount'],
+                'description' => $row['description'],
+                'counterpartyName' => 'PayPal',
+                'counterpartyIban' => null,
+                'date' => $date,
+                'paymentType' => PaymentType::Unknown,
+                'categoryId' => null,
             ]);
         }
 
