@@ -58,7 +58,7 @@ it('renders the update.available banner with the verbatim copy and the install +
     ]);
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
-        ->assertSee('Update available — beatrax 0.1.1 is ready. It will install on next launch.')
+        ->assertSee('Update available — beatrax 0.1.1 is ready. It will install on next launch.', escape: false)
         ->assertSee('Install on next launch')
         ->assertSee('Skip this version')
         ->assertSee('Release notes')
@@ -76,7 +76,7 @@ it('renders the update.stale banner with the amber severity and the update-now +
     ]);
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
-        ->assertSee("You're on version 0.1.0 — version 0.1.1 has been available for 30 days. Update now.")
+        ->assertSee("You're on version 0.1.0 — version 0.1.1 has been available for 30 days. Update now.", escape: false)
         ->assertSee('Update now')
         ->assertSee('Remind me later')
         ->assertSeeHtml('border-amber-300');
@@ -88,11 +88,11 @@ it('renders the update.critical banner with the rose severity and only the insta
         'kind' => 'update.critical',
         'severity' => 'critical',
         'message' => 'Critical update available — version 0.1.2 fixes data corruption on import. Install as soon as possible.',
-        'metadata' => json_encode(['newVersion' => '0.1.2', 'summary' => 'fixes data corruption on import']),
+        'metadata' => json_encode(['newVersion' => '0.1.2', 'summary' => 'data corruption on import']),
     ]);
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
-        ->assertSee('Critical update available — version 0.1.2 fixes data corruption on import. Install as soon as possible.')
+        ->assertSee('Critical update available — version 0.1.2 fixes data corruption on import. Install as soon as possible.', escape: false)
         ->assertSee('Install on next launch')
         ->assertDontSee('Skip this version')
         ->assertSeeHtml('border-rose-500');

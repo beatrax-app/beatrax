@@ -21,13 +21,17 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * makes the one-row-per-user invariant impossible to violate from any
  * call site.
  *
- * The `$fillable` list carries only `user_id`; domain modules that
- * extend the table with additive column-add migrations extend the
- * fillable set inside their own model assignments (preference values
- * are written through Eloquent's mass-assignable surface).
+ * The `$fillable` list extends as feature columns land via additive
+ * column-add migrations. `skipped_update_versions` carries the
+ * per-user list of release versions the user dismissed via the
+ * auto-update banner's "Skip this version" action; the JSON cast
+ * decodes the column into a plain `list<string>` so the
+ * SystemAlertsBanner can apply the suppression filter without
+ * per-row decoding.
  *
  * @property int $id
  * @property int|null $user_id
+ * @property array<array-key, mixed>|null $skipped_update_versions
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -41,12 +45,14 @@ final class UserPreference extends Model
     /** @var list<string> */
     protected $fillable = [
         'user_id',
+        'skipped_update_versions',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
+            'skipped_update_versions' => 'array',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];

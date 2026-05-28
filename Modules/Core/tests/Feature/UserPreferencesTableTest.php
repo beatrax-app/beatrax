@@ -45,13 +45,20 @@ beforeEach(function (): void {
     ]);
 });
 
-it('creates the user_preferences table with exactly the foundation column list', function (): void {
+it('creates the user_preferences table with the foundation column list (plus any later additive columns)', function (): void {
     expect(Schema::hasTable('user_preferences'))->toBeTrue();
 
     $cols = Schema::getColumnListing('user_preferences');
-    sort($cols);
 
-    expect($cols)->toBe(['created_at', 'id', 'updated_at', 'user_id']);
+    // The foundation migration owns these four columns; additive
+    // column-add migrations from downstream domain modules (e.g.
+    // `skipped_update_versions` for the auto-update banner) extend
+    // the table over time. The test asserts presence rather than
+    // strict equality so the foundation contract survives any
+    // future additive column without a coordinated rewrite.
+    foreach (['id', 'user_id', 'created_at', 'updated_at'] as $expected) {
+        expect($cols)->toContain($expected);
+    }
 });
 
 it('enforces a unique constraint on user_id at the database boundary', function (): void {
