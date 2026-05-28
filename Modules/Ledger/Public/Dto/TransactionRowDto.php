@@ -23,6 +23,14 @@ use Spatie\LaravelData\Data;
  * it stays null so the rendering layer collapses to a single line; in
  * EUR-only mode (currency filter supplied) it is null on every row because
  * the primary amount already carries the settled-EUR pair.
+ *
+ * `counterpartySlug` carries the resolved-counterparty slug for the
+ * transaction-row click-through anchor that routes to
+ * `counterparties.profile`. NULL when the transaction has no resolved
+ * counterparty (pre-resolver rows, pathological rows the resolver
+ * couldn't materialise, or rows whose counterparty was pruned by the
+ * garbage-collector job) — the Blade then renders the counterparty
+ * name as plain text instead of a link.
  */
 final class TransactionRowDto extends Data
 {
@@ -34,5 +42,6 @@ final class TransactionRowDto extends Data
         public readonly ?string $categoryName,
         public readonly Money $amount,
         public readonly ?Money $secondaryAmount = null,
+        public readonly ?string $counterpartySlug = null,
     ) {}
 }

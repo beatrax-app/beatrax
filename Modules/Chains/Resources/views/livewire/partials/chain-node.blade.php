@@ -51,7 +51,22 @@
 
 <div class="{{ $cardClasses }}">
     <div class="flex items-center justify-between gap-md">
-        <p class="text-sm text-slate-900 dark:text-slate-100">{{ $node->counterpartyName !== '' ? $node->counterpartyName : '—' }}</p>
+        {{-- Counterparty name on each chain leg links to its profile
+             when the underlying transaction has been resolved by the
+             CounterpartyResolver chain; plain text otherwise so legs
+             without a resolved counterparty still render cleanly. --}}
+        <p class="text-sm text-slate-900 dark:text-slate-100">
+            @if ($node->counterpartyName !== '' && $node->counterpartySlug !== null)
+                <a
+                    href="{{ route('counterparties.profile', ['slug' => $node->counterpartySlug]) }}"
+                    wire:navigate
+                    class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                    data-testid="chain-node-counterparty-link-{{ $node->transactionId }}"
+                >{{ $node->counterpartyName }}</a>
+            @else
+                <span data-testid="chain-node-counterparty-text-{{ $node->transactionId }}">{{ $node->counterpartyName !== '' ? $node->counterpartyName : '—' }}</span>
+            @endif
+        </p>
         <div class="flex items-center gap-sm">
             <p class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                 {{ $fmt($node->amount) }}
@@ -92,7 +107,18 @@
             <p class="text-xs text-slate-500 dark:text-slate-400">Covers {{ $childTotal }} ICS charges</p>
             @foreach ($visibleChildren as $child)
                 <div class="flex items-center justify-between">
-                    <p class="text-sm text-slate-900 dark:text-slate-100">{{ $child->counterpartyName !== '' ? $child->counterpartyName : '—' }}</p>
+                    <p class="text-sm text-slate-900 dark:text-slate-100">
+                        @if ($child->counterpartyName !== '' && $child->counterpartySlug !== null)
+                            <a
+                                href="{{ route('counterparties.profile', ['slug' => $child->counterpartySlug]) }}"
+                                wire:navigate
+                                class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                data-testid="chain-node-child-counterparty-link-{{ $child->transactionId }}"
+                            >{{ $child->counterpartyName }}</a>
+                        @else
+                            <span data-testid="chain-node-child-counterparty-text-{{ $child->transactionId }}">{{ $child->counterpartyName !== '' ? $child->counterpartyName : '—' }}</span>
+                        @endif
+                    </p>
                     <p class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                         {{ $fmt($child->amount) }}
                     </p>

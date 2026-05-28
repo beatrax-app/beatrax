@@ -70,7 +70,23 @@
                                 class="triage-row group"
                             >
                                 <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
-                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
+                                {{-- Counterparty cell renders the resolved counterparty's
+                                     display name. When the row's counterparty_id has been
+                                     resolved (counterpartySlug is non-null), wrap the name
+                                     in a link routing to counterparties.profile. Rows
+                                     without a resolved counterparty render the name as
+                                     plain text. --}}
+                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
+                                    @if ($row->counterpartySlug !== null)
+                                        <a
+                                            href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
+                                            class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                            data-testid="triage-row-counterparty-link-{{ $row->transactionId }}"
+                                        >{{ $row->counterpartyName ?? '—' }}</a>
+                                    @else
+                                        <span data-testid="triage-row-counterparty-text-{{ $row->transactionId }}">{{ $row->counterpartyName ?? '—' }}</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->amountMinor, $row->currency) }}</td>
                                 <td class="px-4 py-2">
                                     <select
