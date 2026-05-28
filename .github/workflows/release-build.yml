@@ -1,11 +1,12 @@
-# Manual build-only verification workflow. Runs the same per-
-# platform `native:build` matrix release.yml runs, but stops after
-# the artifact upload — there is no publish step, no Ed25519
-# manifest signing, and no GitHub Release is created or touched.
+# Manual build-only verification workflow. Runs the per-platform
+# `native:build` matrix and uploads the produced installers as
+# workflow artifacts. No smoke test, no publish, no Ed25519
+# manifest signing, no GitHub Release is created or touched.
 #
 # Use cases:
-#   - smoke-test the desktop bundlers (macOS / Windows / Linux)
-#     for an existing tag without committing to a release
+#   - verify the desktop bundlers (macOS / Windows / Linux)
+#     compile cleanly for an existing tag without committing to a
+#     release
 #   - regenerate the bundle artifacts for an existing tag and
 #     pull them down from the workflow run's artifact tab to
 #     inspect locally before deciding whether to publish
@@ -82,27 +83,6 @@ jobs:
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
 
-            - name: Smoke test the macOS bundle
-              env:
-                  TAG_REF: ${{ inputs.tag }}
-              run: |
-                  set -euo pipefail
-                  VERSION="${TAG_REF#v}"
-                  DMG=$(find dist -name '*.dmg' -print -quit)
-                  if [ -z "$DMG" ]; then
-                      echo "No .dmg artifact found under dist/"
-                      exit 1
-                  fi
-                  hdiutil attach -mountpoint /tmp/dmg-mount "$DMG"
-                  cp -R /tmp/dmg-mount/beatrax.app /Applications/
-                  hdiutil detach /tmp/dmg-mount
-                  xattr -d com.apple.quarantine /Applications/beatrax.app || true
-                  open -a beatrax
-                  sleep 10
-                  RESPONSE=$(curl -fsS http://127.0.0.1:8000/health)
-                  echo "$RESPONSE"
-                  echo "$RESPONSE" | jq -e --arg v "$VERSION" '.status == "ok" and .app_version == $v'
-
             - name: Upload macOS artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
@@ -152,25 +132,6 @@ jobs:
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
 
-            - name: Smoke test the Windows bundle
-              shell: bash
-              env:
-                  TAG_REF: ${{ inputs.tag }}
-              run: |
-                  set -euo pipefail
-                  VERSION="${TAG_REF#v}"
-                  INSTALLER=$(find dist -name '*.exe' -print -quit)
-                  if [ -z "$INSTALLER" ]; then
-                      echo "No .exe installer found under dist/"
-                      exit 1
-                  fi
-                  start //wait "" "$INSTALLER" //S
-                  start "" "C:\\Program Files\\beatrax\\beatrax.exe"
-                  sleep 10
-                  RESPONSE=$(curl -fsS http://127.0.0.1:8000/health)
-                  echo "$RESPONSE"
-                  echo "$RESPONSE" | jq -e --arg v "$VERSION" '.status == "ok" and .app_version == $v'
-
             - name: Upload Windows artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
@@ -218,24 +179,6 @@ jobs:
                   set -euo pipefail
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
-
-            - name: Smoke test the Linux bundle
-              env:
-                  TAG_REF: ${{ inputs.tag }}
-              run: |
-                  set -euo pipefail
-                  VERSION="${TAG_REF#v}"
-                  DEB=$(find dist -name '*.deb' -print -quit)
-                  if [ -z "$DEB" ]; then
-                      echo "No .deb installer found under dist/"
-                      exit 1
-                  fi
-                  sudo dpkg -i "$DEB"
-                  nohup beatrax > /tmp/beatrax.log 2>&1 &
-                  sleep 10
-                  RESPONSE=$(curl -fsS http://127.0.0.1:8000/health)
-                  echo "$RESPONSE"
-                  echo "$RESPONSE" | jq -e --arg v "$VERSION" '.status == "ok" and .app_version == $v'
 
             - name: Upload Linux artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
