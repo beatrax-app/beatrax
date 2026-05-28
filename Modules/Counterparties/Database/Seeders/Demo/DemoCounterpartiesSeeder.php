@@ -86,6 +86,70 @@ final class DemoCounterpartiesSeeder
     ) {}
 
     /**
+     * Per-user `bank` + `self_account` counterparty rows. The
+     * production resolver short-circuits the `self_account` branch
+     * before any upsert (intentional — self-account transfers do not
+     * surface as a counterparty profile), and `bank` rows are only
+     * written by the KnownCounterpartyIban resolver branch when a
+     * recognised institution IBAN is in the seed list. The demo
+     * dataset's PayPal funding + bank-fee IBANs are not in that seed
+     * list, so without an explicit seed the dataset never carries
+     * `bank` or `self_account` rows and the type-chip strip on the
+     * `/counterparties` page would render only four of the six legal
+     * type buckets.
+     *
+     * Idempotency: `updateOrCreate` keyed on `(user_id, slug)` matches
+     * the UNIQUE on the counterparties table so a second seed run
+     * reuses the existing row.
+     *
+     * @var list<array{type: string, slug: string, displayName: string, iban: ?string, merchantName: ?string}>
+     */
+    private const EXTRA_COUNTERPARTIES = [
+        [
+            'type' => 'bank',
+            'slug' => 'asn-bank',
+            'displayName' => 'ASN Bank',
+            'iban' => 'NL00ASNB0123456789',
+            'merchantName' => null,
+        ],
+        [
+            'type' => 'bank',
+            'slug' => 'international-card-services',
+            'displayName' => 'International Card Services',
+            'iban' => 'NL75ABNA0596780870',
+            'merchantName' => null,
+        ],
+        [
+            'type' => 'self_account',
+            'slug' => 'self-asn-checking',
+            'displayName' => 'My ASN checking account',
+            'iban' => 'NL00ASNB0123456789',
+            'merchantName' => null,
+        ],
+        [
+            'type' => 'self_account',
+            'slug' => 'self-paypal-wallet',
+            'displayName' => 'My PayPal wallet',
+            'iban' => 'PAYPAL-DEMO-1',
+            'merchantName' => null,
+        ],
+        [
+            'type' => 'personal',
+            'slug' => 'maria-van-buren',
+            'displayName' => 'Maria van Buren',
+            'iban' => 'NL66ABNA0987654321',
+            'merchantName' => null,
+        ],
+        [
+            'type' => 'personal',
+            'slug' => 'jeroen-de-vries',
+            'displayName' => 'Jeroen de Vries',
+            'iban' => 'NL12RABO0001234567',
+            'merchantName' => null,
+        ],
+    ];
+
+    /**
      * @param  array<string, User>  $users
      */
     public function run(array $users): int
@@ -93,11 +157,35 @@ final class DemoCounterpartiesSeeder
         foreach ($users as $user) {
             $this->seedAliasesForUser($user);
             $this->resolveForUser($user);
+            $this->seedExtraTypeCoverageForUser($user);
         }
 
         return Counterparty::query()
             ->whereIn('user_id', array_map(static fn (User $u): int => $u->id, $users))
             ->count();
+    }
+
+    /**
+     * Idempotently insert the bank + self_account rows that close the
+     * type-coverage gap left by the resolver chain on the demo dataset.
+     */
+    private function seedExtraTypeCoverageForUser(User $user): void
+    {
+        foreach (self::EXTRA_COUNTERPARTIES as $row) {
+            Counterparty::query()->updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'slug' => $row['slug'],
+                ],
+                [
+                    'type' => $row['type'],
+                    'display_name' => $row['displayName'],
+                    'iban' => $row['iban'],
+                    'merchant_name' => $row['merchantName'],
+                    'metadata' => null,
+                ],
+            );
+        }
     }
 
     /**
