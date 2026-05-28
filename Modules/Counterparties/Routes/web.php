@@ -3,9 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
-use Modules\Counterparties\Internal\Http\Livewire\CounterpartyIndex;
-use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
-use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 
 /*
  * Counterparties module routes — the three authenticated surfaces:
@@ -14,6 +11,15 @@ use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
  *   - `/counterparties/triage`  → focused single-card unknown queue
  *   - `/counterparties/{slug}`  → type-aware profile (5 type variants
  *                                 + unknown fallback)
+ *
+ * Routes target Blade wrapper views (`counterparties::index`,
+ * `counterparties::profile`, `counterparties::triage`) that `@extends`
+ * the project's `layouts.app` (which uses `@yield('content')` shape),
+ * then inline the matching Livewire component. The Livewire `#[Layout]`
+ * attribute on the components targets Livewire 4's `<x-layouts.app>`
+ * Blade-component shape, which doesn't match the project's
+ * `@extends`-style layout — going through a wrapper view sidesteps the
+ * mismatch and keeps the layout single-source.
  *
  * Route order is load-bearing: the literal `/triage` MUST register
  * before the `/{slug}` placeholder so the Laravel router matches the
@@ -28,7 +34,12 @@ use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
  * resolve against.
  */
 Route::middleware(['web', 'auth'])->group(static function (): void {
-    Route::get('/counterparties', CounterpartyIndex::class)->name('counterparties.index');
-    Route::get('/counterparties/triage', CounterpartyTriage::class)->name('counterparties.triage');
-    Route::get('/counterparties/{slug}', CounterpartyProfile::class)->name('counterparties.profile');
+    Route::view('/counterparties', 'counterparties::index')
+        ->name('counterparties.index');
+
+    Route::view('/counterparties/triage', 'counterparties::triage')
+        ->name('counterparties.triage');
+
+    Route::get('/counterparties/{slug}', static fn (string $slug) => view('counterparties::profile', ['slug' => $slug]))
+        ->name('counterparties.profile');
 });
