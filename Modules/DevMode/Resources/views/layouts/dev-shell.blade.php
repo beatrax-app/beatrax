@@ -192,6 +192,45 @@
              the spawn fires. --}}
         @livewire('dev.command-arg-prompt-modal')
 
+        {{-- Global toast stack.
+
+             Every $this->dispatch('toast', message: '...') in the
+             project fires a browser CustomEvent on the window with
+             the message in $event.detail.message; this Alpine
+             listener pushes it onto a 5-second auto-dismiss stack
+             rendered bottom-right. Without this host, the dispatch
+             reached no UI — user-visible symptom: "I clicked Run and
+             nothing happened" despite the spawn firing fine on disk.
+
+             Identical snippet lives in the main app layout so toasts
+             work uniformly inside and outside /dev/*. --}}
+        <div
+            x-data="{
+                toasts: [],
+                push(detail) {
+                    const id = Date.now() + Math.random();
+                    this.toasts.push({ id, message: (detail && detail.message) || '' });
+                    setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 5000);
+                },
+                dismiss(id) { this.toasts = this.toasts.filter(t => t.id !== id); },
+            }"
+            x-on:toast.window="push($event.detail)"
+            class="pointer-events-none fixed bottom-4 right-4 z-[10000] flex w-[min(380px,calc(100vw-2rem))] flex-col-reverse gap-2"
+            role="status"
+            aria-live="polite"
+            data-testid="toast-host"
+        >
+            <template x-for="t in toasts" :key="t.id">
+                <div
+                    x-on:click="dismiss(t.id)"
+                    class="pointer-events-auto cursor-pointer rounded-md bg-slate-900 px-4 py-3 text-sm text-white shadow-lg ring-1 ring-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:ring-slate-300"
+                    role="alert"
+                    data-testid="toast"
+                    x-text="t.message"
+                ></div>
+            </template>
+        </div>
+
         @livewireScripts
         @fluxScripts
     </body>
