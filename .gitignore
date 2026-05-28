@@ -87,3 +87,9 @@ yarn-error.log
 
 # macOS Finder metadata
 .DS_Store
+
+# Local-only planning corpus (PLAN.md / SUMMARY.md / workflow state / UAT specs /
+# discussion logs / phase scratch). Kept on disk for the local GSD workflow tools;
+# never tracked in public history — wave 7 of the v1.0 closeout series rewrote
+# every prior commit to strip this directory.
+.planning/
