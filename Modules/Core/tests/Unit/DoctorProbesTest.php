@@ -358,9 +358,10 @@ it('PhpVersionProbe reports the current interpreter version as ok when at the mi
     $probe = new PhpVersionProbe;
     $result = $probe->run();
 
-    // PHP 8.5+ is project-mandated. The test environment is on at
-    // least the minimum, so the probe must read ok and embed the
-    // version string in the message.
+    // PHP 8.4+ is the project minimum (matches composer.json + CI
+    // matrix). The test environment is on at least the minimum, so
+    // the probe must read ok and embed the version string in the
+    // message.
     expect($result->severity)->toBe('ok');
     expect($result->message)->toContain(phpversion());
 });
