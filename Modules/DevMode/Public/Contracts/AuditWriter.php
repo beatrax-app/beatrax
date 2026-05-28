@@ -27,6 +27,12 @@ interface AuditWriter
      * passed RedactionExcerptCap's OAuth scrub-set + Bearer + JWT
      * redaction sweep and the 8 KiB byte cap.
      *
+     * `runId` is the spawn-time identifier; when provided it lands in
+     * the row's properties so {@see finalizeCommandRun()} can locate
+     * and update the same row when the run completes. Callers that
+     * always have a finishedAt + exitCode (one-shot writes from
+     * legacy paths) may pass null.
+     *
      * @param  array<string, mixed>  $args
      */
     public function recordCommandRun(
@@ -39,7 +45,27 @@ interface AuditWriter
         ?int $exitCode,
         string $stdoutExcerpt,
         string $errorExcerpt,
+        ?string $runId = null,
     ): void;
+
+    /**
+     * Finalize a previously-eager-written command run by `runId`.
+     * Returns true when the row was located and updated, false when
+     * no matching row existed (callers fall back to a fresh
+     * recordCommandRun() in that case so the audit trail still
+     * captures the fact-of-run).
+     *
+     * `stdoutExcerpt` is bounded by the same redaction + byte-cap
+     * pipeline as recordCommandRun().
+     */
+    public function finalizeCommandRun(
+        string $runId,
+        CarbonInterface $finishedAt,
+        ?int $exitCode,
+        string $stdoutExcerpt,
+        string $errorExcerpt,
+        bool $cancelled,
+    ): bool;
 
     /**
      * Record a destructive queue action (retry-failed, flush-failed,

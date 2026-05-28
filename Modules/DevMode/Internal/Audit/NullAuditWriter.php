@@ -33,8 +33,21 @@ final class NullAuditWriter implements AuditWriter
         ?int $exitCode,
         string $stdoutExcerpt,
         string $errorExcerpt,
+        ?string $runId = null,
     ): void {
         // Null-shape no-op.
+    }
+
+    public function finalizeCommandRun(
+        string $runId,
+        CarbonInterface $finishedAt,
+        ?int $exitCode,
+        string $stdoutExcerpt,
+        string $errorExcerpt,
+        bool $cancelled,
+    ): bool {
+        // Null-shape no-op — pretend the row existed.
+        return false;
     }
 
     /**
