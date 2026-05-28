@@ -21,13 +21,20 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * makes the one-row-per-user invariant impossible to violate from any
  * call site.
  *
- * The `$fillable` list carries only `user_id`; domain modules that
- * extend the table with additive column-add migrations extend the
- * fillable set inside their own model assignments (preference values
- * are written through Eloquent's mass-assignable surface).
+ * The `$fillable` list grows as domain modules ship additive
+ * column-add migrations against this table. Each consuming module's
+ * column lands in `$fillable` here so the Eloquent mass-assignable
+ * surface stays the single canonical write path. Current columns:
+ *
+ *   - `user_id` — foundation (17-04a)
+ *   - `counterparty_index_view` — `/counterparties` index view mode
+ *     (`cards` | `list`); shipped with 17-06b. Default `cards`
+ *     materialises at the DB boundary, so omission on insert yields
+ *     the canonical default without an Eloquent assignment.
  *
  * @property int $id
  * @property int|null $user_id
+ * @property string $counterparty_index_view
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -41,6 +48,7 @@ final class UserPreference extends Model
     /** @var list<string> */
     protected $fillable = [
         'user_id',
+        'counterparty_index_view',
     ];
 
     /** @return array<string, string> */
