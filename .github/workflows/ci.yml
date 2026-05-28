@@ -71,6 +71,22 @@ jobs:
             - name: Install Composer dependencies
               run: composer install --prefer-dist --no-interaction --no-progress
 
+            - name: Set up Node
+              uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+              with:
+                  node-version: '22'
+                  cache: npm
+
+            - name: Install npm dependencies
+              run: npm ci
+
+            - name: Build Vite assets
+              # Many Blade views call `@vite([...])` which resolves URLs
+              # via `public/build/manifest.json`. Feature tests render
+              # those views, so the manifest must exist before Pest runs
+              # or rendering throws a ViewException.
+              run: npm run build
+
             - name: Prepare environment for Larastan + Pest
               # Larastan boots the Laravel app to provide smarter static
               # analysis (it reads service-container bindings + config).
