@@ -236,6 +236,14 @@ return [
         // launch on Apple Silicon.
         'php scripts/nativephp_force_adhoc_signing.php',
 
+        // Bypass electron-updater's OS-signature differential-download
+        // validation on macOS. The bundle is ad-hoc signed (the hook
+        // above), so the differential path's OS-signature check fails
+        // and the auto-update aborts; the full-binary path retains
+        // SHA-512 binary verification driven by ElectronUpdateChannel,
+        // so end-to-end integrity is preserved.
+        'php scripts/nativephp_inject_macos_update_settings.php',
+
         // Expose `#plugin/*` in the electron package.json `imports` map so
         // subpath imports like `#plugin/server/state.js` resolve under Node
         // subpath imports. The NativePHP-published template only declares the
