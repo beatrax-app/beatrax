@@ -39,4 +39,16 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
     })->name('dashboard');
 
     Route::view('/settings', 'core::settings')->name('settings');
+
+    // "Where is my data?" — the user-facing privacy page that
+    // surfaces the resolved on-disk paths through
+    // UserDataPathService and gates the export-everything CTA on
+    // the authenticated user's is_developer flag. The wrapper
+    // Blade view (`core::help.data-locations`) `@extends`
+    // `layouts.app` and mounts the `core.help-data-locations`
+    // Livewire component — mirrors the `dashboard` view's wiring
+    // shape (Blade `@extends` + `@section('content')` + inline
+    // `@livewire(...)`) so the authenticated chrome resolves
+    // through the same code path.
+    Route::view('/help/data-locations', 'core::help.data-locations')->name('core.help.data-locations');
 });
