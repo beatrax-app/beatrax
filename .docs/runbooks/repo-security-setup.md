@@ -1,27 +1,22 @@
 # Repo Security Setup — `nightworksio/beatrax`
 
-> Runbook captured during the Phase 17 GitHub security walkthrough
-> (2026-05-27). Reproduces the security posture on a freshly-forked or
-> freshly-cloned org repo. Companion file:
-> `.docs/cicd/branch-protection.md`.
+Reproduces the GitHub security posture on a freshly-cloned or freshly-
+forked instance of this repo. Companion file:
+[`../cicd/branch-protection.md`](../cicd/branch-protection.md).
 
-The walkthrough hit one structural constraint: **GitHub gates several
-features behind GitHub Pro on private repos** (branch protection /
-rulesets, secret scanning, CodeQL default setup, private vulnerability
-reporting). The repo will be public after Plan 17-19 — at that point
-all these features become free. The runbook splits into two phases:
+GitHub gates several features behind GitHub Pro on private repos
+(branch-protection rulesets, secret scanning, CodeQL default setup,
+private vulnerability reporting). All of them are free on public repos.
+This runbook splits accordingly:
 
 1. **Configure now** — works on private; carries over to public unchanged.
-2. **Configure on flip** — apply immediately after Plan 17-19 toggles
-   visibility to public.
+2. **Configure on flip** — apply immediately after the repo flips to public.
 
 ---
 
 ## Phase 1 — Configure now (works on private)
 
 ### Repo metadata
-
-Already applied:
 
 ```bash
 gh repo edit nightworksio/beatrax \
@@ -41,17 +36,16 @@ gh repo edit nightworksio/beatrax \
   --add-topic camt053
 ```
 
-Final topic list (13): camt053, desktop-app, dutch-banks,
-hippocratic-license, laravel, livewire, local-first, nativephp,
-personal-finance, php, sepa, sqlite, tailwindcss.
+Topic list (13): `camt053`, `desktop-app`, `dutch-banks`,
+`hippocratic-license`, `laravel`, `livewire`, `local-first`, `nativephp`,
+`personal-finance`, `php`, `sepa`, `sqlite`, `tailwindcss`.
 
-Homepage URL: not set (no project domain yet — revisit if/when one lands).
+Homepage URL: not set (no project domain).
 
-Social-preview image: not set (Plan 17-04 commits `resources/brand/social-preview-1280.png`; upload via UI when ready).
+Social-preview image: upload `resources/brand/social-preview-1280.png`
+via Settings → General → Social preview once the asset is committed.
 
 ### Merge & branch hygiene
-
-Already applied:
 
 ```bash
 gh repo edit nightworksio/beatrax \
@@ -64,18 +58,18 @@ gh repo edit nightworksio/beatrax \
 
 | Setting | Value | Why |
 |---|---|---|
-| Projects | OFF | Issues + Milestones cover planning (Plan 17-18 sets up the v1.1 milestone) |
-| Merge commit | OFF | Forces linear history at the merge level even before ruleset enforcement lands |
+| Projects | OFF | Issues + Milestones cover planning |
+| Merge commit | OFF | Forces linear history at the merge level even before the ruleset enforces it |
 | Squash merge | ON | Primary merge strategy for PRs |
 | Rebase merge | ON | Allowed for clean linear merges |
 | Delete branch on merge | ON | Keeps the branch list tidy |
-| Wiki | OFF | Documentation lives in `.docs/` (Plan 17-08+) |
+| Wiki | OFF | Documentation lives in `.docs/` |
 | Issues | ON | Bug reports + feature requests |
-| Discussions | ON | Community Q&A (default categories: Announcements, General, Ideas, Polls, Q&A, Show and tell — prune later if any feel unused) |
+| Discussions | ON | Community Q&A (default categories: Announcements, General, Ideas, Polls, Q&A, Show and tell — prune unused) |
 
 ### Dependabot — security updates (works on private)
 
-Vulnerability alerts + automated security fixes enabled (free on private):
+Vulnerability alerts + automated security fixes (free on private):
 
 ```bash
 gh api -X PUT repos/nightworksio/beatrax/vulnerability-alerts
@@ -84,8 +78,9 @@ gh api -X PUT repos/nightworksio/beatrax/automated-security-fixes
 
 ### Dependabot — version updates (works on private)
 
-Config committed at `.github/dependabot.yml` (companion file). Covers three
-ecosystems on a weekly Monday-morning Europe/Amsterdam cadence:
+Config committed at [`../../.github/dependabot.yml`](../../.github/dependabot.yml).
+Covers three ecosystems on a weekly Monday-morning Europe/Amsterdam
+cadence:
 
 - **composer** at `/` — Laravel, modules, brick/money, etc. Grouped:
   `laravel` (laravel/livewire/spatie/nwidart), `dev-tooling` (larastan,
@@ -100,11 +95,11 @@ PR limit: 5 (composer + npm) / 3 (github-actions). Labels:
 ### Issue + PR templates (works on private; fully effective once public)
 
 GitHub picks up templates from `.github/` automatically — no settings to
-flip. The walkthrough confirms the files exist:
+flip. Verify the files exist:
 
 ```bash
 ls -1 .github/ISSUE_TEMPLATE/ .github/PULL_REQUEST_TEMPLATE.md
-# Expect:
+# Expected:
 #   .github/PULL_REQUEST_TEMPLATE.md
 #   .github/ISSUE_TEMPLATE/bug_report.md
 #   .github/ISSUE_TEMPLATE/feature_request.md
@@ -112,7 +107,7 @@ ls -1 .github/ISSUE_TEMPLATE/ .github/PULL_REQUEST_TEMPLATE.md
 
 | File | Purpose |
 |---|---|
-| `.github/ISSUE_TEMPLATE/bug_report.md` | Structured bug intake — reproduction steps, expected vs. actual, environment (OS + beatrax version from `/_dev/health`), redirects security issues to SECURITY.md |
+| `.github/ISSUE_TEMPLATE/bug_report.md` | Structured bug intake — reproduction steps, expected vs. actual, environment (OS + beatrax version from `/_dev/health`), redirects security issues to `SECURITY.md` |
 | `.github/ISSUE_TEMPLATE/feature_request.md` | Structured feature intake — use case, proposed UX, why existing features don't cover it |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Pre-fills every PR body with Summary / Why / Test plan / Checklist (Pint, Larastan, Pest, docs, ADR-if-architectural) + Hippocratic-3.0 contribution acknowledgement |
 
@@ -124,12 +119,13 @@ private-vulnerability-reporting endpoint that lights up in Phase 2.
 
 ## Phase 2 — Configure on flip (public-only)
 
-Run all of these immediately after Plan 17-19's
+Run all of these immediately after
 `gh repo edit nightworksio/beatrax --visibility public` succeeds.
 
 ### 1. Branch-protection ruleset
 
-See `.docs/cicd/branch-protection.md` — copy the ruleset JSON and POST it.
+See [`../cicd/branch-protection.md`](../cicd/branch-protection.md) —
+copy the ruleset JSON and POST it.
 
 ### 2. Secret scanning + push protection (free on public)
 
@@ -142,18 +138,18 @@ gh api -X PATCH repos/nightworksio/beatrax \
 What this gives you:
 
 - Scans commits, PRs, and existing code for known secret patterns (AWS
-  keys, GitHub tokens, Stripe keys, etc.)
-- Push protection rejects pushes that contain detected secrets (you
-  bypass only with an explicit "I confirm this is intentional" comment)
+  keys, GitHub tokens, Stripe keys, etc.).
+- Push protection rejects pushes containing detected secrets — bypass
+  requires an explicit "I confirm this is intentional" comment.
 
 ### 3. CodeQL default setup (free on public)
 
-This is a UI-driven setup — there's no CLI shortcut. Steps:
+UI-driven — there is no CLI shortcut:
 
-1. Go to `https://github.com/nightworksio/beatrax/settings/security_analysis`
-2. Under "Code scanning", click "Set up" next to "CodeQL analysis"
-3. Pick "Default" (auto-detected languages — should pick PHP + JavaScript)
-4. Confirm. GitHub commits the workflow + runs the first scan.
+1. Go to `https://github.com/nightworksio/beatrax/settings/security_analysis`.
+2. Under "Code scanning", click "Set up" next to "CodeQL analysis".
+3. Pick "Default" (auto-detected languages — PHP + JavaScript).
+4. Confirm. GitHub commits the workflow and runs the first scan.
 
 ### 4. Private vulnerability reporting (free on public)
 
@@ -161,17 +157,15 @@ This is a UI-driven setup — there's no CLI shortcut. Steps:
 gh api -X PUT repos/nightworksio/beatrax/private-vulnerability-reporting
 ```
 
-Then cross-link from `SECURITY.md` (Plan 17-07 deliverable) with copy
-like:
+`SECURITY.md` cross-links to it:
 
 > Report security vulnerabilities privately at
 > <https://github.com/nightworksio/beatrax/security/advisories/new>.
 
 ### 5. CODEOWNERS
 
-CODEOWNERS at `.github/CODEOWNERS` lands as part of Plan 17-04 (the
-release-workflow plan), then becomes load-bearing once branch protection
-is on. Minimum content:
+`.github/CODEOWNERS` becomes load-bearing once branch protection turns
+on. Minimum content:
 
 ```
 # Workflow changes always require the maintainer to approve, even when
@@ -184,8 +178,8 @@ Replace `<github-username>` with the actual owner handle.
 
 ### 6. Required signed commits — Git client config
 
-Required signatures only enforces on the GitHub side. To make local
-signing work without surprise, the dev box needs:
+`required_signatures` only enforces on the GitHub side. The local dev
+box needs:
 
 ```bash
 # One-time per machine
@@ -200,11 +194,9 @@ Or via Sigstore (`gitsign`) — see GitHub docs on commit signing.
 
 ### 7. Going-public checklist (one pass, all in order)
 
-When the time comes:
-
 ```bash
-# 0. Confirm Plan 17-17 (.planning purge) has landed and force-pushed
-git log --oneline | grep -q ".planning" && echo "STOP — .planning still in history" || echo "ok"
+# 0. Confirm the most recent commit on main is the intended post-scrub tip
+git log -1 --oneline
 
 # 1. Flip visibility
 gh repo edit nightworksio/beatrax --visibility public
@@ -232,19 +224,21 @@ echo "Upload resources/brand/social-preview-1280.png via Settings → General �
 
 ---
 
-## What did NOT happen during the walkthrough
+## What this runbook does not cover
 
-- `signing-prod` GitHub Environment — dropped per Phase 17 A-03 (no paid
-  signing certs means no signing secrets to gate).
-- macOS Developer ID / Azure Trusted Signing secrets — dropped per A-01.
-- Branch protection ruleset itself — deferred per Phase 1/2 split above.
-- CodeQL / secret scanning / private vulnerability reporting — same.
+- **`signing-prod` GitHub Environment.** Not created — the codebase
+  ships no paid signing certs, so there are no signing secrets to gate.
+  The single repo secret in use is `ED25519_PRIVATE_KEY` for the
+  in-house manifest signature, configured separately during the release
+  workflow setup.
+- **macOS Developer ID / Azure Trusted Signing secrets.** Not used —
+  the public-release posture relies on the user-side first-launch
+  unblock for unsigned binaries.
 
 ---
 
-## Why nothing was paid for
+## Why nothing on this runbook is paid
 
-User constraint (Phase 17 amendment A-01..A-03): no paid signing certs,
-no paid GitHub Pro, no paid Azure Trusted Signing. Everything in this
-runbook works on free GitHub plans (free on public for the deferred
-items; free on private for the configured-now items).
+Every feature listed is free on the GitHub plan the repo uses (free on
+public for the deferred items; free on private for the configured-now
+items). No paid Pro, no paid Trusted Signing, no paid Developer ID.
