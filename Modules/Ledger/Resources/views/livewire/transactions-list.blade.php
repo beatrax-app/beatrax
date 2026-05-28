@@ -51,24 +51,52 @@
                 <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
                     @foreach ($page->rows as $row)
                         <tr>
-                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
-                            {{-- Counterparty is the drill-in affordance —
-                                 wire:navigate keeps the SPA-style transition
-                                 the rest of the app uses; underline-on-hover
-                                 keeps the row chrome quiet at rest. From the
-                                 detail page the "View chain" button surfaces
-                                 the cross-account chain drawer. The chain-
-                                 link badge appears next to rows that are
-                                 already part of a confirmed/candidate
-                                 chain_link, so the user knows which rows
-                                 lead somewhere when they click.  --}}
-                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
+                            {{-- Date cell carries the drill-into-detail
+                                 affordance: clicking it routes to the
+                                 transaction-detail page where the
+                                 reclassify control + chain drawer live.
+                                 The counterparty cell to the right owns
+                                 the counterparty-profile click-through.
+                                 Splitting the two affordances onto
+                                 distinct cells means each row has one
+                                 link per visible navigation target. --}}
+                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                 <a
                                     href="{{ route('transactions.show', ['transactionId' => $row->id]) }}"
                                     wire:navigate
                                     class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                     data-testid="tx-row-link-{{ $row->id }}"
-                                >{{ $row->counterpartyName ?? '—' }}</a>
+                                >{{ $row->bookedAt }}</a>
+                            </td>
+                            {{-- Counterparty cell renders the resolved
+                                 counterparty's display name. When the
+                                 row's counterparty_id has been resolved
+                                 by the CounterpartyResolver chain
+                                 (counterpartySlug is non-null), wrap
+                                 the name in a link routing to
+                                 counterparties.profile. self_account
+                                 counterparties also route here — the
+                                 profile page detects the type and
+                                 renders the self-account stub instead
+                                 of the standard profile body. Rows
+                                 without a resolved counterparty (pre-
+                                 resolver history, pathological rows,
+                                 GC-pruned references) render the name
+                                 as plain text. The chain-link badge
+                                 appears next to rows that participate
+                                 in a confirmed/candidate chain_link
+                                 regardless of counterparty state. --}}
+                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
+                                @if ($row->counterpartySlug !== null)
+                                    <a
+                                        href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
+                                        wire:navigate
+                                        class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                        data-testid="tx-row-counterparty-link-{{ $row->id }}"
+                                    >{{ $row->counterpartyName ?? '—' }}</a>
+                                @else
+                                    <span data-testid="tx-row-counterparty-text-{{ $row->id }}">{{ $row->counterpartyName ?? '—' }}</span>
+                                @endif
                                 @if (isset(($chainTxIds ?? [])[$row->id]))
                                     <span
                                         class="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400"

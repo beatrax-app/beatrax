@@ -58,8 +58,22 @@
                             <p class="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">
                                 {{ $kindLabel($hint->kind) }}
                             </p>
+                            {{-- Counterparty name links to its profile
+                                 when the from-row has been resolved by
+                                 the CounterpartyResolver chain; plain
+                                 text otherwise so the row still renders
+                                 cleanly for unresolved sources. --}}
                             <p class="mt-1 text-sm text-slate-900 dark:text-slate-100">
-                                <span>{{ $hint->fromCounterparty ?: '(no counterparty)' }}</span>
+                                @if ($hint->fromCounterpartySlug !== null)
+                                    <a
+                                        href="{{ route('counterparties.profile', ['slug' => $hint->fromCounterpartySlug]) }}"
+                                        wire:navigate
+                                        class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                        data-testid="chain-hint-from-counterparty-link-{{ $hint->chainLinkId }}"
+                                    >{{ $hint->fromCounterparty ?: '(no counterparty)' }}</a>
+                                @else
+                                    <span data-testid="chain-hint-from-counterparty-text-{{ $hint->chainLinkId }}">{{ $hint->fromCounterparty ?: '(no counterparty)' }}</span>
+                                @endif
                                 <span
                                     class="ml-2 text-slate-500 dark:text-slate-400"
                                     style="font-variant-numeric: tabular-nums;"

@@ -34,5 +34,6 @@ final class ChainTreeNode extends Data
         public readonly string $kind,
         public readonly string $confidenceTier,
         public readonly array $children = [],
+        public readonly ?string $counterpartySlug = null,
     ) {}
 }

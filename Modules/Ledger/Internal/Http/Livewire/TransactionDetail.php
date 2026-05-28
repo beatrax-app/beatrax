@@ -226,7 +226,14 @@ final class TransactionDetail extends Component
         ViewFactory $views,
         ChainLinkQuery $chainQuery,
     ): View {
+        // Eager-load the resolved counterparty so the Blade can
+        // render the click-through anchor to counterparties.profile
+        // without paying a second query. The relation is NULL when
+        // the row carries no counterparty_id (pre-resolver history,
+        // pathological rows the resolver couldn't materialise) — the
+        // Blade falls back to plain-text rendering in that case.
         $transaction = Transaction::query()
+            ->with('counterparty')
             ->where('id', $this->transactionId)
             ->where('user_id', $currentUser->user()->id)
             ->firstOrFail();
