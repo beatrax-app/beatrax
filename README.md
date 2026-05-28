@@ -49,6 +49,19 @@ great app, you probably don't need beatrax. If you split your spending
 across ASN + ICS + PayPal + recurring Google Play subscriptions and
 have given up on reconciling them by hand, this is for you.
 
+## Shoutouts
+
+### Thanks, mom
+I want to start off with thanking my mom (Bea - for anyone who wondered where the name was based on), who's been the inspiration for making this.
+
+### Get Shit Done (GSD) / Claude Code
+
+There's a few things I wanted to try out with this project, and one of them was doing everything through prompting, and the quality of what can be delivered is amazing with GSD and Claude. Check GSD out here: https://github.com/gsd-build/get-shit-done
+
+### Laravel / NativePHP
+
+Among alot of other amazing packages (and for sure check out the composer.json), I'd like to highlight Laravel and NativePHP - it's amazing how far the PHP language has come in the last few years, and what you can do with it.
+
 ## Install
 
 beatrax ships installers for macOS, Windows, and Linux. Pick the one
