@@ -23,6 +23,8 @@ but the rest of the tree reads as standalone reference — no "we used to do X" 
 | [CI/CD](cicd/) | Quality gate, release pipeline, branch protection |
 | [Local Development](local_development/) | Setup, database, troubleshooting, dev mode |
 | [Runbooks](runbooks/) | Operational procedures |
+| [Research](research/) | Known hazards, stack rationale, packaging hazards |
+| [History](history/) | Shipped milestones and the lessons that became invariants |
 | [Legal](legal/) | License rationale, data retention |
 
 ## Conventions
