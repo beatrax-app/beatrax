@@ -12,8 +12,9 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
 
 /**
- * Builds two pre-resolved chain examples for the primary demo user so
- * the `/chains` review surface has data to render against:
+ * Builds pre-resolved chain examples for the primary demo user so the
+ * `/chains` review surface and the `/chains/hints` candidate surface
+ * both have data to render against:
  *
  *   1. **PayPal → ASN funding chain.** For each of the three monthly
  *      Bol.com PayPal purchases the demo dataset emits, a
@@ -32,14 +33,27 @@ use Modules\Ledger\Models\Transaction;
  *      account, and the chain link is how the dashboard rolls the
  *      bulk row's underlying detail back into per-merchant lines.
  *
+ *   3. **funded_by_card_hint candidate.** One Coolblue purchase carries
+ *      an unresolved hint emitted by the Receipts module's
+ *      CreateChainLinkFromHint listener — the downstream expense is
+ *      known, the funder card statement transaction is not yet on the
+ *      ledger, so `to_transaction_id` rides as NULL while `state =
+ *      candidate`. Mirrors the shape `/chains/hints` queries.
+ *
+ *   4. **refund_of_hint candidate.** One Bol.com refund row carries a
+ *      receipt-derived original-order reference hint; the original
+ *      purchase has not surfaced on this ledger yet so the hint stays
+ *      candidate with `to_transaction_id = NULL`.
+ *
  * Idempotency: every link upserts via `updateOrCreate` keyed on the
  * `(user_id, from_transaction_id, kind)` composite — re-running the
  * seeder returns the same chain_links row without issuing a second
  * INSERT. The schema's chain_links_state_check trigger pair enforces
  * `state ∈ {candidate, confirmed, rejected}`; the trigger pair on
- * `kind` enforces `paypal_funding|ics_bulk_settle`. Demo rows ship as
- * `state = confirmed, resolver = auto` so the review surface treats
- * them like resolver-emitted rows the user has not re-evaluated yet.
+ * `kind` enforces `paypal_funding|ics_bulk_settle|funded_by_card_hint|
+ * refund_of_hint`. Confirmed demo rows ship as
+ * `state = confirmed, resolver = auto`; hint rows ship as
+ * `state = candidate, resolver = receipt_hint`.
  */
 final class DemoChainsSeeder
 {
@@ -61,6 +75,8 @@ final class DemoChainsSeeder
 
         $this->seedPaypalFundingChain($user);
         $this->seedIcsBulkSettleChain($user, $accounts['demo-1@beatrax.local']);
+        $this->seedFundedByCardHintCandidate($user);
+        $this->seedRefundOfHintCandidate($user);
 
         return $this->countDemoLinks($users);
     }
@@ -164,6 +180,77 @@ final class DemoChainsSeeder
     }
 
     /**
+     * Emit one `funded_by_card_hint` candidate so the /chains/hints
+     * candidate surface has data to render. Picks the Coolblue ICS
+     * card purchase (a recognisable big-ticket row) and emits the
+     * candidate with `to_transaction_id = NULL` — the receipt-derived
+     * hint asserts "this was funded by a card ending in 1234" but the
+     * matching card statement transaction has not yet landed in the
+     * ledger.
+     */
+    private function seedFundedByCardHintCandidate(User $user): void
+    {
+        $expense = Transaction::query()
+            ->where('user_id', $user->id)
+            ->where('source_format', 'demo')
+            ->where('type', 'expense')
+            ->where('description', 'COOLBLUE ROTTERDAM')
+            ->orderBy('posted_at')
+            ->first();
+
+        if ($expense === null) {
+            return;
+        }
+
+        $this->upsertHintCandidateLink(
+            userId: $user->id,
+            fromTransactionId: $expense->id,
+            kind: 'funded_by_card_hint',
+            evidence: [
+                'card_last_four' => '1234',
+                'source_receipt' => 'demo-coolblue-receipt.eml',
+                'resolver_step' => 'demo-seed',
+            ],
+            confidence: '0.700',
+        );
+    }
+
+    /**
+     * Emit one `refund_of_hint` candidate so the /chains/hints surface
+     * also has a refund-side example. Picks the Bol.com refund row and
+     * emits the candidate with `to_transaction_id = NULL` — the
+     * receipt-derived hint asserts the original-order reference id
+     * `ORD-DEMO-99` but the matching purchase row has not surfaced on
+     * this ledger yet.
+     */
+    private function seedRefundOfHintCandidate(User $user): void
+    {
+        $refund = Transaction::query()
+            ->where('user_id', $user->id)
+            ->where('source_format', 'demo')
+            ->where('type', 'refund')
+            ->where('description', 'Retour Bol.com')
+            ->orderBy('posted_at')
+            ->first();
+
+        if ($refund === null) {
+            return;
+        }
+
+        $this->upsertHintCandidateLink(
+            userId: $user->id,
+            fromTransactionId: $refund->id,
+            kind: 'refund_of_hint',
+            evidence: [
+                'original_order_ref' => 'ORD-DEMO-99',
+                'source_receipt' => 'demo-bol-refund-receipt.eml',
+                'resolver_step' => 'demo-seed',
+            ],
+            confidence: '0.750',
+        );
+    }
+
+    /**
      * Return the first settlement whose posted_at is at or after the
      * expense's posted_at. Iterating in-memory is cheap because the
      * demo window only carries three settlements.
@@ -219,6 +306,46 @@ final class DemoChainsSeeder
             'state' => 'confirmed',
             'confidence' => $confidence,
             'resolver' => 'auto',
+            'evidence' => $evidence,
+        ]);
+    }
+
+    /**
+     * Idempotent hint-candidate upsert. Distinct from `upsertChainLink`
+     * because hint candidates legally ride with `to_transaction_id =
+     * NULL` (the schema's NULL-endpoint guard whitelist allows this
+     * specifically for candidate hint kinds) and the resolver string
+     * is `receipt_hint` rather than `auto` so the /chains/hints surface
+     * can distinguish them from confirmed links.
+     *
+     * @param  array<string, mixed>  $evidence
+     */
+    private function upsertHintCandidateLink(
+        int $userId,
+        int $fromTransactionId,
+        string $kind,
+        array $evidence,
+        string $confidence,
+    ): void {
+        $existing = $this->db->connection()
+            ->table('chain_links')
+            ->where('user_id', $userId)
+            ->where('from_transaction_id', $fromTransactionId)
+            ->where('kind', $kind)
+            ->first();
+
+        if ($existing !== null) {
+            return;
+        }
+
+        ChainLink::query()->create([
+            'user_id' => $userId,
+            'from_transaction_id' => $fromTransactionId,
+            'to_transaction_id' => null,
+            'kind' => $kind,
+            'state' => 'candidate',
+            'confidence' => $confidence,
+            'resolver' => 'receipt_hint',
             'evidence' => $evidence,
         ]);
     }
