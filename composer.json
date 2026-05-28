@@ -132,6 +132,10 @@
         "preferred-install": "dist",
         "sort-packages": true,
         "license-validation": false,
+        "platform": {
+            "ext-pcntl": "8.4",
+            "ext-posix": "8.4"
+        },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true,
