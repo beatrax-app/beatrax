@@ -82,6 +82,29 @@
     --space-10: 40px;
     --space-12: 48px;
 
+    /* Spacing — named scale.
+     *
+     * Tailwind v4 builds spacing utilities (p-md, gap-sm, bottom-md, …)
+     * by looking up the `--spacing-{name}` namespace. Without these,
+     * every Blade view that wrote `class="… p-md mt-md gap-sm bottom-md
+     * right-md …"` silently rendered with no padding or no fixed-position
+     * offset — toasts fell into document flow between the system-alerts
+     * banner and the main content, modals lost their gutters, and the
+     * receipt-conflict toast appeared mid-page instead of bottom-right.
+     *
+     * The scale mirrors the typography / radius / shadow naming the rest
+     * of the design system uses so a designer reading the codebase
+     * doesn't have to switch mental models between numeric and named
+     * tokens. Values align with the existing `--space-*` numeric scale:
+     * sm ≈ space-3, md ≈ space-4, lg ≈ space-6, xl ≈ space-8.
+     */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+
+
     /* Shape */
     --radius-sm: 4px;
     --radius-md: 6px;
@@ -2408,4 +2431,28 @@ td.date,
         background: var(--color-surface-2);
         color: var(--color-text);
     }
+}
+
+/*
+ * max-w-{sm,md,lg,xl} overrides.
+ *
+ * Tailwind v4 in the current pinned version generates max-w-{sm,md,lg,xl}
+ * as `max-width: var(--spacing-{name})`, with no fallback to a width
+ * namespace. Once the project added `--spacing-sm: 0.75rem` (so spacing
+ * utilities like `p-md` / `gap-sm` / `bottom-md` resolve correctly), the
+ * derived `max-w-sm` shrank from the intended 24rem to 0.75rem — every
+ * toast, modal, and form using `max-w-sm` collapsed.
+ *
+ * Pinning the four sizes here as plain utilities — order-wise these
+ * resolve AFTER Tailwind's generated rules so they win, no `!important`
+ * needed. Values match Tailwind v3's defaults; if a future Blade view
+ * needs a different width it should use the numeric scale (`max-w-72`)
+ * or a custom utility, not bend these names.
+ */
+@layer utilities {
+    .max-w-xs { max-width: 20rem; }
+    .max-w-sm { max-width: 24rem; }
+    .max-w-md { max-width: 28rem; }
+    .max-w-lg { max-width: 32rem; }
+    .max-w-xl { max-width: 36rem; }
 }

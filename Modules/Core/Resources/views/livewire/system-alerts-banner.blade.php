@@ -25,7 +25,25 @@
     system_alerts.message may carry operator-controlled text that we
     treat as untrusted.
 --}}
-<div role="region" aria-label="System alerts" class="px-6 space-y-2">
+<div
+    role="region"
+    aria-label="System alerts"
+    {{--
+        `px-6` matches the horizontal gutter the main content uses (so
+        an alert card lines up with the dashboard's header). `space-y-2`
+        stacks multiple alerts compactly. When at least one alert is
+        active, `pt-6 pb-8` reserves a comfortable column above + below
+        the stack so the banner stops crowding the page header. When the
+        app is calm (no active rows), the wrapper renders without
+        padding so the empty landmark collapses to zero height — the
+        @if guard means the screen-reader landmark is still announced,
+        but no visible space is consumed.
+    --}}
+    @class([
+        'px-6 space-y-2',
+        'pt-6 pb-8' => count($alerts) > 0,
+    ])
+>
     @foreach ($alerts as $alert)
         @switch ($alert->severity)
             @case ('critical')
