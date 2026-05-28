@@ -90,18 +90,18 @@
         </p>
 
         @if ($devModeOn)
-            {{-- Dev Mode ON: primary CTA. Per CONTEXT.md D-30 the Dev
-                 Mode module owns the export-everything action; until
-                 that route ships, the button is rendered as a disabled
-                 stub so the page contract holds and the verifier can
-                 catch when the wiring goes live. --}}
+            {{-- Dev Mode is on, so the primary CTA renders here. The
+                 export-everything route lives in the Dev Mode module;
+                 until that route ships, the button is rendered as a
+                 disabled stub so the page contract holds and the
+                 verifier can catch when the wiring goes live. --}}
             <button
                 type="button"
                 class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                 data-testid="export-everything-cta"
                 disabled
                 aria-disabled="true"
-                title="Export action ships with the Dev Mode export-everything route per D-30."
+                title="Export action will ship with the Dev Mode export-everything route."
             >Export everything as ZIP</button>
         @else
             <div class="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700">
