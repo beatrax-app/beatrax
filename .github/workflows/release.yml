@@ -51,6 +51,23 @@ permissions:
 
 env:
     TZ: Europe/Amsterdam
+    # Wire NativePHP's updater config to the GitHub publisher.
+    # `php artisan native:build` reads these via the Updater
+    # facade and JSON-encodes them as NATIVEPHP_UPDATER_CONFIG
+    # for electron-builder, which makes electron-builder emit
+    # the auto-update manifests (`latest.yml`, `latest-mac.yml`,
+    # `latest-linux.yml`) alongside the installer artifacts.
+    # Those manifests are what the Ed25519 signing step in the
+    # publish job signs, and what electron-updater polls at
+    # runtime in the installed bundle. The repo is public, so
+    # the read-only GITHUB_TOKEN GitHub injects is enough for
+    # electron-builder's pre-publish dry-runs; `-p never` keeps
+    # it from pushing directly — softprops/action-gh-release
+    # owns the actual upload.
+    NATIVEPHP_UPDATER_PROVIDER: github
+    GITHUB_OWNER: nightworksio
+    GITHUB_REPO: beatrax
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
     gate:
@@ -178,7 +195,9 @@ jobs:
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
                   name: macos-arm64
-                  path: nativephp/electron/dist/*.dmg
+                  path: |
+                      nativephp/electron/dist/*.dmg
+                      nativephp/electron/dist/latest-mac.yml
                   if-no-files-found: error
 
     build-windows:
@@ -236,6 +255,7 @@ jobs:
                   path: |
                       nativephp/electron/dist/*.exe
                       nativephp/electron/dist/*.msi
+                      nativephp/electron/dist/latest.yml
                   if-no-files-found: error
 
     build-linux:
@@ -283,6 +303,7 @@ jobs:
                   path: |
                       nativephp/electron/dist/*.AppImage
                       nativephp/electron/dist/*.deb
+                      nativephp/electron/dist/latest-linux.yml
                   if-no-files-found: error
 
     publish:
