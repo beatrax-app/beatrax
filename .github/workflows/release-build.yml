@@ -45,13 +45,12 @@ env:
 
 jobs:
     build-macos:
-        name: build (macOS, ${{ matrix.arch }})
+        # x64 build skipped — see comment in release.yml. arm64
+        # is the only prebuilt macOS arch the pipeline produces;
+        # Intel users build locally from source.
+        name: build (macOS, arm64)
         runs-on: macos-14
         timeout-minutes: 20
-        strategy:
-            fail-fast: false
-            matrix:
-                arch: [x64, arm64]
         steps:
             - name: Check out the tagged source
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -79,18 +78,18 @@ jobs:
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
-            - name: Build the macOS bundle (${{ matrix.arch }})
+            - name: Build the macOS bundle (arm64)
               env:
                   NATIVEPHP_APP_VERSION: ${{ inputs.tag }}
               run: |
                   set -euo pipefail
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
-                  php artisan native:build mac ${{ matrix.arch }}
+                  php artisan native:build mac arm64
 
-            - name: Upload macOS artifacts (${{ matrix.arch }})
+            - name: Upload macOS artifacts (arm64)
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
-                  name: macos-${{ matrix.arch }}
+                  name: macos-arm64
                   path: nativephp/electron/dist/*.dmg
                   if-no-files-found: error
 
