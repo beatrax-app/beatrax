@@ -149,6 +149,15 @@ both.
 
 ![Transactions](.docs/assets/screenshots/transactions.gif)
 
+### Categorization
+
+A keyboard-driven inbox for transactions that landed without a category.
+Pick a category per row (1–9 hotkeys assign the top categories,
+arrow-keys move, Enter saves), then **Save categories** commits the
+batch — and the rules ripple out to similar future imports.
+
+![Categorization](.docs/assets/screenshots/categorization.gif)
+
 ### Counterparties
 
 Every merchant, bank, person, or self-account that has ever moved
@@ -159,6 +168,15 @@ chain.
 
 ![Counterparties](.docs/assets/screenshots/counterparties.gif)
 
+### Triage
+
+When a transaction belongs to an IBAN beatrax has never seen, it lands
+here as an unknown counterparty with its recent activity. Type a
+display name, pick a type (Merchant / Personal / Bank / Government /
+Self), and one keystroke labels every transaction sharing that IBAN.
+
+![Triage](.docs/assets/screenshots/triage.gif)
+
 ### Recurring
 
 Approved subscriptions and fixed payments at a glance, with the
@@ -166,6 +184,16 @@ monthly total computed across currencies. Each series opens a detail
 page with an amount-over-time chart and every occurrence.
 
 ![Recurring](.docs/assets/screenshots/recurring.gif)
+
+### Drift alerts
+
+Approved recurring series whose latest charge moved outside your
+threshold land here — with prior → current amounts, annualized
+impact, and quick actions (acknowledge, snooze, model a cancellation,
+or mark as already-cancelled). Acknowledged alerts flow into
+**History**.
+
+![Drift alerts](.docs/assets/screenshots/drift.gif)
 
 ### Forecast
 
