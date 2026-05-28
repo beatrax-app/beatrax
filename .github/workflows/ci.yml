@@ -129,6 +129,14 @@ jobs:
               run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 
             - name: Pest (full suite)
+              # Runs serially. A handful of Integration tests in
+              # Modules/EmailScan (the EmlBlobStore inbox tree) and
+              # Modules/DevMode (subprocess stdout/err tmp files) race
+              # on shared filesystem paths when paratest splits them
+              # across workers, since neither path is namespaced by
+              # TEST_TOKEN. Local dev iteration still uses --parallel
+              # via `composer test`; CI trades ~3 min of wall-clock
+              # for reliable, race-free signal.
               env:
                   APP_ENV: testing
-              run: php artisan test --parallel
+              run: php artisan test
