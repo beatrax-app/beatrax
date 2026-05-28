@@ -1,34 +1,37 @@
 # Branch Protection — `nightworksio/beatrax` · main
 
-> Captured during the Phase 17 GitHub security walkthrough (2026-05-27).
-> Repo is private at capture time. Branch-protection enforcement
-> (rulesets) is **deferred to Plan 17-19** because GitHub gates both
-> classic branch protection AND rulesets behind GitHub Pro on private
-> repos — the repo gets these features for free immediately after the
-> visibility flip to public.
+Branch-protection enforcement for `main` uses GitHub **rulesets** (the
+modern, free-on-public successor to classic branch protection).
+Companion runbook: [`../runbooks/repo-security-setup.md`](../runbooks/repo-security-setup.md).
+
+> **Visibility gating.** Several listed features (rulesets, secret
+> scanning, CodeQL default setup, private vulnerability reporting) are
+> only free once the repo is **public**. On a private repo they require
+> GitHub Pro. The "configured-now" vs. "configured-on-flip" split is
+> captured in the runbook.
 
 ## Default branch
 
-`main` (unchanged).
+`main`.
 
-## Posture chosen (per Phase 17 CONTEXT.md D-50)
+## Posture
 
-**Light, solo-friendly:** linear history + required status checks + signed
-commits, but admin can push directly to main without a PR-of-one
-ceremony. Tighten when external contributors arrive post-public-release.
+**Light, solo-friendly.** Linear history, required status checks, signed
+commits — but admins can push directly to `main` without a PR-of-one
+ceremony. The bypass switches off the moment external contributors
+arrive.
 
-## Currently configured (works on private)
+## Current configuration (works on private)
 
-- ✓ Default branch: `main`
-- ✓ Auto-delete merged head branches
-- ✓ Merge commits disabled (forces linear history at the merge level even
-  before rulesets enforce it)
-- ✓ Squash merge + rebase merge both allowed
+| Setting | Value |
+|---|---|
+| Default branch | `main` |
+| Auto-delete merged head branches | ON |
+| Merge commits | OFF (linear history at the merge level even before rulesets enforce) |
+| Squash merge | ON |
+| Rebase merge | ON |
 
-## Deferred-to-public (apply immediately after Plan 17-19 flips visibility)
-
-The full ruleset below assumes the visibility flip has happened. Apply via
-the gh CLI:
+## Ruleset (applies on public)
 
 ```bash
 cat <<'EOF' > /tmp/main-ruleset.json
@@ -64,55 +67,30 @@ EOF
 gh api -X POST repos/nightworksio/beatrax/rulesets --input /tmp/main-ruleset.json
 ```
 
-What this enforces:
+### Rules enforced
 
 | Rule | Effect | Why |
 |---|---|---|
-| `deletion` | Blocks branch deletion | Can't accidentally `git push --delete origin main` |
-| `non_fast_forward` | Blocks force-push | Can't rewrite published history |
+| `deletion` | Blocks branch deletion | `main` cannot be deleted, accidentally or otherwise |
+| `non_fast_forward` | Blocks force-push | Published history cannot be rewritten |
 | `required_linear_history` | No merge commits | All merges via squash or rebase |
-| `required_signatures` | All commits to main must be signed | Repo-level integrity |
-| `required_status_checks` | Listed CI jobs must pass before any push | The 3 quality gates from Phase 17 |
+| `required_signatures` | Every commit on `main` is signed | Repo-level integrity |
+| `required_status_checks` | Listed CI jobs must pass before merge | See "Status checks required" below |
 
-Bypass:
+### Bypass
 
-- `RepositoryRole actor_id 5` = `Admin` — admins (just the owner for now)
-  can push directly when needed. Switch to `bypass_mode: "pull_request"`
-  later if you want admins to still go through PRs.
-
-## Update procedure when CI matrix changes
-
-If Plan 17-02 widens to `[8.4, 8.5]` BEFORE this ruleset is created, leave
-the `quality (PHP 8.5)` context in the ruleset above as-is. If the matrix
-is still single-axis when you create the ruleset, drop the 8.5 line then
-add it back later via:
-
-```bash
-gh api repos/nightworksio/beatrax/rulesets/{ruleset_id} | jq -r .  # find current
-# edit json with the additional context, then:
-gh api -X PUT repos/nightworksio/beatrax/rulesets/{ruleset_id} --input /tmp/updated.json
-```
-
-The `gitleaks` context lands when `.github/workflows/ci.yml` adds the
-gitleaks job (Plan 17-04). Add it to the ruleset's required checks at
-that point, not before.
-
-## Why no classic branch protection
-
-Classic protection requires Pro/paid on private repos AND is being phased
-out by GitHub in favor of rulesets. Skipped entirely.
+`RepositoryRole actor_id 5` (`Admin`) — admins can push directly when
+the situation demands it. Switch to `bypass_mode: "pull_request"` once
+external contributors arrive so admins still go through PRs.
 
 ## Branch protection: main (full enumeration)
 
-Once the ruleset above is applied, the following rules govern every push
-to `main`:
-
 | Rule | Setting | Notes |
 |---|---|---|
-| Require pull request before merging | Optional (admin bypass on) | Solo posture per D-50; tighten when external contributors arrive |
+| Require pull request before merging | Optional (admin bypass on) | Solo posture; tighten when external contributors arrive |
 | Require approvals | 0 (or 1 with a second account) | Self-merge allowed when CI is green |
 | Dismiss stale approvals on new commits | ON | Standard hygiene |
-| Require status checks to pass | ON | See "Status checks required" table below |
+| Require status checks to pass | ON | See "Status checks required" below |
 | Require branches up to date before merging | ON | Forces a rebase against `main` before merge |
 | Require signed commits | ON | All commits to `main` carry a verified signature |
 | Require linear history | ON | Squash + rebase only; no merge commits |
@@ -128,9 +106,8 @@ to `main`:
 | `quality (PHP 8.5)` | `.github/workflows/ci.yml` | `quality` (matrix `php: 8.5`) | Same gates on the next supported PHP — catches forward-compat breakage early |
 | `gitleaks` | `.github/workflows/security.yml` | `gitleaks` | Secret-scan every PR + push for leaked credentials |
 
-The matrix axis `[8.4, 8.5]` lands in Plan 17-02; the `gitleaks` job in
-Plan 17-03. The ruleset above already references all three contexts so
-the moment those workflows merge, the gates become enforced.
+The ruleset references all three contexts already, so the gates become
+enforced the moment the matching workflows merge.
 
 ## Repository settings
 
@@ -153,8 +130,8 @@ the moment those workflows merge, the gates become enforced.
 | Code scanning (CodeQL default) | ON (public-only) | Settings → Code security and analysis |
 | Private vulnerability reporting | ON (public-only) | Settings → Code security and analysis |
 
-Public-only items light up automatically after Plan 17-15's visibility
-flip — see `../runbooks/repo-security-setup.md` for the apply order.
+Public-only items light up automatically after the visibility flip — see
+the runbook for the apply order.
 
 ## Repository metadata
 
@@ -163,18 +140,30 @@ flip — see `../runbooks/repo-security-setup.md` for the apply order.
 | Description | "Local-first personal finance dashboard that resolves cross-account routing chains across banking, ICS Cards, PayPal, and Google Play." |
 | Homepage | Not set (no project domain yet) |
 | Topics (13) | `camt053`, `desktop-app`, `dutch-banks`, `hippocratic-license`, `laravel`, `livewire`, `local-first`, `nativephp`, `personal-finance`, `php`, `sepa`, `sqlite`, `tailwindcss` |
-| Social preview image | `resources/brand/social-preview-1280.png` (uploaded via UI once Plan 17-04 commits the asset) |
+| Social preview image | `resources/brand/social-preview-1280.png` (uploaded via UI) |
+
+## Update procedure when CI matrix changes
+
+The ruleset references status-check contexts by exact string. If the CI
+matrix or a workflow job name changes, the ruleset's
+`required_status_checks` list needs the same edit:
+
+```bash
+gh api repos/nightworksio/beatrax/rulesets/{ruleset_id} | jq -r .
+# edit the JSON with the new context, then:
+gh api -X PUT repos/nightworksio/beatrax/rulesets/{ruleset_id} --input /tmp/updated.json
+```
+
+## Why no classic branch protection
+
+Classic branch protection requires GitHub Pro on private repos and is
+being phased out by GitHub in favor of rulesets. Rulesets are the
+single source of truth.
 
 ## Cross-references
 
-- `../runbooks/repo-security-setup.md` — step-by-step reproduction
-  walkthrough with the matching `gh` recipes.
-- `release-cadence.md` (lands with Plan 17-01) — how the protected `main`
-  branch interacts with the SemVer + release-branch cadence.
-- `release-workflow.md` (lands with Plan 17-09b) — how the release
-  pipeline reads `main`, builds the tagged artefacts, and respects the
-  `required_signatures` rule.
-- `../../.github/CODEOWNERS` (lands with Plan 17-03) — required reviewers
-  for `/.github/workflows/` once the ruleset enforces PR review.
-- `../../.github/dependabot.yml` — the version-update config that
-  Dependabot reads weekly.
+- [`../runbooks/repo-security-setup.md`](../runbooks/repo-security-setup.md) — step-by-step reproduction walkthrough with the matching `gh` recipes.
+- `release-cadence.md` (sibling doc) — how the protected `main` branch interacts with the SemVer + release-branch cadence.
+- `release-workflow.md` (sibling doc) — how the release pipeline reads `main`, builds the tagged artefacts, and respects the `required_signatures` rule.
+- `../../.github/CODEOWNERS` — required reviewers for `/.github/workflows/` once the ruleset enforces PR review.
+- `../../.github/dependabot.yml` — the version-update config Dependabot reads weekly.
