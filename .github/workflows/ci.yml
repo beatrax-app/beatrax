@@ -104,11 +104,20 @@ jobs:
               # CI runner has no DB; we create an empty file here.
               # `.env.example` provides the rest of the required env;
               # `APP_KEY` is generated fresh per run.
+              #
+              # The EmlBlobStore writes temp files under
+              # `storage/app/inbox` and chmods them; the framework also
+              # needs `storage/framework/{cache,sessions,views}` and
+              # `bootstrap/cache` to be writable. The tree is created
+              # explicitly so a fresh CI checkout does not fail with
+              # `failed to chmod temp file` or framework cache errors.
               run: |
                   cp .env.example .env
                   php artisan key:generate --ansi
                   mkdir -p database
                   touch database/database.sqlite
+                  mkdir -p storage/app/inbox storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+                  chmod -R u+rwX storage bootstrap/cache
 
             - name: Pint (code-style)
               run: vendor/bin/pint --test
