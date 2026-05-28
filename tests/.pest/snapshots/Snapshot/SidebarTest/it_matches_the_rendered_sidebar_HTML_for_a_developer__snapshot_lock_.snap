@@ -36,12 +36,12 @@
         Recurring
     </a>
     
-    <a href="/counterparties" class="side-item ">
+    <a href="https://beatrax.test/counterparties" class="side-item ">
         <span class="ic" aria-hidden="true">◉</span>
         Counterparties
     </a>
     
-    <a href="/counterparties/triage" class="side-item ">
+    <a href="https://beatrax.test/counterparties/triage" class="side-item ">
         <span class="ic" aria-hidden="true">❋</span>
         Triage
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
