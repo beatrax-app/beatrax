@@ -21,16 +21,24 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * makes the one-row-per-user invariant impossible to violate from any
  * call site.
  *
- * The `$fillable` list extends as feature columns land via additive
- * column-add migrations. `skipped_update_versions` carries the
- * per-user list of release versions the user dismissed via the
- * auto-update banner's "Skip this version" action; the JSON cast
- * decodes the column into a plain `list<string>` so the
- * SystemAlertsBanner can apply the suppression filter without
- * per-row decoding.
+ * The `$fillable` list grows as domain modules ship additive
+ * column-add migrations against this table. Each consuming module's
+ * column lands in `$fillable` here so the Eloquent mass-assignable
+ * surface stays the single canonical write path. Current columns:
+ *
+ *   - `user_id` — foundation
+ *   - `counterparty_index_view` — `/counterparties` index view mode
+ *     (`cards` | `list`). Default `cards` materialises at the DB
+ *     boundary, so omission on insert yields the canonical default
+ *     without an Eloquent assignment.
+ *   - `skipped_update_versions` — per-user list of release versions
+ *     the user dismissed via the auto-update banner's "Skip this
+ *     version" action. JSON-cast to `array` so SystemAlertsBanner
+ *     can apply the suppression filter without per-row decoding.
  *
  * @property int $id
  * @property int|null $user_id
+ * @property string $counterparty_index_view
  * @property array<array-key, mixed>|null $skipped_update_versions
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
@@ -45,6 +53,7 @@ final class UserPreference extends Model
     /** @var list<string> */
     protected $fillable = [
         'user_id',
+        'counterparty_index_view',
         'skipped_update_versions',
     ];
 

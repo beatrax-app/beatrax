@@ -1,0 +1,46 @@
+{{--
+    Government-type Overview tab body — full-width 3-up tax-year cards
+    with the current year emphasized. Tab bar above carries
+    Overview / Payments / Tax years / Aliases plus the right-of-tab
+    note `— no funding chains for government counterparties`.
+
+    Variables:
+      $taxYears  Collection<\stdClass{ year: int, total_minor: int }>
+      $profile   CounterpartyProfileDto
+--}}
+@php
+    use Illuminate\Support\Number;
+    $currentYear = (int) now()->format('Y');
+@endphp
+
+<div class="space-y-6" style="margin-top: var(--space-5);">
+    <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
+        Annual breakdown across all years with activity. Current year is emphasized.
+    </p>
+
+    @if ($taxYears->isEmpty())
+        <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
+            No payments recorded yet for this counterparty.
+        </p>
+    @else
+        <div class="tax-year-row">
+            @foreach ($taxYears->take(3) as $year)
+                <article class="tax-year-card {{ (int) $year->year === $currentYear ? 'current' : '' }}">
+                    <span style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); font-weight: 600;">
+                        {{ (int) $year->year }}
+                    </span>
+                    <span style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
+                        {{ Number::currency(abs((int) $year->total_minor) / 100, 'EUR', 'nl') }}
+                    </span>
+                </article>
+            @endforeach
+        </div>
+    @endif
+
+    <x-counterparties::frame>
+        <h3 style="font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 var(--space-3);">
+            Recent activity
+        </h3>
+        @include('counterparties::livewire.profile-tabs._recent-activity', ['rows' => $recentActivity])
+    </x-counterparties::frame>
+</div>
