@@ -624,6 +624,7 @@ final class ForecastPage extends Component
                 ['name' => 'Range', 'type' => 'rangeArea', 'data' => $rangeData],
                 ['name' => 'Point estimate', 'type' => 'line', 'data' => $lineData],
             ],
+            'dataLabels' => ['enabled' => false],
             'fill' => ['opacity' => [0.2, 1.0]],
             'stroke' => ['curve' => 'straight', 'width' => [0, 2.5]],
             'colors' => [$panelColor, $panelColor],

@@ -99,7 +99,7 @@
                 if (! window.ApexCharts) { return; }
                 chart = new window.ApexCharts(
                     $el.querySelector('#{{ $chartElementId }}'),
-                    JSON.parse($el.dataset.options),
+                    window.beatraxApplyChartTheme(JSON.parse($el.dataset.options)),
                 );
                 chart.render();
             "

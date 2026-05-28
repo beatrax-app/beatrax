@@ -76,10 +76,35 @@
     }
 @endphp
 
+{{--
+    Same Alpine `x-data` / `x-init` hydration pair the sibling
+    `range-area-chart.blade.php` uses — without it, the inner
+    `<div id="{{ $chartElementId }}">` renders as a bare empty box
+    because nothing mounts an ApexCharts instance onto it. The
+    forecast-updated event listener mirrors the range-area chart so
+    a Livewire-driven horizon / scenario flip refreshes the line
+    chart without remounting the component.
+--}}
 <div
-    id="{{ $chartElementId }}"
-    data-testid="all-accounts-aggregate-chart"
-    data-chart-variant="line"
+    x-data="{ chart: null }"
+    x-init="
+        if (! window.ApexCharts) { return; }
+        chart = new window.ApexCharts(
+            $el.querySelector('#{{ $chartElementId }}'),
+            window.beatraxApplyChartTheme(JSON.parse($el.dataset.options)),
+        );
+        chart.render();
+    "
+    x-on:forecast-updated.window="
+        if (! window.ApexCharts || ! chart) { return; }
+        chart.updateOptions(window.beatraxApplyChartTheme(JSON.parse($el.dataset.options)), true, false);
+    "
     data-options="{{ $optionsJson }}"
-    class="min-h-[320px] rounded-md border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700"
-></div>
+>
+    <div
+        id="{{ $chartElementId }}"
+        data-testid="all-accounts-aggregate-chart"
+        data-chart-variant="line"
+        class="min-h-[320px] rounded-md border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700"
+    ></div>
+</div>

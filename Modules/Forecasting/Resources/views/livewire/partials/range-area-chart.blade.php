@@ -41,13 +41,13 @@
         if (! window.ApexCharts) { return; }
         chart = new window.ApexCharts(
             $el.querySelector('#{{ $chartElementId }}'),
-            JSON.parse($el.dataset.options),
+            window.beatraxApplyChartTheme(JSON.parse($el.dataset.options)),
         );
         chart.render();
     "
     x-on:forecast-updated.window="
         if (! window.ApexCharts || ! chart) { return; }
-        chart.updateOptions(JSON.parse($el.dataset.options), true, false);
+        chart.updateOptions(window.beatraxApplyChartTheme(JSON.parse($el.dataset.options)), true, false);
     "
     data-options="{{ $optionsJson }}"
 >
