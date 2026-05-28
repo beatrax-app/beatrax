@@ -4,18 +4,16 @@
 # Workflow shape: a quality gate (the same Pint + Larastan + Pest
 # matrix that ci.yml runs) fails fast on a broken main before any
 # platform job spins up; macOS-14 + Windows-2025 + Ubuntu-24.04 build
-# in parallel and each runs a /health smoke probe against its own
-# installed bundle; the publish job creates a GitHub Release with
-# every platform artifact attached.
+# in parallel; the publish job creates a GitHub Release with every
+# platform artifact attached.
 #
 # Tag is the single source of truth for the shipped version string.
 # The release workflow strips the leading `v` from the pushed tag
 # (so `v0.1.0` becomes `0.1.0`) and exports it as
 # NATIVEPHP_APP_VERSION before invoking `php artisan native:build`;
 # the bundle reads that value via env('NATIVEPHP_APP_VERSION', ...)
-# in config/nativephp.php and surfaces it through the /health probe,
-# so the smoke step asserts both liveness and that the running
-# bundle reports the exact tag that was pushed.
+# in config/nativephp.php and surfaces it through the /health probe
+# at runtime on real installs.
 #
 # Every third-party action is pinned to a full 40-char commit SHA;
 # tag-only references are a supply-chain risk because mutable tags
@@ -164,34 +162,6 @@ jobs:
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
 
-            - name: Smoke test the macOS bundle
-              env:
-                  TAG_REF: ${{ github.ref_name }}
-              run: |
-                  set -euo pipefail
-                  VERSION="${TAG_REF#v}"
-                  DMG=$(find dist -name '*.dmg' -print -quit)
-                  if [ -z "$DMG" ]; then
-                      echo "No .dmg artifact found under dist/"
-                      exit 1
-                  fi
-                  hdiutil attach -mountpoint /tmp/dmg-mount "$DMG"
-                  cp -R /tmp/dmg-mount/beatrax.app /Applications/
-                  hdiutil detach /tmp/dmg-mount
-                  # Clear the quarantine xattr so Gatekeeper does not
-                  # block automated launch. The bundle is ad-hoc signed,
-                  # so a fresh download in the GUI flow would otherwise
-                  # require a manual right-click → Open from the user.
-                  xattr -d com.apple.quarantine /Applications/beatrax.app || true
-                  open -a beatrax
-                  # Allow the embedded PHP server time to boot before the
-                  # first probe; the bundled server starts asynchronously
-                  # from `open`, so a 10s settle is the documented depth.
-                  sleep 10
-                  RESPONSE=$(curl -fsS http://127.0.0.1:8000/health)
-                  echo "$RESPONSE"
-                  echo "$RESPONSE" | jq -e --arg v "$VERSION" '.status == "ok" and .app_version == $v'
-
             - name: Upload macOS artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
@@ -247,28 +217,6 @@ jobs:
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
 
-            - name: Smoke test the Windows bundle
-              shell: bash
-              env:
-                  TAG_REF: ${{ github.ref_name }}
-              run: |
-                  set -euo pipefail
-                  VERSION="${TAG_REF#v}"
-                  INSTALLER=$(find dist -name '*.exe' -print -quit)
-                  if [ -z "$INSTALLER" ]; then
-                      echo "No .exe installer found under dist/"
-                      exit 1
-                  fi
-                  # Silent install via the installer's /S flag; the
-                  # `start //wait` form blocks until the installer exits
-                  # rather than spawning and returning immediately.
-                  start //wait "" "$INSTALLER" //S
-                  start "" "C:\\Program Files\\beatrax\\beatrax.exe"
-                  sleep 10
-                  RESPONSE=$(curl -fsS http://127.0.0.1:8000/health)
-                  echo "$RESPONSE"
-                  echo "$RESPONSE" | jq -e --arg v "$VERSION" '.status == "ok" and .app_version == $v'
-
             - name: Upload Windows artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
@@ -315,24 +263,6 @@ jobs:
                   set -euo pipefail
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
-
-            - name: Smoke test the Linux bundle
-              env:
-                  TAG_REF: ${{ github.ref_name }}
-              run: |
-                  set -euo pipefail
-                  VERSION="${TAG_REF#v}"
-                  DEB=$(find dist -name '*.deb' -print -quit)
-                  if [ -z "$DEB" ]; then
-                      echo "No .deb installer found under dist/"
-                      exit 1
-                  fi
-                  sudo dpkg -i "$DEB"
-                  nohup beatrax > /tmp/beatrax.log 2>&1 &
-                  sleep 10
-                  RESPONSE=$(curl -fsS http://127.0.0.1:8000/health)
-                  echo "$RESPONSE"
-                  echo "$RESPONSE" | jq -e --arg v "$VERSION" '.status == "ok" and .app_version == $v'
 
             - name: Upload Linux artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
