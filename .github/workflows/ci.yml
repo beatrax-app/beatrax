@@ -71,6 +71,22 @@ jobs:
             - name: Install Composer dependencies
               run: composer install --prefer-dist --no-interaction --no-progress
 
+            - name: Prepare environment for Larastan + Pest
+              # Larastan boots the Laravel app to provide smarter static
+              # analysis (it reads service-container bindings + config).
+              # The boot path runs `PRAGMA journal_mode = WAL` against
+              # the configured SQLite connection, so an empty SQLite
+              # file at `database/database.sqlite` must exist or the
+              # boot fails with `Database file ... does not exist`. The
+              # CI runner has no DB; we create an empty file here.
+              # `.env.example` provides the rest of the required env;
+              # `APP_KEY` is generated fresh per run.
+              run: |
+                  cp .env.example .env
+                  php artisan key:generate --ansi
+                  mkdir -p database
+                  touch database/database.sqlite
+
             - name: Pint (code-style)
               run: vendor/bin/pint --test
 
