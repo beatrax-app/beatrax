@@ -2,7 +2,8 @@
     <div class="side-brand">
         <img src="https://beatrax.test/build/assets/logo-DEpTnGRK.svg" alt="beatrax" width="24" height="24" class="logo logo-svg" />
         <span>beatrax</span>
-        <span class="version-chip">v2.0.0-dev</span>
+        
+        <span class="version-chip">v0.0.0-dev</span>
     </div>
 
     <div class="side-search" role="search">
