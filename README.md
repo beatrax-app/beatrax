@@ -122,23 +122,82 @@ the deeper "is this manifest authentic?" check, see
 
 ## Screenshots
 
-A handful of representative screens from the running app:
+A walk through the app — most are short gifs that step through 2–3
+distinct states, the rest are stills.
 
-- **Dashboard** — the "this month at a glance" view with the cash-flow
-  forecast and the per-category breakdown.
-  <!-- screenshot: .docs/assets/screenshots/dashboard.png -->
-- **Chains review** — the page that shows PayPal → ASN and ICS → ASN
-  funding-chain resolutions, so you can see what really paid for what.
-  <!-- screenshot: .docs/assets/screenshots/chains.png -->
-- **Forecast** — 30 / 60 / 90-day cash-flow projection with what-if
-  scenarios.
-  <!-- screenshot: .docs/assets/screenshots/forecast.png -->
-- **Dev Console** — the diagnostic panel for inspecting ingestion
-  state, queue health, and the SQLite WAL.
-  <!-- screenshot: .docs/assets/screenshots/dev-console.png -->
-- **Multi-user profile selector** — switch between personal and
-  shared-household views without leaving the app.
-  <!-- screenshot: .docs/assets/screenshots/multi-user.png -->
+### Setup wizard
+
+A seven-step first-run flow: welcome → bank → PayPal → ICS card →
+email → review & commit → done. Each connector step is skippable so
+you can come back to it later from Settings.
+
+![Setup wizard walkthrough](.docs/assets/screenshots/setup-wizard.gif)
+
+### Dashboard
+
+The "this month at a glance" view with the cash-flow forecast
+highlight, in/out/net at the top, drift alerts, and email-scan health.
+
+![Dashboard](.docs/assets/screenshots/dashboard.png)
+
+### Transactions
+
+Browse, filter, and recategorize inline. Flip between **EUR only** and
+**Original currency** to reveal what a charge really cost — Google
+Play settles in USD but the ASN charge is in EUR, and the toggle shows
+both.
+
+![Transactions](.docs/assets/screenshots/transactions.gif)
+
+### Counterparties
+
+Every merchant, bank, person, or self-account that has ever moved
+money in or out — with type chips, 12-month totals, average per
+month, and a sparkline of recent activity. Drill in for the full
+profile, recent transactions, aliases, and any detected funding
+chain.
+
+![Counterparties](.docs/assets/screenshots/counterparties.gif)
+
+### Recurring
+
+Approved subscriptions and fixed payments at a glance, with the
+monthly total computed across currencies. Each series opens a detail
+page with an amount-over-time chart and every occurrence.
+
+![Recurring](.docs/assets/screenshots/recurring.gif)
+
+### Forecast
+
+30 / 60 / 90-day cash-flow projection across every account. Toggle
+between the aggregate line and per-account range-area charts, and
+overlay what-if scenarios (e.g. a summer-holiday cash outflow) to see
+the dip before it happens.
+
+![Forecast](.docs/assets/screenshots/forecast.gif)
+
+### Chains review
+
+PayPal → ASN and ICS → ASN funding-chain resolutions, so you can see
+what really paid for what.
+
+![Chains review](.docs/assets/screenshots/chains.png)
+
+### Command palette
+
+`⌘K` from anywhere to jump to a page, run a command, or invoke an
+action. Type-ahead filters across views, dev commands, and actions —
+artisan commands, system snapshot, profile, and more.
+
+![Command palette](.docs/assets/screenshots/palette.gif)
+
+### Dev Console
+
+The diagnostic panel for inspecting ingestion state, queue health,
+SQL, logs, and the SQLite WAL — only visible when developer mode is
+on.
+
+![Dev Console](.docs/assets/screenshots/dev-console.png)
 
 Contributors capturing fresh screenshots can populate a representative
 demo dataset with `php artisan demo:seed --reset` once that command
