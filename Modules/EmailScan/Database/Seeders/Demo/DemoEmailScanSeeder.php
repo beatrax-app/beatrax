@@ -183,7 +183,7 @@ final class DemoEmailScanSeeder
             [
                 'client_id' => 'demo-client-id-'.$provider,
                 'client_secret' => 'demo-client-secret-'.$provider,
-                'redirect_uri' => 'https://diederik.test/oauth/callback/'.$provider,
+                'redirect_uri' => 'https://beatrax.test/oauth/callback/'.$provider,
                 'tokens_blob' => '{"access_token":"demo-access","refresh_token":"demo-refresh"}',
             ],
         );

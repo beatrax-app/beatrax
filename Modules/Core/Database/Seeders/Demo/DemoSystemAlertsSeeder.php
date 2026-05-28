@@ -59,7 +59,7 @@ final class DemoSystemAlertsSeeder
         [
             'kind' => 'update_available',
             'severity' => 'info',
-            'message' => 'A new release of diederik is available — see Settings → About for release notes.',
+            'message' => 'A new release of beatrax is available — see Settings → About for release notes.',
             'ageHours' => 12,
             'acknowledgedAgeHours' => null,
             'seedKey' => 'update-available-current',
