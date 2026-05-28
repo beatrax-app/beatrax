@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 
@@ -191,6 +192,20 @@ final class SettingsPage extends Component
                 'auto_import_drop_folder' => $this->autoImportFromDropFolder,
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
+    }
+
+    /**
+     * Opens the public GitHub releases page in the user's system
+     * browser via the existing OpenExternalUrlAction (https +
+     * github.com allow-list). The "About updates" Settings copy
+     * documents that auto-update arrives via the in-app banner; this
+     * link is the fall-back for users who want to grab an installer
+     * manually (first install, or recovery if a future auto-update
+     * fails to apply).
+     */
+    public function openReleasesPage(OpenExternalUrlAction $opener): void
+    {
+        $opener('https://github.com/nightworksio/beatrax/releases/latest');
     }
 
     public function save(CurrentUser $currentUser): void
