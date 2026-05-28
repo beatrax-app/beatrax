@@ -1,5 +1,7 @@
 # Tag-triggered installer pipeline. Push a v*.*.* tag for a stable
-# draft release; push a v*-rc.* tag for an immediate preview release.
+# draft release; push any tag with a semver prerelease suffix
+# (e.g. v1.0.0-beta, v1.0.0-rc.1, v1.0.0-alpha.2) for an immediate
+# preview release.
 #
 # Workflow shape: a quality gate (the same Pint + Larastan + Pest
 # matrix that ci.yml runs) fails fast on a broken main before any
@@ -329,10 +331,14 @@ jobs:
               with:
                   tag_name: ${{ github.ref_name }}
                   # Stable tags (v*.*.*) create a draft Release that a
-                  # human must explicitly publish; RC tags (v*-rc.*)
-                  # publish immediately to the preview channel.
-                  draft: ${{ !contains(github.ref_name, '-rc') }}
-                  prerelease: ${{ contains(github.ref_name, '-rc') }}
+                  # human must explicitly publish. Any tag carrying a
+                  # semver prerelease suffix (-beta, -rc.1, -alpha.2,
+                  # …) publishes immediately to the preview channel —
+                  # the hyphen after the version triple is semver 2.0's
+                  # marker for a prerelease, so `contains('-')` is the
+                  # right detection rule.
+                  draft: ${{ !contains(github.ref_name, '-') }}
+                  prerelease: ${{ contains(github.ref_name, '-') }}
                   # Every platform artifact PLUS the Ed25519 detached
                   # signature for each publisher manifest. Installed
                   # bundles fetch the matching `.sig` alongside the
