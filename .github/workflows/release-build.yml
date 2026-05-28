@@ -87,7 +87,7 @@ jobs:
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
                   name: macos
-                  path: dist/*.dmg
+                  path: nativephp/electron/dist/*.dmg
                   if-no-files-found: error
 
     build-windows:
@@ -137,8 +137,8 @@ jobs:
               with:
                   name: windows
                   path: |
-                      dist/*.exe
-                      dist/*.msi
+                      nativephp/electron/dist/*.exe
+                      nativephp/electron/dist/*.msi
                   if-no-files-found: error
 
     build-linux:
@@ -185,6 +185,6 @@ jobs:
               with:
                   name: linux
                   path: |
-                      dist/*.AppImage
-                      dist/*.deb
+                      nativephp/electron/dist/*.AppImage
+                      nativephp/electron/dist/*.deb
                   if-no-files-found: error
