@@ -102,6 +102,23 @@ it('publishes php.ini overrides that lift the upload ceiling above the wizard va
     expect($phpIni['post_max_size'])->toBe('20M');
 });
 
+it('publishes a max_execution_time override that absorbs the auto-updater Guzzle call', function (): void {
+    /*
+     * The bundled `php.ini` ships `max_execution_time = 30`, which is
+     * shorter than the NativePHP auto-updater's GitHub-feed Guzzle
+     * request on slow networks. The fatal observed in production
+     * (`Maximum execution time of 30 seconds exceeded at
+     * vendor/guzzlehttp/guzzle/src/Handler/CurlFactory.php`) is exactly
+     * that race. Lock the override here so a casual rename of the
+     * phpIni() key does not silently re-strand the updater.
+     */
+    $provider = app(NativeAppServiceProvider::class);
+    $phpIni = $provider->phpIni();
+
+    expect($phpIni)->toHaveKey('max_execution_time');
+    expect($phpIni['max_execution_time'])->toBe('120');
+});
+
 it('implements the NativePHP ProvidesPhpIni contract so the LoadPHPConfigurationCommand picks up the overrides', function (): void {
     $provider = app(NativeAppServiceProvider::class);
 
