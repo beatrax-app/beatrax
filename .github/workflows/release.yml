@@ -169,6 +169,16 @@ jobs:
             - name: Install npm dependencies
               run: npm ci
 
+            - name: Build Vite assets
+              # Blade layouts call `@vite([...])` which resolves URLs via
+              # `public/build/manifest.json`. `public/build/` is
+              # gitignored, so each per-platform build runner must
+              # regenerate it before `native:build` copies the app tree
+              # into the bundle — otherwise the shipped installer
+              # boots into Laravel's `ViteManifestNotFoundException` on
+              # the first request.
+              run: npm run build
+
             - name: Stage NativePHP electron scaffold + app .env
               # `nativephp/electron/` is gitignored — the desktop build's
               # prebuild hooks (patch-imports, inject-tray) need it on
@@ -270,6 +280,14 @@ jobs:
             - name: Install npm dependencies
               run: npm ci
 
+            - name: Build Vite assets
+              # See the macOS leg above — the manifest must exist on
+              # this runner before `native:build` copies the app tree
+              # into the bundle, or the shipped installer boots into
+              # `ViteManifestNotFoundException`.
+              shell: bash
+              run: npm run build
+
             - name: Stage NativePHP electron scaffold + app .env
               shell: bash
               run: |
@@ -348,6 +366,13 @@ jobs:
 
             - name: Install npm dependencies
               run: npm ci
+
+            - name: Build Vite assets
+              # See the macOS leg above — the manifest must exist on
+              # this runner before `native:build` copies the app tree
+              # into the bundle, or the shipped installer boots into
+              # `ViteManifestNotFoundException`.
+              run: npm run build
 
             - name: Stage NativePHP electron scaffold + app .env
               run: |

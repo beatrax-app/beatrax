@@ -94,6 +94,28 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
 
     private const POST_MAX_SIZE = '20M';
 
+    /**
+     * Maximum wall-clock seconds a single PHP request may spend before
+     * the SAPI aborts it with a FatalError.
+     *
+     * The stock `php.ini` ships `max_execution_time = 30`, which is too
+     * tight for two ordinary code paths the desktop runtime hits at
+     * boot and on a slow network:
+     *
+     *   - The NativePHP auto-updater's GitHub feed check rides through
+     *     Guzzle (`vendor/guzzlehttp/guzzle/src/Handler/CurlFactory.php`)
+     *     with the default 30-second curl timeout; a slow DNS resolve
+     *     or a high-latency hop fatals the request before the manifest
+     *     fetch even starts.
+     *   - Heavy ingestion paths (multi-page CAMT.053, `.eml` archive
+     *     scans) can exceed 30 s on a cold cache while still
+     *     completing successfully on a warm one.
+     *
+     * 120 s is the lowest ceiling that absorbs both paths without
+     * disappearing the safety net entirely.
+     */
+    private const MAX_EXECUTION_TIME = '120';
+
     public function __construct(
         private readonly WindowManager $windows,
         private readonly AppMenuBuilder $appMenu,
@@ -122,6 +144,7 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
         return [
             'upload_max_filesize' => self::UPLOAD_MAX_FILESIZE,
             'post_max_size' => self::POST_MAX_SIZE,
+            'max_execution_time' => self::MAX_EXECUTION_TIME,
         ];
     }
 
