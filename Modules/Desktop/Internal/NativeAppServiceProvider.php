@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal;
 
+use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Native\Desktop\Contracts\ProvidesPhpIni;
 use Native\Desktop\Contracts\WindowManager;
 use Native\Desktop\Facades\Menu;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * The NativePHP-booted application provider.
@@ -120,6 +123,8 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
         private readonly WindowManager $windows,
         private readonly AppMenuBuilder $appMenu,
         private readonly FirstLaunchBootstrap $bootstrap,
+        private readonly ConsoleKernel $console,
+        private readonly LoggerInterface $logger,
     ) {}
 
     /**
@@ -158,6 +163,44 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
         // own `run()` is a no-op, so re-launches after a clean install
         // stay quiet.
         $this->bootstrap->runPendingMigrations();
+
+        // Pre-compile every Blade view into the runtime view cache
+        // before the embedded webserver accepts its first request.
+        //
+        // On Windows two simultaneous Livewire requests that race to
+        // compile the same uncached view both land in
+        // `Illuminate\Filesystem\Filesystem::replace()`, which writes a
+        // `.tmp` and then `rename()`s it atop the target cached path.
+        // Windows fails the loser's rename with WinError 5 ("Access is
+        // denied (code: 5)") when AV or the sibling compile holds the
+        // destination open, and Laravel surfaces it as an
+        // `ErrorException` from the BladeCompiler — observed in the
+        // first-shipped Windows installer's production log under
+        // `C:\Users\<user>\AppData\Roaming\beatrax\storage\framework\views`.
+        //
+        // Pre-compiling here removes the race entirely: every cached
+        // `.php` is on disk before any request lands, the per-request
+        // BladeCompiler short-circuits on the up-to-date mtime check,
+        // and the rename-write path never runs again on the embedded
+        // server. The call goes through the injected console Kernel
+        // rather than a global `Artisan::call()` helper to keep the
+        // facade-free DI rule intact.
+        //
+        // The try/catch is opportunistic: if `view:cache` fails (a
+        // Blade syntax error in a single view aborts the loop and
+        // throws), aborting NativePHP boot here leaves the user with
+        // no app at all — surface the failure to the application log
+        // and fall through to on-demand compilation, which only
+        // re-exposes the race for whichever specific view the loop
+        // failed on.
+        try {
+            $this->console->call('view:cache');
+        } catch (Throwable $e) {
+            $this->logger->warning(
+                'NativePHP boot: view:cache failed; views will compile on demand',
+                ['exception' => $e],
+            );
+        }
 
         // Stateful native window (D-10) — width/height are the
         // first-launch defaults; `rememberState()` persists the
