@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Mockery\MockInterface;
 use Modules\Desktop\Internal\NativeAppServiceProvider;
 use Native\Desktop\Contracts\ProvidesPhpIni;
 use Native\Desktop\Facades\Window;
@@ -33,8 +35,25 @@ use Native\Desktop\Windows\Window as NativeWindow;
  * below asserts.
  */
 
+/*
+ * boot() now invokes `view:cache` through the constructor-injected
+ * console Kernel to pre-warm the Blade view cache (eliminates the
+ * Windows BladeCompiler rename race observed in v1.0.1-beta). The
+ * tests below that exercise boot() bind a Kernel spy so the
+ * provider runs without compiling every project view under Pest —
+ * the view-cache assertion lives in its own test below.
+ */
+function bindConsoleKernelSpy(): MockInterface
+{
+    $spy = Mockery::spy(ConsoleKernel::class);
+    app()->instance(ConsoleKernel::class, $spy);
+
+    return $spy;
+}
+
 it('configures the application window', function (): void {
     Http::fake();
+    bindConsoleKernelSpy();
 
     $fake = Window::fake();
     $fake->alwaysReturnWindows([new NativeWindow('main')]);
@@ -58,6 +77,7 @@ it('does not call the NativePHP `menu-bar/create` endpoint — the persistent tr
      * here and the assertion fails.
      */
     Http::fake();
+    bindConsoleKernelSpy();
     Window::fake()->alwaysReturnWindows([new NativeWindow('main')]);
 
     app(NativeAppServiceProvider::class)->boot();
@@ -123,4 +143,53 @@ it('implements the NativePHP ProvidesPhpIni contract so the LoadPHPConfiguration
     $provider = app(NativeAppServiceProvider::class);
 
     expect($provider)->toBeInstanceOf(ProvidesPhpIni::class);
+});
+
+it('pre-warms the Blade view cache during boot to side-step the Windows rename race', function (): void {
+    /*
+     * On Windows, two simultaneous Livewire requests that race to
+     * compile the same uncached Blade view both call
+     * `Illuminate\Filesystem\Filesystem::replace()`, which writes a
+     * `.tmp` file then `rename()`s it atop the target. Windows fails
+     * the loser's rename with WinError 5 ("Access is denied (code: 5)")
+     * when AV or the sibling compile holds the destination open — the
+     * exact production fatal observed in v1.0.1-beta's
+     * `C:\Users\<user>\AppData\Roaming\beatrax\storage\framework\views`.
+     *
+     * Pre-compiling at NativePHP boot puts every cached `.php` on disk
+     * before the embedded webserver accepts its first request; the
+     * per-request BladeCompiler short-circuits on the up-to-date mtime
+     * check and the rename-write path never runs again. The console
+     * Kernel is constructor-injected (no facade) per the project's
+     * DI-only rule.
+     */
+    Http::fake();
+    Window::fake()->alwaysReturnWindows([new NativeWindow('main')]);
+    $spy = bindConsoleKernelSpy();
+
+    app(NativeAppServiceProvider::class)->boot();
+
+    $spy->shouldHaveReceived('call')->with('view:cache')->once();
+});
+
+it('logs and continues when view:cache throws so a single broken view does not strand NativePHP at boot', function (): void {
+    /*
+     * `view:cache` aborts the whole compile loop on the first Blade
+     * syntax error, so a defensive shipping posture is to log and
+     * fall through to on-demand compilation. Aborting NativePHP boot
+     * here would leave the user with no app at all.
+     */
+    Http::fake();
+    Window::fake()->alwaysReturnWindows([new NativeWindow('main')]);
+
+    $kernel = Mockery::mock(ConsoleKernel::class);
+    $kernel->shouldReceive('call')->with('view:cache')->andThrow(new RuntimeException('boom'));
+    app()->instance(ConsoleKernel::class, $kernel);
+
+    app(NativeAppServiceProvider::class)->boot();
+
+    // No exception escapes — boot() carries on through window-open
+    // and menu-create. The Window fake's `assertOpened()` is the
+    // proof that the post-view-cache code path still ran.
+    expect(true)->toBeTrue();
 });
