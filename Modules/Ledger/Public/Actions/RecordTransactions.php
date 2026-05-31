@@ -12,15 +12,24 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Dto\RecordResult;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 /**
- * Persists a batch of canonical transactions atomically. The single DB
- * transaction is the rollback boundary: if any row in the batch fails the
- * type-validation pre-check, the whole batch is rolled back so a half-imported
- * file never lands. Rows whose fingerprint already exists are silently dropped
- * by `insertOrIgnore` — the DB-layer idempotency proof.
+ * Persists a batch of canonical transactions in bounded, independently-
+ * committing chunks. This is NO LONGER whole-file-atomic: a full-year import
+ * must not run as one unbounded in-memory DB transaction in the web request,
+ * so the batch is sliced into `CHUNK_SIZE` rows and each chunk is committed in
+ * its own DB transaction.
+ *
+ * The new guarantee is idempotent + resumable rather than all-or-nothing:
+ *  - A row that fails the type-validation pre-check rolls back only its own
+ *    chunk; chunks committed before it stay committed.
+ *  - Rows whose fingerprint already exists are silently dropped by
+ *    `insertOrIgnore` — the DB-layer idempotency proof — so re-running the
+ *    same source after a partial failure is non-duplicating: already-committed
+ *    rows are skipped and only the not-yet-stored remainder lands.
  *
  * Every row must carry a non-null `userId`. SQLite treats NULL as distinct in
  * UNIQUE indexes, so a row written with `user_id = NULL` would slip past the
@@ -33,13 +42,20 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
  *
  * For every row that `insertOrIgnore` actually persists (effected === 1) a
  * `TransactionImported` event is dispatched synchronously through the
- * constructor-injected Dispatcher. The dispatch sits inside the existing
- * outer DB transaction so cross-module listeners (e.g., transfer-pair
- * detection) observe just-inserted partner rows within the same import
- * batch's atomic frame. Duplicates never produce an event.
+ * constructor-injected Dispatcher. The dispatch sits inside the row's own
+ * chunk transaction so cross-module listeners (e.g., transfer-pair detection)
+ * observe just-inserted partner rows within the same chunk's atomic frame.
+ * Duplicates never produce an event.
  */
 final class RecordTransactions implements RecordsTransactions
 {
+    /**
+     * Maximum rows persisted per DB transaction. Bounds the size of any single
+     * transaction/in-memory unit so a large import is broken into
+     * independently-committing slices rather than one giant transaction.
+     */
+    private const CHUNK_SIZE = 500;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly FingerprintComposer $fingerprints,
@@ -52,9 +68,38 @@ final class RecordTransactions implements RecordsTransactions
         $inserted = 0;
         $duplicates = 0;
 
-        $this->db->connection()->transaction(function () use ($canonical, $user, &$inserted, &$duplicates): void {
+        // Buffer the (possibly lazy) iterable into bounded chunks and commit
+        // each chunk on its own. iterator_to_array would force the whole batch
+        // into memory at once; chunking keeps the working set bounded.
+        $chunk = [];
+        foreach ($canonical as $row) {
+            $chunk[] = $row;
+            if (count($chunk) >= self::CHUNK_SIZE) {
+                $this->persistChunk($chunk, $user, $inserted, $duplicates);
+                $chunk = [];
+            }
+        }
+
+        // Flush the trailing partial chunk.
+        if ($chunk !== []) {
+            $this->persistChunk($chunk, $user, $inserted, $duplicates);
+        }
+
+        return new RecordResult(inserted: $inserted, duplicates: $duplicates);
+    }
+
+    /**
+     * Persist one bounded chunk in its own DB transaction, folding the chunk's
+     * insert/duplicate counts into the running totals. A failing row rolls back
+     * only this chunk; prior chunks remain committed.
+     *
+     * @param  list<CanonicalTransaction>  $chunk
+     */
+    private function persistChunk(array $chunk, User $user, int &$inserted, int &$duplicates): void
+    {
+        $this->db->connection()->transaction(function () use ($chunk, $user, &$inserted, &$duplicates): void {
             $now = $this->clock->now()->toDateTimeString();
-            foreach ($canonical as $row) {
+            foreach ($chunk as $row) {
                 if ($row->userId === null) {
                     throw new InvalidArgumentException('CanonicalTransaction.userId must not be null when recording transactions.');
                 }
@@ -89,7 +134,5 @@ final class RecordTransactions implements RecordsTransactions
                 }
             }
         });
-
-        return new RecordResult(inserted: $inserted, duplicates: $duplicates);
     }
 }
