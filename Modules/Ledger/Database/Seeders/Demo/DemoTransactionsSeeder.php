@@ -54,12 +54,13 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
 final class DemoTransactionsSeeder
 {
     /**
-     * 90-day window anchored on the wall-clock "today" the seeder runs
-     * at. The dataset slides forward as the developer runs the seeder
-     * on different days, so the README screenshots always show
-     * "recent" activity rather than a fixed historical snapshot.
+     * Number of consecutive calendar months the dataset spans, ending
+     * with the current month (see run() for the anchoring rationale).
+     * Three months of monthly-cadence rows (salary, rent, the funding-
+     * chain settlements, …) plus the windowed day-offset series produce
+     * the documented ~166-row dataset.
      */
-    private const WINDOW_DAYS = 90;
+    private const MONTH_SPAN = 3;
 
     /**
      * Demo EUR/USD cross-rate used for the USD-denominated PayPal
@@ -69,6 +70,14 @@ final class DemoTransactionsSeeder
      * forex provider.
      */
     private const EUR_PER_USD = '0.92000000';
+
+    /**
+     * Inclusive upper bound for the day-offset series, set in run() to
+     * the last day of the current calendar month so the row count is
+     * stable on every run date. Shared across the per-account seed
+     * methods within a single run().
+     */
+    private CarbonImmutable $windowEnd;
 
     public function __construct(
         private readonly FingerprintComposer $fingerprints,
@@ -80,8 +89,40 @@ final class DemoTransactionsSeeder
      */
     public function run(array $users, array $accounts): int
     {
+        // Anchor the window to the first day of the calendar month
+        // MONTH_SPAN-1 months before today (the dataset spans MONTH_SPAN
+        // consecutive calendar months ending with the current one).
+        //
+        // Two bugs in the previous rolling-window logic dropped rows and
+        // made the total drift with the wall-clock date the seeder ran
+        // on (observed 140–166 against a documented ~166):
+        //
+        //  1. `today->subDays(89)` is a rolling cursor, not a calendar
+        //     boundary, so the oldest month's monthly-cadence rows
+        //     (salary, rent, settlements, …) were clipped whenever their
+        //     day-of-month fell before the cursor.
+        //  2. `subMonths()` overflows on end-of-month run dates (e.g.
+        //     "May 31 − 3 months" lands in March, skipping February),
+        //     which collapsed two monthsBack offsets onto the same
+        //     calendar month and lost the duplicates to insertOrIgnore.
+        //
+        // `subMonthsNoOverflow()->startOfMonth()` fixes both: the window
+        // start is the same calendar-month boundary on every run date,
+        // so the row count is deterministic.
         $today = CarbonImmutable::today();
-        $windowStart = $today->subDays(self::WINDOW_DAYS - 1);
+        $windowStart = $today->subMonthsNoOverflow(self::MONTH_SPAN - 1)->startOfMonth();
+
+        // Upper bound for the day-offset series (groceries, transit,
+        // online purchases): the last day of the current calendar month.
+        // Anchoring the bound to a calendar boundary — not the rolling
+        // run date — keeps the row count stable on every run date
+        // (clamping to `today` instead would shrink the current month's
+        // tail on a mid-month run, dropping the total below the
+        // documented band). Seeding the current month in full mirrors the
+        // sibling demo seeders (Recurring/Forecast) which deliberately
+        // seed upcoming-occurrence rows so the "this month at a glance"
+        // surfaces have a complete current month to render.
+        $this->windowEnd = $today->endOfMonth();
 
         $totalInserted = 0;
 
@@ -124,7 +165,7 @@ final class DemoTransactionsSeeder
         // 3× monthly salary credits (Salaris MijnWerkgever BV) on the
         // 25th of each of the three months in the window.
         $salaryCategory = $this->categoryId('income-salary');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 25, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -143,7 +184,7 @@ final class DemoTransactionsSeeder
 
         // Monthly rent on the 1st (housing-rent).
         $rentCategory = $this->categoryId('housing-rent');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 1, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -162,7 +203,7 @@ final class DemoTransactionsSeeder
 
         // Monthly KPN internet + phone on the 3rd.
         $internetCategory = $this->categoryId('housing-internet');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 3, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -180,7 +221,7 @@ final class DemoTransactionsSeeder
         }
 
         // Monthly Ziggo TV/internet on the 5th.
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 5, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -199,7 +240,7 @@ final class DemoTransactionsSeeder
 
         // Monthly Sport City gym membership on the 1st.
         $membershipsCategory = $this->categoryId('subscriptions-memberships');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 1, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -218,7 +259,7 @@ final class DemoTransactionsSeeder
 
         // Health insurance on the 28th (Zilveren Kruis).
         $healthInsuranceCategory = $this->categoryId('insurance-health');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 28, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -236,7 +277,7 @@ final class DemoTransactionsSeeder
         }
 
         // Belastingdienst (tax) on the 27th of each month.
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 27, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -259,7 +300,7 @@ final class DemoTransactionsSeeder
         $ahAmounts = [-6754, -5421, -7188, -4998, -6342, -5876, -7011, -5188, -6655, -7290, -5511, -6020];
         $cursor = $windowStart->startOfWeek(CarbonImmutable::SATURDAY);
         $i = 0;
-        while ($cursor->lessThanOrEqualTo($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+        while ($cursor->lessThanOrEqualTo($this->windowEnd)) {
             if ($cursor->greaterThanOrEqualTo($windowStart) && isset($ahAmounts[$i])) {
                 $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                     'type' => 'expense',
@@ -289,15 +330,16 @@ final class DemoTransactionsSeeder
             $i++;
         }
 
-        // Jumbo + Lidl + Dirk + Hema diversity — one each per month.
+        // Jumbo + Lidl + Dirk + Hema diversity — one each per month
+        // (MONTH_SPAN amounts each, oldest month first).
         $diversityRows = [
-            ['name' => 'Jumbo', 'description' => 'Jumbo Supermarkt Utrecht', 'amounts' => [-3211, -2890, -4055], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
-            ['name' => 'Lidl', 'description' => 'Lidl Filiaal 0042', 'amounts' => [-1989, -2210, -1875], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
-            ['name' => 'Dirk', 'description' => 'Dirk van den Broek', 'amounts' => [-2755, -3120, -2480], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
-            ['name' => 'HEMA', 'description' => 'HEMA bv Utrecht', 'amounts' => [-1295, -1750, -2105], 'category' => $this->categoryId('personal-care'), 'iban' => null, 'paymentType' => PaymentType::Pin],
+            ['name' => 'Jumbo', 'description' => 'Jumbo Supermarkt Utrecht', 'amounts' => [-3540, -3211, -2890, -4055], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
+            ['name' => 'Lidl', 'description' => 'Lidl Filiaal 0042', 'amounts' => [-2065, -1989, -2210, -1875], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
+            ['name' => 'Dirk', 'description' => 'Dirk van den Broek', 'amounts' => [-2940, -2755, -3120, -2480], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
+            ['name' => 'HEMA', 'description' => 'HEMA bv Utrecht', 'amounts' => [-1620, -1295, -1750, -2105], 'category' => $this->categoryId('personal-care'), 'iban' => null, 'paymentType' => PaymentType::Pin],
         ];
         foreach ($diversityRows as $merchant) {
-            foreach ([2, 1, 0] as $idx => $monthsBack) {
+            foreach ([3, 2, 1, 0] as $idx => $monthsBack) {
                 $date = $this->dayInMonth($windowStart, 14 + ($monthsBack * 2), $monthsBack);
                 if ($date->lessThan($windowStart)) {
                     continue;
@@ -320,7 +362,7 @@ final class DemoTransactionsSeeder
         $nsAmounts = [-1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240];
         $cursor = $windowStart;
         $nsIdx = 0;
-        while ($cursor->lessThanOrEqualTo($windowStart->addDays(self::WINDOW_DAYS - 1)) && $nsIdx < count($nsAmounts)) {
+        while ($cursor->lessThanOrEqualTo($this->windowEnd) && $nsIdx < count($nsAmounts)) {
             if (in_array($cursor->dayOfWeek, [CarbonImmutable::TUESDAY, CarbonImmutable::THURSDAY], true)) {
                 $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                     'type' => 'expense',
@@ -339,7 +381,7 @@ final class DemoTransactionsSeeder
 
         // Eating out — Domino's monthly, La Place biweekly.
         $eatingOutCategory = $this->categoryId('eating-out');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 12, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -357,7 +399,7 @@ final class DemoTransactionsSeeder
         }
         foreach ([0, 14, 28, 42, 56, 70, 84] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
-            if ($date->lessThan($windowStart) || $date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+            if ($date->lessThan($windowStart) || $date->greaterThan($this->windowEnd)) {
                 continue;
             }
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
@@ -374,7 +416,7 @@ final class DemoTransactionsSeeder
 
         // Cash withdrawal — once a month from ATM.
         $cashCategory = $this->categoryId('cash-withdrawal');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 8, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -396,7 +438,7 @@ final class DemoTransactionsSeeder
         // account; linkUser1Transfers() wires the pair_transaction_id
         // after both legs are written.
         $transfersInternalCategory = $this->categoryId('transfers-internal');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 10, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -417,7 +459,7 @@ final class DemoTransactionsSeeder
         // settles the full ICS card balance for the prior period).
         // The matching ICS credits land on the ICS account; the
         // Chains demo seeder wires the chain_link in Task 3.
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 18, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -437,7 +479,7 @@ final class DemoTransactionsSeeder
         // Personal P2P transfers — one outgoing to a friend (Maria
         // van Buren) once a month so the personal-counterparty type
         // has data to surface.
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 20, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -468,7 +510,7 @@ final class DemoTransactionsSeeder
         $bolAmounts = [-3500, -1295, -4995, -2150, -1875, -5495, -2799];
         foreach ([2, 9, 16, 23, 38, 52, 70] as $i => $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
-            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+            if ($date->greaterThan($this->windowEnd)) {
                 continue;
             }
             $inserted += $this->insertTransaction($user, $ics, $run, $rowIndex++, [
@@ -498,7 +540,7 @@ final class DemoTransactionsSeeder
         // MediaMarkt — two purchases in different months.
         foreach ([20, 68] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
-            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+            if ($date->greaterThan($this->windowEnd)) {
                 continue;
             }
             $inserted += $this->insertTransaction($user, $ics, $run, $rowIndex++, [
@@ -529,7 +571,7 @@ final class DemoTransactionsSeeder
         $eatingOutCategory = $this->categoryId('eating-out');
         foreach ([6, 19, 27, 41, 55, 73, 81] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
-            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+            if ($date->greaterThan($this->windowEnd)) {
                 continue;
             }
             $inserted += $this->insertTransaction($user, $ics, $run, $rowIndex++, [
@@ -548,7 +590,7 @@ final class DemoTransactionsSeeder
         // the ASN account zeroing the card. Three of them across the
         // window. These rows are the `to_transaction` side of the
         // ics_bulk_settle chain.
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 18, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -576,7 +618,7 @@ final class DemoTransactionsSeeder
 
         // Monthly Spotify on the 11th.
         $musicCategory = $this->categoryId('subscriptions-music');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 11, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -595,7 +637,7 @@ final class DemoTransactionsSeeder
 
         // Monthly Netflix on the 15th.
         $streamingCategory = $this->categoryId('subscriptions-streaming');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 15, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -618,7 +660,7 @@ final class DemoTransactionsSeeder
         $usdAmounts = [-499, -999, -299, -1299, -599];
         foreach ([4, 22, 39, 58, 79] as $i => $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
-            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+            if ($date->greaterThan($this->windowEnd)) {
                 continue;
             }
             $amountUsd = $usdAmounts[$i] ?? -499;
@@ -643,7 +685,7 @@ final class DemoTransactionsSeeder
         // PayPal→ASN demo chain. Each one is funded by an ASN→PayPal
         // top-up on the same date; the chain_link wires the pair.
         $onlineCategory = $this->categoryId('subscriptions-cloud');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 10, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -663,7 +705,7 @@ final class DemoTransactionsSeeder
         // ASN→PayPal funding (transfer_in). The matching transfer_out
         // sits on the ASN account; linkUser1Transfers() pairs them.
         $transfersInternalCategory = $this->categoryId('transfers-internal');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 10, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -690,7 +732,7 @@ final class DemoTransactionsSeeder
         ];
         foreach ($refundRows as $refund) {
             $date = $windowStart->addDays($refund['day']);
-            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+            if ($date->greaterThan($this->windowEnd)) {
                 continue;
             }
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
@@ -710,7 +752,7 @@ final class DemoTransactionsSeeder
         // on the /transactions list.
         foreach ([29, 73] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
-            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+            if ($date->greaterThan($this->windowEnd)) {
                 continue;
             }
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
@@ -735,7 +777,7 @@ final class DemoTransactionsSeeder
         ];
         foreach ($adjustmentRows as $row) {
             $date = $windowStart->addDays($row['day']);
-            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+            if ($date->greaterThan($this->windowEnd)) {
                 continue;
             }
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
@@ -761,7 +803,7 @@ final class DemoTransactionsSeeder
 
         // Salary on the 25th — slightly smaller than user 1's.
         $salaryCategory = $this->categoryId('income-salary');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 25, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -780,7 +822,7 @@ final class DemoTransactionsSeeder
 
         // Monthly rent (lower than user 1).
         $rentCategory = $this->categoryId('housing-rent');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 1, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -801,7 +843,7 @@ final class DemoTransactionsSeeder
         $groceriesCategory = $this->categoryId('groceries');
         foreach ([3, 10, 17, 24, 38, 52, 66, 80] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
-            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+            if ($date->greaterThan($this->windowEnd)) {
                 continue;
             }
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
@@ -817,7 +859,7 @@ final class DemoTransactionsSeeder
         }
 
         // Gemeente Den Haag — local tax.
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 22, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -845,7 +887,7 @@ final class DemoTransactionsSeeder
 
         // Monthly Spotify (the user keeps it on their PayPal).
         $musicCategory = $this->categoryId('subscriptions-music');
-        foreach ([2, 1, 0] as $monthsBack) {
+        foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 9, $monthsBack);
             if ($date->lessThan($windowStart)) {
                 continue;
@@ -866,7 +908,7 @@ final class DemoTransactionsSeeder
         $onlineCategory = $this->categoryId('subscriptions-cloud');
         foreach ([14, 47, 76] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
-            if ($date->greaterThan($windowStart->addDays(self::WINDOW_DAYS - 1))) {
+            if ($date->greaterThan($this->windowEnd)) {
                 continue;
             }
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
@@ -930,7 +972,12 @@ final class DemoTransactionsSeeder
      */
     private function dayInMonth(CarbonImmutable $windowStart, int $day, int $monthsBack): CarbonImmutable
     {
-        $anchor = CarbonImmutable::today()->subMonths($monthsBack)->startOfMonth();
+        // `subMonthsNoOverflow` so that, e.g., "May 31 − 3 months" lands
+        // in February rather than overflowing into March — otherwise two
+        // monthsBack offsets collapse onto the same calendar month on
+        // end-of-month run dates and the duplicate rows are silently
+        // dropped by insertOrIgnore.
+        $anchor = CarbonImmutable::today()->subMonthsNoOverflow($monthsBack)->startOfMonth();
         $candidate = $anchor->setDay(min($day, $anchor->daysInMonth));
 
         return $candidate;
