@@ -1,0 +1,14 @@
+# Keep the build context small + fast. The Dockerfile COPYs nothing from
+# the context (extensions come from the installer image), so these are
+# excluded purely to speed up `docker compose build`. The repo is still
+# fully available at runtime via the bind-mount in docker-compose.yml.
+.git/
+vendor/
+node_modules/
+nativephp/
+public/build/
+.claude/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+storage/logs/
