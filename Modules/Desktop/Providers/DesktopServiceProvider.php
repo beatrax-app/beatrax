@@ -7,6 +7,7 @@ namespace Modules\Desktop\Providers;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Queue\QueueManager;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
@@ -171,6 +172,26 @@ final class DesktopServiceProvider extends ServiceProvider
         $livewire->component('desktop.welcome-screen', WelcomeScreen::class);
         $livewire->component('desktop.close-window-prompt', CloseWindowPrompt::class);
         $livewire->component('desktop.file-staging-page', FileStagingPage::class);
+
+        // Lift the wall-clock execution ceiling for the long-lived
+        // queue-worker loop. Registration is NOT bundle-gated: it must
+        // light up in the spawned queue:work process (which never has
+        // `nativephp-internal.running` set), and resetting the time
+        // limit is harmless in any queue:work context, so it precedes
+        // the bundle-only `return` guard below — mirroring the
+        // DevMode heartbeat's unconditional looping() registration.
+        $queueManager = $this->app->make(QueueManager::class);
+        $queueManager->looping(static function (): void {
+            // PHP's max_execution_time is wall-clock on Windows, where ext-pcntl
+            // is absent so Laravel's per-job timeout never arms. NativePHP spawns
+            // queue:work with the Desktop-owned 120s ceiling (NativeAppServiceProvider
+            // ::phpIni()); without resetting it per poll the long-lived daemon accrues
+            // 120s of real time and the SAPI kills the whole worker at Worker.php.
+            // Resetting to unlimited each loop defuses that while leaving the 120s
+            // web/auto-updater safety net intact. Mirrors WriteWorkerHeartbeat's
+            // looping() registration (the Looping *event* does not fire reliably here).
+            @set_time_limit(0);
+        });
 
         // D-04 continuation listener — fires on every successful Login.
         // The listener re-checks the session-scoped PendingFileIntent
