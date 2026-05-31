@@ -4,9 +4,11 @@
 # suite on every pull request and on every push to `main`. A single PHP
 # axis runs the gates:
 #
-#   - 8.5 — the developer's local dev box and the version `nativephp/php-bin`
-#           bundles inside the shipped desktop build; the gates are honest on
-#           the exact runtime the end user runs.
+#   - 8.5 — the project runtime floor (the `php` constraint in composer.json)
+#           and the minor that runs in the shipped desktop build: the release
+#           workflow runs `native:build` on 8.5 and `nativephp/php-bin` 1.2.0
+#           bundles the matching 8.5 binary. The gates and the shipped bundle
+#           therefore target the same runtime the end user runs.
 #
 # `fail-fast: false` is retained so that if the matrix is ever widened again
 # every axis reports independently rather than being hidden by the first to

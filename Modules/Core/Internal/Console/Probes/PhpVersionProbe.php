@@ -7,11 +7,11 @@ namespace Modules\Core\Internal\Console\Probes;
 /**
  * Reports the running PHP interpreter's version and asserts the
  * configured minimum. The minimum tracks the `php` requirement in
- * composer.json and the lower end of the CI matrix — both are 8.4
- * today; both 8.4 and 8.5 are supported runtimes. The comparison
+ * composer.json and the CI matrix — both are 8.5, which is also the
+ * minor `nativephp/php-bin` ships in the desktop build. The comparison
  * matches against major.minor only so alpha / beta / RC builds of
  * the minimum version still pass — the operator's intent in
- * installing "PHP 8.4-RC1" is to be on 8.4, not to be rejected for it.
+ * installing "PHP 8.5-RC1" is to be on 8.5, not to be rejected for it.
  *
  * `phpversion()` is read directly (not the `PHP_VERSION` constant)
  * so the comparison reflects the runtime, not a statically pre-
@@ -24,7 +24,7 @@ namespace Modules\Core\Internal\Console\Probes;
  */
 final class PhpVersionProbe implements Probe
 {
-    private const MIN_PHP = '8.4';
+    private const MIN_PHP = '8.5';
 
     public function label(): string
     {

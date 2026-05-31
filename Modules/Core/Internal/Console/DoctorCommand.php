@@ -22,7 +22,7 @@ use Modules\Core\Internal\Console\Probes\WalModeProbe;
  * output table and one severity bucket to the exit-code aggregator.
  *
  * Probes:
- *  - PhpVersionProbe (BLOCKER if < 8.4 — matches composer.json + CI matrix)
+ *  - PhpVersionProbe (BLOCKER if < 8.5 — matches composer.json + CI matrix)
  *  - ComposerVersionProbe / SqliteCliVersionProbe / NodeVersionProbe
  *    (warning if missing — none are runtime-fatal for the dashboard,
  *    they matter for dev workflows: composer install, sqlite3 CLI
