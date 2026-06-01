@@ -1179,16 +1179,16 @@
         },
         {
             "name": "google/apiclient-services",
-            "version": "v0.442.0",
+            "version": "v0.443.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/googleapis/google-api-php-client-services.git",
-                "reference": "3afe7b5c9d1cebf2a5be018820ce62eeb906b81f"
+                "reference": "102aba0523d5105adaffdcac6c0c74a527f2bbfc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/googleapis/google-api-php-client-services/zipball/3afe7b5c9d1cebf2a5be018820ce62eeb906b81f",
-                "reference": "3afe7b5c9d1cebf2a5be018820ce62eeb906b81f",
+                "url": "https://api.github.com/repos/googleapis/google-api-php-client-services/zipball/102aba0523d5105adaffdcac6c0c74a527f2bbfc",
+                "reference": "102aba0523d5105adaffdcac6c0c74a527f2bbfc",
                 "shasum": ""
             },
             "require": {
@@ -1217,9 +1217,9 @@
             ],
             "support": {
                 "issues": "https://github.com/googleapis/google-api-php-client-services/issues",
-                "source": "https://github.com/googleapis/google-api-php-client-services/tree/v0.442.0"
+                "source": "https://github.com/googleapis/google-api-php-client-services/tree/v0.443.0"
             },
-            "time": "2026-05-25T01:34:24+00:00"
+            "time": "2026-05-29T01:56:23+00:00"
         },
         {
             "name": "google/auth",
@@ -15152,7 +15152,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
@@ -15169,10 +15169,10 @@
         "ext-simplexml": "*",
         "composer-runtime-api": "^2.0"
     },
-    "platform-dev": [],
+    "platform-dev": {},
     "platform-overrides": {
         "ext-pcntl": "8.4",
         "ext-posix": "8.4"
     },
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
