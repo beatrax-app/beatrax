@@ -1,0 +1,33 @@
+# Local PHP 8.5 toolchain for running the CI gates without installing PHP
+# on the host. The app itself ships via NativePHP / Laravel Herd — this is
+# dev-only tooling (see docker/php8.5/Dockerfile).
+#
+# Usage:
+#   docker compose build
+#   docker compose run --rm php composer install
+#   docker compose run --rm php composer test          # Pest (parallel)
+#   docker compose run --rm php vendor/bin/pint --test  # formatting gate
+#   docker compose run --rm php vendor/bin/phpstan analyse -c phpstan-docker.neon --memory-limit=1G  # Larastan level 10 (memory-safe local Docker config)
+#   docker compose run --rm php vendor/bin/pest Modules/Desktop
+#
+# The repo is bind-mounted, so edits on the host are picked up immediately
+# and `vendor/` written inside the container lands back on the host.
+services:
+  php:
+    build:
+      context: .
+      dockerfile: docker/php8.5/Dockerfile
+    working_dir: /app
+    volumes:
+      - .:/app
+      - composer-cache:/tmp/composer
+    environment:
+      COMPOSER_HOME: /tmp/composer
+      # The Pest/PHPUnit suite drives an in-memory SQLite DB; override on
+      # the command line if a file-backed DB is needed.
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    tty: true
+
+volumes:
+  composer-cache:

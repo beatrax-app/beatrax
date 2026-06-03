@@ -21,7 +21,7 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 
 /**
  * Confirms a previewed import. Loads the cached canonical batch and the
- * cached pending-enrichments list, then inside a single DB transaction:
+ * cached pending-enrichments list, then:
  *
  *  1. Replays the canonical batch through `RecordsTransactions` (which
  *     silently drops fingerprint duplicates and counts them).
@@ -31,9 +31,29 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
  *  3. Updates the ImportRun row with the inserted / duplicate / enriched
  *     / error counts and flips `status` to `confirmed`.
  *
- * The transaction wrapping both writers means a recorder failure cannot
- * land enrichments and an enrichment failure cannot land inserts —
- * confirm is atomic across both halves.
+ * Bounded recorder + atomic enrichment/status flip (deliberately NOT one
+ * giant transaction): a full-year confirm must not run as a single
+ * unbounded DB transaction. The recorder therefore runs OUTSIDE any
+ * transaction so its bounded per-chunk commits (idempotent via the
+ * transaction fingerprint) stay independent and the year-sized batch never
+ * collapses into one unbounded transaction. Only the enrichments + the
+ * ImportRun status flip + the result assembly are wrapped in ONE
+ * `DB::transaction()`, so a committed `confirmed` status ALWAYS implies the
+ * enrichment writes for this attempt fully landed.
+ *
+ * Consequence: a crash mid-confirm can leave recorder rows committed while
+ * the run keeps its previous status (the enrichment/status transaction
+ * rolled back). Re-running is safe:
+ *  - the recorder dedups already-committed rows via their fingerprint
+ *    (`insertOrIgnore`), landing only the remainder;
+ *  - the enrichment transaction re-applies cleanly — any enrichment writes
+ *    from the failed attempt were rolled back with the un-flipped status,
+ *    so the replay re-runs them from a clean slate inside a fresh
+ *    transaction (and `AppliesEnrichments`'s own per-row rank/exact-ref
+ *    short-circuits make even a partial-then-replay sequence a no-op for
+ *    already-applied rows).
+ * The status flip is atomic with the enrichment writes, and the fan-out
+ * dispatch runs only after that transaction has committed.
  *
  * AFTER the transaction commits the action runs a two-stage post-commit
  * block. Re-confirms (status='confirmed' short-circuit above) skip the
@@ -76,11 +96,11 @@ final class ConfirmImport implements ConfirmsImports
         private readonly RecordsTransactions $recorder,
         private readonly AppliesEnrichments $applyEnrichments,
         private readonly PreviewCache $cache,
-        private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly DispatchesChainResolution $chainDispatcher,
         private readonly DispatchesRecurringDetection $recurringDispatcher,
         private readonly UpsertsCardStatements $cardStatementUpserter,
+        private readonly DatabaseManager $db,
     ) {}
 
     public function __invoke(int $importRunId, User $user, bool $dispatchChain = true): ImportConfirmResult
@@ -135,24 +155,42 @@ final class ConfirmImport implements ConfirmsImports
             }
         }
 
-        /** @var ImportConfirmResult $result */
-        $result = $this->db->connection()->transaction(function () use (
-            $canonical,
-            $enrichments,
-            $importRun,
-            $user,
-            $errorCount,
-            $previewDuplicateCount,
-        ): ImportConfirmResult {
-            $recorderResult = ($this->recorder)($canonical, $user);
-            $enrichedCount = ($this->applyEnrichments)($enrichments, $user);
+        // Promote WITHOUT an outer transaction. The recorder commits in
+        // bounded per-chunk transactions (idempotent via the transaction
+        // fingerprint); wrapping it here would demote those commits to
+        // savepoints and re-form the year-sized transaction this change
+        // exists to avoid. A crash after this point leaves committed rows
+        // that a re-run safely (idempotently) completes.
+        $recorderResult = ($this->recorder)($canonical, $user);
 
-            // The pipeline filters fingerprint-duplicates out of `$canonical`
-            // before the recorder runs (so the preview screen can render the
-            // badge); the recorder's own `duplicates` only catches race-
-            // condition collisions between preview and confirm. Total
-            // duplicates = preview-detected + recorder-detected.
-            $totalDuplicates = $previewDuplicateCount + $recorderResult->duplicates;
+        // The pipeline filters fingerprint-duplicates out of `$canonical`
+        // before the recorder runs (so the preview screen can render the
+        // badge); the recorder's own `duplicates` only catches race-
+        // condition collisions between preview and confirm. Total
+        // duplicates = preview-detected + recorder-detected.
+        $totalDuplicates = $previewDuplicateCount + $recorderResult->duplicates;
+
+        // Wrap ONLY the enrichments + the status flip + the result assembly
+        // in one transaction so a committed `confirmed` status ALWAYS implies
+        // the enrichment writes for this attempt fully landed. If the process
+        // fails mid-enrichment, this transaction rolls back its enrichment
+        // writes together with the un-flipped status, so the run keeps its
+        // previous status and a re-confirm replays the enrichments from a
+        // clean slate — unconditionally safe even if AppliesEnrichments were
+        // not internally idempotent. (`AppliesEnrichments` itself runs each
+        // row in its own locked transaction; nested under this outer
+        // transaction those become savepoints, which is fine — the
+        // enrichment set is bounded by the preview's pending-enrichment list,
+        // not by the year-sized canonical batch.)
+        $result = $this->db->connection()->transaction(function () use (
+            $importRun,
+            $enrichments,
+            $user,
+            $recorderResult,
+            $totalDuplicates,
+            $errorCount,
+        ): ImportConfirmResult {
+            $enrichedCount = ($this->applyEnrichments)($enrichments, $user);
 
             $importRun->update([
                 'inserted_count' => $recorderResult->inserted,

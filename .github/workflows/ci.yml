@@ -1,17 +1,18 @@
 # Diederik PR gate — quality-check workflow.
 #
 # Runs Laravel Pint (--test), Larastan level 10 strict, and the full Pest
-# suite on every pull request and on every push to `main`. Two PHP axes
-# always run in parallel:
+# suite on every pull request and on every push to `main`. A single PHP
+# axis runs the gates:
 #
-#   - 8.4 — the version `nativephp/php-bin` bundles inside the shipped
-#           desktop build; the gates must be honest on that exact runtime.
-#   - 8.5 — the developer's local dev box; keeps the project honest about
-#           the newer runtime so divergence is caught at PR time.
+#   - 8.5 — the project runtime floor (the `php` constraint in composer.json)
+#           and the minor that runs in the shipped desktop build: the release
+#           workflow runs `native:build` on 8.5 and `nativephp/php-bin` 1.2.0
+#           bundles the matching 8.5 binary. The gates and the shipped bundle
+#           therefore target the same runtime the end user runs.
 #
-# `fail-fast: false` is intentional — both axes always report, so a
-# regression that only surfaces on one runtime is never hidden by the
-# other finishing first.
+# `fail-fast: false` is retained so that if the matrix is ever widened again
+# every axis reports independently rather than being hidden by the first to
+# finish.
 #
 # Every third-party action is pinned to a full 40-char commit SHA with
 # the human-readable tag retained as an inline comment for legibility.
@@ -37,7 +38,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                php: ['8.4', '8.5']
+                php: ['8.5']
         env:
             # The app is timezone-pinned to Europe/Amsterdam across every
             # module (recurring detection, drift alerts, forecasting all
@@ -62,7 +63,7 @@ jobs:
                   # Extensions the framework + project use. `ext-imap` is
                   # deliberately omitted — the project hard-conflicts with
                   # any IMAP package that requires it (composer.json
-                  # `conflict` block) since PHP 8.4 unbundled it.
+                  # `conflict` block) since PHP unbundled it in 8.4.
                   extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
                   coverage: none
                   tools: composer:v2
