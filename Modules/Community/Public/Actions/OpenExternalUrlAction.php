@@ -23,7 +23,7 @@ use Psr\Log\LoggerInterface;
  * surface 16.1 introduces is the GitHub Compare URL produced by
  * GitHubCompareUrlBuilder.
  *
- * When the bundle is not running inside the NativePHP runtime (Herd
+ * When the bundle is not running inside the NativePHP runtime (local
  * dev mode, CI test runs), the container resolves Shell to the
  * Modules\Community\Internal\Shell\NoOpShell fallback, which logs the
  * would-be URL and does nothing else; feature tests bind a ShellFake

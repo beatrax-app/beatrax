@@ -14,9 +14,9 @@ use Modules\Core\Public\Services\UserDataPathService;
  * mechanism the service observes.
  *
  * Coverage:
- *  - env-unset (Herd dev): every accessor resolves to the project-rooted
+ *  - env-unset (local dev): every accessor resolves to the project-rooted
  *    paths used today, byte-identical to base_path()/storage_path() output
- *    (the A2 Herd-parity regression guard).
+ *    (the A2 local-dev-parity regression guard).
  *  - env-set (simulated NativePHP): every storage-rooted accessor resolves
  *    under the NATIVEPHP_STORAGE_PATH root.
  *  - appPath() rejects `..` path-traversal segments.
@@ -37,7 +37,7 @@ it('resolves the SQLite database file under the project root when the env var is
         ->toBe(base_path('database/database.sqlite'));
 });
 
-it('resolves storage-rooted accessors under the project storage dir when the env var is unset (Herd parity)', function (): void {
+it('resolves storage-rooted accessors under the project storage dir when the env var is unset (local-dev parity)', function (): void {
     expect(UserDataPathService::storageBase())->toBe(storage_path());
     expect(UserDataPathService::backupsPath())->toBe(storage_path('app/backups'));
     expect(UserDataPathService::secretsPath())->toBe(storage_path('app/secrets'));
@@ -112,7 +112,7 @@ it('resolves UserDataPathService as the same singleton instance through the cont
 });
 
 it('keeps backupsPath byte-identical to the previously container-bound storage path when the env var is unset', function (): void {
-    // A2 Herd-parity guard: before Phase 13, BackupDatabaseCommand resolved
+    // A2 local-dev-parity guard: before Phase 13, BackupDatabaseCommand resolved
     // its directory from `$app->basePath('storage/app/backups')`. With the
     // NativePHP env var unset the service must produce that exact string so
     // a future refactor cannot silently shift the dev-mode path.

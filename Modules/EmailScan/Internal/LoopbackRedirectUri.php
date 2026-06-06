@@ -17,15 +17,15 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
  * native-app spec requires the loopback IP shape; Microsoft Entra
  * rejects non-`localhost` HTTP redirects). The URI therefore is
  * always shaped `http://127.0.0.1:PORT/oauth/callback/{provider}`,
- * never the configured Herd / .test URL.
+ * never the configured `.test` URL.
  *
  * Port resolution order:
  *
  *  1. `email-scan.oauth_loopback_port` config value if set (lets the
- *     user override via env var `OAUTH_LOOPBACK_PORT=...` for Herd /
+ *     user override via env var `OAUTH_LOOPBACK_PORT=...` for `.test` /
  *     custom-port setups where `app.url` does NOT carry the literal
  *     port the listener binds — for `app.url=https://beatrax.test`
- *     under Herd, the listener is on 443/80, but the OAuth redirect
+ *     in local dev, the listener is on 443/80, but the OAuth redirect
  *     has to land on a separate `php artisan serve --port=8000`).
  *  2. `parse_url(app.url, PHP_URL_PORT)` if the host parses as
  *     `127.0.0.1` or `localhost` (the user is running

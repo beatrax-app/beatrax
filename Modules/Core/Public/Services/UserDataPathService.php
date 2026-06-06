@@ -16,7 +16,7 @@ use InvalidArgumentException;
  *
  * When the `NATIVEPHP_STORAGE_PATH` environment variable is set it becomes
  * the storage root (a packaged desktop build); when it is absent every
- * accessor falls back to the project-rooted paths used in Herd development.
+ * accessor falls back to the project-rooted paths used in local development.
  * The environment variable is read with `getenv()` — not Laravel's `env()`
  * helper — because `getenv()` is unconditional at every boot stage, which is
  * what makes the static accessors safe to call from `config/*.php` files
@@ -25,7 +25,7 @@ use InvalidArgumentException;
 final class UserDataPathService
 {
     /**
-     * Project root used as the Herd-development fallback. `base_path()` is
+     * Project root used as the local-development fallback. `base_path()` is
      * the one sanctioned raw helper call in the whole codebase — this class
      * is the arch-test allow-list of size one.
      */
@@ -36,7 +36,7 @@ final class UserDataPathService
 
     /**
      * Storage root. When `NATIVEPHP_STORAGE_PATH` is set it IS the root (a
-     * packaged build); absent → project-rooted `storage/` (Herd dev).
+     * packaged build); absent → project-rooted `storage/` (local dev).
      */
     private static function storageRoot(): string
     {

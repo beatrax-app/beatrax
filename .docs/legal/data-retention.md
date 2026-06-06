@@ -30,7 +30,7 @@ crash reporter, no telemetry pipeline.
 
 | Context | Path |
 |---|---|
-| Development (Herd) | `database/database.sqlite` and `storage/app/` inside the project directory |
+| Development (local) | `database/database.sqlite` and `storage/app/` inside the project directory |
 | macOS (shipped bundle) | `~/Library/Application Support/beatrax/database.sqlite` and the sibling `storage/` directory |
 | Windows (shipped bundle) | `%APPDATA%\beatrax\database.sqlite` and the sibling `storage` directory |
 | Linux (shipped bundle) | `~/.config/beatrax/database.sqlite` and the sibling `storage` directory |

@@ -1,41 +1,42 @@
 # Setup
 
-How to get a working development copy of beatrax on a macOS machine. The expected end
-state is the dashboard rendering at `https://beatrax.test/` under Herd, with the test
-suite green and the desktop bundle buildable on demand.
+How to get a working development copy of beatrax. The expected end state is the
+dashboard rendering locally, with the test suite green and the desktop bundle
+buildable on demand.
 
 ## Prerequisites
 
-- macOS (Apple Silicon or Intel both work).
-- [Laravel Herd](https://herd.laravel.com) — the free tier is sufficient. Herd provides
-  PHP, nginx, dnsmasq, and the `*.test` HTTPS routing.
-- Node 20 LTS or later, with `npm`. Herd does not bundle Node.
+- [Docker](https://docs.docker.com/get-docker/) — the PHP 8.5 toolchain is defined in
+  `docker-compose.yml` and `docker/php8.5/Dockerfile`. Everything PHP-related runs via
+  `docker compose run --rm php …`, so PHP and Composer do not need to be on the host.
+- Node 20 LTS or later, with `npm`. The Docker image does not bundle Node.
 - `git`, with commit signing configured if you intend to push.
 
-The project is pinned to PHP 8.5 for development. Herd ships multiple PHP versions side
-by side; pick 8.5 as the project's PHP via Herd's UI or the per-directory `.herd`
-shortcut.
+The project is pinned to PHP 8.5 for development; the Docker image targets exactly that
+version, so the toolchain is reproducible across machines.
 
 ## First-time clone
 
 ```sh
-cd ~/Herd
 git clone git@github.com:nightworksio/beatrax.git
 cd beatrax
 
+# Build the dev PHP 8.5 image
+docker compose build
+
 # Install PHP dependencies (development mode includes Larastan, Pint, Pest)
-composer install
+docker compose run --rm php composer install
 
 # Install frontend dependencies (Tailwind v4, Vite, Alpine, ApexCharts)
 npm ci
 
 # Create the per-environment .env from the example template
 cp .env.example .env
-php artisan key:generate
+docker compose run --rm php php artisan key:generate
 ```
 
-Herd auto-routes `~/Herd/beatrax` to `https://beatrax.test/` without further
-configuration — the dnsmasq + nginx layer detects the directory on disk.
+The repo is bind-mounted into the container, so edits on the host are picked up
+immediately and `vendor/` written inside the container lands back on the host.
 
 ## Initialise the database
 
@@ -47,10 +48,10 @@ file at `database/database.sqlite`:
 touch database/database.sqlite
 
 # Apply every migration
-php artisan migrate
+docker compose run --rm php php artisan migrate
 
 # Optional: enable WAL mode for the local DB — see database.md
-php artisan beatrax:install
+docker compose run --rm php php artisan beatrax:install
 ```
 
 `beatrax:install` is idempotent. It enables WAL mode + `synchronous=NORMAL` on the
@@ -79,19 +80,19 @@ npm run build
 
 ```sh
 # Full suite
-php artisan test --parallel
+docker compose run --rm php php artisan test --parallel
 
 # Just architectural invariants
-php artisan test --testsuite=Arch
+docker compose run --rm php php artisan test --testsuite=Arch
 
 # Single file
-php artisan test tests/Contracts/GsdLeakageTest.php
+docker compose run --rm php php artisan test tests/Contracts/GsdLeakageTest.php
 
 # Pint formatting check
-vendor/bin/pint --test
+docker compose run --rm php vendor/bin/pint --test
 
 # Larastan level 10 strict
-vendor/bin/phpstan analyse --memory-limit=1G
+docker compose run --rm php vendor/bin/phpstan analyse --memory-limit=1G
 ```
 
 The PR gate runs the same three commands on every push. Green locally usually means

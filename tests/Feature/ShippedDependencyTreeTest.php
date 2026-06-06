@@ -50,9 +50,9 @@ it('keeps laravel/horizon and predis/predis in the require-dev section', functio
 
     expect($requireDev)->toBeArray()
         ->and(array_key_exists('laravel/horizon', $requireDev))->toBeTrue(
-            'laravel/horizon must stay in composer.json require-dev for the Herd dev box.',
+            'laravel/horizon must stay in composer.json require-dev for the local dev box.',
         )
         ->and(array_key_exists('predis/predis', $requireDev))->toBeTrue(
-            'predis/predis must stay in composer.json require-dev for the Herd dev box.',
+            'predis/predis must stay in composer.json require-dev for the local dev box.',
         );
 });

@@ -101,7 +101,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | HTTPS Only Cookies — localhost-only, HTTPS optional via Herd
+    | HTTPS Only Cookies — localhost-only, HTTPS optional in local dev
     |--------------------------------------------------------------------------
     */
 

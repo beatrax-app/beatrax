@@ -24,7 +24,7 @@ use Throwable;
  * check filters on `acknowledged_at IS NULL`.
  *
  * Dedup query uses SQLite's `json_extract` against the `metadata`
- * column — Herd ships SQLite 3.45 so the function is available. A
+ * column — the local dev SQLite is 3.45 so the function is available. A
  * Throwable from the extracted-column predicate falls through to a
  * LIKE-based form so a slightly older runtime still dedups correctly.
  *

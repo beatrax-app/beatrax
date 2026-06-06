@@ -24,7 +24,7 @@ posture is to make it impossible by construction.
 
 The quality gate runs on both PHP 8.4 and PHP 8.5. The shipped desktop bundle currently
 uses `nativephp/php-bin` 8.4 (8.5 binaries do not yet exist for the bundle), while the
-developer workstation runs PHP 8.5 under Herd. Running both axes in CI catches any code
+developer workstation runs PHP 8.5 via the Docker toolchain. Running both axes in CI catches any code
 that drifts toward an 8.5-only construct before it can break a release build.
 
 ## SHA-pinning rule

@@ -31,10 +31,10 @@ If everything else fails, the system must surface the complete picture of monthl
 ### Core Technologies
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| PHP | 8.3.x (LTS-style) | Language runtime | Laravel 12 requires PHP 8.2+ and supports 8.2–8.5. PHP 8.3 is the sweet spot: typed class constants, readonly classes, `json_validate()`, mature on macOS Herd, and avoids the PHP 8.4 IMAP-extension fallout (see PITFALLS.md). Pin to 8.3 so the `ext-imap` removal in 8.4 is a deliberate future migration, not a surprise. |
+| PHP | 8.3.x (LTS-style) | Language runtime | Laravel 12 requires PHP 8.2+ and supports 8.2–8.5. PHP 8.3 is the sweet spot: typed class constants, readonly classes, `json_validate()`, and avoids the PHP 8.4 IMAP-extension fallout (see PITFALLS.md). Pin to 8.3 so the `ext-imap` removal in 8.4 is a deliberate future migration, not a surprise. (Note: the project now runs PHP 8.5 in a Docker dev image; see the Development Tools section.) |
 | Laravel | 12.x | Web framework | Released Feb 24, 2025; bug-fix support to Aug 2026, security to Feb 2027. Officially packaged Inertia 2 + shadcn/ui + Tailwind starter kits and a Livewire/Volt starter kit ship out of the box — exactly the calm-dashboard primitives this project wants. |
-| SQLite | 3.45+ (whatever Herd ships) | Local data store | Single file on disk, zero setup, perfect for a single-machine, single-user app. Laravel 11+ made SQLite the default driver. Enable WAL mode (`PRAGMA journal_mode=WAL`) to allow background IMAP/queue workers to read while the web request writes. Single-writer is fine for one human. |
-| Laravel Herd | latest (free tier) | Local dev environment | Native macOS app, zero Homebrew dependency, pre-compiled PHP + nginx + dnsmasq, ships `*.test` HTTPS by default, painless PHP version switching, launches an app at `https://diederik.test` that the user can pin as a desktop bookmark. The free tier is sufficient — Pro features (mail catcher, log viewer, MySQL/Redis services) are not needed for a SQLite-only app. |
+| SQLite | 3.45+ (bundled in the Docker dev image) | Local data store | Single file on disk, zero setup, perfect for a single-machine, single-user app. Laravel 11+ made SQLite the default driver. Enable WAL mode (`PRAGMA journal_mode=WAL`) to allow background IMAP/queue workers to read while the web request writes. Single-writer is fine for one human. |
+| Docker (Compose) | latest | Local dev environment | The toolchain runs entirely in a Docker container (`docker-compose.yml` → `docker/php8.5/Dockerfile`); the host needs only Docker. The repo is bind-mounted so host edits are picked up immediately and `vendor/` written in the container lands back on the host. All Composer / Pest / Pint / PHPStan commands run via `docker compose run --rm php …`. No host PHP install is required. |
 | Tailwind CSS | 4.x | Styling | Bundled in Laravel 12 starter kits; oxide-engine (Rust-based) build is fast; v4's CSS-first config matches the "calm, content-first" aesthetic without a heavy design system. |
 ### Frontend Stack Decision (this is the single biggest call)
 | Technology | Version | Purpose | Why |
@@ -96,14 +96,16 @@ If everything else fails, the system must surface the complete picture of monthl
 ### Development Tools
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| Laravel Herd (free) | PHP + nginx + dnsmasq + `*.test` HTTPS | Use the bundled PHP 8.3 binary. Don't install Homebrew PHP. |
-| TablePlus / DBNGIN / `sqlite3` CLI | SQLite GUI | DBNGIN is by the Herd team and free; TablePlus is the polished option. Either is fine. |
+| Docker + Docker Compose | Containerised PHP 8.5 toolchain | Canonical dev/test runtime. Run everything through `docker compose run --rm php …`; no host PHP runtime is needed. |
+| TablePlus / `sqlite3` CLI | SQLite GUI | TablePlus is the polished option; the `sqlite3` CLI inside the container works too. Either is fine. |
 | Laravel Telescope | In-app request/query/job inspector | Local-only debugging. Disable in any future prod build. |
 | Laravel Debugbar | Per-page query/timer overlay | Same as Telescope, more inline. Pick one. |
 | `php artisan tinker` | REPL for poking at ingestion results | Standard. |
 | launchd (macOS) | Run `schedule:work`, `queue:work`, `imap:idle` on login | Avoids needing the user to `cd ~/code/diederik && php artisan ...` every morning. Plist files live in `~/Library/LaunchAgents/`. |
 ## Installation
-# After installing Laravel Herd (https://herd.laravel.com) and dropping the project in ~/Herd/diederik:
+# With Docker installed, from the project root (toolchain runs in the container — no host PHP needed):
+#   docker compose build
+#   docker compose run --rm php composer install
 # Create the project from the Livewire starter kit
 # Core domain libraries
 # Charts (Livewire wrapper around ApexCharts)
@@ -120,8 +122,7 @@ If everything else fails, the system must surface the complete picture of monthl
 | `database` queue driver | Redis + Horizon | If IMAP backfill of multi-year history becomes job-rate-limited. Unlikely for a single user. |
 | brick/money | moneyphp/money | If you'd rather minimize transitive dependencies — genkgo/camt already pulls in moneyphp/money, so using it directly avoids having two money libraries. Acceptable trade-off; brick is still recommended for its better immutable API. |
 | Pest | PHPUnit | If the user has strong existing PHPUnit muscle memory. Same engine, different surface. |
-| Laravel Herd | Laravel Valet | If you need to install custom PHP extensions (Herd Pro hides that workflow behind a paywall, free Herd makes it awkward). For this project, no custom extensions are needed. |
-| Laravel Herd | Laravel Sail (Docker) | Only on Linux, or if you want full containerization. Adds Docker daemon overhead, slower file I/O on macOS, more moving parts. Don't. |
+| Docker (Compose) | A host PHP install | Don't. The project standardises on the containerised toolchain so PHP version + extensions are identical across machines and CI. A host PHP install is explicitly out of scope. |
 | ApexCharts | Chart.js | If you adopt Filament later (Filament's chart widget is Chart.js-based). |
 | Webklex/laravel-imap | ddeboer/imap | Don't — `ddeboer/imap` requires the native `ext-imap` extension, which was unbundled in PHP 8.4. Hard pass for any 2026 greenfield project. |
 ## What NOT to Use
@@ -133,14 +134,14 @@ If everything else fails, the system must surface the complete picture of monthl
 | **Plain floats / cents-as-int for money** | Floating-point silently corrupts FX conversions; manual integer cents is OK for EUR-only but breaks when ICS settles a USD Google Play charge to EUR. The project explicitly requires multi-currency. | `brick/money` |
 | **`abandoned/older sepa-xml libs` for parsing** | `digitick/sepa-xml`, `php-sepa-xml/php-sepa-xml` generate SEPA payment-initiation XML; they don't parse statements. | `genkgo/camt` for parsing CAMT.053 |
 | **Laravel Horizon** for this project | Pulls in Redis. For one user, the cost/benefit is negative. | `database` queue driver, plain `queue:work` daemon |
-| **Laravel Sail / Docker on macOS** | Bind-mount file I/O on Docker Desktop for Mac is the well-known performance trap; you'll wait 2s for hot-reloads. | Laravel Herd (native binaries) |
+| **A host PHP install** | Drifts from the PHP 8.5 version + extension set used in CI; "works on my machine" bugs follow. | The committed Docker Compose toolchain (`docker compose run --rm php …`) |
 | **Laravel Jetstream / Breeze (legacy starter kits)** | Officially superseded by the Laravel 12 starter kits; no longer receiving updates. | Laravel 12 Livewire Starter Kit (Volt + Flux) |
 | **kingsquare/php-mt940 as the *primary* ingestion path** | Codebase last touched in 2020 — works, but won't gain new bank engines. | Prefer CAMT.053 via genkgo/camt where ASN offers both; use MT940 as a fallback for older statements. |
 | **Storing IMAP passwords in `.env`** | `.env` files leak into git history, editor "recent files," cloud sync clipboards. | A separate `storage/app/secrets/imap.json` with chmod 600, or macOS Keychain via `security` CLI. |
 | **PHP 8.4 right now** | `ext-imap` removed; even though we use `webklex/php-imap`, some transitive deps (`ddeboer` style) might pull it in unexpectedly. Stay on 8.3 until the ecosystem catches up. | PHP 8.3.x |
 ## Stack Patterns by Variant
 - Swap Livewire-starter-kit for `filament/filament` v5
-- Keep every other choice (genkgo/camt, brick/money, webklex/laravel-imap, Pest, SQLite, Herd)
+- Keep every other choice (genkgo/camt, brick/money, webklex/laravel-imap, Pest, SQLite, Docker)
 - Use Filament's chart widgets (Chart.js-based) instead of ApexCharts
 - Accept admin-panel aesthetic until v2
 - Migrate SQLite → PostgreSQL 16 (Laravel makes this a one-config change plus a dump/load)
@@ -173,7 +174,6 @@ If everything else fails, the system must surface the complete picture of monthl
 - [league/csv on Packagist](https://packagist.org/packages/league/csv) — HIGH. 9.28.0 (Dec 27, 2025), 173M installs, PHP 8.1.2+.
 - [Livewire 4 release announcement (laravel.com)](https://laravel.com/blog/livewire-4-is-here-the-artisan-of-the-day-is-caleb-porzio) — HIGH (official). Confirms Jan 2026 release, SFC, batched requests, wire:transition.
 - [Filament v5 / Personal Finance Dashboard tutorials (dev.to)](https://dev.to/maiobarbero/setting-up-laravel-and-filament-for-personal-finance-5om) — MEDIUM. Demonstrates Filament v5 used for the same domain.
-- [Laravel Herd Pricing & Features (herd.laravel.com)](https://herd.laravel.com/) — HIGH (official). Free tier confirmed sufficient; Pro features not needed for this stack.
 - [Pest documentation (pestphp.com)](https://pestphp.com/) — HIGH (official). Community-default for new Laravel projects in 2026.
 - [Laravel Queues 12.x (laravel.com)](https://laravel.com/docs/12.x/queues) — HIGH (official). Database driver suitability for low-volume apps.
 - [Using SQLite in production with Laravel (Laravel News)](https://laravel-news.com/using-sqlite-in-production-with-laravel) — MEDIUM. WAL mode guidance; single-writer caveats discussed.

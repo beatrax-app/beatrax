@@ -41,7 +41,7 @@ Practical recipes for exercising the `Core` module in isolation.
     (`SystemAlertsBannerTest`, `SystemAlertsBannerOAuthReconsentTest`).
   - The sidebar render + dev-mode block (`AppSidebarRenderTest`,
     `AppSidebarDevBlockLiveDataTest`).
-  - The path resolution under both Herd and packaged build env
+  - The path resolution under both local-dev and packaged build env
     (`UserDataPathResolutionTest`).
   - The `users.community_settings` JSON column shape
     (`UserCommunitySettingsColumnTest`).
@@ -97,7 +97,7 @@ composer test
   `NATIVEPHP_APP_VERSION` is unset in the NativePHP runtime config.
   Confirm the release pipeline populates the env var via the
   NativePHP `info.plist` / Windows-equivalent stanza; `dev` is the
-  documented fallback only for local Herd runs.
+  documented fallback only for local dev runs.
 - **A migration ran in dev but not in the packaged build** — the
   packaged build's storage root is `NATIVEPHP_STORAGE_PATH`, not the
   project's `storage/`. Run the packaged `/health` to confirm

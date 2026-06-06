@@ -100,7 +100,7 @@ separate, longer-lived UI element.
 - `Internal/Listeners/ContinuePendingFileIntentAfterLogin::handle($event)`
   — fires on Laravel `Login`. Reads `PendingFileIntent`; redirects
   to the staging page when an intent is present. The subscription is
-  NOT bundle-gated — the round-trip must work in Herd / CI / test
+  NOT bundle-gated — the round-trip must work in local dev / CI / test
   runs.
 - `Internal/Listeners/DispatchOsNotification` — four `handle*`
   methods (one per domain event). Each consults `WindowFocusState`
@@ -152,7 +152,7 @@ audit table), they will land under `Database/Migrations/`.
 - Registers the four Livewire components under the `desktop.*`
   namespace.
 - Subscribes `ContinuePendingFileIntentAfterLogin` to Laravel
-  `Login` unconditionally (the round-trip must work in Herd / CI).
+  `Login` unconditionally (the round-trip must work in local dev / CI).
 - Bundle-gated: subscribes the focus-state flippers, the four
   `DispatchOsNotification` handlers, the `SurfaceWorkerCrashAlert`
   handler, the `HandleNativeOpenFile` handler, and the

@@ -15,9 +15,9 @@ return [
     | runtime exchange consumes the matching URI from the same source so
     | the provider's redirect-URI allow-list check passes.
     |
-    | Set via `OAUTH_LOOPBACK_PORT` in .env when running under Laravel Herd
-    | (which serves the app at `https://beatrax.test` on 443 but cannot
-    | be the OAuth callback host — both providers reject `.test` redirect
+    | Set via `OAUTH_LOOPBACK_PORT` in .env when the app is served on a host
+    | that cannot be the OAuth callback host (e.g. a `.test` domain on 443 —
+    | both providers reject `.test` redirect
     | URIs). The user typically runs `php artisan serve --port=8000` in a
     | separate terminal for the callback handler and sets this to match.
     |

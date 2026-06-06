@@ -30,16 +30,20 @@ use RuntimeException;
  *
  * **Why thin Guzzle, not the Kiota SDK?**
  *
- * `microsoft/microsoft-graph` v3 is a Kiota-generated SDK whose entry
- * point (`Microsoft\Graph\GraphServiceClient`) expects a Kiota
- * authentication provider that itself wraps a TokenRequestContext
- * implementation. That two-layer abstraction is designed for delegated
- * MSAL flows where the SDK refreshes tokens itself. The project's
- * OAuth surface already owns the refresh cycle via
- * `MicrosoftOAuthProvider::refreshAccessToken` + the chmod-600 JSON
- * repository; reusing that surface keeps token storage in one place
- * and avoids the SDK's request-builder hierarchy entirely for the
- * four read-only endpoints this client needs. Direct Guzzle gives us:
+ * The `microsoft/microsoft-graph` Kiota SDK is deliberately NOT a
+ * dependency of this project — it was removed from `composer.json`
+ * because nothing here ever imported it (and its ~36k generated
+ * request-builder/model files dominated the shipped bundle, inflating
+ * the Windows installer's antivirus-scan time). Its entry point
+ * (`Microsoft\Graph\GraphServiceClient`) expects a Kiota authentication
+ * provider that itself wraps a TokenRequestContext implementation. That
+ * two-layer abstraction is designed for delegated MSAL flows where the
+ * SDK refreshes tokens itself. The project's OAuth surface already owns
+ * the refresh cycle via `MicrosoftOAuthProvider::refreshAccessToken` +
+ * the chmod-600 JSON repository; reusing that surface keeps token
+ * storage in one place and avoids the SDK's request-builder hierarchy
+ * entirely for the four read-only endpoints this client needs. Direct
+ * Guzzle gives us:
  *
  *   - one HTTP boundary to audit for `Authorization: Bearer` header
  *     leaks (the catch blocks strip the header before re-throwing),

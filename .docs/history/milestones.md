@@ -67,7 +67,7 @@ PHP 8.5 + Laravel 13 + Livewire 4 + Volt + Flux UI + Tailwind 4 + SQLite
 (WAL + `synchronous=NORMAL`) + Pest 3 + Larastan level 10 strict +
 Laravel Pint. Background work via the `database` queue driver in the
 shipped bundle (Phase 14 carved Horizon out for desktop builds; Horizon
-stays available for the Herd-served development runtime). Redis is dev-mode
+stays available for the local development runtime). Redis is dev-mode
 only and loopback-bound. macOS scheduler / queue / IMAP-idle daemons run
 via `launchd` plists in dev.
 
