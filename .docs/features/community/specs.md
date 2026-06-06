@@ -60,7 +60,7 @@ The behavioural contract for the `Community` module.
 - **No corpus YAML files on disk** (e.g. a stripped-down test
   harness) — `CorpusLoader` logs a `warning` and returns an empty
   list; the listener no-ops. The app boots without a corpus.
-- **Bundle running outside the NativePHP runtime** (Herd dev mode, CI
+- **Bundle running outside the NativePHP runtime** (local dev mode, CI
   tests) — the `Native\Desktop\Contracts\Shell` binding falls back
   to `NoOpShell`. `OpenExternalUrlAction` calls succeed, log the
   would-be URL, and do not launch a browser. Tests bind a `ShellFake`

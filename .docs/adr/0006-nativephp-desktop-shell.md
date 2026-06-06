@@ -57,7 +57,7 @@ The NativePHP code lives quarantined inside `Modules/Desktop/`. Every
 narrower `Native\Desktop\Contracts\Shell` import is restricted to a
 single allow-listed action plus a fallback by
 [`noShellContractOutsideAllowList`](#). The rest of the application
-runs unchanged whether it is hosted by NativePHP or by Laravel Herd.
+runs unchanged whether it is hosted by NativePHP or by the local dev environment.
 
 ## Consequences
 
@@ -67,12 +67,12 @@ runs unchanged whether it is hosted by NativePHP or by Laravel Herd.
   hash-verified platform installers. The
   [`cicd/release-workflow.md`](../cicd/release-workflow.md) document
   describes the per-platform sequence.
-- **Dev under Laravel Herd remains identical.** Day-to-day development
-  uses `https://beatrax.test` on Herd; the NativePHP-specific code
+- **Local dev remains identical.** Day-to-day development runs through
+  the Docker toolchain; the NativePHP-specific code
   paths only activate when running inside the desktop bundle.
-  `BEATRAX_RUNTIME=herd` vs `BEATRAX_RUNTIME=desktop` switches the
-  handful of surfaces that differ (the Horizon iframe is allowed under
-  Herd; the embedded Horizon UI does not ship in the desktop bundle).
+  `BEATRAX_RUNTIME=local` vs `BEATRAX_RUNTIME=desktop` switches the
+  handful of surfaces that differ (the Horizon iframe is allowed in
+  local dev; the embedded Horizon UI does not ship in the desktop bundle).
 - **PHP version is pinned to what NativePHP supports.** NativePHP's
   bundled PHP runtime determines the floor; v1.0 ships on PHP 8.5 and
   the development environment matches. Diverging would mean shipping a

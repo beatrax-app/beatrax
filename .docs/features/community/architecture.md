@@ -87,7 +87,7 @@ NativePHP shell fallback:
   on `(pattern, user_id IS NULL)`.
 - **Internal/Shell/NoOpShell** — fallback for the
   `Native\Desktop\Contracts\Shell` contract when the bundle is not
-  running inside the NativePHP runtime (Herd dev mode, CI tests).
+  running inside the NativePHP runtime (local dev mode, CI tests).
   Logs the would-be URL and does nothing.
 - **Internal/Http/Livewire/** — `MysteryMerchantsPage` (the triage
   list), `SuggestMappingModal` (the suggest flow), `SharedListSettingsPanel`

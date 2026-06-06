@@ -8,12 +8,12 @@ The behavioural contract for the `Desktop` module.
   `use Native\Laravel\…` and `use Native\Desktop\…` statement in the
   codebase must live inside this module. Enforced by the repo-wide
   arch invariant `noNativePhpImportsOutsideDesktopModule`.
-- **No NativePHP listener fires under Herd / CI.** Every
+- **No NativePHP listener fires under local dev / CI.** Every
   bundle-coupled listener subscription is gated by
   `config('nativephp-internal.running') === true`. Tests for the
   in-app behaviour exercise the domain events directly without
   involving NativePHP at all.
-- **`OsThemeSignal` is bound only inside the bundle.** Under Herd /
+- **`OsThemeSignal` is bound only inside the bundle.** In local dev /
   CI the contract is unbound; the layout's `app()->bound(...)` check
   is the documented fallback signal. (The contract's docblock states
   "the absence of a binding is itself the signal".)
@@ -35,7 +35,7 @@ The behavioural contract for the `Desktop` module.
   notification is fired.
 - **The pending-file-intent round-trip works regardless of bundle
   state.** The `Login` subscription for
-  `ContinuePendingFileIntentAfterLogin` is NOT gated; Herd / CI runs
+  `ContinuePendingFileIntentAfterLogin` is NOT gated; local dev / CI runs
   must be able to exercise the staging-page route from a dropped
   file.
 - **The close-behavior choice persists per user.**
@@ -116,8 +116,8 @@ The behavioural contract for the `Desktop` module.
   close-intercept reads.
 - `users.theme` — per-user theme preference; the OS theme is one
   signal, the user preference overrides.
-- `config('nativephp-internal.running')` — the bundle / Herd gate.
-  Set true by the NativePHP runtime; absent under Herd / CI.
+- `config('nativephp-internal.running')` — the bundle / local-dev gate.
+  Set true by the NativePHP runtime; absent under local dev / CI.
 - `NATIVEPHP_APP_VERSION` (env) — populates the `/health`
   `app_version` field. Owned by [`Core`](../core/specs.md);
   surfaced to the user via the application-menu's "About" item

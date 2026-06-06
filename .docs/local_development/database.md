@@ -10,7 +10,7 @@ against the same file without contention.
 
 Two contexts to know about, with two different paths.
 
-### Under Herd (development)
+### Local dev (development)
 
 The development DB lives at `database/database.sqlite`, relative to the project root.
 It is not committed — `.gitignore` excludes both the file itself and its `*-wal` and
@@ -58,7 +58,7 @@ and flags any drift.
 For day-to-day inspection of the local DB:
 
 - **TablePlus** — polished commercial option, free for single-connection use.
-- **DBNGIN** — free, by the Herd team, ships the same `sqlite3` CLI.
+- **DBNGIN** — free, ships the same `sqlite3` CLI.
 - **`sqlite3` CLI** — bundled with macOS; sufficient for ad-hoc queries.
 
 Avoid the SQLite Browser (`sqlitebrowser.org`) for the user-data DB — it has a habit of

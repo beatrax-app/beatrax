@@ -14,7 +14,7 @@ dropped-onto-the-app file through the import pipeline.
 NativePHP is the project's desktop shell ([ADR 0006](../../adr/0006-nativephp-desktop-shell.md)).
 The architecture decision pinpoints why every other module needs to
 stay NativePHP-free: the shipped bundle runs inside an Electron host;
-the Herd dev environment, the CI test runs, and any future headless
+the local dev environment, the CI test runs, and any future headless
 deployment do not. If `Modules/Forecasting` or `Modules/Categorization`
 imported `Native\Laravel\Window`, those modules would only run under
 the bundle, and the test suite would have to mock NativePHP across the
@@ -32,7 +32,7 @@ What the module explicitly does NOT do:
   domain event lives in the owning module.
 - It never bypasses the bundle gate. Every NativePHP-coupled
   subscription is registered only when
-  `config('nativephp-internal.running') === true`, so Herd / CI runs
+  `config('nativephp-internal.running') === true`, so local dev / CI runs
   never reach the NativePHP HTTP client.
 - It never owns the secret-key store. APP_KEY regeneration is owned
   by `Core::EnsureAppKey`; this module's `FirstLaunchBootstrap` only
@@ -46,7 +46,7 @@ What the module explicitly does NOT do:
   - `OsThemeSignal::current()` — returns the current OS theme
     (`light` / `dark` / `null` for "unknown"). Bound to
     `Internal\Native\OsThemeProbe` ONLY inside the NativePHP bundle;
-    under Herd / CI the binding is absent and the app-layout falls
+    under local dev / CI the binding is absent and the app-layout falls
     through to the client-side `prefers-color-scheme` pre-paint
     script. "Absence of a binding is itself the signal."
   - `RemembersPendingFileIntent::remember($path) / consume()` — the
@@ -131,7 +131,7 @@ What the module explicitly does NOT do:
 - `OsThemeProbe::current()` — concrete `OsThemeSignal` reading the
   OS theme. The binding is registered only inside the bundle, so the
   layout's `app()->bound(OsThemeSignal::class)` check falls through
-  to the client-side pre-paint script under Herd / CI.
+  to the client-side pre-paint script under local dev / CI.
 - `SurfaceWorkerCrashAlert::handle($event)` — handles the NativePHP
   `ProcessExited` event. Accumulates crashes in a rolling window; on
   threshold-crossing, raises a `system_alerts` row that

@@ -31,7 +31,7 @@ use Native\Desktop\Contracts\Shell as ShellContract;
  *    fallback if no other module has already bound the contract.
  *    NativePHP's NativeServiceProvider binds the real implementation
  *    inside the desktop runtime; this binding only takes effect when
- *    the bundle runs outside that runtime (Herd dev mode, CI tests).
+ *    the bundle runs outside that runtime (local dev mode, CI tests).
  *  - listens for `UserInstalled` and runs the SeedCommunityCorpus
  *    listener, mirroring SeedDefaultCategoryTree's idempotent posture.
  *  - loads the migration that creates `community_merchant_mappings`,

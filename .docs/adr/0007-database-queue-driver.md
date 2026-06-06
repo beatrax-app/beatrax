@@ -13,7 +13,7 @@ gives a clean abstraction over queue drivers — `database`, `redis`,
 The choice of driver is an operational decision, and it changes per
 deployment surface.
 
-In development under Laravel Herd, the user already has Docker
+In local development, the user already has Docker
 available for the Redis loopback container that v1.0 carved out for
 chain resolution; Horizon's dashboard at `/horizon` is a useful debug
 surface. In the shipped desktop bundle (see
@@ -37,19 +37,19 @@ table cleanly.
   SQLite file as the application schema. The `database` cache driver
   uses the same file for the `cache` and `cache_locks` tables, which
   matters for `withoutOverlapping()` locks on scheduled jobs.
-- **Development under Herd:** `QUEUE_CONNECTION` defaults to `database`
-  in `.env.example`. The `BEATRAX_RUNTIME=herd` developer override may
+- **Local development:** `QUEUE_CONNECTION` defaults to `database`
+  in `.env.example`. The `BEATRAX_RUNTIME=local` developer override may
   switch to `redis` and start Horizon for the dashboard surface; the
   Horizon iframe under `/dev/horizon` is gated on that runtime flag.
 - **Horizon is dev-only.** Its service provider's `boot()` early-exits
-  unless `BEATRAX_RUNTIME=herd` AND `QUEUE_CONNECTION=redis`. The
+  unless `BEATRAX_RUNTIME=local` AND `QUEUE_CONNECTION=redis`. The
   [`noHorizonImportsInShippedBuildCode`](#) arch invariant enforces
   that no production code path imports a Horizon symbol; the provider
   itself imports it inside a runtime guard.
 - **Workers in the desktop bundle:** the NativePHP shell launches a
   long-running `php artisan queue:work --tries=3 --backoff=60` worker
   inside the bundle's child-process slot. The launchd plists shipped
-  in `deploy/launchd/` carry the equivalent setup for Herd-driven
+  in `deploy/launchd/` carry the equivalent setup for local
   development.
 
 ## Consequences
@@ -74,7 +74,7 @@ table cleanly.
   `db:backup` uses the `cache_locks` table; the
   `ShouldBeUniqueUntilProcessing` per-user lock for the chain-resolver
   uses the same backend in shipped mode and switches to Redis under the
-  Herd developer override.
+  local developer override.
 
 ## Alternatives considered
 
@@ -98,4 +98,4 @@ table cleanly.
   the operational view of the queue, scheduler, and failed-jobs
   surfaces.
 - [`local_development/dev-mode.md`](../local_development/dev-mode.md) —
-  the Horizon-under-Herd developer surface.
+  the Horizon-under-local-dev developer surface.

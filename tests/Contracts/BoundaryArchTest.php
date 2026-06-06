@@ -1167,7 +1167,7 @@ it('does not allow raw path helpers or hard-coded storage literals outside UserD
     // Scope is three roots — Modules, app, config — because config files
     // call the static accessors directly (the (?<![>:]) lookbehind keeps
     // UserDataPathService::databaseFile( legal). Test files keep the raw
-    // helpers: they run in a known Herd environment and never ship.
+    // helpers: they run in a known local dev environment and never ship.
     // Migration directories are skipped, consistent with
     // noAuthFacadeOrHelper and phpstan.neon — anonymous-class migrations
     // resolve the service through the container separately. The grep
