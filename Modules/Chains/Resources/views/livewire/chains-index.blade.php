@@ -42,7 +42,7 @@
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700" data-testid="chains-index-empty">
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No chains yet</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Import a few statements (ASN bank, PayPal, ICS card) and the resolver will surface cross-account chains here automatically.
+                Import a few statements (bank, PayPal, card) and the resolver will surface cross-account chains here automatically.
             </p>
         </div>
     @else

@@ -161,7 +161,7 @@ final class UploadWizard extends Component
     {
         return [
             'file.max' => 'That file is too large. Drop in a statement export under the size limit for the chosen format.',
-            'file.extensions' => "That file doesn't look like a supported statement export. Drop in an ASN CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, ICS PDF, an email message (.eml), or a mailbox archive (.mbox).",
+            'file.extensions' => "That file doesn't look like a supported statement export. Drop in a bank CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, a card-statement PDF, an email message (.eml), or a mailbox archive (.mbox).",
         ];
     }
 
