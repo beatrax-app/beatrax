@@ -20,7 +20,7 @@ beforeEach(function (): void {
 it('imports an ASN CAMT.053 XML end-to-end with EndToEndId populated as source_ref', function (): void {
     $result = $this->importer->runAndConfirm(
         __DIR__.'/../../../../tests/fixtures/asn-camt053-sample-1.xml',
-        'asn-camt053',
+        'camt053',
         $this->fixtureUser,
     );
 
@@ -29,13 +29,13 @@ it('imports an ASN CAMT.053 XML end-to-end with EndToEndId populated as source_r
     expect($result->errors)->toBe(0);
 
     $totalRows = Transaction::query()
-        ->where('source_format', 'asn-camt053')
+        ->where('source_format', 'camt053')
         ->where('import_run_id', $result->importRunId)
         ->count();
     expect($totalRows)->toBe($result->inserted);
 
     $withSourceRef = Transaction::query()
-        ->where('source_format', 'asn-camt053')
+        ->where('source_format', 'camt053')
         ->whereNotNull('source_ref')
         ->count();
     expect($withSourceRef)->toBeGreaterThan(0);
@@ -55,12 +55,12 @@ it('imports an ASN CAMT.053 XML end-to-end with EndToEndId populated as source_r
 
 it('re-importing the same CAMT.053 file is a no-op (idempotent SHA-256 short-circuit)', function (): void {
     $fixture = __DIR__.'/../../../../tests/fixtures/asn-camt053-sample-1.xml';
-    $first = $this->importer->runAndConfirm($fixture, 'asn-camt053', $this->fixtureUser);
-    $second = $this->importer->runAndConfirm($fixture, 'asn-camt053', $this->fixtureUser);
+    $first = $this->importer->runAndConfirm($fixture, 'camt053', $this->fixtureUser);
+    $second = $this->importer->runAndConfirm($fixture, 'camt053', $this->fixtureUser);
 
     expect($first->inserted)->toBeGreaterThan(0);
     expect($second->inserted)->toBe(0);
-    expect(Transaction::query()->where('source_format', 'asn-camt053')->count())->toBe($first->inserted);
+    expect(Transaction::query()->where('source_format', 'camt053')->count())->toBe($first->inserted);
 })->group('phase-2');
 
 it('does not create a statement_summaries row when the same user imports a CSV', function (): void {

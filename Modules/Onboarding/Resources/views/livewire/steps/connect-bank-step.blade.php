@@ -18,14 +18,14 @@
     $isGated = $isCsv && $selectedBankFormatHint === null;
 
     $miniStepFourSub = match ($selectedFormat) {
-        'asn-mt940' => 'MT940 (.sta / .940)',
+        'mt940' => 'MT940 (.sta / .940)',
         'asn-csv', 'ing-csv' => 'CSV (.csv)',
         default => 'CAMT.053 (.xml)',
     };
 
     $dropZoneLead = match (true) {
-        $selectedFormat === 'asn-camt053' => 'Drop your CAMT.053 file here',
-        $selectedFormat === 'asn-mt940' => 'Drop your MT940 file here',
+        $selectedFormat === 'camt053' => 'Drop your CAMT.053 file here',
+        $selectedFormat === 'mt940' => 'Drop your MT940 file here',
         $isCsv && $selectedBankFormatHint === 'asn-csv' => 'Drop your ASN CSV here',
         $isCsv && $selectedBankFormatHint === 'ing-csv' => 'Drop your ING CSV here',
         $isCsv => 'Pick which bank exported your CSV — we need to know to read it correctly.',
@@ -33,20 +33,20 @@
     };
 
     $dropZoneAccept = match ($selectedFormat) {
-        'asn-mt940' => '.sta,.940,.txt',
+        'mt940' => '.sta,.940,.txt',
         'asn-csv', 'ing-csv' => '.csv',
         default => '.xml',
     };
 
     $bankListLine = match ($selectedFormat) {
-        'asn-mt940' => 'Supported: ASN, ING, Rabobank, Triodos, SNS, Bunq',
+        'mt940' => 'Supported: ASN, ING, Rabobank, Triodos, SNS, Bunq',
         'asn-csv', 'ing-csv' => 'Supported: ASN, ING — more formats coming as users contribute samples.',
         default => 'Supported: ASN, ING',
     };
 
     $eyebrowSuffix = match (true) {
-        $selectedFormat === 'asn-camt053' => '· CAMT.053',
-        $selectedFormat === 'asn-mt940' => '· MT940',
+        $selectedFormat === 'camt053' => '· CAMT.053',
+        $selectedFormat === 'mt940' => '· MT940',
         $isCsv && $selectedBankFormatHint === 'asn-csv' => '· CSV — ASN',
         $isCsv && $selectedBankFormatHint === 'ing-csv' => '· CSV — ING',
         $isCsv => '· CSV',
@@ -75,23 +75,23 @@
             type="button"
             class="format-chip-button"
             role="radio"
-            aria-checked="{{ $selectedFormat === 'asn-camt053' ? 'true' : 'false' }}"
-            wire:click="setFormat('asn-camt053')"
+            aria-checked="{{ $selectedFormat === 'camt053' ? 'true' : 'false' }}"
+            wire:click="setFormat('camt053')"
         >
             <x-onboarding::format-chip
                 label="CAMT.053"
                 badge="recommended"
-                :recommended="$selectedFormat === 'asn-camt053'"
+                :recommended="$selectedFormat === 'camt053'"
             />
         </button>
         <button
             type="button"
             class="format-chip-button"
             role="radio"
-            aria-checked="{{ $selectedFormat === 'asn-mt940' ? 'true' : 'false' }}"
-            wire:click="setFormat('asn-mt940')"
+            aria-checked="{{ $selectedFormat === 'mt940' ? 'true' : 'false' }}"
+            wire:click="setFormat('mt940')"
         >
-            <x-onboarding::format-chip label="MT940" :recommended="$selectedFormat === 'asn-mt940'" />
+            <x-onboarding::format-chip label="MT940" :recommended="$selectedFormat === 'mt940'" />
         </button>
         <button
             type="button"

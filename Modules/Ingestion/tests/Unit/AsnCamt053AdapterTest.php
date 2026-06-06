@@ -27,17 +27,17 @@ beforeEach(function (): void {
     $this->adapter = $this->app->make(AsnCamt053Adapter::class);
 });
 
-it('reports the asn-camt053 format identifier', function (): void {
-    expect($this->adapter->format())->toBe('asn-camt053');
+it('reports the camt053 format identifier', function (): void {
+    expect($this->adapter->format())->toBe('camt053');
 })->group('phase-2');
 
-it('registers under the asn-camt053 key in the SourceAdapterRegistry', function (): void {
+it('registers under the camt053 key in the SourceAdapterRegistry', function (): void {
     /** @var SourceAdapterRegistry $registry */
     $registry = $this->app->make(SourceAdapterRegistry::class);
 
-    $adapter = $registry->for('asn-camt053');
+    $adapter = $registry->for('camt053');
     expect($adapter)->toBeInstanceOf(AsnCamt053Adapter::class);
-    expect($adapter->format())->toBe('asn-camt053');
+    expect($adapter->format())->toBe('camt053');
 })->group('phase-2');
 
 it('parses the anonymised CAMT.053 fixture into SourceTransactionDto rows', function (): void {

@@ -64,7 +64,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
 
     $runA1 = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/a1.xml',
         'sha256' => str_repeat('a', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-03-01 12:00:00'),
@@ -73,7 +73,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
 
     $runA2 = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/a2.xml',
         'sha256' => str_repeat('b', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
@@ -82,7 +82,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
 
     $runB = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-mt940',
+        'source_format' => 'mt940',
         'raw_file_path' => '/tmp/b.940',
         'sha256' => str_repeat('c', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
@@ -156,7 +156,7 @@ it('is idempotent — re-running the backfill does not overwrite a non-null star
 
     $run = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/idem.xml',
         'sha256' => str_repeat('d', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),

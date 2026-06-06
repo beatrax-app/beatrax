@@ -11,7 +11,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
  * Payment-type hinter specialised for ASN MT940 narrative exports
- * (`source_format = 'asn-mt940'`).
+ * (`source_format = 'mt940'`).
  *
  * The MT940 Tag :86: narrative carries the same Dutch lexemes as the
  * ASN CSV description column — `Betaalautomaat` / `Geldautomaat` for
@@ -27,7 +27,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  */
 final class AsnMt940PaymentTypeHinter implements PaymentTypeHinter
 {
-    private const SOURCE_FORMAT = 'asn-mt940';
+    private const SOURCE_FORMAT = 'mt940';
 
     /**
      * Casefold-lowercase keyword → (`PaymentType`, confidence) mapping.

@@ -27,8 +27,8 @@ it('returns the supports() flag only for the ics-pdf source format', function ()
     $detector = new IcsPdfStartingBalanceDetector($db);
 
     expect($detector->supports('ics-pdf'))->toBeTrue();
-    expect($detector->supports('asn-camt053'))->toBeFalse();
-    expect($detector->supports('asn-mt940'))->toBeFalse();
+    expect($detector->supports('camt053'))->toBeFalse();
+    expect($detector->supports('mt940'))->toBeFalse();
     expect($detector->supports('paypal-csv'))->toBeFalse();
 })->group('phase-16.1.1');
 

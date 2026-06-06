@@ -21,7 +21,7 @@ namespace Modules\Ingestion\Internal\Adapters\Asn;
  */
 final class AsnCamt053HeaderProfile
 {
-    public const FORMAT = 'asn-camt053';
+    public const FORMAT = 'camt053';
 
     /** @var list<string> */
     public const FILE_EXTENSIONS = ['xml'];

@@ -11,7 +11,7 @@ use Modules\Import\Public\Dto\StartingBalanceCandidate;
 
 /**
  * Starting-balance detector specialised for ASN CAMT.053 XML imports
- * (`source_format = 'asn-camt053'`).
+ * (`source_format = 'camt053'`).
  *
  * Reads the `statement_summaries.opening_balance_minor` +
  * `opening_balance_date` columns that the CAMT.053 parser writes for
@@ -28,7 +28,7 @@ use Modules\Import\Public\Dto\StartingBalanceCandidate;
  */
 final class Camt053StartingBalanceDetector implements DetectsStartingBalance
 {
-    private const SOURCE_FORMAT = 'asn-camt053';
+    private const SOURCE_FORMAT = 'camt053';
 
     public function __construct(private readonly DatabaseManager $db) {}
 

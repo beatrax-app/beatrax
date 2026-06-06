@@ -123,7 +123,7 @@ function seedLoadMoreRunWithRows(int $userId, string $sourceFormat, int $newRowC
 }
 
 it('grows one section by 25 rows on each click of loadMoreRows', function (): void {
-    $bankRunId = seedLoadMoreRunWithRows($this->user->id, 'asn-camt053', 60);
+    $bankRunId = seedLoadMoreRunWithRows($this->user->id, 'camt053', 60);
 
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
@@ -136,18 +136,18 @@ it('grows one section by 25 rows on each click of loadMoreRows', function (): vo
     $instance = $component->instance();
     expect($instance->currentPreview()->sections[0]->sampleRows)->toHaveCount(5);
 
-    $component->call('loadMoreRows', 'asn-camt053');
+    $component->call('loadMoreRows', 'camt053');
     expect($component->instance()->currentPreview()->sections[0]->sampleRows)->toHaveCount(30);
 
-    $component->call('loadMoreRows', 'asn-camt053');
+    $component->call('loadMoreRows', 'camt053');
     expect($component->instance()->currentPreview()->sections[0]->sampleRows)->toHaveCount(55);
 
-    $component->call('loadMoreRows', 'asn-camt053');
+    $component->call('loadMoreRows', 'camt053');
     expect($component->instance()->currentPreview()->sections[0]->sampleRows)->toHaveCount(60);
 });
 
 it('isolates per-section row caps so expanding one section does not grow another', function (): void {
-    $bankRunId = seedLoadMoreRunWithRows($this->user->id, 'asn-camt053', 30);
+    $bankRunId = seedLoadMoreRunWithRows($this->user->id, 'camt053', 30);
     $paypalRunId = seedLoadMoreRunWithRows($this->user->id, 'paypal-csv', 30);
 
     DB::table('wizard_progress')
@@ -167,16 +167,16 @@ it('isolates per-section row caps so expanding one section does not grow another
     foreach ($initial as $section) {
         $initialBySource[$section->sourceFormat] = $section;
     }
-    expect($initialBySource['asn-camt053']->sampleRows)->toHaveCount(5);
+    expect($initialBySource['camt053']->sampleRows)->toHaveCount(5);
     expect($initialBySource['paypal-csv']->sampleRows)->toHaveCount(5);
 
-    $component->call('loadMoreRows', 'asn-camt053');
+    $component->call('loadMoreRows', 'camt053');
 
     $afterClick = $component->instance()->currentPreview()->sections;
     $afterBySource = [];
     foreach ($afterClick as $section) {
         $afterBySource[$section->sourceFormat] = $section;
     }
-    expect($afterBySource['asn-camt053']->sampleRows)->toHaveCount(30);
+    expect($afterBySource['camt053']->sampleRows)->toHaveCount(30);
     expect($afterBySource['paypal-csv']->sampleRows)->toHaveCount(5);
 });

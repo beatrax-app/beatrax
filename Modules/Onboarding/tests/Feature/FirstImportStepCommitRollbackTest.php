@@ -87,7 +87,7 @@ it('rolls back all writes when ConfirmsImports throws mid-commit', function (): 
         'default_currency' => 'EUR',
     ]);
 
-    $bankRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'asn-camt053', 3, $bankAccount->id);
+    $bankRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'camt053', 3, $bankAccount->id);
     $cardRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'ics-pdf', 2, $cardAccount->id);
 
     DB::table('wizard_progress')

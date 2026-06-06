@@ -24,7 +24,7 @@ use stdClass;
  *  - NewRowDisposition    — no existing row with this fingerprint.
  *  - DuplicateDisposition — fingerprint match where BOTH sides are
  *                           bank-statement formats (asn-csv,
- *                           asn-camt053, asn-mt940, ics-pdf,
+ *                           camt053, mt940, ics-pdf,
  *                           paypal-csv). Same transaction re-imported
  *                           from a different statement-format export
  *                           drops as a duplicate without upgrading

@@ -107,8 +107,8 @@ it('returns the three ASN formats when the issuer is ASN', function (): void {
 
     expect($available)->toBe([
         ['value' => 'asn-csv', 'label' => 'CSV'],
-        ['value' => 'asn-camt053', 'label' => 'CAMT.053 (XML)'],
-        ['value' => 'asn-mt940', 'label' => 'MT940'],
+        ['value' => 'camt053', 'label' => 'CAMT.053 (XML)'],
+        ['value' => 'mt940', 'label' => 'MT940'],
     ]);
 })->group('phase-3');
 

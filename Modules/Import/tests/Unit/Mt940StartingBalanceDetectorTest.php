@@ -18,16 +18,16 @@ uses(RefreshDatabase::class);
  * Unit coverage for Mt940StartingBalanceDetector. Verifies the
  * detector pulls the earliest opening_balance_date per account
  * from `statement_summaries` joined to `import_runs` filtered to
- * `source_format = 'asn-mt940'`.
+ * `source_format = 'mt940'`.
  */
 
-it('returns the supports() flag only for the asn-mt940 source format', function (): void {
+it('returns the supports() flag only for the mt940 source format', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $detector = new Mt940StartingBalanceDetector($db);
 
-    expect($detector->supports('asn-mt940'))->toBeTrue();
-    expect($detector->supports('asn-camt053'))->toBeFalse();
+    expect($detector->supports('mt940'))->toBeTrue();
+    expect($detector->supports('camt053'))->toBeFalse();
     expect($detector->supports('ics-pdf'))->toBeFalse();
     expect($detector->supports('paypal-csv'))->toBeFalse();
 })->group('phase-16.1.1');
@@ -50,7 +50,7 @@ it('returns one candidate per account with the earliest opening_balance_date win
 
     $earlierRun = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-mt940',
+        'source_format' => 'mt940',
         'raw_file_path' => '/tmp/earlier.sta',
         'sha256' => str_repeat('4', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-03-01 12:00:00'),
@@ -59,7 +59,7 @@ it('returns one candidate per account with the earliest opening_balance_date win
 
     $laterRun = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-mt940',
+        'source_format' => 'mt940',
         'raw_file_path' => '/tmp/later.sta',
         'sha256' => str_repeat('5', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
@@ -98,7 +98,7 @@ it('returns one candidate per account with the earliest opening_balance_date win
     expect($candidate->accountId)->toBe($account->id);
     expect($candidate->openingBalanceMinor)->toBe(4242);
     expect($candidate->openingBalanceDate)->toBe('2026-02-01');
-    expect($candidate->sourceFormat)->toBe('asn-mt940');
+    expect($candidate->sourceFormat)->toBe('mt940');
 })->group('phase-16.1.1');
 
 it('skips import-runs of a non-mt940 source format', function (): void {
@@ -119,7 +119,7 @@ it('skips import-runs of a non-mt940 source format', function (): void {
 
     $camtRun = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/camt.xml',
         'sha256' => str_repeat('6', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),

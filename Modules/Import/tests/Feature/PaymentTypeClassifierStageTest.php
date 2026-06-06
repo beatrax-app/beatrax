@@ -125,11 +125,11 @@ it('resolves a PayPal CSV Service Fee event-type row to PaymentType::Fee', funct
 it('resolves the CAMT.053 row authoritatively from BkTxCd PMNT-CCRD-POSD to PaymentType::Pin', function (): void {
     $tx = ptypeFeatureRow(
         'Generic description',
-        'asn-camt053',
+        'camt053',
         rawPayload: ['sepa' => ['btc' => ['domain' => 'PMNT', 'family' => 'CCRD', 'subFamily' => 'POSD']]],
     );
 
-    $resolved = $this->stage->run($tx, $this->user, 'asn-camt053');
+    $resolved = $this->stage->run($tx, $this->user, 'camt053');
 
     expect($resolved->paymentType)->toBe(PaymentType::Pin);
 });

@@ -57,13 +57,13 @@ it('renders three format chips above the drop zone', function (): void {
 
 it('drop zone is interactive when CAMT.053 is selected', function (): void {
     Livewire::test(ConnectBankStep::class)
-        ->set('selectedFormat', 'asn-camt053')
+        ->set('selectedFormat', 'camt053')
         ->assertDontSeeHtml('aria-disabled="true"');
 });
 
 it('drop zone is interactive when MT940 is selected', function (): void {
     Livewire::test(ConnectBankStep::class)
-        ->set('selectedFormat', 'asn-mt940')
+        ->set('selectedFormat', 'mt940')
         ->assertDontSeeHtml('aria-disabled="true"');
 });
 
@@ -102,7 +102,7 @@ it('stashes bank_import_run_id into wizard_progress.data after a successful subm
     $upload = UploadedFile::fake()->createWithContent('statement.xml', $contents !== false ? $contents : '');
 
     Livewire::test(ConnectBankStep::class)
-        ->set('selectedFormat', 'asn-camt053')
+        ->set('selectedFormat', 'camt053')
         ->set('file', $upload)
         ->call('submit')
         ->assertDispatched('wizard.step.completed');

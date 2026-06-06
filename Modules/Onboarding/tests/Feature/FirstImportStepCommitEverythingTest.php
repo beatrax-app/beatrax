@@ -91,7 +91,7 @@ it('commits every stashed ImportRun and writes starting balances atomically', fu
         'default_currency' => 'EUR',
     ]);
 
-    $bankRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'asn-camt053', 3, $bankAccount->id);
+    $bankRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'camt053', 3, $bankAccount->id);
     $cardRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'ics-pdf', 2, $cardAccount->id);
 
     DB::table('wizard_progress')

@@ -19,7 +19,7 @@ beforeEach(function (): void {
 it('imports an ASN MT940 .sta file end-to-end with EREF or :61: customer-reference populated as source_ref', function (): void {
     $result = $this->importer->runAndConfirm(
         __DIR__.'/../../../../tests/fixtures/asn-mt940-sample-1.sta',
-        'asn-mt940',
+        'mt940',
         $this->fixtureUser,
     );
 
@@ -28,13 +28,13 @@ it('imports an ASN MT940 .sta file end-to-end with EREF or :61: customer-referen
     expect($result->errors)->toBe(0);
 
     $totalRows = Transaction::query()
-        ->where('source_format', 'asn-mt940')
+        ->where('source_format', 'mt940')
         ->where('import_run_id', $result->importRunId)
         ->count();
     expect($totalRows)->toBe($result->inserted);
 
     $withSourceRef = Transaction::query()
-        ->where('source_format', 'asn-mt940')
+        ->where('source_format', 'mt940')
         ->whereNotNull('source_ref')
         ->count();
     expect($withSourceRef)->toBeGreaterThan(0);
@@ -55,10 +55,10 @@ it('imports an ASN MT940 .sta file end-to-end with EREF or :61: customer-referen
 it('re-importing the same MT940 file is a no-op (idempotent SHA-256 short-circuit)', function (): void {
     $fixture = __DIR__.'/../../../../tests/fixtures/asn-mt940-sample-1.sta';
 
-    $first = $this->importer->runAndConfirm($fixture, 'asn-mt940', $this->fixtureUser);
-    $second = $this->importer->runAndConfirm($fixture, 'asn-mt940', $this->fixtureUser);
+    $first = $this->importer->runAndConfirm($fixture, 'mt940', $this->fixtureUser);
+    $second = $this->importer->runAndConfirm($fixture, 'mt940', $this->fixtureUser);
 
     expect($first->inserted)->toBeGreaterThan(0);
     expect($second->inserted)->toBe(0);
-    expect(Transaction::query()->where('source_format', 'asn-mt940')->count())->toBe($first->inserted);
+    expect(Transaction::query()->where('source_format', 'mt940')->count())->toBe($first->inserted);
 })->group('phase-2');
