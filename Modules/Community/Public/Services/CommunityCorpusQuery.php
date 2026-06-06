@@ -31,7 +31,17 @@ final class CommunityCorpusQuery
      */
     private const GENERALIZED_SCAN_LIMIT = 1000;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    /**
+     * Cap the regex scan at 500 corpus rows. Regex patterns are a small
+     * minority of the bundled corpus (store-number / structured-descriptor
+     * cases), so the bound is comfortably above the real count.
+     */
+    private const REGEX_SCAN_LIMIT = 500;
+
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly CorpusPatternMatcher $matcher,
+    ) {}
 
     /**
      * Look up the friendly name for a verbatim raw bank-statement
@@ -58,9 +68,13 @@ final class CommunityCorpusQuery
     {
         $haystack = mb_strtolower($rawDescription);
 
+        // Regex rows carry an empty generalized_pattern and are matched only
+        // by lookupRegex(); excluding them here keeps the LIMIT reflecting
+        // genuinely substring-matchable rows.
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('community_merchant_mappings')
             ->whereNull('user_id')
+            ->where('generalized_pattern', '!=', '')
             ->orderBy('id')
             ->limit(self::GENERALIZED_SCAN_LIMIT)
             ->get(['generalized_pattern', 'name']);
@@ -72,6 +86,38 @@ final class CommunityCorpusQuery
                 continue;
             }
             if (mb_strpos($haystack, mb_strtolower($needle)) !== false) {
+                return $name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Look up the friendly name by matching the corpus's `regex:` patterns
+     * against the raw description via CorpusPatternMatcher. Only rows whose
+     * pattern carries the `regex:` prefix are scanned — the `like 'regex:%'`
+     * operand is a fixed constant, never a corpus value, so it carries no
+     * SQL-LIKE injection surface (the prefix is the matcher's, not user
+     * input). Returns the first match in id order.
+     */
+    public function lookupRegex(string $rawDescription): ?string
+    {
+        /** @var iterable<stdClass> $rows */
+        $rows = $this->db->connection()->table('community_merchant_mappings')
+            ->whereNull('user_id')
+            ->where('pattern', 'like', CorpusPatternMatcher::REGEX_PREFIX.'%')
+            ->orderBy('id')
+            ->limit(self::REGEX_SCAN_LIMIT)
+            ->get(['pattern', 'name']);
+
+        foreach ($rows as $row) {
+            $pattern = is_string($row->pattern) ? $row->pattern : '';
+            $name = is_string($row->name) ? $row->name : '';
+            if ($pattern === '' || $name === '') {
+                continue;
+            }
+            if ($this->matcher->matches($pattern, $rawDescription)) {
                 return $name;
             }
         }

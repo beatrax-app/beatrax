@@ -1,0 +1,45 @@
+# Merchant corpus — pan-European / global services that bill across borders.
+# region defaults to EU. Schema: see merchants/nl.yaml.
+entries:
+  # Streaming / media
+  - { pattern: "SPOTIFY", name: "Spotify", category: "Music" }
+  - { pattern: "NETFLIX", name: "Netflix", category: "Streaming" }
+  - { pattern: "DISNEY PLUS", name: "Disney+", category: "Streaming" }
+  - { pattern: "DISNEYPLUS", name: "Disney+", category: "Streaming" }
+  - { pattern: "HBO MAX", name: "HBO Max", category: "Streaming" }
+  - { pattern: "PARAMOUNT+", name: "Paramount+", category: "Streaming" }
+  - { pattern: "AMAZON PRIME", name: "Amazon Prime", category: "Streaming" }
+  - { pattern: "AMZNPRIME", name: "Amazon Prime", category: "Streaming" }
+  - { pattern: "YOUTUBEPREMIUM", name: "YouTube Premium", category: "Streaming" }
+  - { pattern: "DAZN", name: "DAZN", category: "Streaming" }
+  - { pattern: "AUDIBLE", name: "Audible", category: "Streaming" }
+  # SaaS / digital
+  - { pattern: "APPLE.COM/BILL", name: "Apple", category: "Cloud / Software" }
+  - { pattern: "MICROSOFT", name: "Microsoft", category: "Cloud / Software" }
+  - { pattern: "ADOBE", name: "Adobe", category: "Cloud / Software" }
+  - { pattern: "OPENAI", name: "OpenAI", category: "Cloud / Software" }
+  - { pattern: "ANTHROPIC", name: "Anthropic", category: "Cloud / Software" }
+  - { pattern: "PATREON", name: "Patreon", category: "Cloud / Software" }
+  - { pattern: "STEAMGAMES", name: "Steam", category: "Cloud / Software" }
+  - { pattern: "PLAYSTATION NETWORK", name: "PlayStation", category: "Cloud / Software" }
+  - { pattern: "NINTENDO", name: "Nintendo", category: "Cloud / Software" }
+  # Payment facilitators (prefix forms). Matched anchored so they catch the
+  # facilitator wrapper regardless of the trimmed merchant tail.
+  - { pattern: "regex:^GOOGLE \\*", name: "Google", category: "Cloud / Software" }
+  - { pattern: "regex:^APL\\*", name: "Apple", category: "Cloud / Software" }
+  - { pattern: "regex:^AMZN MKTP", name: "Amazon" }
+  - { pattern: "AMAZON.", name: "Amazon" }
+  # Retail / travel
+  - { pattern: "ZALANDO", name: "Zalando" }
+  - { pattern: "ALIEXPRESS", name: "AliExpress" }
+  - { pattern: "TEMU", name: "Temu" }
+  - { pattern: "BOOKING.COM", name: "Booking.com" }
+  - { pattern: "AIRBNB", name: "Airbnb" }
+  - { pattern: "UBER", name: "Uber", category: "Public transport" }
+  - { pattern: "BOLT.EU", name: "Bolt", category: "Public transport" }
+  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }
+  - { pattern: "GLOVO", name: "Glovo", category: "Eating out" }
+  # Fintech
+  - { pattern: "REVOLUT", name: "Revolut" }
+  - { pattern: "WISE", name: "Wise" }
+  - { pattern: "KLARNA", name: "Klarna" }

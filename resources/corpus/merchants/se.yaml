@@ -1,0 +1,15 @@
+# Merchant corpus — Sweden. region defaults to SE. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: 'regex:\bICA\b', name: "ICA", category: "Groceries" }
+  - { pattern: "COOP", name: "Coop", category: "Groceries" }
+  - { pattern: "WILLYS", name: "Willys", category: "Groceries" }
+  - { pattern: "HEMKOP", name: "Hemköp", category: "Groceries" }
+  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
+  - { pattern: "OKQ8", name: "OKQ8", category: "Fuel" }
+  - { pattern: "PREEM", name: "Preem", category: "Fuel" }
+  - { pattern: "TELIA", name: "Telia", category: "Internet & Phone" }
+  - { pattern: "TELE2", name: "Tele2", category: "Internet & Phone" }
+  - { pattern: "TELENOR", name: "Telenor", category: "Internet & Phone" }
+  - { pattern: "VIAPLAY", name: "Viaplay", category: "Streaming" }
+  - { pattern: "SL ACCESS", name: "SL", category: "Public transport" }
+  - { pattern: "FOODORA", name: "Foodora", category: "Eating out" }

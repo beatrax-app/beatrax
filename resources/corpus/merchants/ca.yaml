@@ -1,0 +1,36 @@
+# Merchant corpus — Canada. region defaults to CA. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "LOBLAWS", name: "Loblaws", category: "Groceries" }
+  - { pattern: "NO FRILLS", name: "No Frills", category: "Groceries" }
+  - { pattern: "SUPERSTORE", name: "Real Canadian Superstore", category: "Groceries" }
+  - { pattern: "METRO", name: "Metro", category: "Groceries" }
+  - { pattern: "SOBEYS", name: "Sobeys", category: "Groceries" }
+  - { pattern: "FRESHCO", name: "FreshCo", category: "Groceries" }
+  - { pattern: "SAVE-ON-FOODS", name: "Save-On-Foods", category: "Groceries" }
+  - { pattern: "SHOPPERS DRUG", name: "Shoppers Drug Mart", category: "Groceries" }
+  - { pattern: "PETRO-CANADA", name: "Petro-Canada", category: "Fuel" }
+  - { pattern: "ESSO", name: "Esso", category: "Fuel" }
+  - { pattern: "ENBRIDGE", name: "Enbridge", category: "Utilities" }
+  - { pattern: "HYDRO QUEBEC", name: "Hydro-Québec", category: "Utilities" }
+  - { pattern: "BC HYDRO", name: "BC Hydro", category: "Utilities" }
+  - { pattern: "ROGERS", name: "Rogers", category: "Internet & Phone" }
+  - { pattern: "BELL CANADA", name: "Bell", category: "Internet & Phone" }
+  - { pattern: "BELL MOBILITY", name: "Bell", category: "Internet & Phone" }
+  - { pattern: "TELUS", name: "Telus", category: "Internet & Phone" }
+  - { pattern: "FIDO", name: "Fido", category: "Internet & Phone" }
+  - { pattern: "KOODO", name: "Koodo", category: "Internet & Phone" }
+  - { pattern: "FREEDOM MOBILE", name: "Freedom Mobile", category: "Internet & Phone" }
+  - { pattern: "VIDEOTRON", name: "Vidéotron", category: "Internet & Phone" }
+  - { pattern: "CRAVE", name: "Crave", category: "Streaming" }
+  - { pattern: "PRESTO", name: "Presto", category: "Public transport" }
+  - { pattern: 'regex:\bTTC\b', name: "Toronto Transit", category: "Public transport" }
+  - { pattern: "TRANSLINK", name: "TransLink", category: "Public transport" }
+  - { pattern: "CANADIAN TIRE", name: "Canadian Tire" }
+  - { pattern: "HUDSONS BAY", name: "Hudson's Bay" }
+  - { pattern: "INDIGO", name: "Indigo" }
+  - { pattern: "DOLLARAMA", name: "Dollarama" }
+  - { pattern: "INTACT", name: "Intact Insurance", category: "Insurance" }
+  - { pattern: "SUN LIFE", name: "Sun Life", category: "Insurance" }
+  - { pattern: "TIM HORTONS", name: "Tim Hortons", category: "Eating out" }
+  - { pattern: "SKIPTHEDISHES", name: "SkipTheDishes", category: "Eating out" }
+  - { pattern: "GOODLIFE", name: "GoodLife Fitness", category: "Memberships" }

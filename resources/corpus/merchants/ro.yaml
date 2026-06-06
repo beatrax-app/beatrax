@@ -1,0 +1,15 @@
+# Merchant corpus — Romania. region defaults to RO. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "KAUFLAND", name: "Kaufland", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "MEGA IMAGE", name: "Mega Image", category: "Groceries" }
+  - { pattern: "CARREFOUR", name: "Carrefour", category: "Groceries" }
+  - { pattern: "PROFI", name: "Profi", category: "Groceries" }
+  - { pattern: "OMV PETROM", name: "OMV Petrom", category: "Fuel" }
+  - { pattern: "ROMPETROL", name: "Rompetrol", category: "Fuel" }
+  - { pattern: "ORANGE", name: "Orange", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: 'regex:\bDIGI\b', name: "Digi", category: "Internet & Phone" }
+  - { pattern: "EMAG", name: "eMAG" }
+  - { pattern: "GLOVO", name: "Glovo", category: "Eating out" }
+  - { pattern: "TAZZ", name: "Tazz", category: "Eating out" }

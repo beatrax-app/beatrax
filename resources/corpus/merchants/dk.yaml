@@ -1,0 +1,14 @@
+# Merchant corpus — Denmark. region defaults to DK. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "NETTO", name: "Netto", category: "Groceries" }
+  - { pattern: "FOTEX", name: "Føtex", category: "Groceries" }
+  - { pattern: "REMA 1000", name: "Rema 1000", category: "Groceries" }
+  - { pattern: "BILKA", name: "Bilka", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
+  - { pattern: "YOUSEE", name: "YouSee", category: "Internet & Phone" }
+  - { pattern: "TELENOR", name: "Telenor", category: "Internet & Phone" }
+  - { pattern: "TELIA", name: "Telia", category: "Internet & Phone" }
+  - { pattern: 'regex:\bDSB\b', name: "DSB", category: "Public transport" }
+  - { pattern: "REJSEKORT", name: "Rejsekort", category: "Public transport" }
+  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }

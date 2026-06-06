@@ -45,26 +45,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Bundled corpus YAML asset paths
+    | Bundled corpus root
     |--------------------------------------------------------------------------
     |
-    | Paths to the YAML files the CorpusLoader reads on UserInstalled.
-    | Both paths are relative to the application root; tests bind a
-    | temporary path here so the loader walks a fixture file without
-    | mutating the shipped corpus on disk. Setting either path to a
-    | non-existent file causes the loader to log a warning and skip the
-    | file — the other path still loads normally.
+    | Root directory (relative to the application root) holding the bundled
+    | classification corpus, organised as <type>/<country>.yaml:
+    |   merchants/<country>.yaml  → crowd-sourced merchant corpus (DB-seeded)
+    |   government/<country>.yaml → government-agency resolver rules
+    |   bank-fees/<country>.yaml  → bank-fee resolver rules
+    |
+    | A file's country code is inferred from its filename (de.yaml → DE).
+    | Tests bind `community.app_root` (or this `root`) to a temporary path so
+    | the loader walks fixture files without mutating the shipped corpus.
     |
     */
 
     'corpus' => [
-        'bundled_path' => 'resources/corpus/merchant-mappings.yaml',
-        'heuristics_path' => 'resources/corpus/built-in-heuristics.yaml',
-
-        // Root directory (relative to the app root) holding the bundled
-        // classification corpus, organised as <type>/<country>.yaml. The
-        // government/ and bank-fees/ subdirectories drive the resolver's
-        // government and bank-fee classification steps.
         'root' => 'resources/corpus',
     ],
 
@@ -73,12 +69,13 @@ return [
     | Application-root override (test-only)
     |--------------------------------------------------------------------------
     |
-    | The CorpusLoader resolves the bundled corpus paths above against
-    | this root. When `null` (the production default) the loader uses
-    | the injected `Application::basePath()` so a relocation of the
-    | source tree continues to work without a code change. Feature
-    | tests bind a fixture directory here so the loader walks a
-    | temporary YAML file without mutating the shipped corpus.
+    | The CorpusLoader and ClassificationRuleProvider resolve the corpus
+    | `root` above against this app root. When `null` (the production
+    | default) they use the injected `Application::basePath()` so a
+    | relocation of the source tree continues to work without a code
+    | change. Feature tests bind a fixture directory here (or set `root`
+    | directly) so the loader walks a temporary corpus tree without
+    | mutating the shipped corpus.
     |
     */
 

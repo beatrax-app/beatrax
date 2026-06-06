@@ -32,16 +32,13 @@ $makeRecorder = function (): LoggerInterface {
 
 beforeEach(function () use ($makeRecorder): void {
     $this->tmpRoot = sys_get_temp_dir().'/beatrax-corpus-warn-'.bin2hex(random_bytes(6));
-    if (! is_dir($this->tmpRoot)) {
-        mkdir($this->tmpRoot, 0o755, true);
-    }
-    $this->corpusPath = $this->tmpRoot.'/merchant-mappings.yaml';
-    $this->heuristicsPath = $this->tmpRoot.'/built-in-heuristics.yaml';
+    $this->merchantsDir = $this->tmpRoot.'/merchants';
+    mkdir($this->merchantsDir, 0o755, true);
+    $this->corpusPath = $this->merchantsDir.'/nl.yaml';
 
     /** @var ConfigRepository $config */
     $config = $this->app->make(ConfigRepository::class);
-    $config->set('community.corpus.bundled_path', $this->corpusPath);
-    $config->set('community.corpus.heuristics_path', $this->heuristicsPath);
+    $config->set('community.corpus.root', $this->tmpRoot);
 
     // Seed one valid category that we'll reference in the YAML.
     Category::create([
@@ -60,8 +57,8 @@ afterEach(function (): void {
     if (isset($this->corpusPath) && is_file($this->corpusPath)) {
         @unlink($this->corpusPath);
     }
-    if (isset($this->heuristicsPath) && is_file($this->heuristicsPath)) {
-        @unlink($this->heuristicsPath);
+    if (isset($this->merchantsDir) && is_dir($this->merchantsDir)) {
+        @rmdir($this->merchantsDir);
     }
     if (isset($this->tmpRoot) && is_dir($this->tmpRoot)) {
         @rmdir($this->tmpRoot);
@@ -77,7 +74,6 @@ entries:
     contributor: "beatrax-bot"
 YAML;
     file_put_contents($this->corpusPath, $yaml);
-    file_put_contents($this->heuristicsPath, "entries: []\n");
 
     /** @var CorpusLoader $loader */
     $loader = $this->app->make(CorpusLoader::class);
@@ -110,7 +106,6 @@ entries:
     contributor: "beatrax-bot"
 YAML;
     file_put_contents($this->corpusPath, $yaml);
-    file_put_contents($this->heuristicsPath, "entries: []\n");
 
     /** @var CorpusLoader $loader */
     $loader = $this->app->make(CorpusLoader::class);
@@ -130,12 +125,9 @@ YAML;
     expect($hasWarning)->toBeFalse();
 });
 
-it('returns an empty list and logs a warning when the bundled file is missing', function (): void {
-    /** @var ConfigRepository $config */
-    $config = $this->app->make(ConfigRepository::class);
-    $config->set('community.corpus.bundled_path', $this->tmpRoot.'/does-not-exist.yaml');
-    file_put_contents($this->heuristicsPath, "entries: []\n");
-
+it('returns an empty list when the merchants corpus directory holds no files', function (): void {
+    // beforeEach created an empty merchants/ directory and wrote no YAML in
+    // this case, so the loader finds nothing to seed.
     /** @var CorpusLoader $loader */
     $loader = $this->app->make(CorpusLoader::class);
     $entries = $loader->loadBundled();

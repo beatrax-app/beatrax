@@ -1,0 +1,16 @@
+# Merchant corpus — Hungary. region defaults to HU. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "TESCO", name: "Tesco", category: "Groceries" }
+  - { pattern: "SPAR", name: "Spar", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "ALDI", name: "Aldi", category: "Groceries" }
+  - { pattern: 'regex:\bCBA\b', name: "CBA", category: "Groceries" }
+  - { pattern: "PENNY", name: "Penny", category: "Groceries" }
+  - { pattern: 'regex:\bMOL\b', name: "MOL", category: "Fuel" }
+  - { pattern: 'regex:\bOMV\b', name: "OMV", category: "Fuel" }
+  - { pattern: "MAGYAR TELEKOM", name: "Magyar Telekom", category: "Internet & Phone" }
+  - { pattern: "YETTEL", name: "Yettel", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: 'regex:\bMAV\b', name: "MÁV", category: "Public transport" }
+  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }
+  - { pattern: "FOODPANDA", name: "Foodpanda", category: "Eating out" }
