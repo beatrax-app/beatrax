@@ -242,6 +242,37 @@ it('Test 6 — step 6 bank fee: KOSTEN KASOPNAME in the description resolves to 
     expect($dto->metadata['subcategory'] ?? null)->toBe('fee');
 });
 
+it('Test 6b — a regex government rule (DE Rundfunkbeitrag) resolves to type=government with the rule name', function (): void {
+    $tx = makeCpResolverTx(
+        accountId: $this->bank->id,
+        userId: $this->user->id,
+        overrides: ['description' => 'BEITRAGSSERVICE ARD ZDF DEUTSCHLANDRADIO'],
+    );
+
+    /** @var CounterpartyResolverService $resolver */
+    $resolver = $this->app->make(CounterpartyResolverService::class);
+    $dto = $resolver->resolve($tx, $this->user);
+
+    expect($dto)->not->toBeNull();
+    expect($dto->type)->toBe('government');
+    expect($dto->displayName)->toBe('Rundfunkbeitrag');
+});
+
+it('Test 6c — the KOSTEN bank-fee rule uses a word boundary, so ONKOSTEN does not match', function (): void {
+    $tx = makeCpResolverTx(
+        accountId: $this->bank->id,
+        userId: $this->user->id,
+        overrides: ['description' => 'ONKOSTENVERGOEDING DECLARATIE'],
+    );
+
+    /** @var CounterpartyResolverService $resolver */
+    $resolver = $this->app->make(CounterpartyResolverService::class);
+    $dto = $resolver->resolve($tx, $this->user);
+
+    // Must NOT be mis-classified as a bank fee (the \bKOSTEN\b boundary).
+    expect($dto?->type)->not->toBe('bank');
+});
+
 it('Test 7 — step 7 unknown: an unmatched transaction with only an IBAN resolves to type=unknown and preserves the IBAN', function (): void {
     $tx = makeCpResolverTx(
         accountId: $this->bank->id,

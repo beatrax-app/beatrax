@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Community\Internal\Corpus\CorpusLoader;
+use Modules\Community\Internal\Corpus\CorpusYamlReader;
 use Modules\Community\Internal\Http\Livewire\HelpOthersTriageButton;
 use Modules\Community\Internal\Http\Livewire\MysteryMerchantsPage;
 use Modules\Community\Internal\Http\Livewire\SharedListSettingsPanel;
@@ -16,7 +17,9 @@ use Modules\Community\Internal\Listeners\SeedCommunityCorpus;
 use Modules\Community\Internal\Services\GitHubCompareUrlBuilder;
 use Modules\Community\Internal\Shell\NoOpShell;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
+use Modules\Community\Public\Services\ClassificationRuleProvider;
 use Modules\Community\Public\Services\CommunityCorpusQuery;
+use Modules\Community\Public\Services\CorpusPatternMatcher;
 use Modules\Core\Public\Events\UserInstalled;
 use Native\Desktop\Contracts\Shell as ShellContract;
 
@@ -44,8 +47,11 @@ final class CommunityServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../../../config/community.php', 'community');
 
+        $this->app->singleton(CorpusYamlReader::class);
         $this->app->singleton(CorpusLoader::class);
         $this->app->singleton(CommunityCorpusQuery::class);
+        $this->app->singleton(ClassificationRuleProvider::class);
+        $this->app->singleton(CorpusPatternMatcher::class);
         $this->app->singleton(GitHubCompareUrlBuilder::class);
         $this->app->singleton(OpenExternalUrlAction::class);
 

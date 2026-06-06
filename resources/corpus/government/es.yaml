@@ -1,0 +1,9 @@
+# Government / public-agency classification rules — Spain.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "AGENCIA TRIBUTARIA"
+    name: "Agencia Tributaria"
+  - pattern: "AEAT"
+    name: "Agencia Tributaria"
+  - pattern: "SEGURIDAD SOCIAL"
+    name: "Seguridad Social"

@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
 
+### Added
+
+- Government-agency and bank-fee classification now lives in a regex-capable,
+  per-country YAML corpus (`resources/corpus/<type>/<country>.yaml`) instead of
+  hardcoded Dutch keyword constants. Patterns may be literal substrings or a
+  `regex:` body, and the bundled set covers tax/social agencies across NL, DE,
+  FR, ES, IT, BE, and GB (e.g. Finanzamt, DGFiP/URSSAF, Agencia Tributaria,
+  Agenzia delle Entrate, HMRC, the German Rundfunkbeitrag via regex), with the
+  remaining EU member states, US, Canada, and Ukraine being filled in.
+
 ### Changed
 
 - User-facing copy and the README now describe beatrax as a generic European

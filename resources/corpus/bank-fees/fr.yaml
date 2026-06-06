@@ -1,0 +1,10 @@
+# Bank-fee classification rules — France. Schema: see bank-fees/nl.yaml.
+entries:
+  - pattern: "COTISATION"
+    name: "Frais bancaires"
+  - pattern: "FRAIS BANCAIRES"
+    name: "Frais bancaires"
+  - pattern: "FRAIS DE TENUE DE COMPTE"
+    name: "Frais de tenue de compte"
+  - pattern: "INTERETS"
+    name: "Intérêts"

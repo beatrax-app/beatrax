@@ -1,0 +1,12 @@
+# Government / public-agency classification rules — Germany.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "FINANZAMT"
+    name: "Finanzamt"
+  - pattern: "RENTENVERSICHERUNG"
+    name: "Deutsche Rentenversicherung"
+  - pattern: "BUNDESAGENTUR FUR ARBEIT"
+    name: "Bundesagentur für Arbeit"
+  # TV/radio licence fee — billed under several creditor-name variants.
+  - pattern: "regex:RUNDFUNK|ARD ZDF DEUTSCHLANDRADIO"
+    name: "Rundfunkbeitrag"
