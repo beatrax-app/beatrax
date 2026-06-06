@@ -1,5 +1,5 @@
 # Local PHP 8.5 toolchain for running the CI gates without installing PHP
-# on the host. The app itself ships via NativePHP / Laravel Herd — this is
+# on the host. The app itself ships via NativePHP — this is
 # dev-only tooling (see docker/php8.5/Dockerfile).
 #
 # Usage:

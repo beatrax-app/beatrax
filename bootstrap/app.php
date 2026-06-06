@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
@@ -54,5 +56,24 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontReport([
             AuthenticationException::class,
         ]);
+
+        // Attach the request method + path to every reported exception.
+        // Laravel's default handler logs framework exceptions — notably
+        // the NativePHP `PreventRegularBrowserAccess` 403 — as a bare
+        // stack trace with no request context, which is exactly what made
+        // the first Windows 403 flood impossible to attribute to a route.
+        // Method + path ONLY: never the query string or request body, so
+        // no financial data reaches the log (the NoStoreFinancialData
+        // invariant). The request is resolved through the container
+        // statically rather than the `request()` global helper to satisfy
+        // the larastan strict no-global-function rule.
+        $exceptions->context(function (): array {
+            $request = Container::getInstance()->make(Request::class);
+
+            return [
+                'method' => $request->method(),
+                'path' => '/'.ltrim($request->path(), '/'),
+            ];
+        });
     })
     ->create();

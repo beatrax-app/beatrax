@@ -20,14 +20,13 @@ early than ask you to rework a finished PR.
 Detailed local setup lives in [`.docs/local_development/setup.md`](.docs/local_development/setup.md).
 The short version:
 
-- Install [Laravel Herd](https://herd.laravel.com) (free tier; ships PHP
-  8.4+, nginx, dnsmasq, and `*.test` HTTPS).
-- Clone the repo into your Herd-watched directory.
-- `composer install`
+- Install [Docker](https://docs.docker.com/get-docker/); the PHP 8.5
+  toolchain is defined in `docker-compose.yml` and `docker/php8.5/Dockerfile`.
+- Clone the repo into your project directory.
+- `docker compose run --rm php composer install`
 - `npm ci`
-- `php artisan migrate`
-- Run the dev server (`php artisan serve` or visit the Herd-linked
-  `*.test` URL).
+- `docker compose run --rm php php artisan migrate`
+- Run the dev server (`docker compose run --rm php php artisan serve`).
 
 The project ships with sample fixtures so you can exercise the
 ingestion paths without owning the source banks' accounts.

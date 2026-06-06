@@ -113,5 +113,5 @@ forbid any other module from importing `Modules\Auth\Internal\*`.
 - `users.force_password_change_at_next_login` — the per-user forced-change
   flag the middleware respects.
 - No environment config keys; the module has no behaviour that varies by
-  runtime (`BEATRAX_RUNTIME=herd` vs `BEATRAX_RUNTIME=app`). The
+  runtime (`BEATRAX_RUNTIME=local` vs `BEATRAX_RUNTIME=app`). The
   `diederik:reset-password` CLI is gated only by shell-access posture.

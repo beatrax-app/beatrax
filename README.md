@@ -111,7 +111,7 @@ php artisan native:build mac x64
 # Installer lands at nativephp/electron/dist/beatrax-<version>-x64.dmg
 ```
 
-Full local-dev prerequisites (Herd, Node 20+, PHP 8.5) are in
+Full local-dev prerequisites (Docker, Node 20+, PHP 8.5) are in
 [.docs/local_development/setup.md](.docs/local_development/setup.md).
 
 ### Installing on Windows

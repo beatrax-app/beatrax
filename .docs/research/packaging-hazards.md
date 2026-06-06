@@ -30,7 +30,7 @@ a service that takes a `Repository $config` and reads
 - The `Modules\Core\Public\Services\AppPaths` injectable is the single
   source of truth for every filesystem location: `databasePath()`,
   `backupsPath()`, `oauthSecretsPath()`, `logsPath()`, `inboxPath()`,
-  `attachmentsPath()`. Herd mode returns the development paths; NativePHP
+  `attachmentsPath()`. Local-dev mode returns the development paths; NativePHP
   mode returns paths under `Application::storagePath()`.
 - Arch invariant: `base_path()`, `database_path()`, `storage_path()`, and
   string literals containing `database.sqlite` / `storage/app/` are
@@ -96,7 +96,7 @@ differentiator. The user sees no error — just wrong numbers.
   bundle.
 - An arch invariant forbids any `Horizon\*` import outside the
   `Modules/DevMode/Internal/HorizonProbe` surface (which only runs under
-  `DIEDERIK_RUNTIME=herd`).
+  `DIEDERIK_RUNTIME=local`).
 
 ## Code signing and runtime hardening
 

@@ -35,7 +35,7 @@ it('binds OsThemeProbe to the OsThemeSignal contract when running inside the Nat
     expect(app(OsThemeSignal::class))->toBeInstanceOf(OsThemeProbe::class);
 });
 
-it('does NOT bind OsThemeSignal under Herd / in tests by default', function (): void {
+it('does NOT bind OsThemeSignal under local dev / in tests by default', function (): void {
     $config = app(ConfigRepository::class);
 
     // The default test environment leaves `nativephp-internal.running`

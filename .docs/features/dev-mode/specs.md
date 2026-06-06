@@ -130,11 +130,11 @@ The behavioural contract for the `DevMode` module.
 
 - `config('app.dev_mode')` — the master gate for the Horizon iframe
   registration and the dev-shell's existence. False in a packaged
-  build by default; true under Herd.
+  build by default; true in local dev.
 - `users.is_developer` — per-user developer flag. The owner of the
   install carries it (set true at signup); partner accounts default
   to false.
-- `BEATRAX_RUNTIME=herd` (env) — informs the system-snapshot page's
+- `BEATRAX_RUNTIME=local` (env) — informs the system-snapshot page's
   presentation; does NOT affect the dev gate.
 - `dev_mode_audit` retention — the `dev:prune-audit` command takes
   a retention argument; the operator runs it periodically.

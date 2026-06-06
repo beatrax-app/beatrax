@@ -131,7 +131,7 @@ final class AppMenuBuilder
 
         if ($this->isDeveloper()) {
             // Route-name based (NOT hardcoded URL host) so the menu
-            // works in both Herd dev (https://beatrax.test) AND shipped
+            // works in both local dev (https://beatrax.test) AND shipped
             // Electron bundles (http://127.0.0.1:{port}). Menu::route
             // resolves the URL through the live UrlGenerator at boot
             // time. The accelerator strings (Cmd+.) are interpreted by

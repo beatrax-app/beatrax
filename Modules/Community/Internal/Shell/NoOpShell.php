@@ -9,7 +9,7 @@ use Psr\Log\LoggerInterface;
 
 /**
  * No-op fallback binding for `Native\Desktop\Contracts\Shell` consumed
- * when the bundle runs outside the NativePHP runtime (Herd dev mode,
+ * when the bundle runs outside the NativePHP runtime (local dev mode,
  * CI test runs). The four contract methods log the would-be call at
  * `info` level so a developer can confirm the integration plumbing
  * fires correctly without an Electron host present. Only OpenExternal

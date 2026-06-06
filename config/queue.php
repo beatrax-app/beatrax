@@ -12,7 +12,7 @@ declare(strict_types=1);
 | dependencies. The `jobs`, `job_batches`, and `cache_locks` tables back this
 | driver alongside `failed_jobs`.
 |
-| The redis connection remains defined for the developer's Herd box, where
+| The redis connection remains defined for the developer's local dev box, where
 | `QUEUE_CONNECTION=redis` selects it.
 */
 

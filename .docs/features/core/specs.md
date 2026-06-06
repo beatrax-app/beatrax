@@ -138,6 +138,6 @@ The behavioural contract for the `Core` module.
   `users.default_currency_view` — per-user preference columns.
 - `user_preferences.skipped_update_versions` (JSON) — per-user
   skipped-update-version list.
-- `BEATRAX_RUNTIME=herd` (env) — Dev-mode runtime distinguisher
+- `BEATRAX_RUNTIME=local` (env) — Dev-mode runtime distinguisher
   several modules respect (`DevMode` for surface gates, `Queue` for
   driver). See [ADR 0007](../../adr/0007-database-queue-driver.md).

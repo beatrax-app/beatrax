@@ -91,7 +91,7 @@ considers inconsistent. `VACUUM INTO` (the mechanism behind
 `db:backup`) is the supported way to produce a consistent copy while
 the app is running.
 
-If `db:backup` itself ever fails to run (Herd PHP swap mid-flight,
+If `db:backup` itself ever fails to run (a PHP version swap mid-flight,
 missing storage permissions, disk full), stop the app before any
 manual copy: `php artisan down`, copy the `.sqlite`, `.sqlite-wal`,
 and `.sqlite-shm` files together as a unit, then `php artisan up`.
@@ -243,7 +243,7 @@ If a `db:backup` process is SIGKILL'd, Laravel's
 `withoutOverlapping(60)` lock row stays in the `cache` table and
 blocks subsequent scheduled runs for up to 60 minutes. The TTL is
 deliberately short so the system self-heals, but pre-TTL recovery is
-useful (e.g. after a Herd PHP swap mid-run).
+useful (e.g. after a PHP version swap mid-run).
 
 Find the lock entry and clear it:
 

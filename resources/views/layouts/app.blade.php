@@ -35,7 +35,7 @@
     $isDark = $userTheme === 'dark' || ($userTheme === 'system' && $osTheme === 'dark');
     // The pre-paint script runs for every system-themed render unless
     // the OS has already given us an explicit light/dark answer. A null
-    // $osTheme — bundle says "no explicit preference" or Herd has no
+    // $osTheme — bundle says "no explicit preference" or local dev has no
     // binding — falls through to the script's matchMedia read.
     $needsPrePaintScript = $userTheme === 'system' && $osTheme === null;
 @endphp
@@ -60,7 +60,7 @@
 
                 Emitted whenever the OsThemeSignal returned null (no
                 explicit OS preference, or the desktop binding is
-                absent under Herd) — the script's `matchMedia` read is
+                absent in local dev) — the script's `matchMedia` read is
                 the authoritative source in that case. When the bundle
                 resolved an explicit `light` / `dark`, the server-side
                 `dark` class is already correct and the script would

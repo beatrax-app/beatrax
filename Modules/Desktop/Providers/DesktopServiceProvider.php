@@ -139,7 +139,7 @@ final class DesktopServiceProvider extends ServiceProvider
 
         // OsThemeProbe is bound to the OsThemeSignal contract ONLY
         // when the app is running inside the NativePHP bundle. Under
-        // Herd / in tests / before the Electron shell is ready, no
+        // local dev / in tests / before the Electron shell is ready, no
         // binding is registered — the app-layout's
         // `app()->bound(OsThemeSignal::class)` check falls through to
         // the client-side `prefers-color-scheme` pre-paint script. The
@@ -148,11 +148,54 @@ final class DesktopServiceProvider extends ServiceProvider
         //
         // The bundle sets `NATIVEPHP_RUNNING=true` (see
         // `config/nativephp-internal.php`); the binding is gated on
-        // that signal so the bundle resolves the probe and Herd / CI
+        // that signal so the bundle resolves the probe and local dev / CI
         // never tries to reach the NativePHP HTTP client.
         $config = $this->app->make(ConfigRepository::class);
         if ($config->get('nativephp-internal.running') === true) {
             $this->app->singleton(OsThemeSignal::class, OsThemeProbe::class);
+
+            // Keep the NativePHP security secret in sync with the live
+            // launch so PreventRegularBrowserAccess does not 403 the
+            // app's own window. See reassertNativePhpSecret() for the
+            // full Windows stale-config-cache rationale.
+            $this->reassertNativePhpSecret($config);
+        }
+    }
+
+    /**
+     * Re-assert the per-launch NativePHP security secret from the live
+     * process environment so a stale config cache cannot strand it.
+     *
+     * NativePHP's Electron shell generates a fresh random secret on every
+     * launch (`state.randomSecret`) and both (a) injects it into the
+     * window's `_php_native` cookie + `X-NativePHP-Secret` header on every
+     * request and (b) exports it to the spawned PHP processes as
+     * `NATIVEPHP_SECRET`. The vendor `PreventRegularBrowserAccess`
+     * middleware `abort(403)`s any request whose cookie/header does not
+     * equal `config('nativephp-internal.secret')`.
+     *
+     * That config value resolves from `env('NATIVEPHP_SECRET')`, which is
+     * frozen the moment `php artisan optimize` runs `config:cache` at
+     * launch (NativePHP runs `optimize` on every production launch). On
+     * Windows the bundle's `bootstrap/cache` write can fail or be skipped
+     * — the same read-only / AV-locked filesystem class that surfaces as
+     * the WinError 5 `view:cache` rename failure in the production log —
+     * leaving a PRIOR launch's secret frozen in the cached config while
+     * the live window sends the CURRENT secret. Every request then 403s
+     * and the window renders nothing.
+     *
+     * `getenv()` (not `env()`) reads the live process environment
+     * unconditionally, independent of the cached config repository — the
+     * same reason `UserDataPathService` uses it — so the value here is
+     * always the authoritative current-launch secret. When the cached
+     * secret is already correct this is a harmless no-op overwrite.
+     */
+    private function reassertNativePhpSecret(ConfigRepository $config): void
+    {
+        $secret = getenv('NATIVEPHP_SECRET');
+
+        if (is_string($secret) && $secret !== '') {
+            $config->set('nativephp-internal.secret', $secret);
         }
     }
 
@@ -197,14 +240,14 @@ final class DesktopServiceProvider extends ServiceProvider
         // The listener re-checks the session-scoped PendingFileIntent
         // and clears it after consumption so the next login does not
         // re-fire the same intent. Subscription is NOT bundle-gated:
-        // the pending-intent round-trip must work in Herd / CI / test
+        // the pending-intent round-trip must work in local dev / CI / test
         // runs too (the feature tests cover those paths directly), and
         // the listener does not call any NativePHP facade — it only
         // touches the Session contract.
         $events->listen(Login::class, [ContinuePendingFileIntentAfterLogin::class, 'handle']);
 
         // Focus-state + OS-notification wiring is bundle-only. Under
-        // Herd / in tests / before the Electron shell is ready,
+        // local dev / in tests / before the Electron shell is ready,
         // there is no native shell to push OS notifications into —
         // the in-app `SystemAlertsBanner` handles every event. The
         // gate mirrors the `OsThemeProbe` contract-binding gate in
@@ -247,14 +290,14 @@ final class DesktopServiceProvider extends ServiceProvider
         // listener accumulates exits in a rolling window and only
         // escalates once the threshold is crossed. The subscription is
         // bundle-only because the listener calls the `Notification`
-        // facade when the window is unfocused — under Herd / in tests
+        // facade when the window is unfocused — under local dev / in tests
         // there is no NativePHP HTTP client to push to.
         $events->listen(ProcessExited::class, [SurfaceWorkerCrashAlert::class, 'handle']);
 
         // PKG-06 native-event bridge: subscribe to the NativePHP-emitted
         // OpenFile event and feed it through FileOpenIntake. Bundle-only
         // because the event itself only fires inside the NativePHP
-        // shell — under Herd / in tests the cross-OS plumbing is
+        // shell — under local dev / in tests the cross-OS plumbing is
         // absent and FileOpenIntake is invoked directly by feature
         // tests instead.
         $events->listen(OpenFile::class, [HandleNativeOpenFile::class, 'handle']);

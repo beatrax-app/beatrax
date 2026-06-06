@@ -66,6 +66,6 @@ guards the module respects:
 
 - `users.<preference_column>` — what it toggles.
 - `config('<module-key>.option')` — what it controls.
-- `BEATRAX_RUNTIME=herd` — whether the module behaves differently
+- `BEATRAX_RUNTIME=local` — whether the module behaves differently
   under the developer-mode runtime override (see
   [ADR 0007](../../adr/0007-database-queue-driver.md)).

@@ -37,15 +37,15 @@ proceed while a writer is active.
 
 ## Decision
 
-- **Storage engine:** SQLite 3.45 or newer (whatever Laravel Herd ships
-  in dev; whatever the bundled PHP carries in the NativePHP installer).
+- **Storage engine:** SQLite 3.45 or newer (whatever the Docker dev
+  image ships; whatever the bundled PHP carries in the NativePHP installer).
 - **Journal mode:** `WAL`, set once at database creation and re-asserted
   by the `Modules/Core/Internal/Console/diederik:doctor` command on
   every run. `PRAGMA synchronous=NORMAL` is paired with WAL — full
   fsync per write is unnecessary for a single-user store with
   filesystem-level backup.
 - **Database location:**
-  - In development under Laravel Herd: `database/database.sqlite`.
+  - In local development: `database/database.sqlite`.
   - In the NativePHP-bundled desktop app: the per-OS user-data
     directory resolved through `UserDataPathService`
     (`~/Library/Application Support/beatrax/` on macOS,

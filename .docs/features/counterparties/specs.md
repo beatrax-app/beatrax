@@ -129,4 +129,4 @@ The behavioural contract for the `Counterparties` module.
 - The garbage-collector retention window (365 days) is fixed in the
   job source.
 - No environment flag changes the resolver's behaviour; it runs the
-  same way under Herd, the packaged build, and CI.
+  same way in local dev, the packaged build, and CI.

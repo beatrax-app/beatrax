@@ -18,7 +18,7 @@ use Modules\DevMode\Internal\Http\Middleware\HorizonFrameAncestors;
  *   1. config('app.dev_mode') === true (env-pinned), AND
  *   2. class_exists(\Laravel\Horizon\HorizonServiceProvider::class)
  *      (Horizon is require-dev; the class is present on the
- *      developer's Herd box but absent from a shipped
+ *      developer's local dev box but absent from a shipped
  *      `composer install --no-dev` bundle).
  *
  * When either signal is false the route is absent from the route
@@ -105,7 +105,7 @@ function horizonGatingReloadRoutes(): void
 it('asserts that the Horizon package class IS present in the test environment (precondition for the gating tests below)', function (): void {
     // The full gate is a two-signal check; the class signal is
     // platform-driven (Horizon is require-dev). On the developer's
-    // Herd box AND in CI it should be present, so the tests below
+    // local dev box AND in CI it should be present, so the tests below
     // can exercise the env-flag side of the gate. If this
     // assertion fails the test environment is broken — the rest of
     // the gating tests then exercise only the env-flag side.

@@ -38,7 +38,7 @@ function ensureDailyLogFile(string $contents): string
     // UserDataPathService::dailyLogFile() resolves the log path via the
     // NATIVEPHP_STORAGE_PATH env var when set, falling back to the
     // project's `storage/` directory otherwise. Without an override the
-    // test would write into the same file Herd's real Monolog writer
+    // test would write into the same file the local dev Monolog writer
     // uses for dev, clobbering the developer's local log. We point the
     // accessor at a per-test sandbox so writes stay isolated. The
     // afterEach hook below restores the env.

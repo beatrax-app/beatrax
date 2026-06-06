@@ -111,7 +111,7 @@ specifically guarding the module-boundary contract. Selected examples:
   Console-bootstrap layer respects the DI-only rule.
 - **`noHorizonImportsInShippedBuildCode`** — Horizon imports are restricted
   to one allow-listed provider that guards itself with the
-  `BEATRAX_RUNTIME=herd` runtime check (see
+  `BEATRAX_RUNTIME=local` runtime check (see
   [ADR 0007](../adr/0007-database-queue-driver.md)).
 - **`noNativePhpImportsOutsideDesktopModule`** — `Native\Laravel\*` and
   `Native\Desktop\*` symbols are forbidden outside `Modules/Desktop/`.

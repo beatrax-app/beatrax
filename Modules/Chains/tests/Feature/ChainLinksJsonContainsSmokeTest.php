@@ -12,7 +12,7 @@ use Modules\Ledger\Models\Transaction;
 
 /*
  * Smoke-test that Laravel's `whereJsonContains` works against the dev
- * SQLite build. JSON1 ships with the SQLite that Herd uses, but this
+ * SQLite build. JSON1 ships with the SQLite the local dev image uses, but this
  * test locks the contract before any later wave commits to the API.
  *
  * The Wave 3 auto-promotion counter walks chain_links by
