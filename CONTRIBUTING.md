@@ -73,8 +73,19 @@ vendor/bin/phpstan analyse --memory-limit=1G   # Larastan level 10 strict
 vendor/bin/pest                            # unit + feature + arch tests
 ```
 
-Run them locally with `composer test` (which runs Pest under
-`--parallel`); the CI workflow runs all three on both PHP 8.4 and 8.5.
+Run them through the Docker toolchain, e.g.
+`docker compose run --rm php vendor/bin/pint --test`. The full test
+suite runs with `docker compose run --rm php php artisan test`
+(serial, like CI) or `composer test` (Pest under `--parallel`, faster
+local iteration). The CI workflow runs all three gates on PHP 8.5.
+
+> **Docker caveat:** a handful of `Modules/DevMode` tests spawn real
+> `php artisan` child processes (the spawn-then-tail console). Those
+> children behave inconsistently under Docker Desktop's bind-mounted
+> filesystem and may fail locally even though they pass in CI's native
+> PHP. If your only failures are in `DevMode\CommandSpawnerTest`,
+> `ArtisanCancelTest`, or `ArtisanStreamReconnectTest`, they are this
+> known environment limitation, not a regression.
 
 Frontend tests are not required — the UI is server-rendered Livewire +
 Blade, and test investment goes into backend correctness.

@@ -23,10 +23,15 @@ services:
       - composer-cache:/tmp/composer
     environment:
       COMPOSER_HOME: /tmp/composer
-      # The Pest/PHPUnit suite drives an in-memory SQLite DB; override on
-      # the command line if a file-backed DB is needed.
-      DB_CONNECTION: sqlite
-      DB_DATABASE: ":memory:"
+      # The Pest/PHPUnit suite runs against the dedicated, isolated
+      # `sqlite_testing` connection (in-memory, no WAL). It must be named
+      # explicitly: pointing the production-shaped `sqlite` connection (WAL +
+      # busy_timeout) at :memory: breaks RefreshDatabase isolation across the
+      # full serial suite. phpunit.xml also sets this, but a real env var
+      # wins over phpunit's <env> in the `artisan test` flow, so the
+      # authoritative value lives here. Override on the command line for a
+      # file-backed DB.
+      DB_CONNECTION: sqlite_testing
     tty: true
 
 volumes:
