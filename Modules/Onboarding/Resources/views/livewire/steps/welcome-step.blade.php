@@ -26,7 +26,7 @@
         <x-onboarding::vd-glyph
             glyph="🏦"
             title="Your bank"
-            description="Drop a statement file. We support ASN, ING, and more."
+            description="Drop a statement file. We read CSV, MT940, and CAMT.053 from most European banks."
         />
         <x-onboarding::vd-glyph
             glyph="💳"
