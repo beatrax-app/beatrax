@@ -120,7 +120,7 @@
                                     type="text"
                                     id="accountName"
                                     wire:model="accountName"
-                                    placeholder="e.g. ASN Spaarrekening"
+                                    placeholder="e.g. Main savings account"
                                     required
                                     maxlength="80"
                                     class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"

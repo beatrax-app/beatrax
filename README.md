@@ -20,13 +20,15 @@
 
 ## What is beatrax?
 
-beatrax is a local-only personal finance dashboard that pulls together
-transactions from ASN Bank, ICS Cards, PayPal, and Google Play into a
-single calm "this month at a glance" view. It resolves the routing
-chains between these accounts (PayPal → ASN or ICS, ICS → ASN via bulk
-iDEAL settlement) so that fixed monthly payments, real underlying
-funding sources, and upcoming cash flow are visible in one place
-instead of buried across statements.
+beatrax is a local-first personal finance dashboard that pulls together
+transactions from your bank, credit cards, PayPal, and app-store
+subscriptions into a single calm "this month at a glance" view. It reads
+the statement formats European banks already export — CAMT.053 (ISO
+20022), MT940, and CSV — so it is not tied to any one institution. It
+then resolves the routing chains between your accounts (PayPal → your
+bank or card, card → bank via bulk SEPA settlement) so that fixed monthly
+payments, real underlying funding sources, and upcoming cash flow are
+visible in one place instead of buried across statements.
 
 It runs entirely on your own machine. No telemetry. No cloud sync. No
 remote account. The SQLite database, the OAuth tokens, the cached
@@ -41,7 +43,7 @@ the longer explanation.
 ## Who is this for?
 
 beatrax is built for a single person — or a two-person household —
-managing their own finances across multiple Dutch bank, card, and
+managing their own finances across multiple bank, card, and
 payment-processor accounts who wants to see their monthly position in
 one place instead of cobbling together statements every cycle. It
 assumes you are technically literate enough to install a desktop
@@ -51,8 +53,9 @@ you need to.
 
 If you bank exclusively with one institution that already gives you a
 great app, you probably don't need beatrax. If you split your spending
-across ASN + ICS + PayPal + recurring Google Play subscriptions and
-have given up on reconciling them by hand, this is for you.
+across several banks, cards, PayPal, and recurring app-store
+subscriptions and have given up on reconciling them by hand, this is for
+you.
 
 ## Shoutouts
 
@@ -183,9 +186,9 @@ highlight, in/out/net at the top, drift alerts, and email-scan health.
 ### Transactions
 
 Browse, filter, and recategorize inline. Flip between **EUR only** and
-**Original currency** to reveal what a charge really cost — Google
-Play settles in USD but the ASN charge is in EUR, and the toggle shows
-both.
+**Original currency** to reveal what a charge really cost — an app-store
+purchase settles in USD but the bank charge is in EUR, and the toggle
+shows both.
 
 ![Transactions](.docs/assets/screenshots/transactions.gif)
 
@@ -246,7 +249,7 @@ the dip before it happens.
 
 ### Chains review
 
-PayPal → ASN and ICS → ASN funding-chain resolutions, so you can see
+PayPal → bank and card → bank funding-chain resolutions, so you can see
 what really paid for what.
 
 ![Chains review](.docs/assets/screenshots/chains.png)

@@ -1,8 +1,8 @@
 <div class="space-y-6">
     <header class="space-y-1">
         <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Upload statement</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Drop in an ASN, ICS, PayPal export, or an email receipt file.</p>
-        <p class="sr-only" id="upload-statement-mime-hint">That file doesn't look like a supported statement export. Drop in an ASN CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, ICS PDF, an email message (.eml), or a mailbox archive (.mbox).</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Drop in a bank, card, or PayPal export, or an email receipt file.</p>
+        <p class="sr-only" id="upload-statement-mime-hint">That file doesn't look like a supported statement export. Drop in a bank CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, a card-statement PDF, an email message (.eml), or a mailbox archive (.mbox).</p>
     </header>
 
     @if ($uploadError !== null)
