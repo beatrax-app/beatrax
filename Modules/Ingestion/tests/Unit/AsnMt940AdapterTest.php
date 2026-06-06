@@ -27,17 +27,17 @@ beforeEach(function (): void {
     $this->adapter = $this->app->make(AsnMt940Adapter::class);
 });
 
-it('declares the asn-mt940 format identifier', function (): void {
-    expect($this->adapter->format())->toBe('asn-mt940');
+it('declares the mt940 format identifier', function (): void {
+    expect($this->adapter->format())->toBe('mt940');
 })->group('phase-2');
 
-it('registers under the asn-mt940 key in the SourceAdapterRegistry', function (): void {
+it('registers under the mt940 key in the SourceAdapterRegistry', function (): void {
     /** @var SourceAdapterRegistry $registry */
     $registry = $this->app->make(SourceAdapterRegistry::class);
-    $adapter = $registry->for('asn-mt940');
+    $adapter = $registry->for('mt940');
 
     expect($adapter)->toBeInstanceOf(AsnMt940Adapter::class);
-    expect($adapter->format())->toBe('asn-mt940');
+    expect($adapter->format())->toBe('mt940');
 })->group('phase-2');
 
 it('parses the anonymised MT940 fixture into SourceTransactionDto rows', function (): void {

@@ -95,7 +95,7 @@ it('updates source_ref and appends a provenance entry to enriched_from', functio
             existingTransactionId: $tx->id,
             newSourceRef: 'EREF-XYZ',
             importRunId: 99,
-            sourceFormat: 'asn-camt053',
+            sourceFormat: 'camt053',
         ),
     ], $this->fixtureUser);
 
@@ -110,7 +110,7 @@ it('updates source_ref and appends a provenance entry to enriched_from', functio
     expect($prov)->not->toBeNull();
     $entries = $prov->getArrayCopy();
     expect($entries)->toHaveCount(1);
-    expect($entries[0]['format'])->toBe('asn-camt053');
+    expect($entries[0]['format'])->toBe('camt053');
     expect($entries[0]['import_run_id'])->toBe(99);
     expect($entries[0]['added'])->toBe(['source_ref']);
     expect($entries[0]['ran_at'])->toBeString();
@@ -119,7 +119,7 @@ it('updates source_ref and appends a provenance entry to enriched_from', functio
 it('appends to an existing enriched_from array on a subsequent enrichment', function (): void {
     $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001', $this->composer);
     $tx->enriched_from = [[
-        'format' => 'asn-mt940',
+        'format' => 'mt940',
         'ran_at' => '2026-02-10T08:00:00+00:00',
         'import_run_id' => 1,
         'added' => ['source_ref'],
@@ -131,7 +131,7 @@ it('appends to an existing enriched_from array on a subsequent enrichment', func
             existingTransactionId: $tx->id,
             newSourceRef: 'EREF-STRONG',
             importRunId: 7,
-            sourceFormat: 'asn-camt053',
+            sourceFormat: 'camt053',
         ),
     ], $this->fixtureUser);
 
@@ -145,13 +145,13 @@ it('appends to an existing enriched_from array on a subsequent enrichment', func
     $prov = $fresh->enriched_from;
     $entries = $prov->getArrayCopy();
     expect($entries)->toHaveCount(2);
-    expect($entries[0]['format'])->toBe('asn-mt940');
-    expect($entries[1]['format'])->toBe('asn-camt053');
+    expect($entries[0]['format'])->toBe('mt940');
+    expect($entries[1]['format'])->toBe('camt053');
     expect($entries[1]['import_run_id'])->toBe(7);
 })->group('phase-2');
 
 it('race-condition no-op: if existing source_ref already equals incoming, no UPDATE and no count', function (): void {
-    $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-X', $this->composer);
+    $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'camt053', 'EREF-X', $this->composer);
     $originalUpdatedAt = $tx->updated_at?->toIso8601String();
 
     $count = ($this->applier)([
@@ -159,7 +159,7 @@ it('race-condition no-op: if existing source_ref already equals incoming, no UPD
             existingTransactionId: $tx->id,
             newSourceRef: 'EREF-X',
             importRunId: 99,
-            sourceFormat: 'asn-camt053',
+            sourceFormat: 'camt053',
         ),
     ], $this->fixtureUser);
 
@@ -195,7 +195,7 @@ it('cross-user safety: a PendingEnrichment for another user\'s row returns 0', f
             existingTransactionId: $otherTx->id,
             newSourceRef: 'EREF-Y',
             importRunId: 99,
-            sourceFormat: 'asn-camt053',
+            sourceFormat: 'camt053',
         ),
     ], $this->fixtureUser);
 
@@ -215,7 +215,7 @@ it('rank no-op: a cached weaker PendingEnrichment never overwrites a freshly-sto
     // MT940 PendingEnrichment must NOT overwrite the now-stronger CAMT
     // ref — re-ranking at write time has to detect the parallel update.
     $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001', $this->composer);
-    $tx->source_format = 'asn-camt053';
+    $tx->source_format = 'camt053';
     $tx->source_ref = 'EREF-PARALLEL';
     $tx->save();
 
@@ -224,7 +224,7 @@ it('rank no-op: a cached weaker PendingEnrichment never overwrites a freshly-sto
             existingTransactionId: $tx->id,
             newSourceRef: 'MT940-WEAK',
             importRunId: 99,
-            sourceFormat: 'asn-mt940',
+            sourceFormat: 'mt940',
         ),
     ], $this->fixtureUser);
 
@@ -233,7 +233,7 @@ it('rank no-op: a cached weaker PendingEnrichment never overwrites a freshly-sto
     /** @var Transaction $fresh */
     $fresh = Transaction::query()->findOrFail($tx->id);
     expect($fresh->source_ref)->toBe('EREF-PARALLEL');
-    expect($fresh->source_format)->toBe('asn-camt053');
+    expect($fresh->source_format)->toBe('camt053');
     expect($fresh->enriched_from)->toBeNull();
 })->group('phase-2');
 
@@ -241,14 +241,14 @@ it('rank no-op: an equal-rank cached enrichment does not overwrite an equally-st
     // Both incoming and stored are CAMT-rank (4) but with different ref
     // values. The existing equality short-circuit already handles
     // ref===ref; this test pins the new same-rank-different-value path.
-    $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-OLD', $this->composer);
+    $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'camt053', 'EREF-OLD', $this->composer);
 
     $count = ($this->applier)([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'EREF-NEW',
             importRunId: 99,
-            sourceFormat: 'asn-camt053',
+            sourceFormat: 'camt053',
         ),
     ], $this->fixtureUser);
 

@@ -48,8 +48,8 @@ final class SourceRefRanker
         }
 
         return match ($format) {
-            'asn-camt053' => 4,
-            'asn-mt940' => 2,
+            'camt053' => 4,
+            'mt940' => 2,
             // PayPal email receipts win on ENRICHED over their CSV
             // counterpart: a receipt carries the canonical PayPal
             // Transaction ID (17-char alphanumeric) while the CSV's

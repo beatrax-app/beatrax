@@ -164,7 +164,7 @@ function seedConsolidatedPreview(int $importRunId, array $rowStatuses): void
 }
 
 it('builds a consolidated batch with one section per source format', function (): void {
-    $camtRun = seedConsolidatedRun($this->userA->id, 'asn-camt053');
+    $camtRun = seedConsolidatedRun($this->userA->id, 'camt053');
     seedConsolidatedPreview($camtRun, ['new', 'new', 'duplicate']);
 
     $pdfRunA = seedConsolidatedRun($this->userA->id, 'ics-pdf');
@@ -187,10 +187,10 @@ it('builds a consolidated batch with one section per source format', function ()
         $bySource[$section->sourceFormat] = $section;
     }
 
-    expect($bySource)->toHaveKeys(['asn-camt053', 'ics-pdf']);
-    expect($bySource['asn-camt053']->importRunIds)->toBe([$camtRun]);
-    expect($bySource['asn-camt053']->totalRows)->toBe(2); // 2 NEW rows out of 3
-    expect($bySource['asn-camt053']->status)->toBe('ready');
+    expect($bySource)->toHaveKeys(['camt053', 'ics-pdf']);
+    expect($bySource['camt053']->importRunIds)->toBe([$camtRun]);
+    expect($bySource['camt053']->totalRows)->toBe(2); // 2 NEW rows out of 3
+    expect($bySource['camt053']->status)->toBe('ready');
 
     expect($bySource['ics-pdf']->importRunIds)->toEqualCanonicalizing([$pdfRunA, $pdfRunB]);
     expect($bySource['ics-pdf']->totalRows)->toBe(3); // 1 + 2 NEW rows
@@ -201,12 +201,12 @@ it('builds a consolidated batch with one section per source format', function ()
 })->group('phase-16.1.1');
 
 it('filters stale ImportRuns older than 14 days', function (): void {
-    $freshRun = seedConsolidatedRun($this->userA->id, 'asn-camt053');
+    $freshRun = seedConsolidatedRun($this->userA->id, 'camt053');
     seedConsolidatedPreview($freshRun, ['new']);
 
     $staleRun = seedConsolidatedRun(
         $this->userA->id,
-        'asn-mt940',
+        'mt940',
         status: 'previewed',
         createdAt: $this->frozenNow->subDays(15),
     );
@@ -219,13 +219,13 @@ it('filters stale ImportRuns older than 14 days', function (): void {
 
     // Only the fresh run survives the 14-day filter; no MT940 section.
     expect($batch->sections)->toHaveCount(1);
-    expect($batch->sections[0]->sourceFormat)->toBe('asn-camt053');
+    expect($batch->sections[0]->sourceFormat)->toBe('camt053');
     expect($batch->sections[0]->importRunIds)->toBe([$freshRun]);
     expect($batch->dedupedTotalCount)->toBe(1);
 })->group('phase-16.1.1');
 
 it('filters ImportRuns whose status is confirmed', function (): void {
-    $previewedRun = seedConsolidatedRun($this->userA->id, 'asn-camt053');
+    $previewedRun = seedConsolidatedRun($this->userA->id, 'camt053');
     seedConsolidatedPreview($previewedRun, ['new', 'new']);
 
     $confirmedRun = seedConsolidatedRun(
@@ -241,16 +241,16 @@ it('filters ImportRuns whose status is confirmed', function (): void {
     $batch = $query->build([$previewedRun, $confirmedRun], $this->userA);
 
     expect($batch->sections)->toHaveCount(1);
-    expect($batch->sections[0]->sourceFormat)->toBe('asn-camt053');
+    expect($batch->sections[0]->sourceFormat)->toBe('camt053');
     expect($batch->sections[0]->importRunIds)->toBe([$previewedRun]);
     expect($batch->dedupedTotalCount)->toBe(2);
 })->group('phase-16.1.1');
 
 it('respects the user_id boundary — runs owned by another user are never returned', function (): void {
-    $aliceRun = seedConsolidatedRun($this->userA->id, 'asn-camt053');
+    $aliceRun = seedConsolidatedRun($this->userA->id, 'camt053');
     seedConsolidatedPreview($aliceRun, ['new']);
 
-    $bobRun = seedConsolidatedRun($this->userB->id, 'asn-camt053');
+    $bobRun = seedConsolidatedRun($this->userB->id, 'camt053');
     seedConsolidatedPreview($bobRun, ['new', 'new', 'new']);
 
     /** @var BuildConsolidatedPreviewQuery $query */

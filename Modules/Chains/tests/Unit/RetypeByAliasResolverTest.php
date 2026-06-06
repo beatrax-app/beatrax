@@ -77,7 +77,7 @@ function retypeFixture(string $username): array
     ]);
     $run = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => sprintf('/tmp/fixture-%d', $counter),
         'sha256' => str_pad((string) $counter, 64, 's', STR_PAD_LEFT),
         'uploaded_at' => CarbonImmutable::now(),
@@ -118,7 +118,7 @@ function retypeTx(
         'counterparty_iban' => $counterpartyIban,
         'counterparty_normalized' => 'FIXTURE',
         'normalization_version' => 1,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'import_run_id' => $importRunId,
         'source_row_index' => $rowIndex,
         'fingerprint' => sprintf('fp-%d', $rowIndex),
@@ -250,7 +250,7 @@ it('skips rows whose alias points at a destination kind with no Account yet (the
     ]);
     $run = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/fixture-frank',
         'sha256' => str_repeat('f', 64),
         'uploaded_at' => CarbonImmutable::now(),

@@ -30,7 +30,7 @@ use Spatie\LaravelData\Data;
  * round-trips cleanly.
  *
  * `sourceFormat` is the canonical source-format identifier of the
- * detector that emitted the candidate (`asn-camt053`, `asn-mt940`,
+ * detector that emitted the candidate (`camt053`, `mt940`,
  * `ics-pdf`, `paypal-csv`). Used by the aggregator's tie-break
  * rules and by the wizard's per-source labelling.
  */

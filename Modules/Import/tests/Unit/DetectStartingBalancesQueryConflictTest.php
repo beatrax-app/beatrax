@@ -39,7 +39,7 @@ it('returns one candidate per account when only one detector fires for that acco
 
     $run = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/single.xml',
         'sha256' => str_repeat('a', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
@@ -65,7 +65,7 @@ it('returns one candidate per account when only one detector fires for that acco
     expect($candidates[0])->toBeInstanceOf(StartingBalanceCandidate::class);
     expect($candidates[0]->accountId)->toBe($account->id);
     expect($candidates[0]->openingBalanceMinor)->toBe(33333);
-    expect($candidates[0]->sourceFormat)->toBe('asn-camt053');
+    expect($candidates[0]->sourceFormat)->toBe('camt053');
 })->group('phase-16.1.1');
 
 it('prefers earliest opening_balance_date when two detectors fire for the same account', function (): void {
@@ -87,7 +87,7 @@ it('prefers earliest opening_balance_date when two detectors fire for the same a
     // CAMT.053 has the EARLIER date (2026-01-01) so it wins on rule 1.
     $camtRun = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/camt.xml',
         'sha256' => str_repeat('b', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
@@ -96,7 +96,7 @@ it('prefers earliest opening_balance_date when two detectors fire for the same a
 
     $mt940Run = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-mt940',
+        'source_format' => 'mt940',
         'raw_file_path' => '/tmp/mt940.sta',
         'sha256' => str_repeat('c', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
@@ -131,7 +131,7 @@ it('prefers earliest opening_balance_date when two detectors fire for the same a
     expect($candidates)->toHaveCount(1);
     expect($candidates[0]->openingBalanceMinor)->toBe(11111);
     expect($candidates[0]->openingBalanceDate)->toBe('2026-01-01');
-    expect($candidates[0]->sourceFormat)->toBe('asn-camt053');
+    expect($candidates[0]->sourceFormat)->toBe('camt053');
 })->group('phase-16.1.1');
 
 it('breaks ties on the same date in favour of CAMT.053 over MT940', function (): void {
@@ -152,7 +152,7 @@ it('breaks ties on the same date in favour of CAMT.053 over MT940', function ():
 
     $camtRun = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/camt-tie.xml',
         'sha256' => str_repeat('d', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
@@ -161,7 +161,7 @@ it('breaks ties on the same date in favour of CAMT.053 over MT940', function ():
 
     $mt940Run = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-mt940',
+        'source_format' => 'mt940',
         'raw_file_path' => '/tmp/mt940-tie.sta',
         'sha256' => str_repeat('e', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
@@ -196,7 +196,7 @@ it('breaks ties on the same date in favour of CAMT.053 over MT940', function ():
 
     expect($candidates)->toHaveCount(1);
     expect($candidates[0]->openingBalanceMinor)->toBe(55555);
-    expect($candidates[0]->sourceFormat)->toBe('asn-camt053');
+    expect($candidates[0]->sourceFormat)->toBe('camt053');
 })->group('phase-16.1.1');
 
 it('surfaces both candidates when two CAMT.053 imports disagree on the same date with different values', function (): void {
@@ -217,7 +217,7 @@ it('surfaces both candidates when two CAMT.053 imports disagree on the same date
 
     $camtA = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/camt-a.xml',
         'sha256' => str_repeat('f', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
@@ -226,7 +226,7 @@ it('surfaces both candidates when two CAMT.053 imports disagree on the same date
 
     $camtB = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/camt-b.xml',
         'sha256' => str_repeat('0', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),
@@ -267,7 +267,7 @@ it('surfaces both candidates when two CAMT.053 imports disagree on the same date
 
     foreach ($candidates as $candidate) {
         expect($candidate->accountId)->toBe($account->id);
-        expect($candidate->sourceFormat)->toBe('asn-camt053');
+        expect($candidate->sourceFormat)->toBe('camt053');
         expect($candidate->openingBalanceDate)->toBe('2026-01-01');
     }
 })->group('phase-16.1.1');

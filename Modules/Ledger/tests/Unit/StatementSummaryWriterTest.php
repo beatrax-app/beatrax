@@ -19,7 +19,7 @@ beforeEach(function (): void {
     /** @var ImportRun $run */
     $run = ImportRun::query()->create([
         'user_id' => $this->fixtureUser->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/fixture.xml',
         'sha256' => str_repeat('a', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-01 12:00:00'),

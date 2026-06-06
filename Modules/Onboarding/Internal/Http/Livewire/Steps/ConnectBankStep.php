@@ -61,7 +61,7 @@ final class ConnectBankStep extends Component
      *
      * @var list<string>
      */
-    private const SUPPORTED_FORMATS = ['asn-camt053', 'asn-mt940', 'asn-csv', 'ing-csv'];
+    private const SUPPORTED_FORMATS = ['camt053', 'mt940', 'asn-csv', 'ing-csv'];
 
     /**
      * Allowed values for the follow-on bank-format chip row that only
@@ -87,7 +87,7 @@ final class ConnectBankStep extends Component
      * `wire:click` handlers. The validator's `in:` rule guards against
      * a property-tampered client value.
      */
-    public string $selectedFormat = 'asn-camt053';
+    public string $selectedFormat = 'camt053';
 
     /**
      * Bank-format pick the follow-on row stores when the user is on
@@ -305,7 +305,7 @@ final class ConnectBankStep extends Component
         // never the literal word "account", so the sentence reads
         // naturally without duplication.
         return match ($sourceFormat) {
-            'asn-camt053', 'asn-mt940', 'asn-csv' => 'ASN bank',
+            'camt053', 'mt940', 'asn-csv' => 'ASN bank',
             'ing-csv' => 'ING bank',
             default => match ($bankFormatHint) {
                 'asn-csv' => 'ASN bank',
@@ -356,8 +356,8 @@ final class ConnectBankStep extends Component
         $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;
 
         $extension = match ($this->selectedFormat) {
-            'asn-camt053' => '.xml',
-            'asn-mt940' => '.sta',
+            'camt053' => '.xml',
+            'mt940' => '.sta',
             default => '.csv',
         };
 

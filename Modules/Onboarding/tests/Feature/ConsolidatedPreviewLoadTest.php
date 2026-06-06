@@ -69,7 +69,7 @@ afterEach(function (): void {
 });
 
 it('loads stashed bank_import_run_id and card_import_run_ids from wizard_progress on mount', function (): void {
-    $bankRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'asn-camt053', 3);
+    $bankRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'camt053', 3);
     $cardRunId1 = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'ics-pdf', 2);
     $cardRunId2 = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'ics-pdf', 1);
 
@@ -95,7 +95,7 @@ it('loads stashed bank_import_run_id and card_import_run_ids from wizard_progres
 });
 
 it('renders a consolidated preview section per source with the locked eyebrow copy', function (): void {
-    $bankRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'asn-camt053', 1);
+    $bankRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'camt053', 1);
     $cardRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'ics-pdf', 1);
 
     DB::table('wizard_progress')

@@ -110,66 +110,66 @@ it('rejects an unknown declared format', function (): void {
     ))->toThrow(SniffMismatchException::class, 'Unsupported sniff target');
 });
 
-it('accepts the anonymised ASN CAMT.053 001.02 fixture and returns format=asn-camt053', function (): void {
+it('accepts the anonymised ASN CAMT.053 001.02 fixture and returns format=camt053', function (): void {
     $result = $this->sniffer->sniff(
         base_path('tests/fixtures/asn-camt053-sample-1.xml'),
-        'asn-camt053',
+        'camt053',
     );
 
     expect($result)->toBeInstanceOf(SniffResult::class);
-    expect($result->format)->toBe('asn-camt053');
+    expect($result->format)->toBe('camt053');
     expect($result->encoding)->toBe('UTF-8');
 })->group('phase-2');
 
 it('accepts a minimal 001.02 CAMT.053 fragment', function (): void {
     $tmp = writeTempXml('<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02"><BkToCstmrStmt/></Document>');
 
-    $result = $this->sniffer->sniff($tmp, 'asn-camt053');
+    $result = $this->sniffer->sniff($tmp, 'camt053');
 
-    expect($result->format)->toBe('asn-camt053');
+    expect($result->format)->toBe('camt053');
 })->group('phase-2');
 
 it('accepts a minimal 001.03 CAMT.053 fragment', function (): void {
     $tmp = writeTempXml('<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.03"><BkToCstmrStmt/></Document>');
 
-    $result = $this->sniffer->sniff($tmp, 'asn-camt053');
+    $result = $this->sniffer->sniff($tmp, 'camt053');
 
-    expect($result->format)->toBe('asn-camt053');
+    expect($result->format)->toBe('camt053');
 })->group('phase-2');
 
 it('accepts a minimal 001.08 CAMT.053 fragment', function (): void {
     $tmp = writeTempXml('<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"><BkToCstmrStmt/></Document>');
 
-    $result = $this->sniffer->sniff($tmp, 'asn-camt053');
+    $result = $this->sniffer->sniff($tmp, 'camt053');
 
-    expect($result->format)->toBe('asn-camt053');
+    expect($result->format)->toBe('camt053');
 })->group('phase-2');
 
 it('rejects a CAMT.052 file (wrong family) with a user-readable message', function (): void {
     $tmp = writeTempXml('<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.08"><BkToCstmrAcctRpt/></Document>');
 
-    expect(fn () => $this->sniffer->sniff($tmp, 'asn-camt053'))
+    expect(fn () => $this->sniffer->sniff($tmp, 'camt053'))
         ->toThrow(SniffMismatchException::class, 'CAMT.053');
 })->group('phase-2');
 
-it('rejects a non-XML payload declared as asn-camt053', function (): void {
+it('rejects a non-XML payload declared as camt053', function (): void {
     $tmp = tempnam(sys_get_temp_dir(), 'asn-csv-as-xml-').'.xml';
     file_put_contents($tmp, "Datum,Je rekening,Tegenrekening\n01-04-2026,NL57ASNB0123456789,...\n");
 
     try {
-        expect(fn () => $this->sniffer->sniff($tmp, 'asn-camt053'))
+        expect(fn () => $this->sniffer->sniff($tmp, 'camt053'))
             ->toThrow(SniffMismatchException::class);
     } finally {
         @unlink($tmp);
     }
 })->group('phase-2');
 
-it('rejects an XML payload with a non-xml extension declared as asn-camt053', function (): void {
+it('rejects an XML payload with a non-xml extension declared as camt053', function (): void {
     $tmp = tempnam(sys_get_temp_dir(), 'camt-no-ext-').'.txt';
     file_put_contents($tmp, '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"/>');
 
     try {
-        expect(fn () => $this->sniffer->sniff($tmp, 'asn-camt053'))
+        expect(fn () => $this->sniffer->sniff($tmp, 'camt053'))
             ->toThrow(SniffMismatchException::class, 'XML');
     } finally {
         @unlink($tmp);
@@ -184,18 +184,18 @@ it('accepts a CAMT.053 XML with a leading UTF-8 BOM + XML declaration + comments
         prefix: "\xEF\xBB\xBF",
     );
 
-    $result = $this->sniffer->sniff($tmp, 'asn-camt053');
+    $result = $this->sniffer->sniff($tmp, 'camt053');
 
-    expect($result->format)->toBe('asn-camt053');
+    expect($result->format)->toBe('camt053');
 })->group('phase-2');
 
 it('accepts an ASN MT940 .sta file', function (): void {
     $result = $this->sniffer->sniff(
         base_path('tests/fixtures/asn-mt940-sample-1.sta'),
-        'asn-mt940',
+        'mt940',
     );
 
-    expect($result->format)->toBe('asn-mt940');
+    expect($result->format)->toBe('mt940');
 })->group('phase-2');
 
 it('accepts an MT940 file with a leading SWIFT block-1 envelope', function (): void {
@@ -206,43 +206,43 @@ it('accepts an MT940 file with a leading SWIFT block-1 envelope', function (): v
     file_put_contents($tmp, $body);
 
     try {
-        $result = $this->sniffer->sniff($tmp, 'asn-mt940');
-        expect($result->format)->toBe('asn-mt940');
+        $result = $this->sniffer->sniff($tmp, 'mt940');
+        expect($result->format)->toBe('mt940');
     } finally {
         @unlink($tmp);
     }
 })->group('phase-2');
 
-it('rejects a CSV file declared as asn-mt940', function (): void {
+it('rejects a CSV file declared as mt940', function (): void {
     $tmp = tempnam(sys_get_temp_dir(), 'csv-as-mt940-').'.sta';
     file_put_contents($tmp, "Datum,Je rekening\n01-04-2026,NL57ASNB0123456789\n");
 
     try {
-        expect(fn () => $this->sniffer->sniff($tmp, 'asn-mt940'))
+        expect(fn () => $this->sniffer->sniff($tmp, 'mt940'))
             ->toThrow(SniffMismatchException::class, 'MT940');
     } finally {
         @unlink($tmp);
     }
 })->group('phase-2');
 
-it('rejects an XML file declared as asn-mt940', function (): void {
+it('rejects an XML file declared as mt940', function (): void {
     $tmp = tempnam(sys_get_temp_dir(), 'xml-as-mt940-').'.sta';
     file_put_contents($tmp, '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"/>');
 
     try {
-        expect(fn () => $this->sniffer->sniff($tmp, 'asn-mt940'))
+        expect(fn () => $this->sniffer->sniff($tmp, 'mt940'))
             ->toThrow(SniffMismatchException::class);
     } finally {
         @unlink($tmp);
     }
 })->group('phase-2');
 
-it('rejects an MT940 file with a wrong extension declared as asn-mt940', function (): void {
+it('rejects an MT940 file with a wrong extension declared as mt940', function (): void {
     $tmp = tempnam(sys_get_temp_dir(), 'mt940-no-ext-').'.xml';
     file_put_contents($tmp, ":20:STMT-2026-04\n:25:NL57ASNB0123456789\n");
 
     try {
-        expect(fn () => $this->sniffer->sniff($tmp, 'asn-mt940'))
+        expect(fn () => $this->sniffer->sniff($tmp, 'mt940'))
             ->toThrow(SniffMismatchException::class, 'MT940');
     } finally {
         @unlink($tmp);

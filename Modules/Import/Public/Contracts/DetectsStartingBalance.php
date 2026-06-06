@@ -28,7 +28,7 @@ interface DetectsStartingBalance
 {
     /**
      * Return true when this detector handles the supplied canonical
-     * source-format identifier (`asn-camt053`, `asn-mt940`, `ics-pdf`,
+     * source-format identifier (`camt053`, `mt940`, `ics-pdf`,
      * `paypal-csv`). Used by tests and structured logs to introspect
      * each detector's responsibility; the aggregator itself simply
      * walks every tagged detector and unions their candidate output.

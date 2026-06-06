@@ -19,7 +19,7 @@ beforeEach(function (): void {
 /*
  * Cross-format dedup policy (phase 16 UAT batch 7):
  *
- * Statement-vs-statement collisions (asn-csv / asn-camt053 / asn-mt940
+ * Statement-vs-statement collisions (asn-csv / camt053 / mt940
  * / ics-pdf / paypal-csv) drop as DUPLICATE on fingerprint match —
  * never enrich. The rank-based source_ref upgrade only fires when AT
  * LEAST one side is a receipt format (paypal-receipt, ics-receipt,
@@ -39,7 +39,7 @@ it('csv_then_camt053: every overlapping row drops as duplicate (no enrichment)',
     expect($first->inserted)->toBe($this->expectedTransactionCount);
     expect($first->enriched)->toBe(0);
 
-    $second = $this->importer->runAndConfirm($this->camtFixture, 'asn-camt053', $this->fixtureUser);
+    $second = $this->importer->runAndConfirm($this->camtFixture, 'camt053', $this->fixtureUser);
 
     expect($second->inserted)->toBe(0);
     expect($second->enriched)->toBe(0);
@@ -61,7 +61,7 @@ it('csv_then_camt053: every overlapping row drops as duplicate (no enrichment)',
 })->group('phase-2');
 
 it('camt053_then_csv: every overlapping row drops as duplicate (no enrichment)', function (): void {
-    $first = $this->importer->runAndConfirm($this->camtFixture, 'asn-camt053', $this->fixtureUser);
+    $first = $this->importer->runAndConfirm($this->camtFixture, 'camt053', $this->fixtureUser);
     expect($first->inserted)->toBe($this->expectedTransactionCount);
     expect($first->enriched)->toBe(0);
 
@@ -71,11 +71,11 @@ it('camt053_then_csv: every overlapping row drops as duplicate (no enrichment)',
     expect($second->enriched)->toBe(0);
     expect($second->duplicates)->toBe($this->expectedTransactionCount);
 
-    // The original asn-camt053 rows are untouched — no source_format flip,
+    // The original camt053 rows are untouched — no source_format flip,
     // no enriched_from entry, no source_ref upgrade.
     $totalCamt = Transaction::query()
         ->where('user_id', $this->fixtureUser->id)
-        ->where('source_format', 'asn-camt053')
+        ->where('source_format', 'camt053')
         ->count();
     expect($totalCamt)->toBe($this->expectedTransactionCount);
 
@@ -87,10 +87,10 @@ it('camt053_then_csv: every overlapping row drops as duplicate (no enrichment)',
 })->group('phase-2');
 
 it('same_format_replay: re-importing CAMT after CAMT produces zero new rows and zero enrichments', function (): void {
-    $first = $this->importer->runAndConfirm($this->camtFixture, 'asn-camt053', $this->fixtureUser);
+    $first = $this->importer->runAndConfirm($this->camtFixture, 'camt053', $this->fixtureUser);
     expect($first->inserted)->toBe($this->expectedTransactionCount);
 
-    $second = $this->importer->runAndConfirm($this->camtFixture, 'asn-camt053', $this->fixtureUser);
+    $second = $this->importer->runAndConfirm($this->camtFixture, 'camt053', $this->fixtureUser);
 
     expect($second->inserted)->toBe(0);
     expect($second->enriched)->toBe(0);
@@ -101,8 +101,8 @@ it('mt940_then_camt053: every overlapping row drops as duplicate (no enrichment)
         $this->markTestSkipped('No same-period MT940 export available from ASN — see asn-cross-format/README.md');
     }
 
-    $this->importer->runAndConfirm($this->mt940Fixture, 'asn-mt940', $this->fixtureUser);
-    $second = $this->importer->runAndConfirm($this->camtFixture, 'asn-camt053', $this->fixtureUser);
+    $this->importer->runAndConfirm($this->mt940Fixture, 'mt940', $this->fixtureUser);
+    $second = $this->importer->runAndConfirm($this->camtFixture, 'camt053', $this->fixtureUser);
 
     expect($second->inserted)->toBe(0);
     expect($second->enriched)->toBe(0);
@@ -114,8 +114,8 @@ it('camt053_then_mt940: every overlapping row drops as duplicate', function (): 
         $this->markTestSkipped('No same-period MT940 export available from ASN — see asn-cross-format/README.md');
     }
 
-    $this->importer->runAndConfirm($this->camtFixture, 'asn-camt053', $this->fixtureUser);
-    $second = $this->importer->runAndConfirm($this->mt940Fixture, 'asn-mt940', $this->fixtureUser);
+    $this->importer->runAndConfirm($this->camtFixture, 'camt053', $this->fixtureUser);
+    $second = $this->importer->runAndConfirm($this->mt940Fixture, 'mt940', $this->fixtureUser);
 
     expect($second->inserted)->toBe(0);
     expect($second->enriched)->toBe(0);
@@ -127,7 +127,7 @@ it('preview-only flow surfaces every cross-statement collision as duplicate', fu
 
     $preview = $this->importer->runFromUpload(
         $this->camtFixture,
-        'asn-camt053',
+        'camt053',
         $this->fixtureUser,
         'february.camt053.xml',
     );
@@ -154,7 +154,7 @@ it('cross_format_pair_fingerprints_match: every CSV row has a CAMT counterpart w
 
     $preview = $this->importer->runFromUpload(
         $this->camtFixture,
-        'asn-camt053',
+        'camt053',
         $this->fixtureUser,
         'february.camt053.xml',
     );

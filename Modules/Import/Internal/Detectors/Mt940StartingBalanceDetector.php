@@ -11,7 +11,7 @@ use Modules\Import\Public\Dto\StartingBalanceCandidate;
 
 /**
  * Starting-balance detector specialised for ASN MT940 statement
- * imports (`source_format = 'asn-mt940'`).
+ * imports (`source_format = 'mt940'`).
  *
  * Reads the `statement_summaries.opening_balance_minor` +
  * `opening_balance_date` columns that the MT940 parser writes from
@@ -34,7 +34,7 @@ use Modules\Import\Public\Dto\StartingBalanceCandidate;
  */
 final class Mt940StartingBalanceDetector implements DetectsStartingBalance
 {
-    private const SOURCE_FORMAT = 'asn-mt940';
+    private const SOURCE_FORMAT = 'mt940';
 
     public function __construct(private readonly DatabaseManager $db) {}
 

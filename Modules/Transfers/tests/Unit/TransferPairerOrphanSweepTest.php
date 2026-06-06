@@ -65,7 +65,7 @@ function orphanFixture(string $username): array
     ]);
     $run = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => sprintf('/tmp/orphan-%d', $counter),
         'sha256' => str_pad((string) $counter, 64, 'o', STR_PAD_LEFT),
         'uploaded_at' => CarbonImmutable::now(),
@@ -102,7 +102,7 @@ function orphanTx(
         'counterparty_iban' => $counterpartyIban,
         'counterparty_normalized' => 'FIXTURE',
         'normalization_version' => 1,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'import_run_id' => $importRunId,
         'source_row_index' => $rowIndex,
         'fingerprint' => sprintf('orph-fp-%d', $rowIndex),

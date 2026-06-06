@@ -17,7 +17,7 @@ namespace Modules\Ingestion\Internal\Adapters\Asn;
  */
 final class AsnMt940HeaderProfile
 {
-    public const FORMAT = 'asn-mt940';
+    public const FORMAT = 'mt940';
 
     /** @var list<string> */
     public const FILE_EXTENSIONS = ['sta', 'mt940', '940', 'txt'];

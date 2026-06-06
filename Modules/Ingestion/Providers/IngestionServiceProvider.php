@@ -34,8 +34,8 @@ final class IngestionServiceProvider extends ServiceProvider
             SourceAdapterRegistry::class,
             static fn (Container $app): SourceAdapterRegistry => new SourceAdapterRegistry([
                 'asn-csv' => $app->make(AsnCsvAdapter::class),
-                'asn-camt053' => $app->make(AsnCamt053Adapter::class),
-                'asn-mt940' => $app->make(AsnMt940Adapter::class),
+                'camt053' => $app->make(AsnCamt053Adapter::class),
+                'mt940' => $app->make(AsnMt940Adapter::class),
                 'ics-pdf' => $app->make(IcsPdfAdapter::class),
                 'paypal-csv' => $app->make(PaypalCsvAdapter::class),
             ]),

@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated dependencies to clear outstanding Dependabot updates: guzzlehttp/guzzle,
   google/apiclient-services, nativephp/desktop, larastan, and Pest on the PHP
   side; fuse.js, vite, and concurrently on the front-end side.
+- Renamed the generic statement-format identifiers `asn-camt053` → `camt053`
+  and `asn-mt940` → `mt940`, since CAMT.053 (ISO 20022) and MT940 (SWIFT) are
+  pan-European standards rather than ASN-specific formats. Existing imports are
+  migrated automatically; the ASN-specific CSV layout (`asn-csv`) keeps its name.
 
 ### Fixed
 

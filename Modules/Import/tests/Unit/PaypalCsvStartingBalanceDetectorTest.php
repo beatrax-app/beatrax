@@ -23,8 +23,8 @@ it('returns the supports() flag only for the paypal-csv source format', function
     $detector = new PaypalCsvStartingBalanceDetector;
 
     expect($detector->supports('paypal-csv'))->toBeTrue();
-    expect($detector->supports('asn-camt053'))->toBeFalse();
-    expect($detector->supports('asn-mt940'))->toBeFalse();
+    expect($detector->supports('camt053'))->toBeFalse();
+    expect($detector->supports('mt940'))->toBeFalse();
     expect($detector->supports('ics-pdf'))->toBeFalse();
 })->group('phase-16.1.1');
 

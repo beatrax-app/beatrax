@@ -73,7 +73,7 @@ it('heals an ASN row left mis-typed by the wizard-order race and closes its pair
     // simulate the post-confirm state directly.
     $asnRun = ImportRun::query()->create([
         'user_id' => $user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/asn-wizard',
         'sha256' => str_repeat('a', 64),
         'uploaded_at' => CarbonImmutable::parse('2026-04-30 09:00:00'),
@@ -94,7 +94,7 @@ it('heals an ASN row left mis-typed by the wizard-order race and closes its pair
         'counterparty_iban' => 'LU89751000135104200E',
         'counterparty_normalized' => 'PAYPAL EUROPE SARL ET CIE SCA',
         'normalization_version' => 1,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'import_run_id' => $asnRun->id,
         'source_row_index' => 1,
         'fingerprint' => 'asn-wizard-1',
