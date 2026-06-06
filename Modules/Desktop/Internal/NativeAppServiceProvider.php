@@ -193,14 +193,7 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
         // and fall through to on-demand compilation, which only
         // re-exposes the race for whichever specific view the loop
         // failed on.
-        try {
-            $this->console->call('view:cache');
-        } catch (Throwable $e) {
-            $this->logger->warning(
-                'NativePHP boot: view:cache failed; views will compile on demand',
-                ['exception' => $e],
-            );
-        }
+        $this->precompileViews();
 
         // Stateful native window (D-10) — width/height are the
         // first-launch defaults; `rememberState()` persists the
@@ -216,5 +209,39 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
         // Help entries; `Menu::create()` installs them as the
         // application menu via Electron's `Menu.setApplicationMenu()`.
         Menu::create(...$this->appMenu->build());
+    }
+
+    /**
+     * Warm the Blade view cache before the embedded webserver takes its
+     * first request, retrying once on a transient failure.
+     *
+     * The Windows WinError 5 ("Access is denied (code: 5)") that aborts
+     * `Filesystem::replace()`'s `rename()` is almost always transient: AV
+     * (or a sibling compile) holds the destination open for a few
+     * milliseconds and releases it. A single immediate retry recompiles
+     * only the views the first pass left uncached — every view that did
+     * land short-circuits on its up-to-date mtime check — so the retry is
+     * cheap and usually clears a transient lock. After two failed passes
+     * the build falls through to on-demand compilation rather than
+     * stranding NativePHP boot with no app at all.
+     */
+    private function precompileViews(): void
+    {
+        foreach ([1, 2] as $attempt) {
+            try {
+                $this->console->call('view:cache');
+
+                return;
+            } catch (Throwable $e) {
+                $this->logger->warning(
+                    "NativePHP boot: view:cache attempt {$attempt} failed",
+                    ['exception' => $e],
+                );
+            }
+        }
+
+        $this->logger->warning(
+            'NativePHP boot: view:cache exhausted retries; views will compile on demand',
+        );
     }
 }
