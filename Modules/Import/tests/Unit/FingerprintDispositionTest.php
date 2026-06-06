@@ -53,13 +53,13 @@ it('pending enrichment carries the four required fields', function (): void {
         existingTransactionId: 99,
         newSourceRef: 'EREF-ABC',
         importRunId: 51,
-        sourceFormat: 'asn-camt053',
+        sourceFormat: 'camt053',
     );
 
     expect($p->existingTransactionId)->toBe(99);
     expect($p->newSourceRef)->toBe('EREF-ABC');
     expect($p->importRunId)->toBe(51);
-    expect($p->sourceFormat)->toBe('asn-camt053');
+    expect($p->sourceFormat)->toBe('camt053');
 })->group('phase-2');
 
 it('disposition variants are final', function (string $variant): void {

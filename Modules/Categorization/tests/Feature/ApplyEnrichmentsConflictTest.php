@@ -265,7 +265,7 @@ it('cross-user T-07-09: pending_enrichment_conflicts for another user is NEVER t
 });
 
 it('non-receipt sourceFormat with unset policy + conflict: keeps stored value silently (no event, no pending row)', function (): void {
-    // Non-receipt-format enrichment (e.g., asn-mt940 vs asn-csv) — the
+    // Non-receipt-format enrichment (e.g., mt940 vs asn-csv) — the
     // receipt-vs-CSV first-conflict toast does not fire for these paths.
     $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'asn-csv', 'CSV-REF');
 
@@ -276,7 +276,7 @@ it('non-receipt sourceFormat with unset policy + conflict: keeps stored value si
             existingTransactionId: $tx->id,
             newSourceRef: 'STRONGER-REF',
             importRunId: 99,
-            sourceFormat: 'asn-camt053',
+            sourceFormat: 'camt053',
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Different name'],
             ],

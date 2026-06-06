@@ -33,7 +33,7 @@
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewSection $section */
 
     $eyebrowLabel = match ($section->sourceFormat) {
-        'asn-camt053', 'asn-mt940', 'asn-csv', 'ing-csv' => 'FROM YOUR BANK STATEMENT',
+        'camt053', 'mt940', 'asn-csv', 'ing-csv' => 'FROM YOUR BANK STATEMENT',
         'ics-pdf' => 'FROM YOUR ICS CARD STATEMENTS',
         'paypal-csv' => 'FROM PAYPAL',
         default => 'FROM '.strtoupper(str_replace('-', ' ', $section->sourceFormat)),

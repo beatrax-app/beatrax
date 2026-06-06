@@ -119,7 +119,7 @@ it('returns newRow when no existing fingerprint matches', function (): void {
 })->group('phase-2');
 
 it('returns duplicate when fingerprint matches and incoming source_ref is NULL', function (): void {
-    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-A', $this->composer);
+    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'camt053', 'EREF-A', $this->composer);
     $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-csv', null);
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
@@ -136,7 +136,7 @@ it('returns duplicate when fingerprint matches across statement formats (CSV →
     // policy because the audit chain shouldn't grow a second
     // source_format on a re-import.
     seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-csv', null, $this->composer);
-    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-A');
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'camt053', 'EREF-A');
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
@@ -144,8 +144,8 @@ it('returns duplicate when fingerprint matches across statement formats (CSV →
 })->group('phase-2');
 
 it('returns duplicate when fingerprint matches across statement formats (MT940 → CAMT)', function (): void {
-    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-mt940', 'MT940-REF-A', $this->composer);
-    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-B');
+    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'mt940', 'MT940-REF-A', $this->composer);
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'camt053', 'EREF-B');
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
@@ -154,7 +154,7 @@ it('returns duplicate when fingerprint matches across statement formats (MT940 �
 
 it('returns duplicate when fingerprint matches across statement formats (CSV → MT940)', function (): void {
     seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001', $this->composer);
-    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-mt940', 'MT940-REF-A');
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'mt940', 'MT940-REF-A');
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
@@ -191,7 +191,7 @@ it('returns enriched when fingerprint matches and the existing side is a receipt
 })->group('phase-2');
 
 it('returns duplicate when incoming rank is lower than existing (CSV after CAMT)', function (): void {
-    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-A', $this->composer);
+    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'camt053', 'EREF-A', $this->composer);
     $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001');
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
@@ -200,8 +200,8 @@ it('returns duplicate when incoming rank is lower than existing (CSV after CAMT)
 })->group('phase-2');
 
 it('returns duplicate when incoming rank equals existing (same format re-import, same ref)', function (): void {
-    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-A', $this->composer);
-    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-A');
+    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'camt053', 'EREF-A', $this->composer);
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'camt053', 'EREF-A');
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
@@ -209,8 +209,8 @@ it('returns duplicate when incoming rank equals existing (same format re-import,
 })->group('phase-2');
 
 it('returns duplicate when incoming rank equals existing AND ref values differ', function (): void {
-    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-OLD', $this->composer);
-    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-camt053', 'EREF-NEW');
+    seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'camt053', 'EREF-OLD', $this->composer);
+    $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'camt053', 'EREF-NEW');
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
@@ -233,7 +233,7 @@ it('scopes the existing-row lookup by user_id', function (): void {
         'iban' => 'NL18ABNA0000000999',
         'default_currency' => 'EUR',
     ]);
-    seedTransactionMatchingCanonical($otherUser, $otherAccount->id, 'asn-camt053', 'EREF-OTHER', $this->composer);
+    seedTransactionMatchingCanonical($otherUser, $otherAccount->id, 'camt053', 'EREF-OTHER', $this->composer);
 
     $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'asn-csv', null);
 

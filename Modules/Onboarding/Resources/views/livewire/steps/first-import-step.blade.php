@@ -110,8 +110,8 @@
                             $alternativeCandidates = [];
                             foreach ($candidates as $candidate) {
                                 $sourceLabel = match ($candidate->sourceFormat) {
-                                    'asn-camt053' => 'CAMT.053',
-                                    'asn-mt940' => 'MT940',
+                                    'camt053' => 'CAMT.053',
+                                    'mt940' => 'MT940',
                                     'asn-csv' => 'ASN CSV',
                                     'ing-csv' => 'ING CSV',
                                     'ics-pdf' => 'ICS PDF',

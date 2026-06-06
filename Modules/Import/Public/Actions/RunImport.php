@@ -142,8 +142,8 @@ final class RunImport implements RunsImports
     {
         $disk = $this->storage->disk(self::STORAGE_DISK);
         $extension = match ($sourceFormat) {
-            'asn-camt053' => 'xml',
-            'asn-mt940' => 'sta',
+            'camt053' => 'xml',
+            'mt940' => 'sta',
             'ics-pdf' => 'pdf',
             'eml' => 'eml',
             'mbox' => 'mbox',

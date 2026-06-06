@@ -33,7 +33,7 @@ interface PaymentTypeHinter
      * hinter recognises the row's payment shape, or `null` otherwise.
      *
      * `$sourceFormat` is the canonical source-format identifier
-     * (`asn-csv`, `asn-camt053`, `asn-mt940`, `ics-pdf`, `paypal-csv`,
+     * (`asn-csv`, `camt053`, `mt940`, `ics-pdf`, `paypal-csv`,
      * receipt formats, etc.). Source-specific hinters use it to skip
      * rows that did not originate from their source; the universal
      * fallback ignores it and inspects every row.

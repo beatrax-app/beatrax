@@ -11,7 +11,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
  * Payment-type hinter specialised for ASN CAMT.053 ISO20022 exports
- * (`source_format = 'asn-camt053'`).
+ * (`source_format = 'camt053'`).
  *
  * Keys off the authoritative `BkTxCd` (Bank Transaction Code) tuple
  * the CAMT.053 adapter persists into `rawPayload['sepa']['btc']` —
@@ -40,7 +40,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  */
 final class AsnCamt053PaymentTypeHinter implements PaymentTypeHinter
 {
-    private const SOURCE_FORMAT = 'asn-camt053';
+    private const SOURCE_FORMAT = 'camt053';
 
     /**
      * Structured BkTxCd tuple → (`PaymentType`, confidence) mapping.

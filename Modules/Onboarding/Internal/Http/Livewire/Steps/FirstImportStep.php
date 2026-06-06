@@ -122,7 +122,7 @@ final class FirstImportStep extends Component
     /**
      * Per-section row caps the user has expanded past the default
      * `SAMPLE_ROW_LIMIT` (5) via the "Load more (N remaining)" footer
-     * button. Keyed by `source_format` value (`'asn-camt053'`,
+     * button. Keyed by `source_format` value (`'camt053'`,
      * `'ics-pdf'`, `'paypal-csv'`, …); the value is the absolute row
      * cap the section should render (5, 30, 55, 80, …). Sections
      * absent from this map use the default 5-row cap.

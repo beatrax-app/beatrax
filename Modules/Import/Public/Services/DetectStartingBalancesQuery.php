@@ -140,7 +140,7 @@ final readonly class DetectStartingBalancesQuery
         $camt053 = [];
         $other = [];
         foreach ($atEarliest as $candidate) {
-            if ($candidate->sourceFormat === 'asn-camt053') {
+            if ($candidate->sourceFormat === 'camt053') {
                 $camt053[] = $candidate;
             } else {
                 $other[] = $candidate;

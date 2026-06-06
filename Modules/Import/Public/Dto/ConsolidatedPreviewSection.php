@@ -18,7 +18,7 @@ use Spatie\LaravelData\Data;
  * section row count.
  *
  *  - `sourceFormat` is the canonical adapter key
- *    (`asn-camt053`, `asn-mt940`, `asn-csv`, `ing-csv`, `ics-pdf`,
+ *    (`camt053`, `mt940`, `asn-csv`, `ing-csv`, `ics-pdf`,
  *    `paypal-csv`). The wizard maps it to the user-facing chip label.
  *  - `importRunIds` are the runs whose cached previews contributed to
  *    this section. The wizard does not need them for rendering but

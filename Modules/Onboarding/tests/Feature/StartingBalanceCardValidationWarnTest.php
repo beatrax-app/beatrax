@@ -48,7 +48,7 @@ beforeEach(function (): void {
     /** @var ImportRun $run */
     $run = ImportRun::query()->create([
         'user_id' => $this->user->id,
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'raw_file_path' => '/tmp/sbc-warn-fixture.xml',
         'sha256' => hash('sha256', 'sbc-warn-fixture'),
         'uploaded_at' => CarbonImmutable::parse('2026-02-01 12:00:00'),
@@ -72,7 +72,7 @@ beforeEach(function (): void {
         'counterparty_normalized' => 'fixture',
         'normalization_version' => 1,
         'description' => 'fixture row',
-        'source_format' => 'asn-camt053',
+        'source_format' => 'camt053',
         'source_row_index' => 1,
         'source_ref' => 'sbc-warn-fixture-1',
         'fingerprint' => hash('sha256', 'sbc-warn-fp-1'),

@@ -51,8 +51,8 @@ final class UploadWizard extends Component
      */
     public const SUPPORTED_FORMATS = [
         'asn-csv',
-        'asn-camt053',
-        'asn-mt940',
+        'camt053',
+        'mt940',
         'ics-pdf',
         'paypal-csv',
         'eml',
@@ -69,7 +69,7 @@ final class UploadWizard extends Component
      * @var array<string, list<string>>
      */
     private const ISSUER_FORMAT_MAP = [
-        'asn' => ['asn-csv', 'asn-camt053', 'asn-mt940'],
+        'asn' => ['asn-csv', 'camt053', 'mt940'],
         'ics' => ['ics-pdf'],
         'paypal' => ['paypal-csv'],
         'email-file' => ['eml', 'mbox'],
@@ -129,7 +129,7 @@ final class UploadWizard extends Component
         return [
             'file' => ['required', 'file', $sizeRule, 'extensions:csv,txt,xml,sta,mt940,940,pdf,eml,mbox'],
             'issuer' => ['required', 'in:asn,ics,paypal,email-file'],
-            'sourceFormat' => ['required', 'in:asn-csv,asn-camt053,asn-mt940,ics-pdf,paypal-csv,eml,mbox', $this->issuerFormatRule()],
+            'sourceFormat' => ['required', 'in:asn-csv,camt053,mt940,ics-pdf,paypal-csv,eml,mbox', $this->issuerFormatRule()],
         ];
     }
 
@@ -178,8 +178,8 @@ final class UploadWizard extends Component
         return match ($this->issuer) {
             'asn' => [
                 ['value' => 'asn-csv', 'label' => 'CSV'],
-                ['value' => 'asn-camt053', 'label' => 'CAMT.053 (XML)'],
-                ['value' => 'asn-mt940', 'label' => 'MT940'],
+                ['value' => 'camt053', 'label' => 'CAMT.053 (XML)'],
+                ['value' => 'mt940', 'label' => 'MT940'],
             ],
             'ics' => [
                 ['value' => 'ics-pdf', 'label' => 'PDF'],
@@ -201,7 +201,7 @@ final class UploadWizard extends Component
      * select never holds a stale value from the previously-chosen issuer
      * (e.g. switching from ICS back to ASN must move sourceFormat off
      * 'ics-pdf' onto 'asn-csv'). Without this reset, a defensive
-     * `in:asn-csv,asn-camt053,asn-mt940,ics-pdf` validator would still
+     * `in:asn-csv,camt053,mt940,ics-pdf` validator would still
      * accept the stale composite but the picker would visually disagree
      * with the submitted value.
      */
@@ -306,8 +306,8 @@ final class UploadWizard extends Component
         $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;
 
         $extension = match ($this->sourceFormat) {
-            'asn-camt053' => '.xml',
-            'asn-mt940' => '.sta',
+            'camt053' => '.xml',
+            'mt940' => '.sta',
             'ics-pdf' => '.pdf',
             'paypal-csv' => '.csv',
             'eml' => '.eml',
