@@ -4,52 +4,44 @@ declare(strict_types=1);
 
 namespace Modules\Community\Internal\Corpus;
 
-use Illuminate\Contracts\Config\Repository as ConfigRepository;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Import\Public\Services\PatternGeneralizer;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Yaml\Exception\ParseException;
-use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 /**
- * Reads the bundled merchant-mappings.yaml and built-in-heuristics.yaml
- * files from disk, validates each entry's required fields, computes the
+ * Reads the bundled merchant corpus YAML files from disk (via the shared
+ * CorpusYamlReader), validates each entry's required fields, computes the
  * generalized pattern via PatternGeneralizer, and returns a list of
- * CorpusEntryDto rows for the SeedCommunityCorpus listener to upsert
- * into the `community_merchant_mappings` table.
+ * CorpusEntryDto rows for the SeedCommunityCorpus listener to upsert into
+ * the `community_merchant_mappings` table.
  *
  * Failure modes are tolerated per-entry, never globally:
  *
- *   - A missing YAML file is logged at `warning` and skipped (the other
- *     configured file still loads); the loader does NOT abort the seed.
- *   - A malformed YAML file (parse error from symfony/yaml) is logged
- *     at `warning` and skipped — same posture.
+ *   - A missing or malformed YAML file (handled by CorpusYamlReader) yields
+ *     an empty entry list and a warning; the other configured file still
+ *     loads and the seed is not aborted.
  *   - An individual entry that lacks `pattern`, `name`, or `contributor`
- *     is logged at `warning` and dropped from the returned list. The
- *     other valid entries still load.
- *   - An entry whose `category` field is non-null but does not match
- *     any row in the `categories` table at load time is logged at
- *     `warning` and INCLUDED in the returned list with the unresolved
- *     category string preserved verbatim. Graceful degradation is the
- *     consumer's responsibility: the auto-suggest chip on the import
- *     preview renders the unresolved category as a plain string.
- *
- * symfony/yaml is invoked with `PARSE_EXCEPTION_ON_INVALID_TYPE` so a
- * YAML body that embeds PHP-object or other native-tag values raises
- * a parse exception rather than silently instantiating arbitrary
- * objects (ASVS V10 — defends against the YAML deserialization threat).
+ *     is logged at `warning` and dropped from the returned list.
+ *   - An entry whose `category` is non-null but matches no row in the
+ *     `categories` table is logged at `warning` and INCLUDED verbatim
+ *     (graceful degradation — the consumer renders the unresolved category
+ *     as a plain string).
  */
 final class CorpusLoader
 {
+    /** @var list<string> Config keys for the bundled merchant corpus files. */
+    private const MERCHANT_PATH_KEYS = [
+        'community.corpus.bundled_path',
+        'community.corpus.heuristics_path',
+    ];
+
     public function __construct(
         private readonly PatternGeneralizer $generalizer,
         private readonly LoggerInterface $logger,
-        private readonly ConfigRepository $config,
         private readonly DatabaseManager $db,
-        private readonly Application $app,
+        private readonly CorpusYamlReader $reader,
     ) {}
 
     /**
@@ -60,16 +52,16 @@ final class CorpusLoader
         $validCategories = $this->fetchKnownCategoryNames();
 
         $entries = [];
-
-        $bundledPath = $this->resolvePath($this->stringConfig('community.corpus.bundled_path'));
-        $heuristicsPath = $this->resolvePath($this->stringConfig('community.corpus.heuristics_path'));
-
-        foreach ([$bundledPath, $heuristicsPath] as $path) {
+        foreach (self::MERCHANT_PATH_KEYS as $key) {
+            $path = $this->reader->resolve($key);
             if ($path === '') {
                 continue;
             }
-            foreach ($this->loadFile($path, $validCategories) as $entry) {
-                $entries[] = $entry;
+            foreach ($this->reader->readEntries($path) as $raw) {
+                $entry = $this->buildEntry($raw, $validCategories);
+                if ($entry !== null) {
+                    $entries[] = $entry;
+                }
             }
         }
 
@@ -77,65 +69,11 @@ final class CorpusLoader
     }
 
     /**
-     * @param  array<string, true>  $validCategories
-     * @return list<CorpusEntryDto>
-     */
-    private function loadFile(string $path, array $validCategories): array
-    {
-        if (! is_file($path)) {
-            $this->logger->warning('CorpusLoader: bundled corpus file is missing.', ['path' => $path]);
-
-            return [];
-        }
-
-        try {
-            /** @var mixed $parsed */
-            $parsed = Yaml::parseFile($path, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
-        } catch (ParseException $e) {
-            $this->logger->warning('CorpusLoader: failed to parse YAML.', [
-                'path' => $path,
-                'exception_message' => $e->getMessage(),
-            ]);
-
-            return [];
-        } catch (Throwable $e) {
-            $this->logger->warning('CorpusLoader: unexpected error reading YAML.', [
-                'path' => $path,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
-            ]);
-
-            return [];
-        }
-
-        if (! is_array($parsed) || ! isset($parsed['entries']) || ! is_array($parsed['entries'])) {
-            $this->logger->warning('CorpusLoader: YAML root has no `entries:` list.', ['path' => $path]);
-
-            return [];
-        }
-
-        $entries = [];
-        foreach ($parsed['entries'] as $raw) {
-            $entry = $this->buildEntry($raw, $validCategories);
-            if ($entry !== null) {
-                $entries[] = $entry;
-            }
-        }
-
-        return $entries;
-    }
-
-    /**
+     * @param  array<int|string, mixed>  $raw
      * @param  array<string, true>  $validCategories
      */
-    private function buildEntry(mixed $raw, array $validCategories): ?CorpusEntryDto
+    private function buildEntry(array $raw, array $validCategories): ?CorpusEntryDto
     {
-        if (! is_array($raw)) {
-            $this->logger->warning('CorpusLoader: corpus entry is not a mapping.', ['raw_type' => gettype($raw)]);
-
-            return null;
-        }
-
         $pattern = is_string($raw['pattern'] ?? null) ? trim($raw['pattern']) : '';
         $name = is_string($raw['name'] ?? null) ? trim($raw['name']) : '';
         $contributor = is_string($raw['contributor'] ?? null) ? trim($raw['contributor']) : '';
@@ -212,44 +150,5 @@ final class CorpusLoader
         }
 
         return $known;
-    }
-
-    /**
-     * Resolve a configured path against the application root, leaving
-     * absolute paths untouched so a test fixture under sys_get_temp_dir
-     * loads from its full path.
-     *
-     * The override key `community.app_root` exists so a feature test can
-     * point the loader at a temporary fixture directory without
-     * relocating the bundled corpus on disk. The production path uses
-     * the injected `Application::basePath()` so a future refactor that
-     * moves this file does not silently break corpus loading.
-     */
-    private function resolvePath(string $configured): string
-    {
-        if ($configured === '') {
-            return '';
-        }
-        if (str_starts_with($configured, '/') || preg_match('#^[A-Za-z]:[\\\\/]#', $configured) === 1) {
-            return $configured;
-        }
-        $root = $this->stringConfig('community.app_root');
-        if ($root === '') {
-            $root = $this->app->basePath();
-        }
-
-        return rtrim($root, '/').'/'.$configured;
-    }
-
-    /**
-     * Narrow a config value to a string. The repository contract returns
-     * `mixed`; this helper centralises the type narrowing so the caller
-     * sites stay free of unsafe casts.
-     */
-    private function stringConfig(string $key): string
-    {
-        $value = $this->config->get($key, '');
-
-        return is_string($value) ? $value : '';
     }
 }

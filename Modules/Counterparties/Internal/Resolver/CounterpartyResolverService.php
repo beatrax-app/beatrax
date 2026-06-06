@@ -7,6 +7,9 @@ namespace Modules\Counterparties\Internal\Resolver;
 use Iban\Validation\Validator as IbanValidator;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Modules\Community\Public\Dto\ClassificationRule;
+use Modules\Community\Public\Services\ClassificationRuleProvider;
+use Modules\Community\Public\Services\CorpusPatternMatcher;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
@@ -53,12 +56,14 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  *      display name only; the IBAN IS preserved on the
  *      `iban` column but never echoed into the slug.
  *   5. Government keyword fallback — descriptions or counterparty
- *      names containing one of the canonical agency keywords
- *      (BELASTINGDIENST, GEMEENTE, RDW, CJIB, SVB) resolve to
- *      type=`government`.
- *   6. Description-keyword bank-fee fallback — descriptions matching
- *      one of the bank-fee patterns (KOSTEN KASOPNAME, RENTE,
- *      KOSTEN ) resolve to type=`bank` with metadata.subcategory=`fee`.
+ *      names matching one of the government agency rules loaded from
+ *      `resources/corpus/government/<country>.yaml` resolve to
+ *      type=`government`. Rules support literal substrings and `regex:`
+ *      patterns (see CorpusPatternMatcher).
+ *   6. Description-keyword bank-fee fallback — descriptions matching one
+ *      of the bank-fee rules loaded from
+ *      `resources/corpus/bank-fees/<country>.yaml` resolve to type=`bank`
+ *      with metadata.subcategory=`fee`.
  *   7. Unresolved — type=`unknown`, the IBAN (when present) is
  *      preserved on the Counterparty row for the Triage queue.
  *
@@ -115,36 +120,6 @@ final class CounterpartyResolverService implements CounterpartyResolver
     ];
 
     /**
-     * Dutch government agencies the keyword fallback recognises.
-     * Matching is case-insensitive and substring-based; the
-     * BELASTINGDIENST + GEMEENTE entries cover the high-volume tax +
-     * municipality cases; RDW (vehicle authority), CJIB (judicial
-     * collection), and SVB (social insurance bank) round out the set
-     * the user's transaction history typically encounters.
-     */
-    private const GOVERNMENT_KEYWORDS = [
-        'BELASTINGDIENST',
-        'GEMEENTE',
-        'RDW',
-        'CJIB',
-        'SVB',
-    ];
-
-    /**
-     * Substrings that signal a bank-fee row in the description (step
-     * 6). The list is purposefully narrow — broader matching would
-     * fight with the merchant resolver (step 3) that already covers
-     * the merchant case. `KOSTEN ` (trailing space) avoids matching
-     * common merchant strings that contain the substring without the
-     * word boundary.
-     */
-    private const BANK_FEE_KEYWORDS = [
-        'KOSTEN KASOPNAME',
-        'KOSTEN ',
-        'RENTE',
-    ];
-
-    /**
      * Transaction types that the personal-IBAN heuristic accepts.
      * The heuristic only fires on cross-account P2P-shaped rows so a
      * merchant transaction that happens to carry a Dutch IBAN does
@@ -161,6 +136,8 @@ final class CounterpartyResolverService implements CounterpartyResolver
         private readonly MerchantNameResolver $merchantResolver,
         private readonly Dispatcher $events,
         private readonly IbanValidator $ibanValidator,
+        private readonly ClassificationRuleProvider $ruleProvider,
+        private readonly CorpusPatternMatcher $matcher,
     ) {}
 
     public function resolve(CanonicalTransaction $tx, User $user): ?CounterpartyResolutionDto
@@ -340,48 +317,68 @@ final class CounterpartyResolverService implements CounterpartyResolver
 
     private function resolveGovernment(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
     {
-        $haystack = mb_strtoupper($this->haystack($tx));
-        if ($haystack === '') {
-            return null;
-        }
-
-        foreach (self::GOVERNMENT_KEYWORDS as $keyword) {
-            if (str_contains($haystack, $keyword)) {
-                return $this->upsert(
-                    userId: $userId,
-                    type: 'government',
-                    displayName: $this->canonicalGovernmentName($keyword, $tx),
-                    iban: $this->normaliseIban($tx->counterpartyIban),
-                    merchantName: null,
-                    metadata: ['matched_keyword' => $keyword],
-                );
-            }
-        }
-
-        return null;
+        return $this->resolveByRules(
+            $tx,
+            $userId,
+            $this->ruleProvider->governmentRules(),
+            'government',
+            fn (ClassificationRule $rule): array => [
+                $this->governmentDisplayName($rule, $tx),
+                ['matched_keyword' => $rule->pattern],
+            ],
+        );
     }
 
     private function resolveBankFee(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
     {
-        $haystack = mb_strtoupper($this->haystack($tx));
+        return $this->resolveByRules(
+            $tx,
+            $userId,
+            $this->ruleProvider->bankFeeRules(),
+            'bank',
+            fn (ClassificationRule $rule): array => [
+                $rule->name ?? 'Bank fee',
+                ['subcategory' => 'fee', 'matched_keyword' => $rule->pattern],
+            ],
+        );
+    }
+
+    /**
+     * Shared engine for the YAML-rule classification steps (government,
+     * bank-fee): match the transaction's haystack against each rule in
+     * order and upsert the first hit. The $build callback supplies the
+     * step-specific display name and metadata for the matched rule.
+     *
+     * @param  list<ClassificationRule>  $rules
+     * @param  callable(ClassificationRule): array{0: string, 1: array<string, mixed>}  $build
+     */
+    private function resolveByRules(
+        CanonicalTransaction $tx,
+        int $userId,
+        array $rules,
+        string $type,
+        callable $build,
+    ): ?CounterpartyResolutionDto {
+        $haystack = $this->haystack($tx);
         if ($haystack === '') {
             return null;
         }
 
-        foreach (self::BANK_FEE_KEYWORDS as $keyword) {
-            if (str_contains($haystack, $keyword)) {
-                return $this->upsert(
-                    userId: $userId,
-                    type: 'bank',
-                    displayName: 'Bank fee',
-                    iban: $this->normaliseIban($tx->counterpartyIban),
-                    merchantName: null,
-                    metadata: [
-                        'subcategory' => 'fee',
-                        'matched_keyword' => $keyword,
-                    ],
-                );
+        foreach ($rules as $rule) {
+            if (! $this->matcher->matches($rule->pattern, $haystack)) {
+                continue;
             }
+
+            [$displayName, $metadata] = $build($rule);
+
+            return $this->upsert(
+                userId: $userId,
+                type: $type,
+                displayName: $displayName,
+                iban: $this->normaliseIban($tx->counterpartyIban),
+                merchantName: null,
+                metadata: $metadata,
+            );
         }
 
         return null;
@@ -573,18 +570,35 @@ final class CounterpartyResolverService implements CounterpartyResolver
         return trim($description.' '.$name);
     }
 
-    private function canonicalGovernmentName(string $keyword, CanonicalTransaction $tx): string
+    private function governmentDisplayName(ClassificationRule $rule, CanonicalTransaction $tx): string
     {
-        // For BELASTINGDIENST + standalone agencies the keyword is the
-        // canonical name. For GEMEENTE the counterparty name typically
-        // includes the city ("GEMEENTE UTRECHT"), so we surface the
-        // counterparty name verbatim when it carries the keyword.
+        // When a literal pattern appears verbatim in the counterparty name
+        // (e.g. "GEMEENTE UTRECHT" or "BELASTINGDIENST APELDOORN"), surface
+        // the fuller name so the city/office is preserved. Regex patterns
+        // can't be substring-checked, so they fall through to the rule's
+        // canonical name.
         $name = $tx->counterpartyName;
-        if (is_string($name) && trim($name) !== '' && stripos($name, $keyword) !== false) {
-            return trim($name);
+        $trimmedName = is_string($name) ? trim($name) : '';
+
+        if ($trimmedName !== '' && ! $this->matcher->isRegex($rule->pattern) && stripos($trimmedName, $rule->pattern) !== false) {
+            return $trimmedName;
         }
 
-        return ucfirst(strtolower($keyword));
+        if ($rule->name !== null) {
+            return $rule->name;
+        }
+
+        if ($trimmedName !== '') {
+            return $trimmedName;
+        }
+
+        // A name-less rule matched only the description and has no
+        // counterparty name to fall back on. Title-case a literal pattern;
+        // a regex body (e.g. `RUNDFUNK|ARD ZDF`) is not human copy, so use a
+        // generic label rather than leaking PCRE syntax into the UI/slug.
+        return $this->matcher->isRegex($rule->pattern)
+            ? 'Government'
+            : ucfirst(strtolower($rule->pattern));
     }
 
     private function looksLikePersonalName(string $name): bool

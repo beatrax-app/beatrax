@@ -60,6 +60,12 @@ return [
     'corpus' => [
         'bundled_path' => 'resources/corpus/merchant-mappings.yaml',
         'heuristics_path' => 'resources/corpus/built-in-heuristics.yaml',
+
+        // Root directory (relative to the app root) holding the bundled
+        // classification corpus, organised as <type>/<country>.yaml. The
+        // government/ and bank-fees/ subdirectories drive the resolver's
+        // government and bank-fee classification steps.
+        'root' => 'resources/corpus',
     ],
 
     /*

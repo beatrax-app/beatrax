@@ -1,0 +1,21 @@
+# Bank-fee classification rules — Netherlands.
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# The fee words use `regex:` with \b word boundaries (NOT a bare substring)
+# so "KOSTEN" matches the standalone fee word but not "ONKOSTEN" (expenses)
+# or "KOSTENLOOS" (free), and "RENTE" does not match "RENTEVRIJ"
+# (interest-free). Regex bodies must be SINGLE-quoted in YAML so the
+# backslash reaches the matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bKOSTEN\b'
+    name: "Bankkosten"
+  - pattern: 'regex:\bRENTE\b'
+    name: "Rente"

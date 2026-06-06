@@ -1,0 +1,10 @@
+# Bank-fee classification rules — Germany. Schema: see bank-fees/nl.yaml.
+entries:
+  - pattern: "ENTGELT"
+    name: "Bankgebühr"
+  - pattern: "KONTOFUHRUNG"
+    name: "Kontoführungsgebühr"
+  - pattern: "GEBUEHREN"
+    name: "Bankgebühr"
+  - pattern: "ZINSEN"
+    name: "Zinsen"
