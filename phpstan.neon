@@ -6,6 +6,12 @@ includes:
 
 parameters:
     level: 10
+    # phpstan 2.2.x intermittently crashes its parallel workers with
+    # phar-include failures when it fans out to many processes inside the
+    # Docker toolchain (8+ cores). Capping the worker count keeps the
+    # quality gate deterministic at a negligible speed cost.
+    parallel:
+        maximumNumberOfProcesses: 4
     paths:
         - Modules
         - app

@@ -254,9 +254,11 @@ class OAuthSecretsRepository
 
     /**
      * Decode the per-inbox token map from a row's decrypted
-     * tokens_blob. The blob is a JSON object keyed by inbox id.
+     * tokens_blob. The blob is a JSON object keyed by inbox id; PHP
+     * coerces those numeric-string keys to int array keys, so the key
+     * type is array-key (int|string), matching encodeInboxes().
      *
-     * @return array<string, array<string, mixed>>
+     * @return array<int|string, array<string, mixed>>
      */
     private function decodeInboxes(?string $blob): array
     {

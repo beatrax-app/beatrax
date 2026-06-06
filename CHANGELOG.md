@@ -17,6 +17,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
 
+### Changed
+
+- User-facing copy and the README now describe beatrax as a generic European
+  personal-finance tool (any bank that exports CAMT.053, MT940, or CSV, plus
+  cards and PayPal) rather than an ASN-specific one. Format-specific names and
+  the genuine ASN-format parsers are unchanged.
+- Updated dependencies to clear outstanding Dependabot updates: guzzlehttp/guzzle,
+  google/apiclient-services, nativephp/desktop, larastan, and Pest on the PHP
+  side; fuse.js, vite, and concurrently on the front-end side.
+
+### Fixed
+
+- Resolve seven static-analysis findings surfaced by the larastan/phpstan
+  upgrade (the OAuth secrets store's per-inbox map is now typed with the
+  array-key it actually uses), and cap phpstan's worker count so the quality
+  gate runs deterministically in the Docker toolchain.
+
 ## [1.1.1] - 2026-06-06
 
 ### Fixed
