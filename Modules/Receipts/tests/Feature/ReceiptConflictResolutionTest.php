@@ -172,7 +172,7 @@ it('cross-user T-07-09: a foreign pending row is NEVER touched by ApplyReceiptCo
         'name' => 'ASN-other',
         'slug' => 'asn-rcr-other',
         'kind' => 'asn',
-        'iban' => 'NL22ASNB0000000000',
+        'iban' => 'NL43ASNB0000000000',
         'default_currency' => 'EUR',
     ]);
 

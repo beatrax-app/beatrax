@@ -198,7 +198,7 @@ it('drops income below the recurring_income_min_amount_minor threshold so small 
             $this->db, $this->user, $this->account, $this->run,
             $date,
             50000, 'EUR', 50000, 'EUR',
-            'small refund client', 'NL00SMAL0000000001',
+            'small refund client', 'NL56SMAL0000000001',
             'income',
             100 + $i,
             'small-'.$i,
@@ -270,7 +270,7 @@ it('clusters mixed-currency income (EUR vs USD same employer) into two separate 
             $this->db, $this->user, $this->account, $this->run,
             $date,
             350000, 'EUR', 350000, 'EUR',
-            'global employer', 'NL00GLOB0000000001',
+            'global employer', 'NL94GLOB0000000001',
             'income',
             800 + $i,
             'gl-eur-'.$i,
@@ -279,7 +279,7 @@ it('clusters mixed-currency income (EUR vs USD same employer) into two separate 
             $this->db, $this->user, $this->account, $this->run,
             $date,
             250000, 'USD', 230000, 'EUR',
-            'global employer', 'NL00GLOB0000000001',
+            'global employer', 'NL94GLOB0000000001',
             'income',
             900 + $i,
             'gl-usd-'.$i,
@@ -347,7 +347,7 @@ it('leaves a snoozed series untouched — refreshing metrics during snooze would
             $this->db, $this->user, $this->account, $this->run,
             $date,
             280000, 'EUR', 280000, 'EUR',
-            'snooze probe employer', 'NL00SNZ00000000001',
+            'snooze probe employer', 'NL47SNZ00000000001',
             'income',
             7000 + $i,
             'snz-'.$i,
@@ -380,7 +380,7 @@ it('leaves a snoozed series untouched — refreshing metrics during snooze would
         $this->db, $this->user, $this->account, $this->run,
         '2025-05-25',
         290000, 'EUR', 290000, 'EUR',
-        'snooze probe employer', 'NL00SNZ00000000001',
+        'snooze probe employer', 'NL47SNZ00000000001',
         'income',
         7999,
         'snz-new',
@@ -408,7 +408,7 @@ it('suppresses every cadence variant when the counterparty has a rejected series
             $this->db, $this->user, $this->account, $this->run,
             $date,
             260000, 'EUR', 260000, 'EUR',
-            'rejected employer', 'NL00REJ00000000001',
+            'rejected employer', 'NL07REJE0000000001',
             'income',
             5000 + $i,
             'rej-m-'.$i,
@@ -430,7 +430,7 @@ it('suppresses every cadence variant when the counterparty has a rejected series
     // for the same IBAN + currency.
     $this->db->connection()->table('transactions')
         ->where('user_id', $this->user->id)
-        ->where('counterparty_iban', 'NL00REJ00000000001')
+        ->where('counterparty_iban', 'NL07REJE0000000001')
         ->delete();
     $quarterlyStart = CarbonImmutable::parse('2025-06-01');
     for ($i = 0; $i < 4; $i++) {
@@ -439,7 +439,7 @@ it('suppresses every cadence variant when the counterparty has a rejected series
             $this->db, $this->user, $this->account, $this->run,
             $date,
             260000, 'EUR', 260000, 'EUR',
-            'rejected employer', 'NL00REJ00000000001',
+            'rejected employer', 'NL07REJE0000000001',
             'income',
             6000 + $i,
             'rej-q-'.$i,
@@ -475,7 +475,7 @@ it('keeps two IBAN-distinct payroll series isolated when both share a detected_n
             $this->db, $this->user, $this->account, $this->run,
             $date,
             300000, 'EUR', 300000, 'EUR',
-            'shared name', 'NL00EMPA0000000001',
+            'shared name', 'NL44EMPA0000000001',
             'income',
             1000 + $i,
             'sn-a-'.$i,
@@ -484,7 +484,7 @@ it('keeps two IBAN-distinct payroll series isolated when both share a detected_n
             $this->db, $this->user, $this->account, $this->run,
             $date,
             320000, 'EUR', 320000, 'EUR',
-            'shared name', 'NL00EMPB0000000002',
+            'shared name', 'NL52EMPB0000000002',
             'income',
             2000 + $i,
             'sn-b-'.$i,
@@ -500,8 +500,8 @@ it('keeps two IBAN-distinct payroll series isolated when both share a detected_n
         ->orderBy('cluster_counterparty_key')
         ->get()->all();
     expect($afterFirstPass)->toHaveCount(2);
-    expect($afterFirstPass[0]->cluster_counterparty_key)->toBe('NL00EMPA0000000001');
-    expect($afterFirstPass[1]->cluster_counterparty_key)->toBe('NL00EMPB0000000002');
+    expect($afterFirstPass[0]->cluster_counterparty_key)->toBe('NL44EMPA0000000001');
+    expect($afterFirstPass[1]->cluster_counterparty_key)->toBe('NL52EMPB0000000002');
 
     // Approve both so a cadence flip pushes them through the
     // approved→cadence_changed seam (which is where the bug
@@ -517,7 +517,7 @@ it('keeps two IBAN-distinct payroll series isolated when both share a detected_n
     // but not for A.
     $this->db->connection()->table('transactions')
         ->where('user_id', $this->user->id)
-        ->where('counterparty_iban', 'NL00EMPB0000000002')
+        ->where('counterparty_iban', 'NL52EMPB0000000002')
         ->delete();
     $quarterlyStart = CarbonImmutable::parse('2025-06-01');
     for ($i = 0; $i < 4; $i++) {
@@ -526,7 +526,7 @@ it('keeps two IBAN-distinct payroll series isolated when both share a detected_n
             $this->db, $this->user, $this->account, $this->run,
             $date,
             320000, 'EUR', 320000, 'EUR',
-            'shared name', 'NL00EMPB0000000002',
+            'shared name', 'NL52EMPB0000000002',
             'income',
             3000 + $i,
             'sn-b-q-'.$i,
@@ -538,12 +538,12 @@ it('keeps two IBAN-distinct payroll series isolated when both share a detected_n
     /** @var RecurringSeries $employerA */
     $employerA = RecurringSeries::query()
         ->where('user_id', $this->user->id)
-        ->where('cluster_counterparty_key', 'NL00EMPA0000000001')
+        ->where('cluster_counterparty_key', 'NL44EMPA0000000001')
         ->firstOrFail();
     /** @var RecurringSeries $employerB */
     $employerB = RecurringSeries::query()
         ->where('user_id', $this->user->id)
-        ->where('cluster_counterparty_key', 'NL00EMPB0000000002')
+        ->where('cluster_counterparty_key', 'NL52EMPB0000000002')
         ->firstOrFail();
 
     expect($employerA->state)->toBe('approved');

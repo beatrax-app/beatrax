@@ -83,7 +83,7 @@ it('matches the snapshot of the parsed MT940 fixture (drift detector)', function
 
 it('pairs each :61: with the immediately following :86:', function (): void {
     $body = ":20:STMT-001\n:25:NL57ASNB0123456789\n:28C:1/1\n:60F:C260401EUR1000,00\n"
-        .":61:2604010401C100,00NTRFINV-001\n:86:100?20EREF+INV-001?32SPOTIFY AB?31NL00BANK0000000001\n"
+        .":61:2604010401C100,00NTRFINV-001\n:86:100?20EREF+INV-001?32SPOTIFY AB?31NL68BANK0000000001\n"
         .":61:2604020402D50,29NMSCFEE\n:86:Unstructured fee description\n"
         .":62F:C260430EUR1049,71\n-\n";
     $tmp = writeMt940Temp($body);
@@ -148,7 +148,7 @@ it('resolves the own IBAN with the AccountResolver', function (): void {
 
 it('cleans the counterparty name via AsnMt940CounterpartyCleaner before yielding', function (): void {
     $body = ":20:S\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
-        .":61:2604010401C100,00NTRFCUST\n:86:100?32005 SPOTIFY AB ABNANL2A?31NL00BANK0000000001\n"
+        .":61:2604010401C100,00NTRFCUST\n:86:100?32005 SPOTIFY AB ABNANL2A?31NL68BANK0000000001\n"
         .":62F:C260430EUR1100,00\n-\n";
     $tmp = writeMt940Temp($body);
 

@@ -31,7 +31,7 @@ beforeEach(function (): void {
         'name' => 'ASN account',
         'slug' => 'asn-idem',
         'kind' => 'asn',
-        'iban' => 'NL18ASNB0123459999',
+        'iban' => 'NL08ASNB0123459999',
         'default_currency' => 'EUR',
     ]);
 });

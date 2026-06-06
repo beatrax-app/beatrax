@@ -16,7 +16,7 @@ beforeEach(function (): void {
         'name' => 'ASN',
         'slug' => 'asn-ptype',
         'kind' => 'asn',
-        'iban' => 'NL57ASNB9999900001',
+        'iban' => 'NL56ASNB9999900001',
         'default_currency' => 'EUR',
     ]);
     $this->importRun = ImportRun::create([

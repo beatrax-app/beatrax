@@ -20,7 +20,7 @@ for ($i = 0; $i < 6; $i++) {
         'original_amount_minor' => 220000,
         'original_currency' => 'EUR',
         'counterparty_normalized' => 'employer a',
-        'counterparty_iban' => 'NL00EMPA0000000001',
+        'counterparty_iban' => 'NL44EMPA0000000001',
     ];
     $transactions[] = [
         'account_id' => null,
@@ -32,7 +32,7 @@ for ($i = 0; $i < 6; $i++) {
         'original_amount_minor' => 220000,
         'original_currency' => 'EUR',
         'counterparty_normalized' => 'employer b',
-        'counterparty_iban' => 'NL00EMPB0000000002',
+        'counterparty_iban' => 'NL52EMPB0000000002',
     ];
 }
 
@@ -44,7 +44,7 @@ return [
             [
                 'direction' => 'income',
                 'cadence' => 'monthly',
-                'counterparty_iban' => 'NL00EMPA0000000001',
+                'counterparty_iban' => 'NL44EMPA0000000001',
                 'latest_amount_minor' => 220000,
                 'currency' => 'EUR',
                 'monthly_equivalent_minor' => 220000,
@@ -52,7 +52,7 @@ return [
             [
                 'direction' => 'income',
                 'cadence' => 'monthly',
-                'counterparty_iban' => 'NL00EMPB0000000002',
+                'counterparty_iban' => 'NL52EMPB0000000002',
                 'latest_amount_minor' => 220000,
                 'currency' => 'EUR',
                 'monthly_equivalent_minor' => 220000,

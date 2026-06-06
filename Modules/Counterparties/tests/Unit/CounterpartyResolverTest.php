@@ -108,14 +108,14 @@ function makeCpResolverTx(int $accountId, ?int $userId = null, array $overrides 
 
 beforeEach(function (): void {
     $this->user = makeCpResolverUser('resolver-fixture');
-    $this->bank = makeCpResolverAccount($this->user, 'bank', 'NL12ASNB0123456789');
+    $this->bank = makeCpResolverAccount($this->user, 'bank', 'NL57ASNB0123456789');
 });
 
 it('Test 1 — step 1 self_account: routes the users own IBAN to type=self_account without writing a counterparty row', function (): void {
     $tx = makeCpResolverTx(
         accountId: $this->bank->id,
         userId: $this->user->id,
-        overrides: ['counterpartyIban' => 'NL12ASNB0123456789'],
+        overrides: ['counterpartyIban' => 'NL57ASNB0123456789'],
     );
 
     /** @var CounterpartyResolverService $resolver */
@@ -193,7 +193,7 @@ it('Test 4 — step 4 personal: Dutch IBAN + personal name on transfer_in resolv
         overrides: [
             'type' => 'transfer_in',
             'counterpartyName' => 'Maria van Buren',
-            'counterpartyIban' => 'NL12ABNA0123456789',
+            'counterpartyIban' => 'NL02ABNA0123456789',
         ],
     );
 
@@ -205,7 +205,7 @@ it('Test 4 — step 4 personal: Dutch IBAN + personal name on transfer_in resolv
     expect($dto->type)->toBe('personal');
     expect($dto->displayName)->toBe('Maria van Buren');
     expect($dto->slug)->toBe('maria-van-buren');
-    expect($dto->iban)->toBe('NL12ABNA0123456789');
+    expect($dto->iban)->toBe('NL02ABNA0123456789');
     expect($dto->slug)->not->toContain('nl12');
     expect($dto->slug)->not->toContain('abna');
 });
@@ -292,7 +292,7 @@ it('Test 8 — idempotency: resolving the same transaction twice returns the sam
 
 it('Test 9 — cross-user isolation: user As resolve does not touch user Bs counterparties', function (): void {
     $userB = makeCpResolverUser('resolver-other');
-    $userBBank = makeCpResolverAccount($userB, 'bank', 'NL12ASNB9999999999');
+    $userBBank = makeCpResolverAccount($userB, 'bank', 'NL08ASNB9999999999');
 
     DB::table('merchant_aliases')->insert([
         'user_id' => $this->user->id,

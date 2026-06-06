@@ -9,18 +9,18 @@ beforeEach(function (): void {
 });
 
 it('parses a structured GVC 005 SEPA direct-debit narrative', function (): void {
-    $content = '005?00DD?20EREF+INVOICE-2026-04?32SPOTIFY AB?31NL00BANK0000000001';
+    $content = '005?00DD?20EREF+INVOICE-2026-04?32SPOTIFY AB?31NL68BANK0000000001';
 
     $parsed = $this->parser->parse($content);
 
     expect($parsed->gvcCode)->toBe('005');
     expect($parsed->gvcKeywords['EREF'])->toBe('INVOICE-2026-04');
     expect($parsed->counterpartyName)->toBe('SPOTIFY AB');
-    expect($parsed->counterpartyIban)->toBe('NL00BANK0000000001');
+    expect($parsed->counterpartyIban)->toBe('NL68BANK0000000001');
 })->group('phase-2');
 
 it('concatenates ?32 and ?33 into a single counterparty name', function (): void {
-    $content = '100?32ALBERT HEIJN AMSTER?33DAM HOOFDDORPLEIN?31NL00BANK0000000002';
+    $content = '100?32ALBERT HEIJN AMSTER?33DAM HOOFDDORPLEIN?31NL41BANK0000000002';
 
     $parsed = $this->parser->parse($content);
 
@@ -67,10 +67,10 @@ it('treats an unstructured narrative (no leading GVC code) as raw description', 
 it('reassembles a multi-line :86: into a single Mt940Narrative', function (): void {
     // The lexer joins continuation lines with `\n`. The parser must scan
     // ?NN codes across line boundaries.
-    $content = "005?20EREF+INVOICE-2026-04\n?32SPOTIFY AB?31NL00BANK0000000001";
+    $content = "005?20EREF+INVOICE-2026-04\n?32SPOTIFY AB?31NL68BANK0000000001";
 
     $parsed = $this->parser->parse($content);
 
     expect($parsed->counterpartyName)->toBe('SPOTIFY AB');
-    expect($parsed->counterpartyIban)->toBe('NL00BANK0000000001');
+    expect($parsed->counterpartyIban)->toBe('NL68BANK0000000001');
 })->group('phase-2');

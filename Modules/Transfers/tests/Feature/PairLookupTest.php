@@ -51,7 +51,7 @@ beforeEach(function (): void {
         'name' => 'ASN other',
         'slug' => 'pl-asn-other',
         'kind' => 'asn',
-        'iban' => 'NL00ASNB9876543210',
+        'iban' => 'NL91ASNB9876543210',
         'default_currency' => 'EUR',
     ]);
 

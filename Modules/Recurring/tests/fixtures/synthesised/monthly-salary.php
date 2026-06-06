@@ -21,7 +21,7 @@ for ($i = 0; $i < 12; $i++) {
         'original_amount_minor' => 350000,
         'original_currency' => 'EUR',
         'counterparty_normalized' => 'acme bv',
-        'counterparty_iban' => 'NL00ACME0000000001',
+        'counterparty_iban' => 'NL20ACME0000000001',
     ];
 }
 
@@ -33,7 +33,7 @@ return [
             [
                 'direction' => 'income',
                 'cadence' => 'monthly',
-                'counterparty_iban' => 'NL00ACME0000000001',
+                'counterparty_iban' => 'NL20ACME0000000001',
                 'latest_amount_minor' => 350000,
                 'currency' => 'EUR',
                 'monthly_equivalent_minor' => 350000,

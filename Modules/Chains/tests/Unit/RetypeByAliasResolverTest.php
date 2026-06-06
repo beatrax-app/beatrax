@@ -245,7 +245,7 @@ it('skips rows whose alias points at a destination kind with no Account yet (the
         'name' => 'ASN-frank',
         'slug' => 'asn-frank',
         'kind' => 'bank',
-        'iban' => 'NL12ASNB1111111111',
+        'iban' => 'NL93ASNB1111111111',
         'default_currency' => 'EUR',
     ]);
     $run = ImportRun::query()->create([

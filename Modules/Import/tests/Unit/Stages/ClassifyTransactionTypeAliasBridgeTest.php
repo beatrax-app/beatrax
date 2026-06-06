@@ -182,7 +182,7 @@ it('returns unchanged when alias exists but user has no account of the target ki
         'name' => 'Only ASN',
         'slug' => 'alias-no-target-account-asn',
         'kind' => 'bank',
-        'iban' => 'NL12ASNB0000009999',
+        'iban' => 'NL21ASNB0000009999',
         'default_currency' => 'EUR',
     ]);
 

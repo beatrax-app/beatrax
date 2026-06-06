@@ -101,7 +101,7 @@ function asnCsvWithFourBranches(): string
         '04-02-2026,NL57ASNB0123456789,LU89751000135104200E,PayPal Europe S.a.r.l.,,,,EUR,887.01,EUR,-25.00,04-02-2026,04-02-2026,9714,BEA,901003,,\'PayPal funding pull\',3,\'Online\'',
         // Row 4 — self-account: counterparty IBAN belongs to user's
         // second ASN account (the savings account seeded in beforeEach)
-        '05-02-2026,NL57ASNB0123456789,NL57ASNB0987654321,Own savings,,,,EUR,862.01,EUR,-50.00,05-02-2026,05-02-2026,9714,OVB,901004,,\'OVERBOEKING NAAR EIGEN SPAREKENING\',3,\'Spaargeld\'',
+        '05-02-2026,NL57ASNB0123456789,NL09ASNB0987654321,Own savings,,,,EUR,862.01,EUR,-50.00,05-02-2026,05-02-2026,9714,OVB,901004,,\'OVERBOEKING NAAR EIGEN SPAREKENING\',3,\'Spaargeld\'',
     ];
 
     return $header."\n".implode("\n", $rows)."\n";
@@ -122,7 +122,7 @@ beforeEach(function (): void {
     $this->savingsAccount = makeCpStageAccount(
         $this->user,
         kind: 'asn',
-        iban: 'NL57ASNB0987654321',
+        iban: 'NL09ASNB0987654321',
         slug: 'asn-savings-cpstage',
         name: 'ASN Savings',
     );
@@ -237,7 +237,7 @@ it('Test 3 — self_account leg leaves transactions.counterparty_id NULL', funct
     // counterpartyId !== null.
     $selfLeg = Transaction::query()
         ->where('user_id', $this->user->id)
-        ->where('counterparty_iban', 'NL57ASNB0987654321')
+        ->where('counterparty_iban', 'NL09ASNB0987654321')
         ->first();
 
     expect($selfLeg)->not->toBeNull();
