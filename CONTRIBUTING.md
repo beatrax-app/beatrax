@@ -98,11 +98,16 @@ Blade, and test investment goes into backend correctness.
 1. Open the pull request against `main`.
 2. Fill in the PR template. CODEOWNERS is auto-configured and will
    request the right reviewer.
-3. Wait for CI to go green. Both the PHP 8.4 and PHP 8.5 quality jobs
-   must pass before review starts.
-4. Address review feedback inline; push fixups as new commits (no
+3. Add a line to the `## [Unreleased]` section of `CHANGELOG.md` for any
+   user-visible change (under `Added`, `Changed`, `Fixed`, `Removed`, or
+   `Performance`). `CHANGELOG.md` is the single source of truth for release
+   notes — the GitHub Release body is generated from it at tag time, so an
+   omitted entry simply will not appear in the release.
+4. Wait for CI to go green. The PHP 8.5 quality gate (Pint, Larastan
+   level 10, Pest) must pass before review starts.
+5. Address review feedback inline; push fixups as new commits (no
    force-push during review unless the reviewer asks for it).
-5. Once approved, the reviewer (or you, if self-merge is permitted)
+6. Once approved, the reviewer (or you, if self-merge is permitted)
    squash-merges. The head branch is auto-deleted after merge.
 
 ## What's in scope for v1.x contributions
