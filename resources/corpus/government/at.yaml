@@ -1,0 +1,11 @@
+# Government / public-agency classification rules — Austria.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "FINANZAMT"
+    name: "Finanzamt Österreich"
+  # ORF broadcasting fee (replaced GIS in 2024). Two-token form avoids
+  # matching bare "ORF" in media references.
+  - pattern: "regex:ORF[ -]BEITRAG"
+    name: "ORF-Beitrag"
+  - pattern: "RENTENVERSICHERUNG"
+    name: "Pensionsversicherung"

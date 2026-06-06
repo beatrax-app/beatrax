@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Slovakia.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "FINANCNA SPRAVA"
+    name: "Finančná správa"
+  - pattern: "SOCIALNA POISTOVNA"
+    name: "Sociálna poisťovňa"

@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Estonia.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "MAKSU- JA TOLLIAMET"
+    name: "Maksu- ja Tolliamet"
+  - pattern: "SOTSIAALKINDLUSTUSAMET"
+    name: "Sotsiaalkindlustusamet"

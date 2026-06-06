@@ -1,0 +1,8 @@
+# Government / public-agency classification rules — Denmark.
+# (The Danish media licence was abolished in 2022 — no DR Licens rule.)
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "SKATTESTYRELSEN"
+    name: "Skattestyrelsen"
+  - pattern: "GAELDSSTYRELSEN"
+    name: "Gældsstyrelsen"

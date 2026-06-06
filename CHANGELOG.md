@@ -22,10 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Government-agency and bank-fee classification now lives in a regex-capable,
   per-country YAML corpus (`resources/corpus/<type>/<country>.yaml`) instead of
   hardcoded Dutch keyword constants. Patterns may be literal substrings or a
-  `regex:` body, and the bundled set covers tax/social agencies across NL, DE,
-  FR, ES, IT, BE, and GB (e.g. Finanzamt, DGFiP/URSSAF, Agencia Tributaria,
-  Agenzia delle Entrate, HMRC, the German Rundfunkbeitrag via regex), with the
-  remaining EU member states, US, Canada, and Ukraine being filled in.
+  `regex:` body, and the bundled set covers tax / social-security / broadcast-fee
+  agencies across all 27 EU member states plus the UK, US, Canada, and Ukraine
+  (e.g. Finanzamt, DGFiP/URSSAF, HMRC, IRS, Canada Revenue Agency, the German
+  Rundfunkbeitrag). Patterns are collision-safe: risky short acronyms use
+  `regex:\b…\b` word boundaries or the agency's full name, and agencies whose
+  statement descriptors carry only a payment reference (not the agency name)
+  are deliberately omitted to avoid false positives.
 
 ### Changed
 

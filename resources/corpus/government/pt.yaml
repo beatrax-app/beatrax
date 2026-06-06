@@ -1,0 +1,8 @@
+# Government / public-agency classification rules — Portugal.
+# (Tax/"Finanças" is paid via Multibanco reference, rarely showing the
+# agency name on the descriptor — only the reliable Segurança Social is
+# listed; tax is better matched by counterparty IBAN.)
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "SEGURANCA SOCIAL"
+    name: "Segurança Social"

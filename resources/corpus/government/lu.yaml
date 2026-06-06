@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Luxembourg.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "ADMINISTRATION DES CONTRIBUTIONS"
+    name: "Administration des contributions directes"
+  - pattern: "regex:\\bCCSS\\b"
+    name: "Centre commun de la sécurité sociale"

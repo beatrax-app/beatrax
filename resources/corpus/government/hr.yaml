@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Croatia.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "POREZNA UPRAVA"
+    name: "Porezna uprava"
+  - pattern: "HRVATSKA RADIOTELEVIZIJA"
+    name: "HRT (pristojba)"

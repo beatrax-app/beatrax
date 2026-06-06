@@ -1,0 +1,13 @@
+# Government / public-agency classification rules — United States.
+# US federal payments use standardized, highly distinctive ACH descriptors.
+# Schema: see government/nl.yaml.
+entries:
+  # Outbound tax payment (IRS / EFTPS) — "IRS USATAXPYMT".
+  - pattern: "USATAXPYMT"
+    name: "IRS"
+  # Inbound tax refund — "IRS TREAS 310 TAX REF".
+  - pattern: "regex:IRS\\s+TREAS\\s+310"
+    name: "IRS (refund)"
+  # Inbound Social Security benefit — "SSA TREAS 310".
+  - pattern: "regex:SSA\\s+TREAS\\s+310"
+    name: "Social Security Administration"

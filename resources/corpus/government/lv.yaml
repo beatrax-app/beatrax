@@ -1,0 +1,6 @@
+# Government / public-agency classification rules — Latvia.
+# (Bare "VID" is dangerously ambiguous; use the full service name.)
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "VALSTS IENEMUMU DIENESTS"
+    name: "VID (Valsts ieņēmumu dienests)"

@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Romania.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "regex:\\bANAF\\b"
+    name: "ANAF"
+  - pattern: "ADMINISTRATIA FINANTELOR"
+    name: "ANAF"

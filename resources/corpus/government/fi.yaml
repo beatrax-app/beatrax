@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Finland.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "VEROHALLINTO"
+    name: "Verohallinto"
+  - pattern: "regex:\\bKELA\\b"
+    name: "Kela"

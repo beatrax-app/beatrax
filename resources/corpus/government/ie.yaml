@@ -1,0 +1,12 @@
+# Government / public-agency classification rules — Ireland.
+# Schema: see government/nl.yaml.
+entries:
+  # "REVENUE" alone is a common word; require the full body or ROS.
+  - pattern: "REVENUE COMMISSIONERS"
+    name: "Revenue"
+  - pattern: "regex:\\bROS\\b"
+    name: "Revenue (ROS)"
+  - pattern: "TV LICENCE"
+    name: "TV Licence"
+  - pattern: "MOTOR TAX"
+    name: "Motor Tax"
