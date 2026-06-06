@@ -9,11 +9,8 @@ use Modules\Core\Public\Events\UserInstalled;
 
 beforeEach(function (): void {
     $this->tmpRoot = sys_get_temp_dir().'/beatrax-corpus-'.bin2hex(random_bytes(6));
-    if (! is_dir($this->tmpRoot)) {
-        mkdir($this->tmpRoot, 0o755, true);
-    }
-    $this->corpusPath = $this->tmpRoot.'/merchant-mappings.yaml';
-    $this->heuristicsPath = $this->tmpRoot.'/built-in-heuristics.yaml';
+    $this->merchantsDir = $this->tmpRoot.'/merchants';
+    mkdir($this->merchantsDir, 0o755, true);
 
     // Three valid entries + one malformed (missing required `name`).
     $yaml = <<<'YAML'
@@ -33,22 +30,19 @@ entries:
   - pattern: "DELTA"
     contributor: "beatrax-bot"
 YAML;
-    file_put_contents($this->corpusPath, $yaml);
-    // Empty heuristics file.
-    file_put_contents($this->heuristicsPath, "entries: []\n");
+    file_put_contents($this->merchantsDir.'/nl.yaml', $yaml);
 
     /** @var ConfigRepository $config */
     $config = $this->app->make(ConfigRepository::class);
-    $config->set('community.corpus.bundled_path', $this->corpusPath);
-    $config->set('community.corpus.heuristics_path', $this->heuristicsPath);
+    $config->set('community.corpus.root', $this->tmpRoot);
 });
 
 afterEach(function (): void {
-    if (isset($this->corpusPath) && is_file($this->corpusPath)) {
-        @unlink($this->corpusPath);
-    }
-    if (isset($this->heuristicsPath) && is_file($this->heuristicsPath)) {
-        @unlink($this->heuristicsPath);
+    if (isset($this->merchantsDir) && is_dir($this->merchantsDir)) {
+        foreach (glob($this->merchantsDir.'/*.yaml') ?: [] as $file) {
+            @unlink($file);
+        }
+        @rmdir($this->merchantsDir);
     }
     if (isset($this->tmpRoot) && is_dir($this->tmpRoot)) {
         @rmdir($this->tmpRoot);
@@ -107,7 +101,7 @@ entries:
     name: "Charlie BV"
     contributor: "beatrax-bot"
 YAML;
-    file_put_contents($this->corpusPath, $updated);
+    file_put_contents($this->merchantsDir.'/nl.yaml', $updated);
 
     $events->dispatch(new UserInstalled($user->id));
 
@@ -121,10 +115,9 @@ YAML;
     expect($db->connection()->table('community_merchant_mappings')->whereNull('user_id')->count())->toBe(3);
 });
 
-it('tolerates a missing heuristics file without aborting the main corpus seed', function (): void {
-    /** @var ConfigRepository $config */
-    $config = $this->app->make(ConfigRepository::class);
-    $config->set('community.corpus.heuristics_path', $this->tmpRoot.'/does-not-exist.yaml');
+it('tolerates a malformed extra country file without aborting the main corpus seed', function (): void {
+    // A second, broken country file must not abort the seed of the valid one.
+    file_put_contents($this->merchantsDir.'/de.yaml', "entries:\n  - { this is : not valid : yaml ::");
 
     $user = makeCommunityTestUser('corpus-seed-d');
 

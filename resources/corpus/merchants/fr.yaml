@@ -1,0 +1,34 @@
+# Merchant corpus — France. region defaults to FR. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "CARREFOUR", name: "Carrefour", category: "Groceries" }
+  - { pattern: "E.LECLERC", name: "E.Leclerc", category: "Groceries" }
+  - { pattern: "LECLERC", name: "E.Leclerc", category: "Groceries" }
+  - { pattern: "INTERMARCHE", name: "Intermarché", category: "Groceries" }
+  - { pattern: "AUCHAN", name: "Auchan", category: "Groceries" }
+  - { pattern: "CASINO", name: "Casino", category: "Groceries" }
+  - { pattern: "MONOPRIX", name: "Monoprix", category: "Groceries" }
+  - { pattern: "FRANPRIX", name: "Franprix", category: "Groceries" }
+  - { pattern: "SUPER U", name: "Super U", category: "Groceries" }
+  - { pattern: "PICARD", name: "Picard", category: "Groceries" }
+  - { pattern: "TOTALENERGIES", name: "TotalEnergies", category: "Fuel" }
+  - { pattern: "EDF", name: "EDF", category: "Utilities" }
+  - { pattern: "ENGIE", name: "Engie", category: "Utilities" }
+  - { pattern: "FREE MOBILE", name: "Free", category: "Internet & Phone" }
+  - { pattern: "FREE TELECOM", name: "Free", category: "Internet & Phone" }
+  - { pattern: "ORANGE", name: "Orange", category: "Internet & Phone" }
+  - { pattern: "SFR", name: "SFR", category: "Internet & Phone" }
+  - { pattern: "BOUYGUES TELECOM", name: "Bouygues Telecom", category: "Internet & Phone" }
+  - { pattern: "SOSH", name: "Sosh", category: "Internet & Phone" }
+  - { pattern: "SNCF", name: "SNCF", category: "Public transport" }
+  - { pattern: "RATP", name: "RATP", category: "Public transport" }
+  - { pattern: "NAVIGO", name: "Navigo", category: "Public transport" }
+  - { pattern: "FNAC", name: "Fnac" }
+  - { pattern: "DARTY", name: "Darty" }
+  - { pattern: "CDISCOUNT", name: "Cdiscount" }
+  - { pattern: "LEROY MERLIN", name: "Leroy Merlin" }
+  - { pattern: "DECATHLON", name: "Decathlon" }
+  - { pattern: "AXA", name: "AXA", category: "Insurance" }
+  - { pattern: "MAIF", name: "MAIF", category: "Insurance" }
+  - { pattern: "MACIF", name: "Macif", category: "Insurance" }
+  - { pattern: "DELIVEROO", name: "Deliveroo", category: "Eating out" }
+  - { pattern: "VEOLIA", name: "Veolia", category: "Utilities" }

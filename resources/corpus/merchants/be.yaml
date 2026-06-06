@@ -1,0 +1,29 @@
+# Merchant corpus — Belgium. region defaults to BE. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "COLRUYT", name: "Colruyt", category: "Groceries" }
+  - { pattern: "DELHAIZE", name: "Delhaize", category: "Groceries" }
+  - { pattern: "CARREFOUR", name: "Carrefour", category: "Groceries" }
+  - { pattern: "ALDI", name: "Aldi", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "OKAY", name: "OKay", category: "Groceries" }
+  - { pattern: "SPAR", name: "Spar", category: "Groceries" }
+  - { pattern: "KRUIDVAT", name: "Kruidvat", category: "Groceries" }
+  - { pattern: "TOTALENERGIES", name: "TotalEnergies", category: "Fuel" }
+  - { pattern: 'regex:\bQ8\b', name: "Q8", category: "Fuel" }
+  - { pattern: "DATS 24", name: "DATS 24", category: "Fuel" }
+  - { pattern: "LUMINUS", name: "Luminus", category: "Utilities" }
+  - { pattern: "ENGIE ELECTRABEL", name: "Engie Electrabel", category: "Utilities" }
+  - { pattern: "PROXIMUS", name: "Proximus", category: "Internet & Phone" }
+  - { pattern: "TELENET", name: "Telenet", category: "Internet & Phone" }
+  - { pattern: 'regex:\bBASE\b', name: "BASE", category: "Internet & Phone" }
+  - { pattern: "ORANGE BELGIUM", name: "Orange Belgium", category: "Internet & Phone" }
+  - { pattern: "NMBS", name: "NMBS/SNCB", category: "Public transport" }
+  - { pattern: "SNCB", name: "NMBS/SNCB", category: "Public transport" }
+  - { pattern: "DE LIJN", name: "De Lijn", category: "Public transport" }
+  - { pattern: "STIB", name: "STIB/MIVB", category: "Public transport" }
+  - { pattern: "BOL.COM", name: "Bol.com" }
+  - { pattern: "COOLBLUE", name: "Coolblue" }
+  - { pattern: "MEDIAMARKT", name: "MediaMarkt" }
+  - { pattern: "AG INSURANCE", name: "AG Insurance", category: "Insurance" }
+  - { pattern: "TAKEAWAY", name: "Takeaway.com", category: "Eating out" }
+  - { pattern: "DELIVEROO", name: "Deliveroo", category: "Eating out" }

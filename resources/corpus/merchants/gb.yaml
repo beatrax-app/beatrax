@@ -1,0 +1,50 @@
+# Merchant corpus — United Kingdom. region defaults to GB. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "TESCO", name: "Tesco", category: "Groceries" }
+  - { pattern: "SAINSBURY", name: "Sainsbury's", category: "Groceries" }
+  - { pattern: "ASDA", name: "Asda", category: "Groceries" }
+  - { pattern: "MORRISONS", name: "Morrisons", category: "Groceries" }
+  - { pattern: "WAITROSE", name: "Waitrose", category: "Groceries" }
+  - { pattern: "MARKS&SPENCER", name: "Marks & Spencer", category: "Groceries" }
+  - { pattern: "MARKS AND SPENCER", name: "Marks & Spencer", category: "Groceries" }
+  - { pattern: "CO-OP", name: "Co-op", category: "Groceries" }
+  - { pattern: "ICELAND", name: "Iceland", category: "Groceries" }
+  - { pattern: "OCADO", name: "Ocado", category: "Groceries" }
+  - { pattern: 'regex:\bBP\b', name: "BP", category: "Fuel" }
+  - { pattern: "SHELL", name: "Shell", category: "Fuel" }
+  - { pattern: "ESSO", name: "Esso", category: "Fuel" }
+  - { pattern: "BRITISH GAS", name: "British Gas", category: "Utilities" }
+  - { pattern: "EDF ENERGY", name: "EDF", category: "Utilities" }
+  - { pattern: "OCTOPUS ENERGY", name: "Octopus Energy", category: "Utilities" }
+  - { pattern: "OVO ENERGY", name: "OVO", category: "Utilities" }
+  - { pattern: "EE LIMITED", name: "EE", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: "GIFFGAFF", name: "giffgaff", category: "Internet & Phone" }
+  - { pattern: "BT GROUP", name: "BT", category: "Internet & Phone" }
+  - { pattern: "SKY DIGITAL", name: "Sky", category: "Internet & Phone" }
+  - { pattern: "SKY SUBSCRIPTION", name: "Sky", category: "Internet & Phone" }
+  - { pattern: "VIRGIN MEDIA", name: "Virgin Media", category: "Internet & Phone" }
+  - { pattern: "PLUSNET", name: "Plusnet", category: "Internet & Phone" }
+  - { pattern: "TALKTALK", name: "TalkTalk", category: "Internet & Phone" }
+  - { pattern: "NOW TV", name: "NOW", category: "Streaming" }
+  - { pattern: "TFL", name: "Transport for London", category: "Public transport" }
+  - { pattern: "TRAINLINE", name: "Trainline", category: "Public transport" }
+  - { pattern: "ARGOS", name: "Argos" }
+  - { pattern: "JOHN LEWIS", name: "John Lewis" }
+  - { pattern: "CURRYS", name: "Currys" }
+  - { pattern: "BOOTS", name: "Boots" }
+  - { pattern: "SCREWFIX", name: "Screwfix" }
+  - { pattern: "PRIMARK", name: "Primark" }
+  - { pattern: "ASOS", name: "ASOS" }
+  - { pattern: "MONZO", name: "Monzo" }
+  - { pattern: "STARLING", name: "Starling Bank" }
+  - { pattern: "ADMIRAL", name: "Admiral", category: "Insurance" }
+  - { pattern: "AVIVA", name: "Aviva", category: "Insurance" }
+  - { pattern: "DIRECT LINE", name: "Direct Line", category: "Insurance" }
+  - { pattern: "JUST EAT", name: "Just Eat", category: "Eating out" }
+  - { pattern: "DELIVEROO", name: "Deliveroo", category: "Eating out" }
+  - { pattern: "GREGGS", name: "Greggs", category: "Eating out" }
+  - { pattern: "COSTA COFFEE", name: "Costa", category: "Eating out" }
+  - { pattern: "PURE GYM", name: "PureGym", category: "Memberships" }
+  - { pattern: "PUREGYM", name: "PureGym", category: "Memberships" }
+  - { pattern: "THE GYM GROUP", name: "The Gym Group", category: "Memberships" }

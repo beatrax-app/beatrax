@@ -1,0 +1,16 @@
+# Merchant corpus — Czechia. region defaults to CZ. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "ALBERT", name: "Albert", category: "Groceries" }
+  - { pattern: "KAUFLAND", name: "Kaufland", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "BILLA", name: "Billa", category: "Groceries" }
+  - { pattern: "TESCO", name: "Tesco", category: "Groceries" }
+  - { pattern: 'regex:\bMOL\b', name: "MOL", category: "Fuel" }
+  - { pattern: "BENZINA", name: "Orlen Benzina", category: "Fuel" }
+  - { pattern: 'regex:\bO2\b', name: "O2", category: "Internet & Phone" }
+  - { pattern: "T-MOBILE", name: "T-Mobile", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: "CESKE DRAHY", name: "České dráhy", category: "Public transport" }
+  - { pattern: "ALZA", name: "Alza" }
+  - { pattern: "ROHLIK", name: "Rohlik", category: "Groceries" }
+  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }

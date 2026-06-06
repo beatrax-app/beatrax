@@ -1,0 +1,17 @@
+# Merchant corpus — Ireland. region defaults to IE. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "TESCO", name: "Tesco", category: "Groceries" }
+  - { pattern: "DUNNES", name: "Dunnes Stores", category: "Groceries" }
+  - { pattern: "SUPERVALU", name: "SuperValu", category: "Groceries" }
+  - { pattern: "ALDI", name: "Aldi", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "CENTRA", name: "Centra", category: "Groceries" }
+  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
+  - { pattern: "APPLEGREEN", name: "Applegreen", category: "Fuel" }
+  - { pattern: "ELECTRIC IRELAND", name: "Electric Ireland", category: "Utilities" }
+  - { pattern: "BORD GAIS", name: "Bord Gáis Energy", category: "Utilities" }
+  - { pattern: 'regex:\bEIR\b', name: "eir", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: "THREE", name: "Three", category: "Internet & Phone" }
+  - { pattern: "LEAP CARD", name: "Leap Card", category: "Public transport" }
+  - { pattern: "IRISH RAIL", name: "Irish Rail", category: "Public transport" }

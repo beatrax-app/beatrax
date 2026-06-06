@@ -1,0 +1,28 @@
+# Merchant corpus — Italy. region defaults to IT. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "ESSELUNGA", name: "Esselunga", category: "Groceries" }
+  - { pattern: "CONAD", name: "Conad", category: "Groceries" }
+  - { pattern: "COOP", name: "Coop", category: "Groceries" }
+  - { pattern: "CARREFOUR", name: "Carrefour", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "EUROSPIN", name: "Eurospin", category: "Groceries" }
+  - { pattern: 'regex:\bPAM\b', name: "Pam Panorama", category: "Groceries" }
+  - { pattern: "ENI STATION", name: "Eni Station", category: "Fuel" }
+  - { pattern: 'regex:\bQ8\b', name: "Q8", category: "Fuel" }
+  - { pattern: "ENEL ENERGIA", name: "Enel", category: "Utilities" }
+  - { pattern: "A2A", name: "A2A", category: "Utilities" }
+  - { pattern: "HERA", name: "Hera", category: "Utilities" }
+  - { pattern: 'regex:\bTIM\b', name: "TIM", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: "WINDTRE", name: "WindTre", category: "Internet & Phone" }
+  - { pattern: "FASTWEB", name: "Fastweb", category: "Internet & Phone" }
+  - { pattern: "TRENITALIA", name: "Trenitalia", category: "Public transport" }
+  - { pattern: "ITALO", name: "Italo", category: "Public transport" }
+  - { pattern: "ATM MILANO", name: "ATM Milano", category: "Public transport" }
+  - { pattern: "MEDIAWORLD", name: "MediaWorld" }
+  - { pattern: "UNIEURO", name: "Unieuro" }
+  - { pattern: "GENERALI", name: "Generali", category: "Insurance" }
+  - { pattern: "UNIPOLSAI", name: "UnipolSai", category: "Insurance" }
+  - { pattern: "GLOVO", name: "Glovo", category: "Eating out" }
+  - { pattern: "JUST EAT", name: "Just Eat", category: "Eating out" }
+  - { pattern: "DELIVEROO", name: "Deliveroo", category: "Eating out" }

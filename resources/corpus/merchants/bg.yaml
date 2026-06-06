@@ -1,0 +1,13 @@
+# Merchant corpus — Bulgaria. region defaults to BG. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "KAUFLAND", name: "Kaufland", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "BILLA", name: "Billa", category: "Groceries" }
+  - { pattern: "FANTASTICO", name: "Fantastico", category: "Groceries" }
+  - { pattern: "LUKOIL", name: "Lukoil", category: "Fuel" }
+  - { pattern: 'regex:\bOMV\b', name: "OMV", category: "Fuel" }
+  - { pattern: 'regex:\bA1\b', name: "A1", category: "Internet & Phone" }
+  - { pattern: "VIVACOM", name: "Vivacom", category: "Internet & Phone" }
+  - { pattern: "YETTEL", name: "Yettel", category: "Internet & Phone" }
+  - { pattern: "GLOVO", name: "Glovo", category: "Eating out" }
+  - { pattern: "EMAG", name: "eMAG" }

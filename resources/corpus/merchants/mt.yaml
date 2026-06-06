@@ -1,0 +1,10 @@
+# Merchant corpus — Malta. region defaults to MT. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "PAVI", name: "Pavi", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "WELBEE", name: "Welbee's", category: "Groceries" }
+  - { pattern: "GO PLC", name: "GO", category: "Internet & Phone" }
+  - { pattern: "EPIC", name: "Epic", category: "Internet & Phone" }
+  - { pattern: "MELITA", name: "Melita", category: "Internet & Phone" }
+  - { pattern: "TALLINJA", name: "Tallinja", category: "Public transport" }
+  - { pattern: "BOLT FOOD", name: "Bolt Food", category: "Eating out" }

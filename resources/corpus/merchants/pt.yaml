@@ -1,0 +1,14 @@
+# Merchant corpus — Portugal. region defaults to PT. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "CONTINENTE", name: "Continente", category: "Groceries" }
+  - { pattern: "PINGO DOCE", name: "Pingo Doce", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "MINIPRECO", name: "Minipreço", category: "Groceries" }
+  - { pattern: "GALP", name: "Galp", category: "Fuel" }
+  - { pattern: "REPSOL", name: "Repsol", category: "Fuel" }
+  - { pattern: 'regex:\bEDP\b', name: "EDP", category: "Utilities" }
+  - { pattern: 'regex:\bMEO\b', name: "MEO", category: "Internet & Phone" }
+  - { pattern: 'regex:\bNOS\b', name: "NOS", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: "CP COMBOIOS", name: "CP", category: "Public transport" }
+  - { pattern: "VIA VERDE", name: "Via Verde", category: "Public transport" }

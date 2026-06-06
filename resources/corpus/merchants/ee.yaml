@@ -1,0 +1,12 @@
+# Merchant corpus — Estonia. region defaults to EE. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "RIMI", name: "Rimi", category: "Groceries" }
+  - { pattern: "MAXIMA", name: "Maxima", category: "Groceries" }
+  - { pattern: "SELVER", name: "Selver", category: "Groceries" }
+  - { pattern: "COOP", name: "Coop", category: "Groceries" }
+  - { pattern: "PRISMA", name: "Prisma", category: "Groceries" }
+  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
+  - { pattern: "TELIA", name: "Telia", category: "Internet & Phone" }
+  - { pattern: "ELISA", name: "Elisa", category: "Internet & Phone" }
+  - { pattern: "TELE2", name: "Tele2", category: "Internet & Phone" }
+  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }

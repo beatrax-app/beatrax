@@ -30,6 +30,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   statement descriptors carry only a payment reference (not the agency name)
   are deliberately omitted to avoid false positives.
 
+- The bundled merchant corpus is reorganised into per-country files
+  (`resources/corpus/merchants/<country>.yaml`, region inferred from filename)
+  and expanded to ~600 merchants across all 27 EU member states plus the UK,
+  US, Canada, and Ukraine — supermarkets, fuel/energy, telecom, streaming,
+  transport, retail, insurance, and food delivery, with pan-European
+  subscriptions and payment-facilitator prefixes (`PAYPAL *`, `GOOGLE *`,
+  `AMZN MKTP`) in `merchants/eu.yaml`. Merchant patterns support the same
+  `regex:` prefix as the rest of the corpus, used to give collision-prone short
+  brand tokens (DIA, ICA, NOS, TIM, …) word boundaries so they no longer match
+  inside ordinary words.
+
 ### Changed
 
 - User-facing copy and the README now describe beatrax as a generic European

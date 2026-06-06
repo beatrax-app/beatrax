@@ -1,0 +1,11 @@
+# Merchant corpus — Cyprus. region defaults to CY. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "ALPHAMEGA", name: "AlphaMega", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "PAPANTONIOU", name: "Papantoniou", category: "Groceries" }
+  - { pattern: "PETROLINA", name: "Petrolina", category: "Fuel" }
+  - { pattern: "CYTA", name: "Cyta", category: "Internet & Phone" }
+  - { pattern: "EPIC", name: "Epic", category: "Internet & Phone" }
+  - { pattern: "PRIMETEL", name: "PrimeTel", category: "Internet & Phone" }
+  - { pattern: "FOODY", name: "Foody", category: "Eating out" }
+  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }
