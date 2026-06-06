@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Malta.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "COMMISSIONER FOR REVENUE"
+    name: "Commissioner for Tax and Customs"
+  - pattern: "COMMISSIONER FOR TAX"
+    name: "Commissioner for Tax and Customs"

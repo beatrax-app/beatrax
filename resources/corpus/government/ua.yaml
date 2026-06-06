@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Ukraine.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "ПОДАТКОВА"
+    name: "Державна податкова служба"
+  - pattern: "ПЕНСІЙНИЙ ФОНД"
+    name: "Пенсійний фонд України"

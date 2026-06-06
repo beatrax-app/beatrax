@@ -1,0 +1,9 @@
+# Government / public-agency classification rules — Sweden.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "SKATTEVERKET"
+    name: "Skatteverket"
+  - pattern: "KRONOFOGDEN"
+    name: "Kronofogden"
+  - pattern: "regex:\\bCSN\\b"
+    name: "CSN (studiestöd)"

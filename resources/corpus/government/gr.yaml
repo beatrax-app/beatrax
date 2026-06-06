@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Greece.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "regex:\\bAADE\\b"
+    name: "ΑΑΔΕ (AADE)"
+  - pattern: "regex:\\bEFKA\\b"
+    name: "e-EFKA"

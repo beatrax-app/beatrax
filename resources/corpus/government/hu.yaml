@@ -1,0 +1,6 @@
+# Government / public-agency classification rules — Hungary.
+# (Bare "NAV" collides with navigation/other text; use the full name.)
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "NEMZETI ADO"
+    name: "NAV (Nemzeti Adó- és Vámhivatal)"

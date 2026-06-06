@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Poland.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "URZAD SKARBOWY"
+    name: "Urząd Skarbowy"
+  - pattern: "regex:\\bZUS\\b"
+    name: "ZUS"
