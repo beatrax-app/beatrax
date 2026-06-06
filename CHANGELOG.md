@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   upgrade (the OAuth secrets store's per-inbox map is now typed with the
   array-key it actually uses), and cap phpstan's worker count so the quality
   gate runs deterministically in the Docker toolchain.
+- The Docker dev toolchain now points the Pest/PHPUnit suite at the isolated
+  `sqlite_testing` connection instead of the WAL-configured `sqlite`
+  connection, so the full test suite runs cleanly in the container instead of
+  failing thousands of tests on a `RefreshDatabase` isolation clash.
 
 ## [1.1.1] - 2026-06-06
 
