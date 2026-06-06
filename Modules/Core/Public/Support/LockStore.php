@@ -21,7 +21,7 @@ use RuntimeException;
  *
  * The store name comes from `config('cache.locks_store')`: `database` in
  * shipped builds (SQLite-backed `cache_locks` table, no Redis daemon) and
- * `redis` on the developer's Herd box. `Cache::store()` resolves a named store
+ * `redis` on the developer's local dev box. `Cache::store()` resolves a named store
  * from `config('cache.stores')`.
  */
 final class LockStore

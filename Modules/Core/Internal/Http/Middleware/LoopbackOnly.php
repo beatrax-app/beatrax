@@ -18,7 +18,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * keeps CLI invocations and Pest fixtures (which do not populate the var
  * unless explicitly told to) running, but it also means a production listener
  * MUST always set `SERVER_ADDR` for the loopback guard to be effective.
- * Laravel Herd and nginx both do this by default; a custom php-fpm dispatcher
+ * Most web servers (nginx, Apache) do this by default; a custom php-fpm dispatcher
  * may not.
  *
  * Loopback detection accepts:

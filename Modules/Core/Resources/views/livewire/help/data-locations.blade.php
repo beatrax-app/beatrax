@@ -30,7 +30,7 @@
     The copy-to-clipboard buttons live as a per-row Alpine island so
     no round-trip is needed; the `navigator.clipboard.writeText`
     promise is best-effort (some browsers gate it on https + user
-    activation, both of which the Herd dev environment + a button
+    activation, both of which the local dev environment + a button
     click satisfy).
 --}}
 <div class="help-locations" data-testid="help-data-locations">

@@ -17,7 +17,7 @@ When a user has `is_developer = true`:
   become accessible. Each renders the relevant live signal from the running app.
 - **Doctor panel** — `/dev/doctor` runs `beatrax:doctor` and parses its output into a
   pass / warn / fail breakdown.
-- **Horizon iframe** — when `BEATRAX_RUNTIME=herd` is set (i.e. the local Herd dev
+- **Horizon iframe** — when `BEATRAX_RUNTIME=local` is set (i.e. the local Docker dev
   environment, not the shipped desktop bundle), the embedded Horizon dashboard renders
   under `/dev/horizon`. The shipped bundle does not ship Redis or Horizon, so this
   surface is intentionally absent there.

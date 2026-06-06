@@ -5,21 +5,19 @@ in the order they tend to bite.
 
 ## "PHP version mismatch" when running tests
 
-The project is pinned to PHP 8.5 for development. If `composer install` or `php artisan
-test` complains about a version constraint, Herd is most likely serving an older PHP.
+The project is pinned to PHP 8.5 for development. If `composer install` or `artisan
+test` complains about a version constraint, the toolchain is most likely resolving an
+older PHP than the Docker image targets.
 
 ```sh
-# Confirm what Herd is using inside this directory
-herd which-php
+# Confirm what the Docker image resolves to
+docker compose run --rm php php --version
 
-# Confirm what the CLI on PATH resolves to
-php --version
-
-# Both should report 8.5.x
+# Should report 8.5.x
 ```
 
-If Herd reports 8.4 or 8.3, set the per-directory PHP version through Herd's UI under
-Sites → beatrax → PHP Version, or run `herd use 8.5` in the project directory.
+If it reports 8.4 or 8.3, the image is stale — rebuild it with `docker compose build
+--no-cache php` so it picks up the pinned `php:8.5-cli` base.
 
 The CI matrix runs both 8.4 and 8.5, so code that requires 8.5-only constructs (`array
 unpacking with string keys`, etc.) breaks the 8.4 axis even if it runs locally on 8.5.
@@ -29,17 +27,17 @@ the suite — it surfaces accidental 8.5-only syntax in seconds.
 ## "Class 'Sodium' not found" / Ed25519 verification fails
 
 The auto-update path verifies signed manifests via libsodium's bundled functions. PHP
-8.4+ ships libsodium in the core distribution, but some Herd installs end up with the
-extension disabled. Check:
+8.4+ ships libsodium in the core distribution, and the Docker image installs it
+explicitly. Check:
 
 ```sh
-php -m | grep -i sodium
+docker compose run --rm php php -m | grep -i sodium
 # Expected: sodium
 ```
 
-If the extension is missing, re-install Herd's PHP via its UI (Settings → PHP →
-Reinstall). The Homebrew PHP build does not ship the same sodium binding, so do not
-substitute it in.
+If the extension is missing, the image is stale or the extension install step in
+`docker/php8.5/Dockerfile` was edited — rebuild with `docker compose build --no-cache
+php`.
 
 ## NativePHP build fails — no 8.5 binary
 
@@ -96,9 +94,8 @@ oxide plugin) — a botched git merge can leave that file pointing at the v3 plu
 ## OAuth callback rejected by Google / Microsoft
 
 The OAuth dance uses the RFC 8252 loopback IP scheme
-(`http://127.0.0.1:PORT/oauth/callback/{provider}`) rather than the Herd-served
-`https://beatrax.test/` host, because both providers reject `*.test` subdomains as
-redirect URIs.
+(`http://127.0.0.1:PORT/oauth/callback/{provider}`) rather than any `*.test`
+host, because both providers reject `*.test` subdomains as redirect URIs.
 
 If a freshly-registered OAuth client rejects the callback, the registered redirect URI
 likely still names `https://beatrax.test/...`. Re-register the URI as

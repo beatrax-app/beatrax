@@ -2,7 +2,7 @@
 #
 # Dev-only PHP 8.5 toolchain for running the CI gates (Pint, Larastan,
 # Pest) without installing PHP on the host. The shipped app runs via
-# NativePHP / Laravel Herd — this image is NOT a production runtime, it
+# NativePHP — this image is NOT a production runtime, it
 # only exists so the quality gates and the queue-worker behaviour can be
 # exercised locally on the same PHP version the bundle targets.
 FROM php:8.5-cli

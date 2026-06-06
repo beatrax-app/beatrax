@@ -79,7 +79,7 @@ through the `version` key in `config/nativephp.php`, which reads
 `env('NATIVEPHP_APP_VERSION', '0.0.0-dev')`.
 
 The default of `0.0.0-dev` exists so that any build produced outside the
-release pipeline — a local Herd build, a developer dry-run, anything that
+release pipeline — a local dev build, a developer dry-run, anything that
 does not set the env var — self-identifies as a dev build. There is no
 ambiguity between "this came off the release line" and "this came off my
 laptop" because the version string itself encodes which path produced the

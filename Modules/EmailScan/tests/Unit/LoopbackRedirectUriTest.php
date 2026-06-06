@@ -46,8 +46,8 @@ it('falls back to app.url port when host is localhost and port is present', func
         ->toBe('http://127.0.0.1:9999/oauth/callback/microsoft');
 });
 
-it('ignores app.url host/scheme and uses port 8000 when app.url is a Herd .test domain', function (): void {
-    // The Herd case from WR-01: app.url is https://beatrax.test, but the
+it('ignores app.url host/scheme and uses port 8000 when app.url is a .test domain', function (): void {
+    // The .test case from WR-01: app.url is https://beatrax.test, but the
     // OAuth callback MUST land on the loopback IP (both providers reject
     // .test redirects). Default to 8000 unless OAUTH_LOOPBACK_PORT is set.
     $config = new Repository([

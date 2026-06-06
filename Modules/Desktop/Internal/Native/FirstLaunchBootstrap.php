@@ -27,7 +27,7 @@ use Modules\Core\Public\Services\UserDataPathService;
  *
  * The shipped bundle holds its SQLite file under the
  * `UserDataPathService`-resolved path (NATIVEPHP_STORAGE_PATH-rooted in
- * the packaged build, project-rooted under Herd). The bootstrap never
+ * the packaged build, project-rooted in local dev). The bootstrap never
  * calls `database_path()` / `storage_path()` / `base_path()` directly —
  * the `noStoragePathHardCodedOutsideUserDataPathService` arch invariant
  * forbids it.
@@ -52,7 +52,7 @@ final class FirstLaunchBootstrap
      * The canonical SQLite path the bundled app reads + writes.
      *
      * Routed through `UserDataPathService` so the packaged build
-     * (NATIVEPHP_STORAGE_PATH set) and Herd development (env unset)
+     * (NATIVEPHP_STORAGE_PATH set) and local development (env unset)
      * both resolve correctly.
      */
     public function databasePath(): string

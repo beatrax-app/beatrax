@@ -20,7 +20,7 @@ use Modules\Core\Public\Services\UserDataPathService;
  *    (NATIVEPHP_STORAGE_PATH is itself the storage root).
  *  - UserDataPathService::secretsPath() resolves to <tmp>/app/secrets.
  *  - With NATIVEPHP_STORAGE_PATH cleared, every accessor resolves to the
- *    project-rooted paths used in Herd development (A2 regression guard).
+ *    project-rooted paths used in local development (A2 regression guard).
  */
 
 beforeEach(function (): void {
@@ -151,7 +151,7 @@ it('resolves the OAuth secrets path under the simulated storage root', function 
 });
 
 it('resolves to today\'s project-rooted paths when no NativePHP storage env is set', function (): void {
-    // A2 / Herd-parity regression guard: clear the env var and assert the
+    // A2 / local-dev-parity regression guard: clear the env var and assert the
     // accessors stay byte-identical to today's project-rooted helpers, so
     // a future refactor cannot silently shift the dev-mode paths.
     putenv('NATIVEPHP_STORAGE_PATH');

@@ -236,7 +236,7 @@ Schedule::call(function (Dispatcher $bus, ScenarioQuery $scenarioQuery): void {
 // not apply here (the rule is scoped via ->not->toBeUsedIn('Modules')).
 //
 // 03:00 wall-clock window: late enough that an interactive session
-// (Herd + Livewire dev loop) has stopped writing for the day; early
+// (local dev + Livewire dev loop) has stopped writing for the day; early
 // enough that a launchd-fired schedule:work picks it up well before
 // the next morning's first dashboard load.
 //

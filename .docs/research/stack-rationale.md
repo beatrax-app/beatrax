@@ -150,8 +150,8 @@ drops both because:
 - `Cache::lock()` against the database driver preserves
   `ShouldBeUniqueUntilProcessing` semantics for the chain-resolution job.
 
-Horizon stays available for the Herd-served development runtime behind a
-`DIEDERIK_RUNTIME=herd` feature flag — the same code paths run, the dev box
+Horizon stays available for the local development runtime behind a
+`DIEDERIK_RUNTIME=local` feature flag — the same code paths run, the dev box
 gets the dashboard, the shipped bundle stays slim.
 
 Canonical decision: [ADR 0007 — Database queue driver](../adr/0007-database-queue-driver.md).

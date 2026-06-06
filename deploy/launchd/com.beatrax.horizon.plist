@@ -14,12 +14,12 @@
     install time (NEVER hard-coded; the substitution runs against the
     user's actual PHP binary + project root):
 
-      {{ABS_PHP_BINARY}}    → PHP_BINARY constant (e.g. /Applications/Herd.app/Contents/Resources/php83/bin/php)
-      {{ABS_PROJECT_ROOT}}  → base_path() (e.g. /Users/<you>/code/beatrax)
+      {{ABS_PHP_BINARY}}    → PHP_BINARY constant (e.g. /usr/local/bin/php)
+      {{ABS_PROJECT_ROOT}}  → base_path() (e.g. /Users/<you>/beatrax)
 
     Crash-loop guard: ThrottleInterval=10 prevents launchd from
     re-spawning the process more than once per 10 seconds. A genuinely
-    broken plist (PHP_BINARY pointing at a stale Herd version, project
+    broken plist (PHP_BINARY pointing at a stale PHP version, project
     root not present) therefore visibly throttles in `launchctl print`
     rather than burning CPU.
 

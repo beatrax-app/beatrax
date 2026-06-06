@@ -24,7 +24,7 @@ It is **not** the right tool for:
 
 ## Prerequisites
 
-- Shell access to the machine running beatrax (the developer machine under Herd, or
+- Shell access to the machine running beatrax (the developer's local dev machine, or
   the host where the desktop bundle's data directory lives).
 - The username (not the email) of the account to reset.
 - A new password to set. The command prompts for one if you do not supply it.

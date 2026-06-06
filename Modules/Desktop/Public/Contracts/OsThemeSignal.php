@@ -23,7 +23,7 @@ namespace Modules\Desktop\Public\Contracts;
  *     layout falls through to the client-side `prefers-color-scheme`
  *     pre-paint script — the script's `matchMedia` read is the
  *     authoritative source in this no-signal case.
- *   - "no binding registered": running under Herd, or before the
+ *   - "no binding registered": running in local dev, or before the
  *     Desktop provider is registered. Callers must check
  *     `app()->bound(OsThemeSignal::class)` before resolving; the
  *     absence of a binding IS itself the no-signal signal.
