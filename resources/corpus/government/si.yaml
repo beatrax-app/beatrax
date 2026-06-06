@@ -1,0 +1,9 @@
+# Government / public-agency classification rules — Slovenia.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "regex:\\bFURS\\b"
+    name: "FURS (finančna uprava)"
+  - pattern: "RTV PRISPEVEK"
+    name: "RTV Slovenija (prispevek)"
+  - pattern: "regex:\\bZPIZ\\b"
+    name: "ZPIZ (pokojninska)"

@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Czechia.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "FINANCNI URAD"
+    name: "Finanční úřad"
+  - pattern: "regex:\\bCSSZ\\b"
+    name: "ČSSZ"

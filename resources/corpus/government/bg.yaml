@@ -1,0 +1,6 @@
+# Government / public-agency classification rules — Bulgaria.
+# (Bare "NRA"/"НАП" are risky; use the full agency name.)
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "НАЦИОНАЛНА АГЕНЦИЯ ЗА ПРИХОДИТЕ"
+    name: "НАП (NRA)"

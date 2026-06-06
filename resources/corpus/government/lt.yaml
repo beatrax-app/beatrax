@@ -1,0 +1,8 @@
+# Government / public-agency classification rules — Lithuania.
+# (Bare "VMI" is too ambiguous; use the full inspectorate name.)
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "VALSTYBINE MOKESCIU INSPEKCIJA"
+    name: "VMI (mokesčių inspekcija)"
+  - pattern: "regex:\\bSODRA\\b"
+    name: "Sodra"

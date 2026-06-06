@@ -1,0 +1,9 @@
+# Government / public-agency classification rules — Canada.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "CANADA REVENUE"
+    name: "Canada Revenue Agency"
+  # Inbound federal benefit credits (Canada Child Benefit, GST/HST credit,
+  # Canada Workers Benefit) — "CANADA FED" / "CANADA PRO" / "CANADA FPT".
+  - pattern: "regex:CANADA\\s+(FED|PRO|FPT)"
+    name: "Canada Revenue Agency (benefit)"
