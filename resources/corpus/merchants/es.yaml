@@ -1,0 +1,29 @@
+# Merchant corpus — Spain. region defaults to ES. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "MERCADONA", name: "Mercadona", category: "Groceries" }
+  - { pattern: "CARREFOUR", name: "Carrefour", category: "Groceries" }
+  - { pattern: 'regex:\bDIA\b', name: "Dia", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "EROSKI", name: "Eroski", category: "Groceries" }
+  - { pattern: "ALCAMPO", name: "Alcampo", category: "Groceries" }
+  - { pattern: "CONSUM", name: "Consum", category: "Groceries" }
+  - { pattern: "EL CORTE INGLES", name: "El Corte Inglés", category: "Groceries" }
+  - { pattern: "REPSOL", name: "Repsol", category: "Fuel" }
+  - { pattern: "CEPSA", name: "Cepsa", category: "Fuel" }
+  - { pattern: "IBERDROLA", name: "Iberdrola", category: "Utilities" }
+  - { pattern: "ENDESA", name: "Endesa", category: "Utilities" }
+  - { pattern: "NATURGY", name: "Naturgy", category: "Utilities" }
+  - { pattern: "MOVISTAR", name: "Movistar", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: "ORANGE", name: "Orange", category: "Internet & Phone" }
+  - { pattern: "YOIGO", name: "Yoigo", category: "Internet & Phone" }
+  - { pattern: "MASMOVIL", name: "MásMóvil", category: "Internet & Phone" }
+  - { pattern: "RENFE", name: "Renfe", category: "Public transport" }
+  - { pattern: "EMT MADRID", name: "EMT Madrid", category: "Public transport" }
+  - { pattern: "CABIFY", name: "Cabify", category: "Public transport" }
+  - { pattern: "ZARA", name: "Zara" }
+  - { pattern: "PCCOMPONENTES", name: "PcComponentes" }
+  - { pattern: "LEROY MERLIN", name: "Leroy Merlin" }
+  - { pattern: "MAPFRE", name: "Mapfre", category: "Insurance" }
+  - { pattern: "GLOVO", name: "Glovo", category: "Eating out" }
+  - { pattern: "JUST EAT", name: "Just Eat", category: "Eating out" }

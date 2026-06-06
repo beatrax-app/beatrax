@@ -117,6 +117,11 @@ final class MerchantNameResolver
             return $communityGeneralized;
         }
 
+        $communityRegex = $this->corpus->lookupRegex($rawDescription);
+        if ($communityRegex !== null) {
+            return $communityRegex;
+        }
+
         return null;
     }
 }

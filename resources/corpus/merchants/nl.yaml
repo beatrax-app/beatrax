@@ -1,0 +1,47 @@
+# Merchant corpus — Netherlands.
+#
+# Seeded into the global tier of the community_merchant_mappings table on
+# install. Region defaults to NL (this filename); contributor defaults to
+# "beatrax-bot". Patterns are case-insensitive substrings unless prefixed
+# with `regex:` (see CorpusPatternMatcher).
+#
+# Schema per entry:
+#   pattern   string  required — statement-descriptor substring or regex: body
+#   name      string  required — friendly merchant name
+#   category  string  optional — a category in the default tree
+#   region    string  optional — overrides the filename-derived country
+#   contributor string optional — provenance (defaults to beatrax-bot)
+entries:
+  - { pattern: "ALBERT HEIJN", name: "Albert Heijn", category: "Groceries" }
+  - { pattern: "JUMBO", name: "Jumbo", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "ALDI", name: "Aldi", category: "Groceries" }
+  - { pattern: "PLUS SUPERMARKT", name: "Plus", category: "Groceries" }
+  - { pattern: "DIRK VAN DEN BROEK", name: "Dirk van den Broek", category: "Groceries" }
+  - { pattern: "EKOPLAZA", name: "Ekoplaza", category: "Groceries" }
+  - { pattern: "BCK*SHELL", name: "Shell", category: "Fuel" }
+  - { pattern: "BP NEDERLAND", name: "BP", category: "Fuel" }
+  - { pattern: "TINQ", name: "Tinq", category: "Fuel" }
+  - { pattern: "TANGO", name: "Tango", category: "Fuel" }
+  - { pattern: "NS GROEP", name: "NS — Dutch Railways", category: "Public transport" }
+  - { pattern: "GVB AMSTERDAM", name: "GVB Amsterdam", category: "Public transport" }
+  - { pattern: "RET ROTTERDAM", name: "RET Rotterdam", category: "Public transport" }
+  - { pattern: "HTM HAAGSCHE", name: "HTM Den Haag", category: "Public transport" }
+  - { pattern: "VIDEOLAND", name: "Videoland", category: "Streaming" }
+  - { pattern: "VATTENFALL", name: "Vattenfall", category: "Utilities" }
+  - { pattern: "ENECO", name: "Eneco", category: "Utilities" }
+  - { pattern: "ESSENT", name: "Essent", category: "Utilities" }
+  - { pattern: "GREENCHOICE", name: "Greenchoice", category: "Utilities" }
+  - { pattern: "ZIGGO", name: "Ziggo", category: "Internet & Phone" }
+  - { pattern: "KPN", name: "KPN", category: "Internet & Phone" }
+  - { pattern: "ODIDO", name: "Odido", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: "BOL.COM", name: "Bol.com" }
+  - { pattern: "COOLBLUE", name: "Coolblue" }
+  - { pattern: "MEDIAMARKT", name: "MediaMarkt" }
+  - { pattern: "HEMA", name: "HEMA" }
+  - { pattern: "ACTION", name: "Action" }
+  - { pattern: "IKEA", name: "IKEA" }
+  - { pattern: "THUISBEZORGD", name: "Thuisbezorgd", category: "Eating out" }
+  - { pattern: "UBER EATS", name: "Uber Eats", category: "Eating out" }
+  - { pattern: "ALBERT HEIJN TO GO", name: "Albert Heijn to go", category: "Groceries" }

@@ -1,0 +1,47 @@
+# Merchant corpus — United States. region defaults to US. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "WALMART", name: "Walmart", category: "Groceries" }
+  - { pattern: "WAL-MART", name: "Walmart", category: "Groceries" }
+  - { pattern: "TARGET", name: "Target", category: "Groceries" }
+  - { pattern: "KROGER", name: "Kroger", category: "Groceries" }
+  - { pattern: "SAFEWAY", name: "Safeway", category: "Groceries" }
+  - { pattern: "PUBLIX", name: "Publix", category: "Groceries" }
+  - { pattern: "WHOLE FOODS", name: "Whole Foods", category: "Groceries" }
+  - { pattern: "WHOLEFDS", name: "Whole Foods", category: "Groceries" }
+  - { pattern: "TRADER JOE", name: "Trader Joe's", category: "Groceries" }
+  - { pattern: "COSTCO", name: "Costco", category: "Groceries" }
+  - { pattern: "SAMS CLUB", name: "Sam's Club", category: "Groceries" }
+  - { pattern: "SHELL OIL", name: "Shell", category: "Fuel" }
+  - { pattern: "EXXON", name: "ExxonMobil", category: "Fuel" }
+  - { pattern: "CHEVRON", name: "Chevron", category: "Fuel" }
+  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
+  - { pattern: "7-ELEVEN", name: "7-Eleven", category: "Fuel" }
+  - { pattern: "VERIZON", name: "Verizon", category: "Internet & Phone" }
+  - { pattern: "VZWRLSS", name: "Verizon", category: "Internet & Phone" }
+  - { pattern: "AT&T", name: "AT&T", category: "Internet & Phone" }
+  - { pattern: "T-MOBILE", name: "T-Mobile", category: "Internet & Phone" }
+  - { pattern: "XFINITY", name: "Comcast Xfinity", category: "Internet & Phone" }
+  - { pattern: "COMCAST", name: "Comcast Xfinity", category: "Internet & Phone" }
+  - { pattern: "SPECTRUM", name: "Spectrum", category: "Internet & Phone" }
+  - { pattern: "HULU", name: "Hulu", category: "Streaming" }
+  - { pattern: "PEACOCK", name: "Peacock", category: "Streaming" }
+  - { pattern: "SLING", name: "Sling TV", category: "Streaming" }
+  - { pattern: "YOUTUBE TV", name: "YouTube TV", category: "Streaming" }
+  - { pattern: "SIRIUSXM", name: "SiriusXM", category: "Streaming" }
+  - { pattern: "UBER", name: "Uber", category: "Public transport" }
+  - { pattern: "LYFT", name: "Lyft", category: "Public transport" }
+  - { pattern: "AMTRAK", name: "Amtrak", category: "Public transport" }
+  - { pattern: "BEST BUY", name: "Best Buy" }
+  - { pattern: "HOME DEPOT", name: "Home Depot" }
+  - { pattern: "LOWES", name: "Lowe's" }
+  - { pattern: "CVS", name: "CVS" }
+  - { pattern: "WALGREENS", name: "Walgreens" }
+  - { pattern: "GEICO", name: "GEICO", category: "Insurance" }
+  - { pattern: "STATE FARM", name: "State Farm", category: "Insurance" }
+  - { pattern: "PROGRESSIVE", name: "Progressive", category: "Insurance" }
+  - { pattern: "DOORDASH", name: "DoorDash", category: "Eating out" }
+  - { pattern: "GRUBHUB", name: "Grubhub", category: "Eating out" }
+  - { pattern: "STARBUCKS", name: "Starbucks", category: "Eating out" }
+  - { pattern: "CHIPOTLE", name: "Chipotle", category: "Eating out" }
+  - { pattern: "PLANET FIT", name: "Planet Fitness", category: "Memberships" }
+  - { pattern: "PELOTON", name: "Peloton", category: "Memberships" }

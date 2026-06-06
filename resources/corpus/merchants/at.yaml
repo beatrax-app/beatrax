@@ -1,0 +1,23 @@
+# Merchant corpus — Austria. region defaults to AT. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "BILLA", name: "Billa", category: "Groceries" }
+  - { pattern: "SPAR", name: "Spar", category: "Groceries" }
+  - { pattern: "INTERSPAR", name: "Interspar", category: "Groceries" }
+  - { pattern: "HOFER", name: "Hofer", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "PENNY", name: "Penny", category: "Groceries" }
+  - { pattern: "MPREIS", name: "MPreis", category: "Groceries" }
+  - { pattern: "BIPA", name: "Bipa", category: "Groceries" }
+  - { pattern: 'regex:\bOMV\b', name: "OMV", category: "Fuel" }
+  - { pattern: "VERBUND", name: "Verbund", category: "Utilities" }
+  - { pattern: "WIEN ENERGIE", name: "Wien Energie", category: "Utilities" }
+  - { pattern: "A1 TELEKOM", name: "A1", category: "Internet & Phone" }
+  - { pattern: "MAGENTA", name: "Magenta", category: "Internet & Phone" }
+  - { pattern: 'regex:\bDREI\b', name: "Drei", category: "Internet & Phone" }
+  - { pattern: "OEBB", name: "ÖBB", category: "Public transport" }
+  - { pattern: "WIENER LINIEN", name: "Wiener Linien", category: "Public transport" }
+  - { pattern: "KLIMATICKET", name: "KlimaTicket", category: "Public transport" }
+  - { pattern: "XXXLUTZ", name: "XXXLutz" }
+  - { pattern: "UNIQA", name: "UNIQA", category: "Insurance" }
+  - { pattern: "MJAM", name: "mjam", category: "Eating out" }
+  - { pattern: "LIEFERANDO", name: "Lieferando", category: "Eating out" }

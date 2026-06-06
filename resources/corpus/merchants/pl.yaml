@@ -1,0 +1,17 @@
+# Merchant corpus — Poland. region defaults to PL. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "BIEDRONKA", name: "Biedronka", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "KAUFLAND", name: "Kaufland", category: "Groceries" }
+  - { pattern: "ZABKA", name: "Żabka", category: "Groceries" }
+  - { pattern: "AUCHAN", name: "Auchan", category: "Groceries" }
+  - { pattern: "CARREFOUR", name: "Carrefour", category: "Groceries" }
+  - { pattern: "ORLEN", name: "Orlen", category: "Fuel" }
+  - { pattern: 'regex:\bPGE\b', name: "PGE", category: "Utilities" }
+  - { pattern: "ORANGE", name: "Orange", category: "Internet & Phone" }
+  - { pattern: "T-MOBILE", name: "T-Mobile", category: "Internet & Phone" }
+  - { pattern: 'regex:\bPLUS\b', name: "Plus", category: "Internet & Phone" }
+  - { pattern: "PKP INTERCITY", name: "PKP Intercity", category: "Public transport" }
+  - { pattern: "ALLEGRO", name: "Allegro" }
+  - { pattern: "INPOST", name: "InPost" }
+  - { pattern: "PYSZNE.PL", name: "Pyszne.pl", category: "Eating out" }

@@ -1,0 +1,15 @@
+# Merchant corpus — Finland. region defaults to FI. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "K-MARKET", name: "K-Group", category: "Groceries" }
+  - { pattern: "K-CITYMARKET", name: "K-Group", category: "Groceries" }
+  - { pattern: "S-MARKET", name: "S-Group", category: "Groceries" }
+  - { pattern: "PRISMA", name: "Prisma", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "ALEPA", name: "Alepa", category: "Groceries" }
+  - { pattern: "NESTE", name: "Neste", category: "Fuel" }
+  - { pattern: "ELISA", name: "Elisa", category: "Internet & Phone" }
+  - { pattern: 'regex:\bDNA\b', name: "DNA", category: "Internet & Phone" }
+  - { pattern: "TELIA", name: "Telia", category: "Internet & Phone" }
+  - { pattern: 'regex:\bVR\b', name: "VR", category: "Public transport" }
+  - { pattern: 'regex:\bHSL\b', name: "HSL", category: "Public transport" }
+  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }

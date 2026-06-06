@@ -1,0 +1,14 @@
+# Merchant corpus — Slovakia. region defaults to SK. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "TESCO", name: "Tesco", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "KAUFLAND", name: "Kaufland", category: "Groceries" }
+  - { pattern: "BILLA", name: "Billa", category: "Groceries" }
+  - { pattern: "COOP JEDNOTA", name: "Coop Jednota", category: "Groceries" }
+  - { pattern: "SLOVNAFT", name: "Slovnaft", category: "Fuel" }
+  - { pattern: 'regex:\bOMV\b', name: "OMV", category: "Fuel" }
+  - { pattern: "ORANGE", name: "Orange", category: "Internet & Phone" }
+  - { pattern: 'regex:\bO2\b', name: "O2", category: "Internet & Phone" }
+  - { pattern: "TELEKOM", name: "Slovak Telekom", category: "Internet & Phone" }
+  - { pattern: "ZSSK", name: "ZSSK", category: "Public transport" }
+  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }

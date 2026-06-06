@@ -1,0 +1,12 @@
+# Merchant corpus — Greece. region defaults to GR. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "SKLAVENITIS", name: "Sklavenitis", category: "Groceries" }
+  - { pattern: "AB VASILOPOULOS", name: "AB Vasilopoulos", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "MASOUTIS", name: "Masoutis", category: "Groceries" }
+  - { pattern: 'regex:\bEKO\b', name: "EKO", category: "Fuel" }
+  - { pattern: "COSMOTE", name: "Cosmote", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: 'regex:\bNOVA\b', name: "Nova", category: "Internet & Phone" }
+  - { pattern: "EFOOD", name: "efood", category: "Eating out" }
+  - { pattern: "SKROUTZ", name: "Skroutz" }

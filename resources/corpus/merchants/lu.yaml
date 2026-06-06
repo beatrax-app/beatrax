@@ -1,0 +1,8 @@
+# Merchant corpus — Luxembourg. region defaults to LU. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "CACTUS", name: "Cactus", category: "Groceries" }
+  - { pattern: "AUCHAN", name: "Auchan", category: "Groceries" }
+  - { pattern: "DELHAIZE", name: "Delhaize", category: "Groceries" }
+  - { pattern: "POST LUXEMBOURG", name: "POST", category: "Internet & Phone" }
+  - { pattern: "ORANGE", name: "Orange", category: "Internet & Phone" }
+  - { pattern: "TANGO", name: "Tango", category: "Internet & Phone" }

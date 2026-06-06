@@ -1,0 +1,20 @@
+# Merchant corpus — Ukraine. region defaults to UA. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: 'regex:\bATB\b', name: "ATB-Market", category: "Groceries" }
+  - { pattern: "SILPO", name: "Silpo", category: "Groceries" }
+  - { pattern: "FORA", name: "Fora", category: "Groceries" }
+  - { pattern: "NOVUS", name: "Novus", category: "Groceries" }
+  - { pattern: "VARUS", name: "Varus", category: "Groceries" }
+  - { pattern: "WOG", name: "WOG", category: "Fuel" }
+  - { pattern: "OKKO", name: "OKKO", category: "Fuel" }
+  - { pattern: "KYIVSTAR", name: "Kyivstar", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone Ukraine", category: "Internet & Phone" }
+  - { pattern: "LIFECELL", name: "lifecell", category: "Internet & Phone" }
+  - { pattern: "MEGOGO", name: "Megogo", category: "Streaming" }
+  - { pattern: "UKRZALIZNYTSIA", name: "Ukrzaliznytsia", category: "Public transport" }
+  - { pattern: "UKLON", name: "Uklon", category: "Public transport" }
+  - { pattern: "ROZETKA", name: "Rozetka" }
+  - { pattern: "NOVA POSHTA", name: "Nova Poshta" }
+  - { pattern: "MONOBANK", name: "monobank" }
+  - { pattern: "PRIVATBANK", name: "PrivatBank" }
+  - { pattern: "GLOVO", name: "Glovo", category: "Eating out" }

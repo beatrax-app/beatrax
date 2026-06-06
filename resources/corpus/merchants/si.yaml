@@ -1,0 +1,13 @@
+# Merchant corpus — Slovenia. region defaults to SI. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "MERCATOR", name: "Mercator", category: "Groceries" }
+  - { pattern: "SPAR", name: "Spar", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "HOFER", name: "Hofer", category: "Groceries" }
+  - { pattern: 'regex:\bTUS\b', name: "Tuš", category: "Groceries" }
+  - { pattern: "PETROL", name: "Petrol", category: "Fuel" }
+  - { pattern: 'regex:\bOMV\b', name: "OMV", category: "Fuel" }
+  - { pattern: "TELEKOM SLOVENIJE", name: "Telekom Slovenije", category: "Internet & Phone" }
+  - { pattern: 'regex:\bA1\b', name: "A1", category: "Internet & Phone" }
+  - { pattern: "TELEMACH", name: "Telemach", category: "Internet & Phone" }
+  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }

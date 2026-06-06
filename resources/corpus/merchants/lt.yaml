@@ -1,0 +1,12 @@
+# Merchant corpus — Lithuania. region defaults to LT. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "MAXIMA", name: "Maxima", category: "Groceries" }
+  - { pattern: 'regex:\bIKI\b', name: "Iki", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "RIMI", name: "Rimi", category: "Groceries" }
+  - { pattern: "NORFA", name: "Norfa", category: "Groceries" }
+  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
+  - { pattern: "TELIA", name: "Telia", category: "Internet & Phone" }
+  - { pattern: 'regex:\bBITE\b', name: "Bitė", category: "Internet & Phone" }
+  - { pattern: "TELE2", name: "Tele2", category: "Internet & Phone" }
+  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }

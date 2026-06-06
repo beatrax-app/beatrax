@@ -6,36 +6,40 @@ namespace Modules\Community\Internal\Corpus;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Dto\CorpusEntryDto;
+use Modules\Community\Public\Services\CorpusPatternMatcher;
 use Modules\Import\Public\Services\PatternGeneralizer;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Reads the bundled merchant corpus YAML files from disk (via the shared
- * CorpusYamlReader), validates each entry's required fields, computes the
- * generalized pattern via PatternGeneralizer, and returns a list of
- * CorpusEntryDto rows for the SeedCommunityCorpus listener to upsert into
- * the `community_merchant_mappings` table.
+ * Reads the bundled merchant corpus from the per-country YAML files under
+ * `resources/corpus/merchants/<country>.yaml` (via the shared
+ * CorpusYamlReader), validates each entry, computes the generalized pattern
+ * via PatternGeneralizer, and returns a list of CorpusEntryDto rows for the
+ * SeedCommunityCorpus listener to upsert into the
+ * `community_merchant_mappings` table. The country code is inferred from
+ * each file's name and used as the default region; `contributor` defaults
+ * to "beatrax-bot" when omitted.
  *
- * Failure modes are tolerated per-entry, never globally:
+ * Failure modes are tolerated per-file and per-entry, never globally:
  *
+ *   - A missing merchants directory yields an empty list and a warning.
  *   - A missing or malformed YAML file (handled by CorpusYamlReader) yields
- *     an empty entry list and a warning; the other configured file still
- *     loads and the seed is not aborted.
- *   - An individual entry that lacks `pattern`, `name`, or `contributor`
- *     is logged at `warning` and dropped from the returned list.
+ *     an empty entry list and a warning; the other country files still load
+ *     and the seed is not aborted.
+ *   - An individual entry that lacks `pattern` or `name` is logged at
+ *     `warning` and dropped from the returned list.
  *   - An entry whose `category` is non-null but matches no row in the
  *     `categories` table is logged at `warning` and INCLUDED verbatim
  *     (graceful degradation — the consumer renders the unresolved category
  *     as a plain string).
+ *   - A `regex:` pattern is stored verbatim and NOT generalized; it is
+ *     matched at lookup time by CorpusPatternMatcher via the regex scan.
  */
 final class CorpusLoader
 {
-    /** @var list<string> Config keys for the bundled merchant corpus files. */
-    private const MERCHANT_PATH_KEYS = [
-        'community.corpus.bundled_path',
-        'community.corpus.heuristics_path',
-    ];
+    /** Default provenance for a bundled corpus entry that omits `contributor`. */
+    private const DEFAULT_CONTRIBUTOR = 'beatrax-bot';
 
     public function __construct(
         private readonly PatternGeneralizer $generalizer,
@@ -45,20 +49,36 @@ final class CorpusLoader
     ) {}
 
     /**
+     * Load every bundled merchant corpus file under
+     * `resources/corpus/merchants/<country>.yaml`. Each file's country code
+     * is inferred from its filename (`de.yaml` → `DE`, `eu.yaml` → `EU`) and
+     * applied as the default region for its entries; an entry may still set
+     * its own `region`. Files are walked in sorted order for determinism.
+     *
      * @return list<CorpusEntryDto>
      */
     public function loadBundled(): array
     {
         $validCategories = $this->fetchKnownCategoryNames();
 
+        $dir = $this->reader->resolve('community.corpus.root', 'resources/corpus').'/merchants';
+        if (! is_dir($dir)) {
+            $this->logger->warning('CorpusLoader: merchants corpus directory is missing.', ['dir' => $dir]);
+
+            return [];
+        }
+
+        $files = glob($dir.'/*.yaml');
+        if ($files === false) {
+            return [];
+        }
+        sort($files);
+
         $entries = [];
-        foreach (self::MERCHANT_PATH_KEYS as $key) {
-            $path = $this->reader->resolve($key);
-            if ($path === '') {
-                continue;
-            }
-            foreach ($this->reader->readEntries($path) as $raw) {
-                $entry = $this->buildEntry($raw, $validCategories);
+        foreach ($files as $file) {
+            $region = $this->regionFromFilename($file);
+            foreach ($this->reader->readEntries($file) as $raw) {
+                $entry = $this->buildEntry($raw, $validCategories, $region);
                 if ($entry !== null) {
                     $entries[] = $entry;
                 }
@@ -68,25 +88,51 @@ final class CorpusLoader
         return $entries;
     }
 
+    /** Max width of the `region` column on community_merchant_mappings. */
+    private const REGION_MAX = 8;
+
+    /**
+     * Derive the region code from a corpus filename (`de.yaml` → `DE`). A
+     * filename longer than the region column is not a valid ISO code, so it
+     * is dropped to an empty region (with a warning) rather than overflowing
+     * the column and making a strict DB driver reject the whole file's rows.
+     */
+    private function regionFromFilename(string $file): string
+    {
+        $region = strtoupper(pathinfo($file, PATHINFO_FILENAME));
+        if (mb_strlen($region) > self::REGION_MAX) {
+            $this->logger->warning('CorpusLoader: corpus filename is not a valid region code; region left empty.', [
+                'file' => $file,
+            ]);
+
+            return '';
+        }
+
+        return $region;
+    }
+
     /**
      * @param  array<int|string, mixed>  $raw
      * @param  array<string, true>  $validCategories
+     * @param  string  $defaultRegion  ISO code inferred from the source filename
      */
-    private function buildEntry(array $raw, array $validCategories): ?CorpusEntryDto
+    private function buildEntry(array $raw, array $validCategories, string $defaultRegion): ?CorpusEntryDto
     {
         $pattern = is_string($raw['pattern'] ?? null) ? trim($raw['pattern']) : '';
         $name = is_string($raw['name'] ?? null) ? trim($raw['name']) : '';
-        $contributor = is_string($raw['contributor'] ?? null) ? trim($raw['contributor']) : '';
 
-        if ($pattern === '' || $name === '' || $contributor === '') {
+        if ($pattern === '' || $name === '') {
             $this->logger->warning('CorpusLoader: corpus entry missing required fields.', [
                 'pattern' => $pattern,
                 'name' => $name,
-                'contributor' => $contributor,
             ]);
 
             return null;
         }
+
+        $contributor = is_string($raw['contributor'] ?? null) && trim($raw['contributor']) !== ''
+            ? trim($raw['contributor'])
+            : self::DEFAULT_CONTRIBUTOR;
 
         $category = isset($raw['category']) && is_string($raw['category'])
             ? trim($raw['category'])
@@ -95,12 +141,9 @@ final class CorpusLoader
             $category = null;
         }
 
-        $region = isset($raw['region']) && is_string($raw['region'])
+        $region = isset($raw['region']) && is_string($raw['region']) && trim($raw['region']) !== ''
             ? trim($raw['region'])
-            : null;
-        if ($region === '') {
-            $region = null;
-        }
+            : $defaultRegion;
 
         if ($category !== null && ! isset($validCategories[$category])) {
             $this->logger->warning('Corpus entry references unknown category.', [
@@ -109,11 +152,19 @@ final class CorpusLoader
             ]);
         }
 
-        $generalized = isset($raw['generalized_pattern']) && is_string($raw['generalized_pattern'])
-            ? trim($raw['generalized_pattern'])
-            : '';
-        if ($generalized === '') {
-            $generalized = $this->generalizer->generalize($pattern);
+        // A `regex:` pattern is matched verbatim by CorpusPatternMatcher, so
+        // it must NOT be run through the substring generalizer (which would
+        // produce a meaningless token). Its generalized_pattern is left empty
+        // so the substring scan skips it; the regex scan picks it up instead.
+        if (str_starts_with($pattern, CorpusPatternMatcher::REGEX_PREFIX)) {
+            $generalized = '';
+        } else {
+            $generalized = isset($raw['generalized_pattern']) && is_string($raw['generalized_pattern'])
+                ? trim($raw['generalized_pattern'])
+                : '';
+            if ($generalized === '') {
+                $generalized = $this->generalizer->generalize($pattern);
+            }
         }
 
         return new CorpusEntryDto(

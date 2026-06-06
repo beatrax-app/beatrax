@@ -1,0 +1,35 @@
+# Merchant corpus — Germany. region defaults to DE. Schema: see merchants/nl.yaml.
+entries:
+  - { pattern: "REWE", name: "REWE", category: "Groceries" }
+  - { pattern: "EDEKA", name: "EDEKA", category: "Groceries" }
+  - { pattern: "ALDI", name: "Aldi", category: "Groceries" }
+  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
+  - { pattern: "KAUFLAND", name: "Kaufland", category: "Groceries" }
+  - { pattern: "NETTO MARKEN", name: "Netto", category: "Groceries" }
+  - { pattern: "PENNY", name: "Penny", category: "Groceries" }
+  - { pattern: "DM-DROGERIE", name: "dm", category: "Groceries" }
+  - { pattern: "ROSSMANN", name: "Rossmann", category: "Groceries" }
+  - { pattern: "ARAL", name: "Aral", category: "Fuel" }
+  - { pattern: "SHELL", name: "Shell", category: "Fuel" }
+  - { pattern: "ESSO", name: "Esso", category: "Fuel" }
+  - { pattern: "E.ON", name: "E.ON", category: "Utilities" }
+  - { pattern: "VATTENFALL", name: "Vattenfall", category: "Utilities" }
+  - { pattern: "ENBW", name: "EnBW", category: "Utilities" }
+  - { pattern: "TELEKOM DEUTSCHLAND", name: "Deutsche Telekom", category: "Internet & Phone" }
+  - { pattern: "VODAFONE", name: "Vodafone", category: "Internet & Phone" }
+  - { pattern: "TELEFONICA", name: "O2 (Telefónica)", category: "Internet & Phone" }
+  - { pattern: "1&1", name: "1&1", category: "Internet & Phone" }
+  - { pattern: "CONGSTAR", name: "congstar", category: "Internet & Phone" }
+  - { pattern: "DB VERTRIEB", name: "Deutsche Bahn", category: "Public transport" }
+  - { pattern: "DEUTSCHE BAHN", name: "Deutsche Bahn", category: "Public transport" }
+  - { pattern: "DEUTSCHLANDTICKET", name: "Deutschlandticket", category: "Public transport" }
+  - { pattern: "ZALANDO", name: "Zalando" }
+  - { pattern: "OTTO", name: "Otto" }
+  - { pattern: "MEDIAMARKT", name: "MediaMarkt" }
+  - { pattern: "SATURN", name: "Saturn" }
+  - { pattern: "DECATHLON", name: "Decathlon" }
+  - { pattern: "ALLIANZ", name: "Allianz", category: "Insurance" }
+  - { pattern: "HUK-COBURG", name: "HUK-Coburg", category: "Insurance" }
+  - { pattern: "TECHNIKER KRANKENKASSE", name: "Techniker Krankenkasse", category: "Health" }
+  - { pattern: "LIEFERANDO", name: "Lieferando", category: "Eating out" }
+  - { pattern: "MCDONALDS", name: "McDonald's", category: "Eating out" }
