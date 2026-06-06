@@ -57,6 +57,11 @@ final class UploadWizard extends Component
         'paypal-csv',
         'eml',
         'mbox',
+        // Bundled bank/fintech CSV presets (GenericCsvAdapter); mirrored from
+        // CsvPresetRegistry. Grouped under the "other-bank" issuer.
+        'n26-csv',
+        'revolut-csv',
+        'ing-nl-csv',
     ];
 
     /**
@@ -73,6 +78,7 @@ final class UploadWizard extends Component
         'ics' => ['ics-pdf'],
         'paypal' => ['paypal-csv'],
         'email-file' => ['eml', 'mbox'],
+        'other-bank' => ['n26-csv', 'revolut-csv', 'ing-nl-csv'],
     ];
 
     public ?TemporaryUploadedFile $file = null;
@@ -103,7 +109,7 @@ final class UploadWizard extends Component
      * and resets `$sourceFormat` to that issuer's first leaf via
      * `updatedIssuer()`.
      */
-    #[Validate('required|in:asn,ics,paypal,email-file')]
+    #[Validate('required|in:asn,ics,paypal,email-file,other-bank')]
     public string $issuer = 'asn';
 
     public string $sourceFormat = 'asn-csv';
@@ -128,8 +134,8 @@ final class UploadWizard extends Component
 
         return [
             'file' => ['required', 'file', $sizeRule, 'extensions:csv,txt,xml,sta,mt940,940,pdf,eml,mbox'],
-            'issuer' => ['required', 'in:asn,ics,paypal,email-file'],
-            'sourceFormat' => ['required', 'in:asn-csv,camt053,mt940,ics-pdf,paypal-csv,eml,mbox', $this->issuerFormatRule()],
+            'issuer' => ['required', 'in:asn,ics,paypal,email-file,other-bank'],
+            'sourceFormat' => ['required', 'in:asn-csv,camt053,mt940,ics-pdf,paypal-csv,eml,mbox,n26-csv,revolut-csv,ing-nl-csv', $this->issuerFormatRule()],
         ];
     }
 
@@ -190,6 +196,11 @@ final class UploadWizard extends Component
             'email-file' => [
                 ['value' => 'eml', 'label' => 'Email message (.eml)'],
                 ['value' => 'mbox', 'label' => 'Mailbox archive (.mbox)'],
+            ],
+            'other-bank' => [
+                ['value' => 'n26-csv', 'label' => 'N26 (CSV)'],
+                ['value' => 'revolut-csv', 'label' => 'Revolut (CSV)'],
+                ['value' => 'ing-nl-csv', 'label' => 'ING Netherlands (CSV)'],
             ],
             default => [],
         };

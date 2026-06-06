@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- Import other European banks' CSV exports via a preset-driven generic CSV
+  importer. Bundled presets cover N26, Revolut, and ING (Netherlands), each
+  selectable under a new "Other bank" source in the import wizard. The engine
+  handles the cross-bank differences — signed vs separate debit/credit columns
+  vs an "Af/Bij"-style direction indicator, comma-or-dot decimals with thousands
+  separators, per-row or fixed currency, and varied date formats — matches
+  columns by a normalised header name (tolerant of minor spelling differences),
+  skips pending/reverted rows (e.g. Revolut `State`) instead of aborting, and
+  rounds sub-cent amounts rather than truncating. Adding another bank is a
+  data-only change (a new entry in `CsvPresetRegistry`).
 
 ### Added
 

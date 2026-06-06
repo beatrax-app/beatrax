@@ -37,6 +37,7 @@
                 <option value="asn">ASN</option>
                 <option value="ics">ICS</option>
                 <option value="paypal">PayPal</option>
+                <option value="other-bank">Other bank (N26, Revolut, ING…)</option>
                 <option value="email-file">Email file (.eml, .mbox)</option>
             </select>
             @error('issuer')

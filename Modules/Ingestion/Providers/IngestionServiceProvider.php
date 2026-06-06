@@ -9,8 +9,11 @@ use Illuminate\Support\ServiceProvider;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053Adapter;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940Adapter;
+use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAdapter;
+use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAmountParser;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvAdapter;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
@@ -28,17 +31,31 @@ final class IngestionServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(CsvPresetRegistry::class);
         $this->app->singleton(HeaderSniffer::class);
 
         $this->app->singleton(
             SourceAdapterRegistry::class,
-            static fn (Container $app): SourceAdapterRegistry => new SourceAdapterRegistry([
-                'asn-csv' => $app->make(AsnCsvAdapter::class),
-                'camt053' => $app->make(AsnCamt053Adapter::class),
-                'mt940' => $app->make(AsnMt940Adapter::class),
-                'ics-pdf' => $app->make(IcsPdfAdapter::class),
-                'paypal-csv' => $app->make(PaypalCsvAdapter::class),
-            ]),
+            static function (Container $app): SourceAdapterRegistry {
+                $adapters = [
+                    'asn-csv' => $app->make(AsnCsvAdapter::class),
+                    'camt053' => $app->make(AsnCamt053Adapter::class),
+                    'mt940' => $app->make(AsnMt940Adapter::class),
+                    'ics-pdf' => $app->make(IcsPdfAdapter::class),
+                    'paypal-csv' => $app->make(PaypalCsvAdapter::class),
+                ];
+
+                // One GenericCsvAdapter per bundled CSV preset (N26, Revolut,
+                // ING-NL, …) — each is its own ingestion format.
+                $presets = $app->make(CsvPresetRegistry::class);
+                $amounts = $app->make(GenericCsvAmountParser::class);
+                $sniffer = $app->make(HeaderSniffer::class);
+                foreach ($presets->all() as $format => $preset) {
+                    $adapters[$format] = new GenericCsvAdapter($preset, $amounts, $sniffer);
+                }
+
+                return new SourceAdapterRegistry($adapters);
+            },
         );
     }
 

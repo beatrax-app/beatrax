@@ -9,6 +9,7 @@ use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfHeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
+use Modules\Ingestion\Public\Dto\CsvPreset;
 use Modules\Ingestion\Public\Dto\SniffResult;
 use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvLanguageException;
@@ -35,6 +36,16 @@ final class HeaderSniffer
     private const HEAD_BYTES = 8192;
 
     private const UTF8_BOM = "\xEF\xBB\xBF";
+
+    /**
+     * In production the container injects the singleton CsvPresetRegistry; the
+     * default exists only so a manually-constructed sniffer (tests, ad-hoc
+     * scripts) still resolves presets. Presets are static, so the fresh
+     * instance is behaviourally identical to the singleton.
+     */
+    public function __construct(
+        private readonly CsvPresetRegistry $presets = new CsvPresetRegistry,
+    ) {}
 
     public function sniff(string $localPath, string $declaredFormat): SniffResult
     {
@@ -65,11 +76,63 @@ final class HeaderSniffer
             PaypalCsvLanguageProfile::FORMAT => $this->sniffPaypalCsv($localPath, $head),
             EmlHeaderProfile::FORMAT => $this->sniffEml($localPath, $head),
             MboxHeaderProfile::FORMAT => $this->sniffMbox($localPath, $head),
-            default => throw new SniffMismatchException(sprintf(
-                'Unsupported sniff target: %s',
-                $declaredFormat,
-            )),
+            default => $this->sniffByPresetFormat($declaredFormat, $localPath, $head),
         };
+    }
+
+    private function sniffByPresetFormat(string $declaredFormat, string $localPath, string $head): SniffResult
+    {
+        $preset = $this->presets->get($declaredFormat);
+        if ($preset === null) {
+            throw new SniffMismatchException(sprintf('Unsupported sniff target: %s', $declaredFormat));
+        }
+
+        return $this->sniffPresetCsv($preset, $localPath, $head);
+    }
+
+    /**
+     * Validates a bundled bank/fintech CSV preset: a `.csv` extension and a
+     * header row containing every cell in the preset's header signature
+     * (order-independent, so a bank reordering optional columns still
+     * sniffs). The message names the bank so the wizard can tell the user
+     * exactly which export it expected.
+     */
+    private function sniffPresetCsv(CsvPreset $preset, string $path, string $head): SniffResult
+    {
+        if (preg_match('/\.csv$/i', $path) !== 1) {
+            throw new SniffMismatchException(sprintf(
+                "That file doesn't look like a CSV. Drop in the %s CSV export.",
+                $preset->label,
+            ));
+        }
+
+        $firstLine = strtok($head, "\r\n");
+        if ($firstLine === false) {
+            throw new SniffMismatchException('The file is empty.');
+        }
+
+        $columns = str_getcsv($firstLine, $preset->delimiter, '"', '');
+        // Compare on the normalised header form so a bank's minor spelling
+        // variations (spacing/case) still sniff — see CsvPreset::normaliseHeader.
+        $present = array_map(static fn (?string $c): string => CsvPreset::normaliseHeader((string) $c), $columns);
+
+        foreach ($preset->headerSignature as $expected) {
+            if (! in_array(CsvPreset::normaliseHeader($expected), $present, strict: true)) {
+                throw new SniffMismatchException(sprintf(
+                    "This CSV doesn't match the %s layout (missing the '%s' column). Make sure you picked the right bank.",
+                    $preset->label,
+                    $expected,
+                ));
+            }
+        }
+
+        return new SniffResult(
+            format: $preset->format,
+            delimiter: $preset->delimiter,
+            hasHeader: true,
+            encoding: $preset->encoding,
+            columnCount: count($columns),
+        );
     }
 
     /**

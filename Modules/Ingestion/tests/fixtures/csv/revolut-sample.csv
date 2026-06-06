@@ -1,0 +1,5 @@
+Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance
+CARD_PAYMENT,Current,2026-05-02 10:15:00,2026-05-02 12:00:00,Spotify,-9.99,0.00,EUR,COMPLETED,490.01
+TOPUP,Current,2026-05-04 09:00:00,2026-05-04 09:01:00,Top-Up via Apple Pay,100.00,0.00,EUR,COMPLETED,590.01
+CARD_PAYMENT,Current,2026-05-05 08:00:00,,Pending coffee,-3.50,0.00,EUR,PENDING,
+CARD_REFUND,Current,2026-05-06 08:00:00,2026-05-06 09:00:00,Reverted charge,-12.00,0.00,EUR,REVERTED,578.01
