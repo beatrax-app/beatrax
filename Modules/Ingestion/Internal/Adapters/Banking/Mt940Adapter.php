@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn;
+namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Carbon\CarbonImmutable;
 use Generator;
-use Modules\Ingestion\Internal\Adapters\Asn\Dto\Mt940BalanceTuple;
-use Modules\Ingestion\Internal\Adapters\Asn\Dto\Mt940Narrative;
-use Modules\Ingestion\Internal\Adapters\Asn\Dto\Mt940StatementLine;
+use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940BalanceTuple;
+use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940Narrative;
+use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
@@ -18,7 +18,7 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Throwable;
 
 /**
- * Hand-rolled MT940 (legacy SWIFT statement) parser for ASN exports.
+ * Hand-rolled MT940 (legacy SWIFT statement) parser for bank exports.
  * Pairs each `:61:` statement-line tag with the optional immediately-
  * following `:86:` narrative tag; produces one SourceTransactionDto per
  * pair. After `parse()` completes, `statementMetadata()` returns the
@@ -31,7 +31,7 @@ use Throwable;
  *  - When the `:86:` GVC narrative carries an `EREF` keyword that is
  *    non-empty and not the literal `NOTPROVIDED`, that value becomes
  *    `sourceRef`.
- *  - Otherwise the `:61:` customer-reference (ASN's 34-char extended
+ *  - Otherwise the `:61:` customer-reference (the 34-char extended
  *    variant) is used.
  *  - Otherwise `sourceRef` stays null. MT940's reference channel is
  *    intentionally weaker than CAMT.053's `EndToEndId`; a CAMT enrichment
@@ -58,22 +58,22 @@ use Throwable;
  *    before either is rejected as a parse error so empty IBAN and
  *    silent-default-EUR currency can never reach the import pipeline.
  */
-final class AsnMt940Adapter implements SourceAdapter
+final class Mt940Adapter implements SourceAdapter
 {
     private ?StatementSummaryData $lastStatementMetadata = null;
 
     public function __construct(
         private readonly HeaderSniffer $sniffer,
-        private readonly AsnMt940Lexer $lexer,
-        private readonly AsnMt940Tag61Parser $tag61,
-        private readonly AsnMt940Tag86Parser $tag86,
-        private readonly AsnMt940CounterpartyCleaner $counterpartyCleaner,
-        private readonly AsnAmountParser $amounts,
+        private readonly Mt940Lexer $lexer,
+        private readonly Mt940Tag61Parser $tag61,
+        private readonly Mt940Tag86Parser $tag86,
+        private readonly Mt940CounterpartyCleaner $counterpartyCleaner,
+        private readonly BankAmountParser $amounts,
     ) {}
 
     public function format(): string
     {
-        return AsnMt940HeaderProfile::FORMAT;
+        return Mt940HeaderProfile::FORMAT;
     }
 
     public function statementMetadata(): ?StatementSummaryData
@@ -83,7 +83,7 @@ final class AsnMt940Adapter implements SourceAdapter
 
     public function parse(string $localPath, AccountResolver $accounts): Generator
     {
-        $this->sniffer->sniff($localPath, AsnMt940HeaderProfile::FORMAT);
+        $this->sniffer->sniff($localPath, Mt940HeaderProfile::FORMAT);
         $this->lastStatementMetadata = null;
 
         $statementId = null;
@@ -257,7 +257,7 @@ final class AsnMt940Adapter implements SourceAdapter
      * Parses a `:60F:` / `:62F:` balance tag content (e.g.
      * `C260401EUR1000,00`) into a signed integer minor amount, a 3-letter
      * currency code, and the balance date. Routes the comma-decimal
-     * amount through `AsnAmountParser` so the integer-only money path is
+     * amount through `BankAmountParser` so the integer-only money path is
      * preserved end-to-end.
      */
     private function parseBalance(string $content): ?Mt940BalanceTuple

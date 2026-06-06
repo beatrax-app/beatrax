@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053Adapter;
+use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
@@ -94,7 +94,7 @@ beforeEach(function (): void {
         }
     };
 
-    $this->adapter = $this->app->make(AsnCamt053Adapter::class);
+    $this->adapter = $this->app->make(Camt053Adapter::class);
 });
 
 it('yields N DTOs from one Ntry with N TxDtls children', function (): void {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn\Dto;
+namespace Modules\Ingestion\Internal\Adapters\Banking\Dto;
 
 /**
  * Decoded `:86:` narrative tag — either structured (with a 3-digit GVC

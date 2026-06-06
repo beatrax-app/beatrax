@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053Adapter;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
+use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
@@ -20,7 +20,7 @@ beforeEach(function (): void {
     };
 
     $this->csv = $this->app->make(AsnCsvAdapter::class);
-    $this->camt = $this->app->make(AsnCamt053Adapter::class);
+    $this->camt = $this->app->make(Camt053Adapter::class);
     $this->fingerprints = $this->app->make(FingerprintComposer::class);
 });
 

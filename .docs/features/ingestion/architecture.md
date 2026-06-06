@@ -68,10 +68,14 @@ What the module explicitly does NOT do:
 
 `Internal/` houses the adapters:
 
-- **Internal/Adapters/Asn/** — `AsnCsvAdapter`, `AsnCamt053Adapter`,
-  `AsnMt940Adapter`, plus parser helpers (`AsnAmountParser`,
-  per-format header profile classes, the MT940 lexer + Tag61 +
-  Tag86 parsers + `AsnMt940CounterpartyCleaner`).
+- **Internal/Adapters/Banking/** — the generic bank-statement parsers:
+  `Camt053Adapter`, `Mt940Adapter`, plus helpers (`BankAmountParser`,
+  per-format header profile classes, the MT940 lexer + Tag61 + Tag86
+  parsers + `Mt940CounterpartyCleaner`).
+- **Internal/Adapters/Asn/** — `AsnCsvAdapter` and its header profile +
+  column map (ASN's own proprietary "CSV met IBAN" layout).
+- **Internal/Adapters/Csv/** — `GenericCsvAdapter` + `GenericCsvAmountParser`,
+  the preset-driven importer for other banks (N26, Revolut, ING…).
 - **Internal/Adapters/Ics/** — `IcsPdfAdapter`, plus parser
   helpers (`PdfTextExtractor`, `IcsAmountParser`,
   `IcsDateParser`, `IcsPdfExtractionMap`,

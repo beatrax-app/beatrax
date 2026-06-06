@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Import\Internal\Parsers\Asn;
+namespace Modules\Import\Internal\Parsers\Banking;
 
 use Modules\Import\Public\Contracts\PaymentTypeHinter;
 use Modules\Import\Public\Dto\PaymentTypeHint;
@@ -10,11 +10,11 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Payment-type hinter specialised for ASN MT940 narrative exports
+ * Payment-type hinter for MT940 narrative exports
  * (`source_format = 'mt940'`).
  *
  * The MT940 Tag :86: narrative carries the same Dutch lexemes as the
- * ASN CSV description column — `Betaalautomaat` / `Geldautomaat` for
+ * the CSV description column — `Betaalautomaat` / `Geldautomaat` for
  * POS / ATM, `iDEAL` for online card-not-present, `Incasso` /
  * `SEPA Direct Debit` for direct debits, and `Overboeking` /
  * `SEPA Credit Transfer` for transfers. The keyword set is therefore
@@ -25,14 +25,14 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  *
  * Pure / stateless / singleton-safe — no constructor dependencies.
  */
-final class AsnMt940PaymentTypeHinter implements PaymentTypeHinter
+final class Mt940PaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = 'mt940';
 
     /**
      * Casefold-lowercase keyword → (`PaymentType`, confidence) mapping.
      * Mirrors `AsnCsvPaymentTypeHinter::KEYWORDS` because the MT940
-     * narrative emits the same lexemes ASN places in its CSV
+     * narrative emits the same lexemes a bank places in its CSV
      * description column.
      *
      * @var list<array{keyword: string, type: PaymentType, confidence: int}>

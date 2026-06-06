@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053Adapter;
+use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
@@ -24,7 +24,7 @@ beforeEach(function (): void {
         }
     };
 
-    $this->adapter = $this->app->make(AsnCamt053Adapter::class);
+    $this->adapter = $this->app->make(Camt053Adapter::class);
 });
 
 it('reports the camt053 format identifier', function (): void {
@@ -36,7 +36,7 @@ it('registers under the camt053 key in the SourceAdapterRegistry', function (): 
     $registry = $this->app->make(SourceAdapterRegistry::class);
 
     $adapter = $registry->for('camt053');
-    expect($adapter)->toBeInstanceOf(AsnCamt053Adapter::class);
+    expect($adapter)->toBeInstanceOf(Camt053Adapter::class);
     expect($adapter->format())->toBe('camt053');
 })->group('phase-2');
 

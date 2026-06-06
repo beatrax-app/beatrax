@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnAmountParser;
+use Modules\Ingestion\Internal\Adapters\Banking\BankAmountParser;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 beforeEach(function (): void {
-    $this->parser = new AsnAmountParser;
+    $this->parser = new BankAmountParser;
 });
 
 it('parses signed and unsigned period-decimal amounts to integer minor units', function (string $raw, int $expected): void {

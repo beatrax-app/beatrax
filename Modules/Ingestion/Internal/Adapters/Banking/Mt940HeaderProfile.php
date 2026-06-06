@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn;
+namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 /**
- * MT940 (legacy SWIFT statement) profile for the ASN MT940 export. The
+ * MT940 (legacy SWIFT statement) profile for an MT940 export. The
  * dialect is documented at `tests/fixtures/asn-mt940-sample-1.md` —
  * structured `:86:` narrative with `?NN` subfields and an extended
  * 34-character `:61:` customer reference.
@@ -15,7 +15,7 @@ namespace Modules\Ingestion\Internal\Adapters\Asn;
  * `SWIFT_ENVELOPE_REGEX` matches the block-4 contents in either form so
  * the sniffer + lexer can strip the wrapper before inspecting tags.
  */
-final class AsnMt940HeaderProfile
+final class Mt940HeaderProfile
 {
     public const FORMAT = 'mt940';
 
