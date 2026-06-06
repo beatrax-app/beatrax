@@ -1,0 +1,9 @@
+# Government / public-agency classification rules — Italy.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "AGENZIA DELLE ENTRATE"
+    name: "Agenzia delle Entrate"
+  - pattern: "INPS"
+    name: "INPS"
+  - pattern: "CANONE RAI"
+    name: "Canone RAI"

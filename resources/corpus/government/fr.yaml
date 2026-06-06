@@ -1,0 +1,15 @@
+# Government / public-agency classification rules — France.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "DGFIP"
+    name: "DGFiP (impôts)"
+  - pattern: "DIRECTION GENERALE DES FINANCES"
+    name: "DGFiP (impôts)"
+  - pattern: "URSSAF"
+    name: "URSSAF"
+  - pattern: "IMPOTS"
+    name: "Impôts"
+  - pattern: "TRESOR PUBLIC"
+    name: "Trésor Public"
+  - pattern: "AMELI"
+    name: "Assurance Maladie (Ameli)"

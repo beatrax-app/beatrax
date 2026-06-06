@@ -1,0 +1,17 @@
+# Government / public-agency classification rules — United Kingdom.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "HMRC"
+    name: "HMRC"
+  - pattern: "HM REVENUE"
+    name: "HMRC"
+  - pattern: "DVLA"
+    name: "DVLA"
+  - pattern: "COUNCIL TAX"
+    name: "Council Tax"
+  - pattern: "TV LICEN"
+    name: "TV Licensing"
+  - pattern: "DWP"
+    name: "DWP"
+  - pattern: "STUDENT LOANS COMPANY"
+    name: "Student Loans Company"

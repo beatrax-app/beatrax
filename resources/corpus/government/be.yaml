@@ -1,0 +1,7 @@
+# Government / public-agency classification rules — Belgium.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "FOD FINANCIEN"
+    name: "FOD Financiën"
+  - pattern: "SPF FINANCES"
+    name: "SPF Finances"

@@ -1,0 +1,29 @@
+# Government / public-agency classification rules — Netherlands.
+#
+# A transaction whose description OR counterparty name matches one of
+# these patterns resolves to a counterparty of type=government (step 5 of
+# CounterpartyResolverService), regardless of country file — the region is
+# informational, inferred from this filename (nl).
+#
+# Schema per entry:
+#   pattern  string  required — a case-insensitive SUBSTRING, or a PCRE body
+#                               prefixed with `regex:` (see CorpusPatternMatcher).
+#                               Keep literals distinctive; short ambiguous
+#                               tokens collide with ordinary merchant names.
+#   name     string  optional — canonical display name. When omitted the
+#                               resolver keeps the statement's own counterparty
+#                               name (or the matched token) as the display name.
+entries:
+  - pattern: "BELASTINGDIENST"
+    name: "Belastingdienst"
+  - pattern: "GEMEENTE"
+  - pattern: "RDW"
+  - pattern: "CJIB"
+    name: "CJIB"
+  - pattern: "SVB"
+  - pattern: "UWV"
+    name: "UWV"
+  - pattern: "DUO GRONINGEN"
+    name: "DUO"
+  - pattern: "TOESLAGEN"
+    name: "Belastingdienst/Toeslagen"
