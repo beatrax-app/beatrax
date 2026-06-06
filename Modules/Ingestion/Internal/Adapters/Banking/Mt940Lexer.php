@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn;
+namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Generator;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
@@ -37,7 +37,7 @@ use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
  * Both caps raise `InvalidAmountException` with a user-readable message so
  * the upload wizard surfaces a fast error instead of a hung worker.
  */
-final class AsnMt940Lexer
+final class Mt940Lexer
 {
     private const MAX_LINE_COUNT = 100_000;
 
@@ -65,7 +65,7 @@ final class AsnMt940Lexer
                     throw new InvalidAmountException('Could not read MT940 file body.');
                 }
 
-                if (preg_match(AsnMt940HeaderProfile::SWIFT_ENVELOPE_REGEX, $whole, $matches) !== 1) {
+                if (preg_match(Mt940HeaderProfile::SWIFT_ENVELOPE_REGEX, $whole, $matches) !== 1) {
                     throw new InvalidAmountException('SWIFT envelope detected but block-4 contents missing.');
                 }
 

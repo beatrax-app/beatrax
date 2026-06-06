@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940Adapter;
+use Modules\Ingestion\Internal\Adapters\Banking\Mt940Adapter;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
@@ -24,7 +24,7 @@ beforeEach(function (): void {
         }
     };
 
-    $this->adapter = $this->app->make(AsnMt940Adapter::class);
+    $this->adapter = $this->app->make(Mt940Adapter::class);
 });
 
 it('declares the mt940 format identifier', function (): void {
@@ -36,7 +36,7 @@ it('registers under the mt940 key in the SourceAdapterRegistry', function (): vo
     $registry = $this->app->make(SourceAdapterRegistry::class);
     $adapter = $registry->for('mt940');
 
-    expect($adapter)->toBeInstanceOf(AsnMt940Adapter::class);
+    expect($adapter)->toBeInstanceOf(Mt940Adapter::class);
     expect($adapter->format())->toBe('mt940');
 })->group('phase-2');
 
@@ -146,7 +146,7 @@ it('resolves the own IBAN with the AccountResolver', function (): void {
     expect($this->resolver->askedFor)->toContain('NL57ASNB0123456789');
 })->group('phase-2');
 
-it('cleans the counterparty name via AsnMt940CounterpartyCleaner before yielding', function (): void {
+it('cleans the counterparty name via Mt940CounterpartyCleaner before yielding', function (): void {
     $body = ":20:S\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
         .":61:2604010401C100,00NTRFCUST\n:86:100?32005 SPOTIFY AB ABNANL2A?31NL68BANK0000000001\n"
         .":62F:C260430EUR1100,00\n-\n";

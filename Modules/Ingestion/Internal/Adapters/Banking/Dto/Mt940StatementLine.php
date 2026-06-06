@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn\Dto;
+namespace Modules\Ingestion\Internal\Adapters\Banking\Dto;
 
 use Carbon\CarbonImmutable;
 
 /**
  * Decoded `:61:` statement-line tag — one bank-side movement on the
  * statement, parsed into typed fields. The `customerReference` field uses
- * the ASN-extended 34-character variant (not the SWIFT-standard 16).
+ * the extended 34-character variant (not the SWIFT-standard 16).
  *
  * `status` follows the MT940 convention:
  *   - `C` = credit (positive amountMinor)

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940Tag61Parser;
+use Modules\Ingestion\Internal\Adapters\Banking\Mt940Tag61Parser;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 beforeEach(function (): void {
-    $this->parser = $this->app->make(AsnMt940Tag61Parser::class);
+    $this->parser = $this->app->make(Mt940Tag61Parser::class);
 });
 
 it('parses a basic credit line with SWIFT status C', function (): void {

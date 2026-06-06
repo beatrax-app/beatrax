@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940CounterpartyCleaner;
+use Modules\Ingestion\Internal\Adapters\Banking\Mt940CounterpartyCleaner;
 
 beforeEach(function (): void {
-    $this->cleaner = $this->app->make(AsnMt940CounterpartyCleaner::class);
+    $this->cleaner = $this->app->make(Mt940CounterpartyCleaner::class);
 });
 
 it('strips a 3-digit GVC prefix', function (): void {

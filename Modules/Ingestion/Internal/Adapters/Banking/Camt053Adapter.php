@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn;
+namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Carbon\CarbonImmutable;
 use DateTimeZone;
@@ -30,7 +30,7 @@ use Money\Money;
 use Throwable;
 
 /**
- * Streaming-by-row parser for ASN's CAMT.053 (ISO 20022 bank-to-customer
+ * Streaming-by-row parser for CAMT.053 (ISO 20022 bank-to-customer
  * statement) XML export. Delegates the file-level unmarshal to genkgo/camt,
  * then walks every Statement -> Entry -> TransactionDetail and yields one
  * SourceTransactionDto per TxDtls (batch entries are split into N rows).
@@ -63,7 +63,7 @@ use Throwable;
  *    adapter converts to integer minor units at the boundary; `Money\Money`
  *    types are not allowed to escape into the Public DTO surface.
  */
-final class AsnCamt053Adapter implements SourceAdapter
+final class Camt053Adapter implements SourceAdapter
 {
     private ?StatementSummaryData $lastStatementMetadata = null;
 
@@ -73,7 +73,7 @@ final class AsnCamt053Adapter implements SourceAdapter
 
     public function format(): string
     {
-        return AsnCamt053HeaderProfile::FORMAT;
+        return Camt053HeaderProfile::FORMAT;
     }
 
     /**
@@ -90,7 +90,7 @@ final class AsnCamt053Adapter implements SourceAdapter
 
     public function parse(string $localPath, AccountResolver $accounts): Generator
     {
-        $this->sniffer->sniff($localPath, AsnCamt053HeaderProfile::FORMAT);
+        $this->sniffer->sniff($localPath, Camt053HeaderProfile::FORMAT);
 
         $message = $this->readMessage($localPath);
         $msgId = $message->getGroupHeader()->getMessageId();
@@ -213,7 +213,7 @@ final class AsnCamt053Adapter implements SourceAdapter
         try {
             // XSD validation is disabled deliberately. The CAMT.053 XSDs
             // genkgo/camt ships are pedantic and would reject any synthetic
-            // test fragment or future ASN extension that adds an unforeseen
+            // test fragment or future format extension that adds an unforeseen
             // optional element. Structural correctness is enforced by the
             // sniffer's namespace match plus the downstream IBAN / amount
             // validators inside genkgo/camt's decoder; security against XXE
@@ -284,7 +284,7 @@ final class AsnCamt053Adapter implements SourceAdapter
         }
         $value = $entry->getValueDate() ?? $booking;
 
-        // ASN exports the BookgDt as a date-only element on every row in the
+        // Banks export the BookgDt as a date-only element on every row in the
         // empirical corpus; the matching CSV adapter zeroes the time so the
         // FingerprintComposer v3 hash agrees between the two formats. Force
         // 00:00:00 here so a midnight-shifted timestamp never sneaks in via

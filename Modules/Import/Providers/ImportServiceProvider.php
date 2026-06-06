@@ -99,8 +99,8 @@ final class ImportServiceProvider extends ServiceProvider
      * the `ReceiptsServiceProvider` tag-loop pattern.
      */
     private const PAYMENT_TYPE_HINTER_FQNS = [
-        'Modules\\Import\\Internal\\Parsers\\Asn\\AsnCamt053PaymentTypeHinter',
-        'Modules\\Import\\Internal\\Parsers\\Asn\\AsnMt940PaymentTypeHinter',
+        'Modules\\Import\\Internal\\Parsers\\Banking\\Camt053PaymentTypeHinter',
+        'Modules\\Import\\Internal\\Parsers\\Banking\\Mt940PaymentTypeHinter',
         'Modules\\Import\\Internal\\Parsers\\Asn\\AsnCsvPaymentTypeHinter',
         'Modules\\Import\\Internal\\Parsers\\Ics\\IcsPdfPaymentTypeHinter',
         'Modules\\Import\\Internal\\Parsers\\Paypal\\PaypalCsvPaymentTypeHinter',

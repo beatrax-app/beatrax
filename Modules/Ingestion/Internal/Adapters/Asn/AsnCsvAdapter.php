@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Generator;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
+use Modules\Ingestion\Internal\Adapters\Banking\BankAmountParser;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
@@ -28,7 +29,7 @@ use Throwable;
  * thousands of rows. The Import pipeline consumes the generator once and
  * never materializes the whole list.
  *
- * Amounts go through AsnAmountParser (regex + integer arithmetic, no float
+ * Amounts go through BankAmountParser (regex + integer arithmetic, no float
  * path — IEEE-754 corrupts cent precision). Counterparty names that arrive
  * empty stay null in the DTO; substituting the `_no_counterparty` sentinel
  * is the Normalize stage's responsibility.
@@ -36,7 +37,7 @@ use Throwable;
 final class AsnCsvAdapter implements SourceAdapter
 {
     public function __construct(
-        private readonly AsnAmountParser $amounts,
+        private readonly BankAmountParser $amounts,
         private readonly HeaderSniffer $sniffer,
     ) {}
 

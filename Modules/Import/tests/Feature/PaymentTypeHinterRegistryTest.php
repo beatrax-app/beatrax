@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Modules\Import\Internal\Parsers\Asn\AsnCamt053PaymentTypeHinter;
 use Modules\Import\Internal\Parsers\Asn\AsnCsvPaymentTypeHinter;
-use Modules\Import\Internal\Parsers\Asn\AsnMt940PaymentTypeHinter;
+use Modules\Import\Internal\Parsers\Banking\Camt053PaymentTypeHinter;
+use Modules\Import\Internal\Parsers\Banking\Mt940PaymentTypeHinter;
 use Modules\Import\Internal\Parsers\DescriptionKeywordFallbackHinter;
 use Modules\Import\Internal\Parsers\Ics\IcsPdfPaymentTypeHinter;
 use Modules\Import\Internal\Parsers\Paypal\PaypalCsvPaymentTypeHinter;
@@ -62,8 +62,8 @@ it('emits the tagged hinters in the documented registration order', function ():
     }
 
     expect($classes)->toBe([
-        AsnCamt053PaymentTypeHinter::class,
-        AsnMt940PaymentTypeHinter::class,
+        Camt053PaymentTypeHinter::class,
+        Mt940PaymentTypeHinter::class,
         AsnCsvPaymentTypeHinter::class,
         IcsPdfPaymentTypeHinter::class,
         PaypalCsvPaymentTypeHinter::class,

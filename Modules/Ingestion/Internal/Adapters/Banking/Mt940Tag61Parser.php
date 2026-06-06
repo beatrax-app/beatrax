@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn;
+namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Carbon\CarbonImmutable;
-use Modules\Ingestion\Internal\Adapters\Asn\Dto\Mt940StatementLine;
+use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Throwable;
 
 /**
  * Parses a single `:61:` statement-line body into a typed
  * `Mt940StatementLine` value object. The amount is converted to signed
- * integer minor units via the reused `AsnAmountParser` (integer regex,
+ * integer minor units via the reused `BankAmountParser` (integer regex,
  * no float coercion).
  *
- * Reads the ASN-extended customer-reference variant: up to 34 chars
+ * Reads the extended customer-reference variant: up to 34 chars
  * before the optional `//bankref` separator (the SWIFT-standard variant
  * caps at 16).
  *
@@ -36,10 +36,10 @@ use Throwable;
  *    standard SWIFT year-boundary convention for late-December entries
  *    on early-January value dates.
  */
-final class AsnMt940Tag61Parser
+final class Mt940Tag61Parser
 {
     /**
-     * Greedy regex over the `:61:` body. Mirrors the ASN dialect:
+     * Greedy regex over the `:61:` body. Mirrors the extended dialect:
      * mandatory value date (YYMMDD), optional entry date (MMDD), status,
      * optional funds-code letter, comma-decimal amount, optional 4-char
      * transaction-type code, optional 34-char customer reference, and an
@@ -59,7 +59,7 @@ final class AsnMt940Tag61Parser
         .'$/';
 
     public function __construct(
-        private readonly AsnAmountParser $amounts,
+        private readonly BankAmountParser $amounts,
     ) {}
 
     public function parse(string $content): Mt940StatementLine
@@ -107,7 +107,7 @@ final class AsnMt940Tag61Parser
 
     /**
      * Converts an MT940 comma-decimal amount (e.g. "1234,56" or "1234")
-     * to integer minor units via the reused `AsnAmountParser`. MT940
+     * to integer minor units via the reused `BankAmountParser`. MT940
      * sometimes omits the fractional part for whole amounts; the helper
      * normalises to a two-digit period-decimal before delegating so the
      * shared integer parser sees its expected shape.
