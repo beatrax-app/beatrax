@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940Lexer;
+use Modules\Ingestion\Internal\Adapters\Banking\Mt940Lexer;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 beforeEach(function (): void {
-    $this->lexer = $this->app->make(AsnMt940Lexer::class);
+    $this->lexer = $this->app->make(Mt940Lexer::class);
 });
 
 it('yields one (tag, content) pair per :NN: line on a simple file', function (): void {

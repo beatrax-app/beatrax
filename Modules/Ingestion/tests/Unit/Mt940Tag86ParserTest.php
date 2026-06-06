@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940Tag86Parser;
+use Modules\Ingestion\Internal\Adapters\Banking\Mt940Tag86Parser;
 
 beforeEach(function (): void {
-    $this->parser = $this->app->make(AsnMt940Tag86Parser::class);
+    $this->parser = $this->app->make(Mt940Tag86Parser::class);
 });
 
 it('parses a structured GVC 005 SEPA direct-debit narrative', function (): void {

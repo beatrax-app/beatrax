@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   statement descriptors carry only a payment reference (not the agency name)
   are deliberately omitted to avoid false positives.
 
+- The internal bank-statement parsers are no longer branded around a single
+  bank: the generic CAMT.053 and MT940 adapters, their helpers, and the shared
+  amount parser moved from `Internal/Adapters/Asn` to a neutral
+  `Internal/Adapters/Banking` namespace (`Camt053Adapter`, `Mt940Adapter`,
+  `BankAmountParser`, …), and the matching Import-module payment-type hinters to
+  `Internal/Parsers/Banking`. ASN's own proprietary CSV adapter keeps its name
+  (it is one specific bank's format, like the new N26/Revolut/ING presets). No
+  behaviour change; format keys are unaffected.
 - The bundled merchant corpus is reorganised into per-country files
   (`resources/corpus/merchants/<country>.yaml`, region inferred from filename)
   and expanded to ~600 merchants across all 27 EU member states plus the UK,

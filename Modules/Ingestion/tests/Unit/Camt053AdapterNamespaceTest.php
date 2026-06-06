@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053Adapter;
+use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 
@@ -83,7 +83,7 @@ beforeEach(function (): void {
         }
     };
 
-    $this->adapter = $this->app->make(AsnCamt053Adapter::class);
+    $this->adapter = $this->app->make(Camt053Adapter::class);
 });
 
 it('parses CAMT.053 sub-version 001.NN via the same code path', function (string $nsVersion): void {

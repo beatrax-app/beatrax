@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn;
+namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 /**
- * Pure parser that converts an ASN amount cell into signed integer minor
- * units. ASN's amount format is period-decimal with two fractional digits
+ * Pure parser that converts a bank amount cell into signed integer minor
+ * units. The amount format is period-decimal with two fractional digits
  * and an optional single leading sign — e.g. "-12.34", "0.29", "1234567.89".
  *
  * The parser is integer-only by construction: the regex captures the whole
@@ -20,10 +20,10 @@ use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
  *
  * Only leading and trailing whitespace is trimmed. Internal whitespace
  * (between the sign and the digits, or anywhere inside the digit run) is
- * rejected — those shapes never appear in a real ASN export and accepting
+ * rejected — those shapes never appear in a real bank export and accepting
  * them would silently merge accidentally-concatenated cells.
  */
-final class AsnAmountParser
+final class BankAmountParser
 {
     public function parseMinor(string $raw): int
     {
@@ -31,7 +31,7 @@ final class AsnAmountParser
 
         if (preg_match('/^([+-]?)(\d+)\.(\d{2})$/', $normalized, $m) !== 1) {
             throw new InvalidAmountException(sprintf(
-                "Cannot parse ASN amount: '%s' (expected period-decimal with two fractional digits, e.g. '-12.34')",
+                "Cannot parse amount: '%s' (expected period-decimal with two fractional digits, e.g. '-12.34')",
                 $raw,
             ));
         }

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Public\Services;
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
-use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940HeaderProfile;
+use Modules\Ingestion\Internal\Adapters\Banking\Camt053HeaderProfile;
+use Modules\Ingestion\Internal\Adapters\Banking\Mt940HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfHeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
 use Modules\Ingestion\Public\Dto\CsvPreset;
@@ -70,8 +70,8 @@ final class HeaderSniffer
 
         return match ($declaredFormat) {
             AsnCsvHeaderProfile::FORMAT => $this->sniffAsnCsv($localPath, $head),
-            AsnCamt053HeaderProfile::FORMAT => $this->sniffAsnCamt053($localPath, $head),
-            AsnMt940HeaderProfile::FORMAT => $this->sniffAsnMt940($localPath, $head),
+            Camt053HeaderProfile::FORMAT => $this->sniffCamt053($localPath, $head),
+            Mt940HeaderProfile::FORMAT => $this->sniffMt940($localPath, $head),
             IcsPdfHeaderProfile::FORMAT => $this->sniffIcsPdf($localPath, $head),
             PaypalCsvLanguageProfile::FORMAT => $this->sniffPaypalCsv($localPath, $head),
             EmlHeaderProfile::FORMAT => $this->sniffEml($localPath, $head),
@@ -313,7 +313,7 @@ final class HeaderSniffer
      * tag at the start of the body (after stripping any optional SWIFT
      * block-1 envelope `{1:...}{2:...}{4: ... -}`).
      */
-    private function sniffAsnMt940(string $path, string $head): SniffResult
+    private function sniffMt940(string $path, string $head): SniffResult
     {
         if (preg_match('/\.(sta|mt940|940|txt)$/i', $path) !== 1) {
             throw new SniffMismatchException(
@@ -323,17 +323,17 @@ final class HeaderSniffer
 
         $body = $this->stripSwiftEnvelope($head);
 
-        if (preg_match(AsnMt940HeaderProfile::SIGNATURE_REGEX, $body) !== 1) {
+        if (preg_match(Mt940HeaderProfile::SIGNATURE_REGEX, $body) !== 1) {
             throw new SniffMismatchException(
                 'This file does not look like MT940 (no :20: tag at the start). If ASN changed their export format, file an issue.'
             );
         }
 
         return new SniffResult(
-            format: AsnMt940HeaderProfile::FORMAT,
+            format: Mt940HeaderProfile::FORMAT,
             delimiter: '',
             hasHeader: false,
-            encoding: AsnMt940HeaderProfile::SOURCE_ENCODING,
+            encoding: Mt940HeaderProfile::SOURCE_ENCODING,
             columnCount: 0,
         );
     }
@@ -345,7 +345,7 @@ final class HeaderSniffer
      */
     private function stripSwiftEnvelope(string $head): string
     {
-        if (preg_match(AsnMt940HeaderProfile::SWIFT_ENVELOPE_REGEX, $head, $matches) === 1) {
+        if (preg_match(Mt940HeaderProfile::SWIFT_ENVELOPE_REGEX, $head, $matches) === 1) {
             return $matches[1];
         }
 
@@ -359,7 +359,7 @@ final class HeaderSniffer
      * gets a clear "wrong family" message rather than a cryptic parser
      * error 50 KB into the file.
      */
-    private function sniffAsnCamt053(string $path, string $head): SniffResult
+    private function sniffCamt053(string $path, string $head): SniffResult
     {
         if (preg_match('/\.xml$/i', $path) !== 1) {
             throw new SniffMismatchException(
@@ -367,7 +367,7 @@ final class HeaderSniffer
             );
         }
 
-        if (preg_match(AsnCamt053HeaderProfile::XML_NAMESPACE_REGEX, $head) !== 1) {
+        if (preg_match(Camt053HeaderProfile::XML_NAMESPACE_REGEX, $head) !== 1) {
             throw new SniffMismatchException(
                 'This XML file does not declare an ISO 20022 CAMT.053 namespace. '
                 .'If you uploaded a CAMT.052 or CAMT.054 file by mistake, re-download '
@@ -376,10 +376,10 @@ final class HeaderSniffer
         }
 
         return new SniffResult(
-            format: AsnCamt053HeaderProfile::FORMAT,
+            format: Camt053HeaderProfile::FORMAT,
             delimiter: '',
             hasHeader: false,
-            encoding: AsnCamt053HeaderProfile::SOURCE_ENCODING,
+            encoding: Camt053HeaderProfile::SOURCE_ENCODING,
             columnCount: 0,
         );
     }

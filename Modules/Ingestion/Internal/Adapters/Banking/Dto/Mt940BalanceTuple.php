@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn\Dto;
+namespace Modules\Ingestion\Internal\Adapters\Banking\Dto;
 
 use Carbon\CarbonImmutable;
 
 /**
  * Decoded `:60F:` / `:62F:` balance tag content — signed integer minor
- * amount, currency, and balance date. Used by `AsnMt940Adapter` to
+ * amount, currency, and balance date. Used by `Mt940Adapter` to
  * populate the statement-summary metadata.
  *
  * Lives under `Internal/` because the shape is parser-implementation

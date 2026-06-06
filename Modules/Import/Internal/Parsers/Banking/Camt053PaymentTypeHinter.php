@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Import\Internal\Parsers\Asn;
+namespace Modules\Import\Internal\Parsers\Banking;
 
 use Modules\Import\Public\Contracts\PaymentTypeHinter;
 use Modules\Import\Public\Dto\PaymentTypeHint;
@@ -10,7 +10,7 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Payment-type hinter specialised for ASN CAMT.053 ISO20022 exports
+ * Payment-type hinter for CAMT.053 ISO 20022 exports
  * (`source_format = 'camt053'`).
  *
  * Keys off the authoritative `BkTxCd` (Bank Transaction Code) tuple
@@ -27,7 +27,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  *
  * When the BkTxCd tuple is missing OR carries a code outside this
  * recognised list, the hinter falls back to the same Dutch lexeme
- * scan as the ASN CSV / MT940 hinters — CAMT entries carry the same
+ * scan as the CSV / MT940 hinters — CAMT entries carry the same
  * narrative text in their `additionalTransactionInformation` /
  * remittance fields, which the adapter merges into the canonical
  * `description`.
@@ -38,7 +38,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  *
  * Pure / stateless / singleton-safe — no constructor dependencies.
  */
-final class AsnCamt053PaymentTypeHinter implements PaymentTypeHinter
+final class Camt053PaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = 'camt053';
 
@@ -63,7 +63,7 @@ final class AsnCamt053PaymentTypeHinter implements PaymentTypeHinter
 
     /**
      * Fallback keyword set when BkTxCd is missing or unrecognised.
-     * Mirrors the ASN CSV / MT940 hinters because CAMT entries carry
+     * Mirrors the CSV / MT940 hinters because CAMT entries carry
      * the same Dutch narrative text in the merged description.
      *
      * @var list<array{keyword: string, type: PaymentType, confidence: int}>

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn;
+namespace Modules\Ingestion\Internal\Adapters\Banking;
 
-use Modules\Ingestion\Internal\Adapters\Asn\Dto\Mt940Narrative;
+use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940Narrative;
 
 /**
  * Parses a single `:86:` narrative body into a typed `Mt940Narrative`
@@ -26,7 +26,7 @@ use Modules\Ingestion\Internal\Adapters\Asn\Dto\Mt940Narrative;
  * is the one exception — it uses a trailing space convention, so its
  * value comes between `BIC ` and the next `+`.
  */
-final class AsnMt940Tag86Parser
+final class Mt940Tag86Parser
 {
     /**
      * SEPA GVC keywords the parser surfaces from the purpose subfields.

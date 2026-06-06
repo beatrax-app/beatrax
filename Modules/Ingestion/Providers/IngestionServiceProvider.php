@@ -6,9 +6,9 @@ namespace Modules\Ingestion\Providers;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCamt053Adapter;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
-use Modules\Ingestion\Internal\Adapters\Asn\AsnMt940Adapter;
+use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
+use Modules\Ingestion\Internal\Adapters\Banking\Mt940Adapter;
 use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAmountParser;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
@@ -39,8 +39,8 @@ final class IngestionServiceProvider extends ServiceProvider
             static function (Container $app): SourceAdapterRegistry {
                 $adapters = [
                     'asn-csv' => $app->make(AsnCsvAdapter::class),
-                    'camt053' => $app->make(AsnCamt053Adapter::class),
-                    'mt940' => $app->make(AsnMt940Adapter::class),
+                    'camt053' => $app->make(Camt053Adapter::class),
+                    'mt940' => $app->make(Mt940Adapter::class),
                     'ics-pdf' => $app->make(IcsPdfAdapter::class),
                     'paypal-csv' => $app->make(PaypalCsvAdapter::class),
                 ];

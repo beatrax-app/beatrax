@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Adapters\Asn;
+namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 /**
  * Pre-normalises an MT940 counterparty name before it reaches the shared
@@ -17,7 +17,7 @@ namespace Modules\Ingestion\Internal\Adapters\Asn;
  * counterparty resolves to the same canonical key across CSV, CAMT, and
  * MT940 imports.
  */
-final class AsnMt940CounterpartyCleaner
+final class Mt940CounterpartyCleaner
 {
     private const GVC_PREFIX_REGEX = '/^\d{3}\s+/';
 

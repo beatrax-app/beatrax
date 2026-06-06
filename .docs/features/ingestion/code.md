@@ -33,23 +33,27 @@ Modules/Ingestion/
 │       └── SourceAdapterRegistry.php
 ├── Internal/
 │   └── Adapters/
-│       ├── Asn/
-│       │   ├── AsnCsvAdapter.php
-│       │   ├── AsnCamt053Adapter.php
-│       │   ├── AsnMt940Adapter.php
-│       │   ├── AsnAmountParser.php
-│       │   ├── AsnCamt053HeaderProfile.php
-│       │   ├── AsnCsvColumnMap.php
-│       │   ├── AsnCsvHeaderProfile.php
-│       │   ├── AsnMt940HeaderProfile.php
-│       │   ├── AsnMt940Lexer.php
-│       │   ├── AsnMt940Tag61Parser.php
-│       │   ├── AsnMt940Tag86Parser.php
-│       │   ├── AsnMt940CounterpartyCleaner.php
+│       ├── Banking/                         # generic bank-statement parsers
+│       │   ├── Camt053Adapter.php
+│       │   ├── Mt940Adapter.php
+│       │   ├── BankAmountParser.php
+│       │   ├── Camt053HeaderProfile.php
+│       │   ├── Mt940HeaderProfile.php
+│       │   ├── Mt940Lexer.php
+│       │   ├── Mt940Tag61Parser.php
+│       │   ├── Mt940Tag86Parser.php
+│       │   ├── Mt940CounterpartyCleaner.php
 │       │   └── Dto/
 │       │       ├── Mt940BalanceTuple.php
 │       │       ├── Mt940Narrative.php
 │       │       └── Mt940StatementLine.php
+│       ├── Asn/                              # ASN's own proprietary CSV
+│       │   ├── AsnCsvAdapter.php
+│       │   ├── AsnCsvColumnMap.php
+│       │   └── AsnCsvHeaderProfile.php
+│       ├── Csv/                              # preset-driven generic CSV importer
+│       │   ├── GenericCsvAdapter.php
+│       │   └── GenericCsvAmountParser.php
 │       ├── Ics/
 │       │   ├── IcsPdfAdapter.php
 │       │   ├── IcsAmountParser.php
