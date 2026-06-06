@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Internal\Resolver;
 
+use Iban\Validation\Validator as IbanValidator;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
@@ -45,7 +46,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  *      (per-user exact / per-user generalised / community exact /
  *      community generalised / null); this resolver simply consumes
  *      its output.
- *   4. Personal-IBAN heuristic — a Dutch IBAN paired with a
+ *   4. Personal-IBAN heuristic — any valid SEPA IBAN paired with a
  *      personal-looking counterparty name appearing on a
  *      transfer_out / transfer_in row resolves to type=`personal`
  *      with the privacy default: the slug is the kebab-cased
@@ -85,16 +86,6 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  */
 final class CounterpartyResolverService implements CounterpartyResolver
 {
-    /**
-     * Dutch IBAN regex used by the personal-IBAN heuristic (step 4).
-     * Matches the published Dutch IBAN shape: `NL` + 2 check digits +
-     * 4-letter bank BIC prefix + 10-digit account number, with no
-     * spaces. IBAN inputs are normalised (uppercase, stripped of
-     * whitespace) before the regex test so the heuristic accepts both
-     * the spaced and unspaced forms banks export.
-     */
-    private const DUTCH_IBAN_REGEX = '/^NL\d{2}[A-Z]{4}\d{10}$/';
-
     /**
      * Single-token markers that disqualify a counterparty name from
      * the personal-IBAN heuristic. The list is short by design: the
@@ -169,6 +160,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
         private readonly ResolvesKnownCounterpartyIban $aliasBridge,
         private readonly MerchantNameResolver $merchantResolver,
         private readonly Dispatcher $events,
+        private readonly IbanValidator $ibanValidator,
     ) {}
 
     public function resolve(CanonicalTransaction $tx, User $user): ?CounterpartyResolutionDto
@@ -314,8 +306,13 @@ final class CounterpartyResolverService implements CounterpartyResolver
             return null;
         }
 
+        // Any structurally valid SEPA/IBAN account (mod-97 checksum + the
+        // country's BBAN length, via jschaedl/iban-validation) paired with a
+        // personal-looking name counts as a personal P2P transfer — not just
+        // Dutch IBANs. The personal-name guard below keeps small-business
+        // counterparties from being mis-typed.
         $iban = $this->normaliseIban($tx->counterpartyIban);
-        if ($iban === null || preg_match(self::DUTCH_IBAN_REGEX, $iban) !== 1) {
+        if ($iban === null || ! $this->ibanValidator->validate($iban)) {
             return null;
         }
 

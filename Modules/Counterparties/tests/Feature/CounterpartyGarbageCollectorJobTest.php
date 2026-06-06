@@ -87,7 +87,7 @@ it('Test 2 — does NOT prune a Counterparty with a transaction in the last 365 
         'name' => 'gc-test-2-account',
         'slug' => 'gc-test-2-account',
         'kind' => 'bank',
-        'iban' => 'NL00BANK0000000002',
+        'iban' => 'NL41BANK0000000002',
         'default_currency' => 'EUR',
         'created_at' => now()->toDateTimeString(),
         'updated_at' => now()->toDateTimeString(),

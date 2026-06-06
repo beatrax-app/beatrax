@@ -27,7 +27,7 @@ it('accepts a nullable user_id for multi-user readiness', function (): void {
         'name' => 'No user',
         'slug' => 'no-user',
         'kind' => 'asn',
-        'iban' => 'NL99ASNB9999999999',
+        'iban' => 'NL08ASNB9999999999',
         'default_currency' => 'EUR',
     ]);
 

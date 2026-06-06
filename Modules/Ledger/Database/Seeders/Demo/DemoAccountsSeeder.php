@@ -12,7 +12,7 @@ use Modules\Ledger\Models\Account;
  * back the demo dataset:
  *
  *   demo-1@beatrax.local
- *     - ASN bank   (NL00ASNB0123456789)
+ *     - ASN bank   (NL57ASNB0123456789)
  *     - ICS card   (1234 56XX XXXX 7890 — stored as the card's
  *                   reference IBAN-shaped slot since the schema only
  *                   knows IBANs; the slug 'ics-demo-1' is the routing
@@ -22,7 +22,7 @@ use Modules\Ledger\Models\Account;
  *                   only sources)
  *
  *   demo-2@beatrax.local
- *     - ASN bank   (NL00ASNB0987654321)
+ *     - ASN bank   (NL09ASNB0987654321)
  *     - PayPal     (PAYPAL-DEMO-2)
  *
  * Each account gets a sensible `starting_balance_minor` (a few
@@ -50,7 +50,7 @@ final class DemoAccountsSeeder
                 'name' => 'ASN Bank',
                 'slug' => 'asn-demo-1',
                 'kind' => 'asn',
-                'iban' => 'NL00ASNB0123456789',
+                'iban' => 'NL57ASNB0123456789',
                 'default_currency' => 'EUR',
                 'starting_balance_minor' => 285000,
             ],
@@ -76,7 +76,7 @@ final class DemoAccountsSeeder
                 'name' => 'ASN Bank',
                 'slug' => 'asn-demo-2',
                 'kind' => 'asn',
-                'iban' => 'NL00ASNB0987654321',
+                'iban' => 'NL09ASNB0987654321',
                 'default_currency' => 'EUR',
                 'starting_balance_minor' => 168000,
             ],

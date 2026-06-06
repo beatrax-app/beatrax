@@ -146,7 +146,7 @@ final class DemoTransferPairsSeeder
             settledCurrency: 'EUR',
             fxRateUsed: null,
             counterpartyName: $type === 'transfer_out' ? 'PayPal' : 'ASN Bank',
-            counterpartyIban: $type === 'transfer_out' ? 'PAYPAL-DEMO-1' : 'NL00ASNB0123456789',
+            counterpartyIban: $type === 'transfer_out' ? 'PAYPAL-DEMO-1' : 'NL57ASNB0123456789',
             counterpartyNormalized: $normalized,
             normalizationVersion: $this->fingerprints->version(),
             description: $description,

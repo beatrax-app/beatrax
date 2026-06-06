@@ -29,7 +29,7 @@ it('adds starting_balance_minor and starting_balance_date nullable columns to ac
         'name' => 'Schema check account',
         'slug' => 'schema-check',
         'kind' => 'asn',
-        'iban' => 'NL00ASNB0000000001',
+        'iban' => 'NL16ASNB0000000001',
         'default_currency' => 'EUR',
     ]);
 
@@ -49,7 +49,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
         'name' => 'Backfill account A',
         'slug' => 'backfill-a',
         'kind' => 'asn',
-        'iban' => 'NL00ASNB0000000010',
+        'iban' => 'NL64ASNB0000000010',
         'default_currency' => 'EUR',
     ]);
 
@@ -58,7 +58,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
         'name' => 'Backfill account B',
         'slug' => 'backfill-b',
         'kind' => 'asn',
-        'iban' => 'NL00ASNB0000000020',
+        'iban' => 'NL85ASNB0000000020',
         'default_currency' => 'EUR',
     ]);
 
@@ -148,7 +148,7 @@ it('is idempotent — re-running the backfill does not overwrite a non-null star
         'name' => 'Idempotent account',
         'slug' => 'idempotent',
         'kind' => 'asn',
-        'iban' => 'NL00ASNB0000000030',
+        'iban' => 'NL09ASNB0000000030',
         'default_currency' => 'EUR',
         'starting_balance_minor' => 77777,
         'starting_balance_date' => CarbonImmutable::parse('2025-12-31 00:00:00'),

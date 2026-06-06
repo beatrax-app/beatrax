@@ -18,14 +18,14 @@ dataset('idempotent_adapters', [
     // rows, which is still the strongest possible idempotency claim
     // for the data available today. Replace with a real overlap pair
     // the moment one lands in tests/fixtures/.
-    'asn-camt053' => [
-        'adapterFormat' => 'asn-camt053',
+    'camt053' => [
+        'adapterFormat' => 'camt053',
         'fixture' => __DIR__.'/../fixtures/asn-camt053-sample-1.xml',
         'overlapBase' => __DIR__.'/../fixtures/asn-camt053-sample-1.xml',
         'overlapNext' => __DIR__.'/../fixtures/asn-camt053-sample-1.xml',
     ],
-    'asn-mt940' => [
-        'adapterFormat' => 'asn-mt940',
+    'mt940' => [
+        'adapterFormat' => 'mt940',
         'fixture' => __DIR__.'/../fixtures/asn-mt940-sample-1.sta',
         'overlapBase' => __DIR__.'/../fixtures/asn-mt940-sample-1.sta',
         'overlapNext' => __DIR__.'/../fixtures/asn-mt940-sample-1.sta',

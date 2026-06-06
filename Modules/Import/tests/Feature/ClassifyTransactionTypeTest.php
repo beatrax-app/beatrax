@@ -126,7 +126,7 @@ it('flips a positive non-transfer row to income (subtractive income rule)', func
         'type' => 'income',  // NormalizeStage's positive-amount default
         'amountMinor' => 250000,
         'settledAmountMinor' => 250000,
-        'counterpartyIban' => 'NL00FOREIGN0000000', // not own account
+        'counterpartyIban' => 'NL69FOREIGN0000000', // not own account
         'counterpartyName' => 'Acme Salary',
     ]);
 
@@ -265,7 +265,7 @@ it('does not flip across users — counterparty matches a different user\'s acco
         'name' => 'Other ICS',
         'slug' => 'classify-other-ics',
         'kind' => 'ics_card',
-        'iban' => 'NL00FOREIGN0000000',
+        'iban' => 'NL69FOREIGN0000000',
         'default_currency' => 'EUR',
     ]);
 
@@ -274,7 +274,7 @@ it('does not flip across users — counterparty matches a different user\'s acco
         'type' => 'expense',
         'amountMinor' => -1000,
         'settledAmountMinor' => -1000,
-        'counterpartyIban' => 'NL00FOREIGN0000000',
+        'counterpartyIban' => 'NL69FOREIGN0000000',
     ]);
 
     $result = $this->stage->run($tx, $this->primaryUser);
@@ -308,7 +308,7 @@ it('keeps a negative non-transfer row as expense (NormalizeStage default unchang
         'type' => 'expense',
         'amountMinor' => -1599,
         'settledAmountMinor' => -1599,
-        'counterpartyIban' => 'NL00FOREIGN0000000', // not own
+        'counterpartyIban' => 'NL69FOREIGN0000000', // not own
     ]);
 
     $result = $this->stage->run($tx, $this->primaryUser);

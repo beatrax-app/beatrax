@@ -126,7 +126,7 @@ beforeEach(function (): void {
 
     $this->user = crqUser('chain-review-queue');
     $this->paypal = crqAccount($this->user, 'crq-paypal', 'paypal', 'PAYPAL');
-    $this->asn = crqAccount($this->user, 'crq-asn', 'asn', 'NL57ASNB1111111111');
+    $this->asn = crqAccount($this->user, 'crq-asn', 'asn', 'NL93ASNB1111111111');
     $this->run = crqImportRun($this->user, str_repeat('a', 64));
 
     // One candidate to act on across the suite.

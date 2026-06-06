@@ -66,7 +66,7 @@ it('Test 2: filter chips filter the grid (clicking Merchants narrows the rows)',
     $user = cpIndexUser('cp-index-filter');
     cpIndexCounterparty($user->id, 'netflix', 'Netflix', 'merchant');
     cpIndexCounterparty($user->id, 'ah', 'Albert Heijn', 'merchant');
-    cpIndexCounterparty($user->id, 'mystery-1', 'NL01TEST0000000001', 'unknown');
+    cpIndexCounterparty($user->id, 'mystery-1', 'NL69TEST0000000001', 'unknown');
 
     $component = Livewire::actingAs($user)->test(CounterpartyIndex::class);
 
@@ -132,7 +132,7 @@ it('Test 6: cross-user isolation — user A never sees user B counterparties', f
 
 it('Test 7: unknown card CTA routes to /counterparties/triage with queue_first', function (): void {
     $user = cpIndexUser('cp-index-unknown-cta');
-    $unknownId = cpIndexCounterparty($user->id, 'mystery-1', 'NL01TEST0000000001', 'unknown', 'NL01TEST0000000001');
+    $unknownId = cpIndexCounterparty($user->id, 'mystery-1', 'NL69TEST0000000001', 'unknown', 'NL69TEST0000000001');
 
     $component = Livewire::actingAs($user)->test(CounterpartyIndex::class);
 

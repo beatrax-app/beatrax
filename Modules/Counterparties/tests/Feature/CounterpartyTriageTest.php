@@ -138,7 +138,7 @@ it('Test 16: renders progress copy verbatim with seen/total/percent/minutes', fu
 it('Test 17: suggestion banner renders verbatim copy + reasoning sub-line', function (): void {
     $user = cpTriageUser('cp-triage-suggest');
     $account = cpTriageAccount($user);
-    $unknownId = cpTriageUnknown($user->id, 'mystery-netflix', 'NL12RABO0123456789');
+    $unknownId = cpTriageUnknown($user->id, 'mystery-netflix', 'NL44RABO0123456789');
 
     // 3 recent transactions whose descriptions all resolve via the
     // MerchantNameResolver. Use a literal merchant name the resolver's
@@ -179,7 +179,7 @@ it('Test 18: acceptSuggestion promotes the unknown to a merchant counterparty', 
     $user = cpTriageUser('cp-triage-accept');
     $account = cpTriageAccount($user);
     $runId = cpTriageImportRun($user);
-    $unknownId = cpTriageUnknown($user->id, 'mystery-spotify', 'NL12RABO0123456790');
+    $unknownId = cpTriageUnknown($user->id, 'mystery-spotify', 'NL17RABO0123456790');
     cpTriageTx($user, $account, $unknownId, $runId, 'SPOTIFY P AMSTERDAM');
 
     // Seed a merchant_aliases row so the resolver returns 'Spotify'
@@ -206,7 +206,7 @@ it('Test 18: acceptSuggestion promotes the unknown to a merchant counterparty', 
 
 it('Test 19: rejectSuggestion dismisses the banner (showSuggestion flips to false)', function (): void {
     $user = cpTriageUser('cp-triage-reject');
-    cpTriageUnknown($user->id, 'mystery-rejected', 'NL12RABO0123456791');
+    cpTriageUnknown($user->id, 'mystery-rejected', 'NL87RABO0123456791');
 
     $component = Livewire::actingAs($user)->test(CounterpartyTriage::class);
     $component->assertSet('showSuggestion', true);
@@ -218,8 +218,8 @@ it('Test 19: rejectSuggestion dismisses the banner (showSuggestion flips to fals
 
 it('Test 20: skipForNow advances the cursor without modifying the row', function (): void {
     $user = cpTriageUser('cp-triage-skip');
-    $id1 = cpTriageUnknown($user->id, 'mystery-skip-1', 'NL12RABO0123456792');
-    $id2 = cpTriageUnknown($user->id, 'mystery-skip-2', 'NL12RABO0123456793');
+    $id1 = cpTriageUnknown($user->id, 'mystery-skip-1', 'NL60RABO0123456792');
+    $id2 = cpTriageUnknown($user->id, 'mystery-skip-2', 'NL33RABO0123456793');
 
     $component = Livewire::actingAs($user)->test(CounterpartyTriage::class);
     $component->assertSet('currentIndex', 0);

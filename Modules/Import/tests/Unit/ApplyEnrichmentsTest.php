@@ -185,7 +185,7 @@ it('cross-user safety: a PendingEnrichment for another user\'s row returns 0', f
         'name' => 'Other ASN',
         'slug' => 'other-asn-applier',
         'kind' => 'asn',
-        'iban' => 'NL18ABNA0000000999',
+        'iban' => 'NL78ABNA0000000999',
         'default_currency' => 'EUR',
     ]);
     $otherTx = seedExistingTransaction($other, $otherAccount->id, 'asn-csv', null, $this->composer);

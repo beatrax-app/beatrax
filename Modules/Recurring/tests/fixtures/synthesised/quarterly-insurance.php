@@ -21,7 +21,7 @@ for ($i = 0; $i < 6; $i++) {
         'original_amount_minor' => -8999,
         'original_currency' => 'EUR',
         'counterparty_normalized' => 'acme insurance',
-        'counterparty_iban' => 'NL00ACME0000000099',
+        'counterparty_iban' => 'NL90ACME0000000099',
     ];
 }
 

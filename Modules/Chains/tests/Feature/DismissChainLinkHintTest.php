@@ -101,7 +101,7 @@ beforeEach(function (): void {
     $this->db = $db;
 
     $this->user = dchUser('dch-user');
-    $this->bank = dchAccount($this->user, 'dch-bank', 'bank', 'NL12ASNB0000000001');
+    $this->bank = dchAccount($this->user, 'dch-bank', 'bank', 'NL16ASNB0000000001');
     $this->run = ImportRun::query()->create([
         'user_id' => $this->user->id,
         'source_format' => 'asn-csv',

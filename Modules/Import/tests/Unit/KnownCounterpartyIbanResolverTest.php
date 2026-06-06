@@ -98,7 +98,7 @@ it('returns null when alias exists but the user owns no account of the target ki
         'name' => 'Only ASN',
         'slug' => 'resolver-no-target-account-asn',
         'kind' => 'bank',
-        'iban' => 'NL12ASNB0000000123',
+        'iban' => 'NL20ASNB0000000123',
         'default_currency' => 'EUR',
     ]);
 
@@ -140,7 +140,7 @@ it('returns the lowest-id account when the user owns two accounts of the alias t
         'name' => 'First ASN',
         'slug' => 'resolver-multi-bank-first',
         'kind' => 'bank',
-        'iban' => 'NL57ASNB0123450000',
+        'iban' => 'NL30ASNB0123450000',
         'default_currency' => 'EUR',
     ]);
     Account::create([
@@ -148,7 +148,7 @@ it('returns the lowest-id account when the user owns two accounts of the alias t
         'name' => 'Second ABN',
         'slug' => 'resolver-multi-bank-second',
         'kind' => 'bank',
-        'iban' => 'NL00ABNA0000000000',
+        'iban' => 'NL85ABNA0000000000',
         'default_currency' => 'EUR',
     ]);
 
@@ -156,13 +156,13 @@ it('returns the lowest-id account when the user owns two accounts of the alias t
     // qualify; the resolver must pick the lowest-id one.
     KnownCounterpartyIban::query()->create([
         'user_id' => $user->id,
-        'real_iban' => 'NL99THIRD0000000000',
+        'real_iban' => 'NL85THRD0000000000',
         'target_account_kind' => 'bank',
         'notes' => 'Fictional third-party institution that aliases to bank.',
     ]);
 
     $resolver = app(ResolvesKnownCounterpartyIban::class);
-    $resolved = $resolver->resolveAccount('NL99THIRD0000000000', $user->id);
+    $resolved = $resolver->resolveAccount('NL85THRD0000000000', $user->id);
 
     expect($resolved)->not->toBeNull();
     expect($resolved->id)->toBe($firstBank->id);

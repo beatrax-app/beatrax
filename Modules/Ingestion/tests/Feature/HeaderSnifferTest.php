@@ -199,7 +199,7 @@ it('accepts an ASN MT940 .sta file', function (): void {
 })->group('phase-2');
 
 it('accepts an MT940 file with a leading SWIFT block-1 envelope', function (): void {
-    $body = '{1:F01ASNBNL21XXXX0000000000}{2:O9400000000ASNBNL21XXXX00000000000000000000N}{3:{108:MT940}}{4:'
+    $body = '{1:F01ASNBNL50XXXX0000000000}{2:O9400000000ASNBNL50XXXX00000000000000000000N}{3:{108:MT940}}{4:'
         ."\n:20:STMT-2026-04\n:25:NL57ASNB0123456789\n:28C:1/1\n:60F:C260401EUR1000,00\n"
         .":61:2604010401C100,00NTRF NONREF\n-}";
     $tmp = tempnam(sys_get_temp_dir(), 'mt940-envelope-').'.sta';

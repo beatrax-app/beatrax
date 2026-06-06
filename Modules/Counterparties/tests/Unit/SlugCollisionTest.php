@@ -117,7 +117,7 @@ beforeEach(function (): void {
         'name' => 'Slug ASN',
         'slug' => 'slug-fixture-asn',
         'kind' => 'bank',
-        'iban' => 'NL12ASNB0000000222',
+        'iban' => 'NL63ASNB0000000222',
         'default_currency' => 'EUR',
     ]);
 });
@@ -207,7 +207,7 @@ it('Test 3 — collision suffixing is per-user: user As "bol" does not block use
         'name' => 'Other ASN',
         'slug' => 'slug-other-asn',
         'kind' => 'bank',
-        'iban' => 'NL12ASNB0000000333',
+        'iban' => 'NL73ASNB0000000333',
         'default_currency' => 'EUR',
     ]);
 

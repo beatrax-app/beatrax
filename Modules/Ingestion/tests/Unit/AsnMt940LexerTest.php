@@ -23,7 +23,7 @@ it('yields one (tag, content) pair per :NN: line on a simple file', function ():
 })->group('phase-2');
 
 it('appends continuation lines to the previous tag buffer with newline preserved', function (): void {
-    $body = ":86:GVC005?20EREF+NOTPROVIDED?32STARBUCKS\nAMSTERDAM?31NL00BANK0000000001\n";
+    $body = ":86:GVC005?20EREF+NOTPROVIDED?32STARBUCKS\nAMSTERDAM?31NL68BANK0000000001\n";
     $tmp = writeMt940Temp($body);
 
     $tokens = iterator_to_array($this->lexer->tokenize($tmp), preserve_keys: false);
@@ -64,7 +64,7 @@ it('flushes the last tag at EOF even without a final EOM marker', function (): v
 })->group('phase-2');
 
 it('strips the SWIFT block-1 envelope and tokenizes block-4 contents', function (): void {
-    $body = '{1:F01ASNBNL21XXXX0000000000}{2:O9400000000ASNBNL21XXXX00000000000000000000N}{4:'
+    $body = '{1:F01ASNBNL50XXXX0000000000}{2:O9400000000ASNBNL50XXXX00000000000000000000N}{4:'
         ."\n:20:STMT-001\n:25:NL57ASNB0123456789\n-\n}";
     $tmp = writeMt940Temp($body);
 
