@@ -65,7 +65,7 @@ it('Test 8: merchant profile renders the merchant tab bar and hero', function ()
 
 it('Test 9: personal profile shows privacy banner + IBAN hidden by default', function (): void {
     $user = cpProfileUser('cp-profile-personal');
-    $iban = 'NL12RABO0123456789';
+    $iban = 'NL44RABO0123456789';
     cpProfileRow($user->id, 'alex-jordan', 'Alex Jordan', 'personal', $iban);
 
     $component = Livewire::actingAs($user)
@@ -84,7 +84,7 @@ it('Test 9: personal profile shows privacy banner + IBAN hidden by default', fun
 
 it('Test 10: personal slug never contains the IBAN', function (): void {
     $user = cpProfileUser('cp-profile-personal-slug');
-    $iban = 'NL12RABO0123456789';
+    $iban = 'NL44RABO0123456789';
     cpProfileRow($user->id, 'alex-jordan', 'Alex Jordan', 'personal', $iban);
 
     $component = Livewire::actingAs($user)
@@ -146,7 +146,7 @@ it('Test 13: self_account renders the stub redirect (no tabs / no hero)', functi
 
 it('Test 14: unknown renders fallback Label CTA (no Chains tab)', function (): void {
     $user = cpProfileUser('cp-profile-unknown');
-    cpProfileRow($user->id, 'mystery-iban-1', 'NL01TEST0000000001', 'unknown', 'NL01TEST0000000001');
+    cpProfileRow($user->id, 'mystery-iban-1', 'NL69TEST0000000001', 'unknown', 'NL69TEST0000000001');
 
     $component = Livewire::actingAs($user)
         ->test(CounterpartyProfile::class, ['slug' => 'mystery-iban-1']);

@@ -44,9 +44,9 @@ it('the redacted ICS text fixture contains zero IBAN-shaped tokens other than th
     preg_match_all('/\b[A-Z]{2}[0-9]{2}[A-Z0-9]{10,}\b/', $contents, $hits);
 
     foreach ($hits[0] as $match) {
-        expect($match)->toBe('NL00BANK0000000000',
+        expect($match)->toBe('NL95BANK0000000000',
             'Committed ICS text fixture must only contain the deterministic '
-            .'NL00BANK0000000000 placeholder, never a real IBAN-shaped token.'
+            .'NL95BANK0000000000 placeholder, never a real IBAN-shaped token.'
         );
     }
 })->group('phase-3');
@@ -92,9 +92,9 @@ it('the tiny synthetic ICS PDF, after pdftotext extraction, contains zero PII-sh
     $hits = [];
     preg_match_all('/\b[A-Z]{2}[0-9]{2}[A-Z0-9]{10,}\b/', $extracted, $hits);
     foreach ($hits[0] as $match) {
-        expect($match)->toBe('NL00BANK0000000000',
+        expect($match)->toBe('NL95BANK0000000000',
             'pdftotext output for the tiny synthetic PDF must only contain the '
-            .'deterministic NL00BANK0000000000 placeholder, never a real IBAN-'
+            .'deterministic NL95BANK0000000000 placeholder, never a real IBAN-'
             .'shaped token.'
         );
     }

@@ -127,11 +127,11 @@ beforeEach(function (): void {
     $this->userB = cucUser('cuc-user-b');
 
     $aPaypal = cucAccount($this->userA, 'cuc-a-pp', 'paypal', 'PAYPAL');
-    $aAsn = cucAccount($this->userA, 'cuc-a-asn', 'asn', 'NL57ASNB0000000001');
+    $aAsn = cucAccount($this->userA, 'cuc-a-asn', 'asn', 'NL16ASNB0000000001');
     $aRun = cucImportRun($this->userA, str_repeat('a', 64));
 
     $bPaypal = cucAccount($this->userB, 'cuc-b-pp', 'paypal', 'PAYPAL-B');
-    $bAsn = cucAccount($this->userB, 'cuc-b-asn', 'asn', 'NL57ASNB0000000002');
+    $bAsn = cucAccount($this->userB, 'cuc-b-asn', 'asn', 'NL86ASNB0000000002');
     $bRun = cucImportRun($this->userB, str_repeat('b', 64));
 
     // 3 candidates for user A.

@@ -42,7 +42,7 @@ it('renders a starting-balance card in the detected state with the detector valu
         'name' => 'ASN account',
         'slug' => 'asn-confirm',
         'kind' => 'asn',
-        'iban' => 'NL18ASNB0123454321',
+        'iban' => 'NL54ASNB0123454321',
         'default_currency' => 'EUR',
     ]);
 

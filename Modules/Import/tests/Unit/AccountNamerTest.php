@@ -20,7 +20,7 @@ beforeEach(function (): void {
 
 it('creates an account scoped to the user with the supplied name + IBAN', function (): void {
     $namer = new AccountNamer;
-    $iban = 'NL01TEST1234567890';
+    $iban = 'NL42TEST1234567890';
 
     $accountId = $namer($iban, 'My ASN Savings', $this->user);
 
@@ -39,7 +39,7 @@ it('creates an account scoped to the user with the supplied name + IBAN', functi
 it('trims whitespace from the user-supplied name', function (): void {
     $namer = new AccountNamer;
 
-    $accountId = $namer('NL02TEST1234567890', '  Trimmed Account  ', $this->user);
+    $accountId = $namer('NL42TEST1234567890', '  Trimmed Account  ', $this->user);
 
     /** @var Account $account */
     $account = Account::query()->find($accountId);
@@ -49,7 +49,7 @@ it('trims whitespace from the user-supplied name', function (): void {
 it('generates a slug containing the last 4 IBAN characters for uniqueness', function (): void {
     $namer = new AccountNamer;
 
-    $accountId = $namer('NL03TEST9876543210', 'Another Account', $this->user);
+    $accountId = $namer('NL47TEST9876543210', 'Another Account', $this->user);
 
     /** @var Account $account */
     $account = Account::query()->find($accountId);
@@ -59,21 +59,21 @@ it('generates a slug containing the last 4 IBAN characters for uniqueness', func
 it('rejects names that contain no alphanumeric characters (emoji only)', function (): void {
     $namer = new AccountNamer;
 
-    expect(fn () => $namer('NL04TEST1111111111', '🎉🎉', $this->user))
+    expect(fn () => $namer('NL49TEST1111111111', '🎉🎉', $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
 
 it('rejects names that contain only punctuation', function (): void {
     $namer = new AccountNamer;
 
-    expect(fn () => $namer('NL05TEST2222222222', '====', $this->user))
+    expect(fn () => $namer('NL02TEST2222222222', '====', $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
 
 it('rejects names below the minimum length bound', function (): void {
     $namer = new AccountNamer;
 
-    expect(fn () => $namer('NL06TEST3333333333', '   ', $this->user))
+    expect(fn () => $namer('NL52TEST3333333333', '   ', $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
 
@@ -81,7 +81,7 @@ it('rejects names above the maximum length bound', function (): void {
     $namer = new AccountNamer;
     $tooLong = str_repeat('a', AccountNamer::NAME_MAX_LENGTH + 1);
 
-    expect(fn () => $namer('NL07TEST4444444444', $tooLong, $this->user))
+    expect(fn () => $namer('NL05TEST4444444444', $tooLong, $this->user))
         ->toThrow(InvalidAccountNameException::class);
 });
 

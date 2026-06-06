@@ -108,7 +108,7 @@ it('scopes totals to the queried user only (no cross-user leakage)', function ()
         'name' => 'Other account',
         'slug' => 'other-account',
         'kind' => 'asn',
-        'iban' => 'NL99ASNB9999999999',
+        'iban' => 'NL08ASNB9999999999',
         'default_currency' => 'EUR',
     ]);
     $otherRun = $this->makeImportRun($other, sha: '1111111111111111111111111111111111111111111111111111111111111111');

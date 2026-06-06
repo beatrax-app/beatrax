@@ -230,7 +230,7 @@ it('scopes the existing-row lookup by user_id', function (): void {
         'name' => 'Other ASN',
         'slug' => 'other-asn',
         'kind' => 'asn',
-        'iban' => 'NL18ABNA0000000999',
+        'iban' => 'NL78ABNA0000000999',
         'default_currency' => 'EUR',
     ]);
     seedTransactionMatchingCanonical($otherUser, $otherAccount->id, 'camt053', 'EREF-OTHER', $this->composer);

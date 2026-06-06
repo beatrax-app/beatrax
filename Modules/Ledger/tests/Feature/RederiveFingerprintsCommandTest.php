@@ -33,7 +33,7 @@ beforeEach(function (): void {
         'name' => 'ASN Betaalrekening',
         'slug' => 'asn-betaalrekening',
         'kind' => 'bank',
-        'iban' => 'NL00ASNB0000000000',
+        'iban' => 'NL43ASNB0000000000',
         'default_currency' => 'EUR',
     ]);
 

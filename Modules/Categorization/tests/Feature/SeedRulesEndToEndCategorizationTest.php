@@ -58,7 +58,7 @@ beforeEach(function (): void {
         'name' => 'Test bank',
         'slug' => 'test-bank',
         'kind' => 'bank',
-        'iban' => 'NL00TEST00000001',
+        'iban' => 'NL69TEST0000000001',
         'default_currency' => 'EUR',
     ]);
 

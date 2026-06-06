@@ -53,7 +53,7 @@ function makePrivacyTx(int $accountId, ?int $userId, array $overrides = []): Can
         'settledCurrency' => 'EUR',
         'fxRateUsed' => null,
         'counterpartyName' => 'Maria van Buren',
-        'counterpartyIban' => 'NL12ABNA0123456789',
+        'counterpartyIban' => 'NL02ABNA0123456789',
         'counterpartyNormalized' => 'maria-van-buren',
         'normalizationVersion' => 1,
         'description' => null,
@@ -99,7 +99,7 @@ beforeEach(function (): void {
         'name' => 'Privacy ASN',
         'slug' => 'privacy-asn',
         'kind' => 'bank',
-        'iban' => 'NL12ASNB0000000111',
+        'iban' => 'NL53ASNB0000000111',
         'default_currency' => 'EUR',
     ]);
 });
@@ -131,10 +131,10 @@ it('Test 2 — personal-type iban column IS populated even though slug stays pri
     $dto = $resolver->resolve($tx, $this->user);
 
     expect($dto)->not->toBeNull();
-    expect($dto->iban)->toBe('NL12ABNA0123456789');
+    expect($dto->iban)->toBe('NL02ABNA0123456789');
 
     $row = DB::table('counterparties')->where('id', $dto->counterpartyId)->first();
     expect($row)->not->toBeNull();
-    expect($row->iban)->toBe('NL12ABNA0123456789');
+    expect($row->iban)->toBe('NL02ABNA0123456789');
     expect($row->slug)->not->toContain($row->iban);
 });

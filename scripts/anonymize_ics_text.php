@@ -13,9 +13,9 @@ declare(strict_types=1);
  *     by spaces or hyphens) -> `****-****-****-XXXX` where XXXX is
  *     randomised digits (NOT the original last-four).
  *   - Spaced-IBAN tokens like `NL75 ABNA 0844 9970 56` -> the deterministic
- *     placeholder `NL00 BANK 0000 0000 00` (spacing preserved).
+ *     placeholder `NL95 BANK 0000 0000 00` (spacing preserved).
  *   - IBAN-shaped tokens (NL / DE / BE / etc. + 2 check digits +
- *     >= 10 alnum) -> `NL00BANK0000000000` (deterministic placeholder).
+ *     >= 10 alnum) -> `NL95BANK0000000000` (deterministic placeholder).
  *   - Card-last-four lines `Uw Card met als laatste vier cijfers NNNN` ->
  *     `Uw Card met als laatste vier cijfers XXXX`.
  *   - Cardholder-name line (heuristic: a line containing only initials +
@@ -83,13 +83,13 @@ $contents = preg_replace_callback(
 
 // 2. Spaced IBAN tokens like `NL75 ABNA 0844 9970 56` (two-letter country +
 //    2 digits + four 4-char alnum groups + 2-char tail). Run BEFORE the
-//    plain-IBAN regex so the spacing is preserved as `NL00 BANK 0000 0000 00`.
+//    plain-IBAN regex so the spacing is preserved as `NL95 BANK 0000 0000 00`.
 $contents = preg_replace_callback(
     '/\b[A-Z]{2}\d{2}(?: [A-Z0-9]{4}){3} \d{2}\b/u',
     function (array $m) use (&$ibanSpacedCount): string {
         $ibanSpacedCount++;
 
-        return 'NL00 BANK 0000 0000 00';
+        return 'NL95 BANK 0000 0000 00';
     },
     $contents
 ) ?? $contents;
@@ -129,12 +129,12 @@ $contents = preg_replace_callback(
     '/\b[A-Z]{2}\d{2}[A-Z0-9]{10,}\b/u',
     function (array $m) use (&$ibanCount): string {
         // Don't double-redact our placeholder.
-        if ($m[0] === 'NL00BANK0000000000') {
+        if ($m[0] === 'NL95BANK0000000000') {
             return $m[0];
         }
         $ibanCount++;
 
-        return 'NL00BANK0000000000';
+        return 'NL95BANK0000000000';
     },
     $contents
 ) ?? $contents;

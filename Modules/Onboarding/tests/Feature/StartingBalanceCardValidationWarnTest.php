@@ -40,7 +40,7 @@ beforeEach(function (): void {
         'name' => 'ASN account',
         'slug' => 'asn-warn',
         'kind' => 'asn',
-        'iban' => 'NL18ASNB0123450001',
+        'iban' => 'NL03ASNB0123450001',
         'default_currency' => 'EUR',
     ]);
 

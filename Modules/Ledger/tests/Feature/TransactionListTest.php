@@ -104,7 +104,7 @@ it('scopes the list to the requested user only', function (): void {
         'name' => 'Other',
         'slug' => 'other',
         'kind' => 'asn',
-        'iban' => 'NL99ASNB9999999999',
+        'iban' => 'NL08ASNB9999999999',
         'default_currency' => 'EUR',
     ]);
     $otherRun = $this->makeImportRun($other, sha: '1111111111111111111111111111111111111111111111111111111111111111');

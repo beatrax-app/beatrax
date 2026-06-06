@@ -142,7 +142,7 @@ beforeEach(function (): void {
 
 it('returns null when no open card_statement exists', function (): void {
     $user = nsmUser('nsm-no-open');
-    nsmAsnAccount($user, 'nsm-asn-no-open', 'NL00ASNB1234567001');
+    nsmAsnAccount($user, 'nsm-asn-no-open', 'NL33ASNB1234567001');
     $ics = nsmIcsAccount($user, 'nsm-ics-no-open');
     $run = nsmImportRun($user);
 
@@ -162,7 +162,7 @@ it('returns null when no open card_statement exists', function (): void {
 
 it('returns a DTO with funder=ASN when an open card_statement + historical settlement exist', function (): void {
     $user = nsmUser('nsm-funder');
-    $asn = nsmAsnAccount($user, 'nsm-asn-funder', 'NL00ASNB1234567002');
+    $asn = nsmAsnAccount($user, 'nsm-asn-funder', 'NL06ASNB1234567002');
     $ics = nsmIcsAccount($user, 'nsm-ics-funder');
     $run = nsmImportRun($user);
 
@@ -197,7 +197,7 @@ it('returns a DTO with funder=ASN when an open card_statement + historical settl
 
 it('falls back to the user\'s first ASN account when no historical settlement exists', function (): void {
     $user = nsmUser('nsm-fallback');
-    $asn = nsmAsnAccount($user, 'nsm-asn-fallback', 'NL00ASNB1234567003');
+    $asn = nsmAsnAccount($user, 'nsm-asn-fallback', 'NL76ASNB1234567003');
     $ics = nsmIcsAccount($user, 'nsm-ics-fallback');
     $run = nsmImportRun($user);
 
@@ -242,7 +242,7 @@ it('isolates by user — user B\'s open statement never leaks to user A', functi
     $userB = nsmUser('nsm-iso-b');
 
     // User B has an open card_statement + ASN; user A has nothing.
-    nsmAsnAccount($userB, 'nsm-asn-iso-b', 'NL00ASNB1234567004');
+    nsmAsnAccount($userB, 'nsm-asn-iso-b', 'NL49ASNB1234567004');
     $icsB = nsmIcsAccount($userB, 'nsm-ics-iso-b');
     $runB = nsmImportRun($userB);
     CardStatement::query()->create([
@@ -261,7 +261,7 @@ it('isolates by user — user B\'s open statement never leaks to user A', functi
 
 it('picks the most-recent open statement when multiple are open', function (): void {
     $user = nsmUser('nsm-recent');
-    nsmAsnAccount($user, 'nsm-asn-recent', 'NL00ASNB1234567005');
+    nsmAsnAccount($user, 'nsm-asn-recent', 'NL22ASNB1234567005');
     $ics = nsmIcsAccount($user, 'nsm-ics-recent');
     $run = nsmImportRun($user);
 
@@ -293,7 +293,7 @@ it('picks the most-recent open statement when multiple are open', function (): v
 
 it('includes partially_settled state and surfaces it on the DTO', function (): void {
     $user = nsmUser('nsm-partial');
-    nsmAsnAccount($user, 'nsm-asn-partial', 'NL00ASNB1234567006');
+    nsmAsnAccount($user, 'nsm-asn-partial', 'NL92ASNB1234567006');
     $ics = nsmIcsAccount($user, 'nsm-ics-partial');
     $run = nsmImportRun($user);
 
@@ -326,8 +326,8 @@ it('includes partially_settled state and surfaces it on the DTO', function (): v
 
 it('funder resolution picks the most-recent chain_link when multiple historical settlements exist', function (): void {
     $user = nsmUser('nsm-multi-funder');
-    $asnOld = nsmAsnAccount($user, 'nsm-asn-old', 'NL00ASNB1234567007');
-    $asnNew = nsmAsnAccount($user, 'nsm-asn-new', 'NL00ASNB1234567008');
+    $asnOld = nsmAsnAccount($user, 'nsm-asn-old', 'NL65ASNB1234567007');
+    $asnNew = nsmAsnAccount($user, 'nsm-asn-new', 'NL38ASNB1234567008');
     $ics = nsmIcsAccount($user, 'nsm-ics-multi');
     $run = nsmImportRun($user);
 
@@ -358,7 +358,7 @@ it('funder resolution picks the most-recent chain_link when multiple historical 
 
 it('the new method does not modify Phase 5\'s existing openForAccount behaviour', function (): void {
     $user = nsmUser('nsm-open-for-account');
-    nsmAsnAccount($user, 'nsm-asn-ofa', 'NL00ASNB1234567009');
+    nsmAsnAccount($user, 'nsm-asn-ofa', 'NL11ASNB1234567009');
     $ics = nsmIcsAccount($user, 'nsm-ics-ofa');
     $run = nsmImportRun($user);
 

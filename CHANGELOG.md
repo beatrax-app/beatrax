@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `asn-mt940` → `mt940`, since CAMT.053 (ISO 20022) and MT940 (SWIFT) are
   pan-European standards rather than ASN-specific formats. Existing imports are
   migrated automatically; the ASN-specific CSV layout (`asn-csv`) keeps its name.
+- The personal-transfer counterparty heuristic now recognises **any valid SEPA
+  IBAN**, not just Dutch ones, using proper mod-97 + country-length validation
+  (via `jschaedl/iban-validation`). A German, French, or Belgian personal
+  transfer is now classified as a person rather than falling through to
+  "unknown". All test/demo fixtures use real, checksum-valid IBANs.
 
 ### Fixed
 

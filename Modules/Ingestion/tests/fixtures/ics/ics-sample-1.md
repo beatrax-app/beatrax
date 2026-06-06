@@ -38,7 +38,7 @@ applied in order:
    The trailing parenthesised group is a synthetic full-card placeholder
    so downstream tests can grep for the canonical four-group form even
    though the real PDF only renders the last-four.
-2. **Spaced IBAN** — `NL75 ABNA 0844 9970 56` → `NL00 BANK 0000 0000 00`
+2. **Spaced IBAN** — `NL75 ABNA 0844 9970 56` → `NL95 BANK 0000 0000 00`
    (spacing preserved; appears in body paragraphs that print the
    payment-deposit IBAN).
 3. **Card-number runs** — any 12+ contiguous digits with optional
@@ -47,7 +47,7 @@ applied in order:
 4. **ICS klantnummer** — standalone 11-digit run → `KLANTNUMMER`
    (non-digit placeholder so the phone regex below cannot cascade-match
    it together with neighbouring page-number columns).
-5. **Compact IBAN** — `NL75ABNA0844997056` → `NL00BANK0000000000`
+5. **Compact IBAN** — `NL75ABNA0844997056` → `NL95BANK0000000000`
    (the project-wide deterministic anonymised-IBAN placeholder).
 6. **Cardholder name** — heuristic match on a standalone line of all-caps
    initials + surname → `KAARTHOUDER` (Dutch literal, all caps).

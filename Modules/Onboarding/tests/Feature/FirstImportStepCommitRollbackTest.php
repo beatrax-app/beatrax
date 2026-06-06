@@ -73,7 +73,7 @@ it('rolls back all writes when ConfirmsImports throws mid-commit', function (): 
         'name' => 'Bank',
         'slug' => 'bank',
         'kind' => 'asn',
-        'iban' => 'NL00BANK0000000000',
+        'iban' => 'NL95BANK0000000000',
         'default_currency' => 'EUR',
     ]);
 
