@@ -45,6 +45,17 @@
     </div>
 
     <div class="side-section-label">THIS MONTH</div>
+    @php
+        // Cached per-user nav counts (NavCountsService). Compact-format large
+        // counts so a four-digit badge never stretches the rail.
+        $navCounts = $navCounts ?? [];
+        $navCount = static function (string $key) use ($navCounts): string {
+            $n = (int) ($navCounts[$key] ?? 0);
+
+            return $n >= 1000 ? round($n / 1000, 1).'k' : (string) $n;
+        };
+    @endphp
+
     <a href="{{ route('dashboard') }}" class="side-item {{ $isActive('/') }}">
         <span class="ic" aria-hidden="true">◆</span>
         Dashboard
@@ -52,6 +63,9 @@
     <a href="{{ route('transactions.index') }}" class="side-item {{ $isActive('/transactions') }}">
         <span class="ic" aria-hidden="true">≡</span>
         Transactions
+        @if (($navCounts['transactions'] ?? 0) > 0)
+            <span class="side-badge muted" aria-label="{{ $navCounts['transactions'] }} transactions">{{ $navCount('transactions') }}</span>
+        @endif
     </a>
     <a href="{{ route('forecast.index') }}" class="side-item {{ $isActive('/forecast') }}">
         <span class="ic" aria-hidden="true">↗</span>
@@ -62,6 +76,9 @@
     <a href="{{ route('recurring.index') }}" class="side-item {{ $isActive('/recurring') }}">
         <span class="ic" aria-hidden="true">↻</span>
         Recurring
+        @if (($navCounts['recurring'] ?? 0) > 0)
+            <span class="side-badge muted" aria-label="{{ $navCounts['recurring'] }} recurring series">{{ $navCount('recurring') }}</span>
+        @endif
     </a>
     {{--
         Counterparties index — the type-aware "who am I transacting
@@ -71,6 +88,9 @@
     <a href="{{ route('counterparties.index') }}" class="side-item {{ $isActive('/counterparties') }}">
         <span class="ic" aria-hidden="true">◉</span>
         Counterparties
+        @if (($navCounts['counterparties'] ?? 0) > 0)
+            <span class="side-badge muted" aria-label="{{ $navCounts['counterparties'] }} counterparties">{{ $navCount('counterparties') }}</span>
+        @endif
     </a>
     {{--
         Counterparty triage queue — focused single-card surface for
@@ -102,24 +122,39 @@
     <a href="{{ route('drift.index') }}" class="side-item {{ $isActive('/drift') }}">
         <span class="ic" aria-hidden="true">⚠</span>
         Drift Alerts
+        @if (($navCounts['drift'] ?? 0) > 0)
+            <span class="side-badge alert" aria-label="{{ $navCounts['drift'] }} open drift alerts">{{ $navCount('drift') }}</span>
+        @endif
     </a>
     <a href="{{ route('budgets.index') }}" class="side-item {{ $isActive('/budgets') }}">
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets
+        @if (($navCounts['budgets'] ?? 0) > 0)
+            <span class="side-badge muted" aria-label="{{ $navCounts['budgets'] }} budgets">{{ $navCount('budgets') }}</span>
+        @endif
     </a>
     <a href="{{ route('drift.watch') }}" class="side-item {{ $isActive('/drift/watch') }}">
         <span class="ic" aria-hidden="true">↗</span>
         Subscriptions
+        @if (($navCounts['subscriptions'] ?? 0) > 0)
+            <span class="side-badge muted" aria-label="{{ $navCounts['subscriptions'] }} subscriptions">{{ $navCount('subscriptions') }}</span>
+        @endif
     </a>
 
     <div class="side-section-label">INGESTION</div>
     <a href="{{ route('imports.new') }}" class="side-item {{ $isActive('/imports/new') }}">
         <span class="ic" aria-hidden="true">⊕</span>
         Imports
+        @if (($navCounts['imports'] ?? 0) > 0)
+            <span class="side-badge muted" aria-label="{{ $navCounts['imports'] }} imports">{{ $navCount('imports') }}</span>
+        @endif
     </a>
     <a href="#" class="side-item">
         <span class="ic" aria-hidden="true">⌗</span>
         Receipts
+        @if (($navCounts['receipts'] ?? 0) > 0)
+            <span class="side-badge muted" aria-label="{{ $navCounts['receipts'] }} receipts">{{ $navCount('receipts') }}</span>
+        @endif
     </a>
     <a href="{{ route('inboxes.index') }}" class="side-item {{ $isActive('/inboxes') }}">
         <span class="ic" aria-hidden="true">✉</span>
