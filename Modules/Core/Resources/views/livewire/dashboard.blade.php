@@ -148,6 +148,10 @@
          happens inside FixedPaymentsViewQuery. --}}
     @livewire('recurring.fixed-payments-card')
 
+    {{-- "This month vs last" — month-over-month spend comparison + top category
+         movers. Renders nothing until there is a prior period to compare. --}}
+    @livewire('core.spending-trend-card')
+
     {{-- "Ways to save" — corpus cancel/cheaper links surfaced from recurring
          + drift data. Renders nothing when there is nothing to suggest. --}}
     @livewire('drift-alerts.savings-insights-card')
