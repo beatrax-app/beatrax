@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Providers\HorizonServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
 use Modules\Budgets\Providers\BudgetsServiceProvider;
+use Modules\Goals\Providers\GoalsServiceProvider;
 use Modules\FX\Providers\FXServiceProvider;
 use Modules\CashBook\Providers\CashBookServiceProvider;
 use Modules\Categorization\Providers\CategorizationServiceProvider;
@@ -44,6 +45,7 @@ return array_values(array_filter([
     RecurringServiceProvider::class,
     DriftAlertsServiceProvider::class,
     BudgetsServiceProvider::class,
+    GoalsServiceProvider::class,
     FXServiceProvider::class,
     CashBookServiceProvider::class,
     ForecastingServiceProvider::class,
