@@ -173,3 +173,33 @@ it('Test 15: cross-user slug returns 404 (not 403)', function (): void {
 
     $response->assertStatus(404);
 });
+
+it('renders the support-resource card with a cancel link on a known merchant', function (): void {
+    $user = cpProfileUser('cp-support-merchant');
+    cpProfileRow($user->id, 'kpn-support', 'KPN', 'merchant');
+
+    Livewire::actingAs($user)
+        ->test(CounterpartyProfile::class, ['slug' => 'kpn-support'])
+        ->assertSee('Support & cancelling')
+        ->assertSee('Cancel')
+        ->assertSee('opzegformulier');
+});
+
+it('renders the getting-help card with a phone number on a known government agency', function (): void {
+    $user = cpProfileUser('cp-support-gov');
+    cpProfileRow($user->id, 'belastingdienst-support', 'Belastingdienst', 'government');
+
+    Livewire::actingAs($user)
+        ->test(CounterpartyProfile::class, ['slug' => 'belastingdienst-support'])
+        ->assertSee('Getting help')
+        ->assertSee('0800-0543');
+});
+
+it('shows no support card for a counterparty absent from the corpus', function (): void {
+    $user = cpProfileUser('cp-support-none');
+    cpProfileRow($user->id, 'nameless-shop', 'Totally Nameless Shop', 'merchant');
+
+    Livewire::actingAs($user)
+        ->test(CounterpartyProfile::class, ['slug' => 'nameless-shop'])
+        ->assertDontSee('Support & cancelling');
+});

@@ -1,0 +1,87 @@
+# Support-resource corpus — Netherlands (NL merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Researched 2026-06: no NL merchant below documents email cancellation — the
+# telecoms use an online form, phone, or registered letter — so cancel_email is
+# omitted and the real method lives in `notes`.
+entries:
+  # --- Merchants ---
+  - name: HelloFresh
+    type: merchant
+    cancel_url: "https://www.hellofresh.nl/about/hoe-annuleer-ik-hellofresh"
+    support_url: "https://www.hellofresh.nl/customercare/contact"
+    notes: "Opzeggen via je account (Instellingen > Abonnement opzeggen), of pauzeer de box. De wijzig/opzeg-deadline ligt enkele dagen voor je bezorgdag."
+  - name: Basic-Fit
+    type: merchant
+    cancel_url: "https://www.basic-fit.com/nl-nl/opzeggen"
+    support_url: "https://www.basic-fit.com/nl-nl/klantenservice"
+    notes: "Opzeggen via My Basic-Fit (my.basic-fit.com/cancel-membership) of de oranje zuil in de club; 4 weken opzegtermijn, eventueel 52-weken minimumtermijn. Geen e-mailkanaal."
+  - name: KPN
+    type: merchant
+    cancel_url: "https://www.kpn.com/service/administratie/opzeggen"
+    support_url: "https://www.kpn.com/service.htm"
+    notes: "Opzeggen via het online opzegformulier (KPN ID) of telefonisch via 0800 0402, of schriftelijk per brief. Meestal 1 maand opzegtermijn. Geen e-mailkanaal."
+  - name: Vodafone
+    type: merchant
+    cancel_url: "https://www.vodafone.nl/support/abonnement-en-rekening/opzeggen"
+    support_url: "https://www.vodafone.nl/support"
+    notes: "Opzeggen via het online opzegformulier of telefonisch via 0800 0094, of per aangetekende brief (Postbus 1500, 6201 BM Maastricht). 1 maand opzegtermijn. Geen e-mailkanaal."
+  - name: Ziggo
+    type: merchant
+    cancel_url: "https://www.ziggo.nl/opzeggen"
+    support_url: "https://www.ziggo.nl/klantenservice"
+    notes: "Opzeggen via het online opzegformulier of telefonisch via 088 121 28 12, of per aangetekende brief (Postbus 43048, 3540 AA Utrecht). Verwerking tot 4 weken. Geen e-mailkanaal."
+  - name: Odido
+    type: merchant
+    cancel_url: "https://www.odido.nl/service/abonnement/opzeggen"
+    support_url: "https://www.odido.nl/service"
+    notes: "Opzeggen via Mijn Odido of telefonisch via 0800 0092, of per brief (Postbus 16272, 2500 BG Den Haag). Meestal 1 maand opzegtermijn. Geen e-mailkanaal."
+  - name: Albert Heijn Premium
+    type: merchant
+    cancel_url: "https://www.ah.nl/klantenservice/mijn-albert-heijn/mijn-albert-heijn-premium"
+    support_url: "https://www.ah.nl/klantenservice"
+    notes: "Stopzetten via de AH-app of website onder 'Mijn Albert Heijn Premium'; opzeggen kan tot 1 dag voor verlenging. Geen e-mailkanaal."
+
+  # --- Government ---
+  - name: Belastingdienst
+    type: government
+    help_url: "https://www.belastingdienst.nl/wps/wcm/connect/nl/contact/contact"
+    apply_url: "https://mijn.belastingdienst.nl/"
+    rights_url: "https://www.belastingdienst.nl/wps/wcm/connect/nl/contact/contact-op-maat/betalen-en-ontvangen/"
+    phone: "0800-0543"
+    notes: "BelastingTelefoon 0800-0543 (gratis), ma-do 8-20u, vr 8-17u. Via Mijn Belastingdienst: aangifte, bezwaar en betalingsregeling (tot 12 maanden)."
+  - name: DUO
+    type: government
+    help_url: "https://duo.nl/particulier/contact/"
+    apply_url: "https://duo.nl/particulier/"
+    rights_url: "https://duo.nl/particulier/betalingsachterstand/"
+    phone: "050-599 77 55"
+    notes: "Telefoon 050-599 77 55, werkdagen 9-17u (BSN bij de hand). Betalingsregeling en berichten in Mijn DUO; bezwaar via Bezwaar en Beroep."
+  - name: CJIB
+    type: government
+    help_url: "https://www.cjib.nl/contact"
+    apply_url: "https://www.cjib.nl/betalen-in-delen-aanvragen"
+    rights_url: "https://www.cjib.nl/direct-regelen/ik-wil-graag/ik-ben-het-niet-eens-met-mijn-boete"
+    phone: "058-215 95 55"
+    notes: "Telefoon 058-215 95 55, werkdagen 8-17u. Betalingsregeling en boetes inzien in Mijn CJIB (DigiD); beroep/bezwaar binnen 6 weken."
+  - name: UWV
+    type: government
+    help_url: "https://www.uwv.nl/nl/contact"
+    apply_url: "https://www.uwv.nl/nl/ww/ww-aanvragen"
+    rights_url: "https://www.uwv.nl/particulieren/bezwaar-en-beroep/index.aspx"
+    phone: "088 898 92 94"
+    notes: "Telefoon 088 898 92 94, werkdagen 8-17u. WW aanvragen en berichten via Mijn UWV (DigiD); bezwaar binnen 6 weken na de beslissing."
+  - name: SVB
+    type: government
+    help_url: "https://www.svb.nl/nl/contact"
+    apply_url: "https://www.svb.nl/nl/"
+    rights_url: "https://www.svb.nl/nl/aow/rechten-en-plichten/bezwaar-en-beroep"
+    phone: "020-656 56 56"
+    notes: "Telefoon 020-656 56 56, werkdagen 8-17u. AOW/kinderbijslag/Anw beheren via Mijn SVB (DigiD); bezwaar online via Mijn SVB."
+  - name: Gemeente
+    type: government
+    help_url: "https://organisaties.overheid.nl/gemeenten"
+    apply_url: "https://mijn.overheid.nl/"
+    rights_url: "https://www.nationaleombudsman.nl/gemeente"
+    notes: "Geen landelijke instantie: zoek je eigen gemeente via organisaties.overheid.nl/gemeenten. Bel 14 + netnummer; persoonlijke zaken via MijnOverheid."

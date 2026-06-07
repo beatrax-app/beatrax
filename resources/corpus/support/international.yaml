@@ -1,0 +1,113 @@
+# Support-resource corpus — international services.
+#
+# Optional "where do I get help / cancel / save money" resources rendered on a
+# counterparty profile. Looked up by normalised counterparty name + type by
+# SupportResourceProvider; every field except name/type is optional.
+#
+# Schema per entry:
+#   name        string  required — canonical brand name (matched by brand prefix)
+#   type        string  required — "merchant" | "government"
+#   cancel_url  string  optional — official cancellation page / flow
+#   support_url string  optional — official help / contact page
+#   cheaper_url string  optional — retention / downgrade / student-discount page
+#   cancel_email map     optional — { to, subject, body } for a one-click mailto:
+#                                    ONLY where email is a genuine cancellation
+#                                    channel. Researched 2026-06: none of the
+#                                    services below document one (they use the
+#                                    online flow / phone / registered letter), so
+#                                    every entry relies on cancel_url + notes.
+#   notes       string  optional — one line on the cancellation method
+entries:
+  - name: Spotify
+    type: merchant
+    cancel_url: "https://support.spotify.com/us/article/cancel-premium/"
+    support_url: "https://support.spotify.com/"
+    cheaper_url: "https://support.spotify.com/us/article/premium-student/"
+    notes: "Cancel online via Account > Manage your plan; Premium runs until the next billing date. If bought through a telecom/partner bundle, cancel there."
+  - name: Netflix
+    type: merchant
+    cancel_url: "https://help.netflix.com/en/node/407"
+    support_url: "https://help.netflix.com/en"
+    notes: "Cancel online via Manage membership; runs to the end of the billing period. If billed via Apple/Google/telecom, cancel at that provider."
+  - name: Disney+
+    type: merchant
+    cancel_url: "https://help.disneyplus.com/article/disneyplus-cancel"
+    support_url: "https://help.disneyplus.com/"
+    notes: "Cancel online via Account > Subscription > Cancel; access continues to the end of the billing period. Third-party billing cancels at that provider."
+  - name: Amazon Prime
+    type: merchant
+    cancel_url: "https://www.amazon.com/gp/help/customer/display.html?nodeId=GTJQ7QZY7QL2HK4Y"
+    support_url: "https://www.amazon.com/gp/help/customer/display.html"
+    notes: "Cancel online via Your Memberships and Subscriptions > Manage > Cancel. An unused paid period may be refundable. (For NL, manage at amazon.nl.)"
+  - name: YouTube Premium
+    type: merchant
+    cancel_url: "https://support.google.com/youtube/answer/6308278"
+    support_url: "https://support.google.com/youtube/"
+    notes: "Cancel online at youtube.com/paid_memberships (Deactivate). If joined via the iOS app, cancel through the Apple account instead."
+  - name: Apple
+    type: merchant
+    cancel_url: "https://support.apple.com/en-us/118428"
+    support_url: "https://support.apple.com/billing"
+    notes: "Cancel on-device via Settings > [name] > Subscriptions, or without an Apple device at reportaproblem.apple.com."
+  - name: Google One
+    type: merchant
+    cancel_url: "https://support.google.com/googleone/answer/9056360"
+    support_url: "https://support.google.com/googleone/"
+    notes: "Cancel in the Google One app/site (Settings > Cancel membership); paid storage lasts until the period ends. Play subscriptions: support.google.com/googleplay."
+  - name: Adobe
+    type: merchant
+    cancel_url: "https://helpx.adobe.com/account/individual/subscriptions-and-plans/renewals-and-cancellations/cancel-adobe-subscription.html"
+    support_url: "https://helpx.adobe.com/account/individual.html"
+    cheaper_url: "https://www.adobe.com/creativecloud/buy/students.html"
+    notes: "Cancel via the Adobe Account page or Customer Support; early cancellation of an annual plan can incur a fee. Full refund within 14 days."
+  - name: Microsoft 365
+    type: merchant
+    cancel_url: "https://support.microsoft.com/en-us/accounts-billing/subscriptions/cancel-a-microsoft-365-subscription"
+    support_url: "https://support.microsoft.com/en-us/accounts-billing/subscriptions/"
+    notes: "Cancel at account.microsoft.com/services/microsoft365 > Cancel subscription. If bought via Apple/Google/retailer, cancel there. Reverts cloud storage to 5GB."
+  - name: Dropbox
+    type: merchant
+    cancel_url: "https://help.dropbox.com/plans/downgrade-dropbox-individual-plans"
+    support_url: "https://help.dropbox.com/"
+    notes: "Cancel/downgrade at dropbox.com (avatar > Manage account > Change plan); reverts to free Basic (2GB) at the end of the cycle. Mobile purchases cancel via the app store."
+  - name: LinkedIn Premium
+    type: merchant
+    cancel_url: "https://www.linkedin.com/help/linkedin/answer/a545578"
+    support_url: "https://www.linkedin.com/help/linkedin"
+    notes: "Cancel via the LinkedIn desktop site or Android app, at least one day before the next billing date. App/Play Store purchases cancel via that store."
+  - name: Audible
+    type: merchant
+    cancel_url: "https://help.audible.com/s/article/cancel-membership"
+    support_url: "https://help.audible.com/"
+    cheaper_url: "https://help.audible.com/s/article/pause-your-membership"
+    notes: "Cancel via Account Details on the website, or by phone/chat. The membership can also be paused. App-store sign-ups cancel via that store."
+  - name: Babbel
+    type: merchant
+    cancel_url: "https://support.babbel.com/hc/en-us/articles/205600298-Canceling-a-subscription"
+    support_url: "https://support.babbel.com/hc/en-us"
+    notes: "If subscribed via babbel.com, cancel on the Account Information page; via an app store, cancel through that store. Deleting the app does not cancel."
+  - name: Duolingo
+    type: merchant
+    cancel_url: "https://www.duolingo.com/help/cancel-my-super-duolingo-subscription"
+    support_url: "https://support.duolingo.com/hc/en-us"
+    notes: "Cancel where you subscribed (web account, Apple, or Google Play). Deleting the app/account does not cancel; no refunds or proration."
+  - name: NordVPN
+    type: merchant
+    cancel_url: "https://support.nordvpn.com/hc/en-us/articles/19556844985489-How-to-cancel-auto-renewal-for-your-NordVPN-subscription"
+    support_url: "https://support.nordvpn.com/"
+    notes: "Turn off auto-renewal in Nord Account (Billing > Subscriptions > Manage). 30-day money-back guarantee via support chat. App-store purchases cancel via that store."
+  - name: Strava
+    type: merchant
+    cancel_url: "https://support.strava.com/hc/en-us/articles/216918927-How-to-Cancel-your-Subscription"
+    support_url: "https://support.strava.com/hc/en-us"
+    notes: "Cancel via Settings > My Account > Cancel subscription on the website; access lasts to the end of the term. App-store purchases cancel via Apple/Google."
+  - name: PlayStation Plus
+    type: merchant
+    cancel_url: "https://www.playstation.com/en-us/support/subscriptions/cancel-playstation-plus/"
+    support_url: "https://www.playstation.com/support/"
+    notes: "Cancel via Account Settings on console or online (turn off auto-renew); benefits continue until the paid period ends."
+  - name: Xbox Game Pass
+    type: merchant
+    cancel_url: "https://support.xbox.com/en-US/help/subscriptions-billing/manage-subscriptions/cancel-recurring-billing-or-subscription"
+    support_url: "https://support.xbox.com/"
+    notes: "Cancel at account.microsoft.com/services > Manage > Cancel subscription, or on the console under Subscriptions."
