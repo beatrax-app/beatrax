@@ -48,6 +48,7 @@ final class FrankfurterRateProvider implements RateProvider
     {
         try {
             $json = $this->http
+                ->createPendingRequest()
                 ->get(self::URL)
                 ->throw()
                 ->json();
@@ -75,6 +76,10 @@ final class FrankfurterRateProvider implements RateProvider
         $rates = [];
 
         foreach ($rawRates as $currency => $rate) {
+            if (! is_scalar($rate)) {
+                continue;
+            }
+
             $rates[(string) $currency] = (string) $rate;
         }
 

@@ -77,6 +77,10 @@ final class BundledSnapshotProvider implements RateProvider
         $rates = [];
 
         foreach ($rawRates as $currency => $rate) {
+            if (! is_scalar($rate)) {
+                continue;
+            }
+
             $rates[(string) $currency] = (string) $rate;
         }
 
