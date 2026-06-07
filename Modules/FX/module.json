@@ -1,0 +1,11 @@
+{
+    "name": "FX",
+    "alias": "fx",
+    "description": "Multi-currency exchange rate infrastructure and base-currency conversion.",
+    "keywords": ["fx", "currency", "exchange-rates"],
+    "priority": 8,
+    "providers": [
+        "Modules\\FX\\Providers\\FXServiceProvider"
+    ],
+    "files": []
+}
