@@ -26,6 +26,8 @@ use Illuminate\Support\Carbon;
  * @property string $password
  * @property int $period_start_day
  * @property string $default_currency_view
+ * @property string $base_currency
+ * @property bool $fx_online_enabled
  * @property bool|null $auto_import_drop_folder
  * @property string $receipt_conflict_resolution
  * @property int $recurring_detection_window_months
@@ -53,6 +55,8 @@ final class User extends Authenticatable
         'password',
         'period_start_day',
         'default_currency_view',
+        'base_currency',
+        'fx_online_enabled',
         'auto_import_drop_folder',
         'receipt_conflict_resolution',
         'recurring_detection_window_months',
@@ -79,6 +83,7 @@ final class User extends Authenticatable
         'recurring_income_min_amount_minor' => 200000,
         'drift_alert_threshold_percent' => 5,
         'theme' => 'system',
+        'base_currency' => 'EUR',
     ];
 
     /** @return array<string, string> */
@@ -90,6 +95,8 @@ final class User extends Authenticatable
             'force_password_change_at_next_login' => 'boolean',
             'period_start_day' => 'integer',
             'default_currency_view' => 'string',
+            'base_currency' => 'string',
+            'fx_online_enabled' => 'boolean',
             'auto_import_drop_folder' => 'boolean',
             'recurring_detection_window_months' => 'integer',
             'recurring_income_min_amount_minor' => 'integer',
