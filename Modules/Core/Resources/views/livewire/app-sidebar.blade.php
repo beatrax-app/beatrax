@@ -152,9 +152,6 @@
     <a href="#" class="side-item">
         <span class="ic" aria-hidden="true">⌗</span>
         Receipts
-        @if (($navCounts['receipts'] ?? 0) > 0)
-            <span class="side-badge muted" aria-label="{{ $navCounts['receipts'] }} receipts">{{ $navCount('receipts') }}</span>
-        @endif
     </a>
     <a href="{{ route('inboxes.index') }}" class="side-item {{ $isActive('/inboxes') }}">
         <span class="ic" aria-hidden="true">✉</span>

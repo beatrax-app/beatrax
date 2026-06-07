@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\CategoryDelta;
 use Modules\Ledger\Public\Dto\Period;
@@ -36,7 +37,7 @@ final class CategorySpendTrendQuery
         $currentSpend = $this->spendByCategory($user->id, $current);
         $previousSpend = $this->spendByCategory($user->id, $previous);
 
-        $names = $this->categoryNames(array_keys($currentSpend + $previousSpend));
+        $names = $this->categoryNames(array_keys($currentSpend + $previousSpend), $user->id);
 
         $movers = [];
         foreach ($currentSpend + $previousSpend as $categoryId => $_) {
@@ -73,13 +74,16 @@ final class CategorySpendTrendQuery
      */
     private function spendByCategory(int $userId, Period $period): array
     {
+        // No whereNotNull(category_id): uncategorised outflow is kept (grouped
+        // under id 0 → "Uncategorized") so the period total is the FULL
+        // EUR-settled outflow, not just the categorised slice. Non-EUR-settled
+        // spend is out of scope by design (this card is EUR-denominated).
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $userId)
             ->where('settled_currency', self::DISPLAY_CURRENCY)
             ->where('settled_amount_minor', '<', 0)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
-            ->whereNotNull('category_id')
             ->groupBy('category_id')
             ->get(['category_id', $this->db->connection()->raw('SUM(-settled_amount_minor) AS spend_minor')]);
 
@@ -95,14 +99,19 @@ final class CategorySpendTrendQuery
      * @param  array<int, int>  $categoryIds
      * @return array<int, string>
      */
-    private function categoryNames(array $categoryIds): array
+    private function categoryNames(array $categoryIds, int $userId): array
     {
         if ($categoryIds === []) {
             return [];
         }
 
+        // Own-or-global guard, matching the rest of the read layer — a name is
+        // only ever resolved for the user's own categories or shared globals.
         $rows = $this->db->connection()->table('categories')
             ->whereIn('id', array_values($categoryIds))
+            ->where(static function (Builder $query) use ($userId): void {
+                $query->whereNull('user_id')->orWhere('user_id', $userId);
+            })
             ->get(['id', 'name']);
 
         $names = [];
