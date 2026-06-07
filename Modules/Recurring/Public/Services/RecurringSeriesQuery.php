@@ -294,6 +294,61 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
+     * The counterparty this series belongs to — the most frequent
+     * `transactions.counterparty_id` across the series' occurrences, or null
+     * when none of the occurrences resolved to a counterparty. Lets the series
+     * detail page deep-link to the counterparty profile. Cross-user safe (the
+     * occurrences are scoped to the user).
+     */
+    public function counterpartyIdForSeries(int $seriesId, User $user): ?int
+    {
+        $row = $this->db->connection()->table('recurring_series_occurrences as o')
+            ->join('transactions as t', 't.id', '=', 'o.transaction_id')
+            ->where('o.recurring_series_id', $seriesId)
+            ->where('o.user_id', $user->id)
+            ->whereNotNull('t.counterparty_id')
+            ->groupBy('t.counterparty_id')
+            ->orderByRaw('COUNT(*) DESC')
+            ->select('t.counterparty_id')
+            ->first();
+
+        if ($row === null) {
+            return null;
+        }
+
+        $id = self::toInt($row->counterparty_id);
+
+        return $id > 0 ? $id : null;
+    }
+
+    /**
+     * The approved / cadence-changed recurring series whose occurrences belong
+     * to the given counterparty — powers the "Recurring" card on a counterparty
+     * profile. Cross-user safe (every join is scoped to the user).
+     *
+     * @return array<int, RecurringSeriesDto>
+     */
+    public function approvedSeriesForCounterparty(int $counterpartyId, User $user): array
+    {
+        $ids = $this->db->connection()->table('recurring_series as s')
+            ->join('recurring_series_occurrences as o', 'o.recurring_series_id', '=', 's.id')
+            ->join('transactions as t', 't.id', '=', 'o.transaction_id')
+            ->where('s.user_id', $user->id)
+            ->where('t.counterparty_id', $counterpartyId)
+            ->whereIn('s.state', ['approved', 'cadence_changed'])
+            ->distinct()
+            ->pluck('s.id')
+            ->map(static fn (mixed $v): int => self::toInt($v))
+            ->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return $this->forSeriesIds($ids, $user);
+    }
+
+    /**
      * Build the amount-over-time payload for the drill-in chart.
      *
      * Returns up to `$maxPoints` data points sorted oldest-to-newest so

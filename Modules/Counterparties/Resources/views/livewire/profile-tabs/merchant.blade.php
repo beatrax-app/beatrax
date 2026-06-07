@@ -44,9 +44,25 @@
             <h3 style="font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 var(--space-3);">
                 Recurring
             </h3>
-            <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
-                No recurring patterns detected.
-            </p>
+            @if (count($recurringSeries ?? []) === 0)
+                <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
+                    No recurring patterns detected.
+                </p>
+            @else
+                <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-2);">
+                    @foreach ($recurringSeries as $series)
+                        <li style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3);">
+                            <a
+                                href="{{ route('recurring.series.show', ['seriesId' => $series->seriesId]) }}"
+                                style="font-size: var(--text-sm); color: var(--color-text); text-decoration: underline; text-underline-offset: 2px;"
+                            >{{ $series->displayName() }}</a>
+                            <span style="font-size: var(--text-sm); color: var(--color-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap;">
+                                {{ $series->monthlyEquivalent->format('nl_NL') }}/mo
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
         </x-counterparties::frame>
     </div>
 

@@ -130,6 +130,7 @@
                 'fundingChain' => $fundingChain,
                 'taxYears' => $taxYears,
                 'ibanRevealed' => $ibanRevealed,
+                'recurringSeries' => $recurringSeries ?? [],
             ])
 
             @if ($activeTab === 'overview' && $supportResource !== null && $supportResource->hasAny())

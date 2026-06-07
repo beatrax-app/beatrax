@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesVarianceTolerance;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -75,6 +76,7 @@ final class RecurringSeriesDetailPage extends Component
         CurrentUser $currentUser,
         RecurringSeriesQuery $query,
         ViewFactory $views,
+        CounterpartyProfileQuery $counterparties,
     ): View {
         $user = $currentUser->user();
         $series = $query->forSeries($this->seriesId, $user);
@@ -87,11 +89,18 @@ final class RecurringSeriesDetailPage extends Component
         $trend = $query->amountTrendForSeries($this->seriesId, $user, $maxPoints);
         $apexOptions = $this->buildApexOptions($trend);
 
+        // Deep link to the counterparty this series belongs to (if resolved).
+        $counterpartyId = $query->counterpartyIdForSeries($this->seriesId, $user);
+        $counterpartyLink = $counterpartyId !== null
+            ? $counterparties->identityForId($user, $counterpartyId)
+            : null;
+
         $view = $views->make('recurring::livewire.recurring-series-detail-page', [
             'series' => $series,
             'occurrences' => $occurrences,
             'apexOptions' => $apexOptions,
             'showAllPoints' => $this->showAllPoints,
+            'counterpartyLink' => $counterpartyLink,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
