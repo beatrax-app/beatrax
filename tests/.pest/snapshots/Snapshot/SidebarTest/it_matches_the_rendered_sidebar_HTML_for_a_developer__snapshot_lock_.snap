@@ -59,6 +59,10 @@
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets
     </a>
+    <a href="https://beatrax.test/drift/watch" class="side-item ">
+        <span class="ic" aria-hidden="true">↗</span>
+        Subscriptions
+    </a>
 
     <div class="side-section-label">INGESTION</div>
     <a href="https://beatrax.test/imports/new" class="side-item ">
