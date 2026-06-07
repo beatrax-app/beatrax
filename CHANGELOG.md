@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- **Net-worth roll-up** — the dashboard leads with one figure across all
+  accounts (assets minus liabilities), with an expandable per-account breakdown.
+  Each account's balance is the same anchor the forecast uses as "today's
+  balance", already sign-correct (a credit card counts as what you owe). Sums
+  EUR-denominated accounts into the headline figure and flags when a non-EUR
+  account is left out (no balance FX conversion yet); the internal
+  `paypal_funding` routing account is excluded. Backed by a new
+  `NetWorthQuery` Public service over the previously-internal balance resolver.
 - **Month-over-month spending** — the dashboard shows a "This month vs last"
   card: the current period's total spend with the signed change against the
   previous period, and the categories that moved the most (each with its delta).
