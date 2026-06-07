@@ -73,6 +73,10 @@
          accounts. --}}
     @livewire('core.net-worth-card')
 
+    {{-- Goals summary card — up to 3 nearest-finishing active goals.
+         Renders a calm empty-state when the user has no goals. --}}
+    @livewire('goals.summary-card')
+
     {{-- KPI tiles: the primary focal point of the dashboard.
 
          When the user's default_currency_view is 'eur_only', `$tiles` is
