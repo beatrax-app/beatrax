@@ -99,6 +99,12 @@
         <testsuite name="CounterpartiesArch">
             <directory suffix="Test.php">./Modules/Counterparties/tests/Arch</directory>
         </testsuite>
+        <testsuite name="FXUnit">
+            <directory suffix="Test.php">./Modules/FX/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="FXFeature">
+            <directory suffix="Test.php">./Modules/FX/tests/Feature</directory>
+        </testsuite>
     </testsuites>
     <php>
         <ini name="memory_limit" value="1G"/>
