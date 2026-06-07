@@ -17,7 +17,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
  * 3. $rate is typed ?string (never float) — guards Pitfall 1
  *    (float silently corrupts FX conversion precision).
  */
-
 it('passthrough() returns isPassthrough=true with original equal to converted', function (): void {
     $money = Money::ofMinor(10000, 'EUR');
 
