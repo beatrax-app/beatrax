@@ -3,10 +3,8 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\DB;
-use Modules\FX\Internal\RateProviderRegistry;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -24,23 +22,15 @@ function seedRates(string $date, array $rates, string $source = 'ecb'): void
             'rate_date' => $date,
             'rate' => $rate,
             'source' => $source,
-            'created_at' => now()->toDateTimeString(),
-            'updated_at' => now()->toDateTimeString(),
+            'created_at' => CarbonImmutable::now()->toDateTimeString(),
+            'updated_at' => CarbonImmutable::now()->toDateTimeString(),
         ]);
     }
 }
 
 describe('ExchangeRateService', function (): void {
     beforeEach(function (): void {
-        // ExchangeRateService reads directly from exchange_rates; registry is not
-        // invoked by convertToBase/convertAtDate, so we pass a real (empty) registry.
-        $cache = app(CacheRepository::class);
-        $this->registry = new RateProviderRegistry([], $cache);
-        $this->service = new ExchangeRateService(
-            app(DatabaseManager::class),
-            $this->registry,
-            $cache,
-        );
+        $this->service = new ExchangeRateService(app(DatabaseManager::class));
     });
 
     it('returns passthrough (isPassthrough=true) with zero DB queries when currencies match (D-03)', function (): void {

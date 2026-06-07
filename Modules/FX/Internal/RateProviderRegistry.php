@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\FX\Internal;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\AllProvidersFailed;
@@ -86,13 +87,21 @@ final class RateProviderRegistry
 
     private function isCircuitOpen(string $providerKey): bool
     {
-        return (int) ($this->cache->get("fx.circuit.{$providerKey}.failures", 0)) >= self::CIRCUIT_OPEN_THRESHOLD;
+        $raw = $this->cache->get("fx.circuit.{$providerKey}.failures", 0);
+
+        return self::toInt($raw) >= self::CIRCUIT_OPEN_THRESHOLD;
     }
 
     private function recordFailure(string $providerKey): void
     {
-        $failures = (int) ($this->cache->get("fx.circuit.{$providerKey}.failures", 0)) + 1;
-        $this->cache->put("fx.circuit.{$providerKey}.failures", $failures, now()->addHours(6));
+        $raw = $this->cache->get("fx.circuit.{$providerKey}.failures", 0);
+        $failures = self::toInt($raw) + 1;
+        $this->cache->put("fx.circuit.{$providerKey}.failures", $failures, CarbonImmutable::now()->addHours(6));
+    }
+
+    private static function toInt(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
     }
 
     private function resetCircuit(string $providerKey): void
