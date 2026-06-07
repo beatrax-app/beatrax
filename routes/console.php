@@ -14,6 +14,7 @@ use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
+use Modules\FX\Internal\Jobs\FetchFxRatesJob;
 use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
 use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
@@ -226,6 +227,36 @@ Schedule::call(function (Dispatcher $bus, ScenarioQuery $scenarioQuery): void {
         }
     });
 })->name('forecasting.daily-sweep')->daily()->withoutOverlapping(30);
+
+// Daily FX rate refresh: fans out one FetchFxRatesJob per user who has
+// explicitly opted into online rate fetching (fx_online_enabled = true).
+// Rate providers are ECB → Frankfurter → bundled snapshot (D-04/D-05).
+// Only opted-in users trigger outbound HTTP requests; local-only users
+// never see external network calls from this entry (local-only ethos).
+//
+// The job's ShouldBeUniqueUntilProcessing lock keyed on userId collapses
+// any same-day re-dispatch (scheduled tick + on-demand refresh) into a
+// single queued run per user.
+//
+// 09:00 window: ECB publishes reference rates at ~16:00 CET (previous
+// business day's data is always available by 09:00 the next morning),
+// so this cadence ensures fresh rates for the day's first dashboard load.
+//
+// Method order .name() BEFORE .dailyAt() BEFORE .withoutOverlapping(30)
+// — Laravel's CallbackEvent::withoutOverlapping reads the description
+// (set by .name()) to derive the mutex name and throws LogicException
+// when the description has not been set yet (same shape as every other
+// entry above).
+//
+// User iteration via ->lazyById(100) so a multi-user deployment does not
+// load every user row into memory at once.
+Schedule::call(function (Dispatcher $bus): void {
+    User::query()->lazyById(100)->each(function (User $user) use ($bus): void {
+        if ((bool) $user->fx_online_enabled) {
+            $bus->dispatch(new FetchFxRatesJob($user->id));
+        }
+    });
+})->name('fx.daily-refresh')->dailyAt('09:00')->withoutOverlapping(30);
 
 // Daily SQLite backup: produces a verified VACUUM-INTO snapshot under
 // storage/app/backups/, applies the retention sweep (7 newest dailies +
