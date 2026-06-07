@@ -89,6 +89,32 @@ final readonly class CounterpartyProfileQuery
     }
 
     /**
+     * Minimal identity (slug + display name + type) for a counterparty id, or
+     * null when it does not belong to the user. Lets another surface — e.g. the
+     * recurring series detail page — deep-link to a profile without loading the
+     * full profile DTO.
+     *
+     * @return array{slug: string, displayName: string, type: string}|null
+     */
+    public function identityForId(User $user, int $id): ?array
+    {
+        $cp = Counterparty::query()
+            ->where('user_id', $user->id)
+            ->where('id', $id)
+            ->first(['slug', 'display_name', 'type']);
+
+        if ($cp === null) {
+            return null;
+        }
+
+        return [
+            'slug' => $cp->slug,
+            'displayName' => $cp->display_name,
+            'type' => $cp->type,
+        ];
+    }
+
+    /**
      * Returns up to `$limit` most-recent transactions tied to the
      * counterparty, ordered newest-first. Each row is a stdClass with
      * the columns the Overview Recent activity strip + the Transactions

@@ -1,4 +1,4 @@
-<div class="max-w-md mx-auto space-y-12" data-testid="settings-page">
+<div class="max-w-2xl mx-auto space-y-12" data-testid="settings-page">
     <header class="space-y-1">
         <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Settings</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">Preferences for how your finances appear in the app.</p>

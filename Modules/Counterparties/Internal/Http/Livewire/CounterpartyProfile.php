@@ -11,6 +11,7 @@ use Modules\Community\Public\Services\SupportResourceProvider;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
+use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -71,6 +72,7 @@ final class CounterpartyProfile extends Component
         CounterpartyProfileQuery $query,
         ViewFactory $views,
         SupportResourceProvider $supportResources,
+        RecurringSeriesQuery $recurring,
     ): View {
         $user = $currentUser->user();
         $profile = $query->bySlug($user, $this->slug);
@@ -100,10 +102,15 @@ final class CounterpartyProfile extends Component
             ? $supportResources->forCounterparty($profile->displayName, $profile->type)
             : null;
 
+        $recurringSeries = in_array($profile->type, ['merchant', 'bank', 'government'], true)
+            ? $recurring->approvedSeriesForCounterparty($profile->id, $user)
+            : [];
+
         return $views->make('counterparties::livewire.counterparty-profile', [
             'profile' => $profile,
             'partial' => $partial,
             'supportResource' => $supportResource,
+            'recurringSeries' => $recurringSeries,
             'recentActivity' => $query->recentActivity($cpModel, 10),
             'categoryBreakdown' => $query->categoryBreakdown($cpModel),
             'fundingChain' => $query->fundingChainSummary($cpModel),

@@ -40,6 +40,14 @@
                 <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">·</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($series->monthlyEquivalent->toMinor()) }}/mo</span>
             </p>
+            @if (! empty($counterpartyLink))
+                <p class="mt-2 text-sm">
+                    <a
+                        href="{{ route('counterparties.profile', ['slug' => $counterpartyLink['slug']]) }}"
+                        class="text-slate-500 underline underline-offset-2 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                    >View {{ $counterpartyLink['displayName'] }} profile →</a>
+                </p>
+            @endif
         </div>
         <div class="flex shrink-0 items-center gap-4">
             @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $series->seriesId], key('threshold-detail-'.$series->seriesId))
