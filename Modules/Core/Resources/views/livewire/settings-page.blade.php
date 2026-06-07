@@ -238,6 +238,7 @@
         <section class="space-y-2" id="data-backup">
             <h2 class="{{ $cardHead }}">Data &amp; backup</h2>
             @livewire('core.encrypted-backup-download')
+            @livewire('core.encrypted-backup-restore')
         </section>
     </div>
 
