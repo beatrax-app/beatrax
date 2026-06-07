@@ -133,6 +133,10 @@
             <span class="side-badge muted" aria-label="{{ $navCounts['budgets'] }} budgets">{{ $navCount('budgets') }}</span>
         @endif
     </a>
+    <a href="{{ route('goals.index') }}" class="side-item {{ $isActive('/goals') }}">
+        <span class="ic" aria-hidden="true">◎</span>
+        Goals
+    </a>
     <a href="{{ route('drift.watch') }}" class="side-item {{ $isActive('/drift/watch') }}">
         <span class="ic" aria-hidden="true">↗</span>
         Subscriptions
