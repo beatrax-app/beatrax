@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Client\Factory as HttpFactory;
-use Illuminate\Http\Client\Request;
 use Modules\FX\Internal\Providers\EcbRateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
