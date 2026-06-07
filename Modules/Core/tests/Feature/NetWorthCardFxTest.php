@@ -37,16 +37,16 @@ if (! function_exists('nwCardAccount')) {
     function nwCardAccount(DatabaseManager $db, int $userId, string $name, string $kind, int $openingMinor, string $currency = 'EUR'): int
     {
         return $db->connection()->table('accounts')->insertGetId([
-            'user_id'                 => $userId,
-            'name'                    => $name,
-            'slug'                    => strtolower($name).'-'.bin2hex(random_bytes(3)),
-            'kind'                    => $kind,
-            'iban'                    => 'NL00CARD'.str_pad((string) random_int(1, 99999999), 8, '0', STR_PAD_LEFT),
-            'default_currency'        => $currency,
-            'opening_balance_minor'   => $openingMinor,
+            'user_id' => $userId,
+            'name' => $name,
+            'slug' => strtolower($name).'-'.bin2hex(random_bytes(3)),
+            'kind' => $kind,
+            'iban' => 'NL00CARD'.str_pad((string) random_int(1, 99999999), 8, '0', STR_PAD_LEFT),
+            'default_currency' => $currency,
+            'opening_balance_minor' => $openingMinor,
             'opening_balance_as_of_date' => '2026-01-01',
-            'created_at'              => '2026-01-01 00:00:00',
-            'updated_at'              => '2026-01-01 00:00:00',
+            'created_at' => '2026-01-01 00:00:00',
+            'updated_at' => '2026-01-01 00:00:00',
         ]);
     }
 }
@@ -72,9 +72,9 @@ beforeEach(function (): void {
     $this->db = app(DatabaseManager::class);
     $this->user = User::create([
         'username' => 'nwcard-fx-fixture',
-        'password'         => 'fixture-password-12chars',
+        'password' => 'fixture-password-12chars',
         'period_start_day' => 1,
-        'base_currency'    => 'EUR',
+        'base_currency' => 'EUR',
     ]);
     $this->actingAs($this->user);
 
