@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- **Month-over-month spending** — the dashboard shows a "This month vs last"
+  card: the current period's total spend with the signed change against the
+  previous period, and the categories that moved the most (each with its delta).
+  Spending more reads in rose, less in emerald. Uses the same EUR-settled outflow
+  definition as the rest of the ledger, so the figures reconcile; renders nothing
+  until there is a prior period to compare.
 - **Sidebar count badges** — the nav items (Transactions, Recurring,
   Counterparties, Drift alerts, Budgets, Subscriptions, Imports, Receipts) now
   show how many items each holds. All counts come from a single per-user cached
