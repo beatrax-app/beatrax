@@ -43,7 +43,7 @@ it('mounts with baseCurrency hydrated from the user row', function (): void {
 
 it('defaults baseCurrency to EUR when user.base_currency is null', function (): void {
     // Directly nullify without going through Eloquent defaults
-    \DB::table('users')->where('id', $this->user->id)->update(['base_currency' => null]);
+    DB::table('users')->where('id', $this->user->id)->update(['base_currency' => null]);
 
     Livewire::test(SettingsPage::class)
         ->assertSet('baseCurrency', 'EUR');
