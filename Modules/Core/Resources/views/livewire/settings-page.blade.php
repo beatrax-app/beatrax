@@ -1,74 +1,52 @@
-<div class="max-w-2xl mx-auto space-y-12" data-testid="settings-page">
+@php
+    // Shared card chrome for the grouped settings sections. The redesign only
+    // changes the visual container — every control, id, wire: binding, @error
+    // block and copy string below is preserved verbatim from the flat layout.
+    $card = 'rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950';
+    $cardHead = 'text-xs uppercase tracking-wide text-[var(--color-text-faint)]';
+@endphp
+
+<div class="max-w-2xl mx-auto space-y-6" data-testid="settings-page">
     <header class="space-y-1">
         <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Settings</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">Preferences for how your finances appear in the app.</p>
     </header>
 
-    {{-- Developer.
-
-         Instant-apply toggle (no Save button) — clicking the .switch
-         primitive calls setDevMode(), which flips the bool property
-         and writes users.is_developer via the User Eloquent model in
-         one round-trip. The toggle is per-user; the writer scopes to
-         CurrentUser so cross-user writes are structurally impossible.
-         Toggling on immediately unlocks /dev for this user (the
-         EnsureDeveloperMode middleware reads is_developer live). --}}
-    <section class="space-y-2" id="developer-mode">
-        <h2 class="text-xs uppercase tracking-wide text-[var(--color-text-faint)]">Developer</h2>
-        <div class="flex items-start justify-between gap-3">
-            <div class="flex-1">
-                <p class="text-sm text-[var(--color-text)]">In-app Dev Console</p>
-                <p class="mt-1 text-xs text-[var(--color-text-muted)]">
-                    Show the Dev Console at /dev. Resets the Advanced toggle on every login.
-                </p>
-            </div>
-            <button type="button"
-                    class="switch{{ $isDeveloper ? ' switch--on' : '' }}"
-                    wire:click="setDevMode({{ $isDeveloper ? 'false' : 'true' }})"
-                    aria-pressed="{{ $isDeveloper ? 'true' : 'false' }}"
-                    aria-label="Developer mode">
-                <span class="switch__thumb"></span>
-            </button>
-        </div>
-    </section>
-
-    {{-- Appearance.
-
-         Instant-apply segmented control (no Save button) — picking a
-         value calls setTheme(), which validates against the
-         light/dark/system allow-list and writes users.theme via the raw
-         query builder in one round-trip. --}}
-    <section class="space-y-2">
-        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Appearance</h2>
-        <div class="space-y-1">
-            <span class="block text-sm text-slate-900 dark:text-slate-100">Theme</span>
-            <div role="radiogroup" aria-label="Theme" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
-                @foreach (['light' => 'Light', 'dark' => 'Dark', 'system' => 'System'] as $value => $label)
-                    <button
-                        type="button"
-                        role="radio"
-                        aria-checked="{{ $theme === $value ? 'true' : 'false' }}"
-                        wire:click="setTheme('{{ $value }}')"
-                        @class([
-                            'px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100',
-                            'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' => $theme === $value,
-                            'bg-white text-slate-900 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900' => $theme !== $value,
-                        ])
-                    >
-                        {{ $label }}
-                    </button>
-                @endforeach
-            </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400">System follows your operating system's light or dark setting.</p>
-            @error('theme')
-                <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-            @enderror
-        </div>
-    </section>
-
-    <form wire:submit="save" class="space-y-12">
+    {{-- ===== Appearance ===== --}}
+    <div class="{{ $card }}">
         <section class="space-y-2">
-            <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Currency display</h2>
+            <h2 class="{{ $cardHead }}">Appearance</h2>
+            <div class="space-y-1">
+                <span class="block text-sm text-slate-900 dark:text-slate-100">Theme</span>
+                <div role="radiogroup" aria-label="Theme" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    @foreach (['light' => 'Light', 'dark' => 'Dark', 'system' => 'System'] as $value => $label)
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked="{{ $theme === $value ? 'true' : 'false' }}"
+                            wire:click="setTheme('{{ $value }}')"
+                            @class([
+                                'px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100',
+                                'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' => $theme === $value,
+                                'bg-white text-slate-900 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900' => $theme !== $value,
+                            ])
+                        >
+                            {{ $label }}
+                        </button>
+                    @endforeach
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400">System follows your operating system's light or dark setting.</p>
+                @error('theme')
+                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
+                @enderror
+            </div>
+        </section>
+    </div>
+
+    {{-- ===== Preferences (batch save) ===== --}}
+    <form wire:submit="save" class="{{ $card }} space-y-8">
+        <section class="space-y-2">
+            <h2 class="{{ $cardHead }}">Currency display</h2>
             <div class="space-y-1">
                 <label for="defaultCurrencyView" class="block text-sm text-slate-900 dark:text-slate-100">Default view on the transactions list</label>
                 <select
@@ -88,7 +66,7 @@
         </section>
 
         <section class="space-y-2">
-            <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Period</h2>
+            <h2 class="{{ $cardHead }}">Period</h2>
             <div class="space-y-1">
                 <label for="periodStartDay" class="block text-sm text-slate-900 dark:text-slate-100">Period starts on day</label>
                 <input
@@ -108,7 +86,7 @@
         </section>
 
         <section class="space-y-4">
-            <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Recurring detection</h2>
+            <h2 class="{{ $cardHead }}">Recurring detection</h2>
             <div class="space-y-1">
                 <label for="recurringDetectionWindowMonths" class="block text-sm text-slate-900 dark:text-slate-100">Detection window (months)</label>
                 <input
@@ -144,7 +122,7 @@
         </section>
 
         <section class="space-y-2">
-            <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Drift alerts</h2>
+            <h2 class="{{ $cardHead }}">Drift alerts</h2>
             <div class="space-y-1" id="drift-threshold">
                 <label for="driftAlertThresholdPercent" class="block text-sm text-slate-900 dark:text-slate-100">Default drift alert threshold</label>
                 <select
@@ -167,7 +145,7 @@
             </div>
         </section>
 
-        <div class="space-y-1">
+        <div class="space-y-1 border-t border-slate-100 pt-6 dark:border-slate-800">
             <button
                 type="submit"
                 class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:focus-visible:ring-emerald-500"
@@ -180,144 +158,134 @@
         </div>
     </form>
 
-    {{-- Forecasting section.
+    {{-- ===== Forecasting ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-3" id="forecast-buffers">
+            <h2 class="{{ $cardHead }}">Forecasting</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                beatrax projects your balance forward from your accounts' current state. For accounts without statement balances (PayPal, legacy CSV imports), set the opening balance here so projections start from a known point.
+            </p>
 
-         One per-account row with an inline OpeningBalanceEditor. The
-         Forecasting module owns the editor + its Save logic; the
-         Settings page hosts the section as the stable location the
-         /forecast page's "Adjust buffers ↗" deep link points at. --}}
-    <section class="space-y-3" id="forecast-buffers">
-        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Forecasting</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-            beatrax projects your balance forward from your accounts' current state. For accounts without statement balances (PayPal, legacy CSV imports), set the opening balance here so projections start from a known point.
-        </p>
+            @if (count($forecastingAccounts ?? []) === 0)
+                <p class="text-sm text-slate-500 dark:text-slate-400">No accounts yet — import a statement to add one.</p>
+            @else
+                <div class="space-y-3">
+                    @foreach ($forecastingAccounts as $account)
+                        @livewire('forecasting.opening-balance-editor', [
+                            'accountId' => $account['id'],
+                            'accountName' => $account['name'],
+                            'accountKind' => $account['kind'],
+                            'currentOpeningMinor' => $account['opening_balance_minor'],
+                            'currentAsOfDate' => $account['opening_balance_as_of_date'],
+                            'currency' => $account['default_currency'],
+                        ], key('opening-balance-editor-' . $account['id']))
+                    @endforeach
+                </div>
+            @endif
+        </section>
+    </div>
 
-        @if (count($forecastingAccounts ?? []) === 0)
-            <p class="text-sm text-slate-500 dark:text-slate-400">No accounts yet — import a statement to add one.</p>
-        @else
-            <div class="space-y-3">
-                @foreach ($forecastingAccounts as $account)
-                    @livewire('forecasting.opening-balance-editor', [
-                        'accountId' => $account['id'],
-                        'accountName' => $account['name'],
-                        'accountKind' => $account['kind'],
-                        'currentOpeningMinor' => $account['opening_balance_minor'],
-                        'currentAsOfDate' => $account['opening_balance_as_of_date'],
-                        'currency' => $account['default_currency'],
-                    ], key('opening-balance-editor-' . $account['id']))
-                @endforeach
+    {{-- ===== Importing (auto-import + aliases) ===== --}}
+    <div class="{{ $card }} space-y-8">
+        <section class="space-y-2">
+            <h2 class="{{ $cardHead }}">Auto-import</h2>
+            <div class="space-y-2">
+                <label for="auto-import-toggle" class="flex items-start gap-3 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        id="auto-import-toggle"
+                        @checked($autoImportFromDropFolder)
+                        wire:change="toggleAutoImport"
+                        aria-describedby="auto-import-help"
+                        class="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-600 dark:text-emerald-500 dark:focus:ring-emerald-500"
+                    />
+                    <div class="flex-1">
+                        <span class="block text-sm text-slate-900 dark:text-slate-100">Auto-import from drop folder</span>
+                        <p id="auto-import-help" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            @if ($autoImportFromDropFolder)
+                                Drop folder is active. beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/{{ $userId }}/</code> every 5 minutes for new files.
+                            @else
+                                When on, beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/{{ $userId }}/</code> every 5 minutes for <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> and <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> files and imports them through the same matcher pipeline as the wizard. Processed files move to <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> so they're never imported twice.
+                            @endif
+                        </p>
+                    </div>
+                </label>
             </div>
-        @endif
-    </section>
+        </section>
 
-    {{-- Watched-folder secondary path.
+        <section class="space-y-2" id="aliases">
+            <h2 class="{{ $cardHead }}">Aliases</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                Review and edit the friendly names you've taught beatrax for cryptic statement descriptions.
+            </p>
+            <a
+                href="{{ route('settings.aliases') }}"
+                class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            >Manage aliases →</a>
+        </section>
+    </div>
 
-         Instant-apply toggle (no Save button) — toggling fires
-         wire:change="toggleAutoImport" which flips the property and
-         writes users.auto_import_drop_folder via the raw query
-         builder in one round-trip. Help text renders the per-user
-         path (storage/app/inbox-drop/{userId}/) because the scanner
-         only walks that subfolder. --}}
-    {{-- Shared merchant list.
+    {{-- ===== Shared merchant list ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2" id="shared-merchant-list">
+            <h2 class="{{ $cardHead }}">Shared merchant list</h2>
+            @livewire('community.shared-list-settings-panel')
+        </section>
+    </div>
 
-         Hosts the SharedListSettingsPanel Livewire component, which
-         owns the three toggle rows + the meta-side "About the
-         shared list" copy. Toggle 3 ships disabled with a version-
-         agnostic inline note (Phase 18 auto-update plumbing will
-         flip the gate live). --}}
-    <section class="space-y-2" id="shared-merchant-list">
-        <h2 class="text-xs uppercase tracking-wide text-[var(--color-text-faint)]">Shared merchant list</h2>
-        @livewire('community.shared-list-settings-panel')
-    </section>
+    {{-- ===== Data & backup ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2" id="data-backup">
+            <h2 class="{{ $cardHead }}">Data &amp; backup</h2>
+            @livewire('core.encrypted-backup-download')
+        </section>
+    </div>
 
-    {{-- Aliases.
+    {{-- ===== Help & about ===== --}}
+    <div class="{{ $card }} space-y-8">
+        <section class="space-y-2" id="about-updates">
+            <h2 class="{{ $cardHead }}">About updates</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                beatrax updates itself automatically once installed. After installing the very first version, future versions arrive via an in-app banner — you don't need to revisit GitHub. If a future update ever fails to apply, you can always re-download the latest installer manually from the releases page.
+            </p>
+            <button
+                type="button"
+                wire:click="openReleasesPage"
+                class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            >Open releases page →</button>
+        </section>
 
-         Deep-link into the power-user surface at /settings/aliases —
-         the consolidated editor, bulk-merge, YAML export/import view
-         over the per-user merchant_aliases table (Phase 16.1 Plan
-         07). The link is the calm one-line entry into the page; the
-         page itself owns the explanation and the actions. --}}
-    <section class="space-y-2" id="aliases">
-        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Aliases</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-            Review and edit the friendly names you've taught beatrax for cryptic statement descriptions.
-        </p>
-        <a
-            href="{{ route('settings.aliases') }}"
-            class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-        >Manage aliases →</a>
-    </section>
+        <section class="space-y-2" id="first-run-tour">
+            <h2 class="{{ $cardHead }}">First-run tour</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                Re-launch the setup wizard if you want to walk back through the introductory flow.
+            </p>
+            <a
+                href="{{ route('setup', ['force' => 1]) }}"
+                class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            >Run setup wizard again</a>
+        </section>
+    </div>
 
-    {{-- Data & backup.
-
-         Hosts the EncryptedBackupDownload component — a passphrase-encrypted,
-         quantum-safe snapshot of the SQLite database streamed as a download
-         (the desktop build). Restore is the destructive counterpart and lives
-         behind the db:restore CLI safety rails / a gated in-app flow. --}}
-    <section class="space-y-2" id="data-backup">
-        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Data &amp; backup</h2>
-        @livewire('core.encrypted-backup-download')
-    </section>
-
-    {{-- About updates.
-
-         beatrax auto-updates once installed; the very first install
-         must be grabbed manually from the GitHub releases page. The
-         link routes through OpenExternalUrlAction so the URL passes
-         the https + github.com allow-list before NativePHP's shell
-         contract opens the system browser. --}}
-    <section class="space-y-2" id="about-updates">
-        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">About updates</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-            beatrax updates itself automatically once installed. After installing the very first version, future versions arrive via an in-app banner — you don't need to revisit GitHub. If a future update ever fails to apply, you can always re-download the latest installer manually from the releases page.
-        </p>
-        <button
-            type="button"
-            wire:click="openReleasesPage"
-            class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-        >Open releases page →</button>
-    </section>
-
-    {{-- First-run tour.
-
-         Re-launches the setup wizard at any time. The `force=1` query
-         flag bypasses the EnsureDatabaseReady "already-set-up" gate so
-         a returning user can walk back through the introductory flow
-         without un-completing their setup. --}}
-    <section class="space-y-2" id="first-run-tour">
-        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">First-run tour</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-            Re-launch the setup wizard if you want to walk back through the introductory flow.
-        </p>
-        <a
-            href="{{ route('setup', ['force' => 1]) }}"
-            class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-        >Run setup wizard again</a>
-    </section>
-
-    <section class="space-y-2">
-        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Auto-import</h2>
-        <div class="space-y-2">
-            <label for="auto-import-toggle" class="flex items-start gap-3 cursor-pointer">
-                <input
-                    type="checkbox"
-                    id="auto-import-toggle"
-                    @checked($autoImportFromDropFolder)
-                    wire:change="toggleAutoImport"
-                    aria-describedby="auto-import-help"
-                    class="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-600 dark:text-emerald-500 dark:focus:ring-emerald-500"
-                />
+    {{-- ===== Advanced (developer) ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2" id="developer-mode">
+            <h2 class="{{ $cardHead }}">Developer</h2>
+            <div class="flex items-start justify-between gap-3">
                 <div class="flex-1">
-                    <span class="block text-sm text-slate-900 dark:text-slate-100">Auto-import from drop folder</span>
-                    <p id="auto-import-help" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        @if ($autoImportFromDropFolder)
-                            Drop folder is active. beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/{{ $userId }}/</code> every 5 minutes for new files.
-                        @else
-                            When on, beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/{{ $userId }}/</code> every 5 minutes for <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> and <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> files and imports them through the same matcher pipeline as the wizard. Processed files move to <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> so they're never imported twice.
-                        @endif
+                    <p class="text-sm text-[var(--color-text)]">In-app Dev Console</p>
+                    <p class="mt-1 text-xs text-[var(--color-text-muted)]">
+                        Show the Dev Console at /dev. Resets the Advanced toggle on every login.
                     </p>
                 </div>
-            </label>
-        </div>
-    </section>
+                <button type="button"
+                        class="switch{{ $isDeveloper ? ' switch--on' : '' }}"
+                        wire:click="setDevMode({{ $isDeveloper ? 'false' : 'true' }})"
+                        aria-pressed="{{ $isDeveloper ? 'true' : 'false' }}"
+                        aria-label="Developer mode">
+                    <span class="switch__thumb"></span>
+                </button>
+            </div>
+        </section>
+    </div>
 </div>
