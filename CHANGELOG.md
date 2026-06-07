@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- **Cash book** — a new `/cash` page to hand-enter cash and other off-bank
+  spending (or income) so it lands in the same ledger as your imports: manual
+  entries categorise, recur-detect, and count toward your month exactly like
+  imported ones, because they flow through the canonical recording pipeline
+  (a synthetic per-user Cash account + a "manual" source). Manual rows are
+  user-owned and deletable (unlike immutable imported rows). The amount field
+  accepts plain and Dutch-grouped formats; the chosen category is validated as
+  your own; and two genuinely-distinct identical same-day entries both record
+  (the recorder bumps the booking time on a fingerprint collision rather than
+  dropping the second).
 - **Net-worth roll-up** — the dashboard leads with one figure across all
   accounts (assets minus liabilities), with an expandable per-account breakdown.
   Each account's balance is the same anchor the forecast uses as "today's

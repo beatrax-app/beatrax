@@ -153,6 +153,10 @@
         <span class="ic" aria-hidden="true">⌗</span>
         Receipts
     </a>
+    <a href="{{ route('cashbook.index') }}" class="side-item {{ $isActive('/cash') }}">
+        <span class="ic" aria-hidden="true">€</span>
+        Cash book
+    </a>
     <a href="{{ route('inboxes.index') }}" class="side-item {{ $isActive('/inboxes') }}">
         <span class="ic" aria-hidden="true">✉</span>
         Email

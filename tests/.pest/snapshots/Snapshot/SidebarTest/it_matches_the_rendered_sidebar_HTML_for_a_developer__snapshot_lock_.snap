@@ -74,6 +74,10 @@
         <span class="ic" aria-hidden="true">⌗</span>
         Receipts
     </a>
+    <a href="https://beatrax.test/cash" class="side-item ">
+        <span class="ic" aria-hidden="true">€</span>
+        Cash book
+    </a>
     <a href="https://beatrax.test/inboxes" class="side-item ">
         <span class="ic" aria-hidden="true">✉</span>
         Email
