@@ -135,3 +135,58 @@ it('EUR-only accounts with EUR base currency work without any rate rows (passthr
     expect($netWorth->hasExcludedAccounts)->toBeFalse();
     expect($netWorth->ratesSource)->toBeNull(); // no conversion occurred
 });
+
+it('carries the converted base equivalent and per-pair rate metadata on a converted line (UI-SPEC §5.2/§5.4)', function (): void {
+    $this->travelTo('2026-06-06'); // freeze clock: a 2026-06-05 rate is 1 day old → fresh
+    nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
+    fxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
+
+    $netWorth = app(NetWorthQuery::class)->forUser($this->user);
+
+    $usdLine = collect($netWorth->accounts)->firstWhere('currency', 'USD');
+    expect($usdLine->isConverted())->toBeTrue();
+    // $100 at 1.08 USD/EUR converts to ~€92.59 — strictly less than the native 10 000 minor.
+    expect($usdLine->baseEquivalentMinor)->not->toBeNull();
+    expect($usdLine->baseEquivalentMinor)->toBeLessThan(10_000);
+    expect($usdLine->fxRate)->not->toBeNull();
+    expect($usdLine->fxSource)->toBe('ecb');
+    expect($usdLine->fxAsOf?->toDateString())->toBe('2026-06-05');
+    expect($usdLine->fxIsStale)->toBeFalse();
+});
+
+it('leaves FX fields null on a base-currency (passthrough) line', function (): void {
+    nwAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+
+    $netWorth = app(NetWorthQuery::class)->forUser($this->user);
+
+    $eurLine = collect($netWorth->accounts)->firstWhere('currency', 'EUR');
+    expect($eurLine->isConverted())->toBeFalse();
+    expect($eurLine->baseEquivalentMinor)->toBeNull();
+    expect($eurLine->fxRate)->toBeNull();
+    expect($eurLine->hasNoRate('EUR'))->toBeFalse();
+});
+
+it('keeps a no-rate non-base account visible but without a base equivalent (D-07)', function (): void {
+    nwAccount($this->db, $this->user->id, 'JPY wallet', 'paypal', 5_000_000, 'JPY'); // no JPY rate seeded
+
+    $netWorth = app(NetWorthQuery::class)->forUser($this->user);
+
+    $jpyLine = collect($netWorth->accounts)->firstWhere('currency', 'JPY');
+    expect($jpyLine)->not->toBeNull();           // still shown in the breakdown
+    expect($jpyLine->isConverted())->toBeFalse();
+    expect($jpyLine->baseEquivalentMinor)->toBeNull();
+    expect($jpyLine->hasNoRate('EUR'))->toBeTrue();
+});
+
+it('flags per-account staleness when the rate is older than the freshness threshold (D-12)', function (): void {
+    $this->travelTo('2026-06-07'); // freeze clock so the 2026-05-20 rate is deterministically stale
+    nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
+    fxRate($this->db, 'USD', '1.08', '2026-05-20', 'bundled'); // well past the 3-day threshold
+
+    $netWorth = app(NetWorthQuery::class)->forUser($this->user);
+
+    $usdLine = collect($netWorth->accounts)->firstWhere('currency', 'USD');
+    expect($usdLine->isConverted())->toBeTrue();
+    expect($usdLine->fxIsStale)->toBeTrue();
+    expect($netWorth->hasStaleRates)->toBeTrue();
+});

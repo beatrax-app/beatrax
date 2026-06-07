@@ -2570,7 +2570,17 @@ td.date,
     margin-left: 3px;
 }
 
-/* FX popover container */
+/* FX popover container.
+ *
+ * Native [popover] elements render in the top layer with a UA default of
+ * `inset: 0; margin: auto` (centred). The anchor positioning that pins each
+ * popover just below-right of its trigger (UI-SPEC §5.4) is applied INLINE on
+ * the element (`position-anchor` + `position-area` + `position-try-fallbacks`)
+ * because the Tailwind v4 / Lightning CSS build pipeline strips those
+ * properties from compiled stylesheets. Inline styles bypass that pipeline and
+ * reach the browser intact. Browsers without anchor support ignore the inline
+ * `position-area` and keep the centred UA default — never the top-left corner.
+ * This rule owns only the visual chrome. */
 .fx-popover {
     background: var(--color-surface-raised);
     border: 1px solid var(--color-border);
@@ -2579,9 +2589,8 @@ td.date,
     padding: var(--space-3);
     width: 224px;
     font-size: var(--text-xs);
+    line-height: 1.45;
     color: var(--color-text);
-    /* Native popover: remove browser default margin/padding */
-    margin: 0;
 }
 
 .fx-popover .fx-rate {

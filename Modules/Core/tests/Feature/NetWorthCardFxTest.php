@@ -155,3 +155,39 @@ it('renders the inline fx-disclosure-trigger--inline for non-base-currency accou
         ->call('toggle') // expand the breakdown list
         ->assertSee('fx-disclosure-trigger--inline', escape: false);
 })->group('phase-1');
+
+it('renders the REAL converted base equivalent in the breakdown, not the native amount relabelled', function (): void {
+    nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
+    nwCardFxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
+
+    // $100 at EUR/USD 1.08 converts to €92,59 — the breakdown must show the
+    // converted figure, never the native 100,00 relabelled as euros (the bug
+    // this upgrade fixes).
+    Livewire::test(NetWorthCard::class)
+        ->call('toggle')
+        ->assertSee('92,59');
+})->group('phase-1');
+
+it('renders the per-pair rate and a human-readable source label in the breakdown popover (UI-SPEC §5.4/§7.2)', function (): void {
+    nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
+    nwCardFxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
+
+    Livewire::test(NetWorthCard::class)
+        ->call('toggle')
+        ->assertSee('1 USD =')      // real rate line, e.g. "1 USD = 0.9259 EUR"
+        ->assertSee('ECB');          // source label, not the raw "ecb"
+})->group('phase-1');
+
+it('anchors each popover to its trigger via inline CSS anchor positioning', function (): void {
+    nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
+    nwCardFxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
+
+    // The anchor-name / position-anchor pair must be emitted inline (the build
+    // pipeline strips position-area from compiled CSS, so positioning lives on
+    // the element). Guards against a regression back to the corner-pinned popover.
+    Livewire::test(NetWorthCard::class)
+        ->call('toggle')
+        ->assertSee('anchor-name:', escape: false)
+        ->assertSee('position-anchor:', escape: false)
+        ->assertSee('position-area: bottom span-right', escape: false);
+})->group('phase-1');
