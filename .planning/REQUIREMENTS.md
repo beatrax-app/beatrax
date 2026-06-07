@@ -18,9 +18,9 @@
 
 #### GOAL (savings goals) — SEED-003
 - [x] **GOAL-01**: User can create a savings goal with a name, target amount, and target date.
-- [ ] **GOAL-02**: User can link a goal to a savings account so contributions are tracked from transfers into it.
-- [ ] **GOAL-03**: System shows progress toward each goal (contributed vs target, % complete).
-- [ ] **GOAL-04**: System projects a realistic finish date from actual cash-flow via the Forecasting engine.
+- [x] **GOAL-02**: User can link a goal to a savings account so contributions are tracked from transfers into it.
+- [x] **GOAL-03**: System shows progress toward each goal (contributed vs target, % complete).
+- [x] **GOAL-04**: System projects a realistic finish date from actual cash-flow via the Forecasting engine.
 - [ ] **GOAL-05**: User can edit, complete, or archive a goal.
 
 #### POTS (savings pots / envelopes) — SEED-011
@@ -117,9 +117,9 @@ Each v1.3 requirement maps to exactly one phase. See `.planning/ROADMAP.md`.
 | FX-03 | Phase 1 | Pending |
 | FX-04 | Phase 1 | Pending |
 | GOAL-01 | Phase 2 | Complete |
-| GOAL-02 | Phase 2 | Pending |
-| GOAL-03 | Phase 2 | Pending |
-| GOAL-04 | Phase 2 | Pending |
+| GOAL-02 | Phase 2 | Complete |
+| GOAL-03 | Phase 2 | Complete |
+| GOAL-04 | Phase 2 | Complete |
 | GOAL-05 | Phase 2 | Pending |
 | POTS-01 | Phase 3 | Pending |
 | POTS-02 | Phase 3 | Pending |

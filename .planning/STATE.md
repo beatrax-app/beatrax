@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
 status: executing
-last_updated: "2026-06-07T21:54:13.299Z"
+last_updated: "2026-06-08T00:00:00.000Z"
 progress:
   total_phases: 15
   completed_phases: 1
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 8
   percent: 7
 ---
 
@@ -27,19 +27,19 @@ progress:
 ## Current Position
 
 Phase: 2 (Savings goals (SEED-003)) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 - **Milestone:** v1.3 "Local & in sync"
 - **Status:** Executing Phase 2
 - **Phase:** 1 of 15 complete; Phase 2 in progress
-- **Plan:** Phase 2 — 1 of 4 executed
+- **Plan:** Phase 2 — 2 of 4 executed (02-01 scaffold, 02-02 read-model done)
 - **Progress:** [███████░░░] 67%
 
 ```
 Phases [█               ] 1/15
 ```
 
-**Next action:** Execute Phase 2. Run `/gsd:execute-phase 2`. Wave 1 = 02-01 (scaffold); Wave 2 = 02-02 + 02-03 (parallel — progress/projection services + writer); Wave 3 = 02-04 (UI + dashboard card, non-autonomous UAT checkpoint).
+**Next action:** Execute Phase 2 Wave 2 plan 02-03 (GoalWriter — CRUD + lifecycle status).
 
 ## Performance Metrics
 
@@ -60,6 +60,9 @@ Phases [█               ] 1/15
 - Milestone-level research skipped; novel areas (CRDT, Noise, FTS) researched per-phase at plan-phase.
 - goals route registered as closure stub (returns 501) until Plan 04 wires GoalsPage::class.
 - newFactory() override added to Goal model to resolve module-local GoalFactory (bypasses Laravel default resolver).
+- GoalProgressQuery uses raw DatabaseManager (not Eloquent) to avoid phpstan-strict-rules staticMethod.dynamicCall on whereIn.
+- TRAILING_WINDOW_DAYS=HORIZON_LIMIT_DAYS=90 in GoalProjectionService (D-07 tunables, aligns run-rate window with max forecast horizon).
+- archivedForUser() created in Plan 02 (not 04) — Plan 04 only consumes it.
 
 ### Critical path
 
@@ -77,8 +80,9 @@ Phases [█               ] 1/15
 
 ## Session Continuity
 
-- **Last session:** 2026-06-07T21:54:13.286Z
-- **Resume by:** Execute Phase 2 Wave 2 plans (02-02 GoalProgressQuery + 02-03 GoalWriter in parallel).
+- **Last session:** 2026-06-08T00:00:00.000Z
+- **Stopped at:** Completed 02-02-PLAN.md (GoalProgressQuery + GoalProjectionService + GoalProgressRow)
+- **Resume by:** Execute Phase 2 Wave 2 plan 02-03 (GoalWriter — CRUD + lifecycle).
 
 ---
 *State initialized: 2026-06-07 for milestone v1.3 "Local & in sync"*
