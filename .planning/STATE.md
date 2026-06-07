@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
 status: executing
-stopped_at: Completed 02-03-PLAN.md (GoalWriter — save/update/parseAmount/markComplete/archive/restore)
+stopped_at: "02-04 at human-verify checkpoint — Tasks 1-3 done (GoalsPage + GoalsSummaryCard + tests GREEN); awaiting browser UAT (Task 4)"
 last_updated: "2026-06-08T00:00:00.000Z"
 progress:
   total_phases: 15
@@ -33,14 +33,14 @@ Plan: 4 of 4
 - **Milestone:** v1.3 "Local & in sync"
 - **Status:** Executing Phase 2
 - **Phase:** 1 of 15 complete; Phase 2 in progress
-- **Plan:** Phase 2 — 3 of 4 executed (02-01 scaffold, 02-02 read-model, 02-03 GoalWriter done)
+- **Plan:** Phase 2 — 02-04 at human-verify checkpoint (Tasks 1-3 done; Task 4 = browser UAT pending)
 - **Progress:** [████████░░] 75%
 
 ```
 Phases [█               ] 1/15
 ```
 
-**Next action:** Execute Phase 2 Wave 3 plan 02-04 (GoalsPage Livewire component + views).
+**Next action:** Human UAT of /goals page and dashboard summary card (Task 4 of 02-04). Type "approved" or describe issues to fix.
 
 ## Performance Metrics
 
@@ -66,6 +66,9 @@ Phases [█               ] 1/15
 - archivedForUser() created in Plan 02 (not 04) — Plan 04 only consumes it.
 - GoalWriter injects only DatabaseManager (not GoalProgressQuery) — intentional parallel-safe decoupling; own inline assertOwnedAccountOrNull() query.
 - GoalWriter::update() throws InvalidArgumentException on cross-user/missing goal; lifecycle methods silently no-op (consistent with write-returns-result vs fire-and-forget patterns).
+- GoalsPage: createGoal()/updateGoal() separate actions with editGoalId property — matches Wave 0 test stub names (Plan 01 stubs are authoritative over plan spec naming).
+- GoalsSummaryCard: top-3 nearest-finishing sorted by projectedFinishDate (null last) using usort, no extra ForecastQuery dependency.
+- goals.index route closure stub swapped for GoalsPage::class in Plan 04 once the class exists at boot time.
 
 ### Critical path
 
@@ -84,8 +87,8 @@ Phases [█               ] 1/15
 ## Session Continuity
 
 - **Last session:** 2026-06-08T00:00:00.000Z
-- **Stopped at:** Completed 02-03-PLAN.md (GoalWriter — save/update/parseAmount/markComplete/archive/restore)
-- **Resume by:** Execute Phase 2 Wave 3 plan 02-04 (GoalsPage Livewire component + views).
+- **Stopped at:** 02-04 human-verify checkpoint — Goals UI built, tests GREEN, awaiting browser UAT (Task 4)
+- **Resume by:** Approve Task 4 UAT (type "approved") or describe issues to fix; then complete 02-04 and mark Phase 2 done.
 
 ---
 *State initialized: 2026-06-07 for milestone v1.3 "Local & in sync"*
