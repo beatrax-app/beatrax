@@ -20,6 +20,7 @@ use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Community\Public\Services\ClassificationRuleProvider;
 use Modules\Community\Public\Services\CommunityCorpusQuery;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
+use Modules\Community\Public\Services\SupportResourceProvider;
 use Modules\Core\Public\Events\UserInstalled;
 use Native\Desktop\Contracts\Shell as ShellContract;
 
@@ -52,6 +53,7 @@ final class CommunityServiceProvider extends ServiceProvider
         $this->app->singleton(CommunityCorpusQuery::class);
         $this->app->singleton(ClassificationRuleProvider::class);
         $this->app->singleton(CorpusPatternMatcher::class);
+        $this->app->singleton(SupportResourceProvider::class);
         $this->app->singleton(GitHubCompareUrlBuilder::class);
         $this->app->singleton(OpenExternalUrlAction::class);
 

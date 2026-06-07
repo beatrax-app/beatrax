@@ -131,6 +131,12 @@
                 'taxYears' => $taxYears,
                 'ibanRevealed' => $ibanRevealed,
             ])
+
+            @if ($activeTab === 'overview' && $supportResource !== null && $supportResource->hasAny())
+                @include('counterparties::livewire.profile-tabs.partials.support-resources', [
+                    'resource' => $supportResource,
+                ])
+            @endif
         </div>
     @endif
 </div>
