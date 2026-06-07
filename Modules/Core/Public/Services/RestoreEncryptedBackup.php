@@ -78,8 +78,13 @@ final class RestoreEncryptedBackup
 
     private function snapshotCurrent(): string
     {
+        // The backups directory may not exist yet (a user who has never run a
+        // backup), so create it before VACUUM INTO writes the snapshot there.
+        $dir = rtrim($this->paths->backups(), '/');
+        $this->files->ensureDirectoryExists($dir, 0700);
+
         $stamp = $this->clock->now()->format('Y-m-d-His');
-        $snapshotPath = rtrim($this->paths->backups(), '/').'/pre-restore-'.$stamp.'.sqlite';
+        $snapshotPath = $dir.'/pre-restore-'.$stamp.'.sqlite';
         $escaped = str_replace("'", "''", $snapshotPath);
 
         // VACUUM INTO must not run inside a transaction.
