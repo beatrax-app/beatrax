@@ -1,0 +1,83 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\FX\Internal\Providers;
+
+use Illuminate\Http\Client\Factory as HttpFactory;
+use Modules\FX\Public\Contracts\RateProvider;
+use Modules\FX\Public\Exceptions\RateFetchException;
+
+/**
+ * Fetches EUR-based exchange rates from the Frankfurter API (fallback provider).
+ *
+ * URL: https://api.frankfurter.dev/v1/latest
+ * Note: the old api.frankfurter.app domain 301-redirects to api.frankfurter.dev;
+ * use the new URL directly to avoid the redirect hop (Pitfall 3).
+ *
+ * Key: 'frankfurter', Priority: 100 (second in the chain after ECB).
+ *
+ * Rate values are cast to string; never float (Pitfall 1 / T-02-03).
+ *
+ * The Http\Factory is constructor-injected (never the Http facade) to satisfy
+ * BoundaryArchTest's "no Illuminate\Support\Facades inside Modules\" rule
+ * (Pitfall 5 / T-02-04).
+ */
+final class FrankfurterRateProvider implements RateProvider
+{
+    private const string URL = 'https://api.frankfurter.dev/v1/latest';
+
+    public function __construct(private readonly HttpFactory $http) {}
+
+    public function key(): string
+    {
+        return 'frankfurter';
+    }
+
+    public function priority(): int
+    {
+        return 100;
+    }
+
+    /**
+     * @return array{date: string, rates: array<string, string>}
+     *
+     * @throws RateFetchException
+     */
+    public function fetch(): array
+    {
+        try {
+            $json = $this->http
+                ->get(self::URL)
+                ->throw()
+                ->json();
+        } catch (\Throwable $e) {
+            throw new RateFetchException('Frankfurter HTTP request failed: '.$e->getMessage(), 0, $e);
+        }
+
+        if (! is_array($json)) {
+            throw new RateFetchException('Frankfurter response is not a JSON object.');
+        }
+
+        $date = $json['date'] ?? null;
+
+        if (! is_string($date)) {
+            throw new RateFetchException('Frankfurter JSON: missing or non-string "date" field.');
+        }
+
+        $rawRates = $json['rates'] ?? [];
+
+        if (! is_array($rawRates)) {
+            throw new RateFetchException('Frankfurter JSON: "rates" field is not an array.');
+        }
+
+        /** @var array<string, string> $rates */
+        $rates = [];
+
+        foreach ($rawRates as $currency => $rate) {
+            $rates[(string) $currency] = (string) $rate;
+        }
+
+        return ['date' => $date, 'rates' => $rates];
+    }
+}
