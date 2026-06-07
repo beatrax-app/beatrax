@@ -15,6 +15,7 @@ use Modules\Ledger\Public\Actions\UpdateTransactionCategory;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
+use Modules\Ledger\Public\Services\CategorySpendTrendQuery;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\StatementSummaryWriter;
@@ -45,6 +46,8 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(RecordsStatementSummary::class, StatementSummaryWriter::class);
         $this->app->singleton(FingerprintComposer::class);
         $this->app->bind(PeriodQuery::class);
+        // Transient (not singleton): depends on the per-request PeriodQuery.
+        $this->app->bind(CategorySpendTrendQuery::class);
         $this->app->singleton(ThisPeriodAtAGlanceQuery::class);
         $this->app->singleton(TopCategoriesByPeriodQuery::class);
         $this->app->singleton(TransactionListQuery::class);
