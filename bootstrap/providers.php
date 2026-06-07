@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Providers\HorizonServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
 use Modules\Budgets\Providers\BudgetsServiceProvider;
+use Modules\CashBook\Providers\CashBookServiceProvider;
 use Modules\Categorization\Providers\CategorizationServiceProvider;
 use Modules\Chains\Providers\ChainsServiceProvider;
 use Modules\Community\Providers\CommunityServiceProvider;
@@ -42,6 +43,7 @@ return array_values(array_filter([
     RecurringServiceProvider::class,
     DriftAlertsServiceProvider::class,
     BudgetsServiceProvider::class,
+    CashBookServiceProvider::class,
     ForecastingServiceProvider::class,
     DesktopServiceProvider::class,
     DevModeServiceProvider::class,
