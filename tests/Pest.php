@@ -23,6 +23,7 @@ foreach (
     [
         'Modules/Auth' => Modules\Auth\Tests\TestCase::class,
         'Modules/Budgets' => Modules\Budgets\Tests\TestCase::class,
+        'Modules/Goals' => Modules\Goals\Tests\TestCase::class,
         'Modules/CashBook' => Modules\CashBook\Tests\TestCase::class,
         'Modules/Categorization' => Modules\Categorization\Tests\TestCase::class,
         'Modules/Chains' => Modules\Chains\Tests\TestCase::class,
