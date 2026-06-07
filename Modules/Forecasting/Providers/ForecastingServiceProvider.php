@@ -45,6 +45,7 @@ use Modules\Forecasting\Public\Events\ScenarioDeleted;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
 use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 use Modules\Forecasting\Public\Services\ForecastQuery;
+use Modules\Forecasting\Public\Services\NetWorthQuery;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
@@ -88,6 +89,7 @@ final class ForecastingServiceProvider extends ServiceProvider
         // constructor-positional (userId, scenarioId, horizonDays) so it
         // is dispatched, not container-resolved — no singleton entry.
         $this->app->singleton(BalanceAnchorResolver::class);
+        $this->app->singleton(NetWorthQuery::class);
         $this->app->singleton(RangeProjector::class);
         $this->app->singleton(DailyFold::class);
         $this->app->singleton(ProjectionPipeline::class);
