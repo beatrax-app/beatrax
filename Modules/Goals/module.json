@@ -1,0 +1,11 @@
+{
+    "name": "Goals",
+    "alias": "goals",
+    "description": "Savings goals with linked-account contribution tracking and projected finish dates.",
+    "keywords": ["goals", "savings", "projection"],
+    "priority": 9,
+    "providers": [
+        "Modules\\Goals\\Providers\\GoalsServiceProvider"
+    ],
+    "files": []
+}
