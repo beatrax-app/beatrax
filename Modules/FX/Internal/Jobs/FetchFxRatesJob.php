@@ -77,6 +77,24 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
 
     public function handle(RateProviderRegistry $registry, DatabaseManager $db, LoggerInterface $logger): void
     {
+        // Defense-in-depth privacy gate (D-04): online fetch is opt-in and off
+        // by default, and this job is the single point where outbound rate HTTP
+        // actually happens. Re-check the flag here so NO dispatch path (the
+        // scheduler, the on-demand "Refresh now" action, or any future caller)
+        // can leak network calls for a user who never enabled online fetch —
+        // the UI gate alone is not a security boundary.
+        $fxOnlineEnabled = $db->connection()->table('users')
+            ->where('id', $this->userId)
+            ->value('fx_online_enabled');
+
+        if (! (bool) $fxOnlineEnabled) {
+            $logger->info('FetchFxRatesJob: skipped — user has online fetch disabled or does not exist.', [
+                'user_id' => $this->userId,
+            ]);
+
+            return;
+        }
+
         $result = $registry->fetchCurrentRates();
 
         $date = $result['date'];

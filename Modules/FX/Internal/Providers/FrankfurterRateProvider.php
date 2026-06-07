@@ -83,6 +83,13 @@ final class FrankfurterRateProvider implements RateProvider
             $rates[(string) $currency] = (string) $rate;
         }
 
+        // An HTTP 200 with no usable rates is a failure, not a success —
+        // otherwise the registry resets the circuit and stops here instead of
+        // falling through to the bundled snapshot (mirrors EcbRateProvider).
+        if ($rates === []) {
+            throw new RateFetchException('Frankfurter response contained no usable rates.');
+        }
+
         return ['date' => $date, 'rates' => $rates];
     }
 }
