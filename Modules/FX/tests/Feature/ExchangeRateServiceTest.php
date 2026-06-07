@@ -32,12 +32,14 @@ function seedRates(string $date, array $rates, string $source = 'ecb'): void
 
 describe('ExchangeRateService', function (): void {
     beforeEach(function (): void {
-        $this->registry = Mockery::mock(RateProviderRegistry::class);
-        $this->cache = Mockery::mock(CacheRepository::class);
+        // ExchangeRateService reads directly from exchange_rates; registry is not
+        // invoked by convertToBase/convertAtDate, so we pass a real (empty) registry.
+        $cache = app(CacheRepository::class);
+        $this->registry = new RateProviderRegistry([], $cache);
         $this->service = new ExchangeRateService(
             app(DatabaseManager::class),
             $this->registry,
-            $this->cache,
+            $cache,
         );
     });
 

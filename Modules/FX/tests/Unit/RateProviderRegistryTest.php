@@ -11,9 +11,10 @@ use Modules\FX\Public\Exceptions\RateFetchException;
 /**
  * @param  array{date: string, rates: array<string, string>}  $result
  */
-function makeFakeProvider(string $key, int $priority, array|null $result = null, bool $throws = false): RateProvider
+function makeFakeProvider(string $key, int $priority, ?array $result = null, bool $throws = false): RateProvider
 {
-    return new class($key, $priority, $result, $throws) implements RateProvider {
+    return new class($key, $priority, $result, $throws) implements RateProvider
+    {
         public function __construct(
             private readonly string $k,
             private readonly int $p,
