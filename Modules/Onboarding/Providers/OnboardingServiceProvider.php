@@ -10,6 +10,7 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Onboarding\Internal\Http\Livewire\SetupWizard;
 use Modules\Onboarding\Internal\Http\Livewire\StartingBalanceCard;
+use Modules\Onboarding\Internal\Http\Livewire\Steps\BudgetsStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectBankStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectCardStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectEmailStep;
@@ -75,6 +76,7 @@ final class OnboardingServiceProvider extends ServiceProvider
         $livewire->component('onboarding.steps.connect-card-step', ConnectCardStep::class);
         $livewire->component('onboarding.steps.connect-email-step', ConnectEmailStep::class);
         $livewire->component('onboarding.steps.first-import-step', FirstImportStep::class);
+        $livewire->component('onboarding.steps.budgets-step', BudgetsStep::class);
         $livewire->component('onboarding.starting-balance-card', StartingBalanceCard::class);
     }
 }
