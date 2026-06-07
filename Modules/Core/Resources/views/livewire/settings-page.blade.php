@@ -248,6 +248,17 @@
         >Manage aliases →</a>
     </section>
 
+    {{-- Data & backup.
+
+         Hosts the EncryptedBackupDownload component — a passphrase-encrypted,
+         quantum-safe snapshot of the SQLite database streamed as a download
+         (the desktop build). Restore is the destructive counterpart and lives
+         behind the db:restore CLI safety rails / a gated in-app flow. --}}
+    <section class="space-y-2" id="data-backup">
+        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Data &amp; backup</h2>
+        @livewire('core.encrypted-backup-download')
+    </section>
+
     {{-- About updates.
 
          beatrax auto-updates once installed; the very first install
