@@ -14,6 +14,7 @@ use Modules\DriftAlerts\Internal\DriftEvaluator;
 use Modules\DriftAlerts\Internal\Http\Livewire\DashboardDriftBadge;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftThresholdEditor;
+use Modules\DriftAlerts\Internal\Http\Livewire\SavingsInsightsCard;
 use Modules\DriftAlerts\Internal\Http\Livewire\SubscriptionDriftWatchPage;
 use Modules\DriftAlerts\Internal\Listeners\EvaluateDriftOnMetricsRefreshed;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
@@ -22,6 +23,7 @@ use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
 use Modules\DriftAlerts\Public\Actions\SnoozeDriftAlert;
 use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
+use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 use Modules\DriftAlerts\Public\Services\SubscriptionDriftWatchQuery;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 
@@ -57,6 +59,7 @@ final class DriftAlertsServiceProvider extends ServiceProvider
         $this->app->singleton(DriftAlertQuery::class);
         $this->app->singleton(CancellationImpactQuery::class);
         $this->app->singleton(SubscriptionDriftWatchQuery::class);
+        $this->app->singleton(SavingsInsightsQuery::class);
         $this->app->singleton(AcknowledgeDriftAlert::class);
         $this->app->singleton(SnoozeDriftAlert::class);
         $this->app->singleton(DismissDriftAlertAsCancelled::class);
@@ -76,6 +79,7 @@ final class DriftAlertsServiceProvider extends ServiceProvider
 
         $livewire->component('drift-alerts.drift-page', DriftPage::class);
         $livewire->component('drift-alerts.subscription-drift-watch-page', SubscriptionDriftWatchPage::class);
+        $livewire->component('drift-alerts.savings-insights-card', SavingsInsightsCard::class);
         $livewire->component('drift-alerts.dashboard-drift-badge', DashboardDriftBadge::class);
         $livewire->component('drift-alerts.drift-threshold-editor', DriftThresholdEditor::class);
 

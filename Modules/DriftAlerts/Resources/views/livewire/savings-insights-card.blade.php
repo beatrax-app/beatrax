@@ -1,0 +1,44 @@
+<div>
+    @if (count($insights) > 0)
+        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="Ways to save">
+            <div class="flex items-baseline justify-between gap-4">
+                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Ways to save</h2>
+                <a href="{{ route('drift.watch') }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">Subscriptions →</a>
+            </div>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Official links from the support corpus — beatrax never cancels or switches anything for you.
+            </p>
+
+            <ul class="mt-4 space-y-2">
+                @foreach ($insights as $insight)
+                    <li
+                        wire:key="insight-{{ $insight->key }}"
+                        class="flex items-center justify-between gap-3 rounded-md border border-slate-100 px-3 py-2 dark:border-slate-800"
+                    >
+                        <p class="min-w-0 flex-1 text-sm text-slate-700 dark:text-slate-300">{{ $insight->message }}</p>
+                        <div class="flex shrink-0 items-center gap-1">
+                            @php
+                                $href = $insight->actionUrl;
+                                $safe = str_starts_with($href, 'https://') || str_starts_with($href, 'http://');
+                            @endphp
+                            @if ($safe)
+                                <a
+                                    href="{{ $href }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                                >{{ $insight->actionLabel }} <span aria-hidden="true" style="opacity:.6;">↗</span></a>
+                            @endif
+                            <button
+                                type="button"
+                                wire:click="dismiss('{{ $insight->key }}')"
+                                aria-label="Dismiss suggestion"
+                                class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                            >×</button>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+</div>

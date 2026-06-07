@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- **"You could save here" insights** — the dashboard shows a "Ways to save"
+  card that pairs your recurring subscriptions with the most relevant official
+  link from the support-resource corpus: a cheaper / student / retention plan
+  where one exists, a cancellation page when a subscription's price has drifted
+  up, or a gentle review nudge for an ongoing charge. Each suggestion is
+  dismissible (and stays dismissed), and the whole set is cached per user so the
+  dashboard never re-runs the resolution on every render. Purely informational —
+  beatrax surfaces the official link, it never cancels or switches anything.
 - **Recurring ↔ counterparty navigation** — a counterparty profile's Recurring
   card now lists that merchant's recurring series (each linking to the series
   detail), and the recurring series detail page links back to the counterparty

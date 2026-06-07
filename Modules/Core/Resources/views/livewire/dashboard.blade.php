@@ -148,6 +148,10 @@
          happens inside FixedPaymentsViewQuery. --}}
     @livewire('recurring.fixed-payments-card')
 
+    {{-- "Ways to save" — corpus cancel/cheaper links surfaced from recurring
+         + drift data. Renders nothing when there is nothing to suggest. --}}
+    @livewire('drift-alerts.savings-insights-card')
+
     {{-- Top spending categories --}}
     <section class="space-y-4">
         <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Top spending</h2>
