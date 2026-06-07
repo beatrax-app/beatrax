@@ -21,6 +21,24 @@ it('renders the signup page on a fresh database', function (): void {
         ->assertSeeText('Create the first account');
 });
 
+it('shows field requirement hints and a live password requirement checklist', function (): void {
+    $response = $this->get('/signup')->assertOk();
+
+    // Static field guidance.
+    $response->assertSeeText('Saved in lowercase. This becomes the owner account.');
+    $response->assertSeeText('Use a passphrase you can remember — there is no password reset, only recovery codes.');
+
+    // The live (Alpine-driven) requirement checklist: the labels live in the
+    // x-for data and the list carries an accessible label + aria-describedby.
+    $response->assertSee('Password requirements', escape: false);
+    $response->assertSee('At least 12 characters', escape: false);
+    $response->assertSee('Both passwords match', escape: false);
+    $response->assertSee('aria-describedby="password-requirements"', escape: false);
+    // The requirement state is computed client-side from the typed values.
+    $response->assertSee('lengthOk', escape: false);
+    $response->assertSee('matchOk', escape: false);
+});
+
 it('returns 404 when a user already exists', function (): void {
     User::query()->create([
         'username' => 'existing',
