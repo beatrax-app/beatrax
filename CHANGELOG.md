@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-07
+
 ### Added
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
@@ -263,7 +265,8 @@ First public preview release.
   resolution; categorization and triage; recurring detection; drift alerts; and
   forecasting charts.
 
-[Unreleased]: https://github.com/nightworksio/beatrax/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/nightworksio/beatrax/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/nightworksio/beatrax/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/nightworksio/beatrax/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/nightworksio/beatrax/compare/v1.0.3-beta...v1.1.0
 [1.0.3-beta]: https://github.com/nightworksio/beatrax/compare/v1.0.2-beta...v1.0.3-beta
