@@ -29,6 +29,7 @@
             <directory>Modules/Desktop/tests/Unit</directory>
             <directory>Modules/DevMode/tests/Unit</directory>
             <directory>Modules/Onboarding/tests/Unit</directory>
+            <directory>Modules/Budgets/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
@@ -52,6 +53,7 @@
             <directory>Modules/Desktop/tests/Feature</directory>
             <directory>Modules/DevMode/tests/Feature</directory>
             <directory>Modules/Onboarding/tests/Feature</directory>
+            <directory>Modules/Budgets/tests/Feature</directory>
         </testsuite>
         <testsuite name="Contracts">
             <directory>tests/Contracts</directory>
@@ -101,8 +103,20 @@
         <ini name="memory_limit" value="1G"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_KEY" value="base64:vQc4qXIjcS1Wt2kPQzGpL3yvqW6CrLqzqkEYqFqW7DA="/>
+        <!-- force="true" so asset()/route() URLs in rendered-HTML snapshots are
+             deterministic (https://beatrax.test) regardless of a local .env
+             APP_URL pointed at the dev server. -->
+        <env name="APP_URL" value="https://beatrax.test" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
+        <!--
+            force="true" so the suite always runs with the Dev Console off,
+            even when a local .env sets BEATRAX_DEV_MODE=true for the dev
+            server. Without it, dev-mode-gated behaviour (e.g. Horizon route
+            registration) would leak into the test run from the developer's
+            environment.
+        -->
+        <env name="BEATRAX_DEV_MODE" value="false" force="true"/>
         <env name="CACHE_STORE" value="array"/>
         <!--
             force="true" so the isolated in-memory test connection wins even

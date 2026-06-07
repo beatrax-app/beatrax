@@ -15,9 +15,9 @@ uses(RefreshDatabase::class);
  * wizard_progress row per step the WizardStepRegistry enumerates for a
  * freshly-installed user, and the idempotency guard that lets re-fires
  * from a UserInstalled listener never duplicate or overwrite already-
- * progressed steps. Step set is currently 7 entries
+ * progressed steps. Step set is currently 8 entries
  * (welcome / connect-bank / connect-paypal / connect-card /
- * connect-email / first-import / done) — the assertions read the
+ * connect-email / first-import / budgets / done) — the assertions read the
  * registry rather than hard-coding the expected count, so future
  * connector additions don't trip this test.
  */
@@ -86,4 +86,34 @@ it('does not overwrite a step that has already progressed past pending', functio
         ->value('status');
 
     expect($status)->toBe('done');
+});
+
+it('seeds a registry step added after a user finished the wizard as skipped, not pending', function (): void {
+    /** @var WizardProgressInitializer $initializer */
+    $initializer = $this->app->make(WizardProgressInitializer::class);
+    $initializer->initialize($this->user->id);
+
+    // Simulate a user who finished onboarding before the step existed:
+    // every row done, and the new step's row removed.
+    DB::table('wizard_progress')->where('user_id', $this->user->id)->update(['status' => 'done']);
+    DB::table('wizard_progress')->where('user_id', $this->user->id)->where('step_key', 'budgets')->delete();
+
+    $initializer->initialize($this->user->id);
+
+    $status = DB::table('wizard_progress')->where('user_id', $this->user->id)->where('step_key', 'budgets')->value('status');
+    expect($status)->toBe('skipped');
+});
+
+it('seeds a newly-added registry step as pending while the user is still mid-wizard', function (): void {
+    /** @var WizardProgressInitializer $initializer */
+    $initializer = $this->app->make(WizardProgressInitializer::class);
+    $initializer->initialize($this->user->id);
+
+    // Mid-wizard: rows still pending, and the new step's row removed.
+    DB::table('wizard_progress')->where('user_id', $this->user->id)->where('step_key', 'budgets')->delete();
+
+    $initializer->initialize($this->user->id);
+
+    $status = DB::table('wizard_progress')->where('user_id', $this->user->id)->where('step_key', 'budgets')->value('status');
+    expect($status)->toBe('pending');
 });

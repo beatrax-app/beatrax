@@ -6,10 +6,10 @@
     nested Livewire component so each step owns its own state without
     contaminating the parent.
 
-    The wizard registers seven step keys: two static bookend steps
-    (welcome + done) and five connector steps (connect-bank,
-    connect-paypal, connect-card, connect-email, first-import). Each
-    step is mounted as a Livewire component via the $currentStepKey
+    The wizard registers eight step keys: two static bookend steps
+    (welcome + done), five connector/import steps (connect-bank,
+    connect-paypal, connect-card, connect-email, first-import), and the
+    optional budgets step. Each step is mounted as a Livewire component via the $currentStepKey
     switch below; a user landing on a step whose component is not yet
     registered sees a coherent "step pending" placeholder rather than
     a mount exception.
@@ -120,6 +120,10 @@
 
                     @case ('connect-email')
                         <livewire:onboarding.steps.connect-email-step :key="'connect-email'" />
+                        @break
+
+                    @case ('budgets')
+                        <livewire:onboarding.steps.budgets-step :key="'budgets'" />
                         @break
 
                     @default

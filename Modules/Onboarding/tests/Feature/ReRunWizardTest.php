@@ -64,7 +64,7 @@ it('resets every wizard_progress row and re-enters from welcome when ?force=1 is
         ->where('user_id', $this->user->id)
         ->where('status', '!=', 'pending')
         ->count();
-    expect($nonPendingBefore)->toBe(7);
+    expect($nonPendingBefore)->toBe(8);
 
     Livewire::withQueryParams(['force' => '1'])
         ->test(SetupWizard::class)

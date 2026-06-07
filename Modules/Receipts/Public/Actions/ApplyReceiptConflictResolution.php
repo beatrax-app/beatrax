@@ -6,6 +6,7 @@ namespace Modules\Receipts\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use JsonException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use stdClass;
@@ -112,17 +113,25 @@ final class ApplyReceiptConflictResolution
 
         if ($choice === 'prefer_receipt' && $fieldIsAllowed) {
             $incomingRaw = is_string($row->incoming_value) ? $row->incoming_value : 'null';
-            /** @var mixed $incoming */
-            $incoming = json_decode($incomingRaw, associative: true, flags: JSON_THROW_ON_ERROR);
 
-            $this->db->connection()
-                ->table('transactions')
-                ->where('id', $transactionId)
-                ->where('user_id', $user->id)
-                ->update([
-                    $fieldName => $incoming,
-                    'updated_at' => $now,
-                ]);
+            try {
+                /** @var mixed $incoming */
+                $incoming = json_decode($incomingRaw, associative: true, flags: JSON_THROW_ON_ERROR);
+
+                $this->db->connection()
+                    ->table('transactions')
+                    ->where('id', $transactionId)
+                    ->where('user_id', $user->id)
+                    ->update([
+                        $fieldName => $incoming,
+                        'updated_at' => $now,
+                    ]);
+            } catch (JsonException) {
+                // A malformed stored value must not 500 the request — the read
+                // side (ReceiptConflictQuery::decodeScalar) already tolerates
+                // it. Skip the apply and fall through to delete the pending row
+                // so a corrupted value can never block future conflicts.
+            }
         }
 
         // Always delete the pending row, even when field_name fell

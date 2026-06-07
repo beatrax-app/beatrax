@@ -55,6 +55,10 @@
         <span class="ic" aria-hidden="true">⚠</span>
         Drift Alerts
     </a>
+    <a href="https://beatrax.test/budgets" class="side-item ">
+        <span class="ic" aria-hidden="true">⊙</span>
+        Budgets
+    </a>
 
     <div class="side-section-label">INGESTION</div>
     <a href="https://beatrax.test/imports/new" class="side-item ">

@@ -29,7 +29,7 @@ it('redirects to the setup-wizard route after a successful signup', function ():
     $user = User::query()->where('username', 'wizard-user')->first();
     expect($user)->not->toBeNull();
 
-    expect(DB::table('wizard_progress')->where('user_id', $user->id)->count())->toBe(7);
+    expect(DB::table('wizard_progress')->where('user_id', $user->id)->count())->toBe(8);
 
     $this->assertAuthenticatedAs($user);
 });
