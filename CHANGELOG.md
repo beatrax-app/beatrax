@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- **Encrypted backups** — Settings → Data & backup can now download a
+  passphrase-encrypted snapshot of your whole database (a `VACUUM INTO` copy,
+  encrypted in place and streamed as a `.sqlite.enc` file), safe to keep on an
+  external drive or in cloud storage because it is unreadable without the
+  passphrase. Encryption is quantum-safe by construction: a purely symmetric
+  scheme (no public-key step, so no Shor exposure) using Argon2id key derivation
+  and XChaCha20-Poly1305 with a 256-bit key. The plaintext snapshot is locked to
+  0600 and deleted as soon as it is encrypted; the passphrase never persists.
+  Available on the SQLite (desktop) build.
 - **Support-resource profiles** — a counterparty profile now shows a "Support &
   cancelling" card (merchants) or "Getting help" card (government) with the
   official cancel / help / cheaper-plan links, a `tel:` helpline, and — where a
