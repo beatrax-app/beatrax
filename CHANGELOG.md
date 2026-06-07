@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- **Recurring ↔ counterparty navigation** — a counterparty profile's Recurring
+  card now lists that merchant's recurring series (each linking to the series
+  detail), and the recurring series detail page links back to the counterparty
+  profile. Resolved through the shared `transactions.counterparty_id`, so it is
+  exact rather than name-matched. The Settings page is also wider for more
+  comfortable use.
 - **Encrypted backups** — Settings → Data & backup can now download a
   passphrase-encrypted snapshot of your whole database (a `VACUUM INTO` copy,
   encrypted in place and streamed as a `.sqlite.enc` file), safe to keep on an
