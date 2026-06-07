@@ -100,6 +100,7 @@
             "Modules\\EmailScan\\Tests\\": "Modules/EmailScan/tests/",
             "Modules\\Forecasting\\Tests\\": "Modules/Forecasting/tests/",
             "Modules\\Receipts\\Tests\\": "Modules/Receipts/tests/",
+            "Modules\\FX\\Tests\\": "Modules/FX/tests/",
             "Modules\\Recurring\\Tests\\": "Modules/Recurring/tests/",
             "Modules\\Transfers\\Tests\\": "Modules/Transfers/tests/"
         }
