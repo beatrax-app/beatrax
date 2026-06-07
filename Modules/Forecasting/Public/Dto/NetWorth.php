@@ -4,14 +4,22 @@ declare(strict_types=1);
 
 namespace Modules\Forecasting\Public\Dto;
 
+use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
 /**
- * Net-worth roll-up: one EUR figure across all of a user's accounts (assets
- * minus liabilities), with the per-account breakdown. `totalMinor` sums only
- * EUR-denominated accounts; `hasExcludedAccounts` is true when a non-EUR
- * account was left out of the single figure (still shown in `accounts`), since
- * the app has no FX-conversion service for balances yet.
+ * Net-worth roll-up across all of a user's accounts (assets minus liabilities),
+ * with a per-account breakdown and FX conversion metadata.
+ *
+ * `totalMinor` sums all accounts converted to the user's base currency via
+ * ExchangeRateService. `hasExcludedAccounts` is true only when at least one
+ * account had no available rate at all (D-07 no-rate fallback). Stale/bundled
+ * conversions are still included in the total but flagged via `hasStaleRates`.
+ *
+ * FX metadata fields (`ratesSource`, `ratesAsOf`, `hasStaleRates`,
+ * `accountsWithoutRate`) are nullable with safe defaults so every existing
+ * construction site keeps compiling without modification (additive-nullable
+ * pattern per RESEARCH Pitfall 7).
  */
 final class NetWorth extends Data
 {
@@ -23,6 +31,10 @@ final class NetWorth extends Data
         public readonly string $currency,
         public readonly array $accounts,
         public readonly bool $hasExcludedAccounts,
+        public readonly ?string $ratesSource = null,
+        public readonly ?CarbonImmutable $ratesAsOf = null,
+        public readonly bool $hasStaleRates = false,
+        public readonly int $accountsWithoutRate = 0,
     ) {}
 
     public function hasAccounts(): bool
