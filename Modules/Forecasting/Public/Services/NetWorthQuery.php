@@ -60,7 +60,19 @@ final class NetWorthQuery
             $anchor = $this->anchor->forAccount($accountId, $user);
             $kind = is_string($account->kind) ? $account->kind : '';
 
-            // Each line keeps its own original currency (D-02)
+            // Convert to base currency via ExchangeRateService (D-08). Run the
+            // conversion first so the account line can carry the real rate /
+            // source / as-of (UI-SPEC §5.2/§5.4) — not just the native amount.
+            $money = Money::ofMinor($anchor->openingBalanceMinor, $anchor->currency);
+            $result = $this->fx->convertToBase($money, $baseCurrency);
+
+            // No rate available — result currency ≠ base currency (D-07). The
+            // line is still emitted (the breakdown shows it with a no-rate
+            // note) but it carries no base equivalent and is left out of total.
+            $rateAvailable = $result->converted->currency() === $baseCurrency;
+
+            // Each line keeps its own original currency (D-02) and, when a rate
+            // was available, the converted base equivalent + rate metadata.
             $lines[] = new AccountBalanceLine(
                 accountId: $accountId,
                 name: is_string($account->name) ? $account->name : '',
@@ -68,15 +80,16 @@ final class NetWorthQuery
                 balanceMinor: $anchor->openingBalanceMinor,
                 currency: $anchor->currency,
                 isLiability: $kind === 'ics_card',
+                baseEquivalentMinor: $rateAvailable && ! $result->isPassthrough
+                    ? $result->converted->toMinor()
+                    : null,
+                fxRate: $result->rate,
+                fxSource: $result->source,
+                fxAsOf: $result->asOf,
+                fxIsStale: $result->isStale,
             );
 
-            // Convert to base currency via ExchangeRateService (D-08)
-            $money = Money::ofMinor($anchor->openingBalanceMinor, $anchor->currency);
-            $result = $this->fx->convertToBase($money, $baseCurrency);
-
-            // Signal: no rate available — result currency ≠ base currency
-            if ($result->converted->currency() !== $baseCurrency) {
-                // D-07: exclude accounts with no rate at all
+            if (! $rateAvailable) {
                 $hasExcluded = true;
                 $accountsWithoutRate++;
 
