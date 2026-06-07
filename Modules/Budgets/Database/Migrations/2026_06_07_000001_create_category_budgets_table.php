@@ -28,7 +28,10 @@ return new class extends Migration
     {
         $this->schema()->create('category_budgets', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
+            // NOT NULL: a budget is always per-user. A nullable user_id would
+            // make the UNIQUE(user_id, category_id) upsert below unenforceable,
+            // since NULL is distinct in a unique index (SQLite/MySQL).
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
             $table->string('period_type', 16)->default('monthly');
             $table->bigInteger('budget_minor');

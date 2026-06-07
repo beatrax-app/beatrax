@@ -11,7 +11,7 @@ use Illuminate\Database\Query\Builder;
 
 /**
  * Per-user item counts for the sidebar nav badges (Transactions, Recurring,
- * Counterparties, Drift alerts, Budgets, Subscriptions, Imports, Receipts).
+ * Counterparties, Drift alerts, Budgets, Subscriptions, Imports).
  *
  * The sidebar renders on every authenticated page, so running a COUNT per item
  * per render would be a steady tax. Instead the whole set is computed once and
@@ -84,7 +84,6 @@ final class NavCountsService
             'budgets' => $count('category_budgets'),
             'subscriptions' => $count('recurring_series', static fn (Builder $query): Builder => $query->where('direction', 'expense')->whereIn('state', self::ACTIVE_STATES)),
             'imports' => $count('import_runs'),
-            'receipts' => $count('receipts'),
         ];
     }
 
