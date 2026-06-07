@@ -16,6 +16,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- **Category Budgets** — a new `/budgets` page (Budgets module) to set a
+  monthly spending ceiling per expense category and track the current period's
+  spend against it, with a status-coloured progress bar (under / near / over),
+  remaining amount, an inline editor, and a period total. Budget writes are
+  validated against the user's own + global expense categories (a
+  client-supplied category id can never attach a budget to another user's
+  category), and the amount field accepts both plain and Dutch grouped formats.
+  An optional **Budgets step** is added to the first-run setup wizard so new
+  users can set a few category budgets during onboarding (or skip it); a step
+  added after a user already finished onboarding is seeded as skipped, so
+  finished users are not dropped back into the wizard.
+
+### Fixed
+
+- The receipt-conflict resolver ("Use receipt") no longer 500s on a malformed
+  stored value: a non-JSON `incoming_value` is skipped (not applied) while the
+  pending row is still cleared, matching the read side's tolerance. The demo
+  seeder now JSON-encodes the conflict values like the production producer.
 - Server-deployment support alongside the NativePHP desktop build. `config`
   now defines Postgres, MySQL, and MariaDB connections (SQLite stays the
   default, so the desktop build is unchanged), selectable via `DB_CONNECTION`

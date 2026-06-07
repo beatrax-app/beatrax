@@ -22,6 +22,7 @@ pest()->extend(TestCase::class)->in('Unit');
 foreach (
     [
         'Modules/Auth' => Modules\Auth\Tests\TestCase::class,
+        'Modules/Budgets' => Modules\Budgets\Tests\TestCase::class,
         'Modules/Categorization' => Modules\Categorization\Tests\TestCase::class,
         'Modules/Chains' => Modules\Chains\Tests\TestCase::class,
         'Modules/Community' => Modules\Community\Tests\TestCase::class,

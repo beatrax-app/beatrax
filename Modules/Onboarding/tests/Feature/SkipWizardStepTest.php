@@ -96,7 +96,7 @@ it('marks every non-done step skipped and redirects to / when skipRest is called
         ->pluck('step_key')
         ->all();
     sort($skippedRows);
-    expect($skippedRows)->toBe(['connect-card', 'connect-email', 'connect-paypal', 'done', 'first-import']);
+    expect($skippedRows)->toBe(['budgets', 'connect-card', 'connect-email', 'connect-paypal', 'done', 'first-import']);
 });
 
 it('is a no-op on non-skippable steps', function (): void {

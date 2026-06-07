@@ -1,0 +1,11 @@
+{
+    "name": "Budgets",
+    "alias": "budgets",
+    "description": "Per-category monthly spending budgets and progress tracking.",
+    "keywords": ["budgets", "categories", "spending"],
+    "priority": 7,
+    "providers": [
+        "Modules\\Budgets\\Providers\\BudgetsServiceProvider"
+    ],
+    "files": []
+}

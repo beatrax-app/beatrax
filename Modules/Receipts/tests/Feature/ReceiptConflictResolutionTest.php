@@ -298,3 +298,34 @@ it('SFC ignores a receipt-conflict-detected event whose userId does NOT match th
         )
         ->assertSet('visible', false);
 });
+
+it('does not error on a malformed (non-JSON) incoming_value; skips the apply but still deletes the row', function (): void {
+    $seeded = seedTxAndPendingConflict(
+        $this->fixtureUser,
+        $this->fixtureAccount,
+        field: 'counterparty_name',
+        stored: 'OWN STORED',
+        incoming: 'OWN INCOMING',
+    );
+
+    // Corrupt incoming_value into a raw, non-JSON string (the shape the old
+    // demo seeder produced). json_decode(..., JSON_THROW_ON_ERROR) would
+    // throw on this — the action must tolerate it rather than 500.
+    DB::table('pending_enrichment_conflicts')
+        ->where('id', $seeded['conflict_id'])
+        ->update(['incoming_value' => 'Bol.com - Order #DEMO-1234 (PayPal)']);
+
+    /** @var ApplyReceiptConflictResolution $resolve */
+    $resolve = $this->app->make(ApplyReceiptConflictResolution::class);
+    $count = $resolve($this->fixtureUser, 'prefer_receipt');
+
+    expect($count)->toBe(1);
+
+    // The malformed value was NOT applied to the transaction…
+    $row = DB::table('transactions')->where('id', $seeded['tx']->id)->first();
+    expect($row->counterparty_name)->toBe('OWN STORED');
+
+    // …and the pending row was still deleted (corrupted rows must not block
+    // future conflicts).
+    expect(DB::table('pending_enrichment_conflicts')->where('id', $seeded['conflict_id'])->count())->toBe(0);
+});

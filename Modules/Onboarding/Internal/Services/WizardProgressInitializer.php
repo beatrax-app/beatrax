@@ -8,7 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * Seeds the six per-user `wizard_progress` rows for a fresh install. One
+ * Seeds the per-user `wizard_progress` rows for a fresh install. One
  * row per (user_id, step_key) — the schema's UNIQUE(user_id, step_key)
  * constraint makes the existence-checked insert idempotent so a re-fire
  * from a duplicated `UserInstalled` dispatch never duplicates rows AND
@@ -37,11 +37,23 @@ final readonly class WizardProgressInitializer
 
         $connection->transaction(function () use ($connection, $userId, $now): void {
             $existing = [];
-            foreach ($connection->table('wizard_progress')->where('user_id', $userId)->get(['step_key']) as $row) {
+            $hasPending = false;
+            foreach ($connection->table('wizard_progress')->where('user_id', $userId)->get(['step_key', 'status']) as $row) {
                 if (is_string($row->step_key)) {
                     $existing[$row->step_key] = true;
                 }
+                if ($row->status !== 'done' && $row->status !== 'skipped') {
+                    $hasPending = true;
+                }
             }
+
+            // A step added to the registry AFTER a user already finished the
+            // wizard (every existing row done/skipped) is seeded as `skipped`,
+            // not `pending` — otherwise the resume resolver would re-drop a
+            // finished user back into the wizard at the new step on their next
+            // visit. A fresh install (no rows) or an in-progress user gets the
+            // normal `pending` seed.
+            $seedStatus = ($existing !== [] && ! $hasPending) ? 'skipped' : 'pending';
 
             foreach ($this->registry->steps() as $stepKey) {
                 if (isset($existing[$stepKey])) {
@@ -51,7 +63,7 @@ final readonly class WizardProgressInitializer
                 $connection->table('wizard_progress')->insert([
                     'user_id' => $userId,
                     'step_key' => $stepKey,
-                    'status' => 'pending',
+                    'status' => $seedStatus,
                     'data' => null,
                     'completed_at' => null,
                     'created_at' => $now,

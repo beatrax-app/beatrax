@@ -176,8 +176,10 @@ final class DemoReceiptsSeeder
             'user_id' => $user->id,
             'transaction_id' => $tx->id,
             'field_name' => $fieldName,
-            'stored_value' => $storedValue,
-            'incoming_value' => $incomingValue,
+            // Match the production producer (ApplyEnrichments): both columns
+            // hold a JSON-encoded scalar, which the resolution action decodes.
+            'stored_value' => json_encode($storedValue, JSON_THROW_ON_ERROR),
+            'incoming_value' => json_encode($incomingValue, JSON_THROW_ON_ERROR),
             'incoming_source_format' => 'eml-receipt',
             'import_run_id' => $importRun->id,
             'created_at' => $now->subHours(6),

@@ -103,6 +103,10 @@
         <span class="ic" aria-hidden="true">⚠</span>
         Drift Alerts
     </a>
+    <a href="{{ route('budgets.index') }}" class="side-item {{ $isActive('/budgets') }}">
+        <span class="ic" aria-hidden="true">⊙</span>
+        Budgets
+    </a>
 
     <div class="side-section-label">INGESTION</div>
     <a href="{{ route('imports.new') }}" class="side-item {{ $isActive('/imports/new') }}">
