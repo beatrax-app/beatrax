@@ -6,6 +6,8 @@ namespace Modules\Goals\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Goals\Internal\Http\Livewire\GoalsPage;
+use Modules\Goals\Internal\Http\Livewire\GoalsSummaryCard;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 
 /**
@@ -39,8 +41,7 @@ final class GoalsServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'goals');
         }
 
-        // TODO (Plan 04): register Livewire components once they exist.
-        // $livewire->component('goals.goals-page', GoalsPage::class);
-        // $livewire->component('goals.summary-card', GoalsSummaryCard::class);
+        $livewire->component('goals.goals-page', GoalsPage::class);
+        $livewire->component('goals.summary-card', GoalsSummaryCard::class);
     }
 }

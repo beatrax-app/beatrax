@@ -1,0 +1,72 @@
+{{--
+    Goals summary card — dashboard inline card showing up to 3 nearest-finishing
+    active goals. Chrome matches the NetWorthCard section. Empty-state shows a
+    calm single-line "No goals yet" copy when the user has no active goals.
+
+    Mini progress bar: 4px height, 80px wide, same 3-state color logic as the
+    full goals-page card. Tabular numerics throughout.
+--}}
+
+@php
+    $progressColor = [
+        'in_progress' => 'bg-emerald-500 dark:bg-emerald-400',
+        'reached'     => 'bg-emerald-500 dark:bg-emerald-400',
+        'overdue'     => 'bg-amber-500 dark:bg-amber-400',
+    ];
+@endphp
+
+<div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950">
+    {{-- Card header --}}
+    <div class="flex items-center justify-between">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Goals</p>
+        <a
+            href="{{ route('goals.index') }}"
+            class="text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
+        >See all →</a>
+    </div>
+
+    @if (count($goals) === 0)
+        {{-- Empty state --}}
+        <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
+            No goals yet.
+            <a
+                href="{{ route('goals.index') }}"
+                class="text-slate-900 underline underline-offset-2 hover:no-underline dark:text-slate-100"
+            >Add your first goal →</a>
+        </p>
+    @else
+        <ul class="mt-4 space-y-3">
+            @foreach ($goals as $row)
+                @php
+                    $pct = $row->targetMinor > 0
+                        ? (int) round(min(100, $row->fractionComplete * 100))
+                        : 0;
+                    $barWidth = $pct === 0 ? 0 : max(2, $pct);
+                    $color = $progressColor[$row->progressState] ?? $progressColor['in_progress'];
+                @endphp
+                <li class="flex items-center gap-3">
+                    <p class="min-w-0 flex-1 truncate text-sm text-slate-900 dark:text-slate-100">{{ $row->name }}</p>
+                    {{-- Mini progress bar: 4px × 80px --}}
+                    <div
+                        class="h-1 w-20 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+                        role="progressbar"
+                        aria-valuenow="{{ $pct }}"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        aria-label="{{ $row->name }}: {{ $pct }}% complete"
+                    >
+                        <div class="h-1 rounded-full {{ $color }}" style="width: {{ $barWidth }}%;"></div>
+                    </div>
+                    <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $pct }}%</span>
+                    <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                        @if ($row->progressState === 'overdue')
+                            <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Overdue</span>
+                        @elseif ($row->projectedFinishDate !== null)
+                            · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->format('d M \'y') }}
+                        @endif
+                    </span>
+                </li>
+            @endforeach
+        </ul>
+    @endif
+</div>
