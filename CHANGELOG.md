@@ -16,6 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- **Support-resource profiles** — a counterparty profile now shows a "Support &
+  cancelling" card (merchants) or "Getting help" card (government) with the
+  official cancel / help / cheaper-plan links, a `tel:` helpline, and — where a
+  service genuinely supports it — a one-click pre-filled cancellation `mailto:`.
+  Backed by a new bundled `resources/corpus/support/<country>.yaml` corpus
+  (researched for ~25 common subscriptions and the main NL agencies; the
+  cancellation method, e.g. online form / phone / registered letter, is shown in
+  a note since none of these document email cancellation). Looked up by
+  word-level brand matching that tolerates legal-entity suffixes ("Netflix
+  International BV" → Netflix) without false-matching ("Apple" never matches
+  "Applebee's"; a plain "Albert Heijn" grocery charge never inherits the
+  "Albert Heijn Premium" cancel card). Link schemes are restricted to http(s)
+  and the mailto address is injection-guarded.
 - **Subscription Drift Watch** — a new `/drift/watch` page ("Subscriptions" in
   the sidebar) that ranks your approved subscriptions by how much their price
   has crept up since the first charge, each with a baseline → latest figure, a

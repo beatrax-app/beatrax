@@ -7,6 +7,7 @@ namespace Modules\Counterparties\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Modules\Community\Public\Services\SupportResourceProvider;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
@@ -69,6 +70,7 @@ final class CounterpartyProfile extends Component
         CurrentUser $currentUser,
         CounterpartyProfileQuery $query,
         ViewFactory $views,
+        SupportResourceProvider $supportResources,
     ): View {
         $user = $currentUser->user();
         $profile = $query->bySlug($user, $this->slug);
@@ -94,9 +96,14 @@ final class CounterpartyProfile extends Component
             default => 'counterparties::livewire.profile-tabs.unknown',
         };
 
+        $supportResource = in_array($profile->type, ['merchant', 'government'], true)
+            ? $supportResources->forCounterparty($profile->displayName, $profile->type)
+            : null;
+
         return $views->make('counterparties::livewire.counterparty-profile', [
             'profile' => $profile,
             'partial' => $partial,
+            'supportResource' => $supportResource,
             'recentActivity' => $query->recentActivity($cpModel, 10),
             'categoryBreakdown' => $query->categoryBreakdown($cpModel),
             'fundingChain' => $query->fundingChainSummary($cpModel),
