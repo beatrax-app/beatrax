@@ -72,7 +72,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scheme (no public-key step, so no Shor exposure) using Argon2id key derivation
   and XChaCha20-Poly1305 with a 256-bit key. The plaintext snapshot is locked to
   0600 and deleted as soon as it is encrypted; the passphrase never persists.
-  Available on the SQLite (desktop) build.
+  Settings → Data & backup can also **restore** from an encrypted backup: upload
+  the `.enc`, enter the passphrase, and type the confirmation phrase. The file is
+  decrypted and integrity-checked first — a wrong passphrase or corrupt backup
+  throws before anything changes — then a pre-restore snapshot of the current
+  database is saved and the verified backup is swapped in (reload to see the
+  restored data). Available on the SQLite (desktop) build; on a server, use
+  `php artisan db:restore` (which gates on maintenance mode) instead.
 - **Support-resource profiles** — a counterparty profile now shows a "Support &
   cancelling" card (merchants) or "Getting help" card (government) with the
   official cancel / help / cheaper-plan links, a `tel:` helpline, and — where a
