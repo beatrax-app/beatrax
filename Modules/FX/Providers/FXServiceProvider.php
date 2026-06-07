@@ -4,29 +4,74 @@ declare(strict_types=1);
 
 namespace Modules\FX\Providers;
 
+use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use Modules\FX\Internal\Providers\BundledSnapshotProvider;
+use Modules\FX\Internal\Providers\EcbRateProvider;
+use Modules\FX\Internal\Providers\FrankfurterRateProvider;
+use Modules\FX\Internal\RateProviderRegistry;
+use Modules\FX\Public\Contracts\RateProvider;
+use Modules\FX\Public\Services\ExchangeRateService;
 
 /**
  * Wires the FX module.
  *
- * `register()` is minimal in plan 01 — the RateProviderRegistry tagged-singleton
- * wiring and the ExchangeRateService singleton are added in plan 02 once those
- * classes exist. This plan establishes the bootable skeleton.
+ * `register()` tags and registers the three rate providers as singletons,
+ * binds `RateProviderRegistry` (sorted by priority() DESC), and binds
+ * `ExchangeRateService` as a singleton — mirroring the ReceiptsServiceProvider
+ * tagged-singleton pattern exactly (01-PATTERNS.md lines 133–189).
  *
- * `boot()` loads migrations from `Database/Migrations` and views under the `fx`
- * namespace, using the conditional is_dir() guard pattern established by
+ * `boot()` loads migrations under `Database/Migrations` and views under
+ * `Resources/views` using the conditional `is_dir()` guard established by
  * BudgetsServiceProvider and ReceiptsServiceProvider.
  *
- * No Livewire components in v1 — the FX module has no own pages.
- * No Routes/web.php — FX settings live on the Core SettingsPage.
- * No Routes/console.php — the daily FX refresh schedule entry lives in the
- * root routes/console.php alongside recurring.detect and forecasting.daily-sweep.
+ * No Livewire components in v1 — FX has no own pages; settings live on
+ * the Core SettingsPage. No Routes/web.php or module-local Routes/console.php;
+ * the daily refresh entry lives in the root routes/console.php.
  */
 final class FXServiceProvider extends ServiceProvider
 {
+    /** @var list<class-string<RateProvider>> */
+    private const array PROVIDER_FQNS = [
+        EcbRateProvider::class,
+        FrankfurterRateProvider::class,
+        BundledSnapshotProvider::class,
+    ];
+
     public function register(): void
     {
-        // RateProviderRegistry + ExchangeRateService singleton bindings added in plan 02.
+        foreach (self::PROVIDER_FQNS as $fqn) {
+            if (class_exists($fqn)) {
+                $this->app->singleton($fqn);
+                $this->app->tag([$fqn], 'fx.rate_provider');
+            }
+        }
+
+        $this->app->singleton(
+            RateProviderRegistry::class,
+            static function (Application $app): RateProviderRegistry {
+                /** @var iterable<RateProvider> $tagged */
+                $tagged = $app->tagged('fx.rate_provider');
+                $providers = [];
+
+                foreach ($tagged as $p) {
+                    $providers[] = $p;
+                }
+
+                usort(
+                    $providers,
+                    static fn (RateProvider $a, RateProvider $b): int => $b->priority() <=> $a->priority(),
+                );
+
+                /** @var Repository $cache */
+                $cache = $app->make(Repository::class);
+
+                return new RateProviderRegistry($providers, $cache);
+            },
+        );
+
+        $this->app->singleton(ExchangeRateService::class);
     }
 
     public function boot(): void
