@@ -84,6 +84,7 @@
             "Tests\\": "tests/",
             "Modules\\Auth\\Tests\\": "Modules/Auth/tests/",
             "Modules\\Budgets\\Tests\\": "Modules/Budgets/tests/",
+            "Modules\\Goals\\Tests\\": "Modules/Goals/tests/",
             "Modules\\CashBook\\Tests\\": "Modules/CashBook/tests/",
             "Modules\\Core\\Tests\\": "Modules/Core/tests/",
             "Modules\\Desktop\\Tests\\": "Modules/Desktop/tests/",
