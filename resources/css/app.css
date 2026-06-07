@@ -2509,3 +2509,96 @@ td.date,
     .max-w-lg { max-width: 32rem; }
     .max-w-xl { max-width: 36rem; }
 }
+
+/*
+ * FX transparency layer primitives (Phase 1 plan 05, UI-SPEC §5.5).
+ * D-11: per-figure disclosure icon + global rates line.
+ * D-12: subtle amber stale/bundled marker — NOT an alert.
+ * D-03: all FX markup is guarded so an all-EUR card is byte-identical to today.
+ * Zero new @theme tokens — every value references an existing token.
+ */
+
+/* FX disclosure affordance icon — inline next to converted figures */
+.fx-disclosure-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    margin-left: 4px;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    color: var(--color-text-faint);
+    transition: var(--tx-quick);
+    vertical-align: middle;
+}
+
+.fx-disclosure-trigger:hover,
+.fx-disclosure-trigger:focus-visible {
+    color: var(--color-text-muted);
+    outline: none;
+}
+
+.fx-disclosure-trigger:focus-visible {
+    outline: 2px solid var(--color-emerald);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+/* The icon glyph — a small circle representing "i" for rate info */
+.fx-icon {
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-full);
+    border: 1.5px solid currentColor;
+}
+
+/* Stale/bundled rate marker — amber dot replaces the neutral icon */
+.fx-icon--stale {
+    background: var(--color-amber-bg);
+    border-color: var(--color-amber);
+    color: var(--color-amber);
+}
+
+/* Inline variant for per-account breakdown rows — slightly smaller touch area */
+.fx-disclosure-trigger--inline {
+    width: 12px;
+    height: 12px;
+    margin-left: 3px;
+}
+
+/* FX popover container */
+.fx-popover {
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-3);
+    width: 224px;
+    font-size: var(--text-xs);
+    color: var(--color-text);
+    /* Native popover: remove browser default margin/padding */
+    margin: 0;
+}
+
+.fx-popover .fx-rate {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-xs);
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.fx-popover .fx-source {
+    margin-top: 2px;
+    color: var(--color-text-faint);
+}
+
+.fx-popover .fx-stale-note {
+    margin-top: var(--space-2);
+    color: var(--color-amber);
+    line-height: 1.4;
+}
