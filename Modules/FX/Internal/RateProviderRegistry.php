@@ -94,9 +94,21 @@ final class RateProviderRegistry
 
     private function recordFailure(string $providerKey): void
     {
-        $raw = $this->cache->get("fx.circuit.{$providerKey}.failures", 0);
-        $failures = self::toInt($raw) + 1;
-        $this->cache->put("fx.circuit.{$providerKey}.failures", $failures, CarbonImmutable::now()->addHours(6));
+        $cacheKey = "fx.circuit.{$providerKey}.failures";
+        $current = self::toInt($this->cache->get($cacheKey, 0));
+
+        if ($current === 0) {
+            // First failure in this window — anchor the 6h circuit window here.
+            $this->cache->put($cacheKey, 1, CarbonImmutable::now()->addHours(6));
+
+            return;
+        }
+
+        // Subsequent failure — bump the count WITHOUT resetting the TTL
+        // (increment preserves the existing expiry). Otherwise a provider that
+        // fails more often than once per 6h would slide its window forever and
+        // the circuit would never auto-heal after the outage ends.
+        $this->cache->increment($cacheKey);
     }
 
     private static function toInt(mixed $value): int

@@ -26,6 +26,13 @@
         default => ucfirst($source),
     };
 
+    // Stale-note copy depends on the rate's provenance (UI-SPEC §7.2): a bundled
+    // snapshot tells the user to enable online refresh; a merely-old online rate
+    // (staleness is age-based, independent of source) just notes its age.
+    $staleNote = static fn (?string $source): string => $source === 'bundled'
+        ? 'Using a bundled snapshot rate. Enable online refresh in Settings for current rates.'
+        : 'This rate is more than 3 days old. The next online refresh will update it.';
+
     // The stored rate is a DECIMAL(18,8) string or a "num/den" fraction
     // (brick/money cross-rate). Render it as a fixed 4-decimal value for the
     // popover — display only, never used for money math (Pitfall 1).
@@ -79,7 +86,7 @@
                                     <p class="fx-rate">Converted to {{ $baseCurrency }}</p>
                                     <p class="fx-source">{{ $sourceLabel($netWorth->ratesSource) }} · as of {{ $netWorth->ratesAsOf->format('d M Y') }}</p>
                                     @if ($netWorth->hasStaleRates)
-                                        <p class="fx-stale-note">Using a bundled snapshot rate. Enable online refresh in Settings for current rates.</p>
+                                        <p class="fx-stale-note">{{ $staleNote($netWorth->ratesSource) }}</p>
                                     @endif
                                 @endif
                             </div>
@@ -97,7 +104,7 @@
                     @if ($conversionActive)
                         {{-- Global rates disclosure line — one per surface (D-11 / UI-SPEC §5.2/§7.3) --}}
                         <p class="mt-0.5 text-xs" style="color: var(--color-text-faint);">
-                            rates as of {{ $netWorth->ratesAsOf?->format('d M Y') }} from {{ $netWorth->ratesSource }}
+                            rates as of {{ $netWorth->ratesAsOf?->format('d M Y') }} from {{ $sourceLabel($netWorth->ratesSource) }}
                         </p>
                     @endif
                 </div>
@@ -143,7 +150,7 @@
                                                 <p class="fx-source">{{ $sourceLabel($account->fxSource) }} · as of {{ $account->fxAsOf->format('d M Y') }}</p>
                                             @endif
                                             @if ($account->fxIsStale)
-                                                <p class="fx-stale-note">Using a bundled snapshot rate. Enable online refresh in Settings for current rates.</p>
+                                                <p class="fx-stale-note">{{ $staleNote($account->fxSource) }}</p>
                                             @endif
                                         </div>
                                     </span>
