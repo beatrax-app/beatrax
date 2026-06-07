@@ -106,12 +106,12 @@ final class SupportResourceProvider
         return new SupportResource(
             name: $name,
             type: $type,
-            cancelUrl: self::str($raw, 'cancel_url'),
-            supportUrl: self::str($raw, 'support_url'),
-            cheaperUrl: self::str($raw, 'cheaper_url'),
-            helpUrl: self::str($raw, 'help_url'),
-            applyUrl: self::str($raw, 'apply_url'),
-            rightsUrl: self::str($raw, 'rights_url'),
+            cancelUrl: self::url($raw, 'cancel_url'),
+            supportUrl: self::url($raw, 'support_url'),
+            cheaperUrl: self::url($raw, 'cheaper_url'),
+            helpUrl: self::url($raw, 'help_url'),
+            applyUrl: self::url($raw, 'apply_url'),
+            rightsUrl: self::url($raw, 'rights_url'),
             phone: self::str($raw, 'phone'),
             cancelEmailTo: self::str($email, 'to'),
             cancelEmailSubject: self::str($email, 'subject'),
@@ -128,6 +128,23 @@ final class SupportResourceProvider
         $value = $array[$key] ?? null;
 
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * Like str() but only accepts an http(s) URL, so a malformed or
+     * non-http(s) corpus value (e.g. a `javascript:` scheme) can never reach a
+     * consumer as a clickable href — validated once at the corpus boundary.
+     *
+     * @param  array<int|string, mixed>  $array
+     */
+    private static function url(array $array, string $key): ?string
+    {
+        $value = self::str($array, $key);
+        if ($value === null) {
+            return null;
+        }
+
+        return str_starts_with($value, 'https://') || str_starts_with($value, 'http://') ? $value : null;
     }
 
     /**
