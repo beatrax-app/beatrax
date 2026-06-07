@@ -49,6 +49,7 @@ final class EcbRateProvider implements RateProvider
     {
         try {
             $body = $this->http
+                ->createPendingRequest()
                 ->get(self::URL)
                 ->throw()
                 ->body();

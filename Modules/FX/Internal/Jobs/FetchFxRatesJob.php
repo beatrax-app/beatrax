@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\FX\Internal\Jobs;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
@@ -12,9 +13,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Modules\Core\Public\Support\LockStore;
 use Modules\FX\Internal\RateProviderRegistry;
+use Psr\Log\LoggerInterface;
 
 /**
  * Fetches current exchange rates from the provider chain and writes
@@ -32,10 +33,10 @@ use Modules\FX\Internal\RateProviderRegistry;
  * the job never duplicates rows (CLAUDE.md idempotency rule).
  *
  * The date keyed in `exchange_rates` is the date from the provider's
- * feed response (the ECB `time` attribute), NOT `now()`. On weekends
- * and ECB public holidays the feed publishes the previous business
- * day's date — keying on now() would produce a false "today" row
- * (Pitfall 2).
+ * feed response (the ECB `time` attribute), NOT CarbonImmutable::now().
+ * On weekends and ECB public holidays the feed publishes the previous
+ * business day's date — keying on now() would produce a false "today"
+ * row (Pitfall 2).
  *
  * Rate values are validated against a plausible range (0.00001–100000)
  * before upsert. Values outside this range are logged and skipped
@@ -74,7 +75,7 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
         return LockStore::forUniqueJobs();
     }
 
-    public function handle(RateProviderRegistry $registry, DatabaseManager $db): void
+    public function handle(RateProviderRegistry $registry, DatabaseManager $db, LoggerInterface $logger): void
     {
         $result = $registry->fetchCurrentRates();
 
@@ -86,14 +87,14 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
         $source = $result['provider'];
 
         $rows = [];
-        $now = now()->toDateTimeString();
+        $now = CarbonImmutable::now()->toDateTimeString();
 
         foreach ($rates as $quoteCurrency => $rateStr) {
             // Validate rate within plausible range (T-02-01)
             $rateFloat = (float) $rateStr;
 
             if ($rateFloat < self::RATE_MIN || $rateFloat > self::RATE_MAX) {
-                Log::warning('FetchFxRatesJob: out-of-range rate skipped.', [
+                $logger->warning('FetchFxRatesJob: out-of-range rate skipped.', [
                     'currency' => $quoteCurrency,
                     'rate' => $rateStr,
                     'source' => $source,
@@ -105,7 +106,7 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
 
             $rows[] = [
                 'base_currency' => 'EUR',
-                'quote_currency' => (string) $quoteCurrency,
+                'quote_currency' => $quoteCurrency,
                 'rate_date' => $date,             // provider's date, NOT now() — Pitfall 2
                 'rate' => $rateStr,
                 'source' => $source,

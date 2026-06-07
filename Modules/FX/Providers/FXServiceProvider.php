@@ -51,12 +51,16 @@ final class FXServiceProvider extends ServiceProvider
         $this->app->singleton(
             RateProviderRegistry::class,
             static function (Application $app): RateProviderRegistry {
-                /** @var iterable<RateProvider> $tagged */
+                /** @var iterable<int|string, mixed> $tagged */
                 $tagged = $app->tagged('fx.rate_provider');
+
+                /** @var list<RateProvider> $providers */
                 $providers = [];
 
                 foreach ($tagged as $p) {
-                    $providers[] = $p;
+                    if ($p instanceof RateProvider) {
+                        $providers[] = $p;
+                    }
                 }
 
                 usort(
@@ -64,7 +68,6 @@ final class FXServiceProvider extends ServiceProvider
                     static fn (RateProvider $a, RateProvider $b): int => $b->priority() <=> $a->priority(),
                 );
 
-                /** @var Repository $cache */
                 $cache = $app->make(Repository::class);
 
                 return new RateProviderRegistry($providers, $cache);

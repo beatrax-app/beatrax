@@ -9,6 +9,7 @@ use Modules\FX\Internal\Jobs\FetchFxRatesJob;
 use Modules\FX\Internal\Providers\EcbRateProvider;
 use Modules\FX\Internal\RateProviderRegistry;
 use Modules\FX\Public\Contracts\RateProvider;
+use Psr\Log\LoggerInterface;
 
 /**
  * Creates a fake RateProvider that always returns the given result.
@@ -70,7 +71,7 @@ describe('FetchFxRatesJob', function (): void {
         app()->instance(RateProviderRegistry::class, $registry);
 
         $job = new FetchFxRatesJob(1);
-        $job->handle($registry, app(DatabaseManager::class));
+        $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class));
 
         expect(DB::table('exchange_rates')->where('rate_date', $feedDate)->count())
             ->toBeGreaterThanOrEqual(2);
@@ -106,11 +107,12 @@ describe('FetchFxRatesJob', function (): void {
         $registry = new RateProviderRegistry([$ecbProvider], $cache);
 
         $db = app(DatabaseManager::class);
+        $logger = app(LoggerInterface::class);
         $job = new FetchFxRatesJob(1);
 
         // Run twice
-        $job->handle($registry, $db);
-        $job->handle($registry, $db);
+        $job->handle($registry, $db, $logger);
+        $job->handle($registry, $db, $logger);
 
         $count = DB::table('exchange_rates')->where([
             'base_currency' => 'EUR',
@@ -134,8 +136,9 @@ describe('FetchFxRatesJob', function (): void {
         $registry = new RateProviderRegistry([$fakeProvider], $cache);
 
         $db = app(DatabaseManager::class);
+        $logger = app(LoggerInterface::class);
         $job = new FetchFxRatesJob(1);
-        $job->handle($registry, $db);
+        $job->handle($registry, $db, $logger);
 
         // Verify row has feed date, not today
         expect(DB::table('exchange_rates')->where('rate_date', $feedDate)->exists())->toBeTrue();
@@ -156,7 +159,7 @@ describe('FetchFxRatesJob', function (): void {
         $db = app(DatabaseManager::class);
 
         $job = new FetchFxRatesJob(1);
-        $job->handle($registry, $db);
+        $job->handle($registry, $db, app(LoggerInterface::class));
 
         expect(DB::table('exchange_rates')->where('quote_currency', 'USD')->exists())->toBeTrue();
         expect(DB::table('exchange_rates')->where('quote_currency', 'XYZ')->exists())->toBeFalse();

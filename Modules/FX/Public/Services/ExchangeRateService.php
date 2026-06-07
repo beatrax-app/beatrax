@@ -12,9 +12,8 @@ use Brick\Money\ExchangeRateProvider\BaseCurrencyProvider;
 use Brick\Money\ExchangeRateProvider\ConfigurableProvider;
 use Brick\Money\Money as BrickMoney;
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\DatabaseManager;
-use Modules\FX\Internal\RateProviderRegistry;
+use Illuminate\Support\Collection;
 use Modules\FX\Public\Dto\ConversionResult;
 use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -46,11 +45,7 @@ final class ExchangeRateService
 
     private const string BASE_CURRENCY = 'EUR';
 
-    public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly RateProviderRegistry $registry,
-        private readonly Repository $cache,
-    ) {}
+    public function __construct(private readonly DatabaseManager $db) {}
 
     /**
      * Convert $money to $targetCurrency at the latest available rate (D-08).
@@ -98,13 +93,13 @@ final class ExchangeRateService
     // -------------------------------------------------------------------------
 
     /**
-     * @return list<object{base_currency: mixed, quote_currency: mixed, rate: mixed, rate_date: mixed, source: mixed}>
+     * @return Collection<int, \stdClass>
      */
-    private function fetchLatestRates(): array
+    private function fetchLatestRates(): Collection
     {
         // Select the most-recent row per (base, quote) pair using a subquery
         // so we always get the freshest rate regardless of source.
-        $rows = $this->db->connection()
+        return $this->db->connection()
             ->table('exchange_rates as er')
             ->select([
                 'er.base_currency',
@@ -120,27 +115,17 @@ final class ExchangeRateService
                   AND inner_er.quote_currency = er.quote_currency
             )')
             ->get();
-
-        /** @var list<object{base_currency: mixed, quote_currency: mixed, rate: mixed, rate_date: mixed, source: mixed}> $list */
-        $list = $rows->all();
-
-        return $list;
     }
 
     /**
-     * @return list<object{base_currency: mixed, quote_currency: mixed, rate: mixed, rate_date: mixed, source: mixed}>
+     * @return Collection<int, \stdClass>
      */
-    private function fetchRatesForDate(string $date): array
+    private function fetchRatesForDate(string $date): Collection
     {
-        $rows = $this->db->connection()
+        return $this->db->connection()
             ->table('exchange_rates')
             ->where('rate_date', $date)
             ->get(['base_currency', 'quote_currency', 'rate', 'rate_date', 'source']);
-
-        /** @var list<object{base_currency: mixed, quote_currency: mixed, rate: mixed, rate_date: mixed, source: mixed}> $list */
-        $list = $rows->all();
-
-        return $list;
     }
 
     /**
@@ -153,11 +138,8 @@ final class ExchangeRateService
         string $knownRate,
         string $date,
     ): ConversionResult {
-        // For a direct pair (source→target or target→source via EUR base), the
-        // tx.fx_rate_used stores the rate in the direction the transaction needed.
-        // Here we use it as-is: we build a ConfigurableProvider for the pair
-        // source→target with the given rate, then convert via BaseCurrencyProvider
-        // so cross-rates still derive correctly when needed.
+        // For a direct pair (source→target), tx.fx_rate_used stores the rate in the
+        // direction the transaction needed. Use it as-is via ConfigurableProvider.
         $configProvider = new ConfigurableProvider;
         $configProvider->setExchangeRate($money->currency(), $targetCurrency, $knownRate);
 
@@ -165,9 +147,8 @@ final class ExchangeRateService
             $converter = new CurrencyConverter($configProvider);
             $brickSource = BrickMoney::ofMinor($money->toMinor(), $money->currency());
             $brickResult = $converter->convert($brickSource, $targetCurrency, new DefaultContext, RoundingMode::HALF_UP);
-        } catch (CurrencyConversionException $e) {
-            // If direct rate is not enough (cross-rate), fall back to DB rows.
-            // This should not normally happen for tx.fx_rate_used, but we guard.
+        } catch (CurrencyConversionException) {
+            // If the direct rate is insufficient (cross-rate needed), fall back to DB rows.
             return $this->convertWithRows($money, $targetCurrency, $this->fetchRatesForDate($date));
         }
 
@@ -185,11 +166,11 @@ final class ExchangeRateService
     }
 
     /**
-     * @param  list<object{base_currency: mixed, quote_currency: mixed, rate: mixed, rate_date: mixed, source: mixed}>  $rows
+     * @param  Collection<int, \stdClass>  $rows
      */
-    private function convertWithRows(Money $money, string $targetCurrency, array $rows): ConversionResult
+    private function convertWithRows(Money $money, string $targetCurrency, Collection $rows): ConversionResult
     {
-        if ($rows === []) {
+        if ($rows->isEmpty()) {
             // No rows available — return passthrough with original (D-07 no-rate fallback)
             return ConversionResult::passthrough($money);
         }
@@ -200,26 +181,29 @@ final class ExchangeRateService
         $source = null;
 
         foreach ($rows as $row) {
-            $baseC = is_string($row->base_currency) ? $row->base_currency : (string) $row->base_currency;
-            $quoteC = is_string($row->quote_currency) ? $row->quote_currency : (string) $row->quote_currency;
+            $baseC = self::toString($row->base_currency ?? null);
+            $quoteC = self::toString($row->quote_currency ?? null);
             $rateRaw = $row->rate ?? null;
 
-            if ($rateRaw === null) {
+            if ($baseC === null || $quoteC === null || $rateRaw === null) {
                 continue;
             }
 
             // Cast to string — never float (Pitfall 1 / T-02-03)
-            $rateStr = is_string($rateRaw) ? $rateRaw : (string) $rateRaw;
+            $rateStr = self::toString($rateRaw);
+
+            if ($rateStr === null) {
+                continue;
+            }
 
             $configProvider->setExchangeRate($baseC, $quoteC, $rateStr);
 
             // Track the most recent date + source for metadata
-            $rowDate = is_string($row->rate_date) ? $row->rate_date : (string) $row->rate_date;
+            $rowDate = self::toString($row->rate_date ?? null);
 
-            if ($latestDate === null || $rowDate > $latestDate) {
+            if ($rowDate !== null && ($latestDate === null || $rowDate > $latestDate)) {
                 $latestDate = $rowDate;
-                $rowSource = $row->source ?? null;
-                $source = is_string($rowSource) ? $rowSource : (string) $rowSource;
+                $source = self::toString($row->source ?? null);
             }
         }
 
@@ -230,18 +214,18 @@ final class ExchangeRateService
             $converter = new CurrencyConverter($basedProvider);
             $brickSource = BrickMoney::ofMinor($money->toMinor(), $money->currency());
             $brickResult = $converter->convert($brickSource, $targetCurrency, new DefaultContext, RoundingMode::HALF_UP);
-        } catch (CurrencyConversionException $e) {
+        } catch (CurrencyConversionException) {
             // Rate pair unavailable — fall back to passthrough (D-07)
             return ConversionResult::passthrough($money);
         }
 
         $converted = Money::ofMinor($brickResult->getMinorAmount()->toInt(), $targetCurrency);
 
-        // Determine the rate string for the direct pair used (if derivable)
+        // Determine the rate string for the effective pair used
         $rateStr = $this->deriveRateString($money->currency(), $targetCurrency, $basedProvider);
 
         $asOf = $latestDate !== null ? CarbonImmutable::parse($latestDate) : null;
-        $isStale = $asOf !== null && $asOf->diffInDays(now()->startOfDay()) > self::STALE_DAYS_THRESHOLD;
+        $isStale = $asOf !== null && $asOf->diffInDays(CarbonImmutable::now()->startOfDay()) > self::STALE_DAYS_THRESHOLD;
 
         return new ConversionResult(
             original: $money,
@@ -267,5 +251,14 @@ final class ExchangeRateService
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private static function toString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return is_scalar($value) ? (string) $value : null;
     }
 }
