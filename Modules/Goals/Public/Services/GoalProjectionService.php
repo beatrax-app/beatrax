@@ -7,8 +7,8 @@ namespace Modules\Goals\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
-use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Forecasting\Public\Services\ForecastQuery;
+use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Goals\Models\Goal;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -63,6 +63,8 @@ final class GoalProjectionService
             return ['date' => null, 'beyondHorizon' => false];
         }
 
+        $accountId = $goal->account_id;
+
         // Guard 2: already reached.
         if ($contributedMinor >= $goal->target_minor) {
             return ['date' => null, 'beyondHorizon' => false];
@@ -77,7 +79,7 @@ final class GoalProjectionService
 
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
-            ->where('account_id', $goal->account_id)
+            ->where('account_id', $accountId)
             ->whereIn('type', ['transfer_in', 'income'])
             ->where('posted_at', '>=', $effectiveStart)
             ->get(['amount_minor', 'currency']);
@@ -112,7 +114,7 @@ final class GoalProjectionService
             // Validate that the forecast is available (not computing).
             // We use the forecast as a sanity signal only — do NOT read
             // pointMinor as a goal contribution figure (Pitfall 4).
-            $this->forecast->forUser((int) $goal->account_id, $horizon, null, $user);
+            $this->forecast->forUser($accountId, $horizon, null, $user);
             // If we reach here the forecast is complete → in-horizon, high confidence.
         } catch (NotFoundHttpException) {
             // Cross-user or missing account — should not occur given FK + scope,
@@ -131,7 +133,7 @@ final class GoalProjectionService
         return match (true) {
             $daysToFinish <= 30 => 30,
             $daysToFinish <= 60 => 60,
-            default             => 90,
+            default => 90,
         };
     }
 

@@ -11,6 +11,7 @@ use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Dto\GoalProgressRow;
 use Modules\Ledger\Public\ValueObjects\Money;
+use stdClass;
 
 /**
  * Read model for the Goals page and dashboard card.
@@ -23,9 +24,14 @@ use Modules\Ledger\Public\ValueObjects\Money;
  * posted on/after the goal's start_date, each base-converted via
  * `ExchangeRateService::convertToBase()`. Unlinked goals report 0 contributed.
  *
- * Cross-user isolation: every raw `transactions` read carries an explicit
- * `->where('user_id', $user->id)` guard; the `Goal` model is loaded through the
- * `BelongsToUser`-scoped query so a foreign goal_id resolves to nothing (T-02-04).
+ * All reads go through raw `DatabaseManager` queries to stay clean under
+ * `phpstan-strict-rules`' `staticMethod.dynamicCall` rule (the same pattern
+ * as BudgetProgressQuery and UncategorizedTriageQuery — Eloquent-free read path,
+ * Eloquent only for the write path).
+ *
+ * Cross-user isolation: every raw `goals` read carries an explicit
+ * `->where('user_id', $user->id)` guard; raw `transactions` reads carry the same.
+ * (T-02-04).
  *
  * No float money: `fractionComplete` is an int ratio (contributedMinor /
  * targetMinor), never a Money->float() call (T-02-06).
@@ -46,21 +52,7 @@ final class GoalProgressQuery
      */
     public function forUser(User $user): array
     {
-        $goals = Goal::query()
-            ->whereIn('status', ['active', 'completed'])
-            ->with('account')
-            ->get();
-
-        if ($goals->isEmpty()) {
-            return [];
-        }
-
-        $rows = [];
-        foreach ($goals as $goal) {
-            $rows[] = $this->mapGoal($goal, $user);
-        }
-
-        return $rows;
+        return $this->loadRows($user, 'active', 'completed');
     }
 
     /**
@@ -71,57 +63,106 @@ final class GoalProgressQuery
      */
     public function archivedForUser(User $user): array
     {
-        $goals = Goal::query()
-            ->where('status', 'archived')
-            ->with('account')
-            ->get();
+        return $this->loadRows($user, 'archived');
+    }
 
-        if ($goals->isEmpty()) {
+    /**
+     * Internal: loads goals matching the given statuses and maps them to rows.
+     *
+     * @return list<GoalProgressRow>
+     */
+    private function loadRows(User $user, string ...$statuses): array
+    {
+        $connection = $this->db->connection();
+
+        // Fetch goals via raw DatabaseManager to stay clean under phpstan-strict-rules'
+        // staticMethod.dynamicCall constraint. Left-join accounts so account_name
+        // arrives in a single query with no N+1 expansion.
+        $goalRows = $connection->table('goals')
+            ->leftJoin('accounts', 'goals.account_id', '=', 'accounts.id')
+            ->where('goals.user_id', $user->id)
+            ->whereIn('goals.status', $statuses)
+            ->orderBy('goals.id')
+            ->get([
+                'goals.id',
+                'goals.name',
+                'goals.account_id',
+                'goals.target_minor',
+                'goals.target_currency',
+                'goals.start_date',
+                'goals.target_date',
+                'goals.status',
+                'accounts.name as account_name',
+            ]);
+
+        if ($goalRows->isEmpty()) {
             return [];
         }
 
+        // Build a lightweight Goal model per row so GoalProjectionService can
+        // consume the model's typed properties (start_date as CarbonImmutable,
+        // account_id, target_minor, etc.) without re-implementing casting here.
         $rows = [];
-        foreach ($goals as $goal) {
-            $rows[] = $this->mapGoal($goal, $user);
+        foreach ($goalRows as $row) {
+            $goal = $this->hydrateGoal($row);
+            $accountName = isset($row->account_name) && is_string($row->account_name)
+                ? $row->account_name
+                : null;
+
+            $contributedMinor = $this->sumContributions($goal, $user);
+            $targetMinor = self::toInt($row->target_minor);
+            $fractionComplete = $targetMinor > 0 ? $contributedMinor / $targetMinor : 0.0;
+
+            $progressState = match (true) {
+                $contributedMinor >= $targetMinor => 'reached',
+                CarbonImmutable::today()->gt($goal->target_date) => 'overdue',
+                default => 'in_progress',
+            };
+
+            ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon] =
+                $this->projection->project($goal, $contributedMinor, $user);
+
+            $rows[] = new GoalProgressRow(
+                id: self::toInt($row->id),
+                name: self::toStr($row->name),
+                accountId: $row->account_id !== null ? self::toInt($row->account_id) : null,
+                accountName: $accountName,
+                targetMinor: $targetMinor,
+                contributedMinor: $contributedMinor,
+                currency: self::toStr($row->target_currency),
+                fractionComplete: $fractionComplete,
+                status: self::toStr($row->status),
+                progressState: $progressState,
+                projectedFinishDate: $projectedDate,
+                projectionBeyondHorizon: $beyondHorizon,
+            );
         }
 
         return $rows;
     }
 
     /**
-     * Maps a single Goal to a GoalProgressRow DTO, shared by forUser() and archivedForUser().
+     * Hydrates a Goal Eloquent model from a raw stdClass row so that
+     * model casts (immutable_date for start_date / target_date) and typed
+     * properties are available to GoalProjectionService without repeating
+     * the casting logic here.
      */
-    private function mapGoal(Goal $goal, User $user): GoalProgressRow
+    private function hydrateGoal(stdClass $row): Goal
     {
-        $contributedMinor = $this->sumContributions($goal, $user);
-        $targetMinor = self::toInt($goal->target_minor);
-        $fractionComplete = $targetMinor > 0 ? $contributedMinor / $targetMinor : 0.0;
+        $goal = new Goal;
+        $goal->forceFill([
+            'id' => self::toInt($row->id),
+            'user_id' => self::toInt($row->id), // placeholder; not used by projection
+            'account_id' => $row->account_id !== null ? self::toInt($row->account_id) : null,
+            'name' => self::toStr($row->name),
+            'target_minor' => self::toInt($row->target_minor),
+            'target_currency' => self::toStr($row->target_currency),
+            'start_date' => self::toStr($row->start_date),
+            'target_date' => isset($row->target_date) ? self::toStr($row->target_date) : CarbonImmutable::today()->addYear()->toDateString(),
+            'status' => self::toStr($row->status),
+        ]);
 
-        $progressState = match (true) {
-            $contributedMinor >= $targetMinor => 'reached',
-            CarbonImmutable::today()->gt($goal->target_date) => 'overdue',
-            default => 'in_progress',
-        };
-
-        ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon] =
-            $this->projection->project($goal, $contributedMinor, $user);
-
-        $account = $goal->account;
-
-        return new GoalProgressRow(
-            id: self::toInt($goal->id),
-            name: self::toStr($goal->name),
-            accountId: $goal->account_id !== null ? self::toInt($goal->account_id) : null,
-            accountName: $account !== null ? self::toStr($account->name) : null,
-            targetMinor: $targetMinor,
-            contributedMinor: $contributedMinor,
-            currency: self::toStr($goal->target_currency),
-            fractionComplete: $fractionComplete,
-            status: self::toStr($goal->status),
-            progressState: $progressState,
-            projectedFinishDate: $projectedDate,
-            projectionBeyondHorizon: $beyondHorizon,
-        );
+        return $goal;
     }
 
     /**

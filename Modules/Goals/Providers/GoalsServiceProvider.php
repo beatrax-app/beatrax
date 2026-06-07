@@ -6,16 +6,16 @@ namespace Modules\Goals\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Goals\Public\Services\GoalProgressQuery;
 
 /**
- * Wires the Goals module: migrations, routes, views, and Livewire component
- * registrations.
+ * Wires the Goals module: migrations, routes, views, Livewire component
+ * registrations, and the GoalProgressQuery singleton.
  *
- * `register()` is intentionally empty in Plan 01.
- * The `GoalProgressQuery` singleton is registered in Plan 02 (avoids
- * referencing a class that does not yet exist).
- * `GoalWriter` (Plan 03) autowires with ONLY a `DatabaseManager` dependency
- * and does NOT depend on `GoalProgressQuery` in its constructor.
+ * `GoalProjectionService` and `GoalProgressQuery` autowire their constructor
+ * deps (DatabaseManager / ExchangeRateService / ForecastQuery) — an explicit
+ * singleton for GoalProgressQuery matches the Budgets pattern and prevents
+ * multiple queries being built per request cycle.
  *
  * Plan 04 will add the two $livewire->component() registrations below once the
  * Livewire page and summary-card components exist.
@@ -24,8 +24,7 @@ final class GoalsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Intentionally empty — see docblock above.
-        // Plan 02 will add: $this->app->singleton(GoalProgressQuery::class);
+        $this->app->singleton(GoalProgressQuery::class);
     }
 
     public function boot(LivewireManager $livewire): void
