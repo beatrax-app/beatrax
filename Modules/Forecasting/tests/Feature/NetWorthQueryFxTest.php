@@ -42,12 +42,12 @@ function fxRate(DatabaseManager $db, string $quote, string $rate, string $date =
 // ---------------------------------------------------------------------------
 
 beforeEach(function (): void {
-    $this->db   = app(DatabaseManager::class);
+    $this->db = app(DatabaseManager::class);
     $this->user = User::create([
-        'username'        => 'fx-networth-fixture',
-        'password'        => 'fixture-password-12chars',
+        'username' => 'fx-networth-fixture',
+        'password' => 'fixture-password-12chars',
         'period_start_day' => 1,
-        'base_currency'   => 'EUR',
+        'base_currency' => 'EUR',
     ]);
 });
 
