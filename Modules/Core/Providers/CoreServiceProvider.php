@@ -16,6 +16,7 @@ use Modules\Core\Internal\Console\RestoreDatabaseCommand;
 use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\EncryptedBackupDownload;
+use Modules\Core\Internal\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Internal\Http\Livewire\HelpDataLocations;
 use Modules\Core\Internal\Http\Livewire\NetWorthCard;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
@@ -29,6 +30,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\CurrentUserService;
 use Modules\Core\Public\Services\NavCountsService;
+use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -63,6 +65,7 @@ final class CoreServiceProvider extends ServiceProvider
         // service to resolve the backups directory.
         $this->app->singleton(UserDataPathService::class);
         $this->app->singleton(NavCountsService::class);
+        $this->app->singleton(RestoreEncryptedBackup::class);
 
         if (! class_exists(User::class, false)) {
             class_alias(CoreUser::class, User::class);
@@ -79,6 +82,7 @@ final class CoreServiceProvider extends ServiceProvider
         $livewire->component('core.dashboard', Dashboard::class);
         $livewire->component('core.settings-page', SettingsPage::class);
         $livewire->component('core.encrypted-backup-download', EncryptedBackupDownload::class);
+        $livewire->component('core.encrypted-backup-restore', EncryptedBackupRestore::class);
         $livewire->component('core.spending-trend-card', SpendingTrendCard::class);
         $livewire->component('core.net-worth-card', NetWorthCard::class);
         $livewire->component('core.system-alerts-banner', SystemAlertsBanner::class);
