@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Forecasting\Public\Services;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
 use Modules\Forecasting\Public\Dto\AccountBalanceLine;
 use Modules\Forecasting\Public\Dto\NetWorth;
+use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
  * Net-worth roll-up across all of a user's accounts. Each account's current
@@ -17,11 +20,12 @@ use Modules\Forecasting\Public\Dto\NetWorth;
  * are positive, a credit card's is negative (amount owed) — so net worth is
  * simply the sum, no per-kind sign juggling.
  *
- * Multi-currency: there is no balance FX-conversion service yet, so the single
- * `totalMinor` sums only EUR-denominated accounts; any non-EUR account is still
- * listed in the breakdown and flagged via `hasExcludedAccounts`. `paypal_funding`
- * is an internal routing construct, not a balance-holding account, so it is
- * excluded.
+ * Multi-currency: non-EUR accounts are converted to the user's base currency
+ * via ExchangeRateService (D-01/D-08). Each account line keeps its own
+ * original currency (D-02). When no rate exists for a pair, that account is
+ * excluded from the total and flagged via `accountsWithoutRate`/
+ * `hasExcludedAccounts` (D-07 no-rate fallback). `paypal_funding` is an
+ * internal routing construct excluded from the roll-up entirely.
  */
 final class NetWorthQuery
 {
@@ -30,6 +34,7 @@ final class NetWorthQuery
     public function __construct(
         private readonly BalanceAnchorResolver $anchor,
         private readonly DatabaseManager $db,
+        private readonly ExchangeRateService $fx,
     ) {}
 
     public function forUser(User $user): NetWorth
@@ -43,12 +48,19 @@ final class NetWorthQuery
         $lines = [];
         $total = 0;
         $hasExcluded = false;
+        $accountsWithoutRate = 0;
+        $hasStaleRates = false;
+        $latestSource = null;
+        $latestAsOf = null;
+
+        $baseCurrency = $user->base_currency;
 
         foreach ($accounts as $account) {
             $accountId = self::toInt($account->id);
             $anchor = $this->anchor->forAccount($accountId, $user);
             $kind = is_string($account->kind) ? $account->kind : '';
 
+            // Each line keeps its own original currency (D-02)
             $lines[] = new AccountBalanceLine(
                 accountId: $accountId,
                 name: is_string($account->name) ? $account->name : '',
@@ -58,18 +70,46 @@ final class NetWorthQuery
                 isLiability: $kind === 'ics_card',
             );
 
-            if ($anchor->currency === 'EUR') {
-                $total += $anchor->openingBalanceMinor;
-            } else {
+            // Convert to base currency via ExchangeRateService (D-08)
+            $money = Money::ofMinor($anchor->openingBalanceMinor, $anchor->currency);
+            $result = $this->fx->convertToBase($money, $baseCurrency);
+
+            // Signal: no rate available — result currency ≠ base currency
+            if ($result->converted->currency() !== $baseCurrency) {
+                // D-07: exclude accounts with no rate at all
                 $hasExcluded = true;
+                $accountsWithoutRate++;
+
+                continue;
+            }
+
+            $total += $result->converted->toMinor();
+
+            // Track FX metadata from the latest non-passthrough conversion (D-08)
+            if (! $result->isPassthrough) {
+                $hasStaleRates = $hasStaleRates || $result->isStale;
+
+                if ($result->source !== null) {
+                    $latestSource = $result->source;
+                }
+
+                if ($result->asOf !== null) {
+                    if ($latestAsOf === null || $result->asOf > $latestAsOf) {
+                        $latestAsOf = $result->asOf;
+                    }
+                }
             }
         }
 
         return new NetWorth(
             totalMinor: $total,
-            currency: 'EUR',
+            currency: $baseCurrency,
             accounts: $lines,
             hasExcludedAccounts: $hasExcluded,
+            ratesSource: $latestSource,
+            ratesAsOf: $latestAsOf instanceof CarbonImmutable ? $latestAsOf : null,
+            hasStaleRates: $hasStaleRates,
+            accountsWithoutRate: $accountsWithoutRate,
         );
     }
 

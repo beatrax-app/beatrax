@@ -6,14 +6,16 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Services\NetWorthQuery;
 
-function nwAccount(DatabaseManager $db, int $userId, string $name, string $kind, int $openingMinor, string $currency = 'EUR'): int
-{
-    return $db->connection()->table('accounts')->insertGetId([
-        'user_id' => $userId, 'name' => $name, 'slug' => strtolower($name).'-'.bin2hex(random_bytes(3)),
-        'kind' => $kind, 'iban' => 'NL00NETW'.str_pad((string) random_int(1, 99999999), 8, '0', STR_PAD_LEFT),
-        'default_currency' => $currency, 'opening_balance_minor' => $openingMinor, 'opening_balance_as_of_date' => '2026-01-01',
-        'created_at' => '2026-01-01 00:00:00', 'updated_at' => '2026-01-01 00:00:00',
-    ]);
+if (! function_exists('nwAccount')) {
+    function nwAccount(DatabaseManager $db, int $userId, string $name, string $kind, int $openingMinor, string $currency = 'EUR'): int
+    {
+        return $db->connection()->table('accounts')->insertGetId([
+            'user_id' => $userId, 'name' => $name, 'slug' => strtolower($name).'-'.bin2hex(random_bytes(3)),
+            'kind' => $kind, 'iban' => 'NL00NETW'.str_pad((string) random_int(1, 99999999), 8, '0', STR_PAD_LEFT),
+            'default_currency' => $currency, 'opening_balance_minor' => $openingMinor, 'opening_balance_as_of_date' => '2026-01-01',
+            'created_at' => '2026-01-01 00:00:00', 'updated_at' => '2026-01-01 00:00:00',
+        ]);
+    }
 }
 
 beforeEach(function (): void {
