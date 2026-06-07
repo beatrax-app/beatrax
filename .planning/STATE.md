@@ -3,6 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
 status: executing
+stopped_at: Completed 02-03-PLAN.md (GoalWriter — save/update/parseAmount/markComplete/archive/restore)
 last_updated: "2026-06-08T00:00:00.000Z"
 progress:
   total_phases: 15
@@ -27,19 +28,19 @@ progress:
 ## Current Position
 
 Phase: 2 (Savings goals (SEED-003)) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 - **Milestone:** v1.3 "Local & in sync"
 - **Status:** Executing Phase 2
 - **Phase:** 1 of 15 complete; Phase 2 in progress
-- **Plan:** Phase 2 — 2 of 4 executed (02-01 scaffold, 02-02 read-model done)
-- **Progress:** [███████░░░] 67%
+- **Plan:** Phase 2 — 3 of 4 executed (02-01 scaffold, 02-02 read-model, 02-03 GoalWriter done)
+- **Progress:** [████████░░] 75%
 
 ```
 Phases [█               ] 1/15
 ```
 
-**Next action:** Execute Phase 2 Wave 2 plan 02-03 (GoalWriter — CRUD + lifecycle status).
+**Next action:** Execute Phase 2 Wave 3 plan 02-04 (GoalsPage Livewire component + views).
 
 ## Performance Metrics
 
@@ -63,6 +64,8 @@ Phases [█               ] 1/15
 - GoalProgressQuery uses raw DatabaseManager (not Eloquent) to avoid phpstan-strict-rules staticMethod.dynamicCall on whereIn.
 - TRAILING_WINDOW_DAYS=HORIZON_LIMIT_DAYS=90 in GoalProjectionService (D-07 tunables, aligns run-rate window with max forecast horizon).
 - archivedForUser() created in Plan 02 (not 04) — Plan 04 only consumes it.
+- GoalWriter injects only DatabaseManager (not GoalProgressQuery) — intentional parallel-safe decoupling; own inline assertOwnedAccountOrNull() query.
+- GoalWriter::update() throws InvalidArgumentException on cross-user/missing goal; lifecycle methods silently no-op (consistent with write-returns-result vs fire-and-forget patterns).
 
 ### Critical path
 
@@ -81,8 +84,8 @@ Phases [█               ] 1/15
 ## Session Continuity
 
 - **Last session:** 2026-06-08T00:00:00.000Z
-- **Stopped at:** Completed 02-02-PLAN.md (GoalProgressQuery + GoalProjectionService + GoalProgressRow)
-- **Resume by:** Execute Phase 2 Wave 2 plan 02-03 (GoalWriter — CRUD + lifecycle).
+- **Stopped at:** Completed 02-03-PLAN.md (GoalWriter — save/update/parseAmount/markComplete/archive/restore)
+- **Resume by:** Execute Phase 2 Wave 3 plan 02-04 (GoalsPage Livewire component + views).
 
 ---
 *State initialized: 2026-06-07 for milestone v1.3 "Local & in sync"*

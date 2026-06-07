@@ -81,7 +81,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — Goals module scaffold: goals table + Goal model + factory + provider/route registration + Wave 0 test harness
 - [x] 02-02-PLAN.md — GoalProgressQuery + GoalProjectionService + GoalProgressRow DTO (contribution sum, FX, run-rate finish date)
-- [ ] 02-03-PLAN.md — GoalWriter: create/edit + parseAmount + account-ownership validation + markComplete/archive/restore lifecycle
+- [x] 02-03-PLAN.md — GoalWriter: create/edit + parseAmount + account-ownership validation + markComplete/archive/restore lifecycle
 - [ ] 02-04-PLAN.md — /goals Livewire page + Flux create/edit modal + lifecycle UI + dashboard summary card + sidebar/dashboard wiring
 
 ### Phase 3: Savings pots / envelopes (SEED-011)
@@ -222,7 +222,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Base-currency FX conversion | 5/5 | Complete | 2026-06-07 |
-| 2. Savings goals | 2/4 | In Progress|  |
+| 2. Savings goals | 3/4 | In Progress|  |
 | 3. Savings pots / envelopes | 0/0 | Not started | - |
 | 4. Responsive + installable PWA | 0/0 | Not started | - |
 | 5. PIN / biometric app-lock | 0/0 | Not started | - |
