@@ -17,6 +17,7 @@ use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Internal\Http\Livewire\HelpDataLocations;
+use Modules\Core\Internal\Http\Livewire\NetWorthCard;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Internal\Http\Livewire\SpendingTrendCard;
 use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
@@ -79,6 +80,7 @@ final class CoreServiceProvider extends ServiceProvider
         $livewire->component('core.settings-page', SettingsPage::class);
         $livewire->component('core.encrypted-backup-download', EncryptedBackupDownload::class);
         $livewire->component('core.spending-trend-card', SpendingTrendCard::class);
+        $livewire->component('core.net-worth-card', NetWorthCard::class);
         $livewire->component('core.system-alerts-banner', SystemAlertsBanner::class);
         $livewire->component('core.app-sidebar', AppSidebar::class);
         $livewire->component('core.help-data-locations', HelpDataLocations::class);

@@ -68,6 +68,11 @@
         @endif
     </section>
 
+    {{-- Net worth — one figure across all accounts (assets minus liabilities),
+         with an expandable per-account breakdown. Renders nothing with no
+         accounts. --}}
+    @livewire('core.net-worth-card')
+
     {{-- KPI tiles: the primary focal point of the dashboard.
 
          When the user's default_currency_view is 'eur_only', `$tiles` is
