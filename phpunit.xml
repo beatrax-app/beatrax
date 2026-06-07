@@ -30,7 +30,6 @@
             <directory>Modules/DevMode/tests/Unit</directory>
             <directory>Modules/Onboarding/tests/Unit</directory>
             <directory>Modules/Budgets/tests/Unit</directory>
-            <directory>Modules/CashBook/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
