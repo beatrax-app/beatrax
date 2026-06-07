@@ -1,0 +1,11 @@
+{
+    "name": "CashBook",
+    "alias": "cashbook",
+    "description": "Manual / cash transaction entry into the canonical ledger.",
+    "keywords": ["cash", "manual", "transactions"],
+    "priority": 8,
+    "providers": [
+        "Modules\\CashBook\\Providers\\CashBookServiceProvider"
+    ],
+    "files": []
+}

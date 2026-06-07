@@ -1,0 +1,101 @@
+@php
+    use Modules\Ledger\Public\ValueObjects\Money;
+
+    $fmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format('nl_NL');
+    $input = 'block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100';
+@endphp
+
+<div class="mx-auto max-w-3xl px-4 py-12">
+    <header class="mb-8">
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Cash book</h1>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Record cash and other off-bank spending by hand. Manual entries flow into the same
+            ledger as your imports — they categorise, recur-detect, and count toward your month.
+        </p>
+    </header>
+
+    <form wire:submit="add" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-800 dark:bg-slate-950">
+        <div role="radiogroup" aria-label="Direction" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+            @foreach (['expense' => 'Expense', 'income' => 'Income'] as $value => $label)
+                <button
+                    type="button"
+                    role="radio"
+                    aria-checked="{{ $direction === $value ? 'true' : 'false' }}"
+                    wire:click="$set('direction', '{{ $value }}')"
+                    @class([
+                        'px-4 py-1.5 text-sm focus:outline-none',
+                        'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' => $direction === $value,
+                        'bg-white text-slate-900 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900' => $direction !== $value,
+                    ])
+                >{{ $label }}</button>
+            @endforeach
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="space-y-1">
+                <label for="cb-amount" class="block text-sm text-slate-900 dark:text-slate-100">Amount (€)</label>
+                <input id="cb-amount" type="text" inputmode="decimal" wire:model="amount" placeholder="0.00" class="{{ $input }}" />
+            </div>
+            <div class="space-y-1">
+                <label for="cb-date" class="block text-sm text-slate-900 dark:text-slate-100">Date</label>
+                <input id="cb-date" type="date" wire:model="date" class="{{ $input }}" />
+            </div>
+            <div class="space-y-1">
+                <label for="cb-counterparty" class="block text-sm text-slate-900 dark:text-slate-100">Counterparty</label>
+                <input id="cb-counterparty" type="text" wire:model="counterparty" placeholder="e.g. Bakery" class="{{ $input }}" />
+            </div>
+            <div class="space-y-1">
+                <label for="cb-category" class="block text-sm text-slate-900 dark:text-slate-100">Category <span class="text-slate-400">(optional)</span></label>
+                <select id="cb-category" wire:model="categoryId" class="{{ $input }}">
+                    <option value="">Uncategorized</option>
+                    @foreach ($categories as $category)
+                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+
+        <div class="space-y-1">
+            <label for="cb-description" class="block text-sm text-slate-900 dark:text-slate-100">Note <span class="text-slate-400">(optional)</span></label>
+            <input id="cb-description" type="text" wire:model="description" class="{{ $input }}" />
+        </div>
+
+        @if ($error !== '')
+            <p class="text-sm text-rose-600 dark:text-rose-500">{{ $error }}</p>
+        @endif
+
+        <button type="submit" class="w-full rounded-md bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400">
+            Add entry
+        </button>
+    </form>
+
+    <section class="mt-8">
+        <h2 class="mb-3 text-xs uppercase tracking-wide text-[var(--color-text-faint)]">Manual entries</h2>
+        @if (count($entries) === 0)
+            <p class="text-sm text-slate-500 dark:text-slate-400">No manual entries yet.</p>
+        @else
+            <ul class="divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-700">
+                @foreach ($entries as $entry)
+                    <li wire:key="manual-{{ $entry->id }}" class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-slate-900 dark:text-slate-100">{{ $entry->counterparty_name }}</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">
+                                {{ \Illuminate\Support\Str::limit((string) $entry->posted_at, 10, '') }}
+                                @if ($entry->category_name)· {{ $entry->category_name }}@endif
+                            </p>
+                        </div>
+                        <span class="shrink-0 font-medium {{ (int) $entry->settled_amount_minor < 0 ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-400' }}" style="font-variant-numeric: tabular-nums;">
+                            {{ $fmt((int) $entry->settled_amount_minor) }}
+                        </span>
+                        <button
+                            type="button"
+                            wire:click="delete({{ (int) $entry->id }})"
+                            aria-label="Delete entry"
+                            class="shrink-0 rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800 dark:hover:text-rose-400"
+                        >Delete</button>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+    </section>
+</div>
