@@ -18,6 +18,7 @@
     </div>
 
     <div class="side-section-label">THIS MONTH</div>
+    
     <a href="https://beatrax.test" class="side-item ">
         <span class="ic" aria-hidden="true">◆</span>
         Dashboard
@@ -25,7 +26,7 @@
     <a href="https://beatrax.test/transactions" class="side-item ">
         <span class="ic" aria-hidden="true">≡</span>
         Transactions
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     <a href="https://beatrax.test/forecast" class="side-item ">
         <span class="ic" aria-hidden="true">↗</span>
         Forecasts
@@ -35,12 +36,12 @@
     <a href="https://beatrax.test/recurring" class="side-item ">
         <span class="ic" aria-hidden="true">↻</span>
         Recurring
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
     <a href="https://beatrax.test/counterparties" class="side-item ">
         <span class="ic" aria-hidden="true">◉</span>
         Counterparties
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
     <a href="https://beatrax.test/counterparties/triage" class="side-item ">
         <span class="ic" aria-hidden="true">❋</span>
@@ -54,25 +55,25 @@
     <a href="https://beatrax.test/drift" class="side-item ">
         <span class="ic" aria-hidden="true">⚠</span>
         Drift Alerts
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     <a href="https://beatrax.test/budgets" class="side-item ">
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     <a href="https://beatrax.test/drift/watch" class="side-item ">
         <span class="ic" aria-hidden="true">↗</span>
         Subscriptions
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
 
     <div class="side-section-label">INGESTION</div>
     <a href="https://beatrax.test/imports/new" class="side-item ">
         <span class="ic" aria-hidden="true">⊕</span>
         Imports
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     <a href="#" class="side-item">
         <span class="ic" aria-hidden="true">⌗</span>
         Receipts
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     <a href="https://beatrax.test/inboxes" class="side-item ">
         <span class="ic" aria-hidden="true">✉</span>
         Email
