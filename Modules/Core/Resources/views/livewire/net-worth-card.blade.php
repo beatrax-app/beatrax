@@ -15,6 +15,38 @@
 
     // Conversion is active when ratesSource is non-null (at least one non-base account was converted).
     $conversionActive = $netWorth->ratesSource !== null;
+
+    // Human-readable provider label for the disclosure copy (UI-SPEC §7.2).
+    $sourceLabel = static fn (?string $source): string => match ($source) {
+        'ecb' => 'ECB',
+        'frankfurter' => 'Frankfurter',
+        'bundled' => 'Bundled snapshot',
+        'transaction' => 'Recorded rate',
+        null, '' => 'rates',
+        default => ucfirst($source),
+    };
+
+    // The stored rate is a DECIMAL(18,8) string or a "num/den" fraction
+    // (brick/money cross-rate). Render it as a fixed 4-decimal value for the
+    // popover — display only, never used for money math (Pitfall 1).
+    $fmtRate = static function (?string $rate): ?string {
+        if ($rate === null || $rate === '') {
+            return null;
+        }
+        if (str_contains($rate, '/')) {
+            [$num, $den] = array_pad(explode('/', $rate, 2), 2, '');
+            if (! is_numeric($num) || ! is_numeric($den) || (float) $den === 0.0) {
+                return null;
+            }
+            $value = (float) $num / (float) $den;
+        } elseif (is_numeric($rate)) {
+            $value = (float) $rate;
+        } else {
+            return null;
+        }
+
+        return number_format($value, 4, '.', '');
+    };
 @endphp
 
 <div>
@@ -28,21 +60,26 @@
                     <p class="mt-1 text-3xl font-semibold {{ $amountClass($netWorth->totalMinor) }}" style="font-variant-numeric: tabular-nums;">
                         {{ $fmt($netWorth->totalMinor) }}
                         @if ($conversionActive)
-                            {{-- Disclosure trigger: click reveals rate · source · as-of date (D-11) --}}
+                            {{-- Disclosure trigger: click reveals source · as-of date (D-11).
+                                 anchor-name ties the popover to this trigger (UI-SPEC §5.4). --}}
                             <button type="button"
                                     class="fx-disclosure-trigger"
+                                    style="anchor-name: --fx-net;"
                                     aria-label="Rate details"
                                     x-data
                                     x-on:click="$refs.fxPopNetworth.showPopover()">
                                 <span class="fx-icon {{ $netWorth->hasStaleRates ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
                             </button>
-                            {{-- Native HTML Popover API — no JS library needed (UI-SPEC §5.4/§6.4) --}}
-                            <div popover id="fx-pop-networth" x-ref="fxPopNetworth" class="fx-popover">
-                                @if ($netWorth->ratesSource !== null && $netWorth->ratesAsOf !== null)
-                                    <p class="fx-rate">{{ $netWorth->ratesAsOf->format('Y-m-d') }}</p>
-                                    <p class="fx-source">{{ $netWorth->ratesSource }} · as of {{ $netWorth->ratesAsOf->format('d M Y') }}</p>
+                            {{-- Native HTML Popover API — no JS library needed (UI-SPEC §5.4/§6.4).
+                                 The total mixes currencies, so it summarises source + as-of
+                                 rather than claiming a single rate; per-pair rates live on the
+                                 breakdown rows below. --}}
+                            <div popover id="fx-pop-networth" x-ref="fxPopNetworth" class="fx-popover" style="position-anchor: --fx-net; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
+                                @if ($netWorth->ratesAsOf !== null)
+                                    <p class="fx-rate">Converted to {{ $baseCurrency }}</p>
+                                    <p class="fx-source">{{ $sourceLabel($netWorth->ratesSource) }} · as of {{ $netWorth->ratesAsOf->format('d M Y') }}</p>
                                     @if ($netWorth->hasStaleRates)
-                                        <p class="fx-stale-note">Using bundled rate. Enable online refresh for current rates.</p>
+                                        <p class="fx-stale-note">Using a bundled snapshot rate. Enable online refresh in Settings for current rates.</p>
                                     @endif
                                 @endif
                             </div>
@@ -84,26 +121,36 @@
                             <span class="shrink-0 font-medium {{ $amountClass($account->balanceMinor) }}" style="font-variant-numeric: tabular-nums;">
                                 {{-- Native amount as primary display (D-02) --}}
                                 {{ $nativeFmt($account->balanceMinor, $account->currency) }}
-                                @if ($account->currency !== $baseCurrency)
-                                    {{-- Per-account: faint base-equivalent + inline FX trigger (D-02 / UI-SPEC §5.2) --}}
+                                @if ($account->isConverted())
+                                    {{-- Per-account: real base-equivalent + inline FX trigger carrying
+                                         this pair's actual rate (D-02 / UI-SPEC §5.2/§5.4) --}}
                                     <span class="ml-1 text-xs" style="color: var(--color-text-faint);">
-                                        ≈ {{ $fmt($account->balanceMinor) }}
+                                        ≈ {{ $fmt($account->baseEquivalentMinor) }}
                                         <button type="button"
                                                 class="fx-disclosure-trigger fx-disclosure-trigger--inline"
+                                                style="anchor-name: --fx-a{{ $account->accountId }};"
                                                 aria-label="Rate details for {{ $account->name }}"
                                                 x-data
                                                 x-on:click="$refs.{{ 'fxPop'.$account->accountId }}.showPopover()">
-                                            <span class="fx-icon {{ $netWorth->hasStaleRates ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
+                                            <span class="fx-icon {{ $account->fxIsStale ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
                                         </button>
-                                        <div popover id="fx-pop-{{ $account->accountId }}" x-ref="{{ 'fxPop'.$account->accountId }}" class="fx-popover">
-                                            @if ($netWorth->ratesSource !== null && $netWorth->ratesAsOf !== null)
-                                                <p class="fx-source">{{ $netWorth->ratesSource }} · as of {{ $netWorth->ratesAsOf->format('d M Y') }}</p>
-                                                @if ($netWorth->hasStaleRates)
-                                                    <p class="fx-stale-note">Using bundled rate. Enable online refresh for current rates.</p>
-                                                @endif
+                                        <div popover id="fx-pop-{{ $account->accountId }}" x-ref="{{ 'fxPop'.$account->accountId }}" class="fx-popover" style="position-anchor: --fx-a{{ $account->accountId }}; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
+                                            @php($accountRate = $fmtRate($account->fxRate))
+                                            @if ($accountRate !== null)
+                                                <p class="fx-rate">1 {{ $account->currency }} = {{ $accountRate }} {{ $baseCurrency }}</p>
+                                            @endif
+                                            @if ($account->fxAsOf !== null)
+                                                <p class="fx-source">{{ $sourceLabel($account->fxSource) }} · as of {{ $account->fxAsOf->format('d M Y') }}</p>
+                                            @endif
+                                            @if ($account->fxIsStale)
+                                                <p class="fx-stale-note">Using a bundled snapshot rate. Enable online refresh in Settings for current rates.</p>
                                             @endif
                                         </div>
                                     </span>
+                                @elseif ($account->hasNoRate($baseCurrency))
+                                    {{-- No rate at all for this pair (D-07) — show the native amount
+                                         only, with a calm amber note in the base-equivalent slot. --}}
+                                    <span class="ml-1 text-xs" style="color: var(--color-amber);">· no rate available</span>
                                 @endif
                             </span>
                         </li>
