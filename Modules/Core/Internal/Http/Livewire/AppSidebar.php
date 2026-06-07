@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\NavCountsService;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 
 /**
@@ -59,6 +60,7 @@ final class AppSidebar extends Component
         DatabaseManager $db,
         Clock $clock,
         CounterpartyTriageQueue $triage,
+        NavCountsService $navCounts,
     ): View {
         $user = $currentUser->user();
         $isDeveloper = $user->is_developer === true;
@@ -92,6 +94,7 @@ final class AppSidebar extends Component
             'queueCount' => $queueCount,
             'workerSecondsAgo' => $workerSecondsAgo,
             'unknownCount' => $triage->unknownCountForUser($user),
+            'navCounts' => $navCounts->forUser($user->id),
         ]);
     }
 

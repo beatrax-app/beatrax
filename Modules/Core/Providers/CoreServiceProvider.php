@@ -26,6 +26,7 @@ use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\CurrentUserService;
+use Modules\Core\Public\Services\NavCountsService;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -59,6 +60,7 @@ final class CoreServiceProvider extends ServiceProvider
         // command, restore command, and freshness probe all inject this
         // service to resolve the backups directory.
         $this->app->singleton(UserDataPathService::class);
+        $this->app->singleton(NavCountsService::class);
 
         if (! class_exists(User::class, false)) {
             class_alias(CoreUser::class, User::class);

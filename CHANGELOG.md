@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- **Sidebar count badges** — the nav items (Transactions, Recurring,
+  Counterparties, Drift alerts, Budgets, Subscriptions, Imports, Receipts) now
+  show how many items each holds. All counts come from a single per-user cached
+  payload (NavCountsService, short TTL, invalidated on demand) so the sidebar —
+  which renders on every page — never fans out a pile of COUNT queries per
+  render. Large counts are compact-formatted (e.g. "3.1k"), and a count of zero
+  hides the badge to keep the rail calm.
 - **"You could save here" insights** — the dashboard shows a "Ways to save"
   card that pairs your recurring subscriptions with the most relevant official
   link from the support-resource corpus: a cheaper / student / retention plan
