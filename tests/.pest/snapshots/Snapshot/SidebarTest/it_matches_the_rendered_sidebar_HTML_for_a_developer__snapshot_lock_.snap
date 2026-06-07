@@ -73,7 +73,7 @@
     <a href="#" class="side-item">
         <span class="ic" aria-hidden="true">⌗</span>
         Receipts
-        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
+    </a>
     <a href="https://beatrax.test/inboxes" class="side-item ">
         <span class="ic" aria-hidden="true">✉</span>
         Email

@@ -33,7 +33,7 @@ it('counts items per nav section, scoped to the user', function (): void {
 
     expect($counts['counterparties'])->toBe(2);
     expect($counts['transactions'])->toBe(0);
-    expect($counts)->toHaveKeys(['transactions', 'recurring', 'counterparties', 'drift', 'budgets', 'subscriptions', 'imports', 'receipts']);
+    expect($counts)->toHaveKeys(['transactions', 'recurring', 'counterparties', 'drift', 'budgets', 'subscriptions', 'imports']);
 });
 
 it('caches the counts and refreshes only after forget()', function (): void {
@@ -51,7 +51,12 @@ it('caches the counts and refreshes only after forget()', function (): void {
     expect($service->forUser($this->user->id)['counterparties'])->toBe(2);
 });
 
-it('returns zero (not an error) when a counted table is absent', function (): void {
-    // receipts is not migrated in this lightweight Core test context.
-    expect(app(NavCountsService::class)->forUser($this->user->id)['receipts'])->toBe(0);
+it('does not error and returns every expected key', function (): void {
+    // The hasTable guard means a build missing a module's table yields 0
+    // rather than a 500; all keys are always present.
+    $counts = app(NavCountsService::class)->forUser($this->user->id);
+
+    foreach (['transactions', 'recurring', 'counterparties', 'drift', 'budgets', 'subscriptions', 'imports'] as $key) {
+        expect($counts[$key])->toBeInt();
+    }
 });
