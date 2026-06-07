@@ -65,6 +65,76 @@
             </div>
         </section>
 
+        {{-- ===== Currency reporting (FX base currency + online fetch toggle) ===== --}}
+        <section class="space-y-6">
+            {{-- Sub-section A: Base reporting currency picker --}}
+            <div class="space-y-2">
+                <h2 class="{{ $cardHead }}">Base reporting currency</h2>
+                <div class="space-y-1">
+                    <label for="baseCurrency" class="block text-sm text-slate-900 dark:text-slate-100">Reporting currency</label>
+                    <select
+                        id="baseCurrency"
+                        name="baseCurrency"
+                        wire:model="baseCurrency"
+                        class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                    >
+                        @foreach ($currencyOptions as $code => $name)
+                            <option value="{{ $code }}">{{ $code }} — {{ $name }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">All totals and roll-ups convert to this currency. Each account still shows its own original currency alongside.</p>
+                    @error('baseCurrency')
+                        <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+
+            {{-- Sub-section B: Online exchange-rate fetch toggle --}}
+            <div class="space-y-3">
+                <h2 class="{{ $cardHead }}">Exchange rates</h2>
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1">
+                        <p class="text-sm text-[var(--color-text)]">Fetch current rates online</p>
+                        <p class="mt-1 text-xs text-[var(--color-text-muted)]">
+                            @if ($fxOnlineEnabled)
+                                Rates fetched from ECB daily. Only currency pair lookups — no personal data.
+                                @if ($fxLastUpdated)
+                                    Last updated: {{ $fxLastUpdated }}.
+                                @endif
+                            @else
+                                Bundled rates are used. No data leaves your machine.
+                            @endif
+                        </p>
+                    </div>
+                    <button type="button"
+                            class="switch{{ $fxOnlineEnabled ? ' switch--on' : '' }}"
+                            wire:click="toggleFxOnline"
+                            aria-pressed="{{ $fxOnlineEnabled ? 'true' : 'false' }}"
+                            aria-label="Fetch current exchange rates online">
+                        <span class="switch__thumb"></span>
+                    </button>
+                </div>
+
+                @if ($fxOnlineEnabled)
+                    <div wire:transition class="flex items-center justify-between gap-3">
+                        <p class="text-xs" style="color: var(--color-text-faint);">
+                            @if ($fxRefreshing)
+                                Refreshing&hellip;
+                            @else
+                                Next auto-refresh: daily at 09:00
+                            @endif
+                        </p>
+                        <button
+                            type="button"
+                            wire:click="refreshFxRates"
+                            wire:loading.attr="disabled"
+                            class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                        >Refresh now</button>
+                    </div>
+                @endif
+            </div>
+        </section>
+
         <section class="space-y-2">
             <h2 class="{{ $cardHead }}">Period</h2>
             <div class="space-y-1">
