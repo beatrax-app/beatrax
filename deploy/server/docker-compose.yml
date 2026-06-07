@@ -1,0 +1,57 @@
+# Production-style self-host stack for beatrax (single user / household).
+#
+# Setup:
+#   cp deploy/server/.env.example deploy/server/.env     # then edit it
+#   # generate an app key and paste it into deploy/server/.env as APP_KEY:
+#   docker compose -f deploy/server/docker-compose.yml run --rm app php artisan key:generate --show
+#   docker compose -f deploy/server/docker-compose.yml up -d --build
+#   docker compose -f deploy/server/docker-compose.yml exec app php artisan beatrax:install
+#
+# All app processes (app/queue/scheduler) read the SAME deploy/server/.env via
+# env_file, so APP_KEY + DB credentials stay consistent across containers.
+# (Use `beatrax:install` here, not `beatrax:setup` — setup is for the bare-metal
+# single-process path; in Docker the env_file is the source of truth.)
+name: beatrax
+
+x-app: &app
+  build:
+    context: ../..
+    dockerfile: deploy/server/Dockerfile
+  image: beatrax-app:latest
+  env_file: .env
+  depends_on:
+    db:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  app:
+    <<: *app
+    ports:
+      - "${HTTP_PORT:-8000}:80"
+
+  queue:
+    <<: *app
+    command: php artisan queue:work --tries=3 --backoff=60 --sleep=3
+
+  scheduler:
+    <<: *app
+    command: php artisan schedule:work
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-beatrax}
+      POSTGRES_USER: ${DB_USERNAME:-beatrax}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-beatrax}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  db-data:

@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- Server-deployment support alongside the NativePHP desktop build. `config`
+  now defines Postgres, MySQL, and MariaDB connections (SQLite stays the
+  default, so the desktop build is unchanged), selectable via `DB_CONNECTION`
+  + the `DB_*` env vars. A new interactive `php artisan beatrax:setup` command
+  walks a self-hoster through writing `.env` (app URL, application key,
+  database), verifies the connection, and hands off to `beatrax:install` in a
+  fresh process. A `deploy/server/` recipe ships a single-container FrankenPHP
+  image (code + assets baked in) with Postgres, a queue worker, and the
+  scheduler, and `.docs/deployment.md` documents both the Docker and the
+  bare-metal (clone-without-Docker) paths, including logging to stderr, the
+  database queue (no Redis/Horizon on a server), and keeping the Dev Console
+  off in production.
 - Import other European banks' CSV exports via a preset-driven generic CSV
   importer. Bundled presets cover N26, Revolut, and ING (Netherlands), each
   selectable under a new "Other bank" source in the import wizard. The engine
