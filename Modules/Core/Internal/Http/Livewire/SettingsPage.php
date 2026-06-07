@@ -12,6 +12,8 @@ use Livewire\Component;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
+use Modules\Ledger\Models\Currency;
 
 /**
  * Settings page. Surfaces the user preferences that govern global
@@ -31,6 +33,13 @@ use Modules\Core\Public\Contracts\CurrentUser;
  *  - `recurringIncomeMinAmountMinor` — incomes whose absolute amount is
  *    below this threshold are not auto-clustered into income series.
  *    Stored as signed BIGINT minor units; 0 disables the threshold.
+ *  - `baseCurrency` — the ISO-4217 reporting currency for all roll-ups
+ *    (net worth, dashboard totals, budgets, forecasts). Saved with the
+ *    batch Save button; validated against the seeded currencies table.
+ *  - `fxOnlineEnabled` — opt-in toggle for online exchange-rate fetch.
+ *    Persists instantly (no Save button); defaults false per D-04.
+ *  - `refreshFxRates()` — dispatches FetchFxRatesJob for the current user
+ *    on demand (D-06 manual refresh).
  *
  * Service collaborators arrive as parameters on each action method; the
  * Livewire strict-rules ruleset forbids constructor-DI on Component
@@ -115,7 +124,42 @@ final class SettingsPage extends Component
      */
     public bool $saved = false;
 
-    public function mount(CurrentUser $currentUser): void
+    /**
+     * Base reporting currency for whole-app roll-ups (net worth, dashboard
+     * totals, budgets, forecasts). Validated against the seeded currencies
+     * table (exists:currencies,code) so arbitrary codes can never reach the
+     * DB. Saved with the batch Save button (deferred wire:model), consistent
+     * with defaultCurrencyView and periodStartDay.
+     *
+     * D-03: when base_currency equals the figure's currency, zero overhead.
+     */
+    #[Validate('nullable|string|size:3|exists:currencies,code')]
+    public string $baseCurrency = 'EUR';
+
+    /**
+     * Opt-in toggle for online exchange-rate fetch (D-04). Off by default
+     * (T-04-03: outbound fetch is explicit user consent). Persists instantly
+     * via toggleFxOnline() without a Save round-trip — mirrors the
+     * autoImportFromDropFolder pattern.
+     */
+    public bool $fxOnlineEnabled = false;
+
+    /**
+     * UI flag set to true immediately when refreshFxRates() dispatches the
+     * job. Consumed by the Blade view to disable the "Refresh now" button
+     * and display "Refreshing…" copy while the round-trip completes.
+     */
+    public bool $fxRefreshing = false;
+
+    /**
+     * Human-readable date of the latest exchange_rates row for this user,
+     * hydrated in mount() from the exchange_rates table. Null when no rates
+     * have been fetched yet. Displayed in the toggle help text as
+     * "Last updated: {date} from {source}." (UI-SPEC §7.1).
+     */
+    public ?string $fxLastUpdated = null;
+
+    public function mount(CurrentUser $currentUser, DatabaseManager $db): void
     {
         $user = $currentUser->user();
         $this->defaultCurrencyView = $user->default_currency_view;
@@ -126,6 +170,19 @@ final class SettingsPage extends Component
         $this->driftAlertThresholdPercent = $user->drift_alert_threshold_percent;
         $this->theme = $user->theme;
         $this->isDeveloper = $user->is_developer === true;
+        $this->baseCurrency = $user->base_currency ?? 'EUR';
+        $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
+
+        // Hydrate fxLastUpdated from the latest exchange_rates row (if any).
+        $latestRate = $db->connection()
+            ->table('exchange_rates')
+            ->orderByDesc('rate_date')
+            ->first(['rate_date']);
+
+        if ($latestRate !== null) {
+            $rawDate = $latestRate->rate_date ?? null;
+            $this->fxLastUpdated = is_string($rawDate) ? substr($rawDate, 0, 10) : null;
+        }
     }
 
     /**
@@ -208,6 +265,42 @@ final class SettingsPage extends Component
         $opener('https://github.com/nightworksio/beatrax/releases/latest');
     }
 
+    /**
+     * Instant-apply toggle for the online exchange-rate fetch opt-in (D-04).
+     * Mirrors toggleAutoImport: flips the property, then writes via raw
+     * query-builder so the DB change is a single round-trip without Eloquent
+     * change tracking. Scoped to the current user's row — user_id is never
+     * read from the request (T-04-02 / V4 access-control).
+     */
+    public function toggleFxOnline(CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
+    {
+        $this->fxOnlineEnabled = ! $this->fxOnlineEnabled;
+
+        $user = $currentUser->user();
+        $db->connection()
+            ->table('users')
+            ->where('id', $user->id)
+            ->update([
+                'fx_online_enabled' => $this->fxOnlineEnabled,
+                'updated_at' => $clock->now()->toDateTimeString(),
+            ]);
+    }
+
+    /**
+     * Dispatches FetchFxRatesJob for the current user on demand (D-06).
+     * Sets fxRefreshing to give the UI immediate feedback while the job
+     * is queued. The dispatch goes through DispatchFxRatesRefresh (the FX
+     * module's Public action) so this Core component never reaches into
+     * FX's Internal namespace (cross-module boundary rule).
+     * User id is always resolved from CurrentUser — never from the request
+     * (T-04-02 / V4 access-control).
+     */
+    public function refreshFxRates(DispatchFxRatesRefresh $dispatch, CurrentUser $currentUser): void
+    {
+        $this->fxRefreshing = true;
+        $dispatch($currentUser->user()->id);
+    }
+
     public function save(CurrentUser $currentUser): void
     {
         $this->validate();
@@ -218,6 +311,7 @@ final class SettingsPage extends Component
         $user->recurring_detection_window_months = $this->recurringDetectionWindowMonths;
         $user->recurring_income_min_amount_minor = $this->recurringIncomeMinAmountMinor;
         $user->drift_alert_threshold_percent = $this->driftAlertThresholdPercent;
+        $user->base_currency = $this->baseCurrency;
         $user->save();
 
         $this->saved = true;
@@ -267,6 +361,26 @@ final class SettingsPage extends Component
             ];
         }
 
+        // Build the currency picker option list from the seeded currencies table.
+        // Sorted alpha by code so the <select> is consistent across renders.
+        // The query uses the DB connection directly (no facade) per the
+        // BoundaryArchTest no-facade rule.
+        $currencyRows = $db->connection()
+            ->table('currencies')
+            ->orderBy('code')
+            ->get(['code', 'name']);
+
+        /** @var array<string, string> $currencyOptions */
+        $currencyOptions = [];
+        foreach ($currencyRows as $row) {
+            /** @var \stdClass $row */
+            $code = is_string($row->code ?? null) ? $row->code : '';
+            $name = is_string($row->name ?? null) ? $row->name : '';
+            if ($code !== '') {
+                $currencyOptions[$code] = $name;
+            }
+        }
+
         return $views->make('core::livewire.settings-page', [
             // Expose the per-user inbox-drop path so the help text
             // renders the directory the user must actually create
@@ -274,6 +388,7 @@ final class SettingsPage extends Component
             // root inbox-drop folder.
             'userId' => $currentUser->user()->id,
             'forecastingAccounts' => $accountList,
+            'currencyOptions' => $currencyOptions,
         ]);
     }
 
@@ -305,6 +420,9 @@ final class SettingsPage extends Component
             'driftAlertThresholdPercent.required' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',
             'driftAlertThresholdPercent.integer' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',
             'driftAlertThresholdPercent.in' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',
+            'baseCurrency.size' => 'Please choose a currency.',
+            'baseCurrency.exists' => 'Please choose a currency.',
+            'baseCurrency.string' => 'Please choose a currency.',
         ];
     }
 }
