@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\FX\Internal\Providers;
 
+use JsonException;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
@@ -54,8 +55,16 @@ final class BundledSnapshotProvider implements RateProvider
             throw new RateFetchException('Bundled snapshot not found at: '.$this->snapshotPath);
         }
 
-        /** @var mixed $decoded */
-        $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        try {
+            /** @var mixed $decoded */
+            $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            // JsonException extends Exception, not RateFetchException — without
+            // this catch a corrupt snapshot would escape the whole provider
+            // fallback chain (the registry only catches RateFetchException),
+            // bypassing the D-07 safe-fallback contract.
+            throw new RateFetchException('Bundled snapshot JSON is malformed: '.$e->getMessage(), previous: $e);
+        }
 
         if (! is_array($decoded)) {
             throw new RateFetchException('Bundled snapshot JSON is not an object.');
@@ -82,6 +91,13 @@ final class BundledSnapshotProvider implements RateProvider
             }
 
             $rates[(string) $currency] = (string) $rate;
+        }
+
+        // An empty rate set is a failure, not a success — otherwise the
+        // registry would treat the (final) bundled provider as having
+        // succeeded and write zero rows (mirrors EcbRateProvider).
+        if ($rates === []) {
+            throw new RateFetchException('Bundled snapshot contains no usable rates.');
         }
 
         return ['date' => $date, 'rates' => $rates];

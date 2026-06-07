@@ -5,11 +5,25 @@ declare(strict_types=1);
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\DB;
+use Modules\Core\Models\User;
 use Modules\FX\Internal\Jobs\FetchFxRatesJob;
 use Modules\FX\Internal\Providers\EcbRateProvider;
 use Modules\FX\Internal\RateProviderRegistry;
 use Modules\FX\Public\Contracts\RateProvider;
 use Psr\Log\LoggerInterface;
+
+// All job runs require a user who has opted into online fetch (D-04). The job
+// re-checks fx_online_enabled as a defense-in-depth privacy gate, so every
+// "happy path" test must seed an opted-in user.
+beforeEach(function (): void {
+    $this->fxUserId = User::create([
+        'username' => 'fx-job-fixture',
+        'password' => 'fixture-password-12chars',
+        'period_start_day' => 1,
+        'base_currency' => 'EUR',
+        'fx_online_enabled' => true,
+    ])->id;
+});
 
 /**
  * Creates a fake RateProvider that always returns the given result.
@@ -70,7 +84,7 @@ describe('FetchFxRatesJob', function (): void {
         $registry = new RateProviderRegistry([$ecbProvider], $cache);
         app()->instance(RateProviderRegistry::class, $registry);
 
-        $job = new FetchFxRatesJob(1);
+        $job = new FetchFxRatesJob($this->fxUserId);
         $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class));
 
         expect(DB::table('exchange_rates')->where('rate_date', $feedDate)->count())
@@ -108,7 +122,7 @@ describe('FetchFxRatesJob', function (): void {
 
         $db = app(DatabaseManager::class);
         $logger = app(LoggerInterface::class);
-        $job = new FetchFxRatesJob(1);
+        $job = new FetchFxRatesJob($this->fxUserId);
 
         // Run twice
         $job->handle($registry, $db, $logger);
@@ -137,7 +151,7 @@ describe('FetchFxRatesJob', function (): void {
 
         $db = app(DatabaseManager::class);
         $logger = app(LoggerInterface::class);
-        $job = new FetchFxRatesJob(1);
+        $job = new FetchFxRatesJob($this->fxUserId);
         $job->handle($registry, $db, $logger);
 
         // Verify row has feed date, not today
@@ -158,10 +172,56 @@ describe('FetchFxRatesJob', function (): void {
         $registry = new RateProviderRegistry([$fakeProvider], $cache);
         $db = app(DatabaseManager::class);
 
-        $job = new FetchFxRatesJob(1);
+        $job = new FetchFxRatesJob($this->fxUserId);
         $job->handle($registry, $db, app(LoggerInterface::class));
 
         expect(DB::table('exchange_rates')->where('quote_currency', 'USD')->exists())->toBeTrue();
         expect(DB::table('exchange_rates')->where('quote_currency', 'XYZ')->exists())->toBeFalse();
+    });
+
+    it('no-ops without touching any provider when the user has online fetch disabled (D-04 privacy gate)', function (): void {
+        $disabledUser = User::create([
+            'username' => 'fx-disabled-fixture',
+            'password' => 'fixture-password-12chars',
+            'period_start_day' => 1,
+            'base_currency' => 'EUR',
+            'fx_online_enabled' => false,
+        ]);
+
+        // A provider that fails the test if it is ever consulted — the job must
+        // not reach the provider chain for an opted-out user.
+        $tripwire = new class implements RateProvider
+        {
+            public function key(): string
+            {
+                return 'tripwire';
+            }
+
+            public function priority(): int
+            {
+                return 999;
+            }
+
+            public function fetch(): array
+            {
+                throw new RuntimeException('Provider must not be consulted for an opted-out user.');
+            }
+        };
+
+        $registry = new RateProviderRegistry([$tripwire], app(Repository::class));
+
+        $job = new FetchFxRatesJob($disabledUser->id);
+        $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class));
+
+        expect(DB::table('exchange_rates')->count())->toBe(0);
+    });
+
+    it('no-ops for a non-existent user id', function (): void {
+        $registry = new RateProviderRegistry([], app(Repository::class));
+
+        $job = new FetchFxRatesJob(999_999);
+        $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class));
+
+        expect(DB::table('exchange_rates')->count())->toBe(0);
     });
 });

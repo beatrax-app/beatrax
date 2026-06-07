@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\FX\Public\Services;
 
+use Brick\Math\Exception\MathException;
 use Brick\Math\RoundingMode;
 use Brick\Money\Context\DefaultContext;
 use Brick\Money\CurrencyConverter;
@@ -147,12 +148,14 @@ final class ExchangeRateService
             $converter = new CurrencyConverter($configProvider);
             $brickSource = BrickMoney::ofMinor($money->toMinor(), $money->currency());
             $brickResult = $converter->convert($brickSource, $targetCurrency, new DefaultContext, RoundingMode::HALF_UP);
-        } catch (CurrencyConversionException) {
-            // If the direct rate is insufficient (cross-rate needed), fall back to DB rows.
+            $convertedMinor = $brickResult->getMinorAmount()->toInt();
+        } catch (CurrencyConversionException|MathException) {
+            // Direct rate insufficient (cross-rate needed) or the result overflows
+            // the platform integer range — fall back to the dated DB rows.
             return $this->convertWithRows($money, $targetCurrency, $this->fetchRatesForDate($date));
         }
 
-        $converted = Money::ofMinor($brickResult->getMinorAmount()->toInt(), $targetCurrency);
+        $converted = Money::ofMinor($convertedMinor, $targetCurrency);
 
         return new ConversionResult(
             original: $money,
@@ -175,10 +178,15 @@ final class ExchangeRateService
             return ConversionResult::passthrough($money);
         }
 
-        // Build a ConfigurableProvider from the rows (all EUR-based pairs)
+        // Build a ConfigurableProvider from the rows (all EUR-based pairs).
+        // Track the freshest date + source PER quote currency so the result
+        // metadata reflects the pair(s) actually used in this conversion, not
+        // the globally newest row (which would mis-report a stale pair as
+        // fresh — D-07/D-12).
         $configProvider = new ConfigurableProvider;
-        $latestDate = null;
-        $source = null;
+
+        /** @var array<string, array{date: string, source: ?string}> $rateMeta */
+        $rateMeta = [];
 
         foreach ($rows as $row) {
             $baseC = self::toString($row->base_currency ?? null);
@@ -198,12 +206,10 @@ final class ExchangeRateService
 
             $configProvider->setExchangeRate($baseC, $quoteC, $rateStr);
 
-            // Track the most recent date + source for metadata
             $rowDate = self::toString($row->rate_date ?? null);
 
-            if ($rowDate !== null && ($latestDate === null || $rowDate > $latestDate)) {
-                $latestDate = $rowDate;
-                $source = self::toString($row->source ?? null);
+            if ($rowDate !== null && (! isset($rateMeta[$quoteC]) || $rowDate > $rateMeta[$quoteC]['date'])) {
+                $rateMeta[$quoteC] = ['date' => $rowDate, 'source' => self::toString($row->source ?? null)];
             }
         }
 
@@ -214,17 +220,23 @@ final class ExchangeRateService
             $converter = new CurrencyConverter($basedProvider);
             $brickSource = BrickMoney::ofMinor($money->toMinor(), $money->currency());
             $brickResult = $converter->convert($brickSource, $targetCurrency, new DefaultContext, RoundingMode::HALF_UP);
-        } catch (CurrencyConversionException) {
-            // Rate pair unavailable — fall back to passthrough (D-07)
+            $convertedMinor = $brickResult->getMinorAmount()->toInt();
+        } catch (CurrencyConversionException|MathException) {
+            // Rate pair unavailable, or the converted amount overflows the
+            // platform integer range — fall back to passthrough (D-07) rather
+            // than crashing the caller (e.g. the whole net-worth render).
             return ConversionResult::passthrough($money);
         }
 
-        $converted = Money::ofMinor($brickResult->getMinorAmount()->toInt(), $targetCurrency);
+        $converted = Money::ofMinor($convertedMinor, $targetCurrency);
 
         // Determine the rate string for the effective pair used
         $rateStr = $this->deriveRateString($money->currency(), $targetCurrency, $basedProvider);
 
-        $asOf = $latestDate !== null ? CarbonImmutable::parse($latestDate) : null;
+        // As-of / source / staleness reflect the OLDEST rate actually involved
+        // in this conversion (the non-base legs), so any stale leg flags the
+        // whole figure as stale.
+        [$asOf, $source] = $this->resolveRateMetadata($money->currency(), $targetCurrency, $rateMeta);
         $isStale = $asOf !== null && $asOf->diffInDays(CarbonImmutable::now()->startOfDay()) > self::STALE_DAYS_THRESHOLD;
 
         return new ConversionResult(
@@ -236,6 +248,40 @@ final class ExchangeRateService
             asOf: $asOf,
             isStale: $isStale,
         );
+    }
+
+    /**
+     * Resolves the as-of date + source for a conversion from the metadata of
+     * the rate rows actually involved (the non-base legs of from→to). The
+     * as-of is the OLDEST involved leg so a single stale leg flags the figure;
+     * the source is that oldest leg's source.
+     *
+     * @param  array<string, array{date: string, source: ?string}>  $rateMeta
+     * @return array{0: ?CarbonImmutable, 1: ?string}
+     */
+    private function resolveRateMetadata(string $fromCurrency, string $toCurrency, array $rateMeta): array
+    {
+        $oldestDate = null;
+        $source = null;
+
+        foreach ([$fromCurrency, $toCurrency] as $currency) {
+            // The base currency (EUR) has no row — its leg is trivially fresh.
+            if ($currency === self::BASE_CURRENCY || ! isset($rateMeta[$currency])) {
+                continue;
+            }
+
+            $date = $rateMeta[$currency]['date'];
+
+            if ($oldestDate === null || $date < $oldestDate) {
+                $oldestDate = $date;
+                $source = $rateMeta[$currency]['source'];
+            }
+        }
+
+        return [
+            $oldestDate !== null ? CarbonImmutable::parse($oldestDate) : null,
+            $source,
+        ];
     }
 
     /**
