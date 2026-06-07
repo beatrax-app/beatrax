@@ -1,0 +1,128 @@
+{{--
+    /drift/watch — Subscription Drift Watch overview. Approved subscriptions
+    ranked by how much their price has crept up since the first observed charge,
+    each with a sparkline of its amount history and a deep link into the
+    series-detail chart. Blade default `{{ }}` escaping throughout; the
+    sparkline is built from numeric data only.
+--}}
+@php
+    use Modules\Ledger\Public\ValueObjects\Money;
+
+    $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
+        ->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+
+    $signed = static fn (int $minor, string $currency): string => ($minor >= 0 ? '+' : '−').$fmt(abs($minor), $currency);
+
+    $deltaClass = [
+        'up' => 'text-rose-600 dark:text-rose-400',
+        'down' => 'text-emerald-600 dark:text-emerald-400',
+        'flat' => 'text-slate-500 dark:text-slate-400',
+    ];
+
+    // Build a tiny SVG polyline (88×26) from a row's amount points.
+    $sparkline = static function (array $points): string {
+        $values = array_map(static fn (array $p): int => (int) $p['amount_minor'], $points);
+        $n = count($values);
+        if ($n < 2) {
+            return '';
+        }
+        $min = min($values);
+        $max = max($values);
+        $w = 88;
+        $h = 26;
+        $pad = 3;
+        $span = $max - $min;
+        $coords = [];
+        foreach ($values as $i => $v) {
+            $x = $pad + ($i / ($n - 1)) * ($w - 2 * $pad);
+            $y = $span === 0
+                ? $h / 2
+                : ($h - $pad) - (($v - $min) / $span) * ($h - 2 * $pad);
+            $coords[] = round($x, 1).','.round($y, 1);
+        }
+
+        return implode(' ', $coords);
+    };
+@endphp
+
+<div class="mx-auto max-w-3xl px-4 py-12">
+    <header class="mb-8">
+        <div class="flex items-baseline justify-between gap-4">
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Subscription drift</h1>
+            <a href="{{ route('drift.index') }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">Drift alerts →</a>
+        </div>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            How much each subscription's price has crept up since you started tracking it.
+        </p>
+
+        @if ($trackedCount > 0)
+            <div class="mt-6 flex flex-wrap items-baseline gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300">
+                <span class="font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $trackedCount }}</span>
+                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">tracked</span>
+                <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
+                <span class="font-medium {{ $driftedUpCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">{{ $driftedUpCount }}</span>
+                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">crept up</span>
+                <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totalMonthlyMinor, 'EUR') }}</span>
+                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">/month total</span>
+            </div>
+        @endif
+    </header>
+
+    @if ($trackedCount === 0)
+        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Nothing to watch yet</h2>
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                Once an approved subscription has been charged at least twice, its price
+                trend shows up here. Approve recurring series on
+                <a href="{{ route('recurring.index') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">Recurring</a>.
+            </p>
+        </div>
+    @else
+        <ul class="space-y-2">
+            @foreach ($rows as $row)
+                @php $dir = $row->direction(); @endphp
+                <li class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="min-w-0 flex-1">
+                            <p class="flex items-center gap-2 text-sm">
+                                <a
+                                    href="{{ route('recurring.series.show', ['seriesId' => $row->seriesId]) }}"
+                                    class="truncate font-medium text-slate-900 hover:underline underline-offset-2 dark:text-slate-100"
+                                >{{ $row->name }}</a>
+                                @if ($row->hasOpenAlert)
+                                    <a href="{{ route('drift.index') }}" class="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300" style="background: color-mix(in srgb, currentColor 14%, transparent);">open alert</a>
+                                @endif
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
+                                {{ $fmt($row->baselineMinor, $row->currency) }}
+                                <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">→</span>
+                                {{ $fmt($row->latestMinor, $row->currency) }}
+                            </p>
+                        </div>
+
+                        <svg viewBox="0 0 88 26" width="88" height="26" class="shrink-0 text-slate-300 dark:text-slate-600" aria-hidden="true" preserveAspectRatio="none">
+                            <polyline
+                                points="{{ $sparkline($row->points) }}"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+
+                        <div class="w-24 shrink-0 text-right">
+                            <p class="text-sm font-medium {{ $deltaClass[$dir] }}" style="font-variant-numeric: tabular-nums;">
+                                {{ $signed($row->deltaMinor, $row->currency) }}
+                            </p>
+                            <p class="text-xs {{ $deltaClass[$dir] }}" style="font-variant-numeric: tabular-nums;">
+                                {{ ($row->deltaPercent >= 0 ? '+' : '−').number_format(abs($row->deltaPercent), 1) }}%
+                            </p>
+                        </div>
+                    </div>
+                </li>
+            @endforeach
+        </ul>
+    @endif
+</div>

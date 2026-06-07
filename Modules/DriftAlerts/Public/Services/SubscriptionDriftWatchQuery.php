@@ -1,0 +1,108 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\DriftAlerts\Public\Services;
+
+use Illuminate\Database\DatabaseManager;
+use Modules\Core\Models\User;
+use Modules\DriftAlerts\Public\Dto\SubscriptionDriftRow;
+use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+
+/**
+ * Builds the Subscription Drift Watch overview: every approved recurring
+ * EXPENSE series (subscription) that has at least two observed amounts, with
+ * its baseline → latest price, the cumulative drift, and the amount-history
+ * sparkline. Sorted by the largest € increase first so the subscriptions that
+ * crept up the most surface at the top.
+ *
+ * This is the subscription-centric counterpart to the alert-centric /drift
+ * page: it reuses the Recurring module's occurrence history
+ * (RecurringSeriesQuery::amountTrendForSeries) and the DriftAlerts open-alert
+ * rows, rather than introducing a new history store.
+ */
+final class SubscriptionDriftWatchQuery
+{
+    /**
+     * Point ceiling for the amount trend. The drift watch reports the price
+     * change since the FIRST charge ("since you started tracking it"), so it
+     * must read the full occurrence history — not the 24-point default the
+     * series-detail chart uses, which would make the baseline the oldest of
+     * only the last 24 charges. 600 covers any realistic subscription lifetime
+     * (50 years monthly / 11 years weekly).
+     */
+    private const FULL_HISTORY_POINTS = 600;
+
+    public function __construct(
+        private readonly RecurringSeriesQuery $series,
+        private readonly DatabaseManager $db,
+    ) {}
+
+    /**
+     * @return list<SubscriptionDriftRow>
+     */
+    public function forUser(User $user): array
+    {
+        $openAlertSeriesIds = $this->openAlertSeriesIds($user);
+
+        $rows = [];
+        foreach ($this->series->allApprovedForUser($user) as $dto) {
+            if ($dto->direction !== 'expense') {
+                continue;
+            }
+
+            $trend = $this->series->amountTrendForSeries($dto->seriesId, $user, self::FULL_HISTORY_POINTS);
+            $points = $trend->points;
+            if (count($points) < 2) {
+                // A single observation can't have drifted yet.
+                continue;
+            }
+
+            // Expense amounts are negative; compare the ABSOLUTE price so a
+            // more-expensive charge reads as a positive (upward) drift.
+            $baseline = abs($points[0]['amount_minor']);
+            $latest = abs($points[count($points) - 1]['amount_minor']);
+            $delta = $latest - $baseline;
+
+            $rows[] = new SubscriptionDriftRow(
+                seriesId: $dto->seriesId,
+                name: $dto->displayName(),
+                baselineMinor: $baseline,
+                latestMinor: $latest,
+                deltaMinor: $delta,
+                deltaPercent: $baseline > 0 ? $delta / $baseline * 100 : 0.0,
+                monthlyEquivalentMinor: abs($dto->monthlyEquivalent->toMinor()),
+                currency: $trend->currency,
+                points: array_map(
+                    static fn (array $point): array => ['date' => $point['date'], 'amount_minor' => abs($point['amount_minor'])],
+                    $points,
+                ),
+                hasOpenAlert: isset($openAlertSeriesIds[$dto->seriesId]),
+            );
+        }
+
+        usort($rows, static fn (SubscriptionDriftRow $a, SubscriptionDriftRow $b): int => $b->deltaMinor <=> $a->deltaMinor);
+
+        return $rows;
+    }
+
+    /**
+     * @return array<int, true> series ids with an unresolved drift alert
+     */
+    private function openAlertSeriesIds(User $user): array
+    {
+        $ids = [];
+        $rows = $this->db->connection()->table('drift_alerts')
+            ->where('user_id', $user->id)
+            ->where('state', 'open')
+            ->get(['recurring_series_id']);
+
+        foreach ($rows as $row) {
+            if (is_numeric($row->recurring_series_id)) {
+                $ids[(int) $row->recurring_series_id] = true;
+            }
+        }
+
+        return $ids;
+    }
+}

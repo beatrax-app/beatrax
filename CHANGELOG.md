@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CHANGELOG.md` as the source of truth for release notes, automatically
   published into each GitHub Release body by the release workflow.
+- **Subscription Drift Watch** — a new `/drift/watch` page ("Subscriptions" in
+  the sidebar) that ranks your approved subscriptions by how much their price
+  has crept up since the first charge, each with a baseline → latest figure, a
+  signed €/% delta, an amount-history sparkline, and an "open alert" badge that
+  deep-links to the drift alert. The subscription-centric companion to the
+  alert-centric `/drift` page; reuses the recurring occurrence history rather
+  than adding a new store, and reads the full history so the baseline is the
+  true first charge.
 - **Category Budgets** — a new `/budgets` page (Budgets module) to set a
   monthly spending ceiling per expense category and track the current period's
   spend against it, with a status-coloured progress bar (under / near / over),

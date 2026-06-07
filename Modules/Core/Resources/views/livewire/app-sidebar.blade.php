@@ -107,6 +107,10 @@
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets
     </a>
+    <a href="{{ route('drift.watch') }}" class="side-item {{ $isActive('/drift/watch') }}">
+        <span class="ic" aria-hidden="true">↗</span>
+        Subscriptions
+    </a>
 
     <div class="side-section-label">INGESTION</div>
     <a href="{{ route('imports.new') }}" class="side-item {{ $isActive('/imports/new') }}">

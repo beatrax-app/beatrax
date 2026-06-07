@@ -23,7 +23,7 @@
     $remainingMinor = $totalBudgetMinor - $totalSpentMinor;
 @endphp
 
-<div class="mx-auto max-w-3xl">
+<div class="mx-auto max-w-3xl px-4 py-12">
     <header class="mb-8">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Budgets</h1>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
