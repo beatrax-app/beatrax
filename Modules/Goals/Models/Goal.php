@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Goals\Models;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -74,5 +75,18 @@ final class Goal extends Model
             'start_date' => 'immutable_date',
             'target_date' => 'immutable_date',
         ];
+    }
+
+    /**
+     * Override factory resolution — Laravel's default resolver derives
+     * `Database\Factories\<ModelName>Factory` which is not where module
+     * factories live. Pointing directly to GoalFactory ensures
+     * `Goal::factory()` resolves correctly in tests.
+     *
+     * @return Factory<self>
+     */
+    protected static function newFactory(): Factory
+    {
+        return GoalFactory::new();
     }
 }
