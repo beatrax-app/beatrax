@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
-status: executing
-stopped_at: "02-04 at human-verify checkpoint — Tasks 1-3 done (GoalsPage + GoalsSummaryCard + tests GREEN); awaiting browser UAT (Task 4)"
-last_updated: "2026-06-08T00:00:00.000Z"
+status: ready_to_plan
+stopped_at: Phase 2 complete (4/4) — ready to discuss Phase 3
+last_updated: 2026-06-08T21:10:08.486Z
 progress:
   total_phases: 15
   completed_phases: 1
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 7
 ---
 
@@ -23,7 +23,7 @@ progress:
 - **Requirements:** `.planning/REQUIREMENTS.md`
 - **Roadmap:** `.planning/ROADMAP.md`
 - **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-- **Current focus:** Phase 2 — Savings goals (SEED-003)
+- **Current focus:** Phase 3 — savings pots / envelopes (seed 011)
 
 ## Current Position
 
@@ -31,9 +31,9 @@ Phase: 2 (Savings goals (SEED-003)) — EXECUTING
 Plan: 4 of 4
 
 - **Milestone:** v1.3 "Local & in sync"
-- **Status:** Executing Phase 2
-- **Phase:** 1 of 15 complete; Phase 2 in progress
-- **Plan:** Phase 2 — 02-04 at human-verify checkpoint (Tasks 1-3 done; Task 4 = browser UAT pending)
+- **Status:** Ready to plan
+- **Phase:** 3 of 15 (savings pots / envelopes (seed 011))
+- **Plan:** Not started
 - **Progress:** [████████░░] 75%
 
 ```
