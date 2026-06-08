@@ -39,9 +39,6 @@ final class GoalsSummaryCard extends Component
         // Sort by projected finish date (soonest first), then by target date as
         // a fallback when there is no projection (null sorts to the end).
         usort($rows, static function (GoalProgressRow $a, GoalProgressRow $b): int {
-            $aDate = $a->projectedFinishDate ?? $b->projectedFinishDate ?? '';
-            $bDate = $b->projectedFinishDate ?? $a->projectedFinishDate ?? '';
-
             if ($a->projectedFinishDate === null && $b->projectedFinishDate === null) {
                 return 0;
             }
