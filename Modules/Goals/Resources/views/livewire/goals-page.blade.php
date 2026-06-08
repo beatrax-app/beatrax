@@ -115,8 +115,10 @@
                         <p class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
                             @if ($isCompleted || $isReached)
                                 Target reached
-                            @elseif ($row->projectedFinishDate === null)
+                            @elseif ($row->projectedFinishDate === null && $row->contributedMinor <= 0)
                                 Add contributions to see a projection
+                            @elseif ($row->projectedFinishDate === null)
+                                Building a projection&hellip;
                             @elseif ($row->projectionBeyondHorizon)
                                 Est. {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY') }} ·
                                 <span class="text-slate-400 dark:text-slate-500">(projection)</span>
