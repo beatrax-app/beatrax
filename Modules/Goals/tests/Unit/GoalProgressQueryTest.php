@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Services\GoalProgressQuery;
@@ -253,4 +254,50 @@ it('excludes another users transactions from contribution sum', function (): voi
 
 it('returns an empty list when the user has no active goals', function (): void {
     expect(app(GoalProgressQuery::class)->forUser($this->user))->toBe([]);
+});
+
+// ---------------------------------------------------------------------------
+// CR-02: contributions are converted into the goal's target_currency, NOT the
+// user's current base_currency (D-05 makes target_currency immutable so the two
+// can diverge). Numerator and denominator must share a unit.
+// ---------------------------------------------------------------------------
+
+it('converts contributions into the goal target_currency when it diverges from base_currency', function (): void {
+    // User's base currency is EUR; the goal's target currency is USD.
+    $this->user->update(['base_currency' => 'EUR']);
+
+    // Latest EUR->USD rate so the FX service can convert EUR contributions to USD.
+    DB::table('exchange_rates')->insert([
+        'base_currency' => 'EUR',
+        'quote_currency' => 'USD',
+        'rate_date' => CarbonImmutable::now()->toDateString(),
+        'rate' => '1.10000000',
+        'source' => 'test',
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    $startDate = CarbonImmutable::now()->subDays(5)->toDateString();
+    Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'target_minor' => 110000,        // 1 100.00 USD
+        'target_currency' => 'USD',
+        'start_date' => $startDate,
+        'target_date' => CarbonImmutable::now()->addDays(30)->toDateString(),
+        'status' => 'active',
+    ]);
+
+    // A 1 000.00 EUR contribution → 1 100.00 USD at 1.10 → exactly the target.
+    goalTx($this->user->id, $this->account->id, $this->run->id, 100000, 'transfer_in', CarbonImmutable::now()->toDateString());
+
+    $rows = app(GoalProgressQuery::class)->forUser($this->user);
+
+    // If the contribution were (wrongly) converted to base EUR it would stay
+    // 100000 and the goal would read 0.909 / in_progress. Converted to USD it is
+    // 110000 → fraction 1.0 → reached.
+    expect($rows[0]->contributedMinor)->toBe(110000);
+    expect($rows[0]->currency)->toBe('USD');
+    expect($rows[0]->fractionComplete)->toBe(1.0);
+    expect($rows[0]->progressState)->toBe('reached');
 });
