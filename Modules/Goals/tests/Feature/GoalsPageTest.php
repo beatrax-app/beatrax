@@ -150,6 +150,37 @@ it('updates an existing goals name and target via edit', function (): void {
     ]);
 });
 
+it('openEdit prefills the target date so the edit can be saved without re-entry', function (): void {
+    $goal = Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'name' => 'Old name',
+        'target_minor' => 50000,
+        'target_date' => '2027-06-01',
+        'status' => 'active',
+    ]);
+
+    // openEdit must populate targetDate from the stored goal (WR-01); the
+    // previous behaviour blanked it, so a subsequent save failed date validation.
+    Livewire::test(GoalsPage::class)
+        ->call('openEdit', $goal->id)
+        ->assertSet('editGoalId', $goal->id)
+        ->assertSet('name', 'Old name')
+        ->assertSet('targetDate', '2027-06-01')
+        // Save immediately without re-entering the date — must succeed.
+        ->set('name', 'New name')
+        ->set('targetAmount', '750.00')
+        ->call('updateGoal')
+        ->assertDispatched('toast')
+        ->assertSet('errorDate', '');
+
+    $this->assertDatabaseHas('goals', [
+        'id' => $goal->id,
+        'name' => 'New name',
+        'target_minor' => 75000,
+    ]);
+});
+
 it('markComplete sets status to completed and the goal remains in the list', function (): void {
     $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
