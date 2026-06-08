@@ -45,6 +45,14 @@ final class GoalProjectionService
     /** Maximum forecast horizon — project dates beyond this are extrapolated (lower-confidence). */
     private const int HORIZON_LIMIT_DAYS = 90;
 
+    /**
+     * Minimum observation history (days) before a run-rate projection is shown.
+     * Below this, one early deposit would extrapolate a misleadingly-soon finish
+     * (a goal created today divides by a 1-day window). Until enough signal
+     * accrues the card shows the "building a projection" copy instead.
+     */
+    private const int MIN_OBSERVATION_DAYS = 7;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly ExchangeRateService $fx,
@@ -101,10 +109,16 @@ final class GoalProjectionService
         // systematically understate the rate (and overstate the finish date). Use
         // the real elapsed days, floored at 1 to avoid a divide-by-zero on a goal
         // created today.
-        $observationDays = max(
-            1,
-            CarbonImmutable::parse($effectiveStart)->diffInDays(CarbonImmutable::today()),
-        );
+        // Guard 3: not enough observation history for a credible run-rate.
+        // A goal only a few days old would otherwise divide its first deposit by
+        // a 1-day window and project a finish a day or two out (WR-06). Suppress
+        // the projected date until MIN_OBSERVATION_DAYS of history exist.
+        $elapsedDays = CarbonImmutable::parse($effectiveStart)->diffInDays(CarbonImmutable::today());
+        if ($elapsedDays < self::MIN_OBSERVATION_DAYS) {
+            return ['date' => null, 'beyondHorizon' => false];
+        }
+
+        $observationDays = max(1, $elapsedDays);
         $dailyRateMinor = $windowSum / $observationDays;
 
         if ($dailyRateMinor <= 0.0) {

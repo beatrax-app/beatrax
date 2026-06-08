@@ -116,6 +116,35 @@ it('returns a projected finish date when there is a contribution history', funct
     expect($rows[0]->contributedMinor)->toBe(60000);
 });
 
+// WR-06 follow-up: a goal younger than the minimum observation window must NOT
+// project a finish date. One large early deposit divided by a 1-3 day window
+// would otherwise extrapolate a misleadingly-soon finish; the card shows the
+// "building a projection" copy until enough history accrues.
+it('suppresses the projected date until the minimum observation window has elapsed', function (): void {
+    // Goal created 3 days ago (< 7-day minimum) with a single large deposit.
+    $startDate = CarbonImmutable::now()->subDays(3)->toDateString();
+    Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'target_minor' => 500000,
+        'start_date' => $startDate,
+        'target_date' => CarbonImmutable::now()->addDays(60)->toDateString(),
+        'status' => 'active',
+    ]);
+
+    // A big day-2 deposit that, divided by the tiny window, would project a
+    // finish only days out.
+    projTx($this->user->id, $this->account->id, $this->run->id, 200000, CarbonImmutable::now()->subDays(1)->toDateString());
+
+    $rows = app(GoalProgressQuery::class)->forUser($this->user);
+
+    // Contributions still count (200 000 < 500 000 → in_progress) but no
+    // projected date is offered yet.
+    expect($rows[0]->contributedMinor)->toBe(200000);
+    expect($rows[0]->projectedFinishDate)->toBeNull();
+    expect($rows[0]->progressState)->toBe('in_progress');
+});
+
 it('sets projectionBeyondHorizon to false when projected finish is within 90 days', function (): void {
     // High daily contribution rate → finish date very soon (within horizon).
     $startDate = CarbonImmutable::now()->subDays(10)->toDateString();
