@@ -9,6 +9,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Goals\Public\Exceptions\GoalNotFoundException;
+use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Goals\Public\Services\GoalWriter;
 
@@ -97,7 +99,7 @@ final class GoalsPage extends Component
                 $this->targetDate,
                 $accountId,
             );
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidGoalAmountException $e) {
             $this->errorAmount = 'Enter a valid amount greater than zero.';
 
             return;
@@ -129,7 +131,7 @@ final class GoalsPage extends Component
                 $this->editGoalId = $goalId;
                 $this->name = $row->name;
                 $this->targetAmount = number_format($row->targetMinor / 100, 2, '.', '');
-                $this->targetDate = '';   // no target_date on GoalProgressRow; will be left blank for now
+                $this->targetDate = $row->targetDate;   // prefill from the goal's stored target date (WR-01)
                 $this->accountId = $row->accountId !== null ? (string) $row->accountId : '';
                 $this->clearErrors();
                 $this->dispatch('modal-show', name: 'goal-form');
@@ -174,14 +176,13 @@ final class GoalsPage extends Component
                 $this->targetDate,
                 $accountId,
             );
-        } catch (\InvalidArgumentException $e) {
-            $msg = $e->getMessage();
-            if (str_contains($msg, 'not found')) {
-                // Cross-user attempt — silently ignore.
-                $this->resetForm();
+        } catch (GoalNotFoundException $e) {
+            // Cross-user / missing goal — silently ignore (control flow on
+            // exception type, not message text — WR-05).
+            $this->resetForm();
 
-                return;
-            }
+            return;
+        } catch (InvalidGoalAmountException $e) {
             $this->errorAmount = 'Enter a valid amount greater than zero.';
 
             return;
@@ -215,16 +216,24 @@ final class GoalsPage extends Component
      * Show the in-card micro-confirm for archiving a goal.
      * Actual archive happens in `archive()`.
      */
-    public function confirmArchive(int $goalId): void
+    public function confirmArchive(CurrentUser $currentUser, int $goalId): void
     {
+        if (! $currentUser->isAuthenticated()) {
+            return;
+        }
+
         $this->archivingGoalId = $goalId;
     }
 
     /**
      * Cancel the archive micro-confirm.
      */
-    public function cancelArchive(): void
+    public function cancelArchive(CurrentUser $currentUser): void
     {
+        if (! $currentUser->isAuthenticated()) {
+            return;
+        }
+
         $this->archivingGoalId = 0;
     }
 
@@ -275,6 +284,23 @@ final class GoalsPage extends Component
         DatabaseManager $db,
         ViewFactory $views,
     ): View {
+        // Defence-in-depth: the `auth` route middleware makes this unreachable,
+        // but guard anyway so an unauthenticated render degrades to the empty
+        // page instead of throwing NotAuthenticatedException (IN-03).
+        if (! $currentUser->isAuthenticated()) {
+            $view = $views->make('goals::livewire.goals-page', [
+                'rows' => [],
+                'archived' => [],
+                'accounts' => [],
+                'baseCurrency' => 'EUR',
+            ]);
+
+            /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
+            $view->extends('layouts.app', ['title' => 'Goals · beatrax']);
+
+            return $view;
+        }
+
         $user = $currentUser->user();
         $rows = $query->forUser($user);
         $archived = $query->archivedForUser($user);
