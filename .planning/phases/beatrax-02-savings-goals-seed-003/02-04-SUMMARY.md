@@ -149,3 +149,38 @@ The following verification steps are pending browser review:
 - [x] Arch suite GREEN (64 tests)
 
 ## Self-Check: PASSED
+
+---
+
+## Task 4 — Human UAT: PASSED (2026-06-08)
+
+Driven browser walkthrough (Chrome MCP) against the running app at
+`http://localhost:8000/goals`. GIF: `goals_uat_walkthrough.gif`.
+
+| Step | Check | Result |
+|------|-------|--------|
+| 1 | Page header + subtitle + "Add goal" + sidebar nav + empty-state | PASS |
+| 2 | Create modal (correct width), fields, "No account — track manually" first, create → toast + card | PASS |
+| 3 | Slim bar, mono tabular contributed/target + faint slash, "Add contributions to see a projection" | PASS |
+| 5 | kebab → Archive → in-card micro-confirm → toast → "Archived goals (N)" disclosure → Restore | PASS |
+| 6 | Dashboard Goals summary card renders after Net Worth card | PASS |
+| 7 | Light/dark tokens hold on the Goals surface | PASS |
+| 4 | Account-linked transfer-driven progress + ≥100% Reached badge | NOT DRIVEN (needs seeded linked-account transfers) — logic unit-verified by GoalProgressQueryTest (GOAL-02/03, incl. `reached` bucket) |
+
+## Post-checkpoint deviations (fixes applied during UAT)
+
+UAT exposed an **app-wide** Flux-modal defect (latent before Phase 2; the
+goals modal was the first surface to trigger it) plus two minor polish items.
+All fixed, rebuilt, and re-verified in the browser; 29 Goals tests still GREEN.
+
+- `718ee33` fix(02-04): repair Flux modal width collapse. The `@theme`
+  `--spacing-{xs..xl}` named tokens are what Tailwind v4 resolves Flux's
+  `:where()`-wrapped modal width defaults (`min-w-xs`/`max-w-xl`) through, so
+  every bare `<flux:modal>` collapsed to 8px/32px. Pinned canonical container
+  widths on the Flux default-modal dialog (`resources/css/app.css`); flyout
+  drawers use `w-*` and are untouched. Also restores Categorization, Community,
+  and the other bare-default modals.
+- `99f2258` fix(02-04): goal modal now dispatches `modal-close` (Flux's real
+  event; it was `modal-hide`, which Flux ignores) so it dismisses on save; and
+  the modal subtitle now carries a real description instead of duplicating the
+  title.

@@ -27,7 +27,7 @@
 
 ### Track 1 — Goals & motivation
 - [x] **Phase 1: Base-currency FX conversion** - Pluggable + offline FX so non-EUR balances roll into one reporting currency. _(completed 2026-06-07)_
-- [ ] **Phase 2: Savings goals (SEED-003)** - Target amount/date, contribution tracking, forecast-driven finish date.
+- [x] **Phase 2: Savings goals (SEED-003)** - Target amount/date, contribution tracking, forecast-driven finish date. (completed 2026-06-08)
 - [ ] **Phase 3: Savings pots / envelopes (SEED-011)** - Virtual sub-balances that reconcile against a real account.
 
 ### Track 2 — Take it with you
@@ -82,7 +82,7 @@ Plans:
 - [x] 02-01-PLAN.md — Goals module scaffold: goals table + Goal model + factory + provider/route registration + Wave 0 test harness
 - [x] 02-02-PLAN.md — GoalProgressQuery + GoalProjectionService + GoalProgressRow DTO (contribution sum, FX, run-rate finish date)
 - [x] 02-03-PLAN.md — GoalWriter: create/edit + parseAmount + account-ownership validation + markComplete/archive/restore lifecycle
-- [ ] 02-04-PLAN.md — /goals Livewire page + Flux create/edit modal + lifecycle UI + dashboard summary card + sidebar/dashboard wiring
+- [x] 02-04-PLAN.md — /goals Livewire page + Flux create/edit modal + lifecycle UI + dashboard summary card + sidebar/dashboard wiring
 
 ### Phase 3: Savings pots / envelopes (SEED-011)
 **Goal**: User can carve a single real account balance into named virtual pots that always reconcile back to the real balance.
@@ -222,7 +222,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Base-currency FX conversion | 5/5 | Complete | 2026-06-07 |
-| 2. Savings goals | 3/4 | In Progress|  |
+| 2. Savings goals | 4/4 | Complete   | 2026-06-08 |
 | 3. Savings pots / envelopes | 0/0 | Not started | - |
 | 4. Responsive + installable PWA | 0/0 | Not started | - |
 | 5. PIN / biometric app-lock | 0/0 | Not started | - |
