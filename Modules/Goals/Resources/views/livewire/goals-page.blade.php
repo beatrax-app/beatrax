@@ -233,7 +233,7 @@
                 {{ $editGoalId ? 'Edit goal' : 'Create a savings goal' }}
             </h2>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {{ $editGoalId ? 'Edit goal' : 'Create a savings goal' }}
+                {{ $editGoalId ? 'Update the name, target, date, or linked account.' : 'Set a target amount and date to track your savings progress.' }}
             </p>
 
             <form
