@@ -104,7 +104,7 @@ final class GoalsPage extends Component
         }
 
         $this->resetForm();
-        $this->dispatch('modal-hide', name: 'goal-form');
+        $this->dispatch('modal-close', name: 'goal-form');
         $this->toast('Goal created.');
     }
 
@@ -188,7 +188,7 @@ final class GoalsPage extends Component
         }
 
         $this->resetForm();
-        $this->dispatch('modal-hide', name: 'goal-form');
+        $this->dispatch('modal-close', name: 'goal-form');
         $this->toast('Goal updated.');
     }
 
@@ -262,7 +262,7 @@ final class GoalsPage extends Component
     public function cancel(): void
     {
         $this->resetForm();
-        $this->dispatch('modal-hide', name: 'goal-form');
+        $this->dispatch('modal-close', name: 'goal-form');
     }
 
     // -----------------------------------------------------------------------
