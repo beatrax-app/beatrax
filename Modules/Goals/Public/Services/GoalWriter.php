@@ -9,6 +9,8 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Goals\Models\Goal;
+use Modules\Goals\Public\Exceptions\GoalNotFoundException;
+use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 
 /**
  * The single write path for savings goals.
@@ -45,8 +47,8 @@ final class GoalWriter
      * a `withoutGlobalScope` upsert with the authed `$user` as authoritative.
      * `status` is hard-coded to 'active'; it is never accepted from the caller.
      *
-     * @throws \InvalidArgumentException when `$rawAmount` is invalid or when
-     *                                   `$accountId` is not owned by `$user`.
+     * @throws InvalidGoalAmountException when `$rawAmount` is invalid or non-positive.
+     * @throws \InvalidArgumentException when `$accountId` is not owned by `$user`.
      */
     public function save(
         User $user,
@@ -57,26 +59,29 @@ final class GoalWriter
     ): Goal {
         $minor = $this->parseAmount($rawAmount);
         if ($minor === null) {
-            throw new \InvalidArgumentException('Invalid or non-positive target amount.');
+            throw new InvalidGoalAmountException('Invalid or non-positive target amount.');
         }
 
         $this->assertOwnedAccountOrNull($user, $accountId);
 
+        // Always create a fresh goal — `save()` is the dedicated create path and
+        // the lifecycle methods own all subsequent mutation. An `updateOrCreate`
+        // keyed on (user_id, name, start_date) would silently overwrite an
+        // existing same-name same-day goal (e.g. two "Holiday" goals), which
+        // contradicts the create contract (WR-02). Bypass the BelongsToUser
+        // global scope so the authed `$user` stays authoritative regardless of
+        // guard state (T-02-12).
         /** @var Goal $goal */
-        $goal = Goal::query()->withoutGlobalScope(UserScope::class)->updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'name' => $name,
-                'start_date' => CarbonImmutable::today()->toDateString(),
-            ],
-            [
-                'account_id' => $accountId,
-                'target_minor' => $minor,
-                'target_currency' => $user->base_currency,
-                'target_date' => $targetDate,
-                'status' => 'active',
-            ],
-        );
+        $goal = Goal::query()->withoutGlobalScope(UserScope::class)->create([
+            'user_id' => $user->id,
+            'name' => $name,
+            'start_date' => CarbonImmutable::today()->toDateString(),
+            'account_id' => $accountId,
+            'target_minor' => $minor,
+            'target_currency' => $user->base_currency,
+            'target_date' => $targetDate,
+            'status' => 'active',
+        ]);
 
         return $goal;
     }
@@ -89,9 +94,9 @@ final class GoalWriter
      * `status` is never touched here (T-02-10; only the lifecycle methods may
      * mutate it).
      *
-     * @throws \InvalidArgumentException when the goal is not found (cross-user /
-     *                                   missing), when `$rawAmount` is invalid, or when `$accountId` is not
-     *                                   owned by `$user`.
+     * @throws GoalNotFoundException when the goal is not found (cross-user / missing).
+     * @throws InvalidGoalAmountException when `$rawAmount` is invalid or non-positive.
+     * @throws \InvalidArgumentException when `$accountId` is not owned by `$user`.
      */
     public function update(
         User $user,
@@ -101,15 +106,18 @@ final class GoalWriter
         string $targetDate,
         ?int $accountId,
     ): Goal {
-        // BelongsToUser global scope makes a foreign goalId resolve to null.
-        $goal = Goal::find($goalId);
+        // Defensively re-assert ownership against the PASSED $user rather than
+        // relying solely on the ambient BelongsToUser global scope (which reads
+        // CurrentUser and is a no-op in an unauthenticated context). A foreign or
+        // missing goalId resolves to null → GoalNotFoundException (WR-04).
+        $goal = $this->findOwnedGoal($user, $goalId);
         if (! $goal instanceof Goal) {
-            throw new \InvalidArgumentException('Goal not found or not owned by user.');
+            throw new GoalNotFoundException('Goal not found or not owned by user.');
         }
 
         $minor = $this->parseAmount($rawAmount);
         if ($minor === null) {
-            throw new \InvalidArgumentException('Invalid or non-positive target amount.');
+            throw new InvalidGoalAmountException('Invalid or non-positive target amount.');
         }
 
         $this->assertOwnedAccountOrNull($user, $accountId);
@@ -130,7 +138,7 @@ final class GoalWriter
      */
     public function markComplete(User $user, int $goalId): void
     {
-        $goal = Goal::find($goalId);
+        $goal = $this->findOwnedGoal($user, $goalId);
         if (! $goal instanceof Goal) {
             return; // cross-user / missing — silent no-op (T-02-09)
         }
@@ -146,7 +154,7 @@ final class GoalWriter
      */
     public function archive(User $user, int $goalId): void
     {
-        $goal = Goal::find($goalId);
+        $goal = $this->findOwnedGoal($user, $goalId);
         if (! $goal instanceof Goal) {
             return; // cross-user / missing — silent no-op (T-02-09)
         }
@@ -161,7 +169,7 @@ final class GoalWriter
      */
     public function restore(User $user, int $goalId): void
     {
-        $goal = Goal::find($goalId);
+        $goal = $this->findOwnedGoal($user, $goalId);
         if (! $goal instanceof Goal) {
             return; // cross-user / missing — silent no-op (T-02-09)
         }
@@ -205,6 +213,25 @@ final class GoalWriter
         $minor = (int) $whole * 100 + (int) str_pad($frac, 2, '0');
 
         return $minor > 0 ? $minor : null;
+    }
+
+    /**
+     * Resolve a goal by id, scoped explicitly to the PASSED `$user` rather than
+     * the ambient BelongsToUser global scope. Bypassing the global scope and
+     * re-asserting `user_id = $user->id` makes ownership independent of guard
+     * state — in an unauthenticated context UserScope applies no filter, so
+     * relying on it alone is a latent IDOR (WR-04). Returns null for a missing
+     * or cross-user id.
+     */
+    private function findOwnedGoal(User $user, int $goalId): ?Goal
+    {
+        /** @var Goal|null $goal */
+        $goal = Goal::query()
+            ->withoutGlobalScope(UserScope::class)
+            ->where('user_id', $user->id)
+            ->find($goalId);
+
+        return $goal;
     }
 
     /**
