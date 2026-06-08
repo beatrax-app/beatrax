@@ -84,15 +84,28 @@ final class GoalProjectionService
             ->where('posted_at', '>=', $effectiveStart)
             ->get(['amount_minor', 'currency']);
 
+        // Convert the window's contributions into the goal's own target_currency
+        // so the run-rate numerator shares a unit with target_minor (the
+        // remaining-amount denominator). Using base_currency here would mix units
+        // for any goal whose target_currency diverges from base_currency (D-05).
         $windowSum = 0;
         foreach ($rows as $r) {
             $money = Money::ofMinor(self::toInt($r->amount_minor), self::toStr($r->currency));
-            $result = $this->fx->convertToBase($money, $user->base_currency);
+            $result = $this->fx->convertToBase($money, $goal->target_currency);
             $windowSum += $result->converted->toMinor();
         }
 
-        // dailyRateMinor = sum over the window / window length (constant denominator).
-        $dailyRateMinor = $windowSum / self::TRAILING_WINDOW_DAYS;
+        // dailyRateMinor = sum over the window / the ACTUAL elapsed observation
+        // window (not the constant 90). For a goal younger than TRAILING_WINDOW_DAYS,
+        // $effectiveStart is clamped to its start_date, so dividing by 90 would
+        // systematically understate the rate (and overstate the finish date). Use
+        // the real elapsed days, floored at 1 to avoid a divide-by-zero on a goal
+        // created today.
+        $observationDays = max(
+            1,
+            CarbonImmutable::parse($effectiveStart)->diffInDays(CarbonImmutable::today()),
+        );
+        $dailyRateMinor = $windowSum / $observationDays;
 
         if ($dailyRateMinor <= 0.0) {
             return ['date' => null, 'beyondHorizon' => false];
