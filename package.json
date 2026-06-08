@@ -8,7 +8,7 @@
     "devDependencies": {
         "@tailwindcss/vite": "^4.0",
         "apexcharts": "^3.54.1",
-        "axios": "^1.7",
+        "axios": "^1.17",
         "concurrently": "^10.0",
         "laravel-vite-plugin": "^3.0",
         "tailwindcss": "^4.0",
