@@ -169,6 +169,29 @@ td.date,
 }
 
 /*
+ * Flux modal default width — collision repair.
+ *
+ * Flux ships every standard <flux:modal> dialog with the :where()-wrapped
+ * defaults `[:where(&)]:min-w-xs` / `[:where(&)]:max-w-xl` (zero specificity
+ * so a modal's own width class can win). Tailwind v4 resolves those named
+ * width utilities through the `--spacing-{name}` namespace — and the named
+ * `--spacing-xs..xl` tokens defined in @theme above (for `p-md`, `gap-sm`,
+ * …) make them resolve to 0.5rem / 2rem. Result: every bare <flux:modal>
+ * (Goals, Categorization, Community, …) collapsed to an ~48px sliver.
+ *
+ * Restore Flux's intended dialog width range with the canonical container
+ * values. Unlayered + element-scoped to the dialog so it reliably overrides
+ * the layered :where() default; flyout drawers use `w-*` (not these two
+ * classes) and are untouched.
+ */
+[data-flux-modal] > dialog:where([class~="[:where(&)]:max-w-xl"]) {
+    max-width: 36rem;
+}
+[data-flux-modal] > dialog:where([class~="[:where(&)]:min-w-xs"]) {
+    min-width: 20rem;
+}
+
+/*
  * Sidebar primitives (sketch-validated, Phase 16 D-05). The bespoke
  * classes below honour the token block above — no hard-coded colors,
  * sizes flip with `.dark` automatically.
