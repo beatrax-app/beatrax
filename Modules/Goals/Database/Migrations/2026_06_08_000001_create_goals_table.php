@@ -48,7 +48,13 @@ return new class extends Migration
             // orphans the goal (unlinked) rather than cascade-deleting it.
             $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $table->string('name');
-            $table->bigInteger('target_minor');                     // signed BIGINT minor — NO float
+            // Signed BIGINT minor — NO float. Always positive in practice (a
+            // target amount, not a signed flow); positivity is enforced in
+            // GoalWriter::parseAmount, the sole write path. A DB-level CHECK is
+            // intentionally omitted (overkill for SQLite-first) — a direct insert
+            // or seeder bypassing the writer could store a non-positive value
+            // (IN-02), so any future alternate write path must re-assert it.
+            $table->bigInteger('target_minor');
             $table->string('target_currency', 3)->default('EUR');   // base currency at creation (D-05)
             $table->date('start_date');                             // contributions count from here (D-01)
             $table->date('target_date');
