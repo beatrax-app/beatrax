@@ -301,3 +301,66 @@ it('converts contributions into the goal target_currency when it diverges from b
     expect($rows[0]->fractionComplete)->toBe(1.0);
     expect($rows[0]->progressState)->toBe('reached');
 });
+
+// CR-02 (inverse, common real case): a foreign-currency CONTRIBUTION is
+// converted INTO an EUR goal's target_currency via the EUR-based provider's
+// derived cross-rate. Validates the conversion direction the typical user hits
+// (USD merchant credit landing in a EUR goal), which the divergence test above
+// only exercises in the opposite direction.
+it('converts a USD contribution into the goal target_currency for a EUR goal', function (): void {
+    $this->user->update(['base_currency' => 'EUR']);
+
+    // EUR->USD = 1.10, so the derived USD->EUR cross-rate is 1/1.10.
+    DB::table('exchange_rates')->insert([
+        'base_currency' => 'EUR',
+        'quote_currency' => 'USD',
+        'rate_date' => CarbonImmutable::now()->toDateString(),
+        'rate' => '1.10000000',
+        'source' => 'test',
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    $startDate = CarbonImmutable::now()->subDays(5)->toDateString();
+    Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'target_minor' => 200000,        // 2 000.00 EUR
+        'target_currency' => 'EUR',
+        'start_date' => $startDate,
+        'target_date' => CarbonImmutable::now()->addDays(60)->toDateString(),
+        'status' => 'active',
+    ]);
+
+    // A 1 100.00 USD transfer_in → 1 000.00 EUR at 1/1.10 (exact, HALF_UP).
+    Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'transfer_in',
+        'posted_at' => CarbonImmutable::now()->toDateString(),
+        'booked_at' => CarbonImmutable::now()->toDateString().' 12:00:00',
+        'value_date' => CarbonImmutable::now()->toDateString(),
+        'amount_minor' => 110000,
+        'currency' => 'USD',
+        'settled_amount_minor' => 110000,
+        'settled_currency' => 'USD',
+        'counterparty_name' => 'USD merchant',
+        'counterparty_normalized' => 'usd merchant',
+        'normalization_version' => 1,
+        'category_id' => null,
+        'source_format' => 'camt053',
+        'import_run_id' => $this->run->id,
+        'source_row_index' => 9001,
+        'fingerprint' => str_pad('9001', 64, '0', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+
+    $rows = app(GoalProgressQuery::class)->forUser($this->user);
+
+    // Converted to EUR: 110000 USD / 1.10 = 100000 EUR (not the raw 110000,
+    // which would wrongly read 0.55 in EUR minor units).
+    expect($rows[0]->contributedMinor)->toBe(100000);
+    expect($rows[0]->currency)->toBe('EUR');
+    expect($rows[0]->fractionComplete)->toBe(0.5);
+    expect($rows[0]->progressState)->toBe('in_progress');
+});
