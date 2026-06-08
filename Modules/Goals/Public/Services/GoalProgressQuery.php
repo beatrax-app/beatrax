@@ -131,6 +131,7 @@ final class GoalProgressQuery
                 contributedMinor: $contributedMinor,
                 currency: self::toStr($row->target_currency),
                 fractionComplete: $fractionComplete,
+                targetDate: self::toDateStr($row->target_date),
                 status: self::toStr($row->status),
                 progressState: $progressState,
                 projectedFinishDate: $projectedDate,
@@ -152,7 +153,7 @@ final class GoalProgressQuery
         $goal = new Goal;
         $goal->forceFill([
             'id' => self::toInt($row->id),
-            'user_id' => self::toInt($row->id), // placeholder; not used by projection
+            'user_id' => null, // not loaded on the read path; projection takes $user explicitly
             'account_id' => $row->account_id !== null ? self::toInt($row->account_id) : null,
             'name' => self::toStr($row->name),
             'target_minor' => self::toInt($row->target_minor),
@@ -166,8 +167,12 @@ final class GoalProgressQuery
     }
 
     /**
-     * Sums base-converted credits (transfer_in, income) on the linked account
-     * since the goal's start_date. Returns 0 for unlinked goals.
+     * Sums credits (transfer_in, income) on the linked account since the goal's
+     * start_date, converted into the goal's own `target_currency` (NOT the user's
+     * current base currency — D-05 makes target_currency immutable so it can
+     * diverge from base_currency; numerator and denominator must share a unit so
+     * fractionComplete, the "reached" flip, and the rendered figure are all
+     * consistent). Returns 0 for unlinked goals.
      *
      * Every raw read carries an explicit user_id guard (T-02-04).
      */
@@ -187,7 +192,7 @@ final class GoalProgressQuery
         $contributedMinor = 0;
         foreach ($rows as $r) {
             $money = Money::ofMinor(self::toInt($r->amount_minor), self::toStr($r->currency));
-            $result = $this->fx->convertToBase($money, $user->base_currency);
+            $result = $this->fx->convertToBase($money, $goal->target_currency);
             $contributedMinor += $result->converted->toMinor();
         }
 
@@ -202,5 +207,24 @@ final class GoalProgressQuery
     private static function toStr(mixed $value): string
     {
         return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
+    }
+
+    /**
+     * Normalises a raw DB date value to a 'Y-m-d' string suitable for a
+     * `<input type="date">` prefill, regardless of whether the driver returns
+     * 'Y-m-d' or 'Y-m-d H:i:s'. Returns '' for an empty/unparseable value.
+     */
+    private static function toDateStr(mixed $value): string
+    {
+        $raw = self::toStr($value);
+        if ($raw === '') {
+            return '';
+        }
+
+        try {
+            return CarbonImmutable::parse($raw)->toDateString();
+        } catch (\Throwable) {
+            return '';
+        }
     }
 }
