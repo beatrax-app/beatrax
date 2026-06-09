@@ -11,6 +11,7 @@ use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Dto\GoalProgressRow;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Pots\Public\Services\PotBalanceQuery;
 use stdClass;
 
 /**
@@ -42,6 +43,7 @@ final class GoalProgressQuery
         private readonly DatabaseManager $db,
         private readonly ExchangeRateService $fx,
         private readonly GoalProjectionService $projection,
+        private readonly PotBalanceQuery $potBalance,
     ) {}
 
     /**
@@ -99,6 +101,9 @@ final class GoalProgressQuery
             return [];
         }
 
+        // D-10: batch-load pot balances keyed by goal_id — avoids N+1 in the loop.
+        $linkedPotBalances = $this->potBalance->linkedPotBalancesForUser($user);
+
         // Build a lightweight Goal model per row so GoalProjectionService can
         // consume the model's typed properties (start_date as CarbonImmutable,
         // account_id, target_minor, etc.) without re-implementing casting here.
@@ -109,7 +114,24 @@ final class GoalProgressQuery
                 ? $row->account_name
                 : null;
 
-            $contributedMinor = $this->sumContributions($goal, $user);
+            // D-10: if this goal has an active linked pot, use the pot's balance
+            // as contributedMinor (FX-converted into target_currency when needed).
+            // Otherwise fall back to the Phase 2 sumContributions() path.
+            $goalId = self::toInt($row->id);
+            if (isset($linkedPotBalances[$goalId])) {
+                $potMinor = $linkedPotBalances[$goalId];
+                $potCurrency = $this->potBalance->currencyForLinkedPot($goalId, $user);
+                $targetCurrency = self::toStr($row->target_currency);
+
+                if ($potCurrency !== null && $potCurrency !== $targetCurrency) {
+                    $money = Money::ofMinor($potMinor, $potCurrency);
+                    $contributedMinor = $this->fx->convertToBase($money, $targetCurrency)->converted->toMinor();
+                } else {
+                    $contributedMinor = $potMinor;
+                }
+            } else {
+                $contributedMinor = $this->sumContributions($goal, $user);
+            }
             $targetMinor = self::toInt($row->target_minor);
             $fractionComplete = $targetMinor > 0 ? $contributedMinor / $targetMinor : 0.0;
 
