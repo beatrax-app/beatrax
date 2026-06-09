@@ -20,7 +20,6 @@ services:
     working_dir: /app
     volumes:
       - .:/app
-      - /Users/wessel/Development/nightworksio/beatrax/vendor:/app/vendor:ro
       - composer-cache:/tmp/composer
     environment:
       COMPOSER_HOME: /tmp/composer
