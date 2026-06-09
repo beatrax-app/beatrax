@@ -6,6 +6,7 @@ namespace Modules\Pots\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Pots\Internal\Http\Livewire\PotsPage;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 
 /**
@@ -39,8 +40,6 @@ final class PotsServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'pots');
         }
 
-        // Plan 03: $livewire->component('pots.pots-page', PotsPage::class);
-        // Registered here once PotsPage exists (same pattern as GoalsServiceProvider
-        // which registers GoalsPage after Plan 04).
+        $livewire->component('pots.pots-page', PotsPage::class);
     }
 }
