@@ -152,6 +152,29 @@ final class PotBalanceQuery
     }
 
     /**
+     * Returns the id of the active pot linked to $goalId for $user, or null
+     * when no such pot exists. Used by GoalsPage to prefill the pot-picker
+     * when opening the edit modal (D-11).
+     */
+    public function linkedPotIdForGoal(int $goalId, User $user): ?int
+    {
+        $row = $this->db->connection()
+            ->table('pots')
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->where('goal_id', $goalId)
+            ->first(['id']);
+
+        if ($row === null) {
+            return null;
+        }
+
+        $id = $row->id ?? null;
+
+        return is_numeric($id) ? (int) $id : null;
+    }
+
+    /**
      * Returns the currency of the active pot linked to $goalId for $user, or
      * null when no such pot exists. Used by GoalProgressQuery to decide whether
      * FX conversion is needed (D-10).
