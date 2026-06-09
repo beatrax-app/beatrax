@@ -296,7 +296,7 @@
                     <label for="goal-account" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Savings account (optional)</label>
                     <select
                         id="goal-account"
-                        wire:model="accountId"
+                        wire:model.live="accountId"
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                     >
                         <option value="">No account — track manually</option>
@@ -304,6 +304,30 @@
                             <option value="{{ $account->id }}">{{ $account->name }}</option>
                         @endforeach
                     </select>
+                </div>
+
+                {{-- Linked pot (optional) — D-11; settable from goal side --}}
+                <div>
+                    <label for="goal-pot" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Linked pot (optional)</label>
+                    <select
+                        id="goal-pot"
+                        wire:model="linkedPotId"
+                        @if ($accountId === '') disabled @endif
+                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 disabled:opacity-50 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                    >
+                        @if ($accountId === '')
+                            <option value="" disabled>Select an account first</option>
+                        @else
+                            <option value="">No pot — use transfer tracking</option>
+                            @foreach ($pots as $pot)
+                                <option value="{{ $pot->id }}">{{ $pot->name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                    @if ($errorLinkedPot !== '')
+                        <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorLinkedPot }}</p>
+                    @endif
+                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">When linked, the pot's balance drives this goal's progress.</p>
                 </div>
 
                 {{-- Modal footer --}}
