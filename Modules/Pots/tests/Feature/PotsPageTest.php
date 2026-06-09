@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
 use Modules\Pots\Internal\Http\Livewire\PotsPage;
 use Modules\Pots\Models\Pot;
 
@@ -37,6 +39,15 @@ beforeEach(function (): void {
         'kind' => 'asn',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
+    ]);
+
+    $this->run = ImportRun::create([
+        'user_id' => $this->user->id,
+        'source_format' => 'camt053',
+        'raw_file_path' => '/tmp/test.xml',
+        'sha256' => str_repeat('a', 64),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
     ]);
 });
 
@@ -131,7 +142,7 @@ it('fundPot inserts a fund movement and the pot balance reflects it', function (
         'normalization_version' => 1,
         'category_id' => null,
         'source_format' => 'camt053',
-        'import_run_id' => null,
+        'import_run_id' => $this->run->id,
         'source_row_index' => 1,
         'fingerprint' => str_pad('fund1', 64, '0', STR_PAD_LEFT),
         'fingerprint_version' => 1,
