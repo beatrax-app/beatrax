@@ -1,0 +1,11 @@
+{
+    "name": "Pots",
+    "alias": "pots",
+    "description": "Virtual savings pots / envelope allocations over real account balances.",
+    "keywords": ["pots", "envelopes", "allocation"],
+    "priority": 10,
+    "providers": [
+        "Modules\\Pots\\Providers\\PotsServiceProvider"
+    ],
+    "files": []
+}
