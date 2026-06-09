@@ -137,6 +137,10 @@
         <span class="ic" aria-hidden="true">◎</span>
         Goals
     </a>
+    <a href="{{ route('pots.index') }}" class="side-item {{ $isActive('/pots') }}">
+        <span class="ic" aria-hidden="true">◫</span>
+        Pots
+    </a>
     <a href="{{ route('drift.watch') }}" class="side-item {{ $isActive('/drift/watch') }}">
         <span class="ic" aria-hidden="true">↗</span>
         Subscriptions
