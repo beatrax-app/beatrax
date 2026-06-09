@@ -6,7 +6,6 @@ namespace Modules\Pots\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
-use Modules\Pots\Public\Services\PotBalanceQuery;
 
 /**
  * Wires the Pots module: migrations, routes, views, Livewire component
@@ -23,7 +22,9 @@ final class PotsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(PotBalanceQuery::class);
+        // Plan 02: $this->app->singleton(\Modules\Pots\Public\Services\PotBalanceQuery::class);
+        // Uncommented in Plan 02 once PotBalanceQuery exists. Larastan level 10 flags a
+        // missing class in the use-import, so the singleton is deferred per plan instructions.
         // PotWriter is stateless — no singleton needed (same as BudgetWriter)
     }
 
