@@ -11,6 +11,7 @@ use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Pots\Models\Pot;
 
 uses(RefreshDatabase::class);
 
@@ -363,4 +364,71 @@ it('converts a USD contribution into the goal target_currency for a EUR goal', f
     expect($rows[0]->currency)->toBe('EUR');
     expect($rows[0]->fractionComplete)->toBe(0.5);
     expect($rows[0]->progressState)->toBe('in_progress');
+});
+
+// ---------------------------------------------------------------------------
+// POTS-04 / D-10: linked pot balance drives goal progress
+//
+// These tests reference PotBalanceQuery (Plan 02) and GoalProgressQuery being
+// wired to inject PotBalanceQuery (Plan 04). They will fail until Plan 04
+// lands — that is correct Wave 0 RED behaviour.
+// ---------------------------------------------------------------------------
+
+it('uses the linked pot balance as contributedMinor instead of the transaction sum', function (): void {
+    $startDate = CarbonImmutable::now()->subDays(10)->toDateString();
+    $goal = Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'target_minor' => 100000,
+        'start_date' => $startDate,
+        'status' => 'active',
+    ]);
+
+    // Create a pot linked to this goal (goal_id on pots table = the link, D-10 / POTS-04)
+    $pot = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => $goal->id,
+    ]);
+
+    // Fund the pot — this is the contribution via the linked-pot path.
+    DB::table('pot_movements')->insert([
+        'user_id' => $this->user->id,
+        'pot_id' => $pot->id,
+        'counterpart_pot_id' => null,
+        'amount_minor' => 40000,
+        'currency' => 'EUR',
+        'kind' => 'fund',
+        'memo' => null,
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    // Also add transfer_in transactions on the goal's account — these should
+    // NOT count because the linked-pot path overrides the transaction-sum path.
+    goalTx($this->user->id, $this->account->id, $this->run->id, 70000, 'transfer_in', CarbonImmutable::now()->toDateString());
+
+    $rows = app(GoalProgressQuery::class)->forUser($this->user);
+
+    // contributedMinor must be the pot balance (40000), not the transaction sum (70000).
+    expect($rows[0]->contributedMinor)->toBe(40000);
+});
+
+it('falls back to transfer tracking for a goal with no linked pot', function (): void {
+    $startDate = CarbonImmutable::now()->subDays(10)->toDateString();
+    Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'target_minor' => 100000,
+        'start_date' => $startDate,
+        'status' => 'active',
+    ]);
+
+    // No pot linked — Phase 2 transfer-tracking behavior is unchanged.
+    goalTx($this->user->id, $this->account->id, $this->run->id, 30000, 'transfer_in', CarbonImmutable::now()->toDateString());
+
+    $rows = app(GoalProgressQuery::class)->forUser($this->user);
+
+    // contributedMinor must be the transaction sum (30000), not zero.
+    expect($rows[0]->contributedMinor)->toBe(30000);
 });
