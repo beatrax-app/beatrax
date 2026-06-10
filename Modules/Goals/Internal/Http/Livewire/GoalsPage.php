@@ -70,6 +70,17 @@ final class GoalsPage extends Component
         }
     }
 
+    /**
+     * The pot picker's option list is scoped to the selected account, but the
+     * bound property survives a re-render — switching accounts would silently
+     * keep (and submit) a pot from the previously selected account (WR-10).
+     * Reset the selection whenever the account changes.
+     */
+    public function updatedAccountId(): void
+    {
+        $this->linkedPotId = '';
+    }
+
     // -----------------------------------------------------------------------
     // Create goal
     // -----------------------------------------------------------------------
@@ -100,30 +111,32 @@ final class GoalsPage extends Component
 
         $accountId = $this->accountId !== '' ? (int) $this->accountId : null;
 
+        // WR-02: goal save + optional pot link run in ONE transaction so a
+        // failed link (one-pot-per-goal violation, cross-user pot id) rolls
+        // back the goal — no orphan goal and no duplicate on resubmit.
         try {
-            $goal = $writer->save(
-                $currentUser->user(),
-                $this->name,
-                $this->targetAmount,
-                $this->targetDate,
-                $accountId,
-            );
-        } catch (InvalidGoalAmountException $e) {
+            $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $accountId): void {
+                $goal = $writer->save(
+                    $currentUser->user(),
+                    $this->name,
+                    $this->targetAmount,
+                    $this->targetDate,
+                    $accountId,
+                );
+
+                // D-11: if a pot was selected, link it from the goal side via PotWriter.
+                if ($this->linkedPotId !== '') {
+                    $this->linkPotToGoal($currentUser, $db, $potWriter, (int) $this->linkedPotId, $goal->id);
+                }
+            });
+        } catch (InvalidGoalAmountException) {
             $this->errorAmount = 'Enter a valid amount greater than zero.';
 
             return;
-        }
+        } catch (\InvalidArgumentException $e) {
+            $this->errorLinkedPot = $e->getMessage();
 
-        // D-11: if a pot was selected, link it from the goal side via PotWriter.
-        if ($this->linkedPotId !== '') {
-            $potId = (int) $this->linkedPotId;
-            try {
-                $this->linkPotToGoal($currentUser, $db, $potWriter, $potId, $goal->id);
-            } catch (\InvalidArgumentException $e) {
-                $this->errorLinkedPot = $e->getMessage();
-
-                return;
-            }
+            return;
         }
 
         $this->resetForm();
@@ -151,7 +164,9 @@ final class GoalsPage extends Component
             if ($row->id === $goalId) {
                 $this->editGoalId = $goalId;
                 $this->name = $row->name;
-                $this->targetAmount = number_format($row->targetMinor / 100, 2, '.', '');
+                // Integer-only minor→display formatting — no float division on
+                // a money amount (IN-05 / no-float-money rule).
+                $this->targetAmount = sprintf('%d.%02d', intdiv($row->targetMinor, 100), $row->targetMinor % 100);
                 $this->targetDate = $row->targetDate;   // prefill from the goal's stored target date (WR-01)
                 $this->accountId = $row->accountId !== null ? (string) $row->accountId : '';
                 // D-11: prefill the linked pot picker from the goal side.
@@ -191,43 +206,47 @@ final class GoalsPage extends Component
 
         $accountId = $this->accountId !== '' ? (int) $this->accountId : null;
 
+        // D-11: pot picker change (link, move, or clear) is resolved up front.
+        $newPotId = $this->linkedPotId !== '' ? (int) $this->linkedPotId : null;
+        $prevPotId = $potBalance->linkedPotIdForGoal($this->editGoalId, $currentUser->user());
+
+        // WR-03: the goal update and the clear + relink sequence run in ONE
+        // transaction so a failed relink (e.g. tampered/cross-user pot id)
+        // rolls back both the goal update and the cleared previous link —
+        // the existing goal↔pot link is never silently lost.
         try {
-            $writer->update(
-                $currentUser->user(),
-                $this->editGoalId,
-                $this->name,
-                $this->targetAmount,
-                $this->targetDate,
-                $accountId,
-            );
-        } catch (GoalNotFoundException $e) {
+            $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $accountId, $newPotId, $prevPotId): void {
+                $writer->update(
+                    $currentUser->user(),
+                    $this->editGoalId,
+                    $this->name,
+                    $this->targetAmount,
+                    $this->targetDate,
+                    $accountId,
+                );
+
+                if ($newPotId !== null && $newPotId !== $prevPotId) {
+                    // Clear the previous link first so assertGoalOwnedAndFree passes (D-11).
+                    if ($prevPotId !== null) {
+                        $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
+                    }
+
+                    $this->linkPotToGoal($currentUser, $db, $potWriter, $newPotId, $this->editGoalId);
+                } elseif ($newPotId === null && $prevPotId !== null) {
+                    // User cleared the selection — remove the link.
+                    $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
+                }
+            });
+        } catch (GoalNotFoundException) {
             // Cross-user / missing goal — silently ignore (control flow on
             // exception type, not message text — WR-05).
             $this->resetForm();
 
             return;
-        } catch (InvalidGoalAmountException $e) {
+        } catch (InvalidGoalAmountException) {
             $this->errorAmount = 'Enter a valid amount greater than zero.';
 
             return;
-        }
-
-        // D-11: handle the pot picker change (link, move, or clear).
-        $newPotId = $this->linkedPotId !== '' ? (int) $this->linkedPotId : null;
-        $prevPotId = $potBalance->linkedPotIdForGoal($this->editGoalId, $currentUser->user());
-
-        try {
-            if ($newPotId !== null && $newPotId !== $prevPotId) {
-                // Clear the previous link first so assertGoalOwnedAndFree passes (D-11).
-                if ($prevPotId !== null) {
-                    $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
-                }
-
-                $this->linkPotToGoal($currentUser, $db, $potWriter, $newPotId, $this->editGoalId);
-            } elseif ($newPotId === null && $prevPotId !== null) {
-                // User cleared the selection — remove the link.
-                $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
-            }
         } catch (\InvalidArgumentException $e) {
             $this->errorLinkedPot = $e->getMessage();
 
@@ -362,26 +381,18 @@ final class GoalsPage extends Component
             ->toArray();
 
         // Pot options for the linked-pot picker (D-11 / T-03-13):
-        // Only active pots owned by this user that are either unlinked or
-        // already linked to the goal being edited (so the current link stays
-        // in the list). Scoped to the selected account when one is chosen.
+        // Only active pots owned by this user that are fully unlinked —
+        // neither goal-linked nor category-linked (WR-05: selecting a
+        // category-linked pot here would silently destroy its category link)
+        // — or already linked to the goal being edited (so the current link
+        // stays in the list). Scoped to the selected account when one is
+        // chosen.
         $selectedAccountId = $this->accountId !== '' ? (int) $this->accountId : null;
-        $potsQuery = $db->connection()
-            ->table('pots')
-            ->where('user_id', $user->id)
-            ->where('status', 'active')
-            ->where(static function (Builder $q) use ($selectedAccountId): void {
-                if ($selectedAccountId !== null) {
-                    $q->where('account_id', $selectedAccountId);
-                }
-            })
-            ->where(static function (Builder $q): void {
-                $q->whereNull('goal_id');
-            });
 
-        // If editing, also include the pot currently linked to this goal.
-        if ($this->editGoalId !== 0) {
-            $potsQuery = $db->connection()
+        // Single source for the base picker query so the edit-mode union
+        // branch cannot drift from the non-edit branch (IN-04).
+        $basePotsQuery = static function () use ($db, $user, $selectedAccountId): Builder {
+            return $db->connection()
                 ->table('pots')
                 ->where('user_id', $user->id)
                 ->where('status', 'active')
@@ -390,9 +401,15 @@ final class GoalsPage extends Component
                         $q->where('account_id', $selectedAccountId);
                     }
                 })
-                ->where(static function (Builder $q): void {
-                    $q->whereNull('goal_id');
-                })
+                ->whereNull('goal_id')
+                ->whereNull('category_id');
+        };
+
+        $potsQuery = $basePotsQuery();
+
+        // If editing, also include the pot currently linked to this goal.
+        if ($this->editGoalId !== 0) {
+            $potsQuery = $basePotsQuery()
                 ->union(
                     $db->connection()
                         ->table('pots')
@@ -466,7 +483,11 @@ final class GoalsPage extends Component
      * Link $potId to $goalId using PotWriter::update. Fetches the pot's current
      * name first so the update does not blank it.
      *
-     * @throws \InvalidArgumentException on one-pot-per-goal violation (T-03-12)
+     * Rejects category-linked pots: PotWriter::update would otherwise null out
+     * `category_id` and silently destroy the user's category link (WR-05). The
+     * picker already excludes them, this guards against stale/tampered ids.
+     *
+     * @throws \InvalidArgumentException on one-pot-per-goal violation (T-03-12) or category-linked pot (WR-05)
      * @throws PotNotFoundException on cross-user pot id (T-03-11)
      */
     private function linkPotToGoal(
@@ -477,7 +498,20 @@ final class GoalsPage extends Component
         int $goalId,
     ): void {
         $user = $currentUser->user();
-        $name = $this->potName($potId, $user, $db);
+
+        $row = $db->connection()
+            ->table('pots')
+            ->where('user_id', $user->id)
+            ->where('id', $potId)
+            ->first(['name', 'category_id']);
+
+        if ($row !== null && $row->category_id !== null) {
+            throw new \InvalidArgumentException(
+                'This pot is linked to a category. Remove that link on the Pots page first.'
+            );
+        }
+
+        $name = ($row !== null && is_string($row->name)) ? $row->name : '';
         $potWriter->update($user, $potId, $name, $goalId, null);
     }
 

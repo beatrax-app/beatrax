@@ -40,11 +40,16 @@ final class PotBalanceQuery
     /**
      * Returns the signed SUM(amount_minor) for a pot — the pot's current
      * balance (D-06). Returns 0 when no movements exist.
+     *
+     * Takes the acting $user explicitly so this Public (cross-module) method
+     * can never read another user's pot balance from an unvalidated id
+     * (T-03-07 / WR-07). The ['user_id','pot_id'] index serves this shape.
      */
-    public function balanceForPot(int $potId): int
+    public function balanceForPot(int $potId, User $user): int
     {
         return (int) $this->db->connection()
             ->table('pot_movements')
+            ->where('user_id', $user->id)
             ->where('pot_id', $potId)
             ->sum('amount_minor');
     }
@@ -128,11 +133,12 @@ final class PotBalanceQuery
     }
 
     /**
-     * Batch-load pot balances keyed by goal_id for all active goal-linked pots
-     * owned by the user — avoids N+1 in GoalProgressQuery (03-RESEARCH.md
-     * Pitfall 3 / D-10).
+     * Batch-load pot balance AND currency keyed by goal_id for all active
+     * goal-linked pots owned by the user — avoids N+1 in GoalProgressQuery
+     * (03-RESEARCH.md Pitfall 3 / D-10). Currency rides along in the same
+     * load so no per-goal follow-up query is needed (IN-03).
      *
-     * @return array<int, int> goal_id => balanceMinor
+     * @return array<int, array{balance: int, currency: string}> goal_id => pot balance + currency
      */
     public function linkedPotBalancesForUser(User $user): array
     {
@@ -141,11 +147,14 @@ final class PotBalanceQuery
             ->where('user_id', $user->id)
             ->where('status', 'active')
             ->whereNotNull('goal_id')
-            ->get(['id', 'goal_id']);
+            ->get(['id', 'goal_id', 'currency']);
 
         $result = [];
         foreach ($rows as $row) {
-            $result[self::toInt($row->goal_id)] = $this->balanceForPot(self::toInt($row->id));
+            $result[self::toInt($row->goal_id)] = [
+                'balance' => $this->balanceForPot(self::toInt($row->id), $user),
+                'currency' => self::toStr($row->currency),
+            ];
         }
 
         return $result;
@@ -176,8 +185,9 @@ final class PotBalanceQuery
 
     /**
      * Returns the currency of the active pot linked to $goalId for $user, or
-     * null when no such pot exists. Used by GoalProgressQuery to decide whether
-     * FX conversion is needed (D-10).
+     * null when no such pot exists. Single-goal convenience lookup; batched
+     * consumers should prefer linkedPotBalancesForUser(), which carries the
+     * currency alongside the balance (IN-03).
      */
     public function currencyForLinkedPot(int $goalId, User $user): ?string
     {
@@ -222,6 +232,7 @@ final class PotBalanceQuery
 
         return (int) $this->db->connection()
             ->table('pot_movements')
+            ->where('user_id', $user->id)
             ->whereIn('pot_id', $activePotIds)
             ->sum('amount_minor');
     }
@@ -252,7 +263,6 @@ final class PotBalanceQuery
                 'pots.status',
                 'pots.goal_id',
                 'pots.category_id',
-                'pots.created_at',
                 'accounts.name as account_name',
                 'goals.name as goal_name',
                 'categories.name as category_name',
@@ -274,10 +284,11 @@ final class PotBalanceQuery
         $rows = [];
         foreach ($pots as $pot) {
             $potId = self::toInt($pot->id);
-            $balanceMinor = $this->balanceForPot($potId);
+            $balanceMinor = $this->balanceForPot($potId, $user);
 
             // Recent movements: latest 10 for this pot
             $movementRows = $connection->table('pot_movements')
+                ->where('user_id', $user->id)
                 ->where('pot_id', $potId)
                 ->orderByDesc('created_at')
                 ->orderByDesc('id')
@@ -326,28 +337,22 @@ final class PotBalanceQuery
                 );
             }
 
-            // Category spend for the current period (D-12)
+            // Category spend for the current period (D-12). Filtered to the
+            // pot's currency: settled amounts are per-row currency-tagged and
+            // the view labels this figure with the pot's currency — summing
+            // mixed currencies in raw minor units would be dishonest (WR-08).
             $categoryId = $pot->category_id !== null ? self::toInt($pot->category_id) : null;
             $categorySpentMinor = null;
             if ($categoryId !== null) {
                 $spent = (int) $connection->table('transactions')
                     ->where('user_id', $user->id)
                     ->where('category_id', $categoryId)
+                    ->where('settled_currency', self::toStr($pot->currency))
                     ->where('settled_amount_minor', '<', 0)
                     ->where('posted_at', '>=', $period->start->toDateString())
                     ->where('posted_at', '<', $period->endExclusive->toDateString())
                     ->sum($connection->raw('-settled_amount_minor'));
                 $categorySpentMinor = $spent;
-            }
-
-            $potCreatedAtRaw = self::toStr($pot->created_at ?? null);
-            $potCreatedAt = '';
-            if ($potCreatedAtRaw !== '') {
-                try {
-                    $potCreatedAt = CarbonImmutable::parse($potCreatedAtRaw)->format('Y-m-d H:i');
-                } catch (\Throwable) {
-                    $potCreatedAt = '';
-                }
             }
 
             $rows[] = new PotRow(
