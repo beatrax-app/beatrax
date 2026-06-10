@@ -25,15 +25,15 @@
     $occurrenceCount = count($occurrences);
 @endphp
 
-{{-- Mobile top bar (D-05): back affordance targeting /recurring parent list.
-     Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
-     The page title is the series display name, truncated to one line. --}}
-<x-core::mobile-top-bar
-    :backUrl="route('recurring.index')"
-    :title="$series->displayName()"
-/>
-
 <div class="mx-auto max-w-5xl px-4 py-12">
+    {{-- Mobile top bar (D-05): back affordance targeting /recurring parent list.
+         Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
+         The page title is the series display name, truncated to one line.
+         Must live INSIDE the root div — Livewire allows only one root element. --}}
+    <x-core::mobile-top-bar
+        :backUrl="route('recurring.index')"
+        :title="$series->displayName()"
+    />
     <header class="mb-8 flex items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
             <h1 class="truncate text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $series->displayName() }}</h1>

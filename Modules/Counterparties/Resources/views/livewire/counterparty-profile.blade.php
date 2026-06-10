@@ -20,13 +20,13 @@
     $isSelf = $profile->type === 'self_account';
 @endphp
 
-{{-- Mobile top bar back affordance (D-05): shown at <1024px with ← to /counterparties --}}
-<x-core::mobile-top-bar
-    :backUrl="route('counterparties.index')"
-    :title="$isSelf ? ($profile->displayName ?? 'Account') : ($profile->displayName ?? 'Counterparty')"
-/>
-
 <div style="padding: var(--space-6) var(--space-4); max-width: 980px; margin: 0 auto;" class="space-y-6">
+    {{-- Mobile top bar back affordance (D-05): shown at <1024px with ← to /counterparties.
+         Must live INSIDE the root div — Livewire allows only one root element. --}}
+    <x-core::mobile-top-bar
+        :backUrl="route('counterparties.index')"
+        :title="$isSelf ? ($profile->displayName ?? 'Account') : ($profile->displayName ?? 'Counterparty')"
+    />
     @if ($isSelf)
         {{-- Self-account: stub redirect, no hero / no tabs --}}
         @include('counterparties::livewire.profile-tabs.self', ['profile' => $profile])
