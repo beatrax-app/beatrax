@@ -25,6 +25,14 @@
     $occurrenceCount = count($occurrences);
 @endphp
 
+{{-- Mobile top bar (D-05): back affordance targeting /recurring parent list.
+     Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
+     The page title is the series display name, truncated to one line. --}}
+<x-core::mobile-top-bar
+    :backUrl="route('recurring.index')"
+    :title="$series->displayName()"
+/>
+
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8 flex items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
@@ -49,7 +57,8 @@
                 </p>
             @endif
         </div>
-        <div class="flex shrink-0 items-center gap-4">
+        {{-- Desktop controls: shrink-0 row; wraps naturally at phone width --}}
+        <div class="flex shrink-0 flex-wrap items-center gap-4">
             @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $series->seriesId], key('threshold-detail-'.$series->seriesId))
             @livewire('forecasting.model-what-if-dropdown', ['seriesId' => $series->seriesId], key('what-if-'.$series->seriesId))
             <div x-data="{ open: false }" class="relative">
@@ -84,9 +93,10 @@
                     @endforeach
                 </div>
             </div>
+            {{-- Back link: visible at desktop (mobile top bar handles phone D-05) --}}
             <a
                 href="{{ route('recurring.index') }}"
-                class="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+                class="hidden md:inline text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
             >Back to Recurring</a>
         </div>
     </header>
@@ -129,7 +139,10 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400">No occurrences recorded for this series yet.</p>
             </div>
         @else
-            <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+            {{-- overflow-x: auto wrapper ensures the occurrences table is scrollable
+                 at phone width without horizontal page overflow (D-06). --}}
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700" style="min-width: 360px;">
                 <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
@@ -154,6 +167,7 @@
                     </tbody>
                 </table>
             </div>
+            </div>{{-- end overflow-x scroller --}}
         @endif
     </section>
 </div>
