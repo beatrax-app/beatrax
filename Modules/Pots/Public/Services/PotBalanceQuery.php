@@ -133,11 +133,12 @@ final class PotBalanceQuery
     }
 
     /**
-     * Batch-load pot balances keyed by goal_id for all active goal-linked pots
-     * owned by the user — avoids N+1 in GoalProgressQuery (03-RESEARCH.md
-     * Pitfall 3 / D-10).
+     * Batch-load pot balance AND currency keyed by goal_id for all active
+     * goal-linked pots owned by the user — avoids N+1 in GoalProgressQuery
+     * (03-RESEARCH.md Pitfall 3 / D-10). Currency rides along in the same
+     * load so no per-goal follow-up query is needed (IN-03).
      *
-     * @return array<int, int> goal_id => balanceMinor
+     * @return array<int, array{balance: int, currency: string}> goal_id => pot balance + currency
      */
     public function linkedPotBalancesForUser(User $user): array
     {
@@ -146,11 +147,14 @@ final class PotBalanceQuery
             ->where('user_id', $user->id)
             ->where('status', 'active')
             ->whereNotNull('goal_id')
-            ->get(['id', 'goal_id']);
+            ->get(['id', 'goal_id', 'currency']);
 
         $result = [];
         foreach ($rows as $row) {
-            $result[self::toInt($row->goal_id)] = $this->balanceForPot(self::toInt($row->id), $user);
+            $result[self::toInt($row->goal_id)] = [
+                'balance' => $this->balanceForPot(self::toInt($row->id), $user),
+                'currency' => self::toStr($row->currency),
+            ];
         }
 
         return $result;
@@ -181,8 +185,9 @@ final class PotBalanceQuery
 
     /**
      * Returns the currency of the active pot linked to $goalId for $user, or
-     * null when no such pot exists. Used by GoalProgressQuery to decide whether
-     * FX conversion is needed (D-10).
+     * null when no such pot exists. Single-goal convenience lookup; batched
+     * consumers should prefer linkedPotBalancesForUser(), which carries the
+     * currency alongside the balance (IN-03).
      */
     public function currencyForLinkedPot(int $goalId, User $user): ?string
     {
