@@ -114,14 +114,16 @@ it('renders one line for an EUR-native row in original mode', function (): void 
     // line ONLY when `$row->secondaryAmount !== null`. For an EUR-native
     // row in original mode, secondaryAmount is null, so that secondary-
     // line class signature should not appear in the rendered fragment
-    // for the amount cell. The EUR amount itself appears exactly once.
+    // for the amount cell. The EUR amount appears exactly twice since
+    // Phase 4: once in the desktop table row and once in the phone
+    // card-list item (the two are toggled by CSS, both are in the DOM).
     $eur = BrickMoney::ofMinor(-2500, 'EUR')->formatTo('nl_NL');
 
     $component = Livewire::test(TransactionsList::class)
         ->set('currency', 'original');
 
     $body = $component->html();
-    expect(substr_count($body, $eur))->toBe(1);
+    expect(substr_count($body, $eur))->toBe(2);
     expect($body)->not->toContain('mt-1 block text-xs text-slate-500');
 })->group('phase-3');
 
