@@ -20,6 +20,12 @@
     $isSelf = $profile->type === 'self_account';
 @endphp
 
+{{-- Mobile top bar back affordance (D-05): shown at <1024px with ← to /counterparties --}}
+<x-core::mobile-top-bar
+    :backUrl="route('counterparties.index')"
+    :title="$isSelf ? ($profile->displayName ?? 'Account') : ($profile->displayName ?? 'Counterparty')"
+/>
+
 <div style="padding: var(--space-6) var(--space-4); max-width: 980px; margin: 0 auto;" class="space-y-6">
     @if ($isSelf)
         {{-- Self-account: stub redirect, no hero / no tabs --}}
@@ -36,8 +42,9 @@
             </span>
         </header>
 
-        {{-- Hero stats strip ---------------------------------------- --}}
-        <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-4);">
+        {{-- Hero stats strip: single-column at phone width (D-05), auto-fit at >=768px --}}
+        <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-4);"
+                 class="cp-profile-hero-stats">
             <div class="frame frame-tight">
                 <div style="font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
                     @if ($profile->type === 'personal') Net received @else 12-month total @endif
@@ -66,7 +73,7 @@
             @endif
         </section>
 
-        {{-- Tab bar — varies per type ------------------------------- --}}
+        {{-- Tab bar — varies per type; horizontal scroll at phone width so no tabs clip --}}
         @php
             $tabBars = [
                 'merchant' => [
@@ -105,17 +112,18 @@
                 default => null,
             };
         @endphp
-        <nav style="border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0;">
+        {{-- overflow-x: auto ensures the tab bar scrolls at phone width rather than clipping --}}
+        <nav style="border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;">
             @foreach ($tabs as $tab)
                 <button
                     type="button"
                     class="focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                    style="padding: 8px 14px; border: 0; background: transparent; font-size: var(--text-sm); font-weight: 500; color: {{ $activeTab === $tab['key'] ? 'var(--color-text)' : 'var(--color-text-muted)' }}; border-bottom: 1px solid {{ $activeTab === $tab['key'] ? 'var(--color-text)' : 'transparent' }}; cursor: pointer;"
+                    style="padding: 8px 14px; border: 0; background: transparent; font-size: var(--text-sm); font-weight: 500; color: {{ $activeTab === $tab['key'] ? 'var(--color-text)' : 'var(--color-text-muted)' }}; border-bottom: 1px solid {{ $activeTab === $tab['key'] ? 'var(--color-text)' : 'transparent' }}; cursor: pointer; white-space: nowrap; flex-shrink: 0;"
                     wire:click="switchTab('{{ $tab['key'] }}')"
                 >{{ $tab['label'] }}</button>
             @endforeach
             @if ($tabNote !== null)
-                <span style="font-size: var(--text-xs); color: var(--color-text-faint); margin-left: var(--space-3);">
+                <span style="font-size: var(--text-xs); color: var(--color-text-faint); margin-left: var(--space-3); white-space: nowrap; flex-shrink: 0;">
                     {{ $tabNote }}
                 </span>
             @endif

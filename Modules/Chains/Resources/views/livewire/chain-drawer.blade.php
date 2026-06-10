@@ -56,14 +56,16 @@
             </div>
         @elseif (count($tree->nodes) === 1)
             {{-- Only the root node walked back — no funder leg followed. --}}
-            <div class="px-6 py-md space-y-md">
+            {{-- overflow-x-scroll-wrapper ensures chain-node inner content scrolls horizontally at phone width --}}
+            <div class="overflow-x-scroll-wrapper px-6 py-md space-y-md" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 @include('chains::livewire.partials.chain-node', ['node' => $tree->nodes[0], 'fanoutPage' => $fanoutPage])
                 <div class="rounded-md border border-slate-200 bg-slate-50 p-3 dark:bg-slate-900 dark:border-slate-700">
                     <p class="text-xs text-slate-500 dark:text-slate-400">No funding chain found beyond this leg.</p>
                 </div>
             </div>
         @else
-            <div class="px-6 py-md space-y-md">
+            {{-- overflow-x-scroll-wrapper ensures multi-leg chain content scrolls horizontally at phone width --}}
+            <div class="overflow-x-scroll-wrapper px-6 py-md space-y-md" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 @foreach ($tree->nodes as $node)
                     {{-- Issue #13 fix: pass $fanoutPage explicitly to the
                          partial. The partial declares

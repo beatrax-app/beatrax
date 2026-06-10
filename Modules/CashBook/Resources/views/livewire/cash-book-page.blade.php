@@ -74,7 +74,37 @@
         @if (count($entries) === 0)
             <p class="text-sm text-slate-500 dark:text-slate-400">No manual entries yet.</p>
         @else
-            <ul class="divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-700">
+            {{-- Phone (<768px): .card-list-item per entry (D-06 daily-driver) --}}
+            <div class="phone-only">
+                @foreach ($entries as $entry)
+                    @php $isPositive = (int) $entry->settled_amount_minor > 0; @endphp
+                    <div wire:key="manual-phone-{{ $entry->id }}" class="card-list-item" style="display: flex; justify-content: space-between;">
+                        <div style="min-width: 0; flex: 1 1 auto;">
+                            <span class="primary">{{ $entry->counterparty_name }}</span>
+                            <span class="secondary">
+                                {{ \Illuminate\Support\Str::limit((string) $entry->posted_at, 10, '') }}
+                                @if ($entry->category_name)· {{ $entry->category_name }}@endif
+                            </span>
+                        </div>
+                        <div style="flex: 0 0 auto; text-align: right; display: flex; align-items: center; gap: var(--space-2);">
+                            <span
+                                class="amount{{ $isPositive ? ' positive' : '' }}"
+                                style="{{ $isPositive ? 'color: var(--color-emerald)' : '' }}"
+                            >{{ $fmt((int) $entry->settled_amount_minor) }}</span>
+                            {{-- Delete action always-visible at phone width (D-12) --}}
+                            <button
+                                type="button"
+                                wire:click="delete({{ (int) $entry->id }})"
+                                aria-label="Delete entry"
+                                style="background: transparent; border: 0; color: var(--color-text-muted); font-size: var(--text-xs); cursor: pointer; padding: var(--space-2); min-width: 44px; min-height: 44px;"
+                            >✕</button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- Desktop (>=768px): existing list layout --}}
+            <ul class="desktop-only divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-700">
                 @foreach ($entries as $entry)
                     <li wire:key="manual-{{ $entry->id }}" class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                         <div class="min-w-0 flex-1">
