@@ -22,8 +22,9 @@ use stdClass;
  * archived-goals disclosure).
  *
  * Contribution sum: credits (type IN transfer_in, income) on the linked account
- * posted on/after the goal's start_date, each base-converted via
- * `ExchangeRateService::convertToBase()`. Unlinked goals report 0 contributed.
+ * posted on/after the goal's start_date, each converted into the goal's
+ * immutable `target_currency` (D-05 — NOT the user's current base currency,
+ * which may diverge). Unlinked goals report 0 contributed.
  *
  * All reads go through raw `DatabaseManager` queries to stay clean under
  * `phpstan-strict-rules`' `staticMethod.dynamicCall` rule (the same pattern
@@ -34,8 +35,9 @@ use stdClass;
  * `->where('user_id', $user->id)` guard; raw `transactions` reads carry the same.
  * (T-02-04).
  *
- * No float money: `fractionComplete` is an int ratio (contributedMinor /
- * targetMinor), never a Money->float() call (T-02-06).
+ * No float money on amounts: `fractionComplete` is a float ratio of two
+ * integer minor amounts (contributedMinor / targetMinor) — a display fraction,
+ * never a Money->float() call on a money value (T-02-06).
  */
 final class GoalProgressQuery
 {
