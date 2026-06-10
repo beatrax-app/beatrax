@@ -63,7 +63,13 @@ final class PotsPage extends Component
     /** 'fund' | 'withdraw' | 'transfer' */
     public string $operationKind = '';
 
-    public int $transferTargetPotId = 0;
+    /**
+     * String-typed because it backs a <select> whose placeholder option is ''
+     * — hydrating '' into an int property throws a Livewire property-type
+     * error instead of a validation message (WR-09; same pattern as
+     * $accountId here and on GoalsPage). Cast in movePot().
+     */
+    public string $transferTargetPotId = '';
 
     // Inline archive confirm
     public int $archivingPotId = 0;
@@ -387,10 +393,12 @@ final class PotsPage extends Component
         }
 
         try {
+            // '' (placeholder) casts to 0, which PotWriter rejects with
+            // PotNotFoundException → inline error (WR-09).
             $writer->transfer(
                 $user,
                 $this->operationPotId,
-                $this->transferTargetPotId,
+                (int) $this->transferTargetPotId,
                 $this->operationAmount,
                 $memo,
             );
@@ -640,7 +648,7 @@ final class PotsPage extends Component
         $this->operationAmount = '';
         $this->operationMemo = '';
         $this->operationKind = '';
-        $this->transferTargetPotId = 0;
+        $this->transferTargetPotId = '';
         $this->clearErrors();
     }
 
