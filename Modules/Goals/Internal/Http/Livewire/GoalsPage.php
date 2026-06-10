@@ -164,7 +164,9 @@ final class GoalsPage extends Component
             if ($row->id === $goalId) {
                 $this->editGoalId = $goalId;
                 $this->name = $row->name;
-                $this->targetAmount = number_format($row->targetMinor / 100, 2, '.', '');
+                // Integer-only minor→display formatting — no float division on
+                // a money amount (IN-05 / no-float-money rule).
+                $this->targetAmount = sprintf('%d.%02d', intdiv($row->targetMinor, 100), $row->targetMinor % 100);
                 $this->targetDate = $row->targetDate;   // prefill from the goal's stored target date (WR-01)
                 $this->accountId = $row->accountId !== null ? (string) $row->accountId : '';
                 // D-11: prefill the linked pot picker from the goal side.
