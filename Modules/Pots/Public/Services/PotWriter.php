@@ -380,6 +380,11 @@ final class PotWriter
      * Restore an archived pot to active status. No balance is restored —
      * the pot comes back empty (D-09).
      *
+     * One-pot-per-goal (D-11) is re-checked here: if another active pot
+     * claimed this pot's goal while it was archived, the restored pot comes
+     * back UNLINKED instead of creating a second active pot on the same goal
+     * (WR-04).
+     *
      * A foreign or missing archived pot id is a silent no-op.
      */
     public function restore(User $user, int $potId): void
@@ -393,6 +398,24 @@ final class PotWriter
 
         if (! $pot instanceof Pot) {
             return;
+        }
+
+        // D-11 / WR-04: archive() keeps goal_id, and another pot may have
+        // been linked to the same goal in the meantime. Restoring must not
+        // produce two active pots on one goal — the restored pot loses its
+        // link when the goal is already taken.
+        if ($pot->goal_id !== null) {
+            $goalTaken = $this->db->connection()
+                ->table('pots')
+                ->where('user_id', $user->id)
+                ->where('goal_id', $pot->goal_id)
+                ->where('status', 'active')
+                ->where('id', '!=', $pot->id)
+                ->exists();
+
+            if ($goalTaken) {
+                $pot->goal_id = null;
+            }
         }
 
         $pot->status = 'active';
