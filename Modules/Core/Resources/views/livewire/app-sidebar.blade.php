@@ -41,7 +41,17 @@
             aria-label="Search or jump to"
             disabled
         />
-        <span class="kbd" aria-hidden="true">⌘K</span>
+        {{--
+            Platform-aware kbd hint (D-04, Phase 4 Plan 03).
+            Renders ⌘K on macOS and Ctrl+K on Windows/Linux — no hardcoded ⌘K glyph.
+            hidden-touch class hides this chip on touch devices (D-13, @media pointer:coarse).
+            Detection via Alpine $store.platform.isMac (set in resources/js/app.js).
+        --}}
+        <span
+            class="kbd hidden-touch"
+            aria-hidden="true"
+            x-text="$store.platform.isMac ? '⌘K' : 'Ctrl+K'"
+        >Ctrl+K</span>
     </div>
 
     <div class="side-section-label">THIS MONTH</div>
