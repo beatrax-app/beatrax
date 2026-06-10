@@ -70,6 +70,17 @@ final class GoalsPage extends Component
         }
     }
 
+    /**
+     * The pot picker's option list is scoped to the selected account, but the
+     * bound property survives a re-render — switching accounts would silently
+     * keep (and submit) a pot from the previously selected account (WR-10).
+     * Reset the selection whenever the account changes.
+     */
+    public function updatedAccountId(): void
+    {
+        $this->linkedPotId = '';
+    }
+
     // -----------------------------------------------------------------------
     // Create goal
     // -----------------------------------------------------------------------
