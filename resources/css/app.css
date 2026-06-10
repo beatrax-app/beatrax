@@ -2870,3 +2870,61 @@ td.date,
         background: var(--color-surface-2);
     }
 }
+
+/*
+ * Phone-only / desktop-only display utilities (04-05).
+ * .phone-only:  visible at <768px, hidden at >=768px.
+ * .desktop-only: hidden at <768px, visible at >=768px.
+ * Used to present distinct markup branches without JS.
+ */
+@layer components {
+    .phone-only {
+        display: block;
+    }
+
+    .desktop-only {
+        display: none;
+    }
+
+    @media (min-width: 768px) {
+        .phone-only {
+            display: none !important;
+        }
+
+        .desktop-only {
+            display: block;
+        }
+    }
+
+    /* cp-cards-grid: single-column at phone, auto-fill at >=768px */
+    .cp-cards-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    @media (min-width: 768px) {
+        .cp-cards-grid {
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+        }
+    }
+
+    /* cp-profile-hero-stats: single-column at phone, auto-fit at >=768px */
+    .cp-profile-hero-stats {
+        grid-template-columns: 1fr !important;
+    }
+
+    @media (min-width: 768px) {
+        .cp-profile-hero-stats {
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+        }
+    }
+
+    /*
+     * Overflow-x-auto power surface wrapper (04-05 chains / D-06 power split).
+     * Wraps dense chain/graph tables so they scroll horizontally at phone width
+     * without breaking the page layout. Desktop: no change.
+     */
+    .overflow-x-scroll-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
