@@ -19,6 +19,7 @@ use Modules\Forecasting\Providers\ForecastingServiceProvider;
 use Modules\FX\Providers\FXServiceProvider;
 use Modules\Goals\Providers\GoalsServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
+use Modules\Pots\Providers\PotsServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
 use Modules\Onboarding\Providers\OnboardingServiceProvider;
@@ -46,6 +47,7 @@ return array_values(array_filter([
     DriftAlertsServiceProvider::class,
     BudgetsServiceProvider::class,
     GoalsServiceProvider::class,
+    PotsServiceProvider::class,
     FXServiceProvider::class,
     CashBookServiceProvider::class,
     ForecastingServiceProvider::class,
