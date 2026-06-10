@@ -1,4 +1,7 @@
-<div class="p-6 space-y-6" data-testid="dev-overview-page">
+{{-- D-20 / UI-SPEC §19: overflow-x-auto at the page root ensures no surface
+     overflows the viewport at phone width. The dark console pane preserves
+     its fixed dark styling (localized dark exception per SKILL). --}}
+<div class="p-6 space-y-6 overflow-x-auto" data-testid="dev-overview-page">
     <header class="space-y-1">
         <h1 class="text-xl font-semibold text-[var(--color-text)]">Overview</h1>
         <p class="text-sm text-[var(--color-text-muted)]">Operational surface for the in-app Developer Console.</p>

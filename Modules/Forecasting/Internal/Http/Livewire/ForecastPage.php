@@ -642,6 +642,19 @@ final class ForecastPage extends Component
             'legend' => ['show' => false],
             'tooltip' => ['shared' => true, 'intersect' => false],
             'annotations' => $annotations,
+            // D-11: phone-tuned responsive breakpoints baked into server-rendered
+            // options so the chart fills the container at phone width with fewer
+            // x-axis labels and no legend — no extra JS required.
+            'responsive' => [
+                [
+                    'breakpoint' => 768,
+                    'options' => [
+                        'chart' => ['height' => 240],
+                        'xaxis' => ['tickAmount' => 4],
+                        'legend' => ['show' => false],
+                    ],
+                ],
+            ],
         ];
     }
 

@@ -111,25 +111,10 @@
             >{{ $showAllPoints ? 'Show recent 24' : 'View all points' }}</button>
         </div>
 
-        <div
-            x-data="{ chart: null }"
-            x-init="
-                if (! window.ApexCharts) { return; }
-                chart = new window.ApexCharts(
-                    $el.querySelector('#{{ $chartElementId }}'),
-                    window.beatraxApplyChartTheme(JSON.parse($el.dataset.options)),
-                );
-                chart.render();
-            "
-            data-options="{{ json_encode($apexOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}"
-        >
-            <div id="{{ $chartElementId }}"></div>
-            <noscript>
-                <p class="text-xs text-slate-500 dark:text-slate-400">
-                    Chart requires JavaScript. {{ $occurrenceCount }} observation{{ $occurrenceCount === 1 ? '' : 's' }} below.
-                </p>
-            </noscript>
-        </div>
+        @include('recurring::livewire.partials.recurring-detail-chart-options', [
+            'apexOptions' => $apexOptions,
+            'chartElementId' => $chartElementId,
+        ])
     </section>
 
     <section>
