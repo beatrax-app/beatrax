@@ -6,6 +6,20 @@
     $cardHead = 'text-xs uppercase tracking-wide text-[var(--color-text-faint)]';
 @endphp
 
+{{--
+    Phone responsive pass (UI-SPEC §19, D-22).
+    At <768px: max-width constraint is removed; .settings-grid collapses to a
+    single column via the scoped style below. Desktop multi-column unchanged.
+--}}
+<style>
+    @media (max-width: 767px) {
+        .settings-grid {
+            display: flex !important;
+            flex-direction: column !important;
+        }
+    }
+</style>
+
 <div class="max-w-2xl mx-auto space-y-6" data-testid="settings-page">
     <header class="space-y-1">
         <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Settings</h1>
@@ -309,6 +323,16 @@
             <h2 class="{{ $cardHead }}">Data &amp; backup</h2>
             @livewire('core.encrypted-backup-download')
             @livewire('core.encrypted-backup-restore')
+        </section>
+    </div>
+
+    {{-- ===== Install (D-22 placement b) ===== --}}
+    {{-- Standing install row: "Install beatrax as an app" — copy and CTA
+         logic owned by the x-core::install-hint component. --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2" id="install-app">
+            <h2 class="{{ $cardHead }}">Install</h2>
+            <x-core::install-hint />
         </section>
     </div>
 
