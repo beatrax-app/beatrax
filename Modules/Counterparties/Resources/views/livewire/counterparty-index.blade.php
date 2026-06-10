@@ -41,8 +41,14 @@
         </p>
     </header>
 
-    {{-- Toolbar: search · sort · view toggle ----------------------- --}}
-    <div style="display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;">
+    {{-- Toolbar: phone collapse (D-07) vs. full desktop toolbar --------- --}}
+    {{-- Phone (<768px): filter-sheet-trigger row only (search + Filters badge) --}}
+    <div class="phone-only">
+        <x-core::filter-sheet-trigger :activeCount="0" searchModel="" />
+    </div>
+
+    {{-- Desktop (>=768px): search · sort · view toggle inline --}}
+    <div class="desktop-only" style="display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;">
         <div class="side-search" role="search" style="flex: 1 1 280px; min-width: 240px;">
             <span class="ic" aria-hidden="true">⌕</span>
             <input
@@ -119,7 +125,9 @@
             >Import a statement →</a>
         </section>
     @elseif ($activeView === 'cards')
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-5);">
+        {{-- cards grid: single-column at phone width, auto-fill at >=768px --}}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-5);"
+             class="cp-cards-grid">
             @foreach ($rows as $row)
                 @php
                     $totalFormatted = Number::currency(abs($row->total12mMinor) / 100, 'EUR', 'nl');
@@ -204,8 +212,37 @@
             @endforeach
         </div>
     @else
-        {{-- List view --}}
-        <div class="frame" style="padding: 0; overflow: hidden;">
+        {{-- List view: desktop table + phone card-list-item degradation --}}
+        @foreach ($rows as $row)
+            @php
+                $totalFormatted = Number::currency(abs($row->total12mMinor) / 100, 'EUR', 'nl');
+                $avgFormatted = Number::currency(abs($row->avgPerMonthMinor) / 100, 'EUR', 'nl');
+                $href = match (true) {
+                    $row->type === 'self_account' => '/accounts/'.$row->slug,
+                    $row->type === 'unknown' => route('counterparties.triage', ['queue_first' => $row->id]),
+                    default => route('counterparties.profile', ['slug' => $row->slug]),
+                };
+            @endphp
+            {{-- phone-only: .card-list-item renders each row as a tidy two-line card --}}
+            <a
+                href="{{ $href }}"
+                class="card-list-item phone-only focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
+                style="text-decoration: none; display: flex;"
+            >
+                <div style="flex: 1 1 auto; min-width: 0;">
+                    <span class="primary">{{ $row->displayName }}</span>
+                    <span class="secondary">
+                        <x-counterparties::type-chip :type="$row->type" />
+                    </span>
+                </div>
+                <div style="flex: 0 0 auto; text-align: right;">
+                    <span class="amount" style="{{ $row->total12mMinor > 0 ? 'color: var(--color-emerald)' : '' }}">{{ $totalFormatted }}</span>
+                </div>
+            </a>
+        @endforeach
+
+        {{-- desktop-only: standard table --}}
+        <div class="frame desktop-only" style="padding: 0; overflow: hidden;">
             <table style="width: 100%; border-collapse: collapse;">
                 <thead style="background: var(--color-surface-2); text-align: left;">
                     <tr style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted);">
