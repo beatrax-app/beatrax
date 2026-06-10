@@ -598,12 +598,6 @@ final class PotsPage extends Component
             ->get(['id', 'name'])
             ->toArray();
 
-        // Active pots per account for the move modal destination picker
-        $potsForMove = [];
-        foreach ($activePots as $pot) {
-            $potsForMove[$pot->accountId][] = $pot;
-        }
-
         $view = $views->make('pots::livewire.pots-page', [
             'groups' => $groups,
             'reconciliations' => $reconciliations,
@@ -611,7 +605,10 @@ final class PotsPage extends Component
             'accounts' => $accounts,
             'goalsForPicker' => $goalsForPicker,
             'categoriesForPicker' => $categoriesForPicker,
-            'potsForMove' => $potsForMove,
+            // The move-modal destination picker consumes the same
+            // account-grouped active pots as the card list — one structure,
+            // two view variables (IN-04).
+            'potsForMove' => $groups,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
