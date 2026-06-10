@@ -13,9 +13,16 @@
         without standing up the full preview pipeline).
 
     Expects `$rows` (list<PreviewRowDto>) in scope.
+
+    D-06 / UI-SPEC §19: overflow-x:auto on the outer wrapper ensures
+    counterparty name cells scroll horizontally at phone width when
+    this partial is rendered standalone (e.g. in the test context).
+    When embedded inside the preview-wizard table the parent section's
+    overflow-x-auto handles the horizontal scroll.
 --}}
 
-<div class="rename-counterparty-cells">
+{{-- overflow-x-auto ensures phone-width horizontal scroll in standalone use --}}
+<div class="rename-counterparty-cells overflow-x-auto">
     @foreach ($rows as $row)
         <div class="cp-cell" data-row-index="{{ $row->rowIndex }}">
             @if ($row->aliasFriendlyName !== null)
