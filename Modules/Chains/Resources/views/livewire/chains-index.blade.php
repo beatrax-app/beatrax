@@ -46,7 +46,9 @@
             </p>
         </div>
     @else
-        <ul class="space-y-3" data-testid="chains-index-list">
+        {{-- overflow-x: auto wrapper so dense chain rows scroll horizontally at phone width (D-06 power split) --}}
+        <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <ul class="space-y-3" data-testid="chains-index-list" style="min-width: 480px;">
             @foreach ($chains as $chain)
                 @php
                     $tierClasses = match ($chain->state) {
@@ -131,5 +133,6 @@
                 </li>
             @endforeach
         </ul>
+        </div>{{-- /overflow-x-scroll-wrapper --}}
     @endif
 </div>

@@ -47,7 +47,9 @@
             </p>
         </div>
     @else
-        <ul class="space-y-4" data-testid="chain-hints-list">
+        {{-- overflow-x: auto wrapper so dense hint rows scroll horizontally at phone width (D-06 power split) --}}
+        <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <ul class="space-y-4" data-testid="chain-hints-list" style="min-width: 480px;">
             @foreach ($hints as $hint)
                 <li
                     class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700"
@@ -107,5 +109,6 @@
                 </li>
             @endforeach
         </ul>
+        </div>{{-- /overflow-x-scroll-wrapper --}}
     @endif
 </div>
