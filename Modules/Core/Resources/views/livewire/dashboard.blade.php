@@ -22,7 +22,47 @@
     x-on:keydown.window.t="if (!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) $wire.today()"
     wire:poll.5s="refreshFailedChainResolution"
 >
-    <header class="flex items-start justify-between gap-6">
+    {{--
+        Phone responsive pass (D-15, UI-SPEC §9).
+
+        At <768px (phone), the dashboard column switches to a flex container
+        with explicit order values so the D-15 inbox-like posture is achieved
+        without moving or duplicating any markup:
+
+          order-1: header
+          order-2: alerts strip (drift badge)
+          order-3: KPI tiles (single-column at phone)
+          order-4: goals summary card
+          order-5: upcoming content (fixed payments, spending trend, savings insights)
+          order-6: status tiles + net worth (deprioritised on phone)
+          order-7: top spending + recent transactions
+          order-8: install hint
+
+        At >=768px (tablet/desktop), all order classes are reset (order-none) and
+        the existing space-y-12 block layout is preserved exactly.
+    --}}
+    <style>
+        @media (max-width: 767px) {
+            .dashboard-main {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-8, 2rem);
+            }
+            .dashboard-phone-order-1  { order: 1; }
+            .dashboard-phone-order-2  { order: 2; }
+            .dashboard-phone-order-3  { order: 3; }
+            .dashboard-phone-order-4  { order: 4; }
+            .dashboard-phone-order-5  { order: 5; }
+            .dashboard-phone-order-6  { order: 6; }
+            .dashboard-phone-order-7  { order: 7; }
+            .dashboard-phone-order-8  { order: 8; }
+        }
+    </style>
+
+    <div class="dashboard-main">
+
+    {{-- Header (order 1 on phone, first naturally on desktop) --}}
+    <header class="flex items-start justify-between gap-6 dashboard-phone-order-1">
         <div class="space-y-1">
             <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $summary->period->label }}</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">This period at a glance.</p>
@@ -48,36 +88,19 @@
         </div>
     </header>
 
-    {{-- Status tile row — Forecast highlights + Email scan health.
-         Phase 5's "Next ICS settlement" inline tile is REPLACED by the
-         Phase 10 Forecast highlights Livewire tile (strict superset —
-         the next-settlement line is preserved). Either tile may be
-         hidden when its source query returns no data. Side-by-side on
-         desktop (md:grid-cols-2), stacked on mobile. --}}
-    <section class="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Status tiles">
-        @livewire('forecasting.forecast-highlights-tile')
+    {{-- Alerts strip (order 2 on phone): drift alerts, full-width stacked (D-15) --}}
+    {{-- Inline "Drift alerts" tile — count + EUR-roll-up annualized
+         impact for open drift_alerts. The tile renders no chrome when
+         the user has zero open drift alerts; the dashboard collapses
+         gracefully on a quiet day. Cross-user scoping happens inside
+         DriftAlertQuery. --}}
+    <div class="dashboard-phone-order-2">
+        @livewire('drift-alerts.dashboard-drift-badge')
+    </div>
 
-        @if (isset($emailScanHealth) && $emailScanHealth !== null)
-            <a
-                href="{{ route('inboxes.index') }}"
-                class="block rounded-lg transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
-                aria-label="Email scan health — {{ count($emailScanHealth->lines) + $emailScanHealth->overflowCount }} connected {{ ($emailScanHealth->overflowCount + count($emailScanHealth->lines)) === 1 ? 'inbox' : 'inboxes' }}"
-            >
-                @include('email-scan::livewire.email-scan-health-tile', ['tile' => $emailScanHealth])
-            </a>
-        @endif
-    </section>
-
-    {{-- Net worth — one figure across all accounts (assets minus liabilities),
-         with an expandable per-account breakdown. Renders nothing with no
-         accounts. --}}
-    @livewire('core.net-worth-card')
-
-    {{-- Goals summary card — up to 3 nearest-finishing active goals.
-         Renders a calm empty-state when the user has no goals. --}}
-    @livewire('goals.summary-card')
-
-    {{-- KPI tiles: the primary focal point of the dashboard.
+    {{-- KPI tiles (order 3 on phone): the primary focal point of the dashboard.
+         Single-column at <768px (overriding the md:grid-cols-3 grid), desktop
+         3-up grid unchanged at >=768px.
 
          When the user's default_currency_view is 'eur_only', `$tiles` is
          null and a single row of In / Out / Net tiles renders from
@@ -87,6 +110,7 @@
          labeled tile-row per currency. An EUR-only month in original
          mode collapses to a single labeled row that visually matches the
          EUR-only layout. --}}
+    <div class="dashboard-phone-order-3">
     @if ($tiles === null)
         <section class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="This period totals">
             <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
@@ -143,98 +167,142 @@
             @endforeach
         </div>
     @endif
+    </div>
 
-    {{-- Inline "Drift alerts" tile — count + EUR-roll-up annualized
-         impact for open drift_alerts. The tile renders no chrome when
-         the user has zero open drift alerts; the dashboard collapses
-         gracefully on a quiet day. Cross-user scoping happens inside
-         DriftAlertQuery. --}}
-    @livewire('drift-alerts.dashboard-drift-badge')
+    {{-- Goals summary card (order 4 on phone) — up to 3 nearest-finishing active goals.
+         Renders a calm empty-state when the user has no goals. --}}
+    <div class="dashboard-phone-order-4">
+        @livewire('goals.summary-card')
+    </div>
 
-    {{-- Inline "Fixed monthly payments" card — top six approved
-         recurring series with View-all link to `/recurring`. The card
-         resolves through Livewire's container; cross-user scoping
-         happens inside FixedPaymentsViewQuery. --}}
-    @livewire('recurring.fixed-payments-card')
+    {{-- Upcoming content (order 5 on phone): fixed payments, spending trend, savings insights --}}
+    <div class="dashboard-phone-order-5 space-y-12">
+        {{-- Inline "Fixed monthly payments" card — top six approved
+             recurring series with View-all link to `/recurring`. The card
+             resolves through Livewire's container; cross-user scoping
+             happens inside FixedPaymentsViewQuery. --}}
+        @livewire('recurring.fixed-payments-card')
 
-    {{-- "This month vs last" — month-over-month spend comparison + top category
-         movers. Renders nothing until there is a prior period to compare. --}}
-    @livewire('core.spending-trend-card')
+        {{-- "This month vs last" — month-over-month spend comparison + top category
+             movers. Renders nothing until there is a prior period to compare. --}}
+        @livewire('core.spending-trend-card')
 
-    {{-- "Ways to save" — corpus cancel/cheaper links surfaced from recurring
-         + drift data. Renders nothing when there is nothing to suggest. --}}
-    @livewire('drift-alerts.savings-insights-card')
+        {{-- "Ways to save" — corpus cancel/cheaper links surfaced from recurring
+             + drift data. Renders nothing when there is nothing to suggest. --}}
+        @livewire('drift-alerts.savings-insights-card')
+    </div>
 
-    {{-- Top spending categories --}}
-    <section class="space-y-4">
-        <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Top spending</h2>
-        @if (count($summary->topCategories) === 0)
-            <p class="text-sm text-slate-500 dark:text-slate-400">No categorized expenses yet.</p>
-        @else
-            <ul class="space-y-3">
-                @foreach ($summary->topCategories as $cat)
-                    <li class="space-y-1">
-                        <div class="flex items-baseline justify-between text-sm">
-                            <span class="text-slate-900 dark:text-slate-100">{{ $cat->name }}</span>
-                            <span class="text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                                {{ $fmt($cat->spend) }}
-                            </span>
-                        </div>
-                        <div class="h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                            @php
-                                $rawPct = (int) round($cat->percentageOfTotal * 100);
-                                $barWidth = $rawPct === 0 ? 0 : max(2, min(100, $rawPct));
-                            @endphp
-                            <div
-                                class="h-1 bg-slate-900 dark:bg-slate-100"
-                                style="width: {{ $barWidth }}%;"
-                            ></div>
-                        </div>
-                    </li>
-                @endforeach
-            </ul>
-        @endif
-    </section>
+    {{-- Status tiles + net worth (order 6 on phone): deprioritised below core content --}}
+    <div class="dashboard-phone-order-6 space-y-12">
+        {{-- Status tile row — Forecast highlights + Email scan health.
+             Phase 5's "Next ICS settlement" inline tile is REPLACED by the
+             Phase 10 Forecast highlights Livewire tile (strict superset —
+             the next-settlement line is preserved). Either tile may be
+             hidden when its source query returns no data. Side-by-side on
+             desktop (md:grid-cols-2), stacked on mobile. --}}
+        <section class="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Status tiles">
+            @livewire('forecasting.forecast-highlights-tile')
 
-    {{-- Recent transactions --}}
-    <section class="space-y-4">
-        <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Recent transactions</h2>
-            <a
-                href="{{ route('transactions.index') }}"
-                class="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
-            >View all</a>
-        </div>
+            @if (isset($emailScanHealth) && $emailScanHealth !== null)
+                <a
+                    href="{{ route('inboxes.index') }}"
+                    class="block rounded-lg transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                    aria-label="Email scan health — {{ count($emailScanHealth->lines) + $emailScanHealth->overflowCount }} connected {{ ($emailScanHealth->overflowCount + count($emailScanHealth->lines)) === 1 ? 'inbox' : 'inboxes' }}"
+                >
+                    @include('email-scan::livewire.email-scan-health-tile', ['tile' => $emailScanHealth])
+                </a>
+            @endif
+        </section>
 
-        @if (count($summary->recentTransactions) === 0)
-            <p class="text-sm text-slate-500 dark:text-slate-400">Nothing here for this period.</p>
-        @else
-            <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-                <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
-                    <thead class="bg-slate-50 dark:bg-slate-900">
-                        <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Date</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Counterparty</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Category</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
-                        @foreach ($summary->recentTransactions as $row)
-                            <tr>
-                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
-                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
-                                <td class="px-4 py-2 text-slate-500 dark:text-slate-400">{{ $row->categoryName ?? 'Uncategorized' }}</td>
-                                <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                                    {{ $fmt($row->amount) }}
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+        {{-- Net worth — one figure across all accounts (assets minus liabilities),
+             with an expandable per-account breakdown. Renders nothing with no
+             accounts. --}}
+        @livewire('core.net-worth-card')
+    </div>
+
+    {{-- Top spending + recent transactions (order 7 on phone) --}}
+    <div class="dashboard-phone-order-7 space-y-12">
+        {{-- Top spending categories --}}
+        <section class="space-y-4">
+            <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Top spending</h2>
+            @if (count($summary->topCategories) === 0)
+                <p class="text-sm text-slate-500 dark:text-slate-400">No categorized expenses yet.</p>
+            @else
+                <ul class="space-y-3">
+                    @foreach ($summary->topCategories as $cat)
+                        <li class="space-y-1">
+                            <div class="flex items-baseline justify-between text-sm">
+                                <span class="text-slate-900 dark:text-slate-100">{{ $cat->name }}</span>
+                                <span class="text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
+                                    {{ $fmt($cat->spend) }}
+                                </span>
+                            </div>
+                            <div class="h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                                @php
+                                    $rawPct = (int) round($cat->percentageOfTotal * 100);
+                                    $barWidth = $rawPct === 0 ? 0 : max(2, min(100, $rawPct));
+                                @endphp
+                                <div
+                                    class="h-1 bg-slate-900 dark:bg-slate-100"
+                                    style="width: {{ $barWidth }}%;"
+                                ></div>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>
+
+        {{-- Recent transactions --}}
+        <section class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Recent transactions</h2>
+                <a
+                    href="{{ route('transactions.index') }}"
+                    class="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
+                >View all</a>
             </div>
-        @endif
-    </section>
+
+            @if (count($summary->recentTransactions) === 0)
+                <p class="text-sm text-slate-500 dark:text-slate-400">Nothing here for this period.</p>
+            @else
+                <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                    <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                        <thead class="bg-slate-50 dark:bg-slate-900">
+                            <tr>
+                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Date</th>
+                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Counterparty</th>
+                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Category</th>
+                                <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
+                            @foreach ($summary->recentTransactions as $row)
+                                <tr>
+                                    <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
+                                    <td class="px-4 py-2 text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
+                                    <td class="px-4 py-2 text-slate-500 dark:text-slate-400">{{ $row->categoryName ?? 'Uncategorized' }}</td>
+                                    <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
+                                        {{ $fmt($row->amount) }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </section>
+    </div>
+
+    {{-- Standing install-hint card (order 8 on phone, bottom of column on all viewports) --}}
+    {{-- D-22: "Also want to see your data on your phone?" standing promo card.
+         The install-hint component (plan 03) owns the copy and the
+         beforeinstallprompt / iOS fallback logic. --}}
+    <div class="dashboard-phone-order-8">
+        <x-core::install-hint />
+    </div>
+
+    </div>{{-- end .dashboard-main --}}
 
     {{-- Reauth-detected toast.
 
