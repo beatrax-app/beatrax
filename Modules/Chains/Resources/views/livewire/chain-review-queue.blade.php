@@ -71,7 +71,9 @@
             </p>
         </div>
     @else
-        <ul class="space-y-4">
+        {{-- overflow-x: auto wrapper so dense chain rows scroll horizontally at phone width (D-06 power split) --}}
+        <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <ul class="space-y-4" style="min-width: 480px;">
             @foreach ($candidates as $row)
                 <li class="rounded-lg border border-slate-200 bg-slate-50 p-4 opacity-90 dark:bg-slate-900 dark:border-slate-700">
                     <div class="flex items-start justify-between gap-4">
@@ -135,6 +137,7 @@
                 </li>
             @endforeach
         </ul>
+        </div>{{-- /overflow-x-scroll-wrapper --}}
 
         @if (count($candidates) >= 25)
             @php
