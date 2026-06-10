@@ -1,4 +1,6 @@
-<div class="p-8 space-y-6" data-testid="artisan-runner-page">
+{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the artisan runner
+     timeline and run cards scroll horizontally at phone width. --}}
+<div class="p-8 space-y-6 overflow-x-auto" data-testid="artisan-runner-page">
     <header class="flex items-center justify-between gap-4">
         <div class="space-y-1">
             <h1 class="text-xl font-semibold text-[var(--color-text)]">Artisan runner</h1>
