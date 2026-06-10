@@ -193,43 +193,47 @@ final class GoalsPage extends Component
 
         $accountId = $this->accountId !== '' ? (int) $this->accountId : null;
 
+        // D-11: pot picker change (link, move, or clear) is resolved up front.
+        $newPotId = $this->linkedPotId !== '' ? (int) $this->linkedPotId : null;
+        $prevPotId = $potBalance->linkedPotIdForGoal($this->editGoalId, $currentUser->user());
+
+        // WR-03: the goal update and the clear + relink sequence run in ONE
+        // transaction so a failed relink (e.g. tampered/cross-user pot id)
+        // rolls back both the goal update and the cleared previous link —
+        // the existing goal↔pot link is never silently lost.
         try {
-            $writer->update(
-                $currentUser->user(),
-                $this->editGoalId,
-                $this->name,
-                $this->targetAmount,
-                $this->targetDate,
-                $accountId,
-            );
-        } catch (GoalNotFoundException $e) {
+            $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $accountId, $newPotId, $prevPotId): void {
+                $writer->update(
+                    $currentUser->user(),
+                    $this->editGoalId,
+                    $this->name,
+                    $this->targetAmount,
+                    $this->targetDate,
+                    $accountId,
+                );
+
+                if ($newPotId !== null && $newPotId !== $prevPotId) {
+                    // Clear the previous link first so assertGoalOwnedAndFree passes (D-11).
+                    if ($prevPotId !== null) {
+                        $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
+                    }
+
+                    $this->linkPotToGoal($currentUser, $db, $potWriter, $newPotId, $this->editGoalId);
+                } elseif ($newPotId === null && $prevPotId !== null) {
+                    // User cleared the selection — remove the link.
+                    $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
+                }
+            });
+        } catch (GoalNotFoundException) {
             // Cross-user / missing goal — silently ignore (control flow on
             // exception type, not message text — WR-05).
             $this->resetForm();
 
             return;
-        } catch (InvalidGoalAmountException $e) {
+        } catch (InvalidGoalAmountException) {
             $this->errorAmount = 'Enter a valid amount greater than zero.';
 
             return;
-        }
-
-        // D-11: handle the pot picker change (link, move, or clear).
-        $newPotId = $this->linkedPotId !== '' ? (int) $this->linkedPotId : null;
-        $prevPotId = $potBalance->linkedPotIdForGoal($this->editGoalId, $currentUser->user());
-
-        try {
-            if ($newPotId !== null && $newPotId !== $prevPotId) {
-                // Clear the previous link first so assertGoalOwnedAndFree passes (D-11).
-                if ($prevPotId !== null) {
-                    $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
-                }
-
-                $this->linkPotToGoal($currentUser, $db, $potWriter, $newPotId, $this->editGoalId);
-            } elseif ($newPotId === null && $prevPotId !== null) {
-                // User cleared the selection — remove the link.
-                $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
-            }
         } catch (\InvalidArgumentException $e) {
             $this->errorLinkedPot = $e->getMessage();
 
