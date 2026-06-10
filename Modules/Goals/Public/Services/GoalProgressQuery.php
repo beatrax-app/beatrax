@@ -121,11 +121,13 @@ final class GoalProgressQuery
             // Otherwise fall back to the Phase 2 sumContributions() path.
             $goalId = self::toInt($row->id);
             if (isset($linkedPotBalances[$goalId])) {
-                $potMinor = $linkedPotBalances[$goalId];
-                $potCurrency = $this->potBalance->currencyForLinkedPot($goalId, $user);
+                // IN-03: balance and currency arrive from the single batched
+                // load — no per-goal follow-up query.
+                $potMinor = $linkedPotBalances[$goalId]['balance'];
+                $potCurrency = $linkedPotBalances[$goalId]['currency'];
                 $targetCurrency = self::toStr($row->target_currency);
 
-                if ($potCurrency !== null && $potCurrency !== $targetCurrency) {
+                if ($potCurrency !== '' && $potCurrency !== $targetCurrency) {
                     $money = Money::ofMinor($potMinor, $potCurrency);
                     $contributedMinor = $this->fx->convertToBase($money, $targetCurrency)->converted->toMinor();
                 } else {
