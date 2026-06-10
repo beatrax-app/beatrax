@@ -105,20 +105,24 @@
                 /*
                  * Global command-palette keybind handler (D-42, 16-08).
                  *
-                 *   - ⌘K / Ctrl+K → dispatch 'palette:open' (the
+                 *   - Cmd+K / Ctrl+K → dispatch 'palette:open' (the
                  *     CommandPaletteModal Livewire component listens
                  *     and pops the Flux modal).
-                 *   - ⌘. / Ctrl+. → jump to /dev (opens the Dev
+                 *   - Cmd+. / Ctrl+. → jump to /dev (opens the Dev
                  *     Console; non-developers receive 404 from
                  *     EnsureDeveloperMode).
                  *
                  * I-7 fix: do NOT steal keystrokes when focus is inside
                  * a text field. Without this carve-out a developer
-                 * typing 'k' inside a search input while holding ⌘
-                 * (e.g. ⌘← / ⌘→ to navigate words on macOS, then a
+                 * typing 'k' inside a search input while holding Cmd
+                 * (e.g. Cmd+Left / Cmd+Right to navigate words on macOS, then a
                  * 'k') would have the palette open over their input.
                  * The standard browser bindings inside INPUT /
                  * TEXTAREA / contentEditable stay primary.
+                 *
+                 * Raw U+2318 glyphs are banned from this template: x-data
+                 * comments render into the HTML attribute and trip
+                 * AppSidebarKbdTest's not-contains-glyph assertion (D-04).
                  */
                 const t = document.activeElement;
                 if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {

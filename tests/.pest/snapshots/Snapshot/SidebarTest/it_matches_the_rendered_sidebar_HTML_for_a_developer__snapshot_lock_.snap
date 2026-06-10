@@ -14,7 +14,12 @@
             aria-label="Search or jump to"
             disabled
         />
-        <span class="kbd" aria-hidden="true">⌘K</span>
+        
+                <span
+            class="kbd hidden-touch"
+            aria-hidden="true"
+            x-text="$store.platform.isMac ? '\u2318K' : 'Ctrl+K'"
+        >Ctrl+K</span>
     </div>
 
     <div class="side-section-label">THIS MONTH</div>
