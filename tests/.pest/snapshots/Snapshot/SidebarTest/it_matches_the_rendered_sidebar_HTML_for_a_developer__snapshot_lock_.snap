@@ -60,6 +60,14 @@
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
+    <a href="https://beatrax.test/goals" class="side-item ">
+        <span class="ic" aria-hidden="true">◎</span>
+        Goals
+    </a>
+    <a href="https://beatrax.test/pots" class="side-item ">
+        <span class="ic" aria-hidden="true">◫</span>
+        Pots
+    </a>
     <a href="https://beatrax.test/drift/watch" class="side-item ">
         <span class="ic" aria-hidden="true">↗</span>
         Subscriptions
