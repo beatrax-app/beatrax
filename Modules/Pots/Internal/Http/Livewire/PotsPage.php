@@ -63,7 +63,13 @@ final class PotsPage extends Component
     /** 'fund' | 'withdraw' | 'transfer' */
     public string $operationKind = '';
 
-    public int $transferTargetPotId = 0;
+    /**
+     * String-typed because it backs a <select> whose placeholder option is ''
+     * — hydrating '' into an int property throws a Livewire property-type
+     * error instead of a validation message (WR-09; same pattern as
+     * $accountId here and on GoalsPage). Cast in movePot().
+     */
+    public string $transferTargetPotId = '';
 
     // Inline archive confirm
     public int $archivingPotId = 0;
@@ -387,10 +393,12 @@ final class PotsPage extends Component
         }
 
         try {
+            // '' (placeholder) casts to 0, which PotWriter rejects with
+            // PotNotFoundException → inline error (WR-09).
             $writer->transfer(
                 $user,
                 $this->operationPotId,
-                $this->transferTargetPotId,
+                (int) $this->transferTargetPotId,
                 $this->operationAmount,
                 $memo,
             );
@@ -559,9 +567,12 @@ final class PotsPage extends Component
             ->orderBy('name');
 
         if ($this->editPotId !== 0) {
-            // When editing, exclude goals linked to OTHER pots (allow the current pot's goal)
+            // When editing, exclude goals linked to OTHER pots (allow the current pot's goal).
+            // editPotId is client-controlled — scope to the user like every other
+            // read on user-owned tables (T-03-07 / WR-06).
             $currentPotGoalId = $db->connection()
                 ->table('pots')
+                ->where('user_id', $user->id)
                 ->where('id', $this->editPotId)
                 ->value('goal_id');
             $goalsToExclude = array_filter(
@@ -587,12 +598,6 @@ final class PotsPage extends Component
             ->get(['id', 'name'])
             ->toArray();
 
-        // Active pots per account for the move modal destination picker
-        $potsForMove = [];
-        foreach ($activePots as $pot) {
-            $potsForMove[$pot->accountId][] = $pot;
-        }
-
         $view = $views->make('pots::livewire.pots-page', [
             'groups' => $groups,
             'reconciliations' => $reconciliations,
@@ -600,7 +605,10 @@ final class PotsPage extends Component
             'accounts' => $accounts,
             'goalsForPicker' => $goalsForPicker,
             'categoriesForPicker' => $categoriesForPicker,
-            'potsForMove' => $potsForMove,
+            // The move-modal destination picker consumes the same
+            // account-grouped active pots as the card list — one structure,
+            // two view variables (IN-04).
+            'potsForMove' => $groups,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -637,7 +645,7 @@ final class PotsPage extends Component
         $this->operationAmount = '';
         $this->operationMemo = '';
         $this->operationKind = '';
-        $this->transferTargetPotId = 0;
+        $this->transferTargetPotId = '';
         $this->clearErrors();
     }
 

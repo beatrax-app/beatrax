@@ -74,29 +74,36 @@ final class PotWriter
 
         $currency = $this->accountCurrency($accountId, $user);
 
-        /** @var Pot $pot */
-        $pot = Pot::query()->withoutGlobalScope(UserScope::class)->create([
-            'user_id' => $user->id,
-            'account_id' => $accountId,
-            'goal_id' => $goalId,
-            'category_id' => $categoryId,
-            'name' => $name,
-            'currency' => $currency,
-            'status' => 'active',
-        ]);
-
-        // Optional initial funding (D-08)
+        // Parse the optional initial amount BEFORE any write so an invalid
+        // amount string never leaves an orphan pot behind (WR-01).
+        $minor = null;
         if ($rawInitialAmount !== null && trim($rawInitialAmount) !== '') {
             $minor = $this->parseAmount($rawInitialAmount);
             if ($minor === null) {
                 throw new \InvalidArgumentException('Invalid or non-positive initial amount.');
             }
+        }
 
-            $potId = $pot->id;
-            $potAccountId = $pot->account_id;
-            $this->db->connection()->transaction(function () use ($user, $potId, $potAccountId, $minor, $currency): void {
-                $unallocated = $this->balance->currentUnallocatedForAccount($potAccountId, $user);
+        // Creation + optional initial funding (D-08) run in ONE transaction so
+        // a failed funding check rolls back the pot row — no orphan pot in the
+        // list and no duplicate on resubmit (WR-01).
+        /** @var Pot $pot */
+        $pot = $this->db->connection()->transaction(function () use ($user, $name, $accountId, $goalId, $categoryId, $currency, $minor): Pot {
+            /** @var Pot $pot */
+            $pot = Pot::query()->withoutGlobalScope(UserScope::class)->create([
+                'user_id' => $user->id,
+                'account_id' => $accountId,
+                'goal_id' => $goalId,
+                'category_id' => $categoryId,
+                'name' => $name,
+                'currency' => $currency,
+                'status' => 'active',
+            ]);
+
+            if ($minor !== null) {
+                $unallocated = $this->balance->currentUnallocatedForAccount($accountId, $user);
                 if ($minor > $unallocated) {
+                    // Throwing inside the transaction rolls back the pot creation.
                     throw new InsufficientUnallocatedException(
                         'Initial amount exceeds unallocated balance.'
                     );
@@ -104,7 +111,7 @@ final class PotWriter
 
                 $this->db->connection()->table('pot_movements')->insert([
                     'user_id' => $user->id,
-                    'pot_id' => $potId,
+                    'pot_id' => $pot->id,
                     'counterpart_pot_id' => null,
                     'amount_minor' => $minor,
                     'currency' => $currency,
@@ -113,8 +120,10 @@ final class PotWriter
                     'created_at' => CarbonImmutable::now(),
                     'updated_at' => CarbonImmutable::now(),
                 ]);
-            });
-        }
+            }
+
+            return $pot;
+        });
 
         return $pot;
     }
@@ -230,7 +239,7 @@ final class PotWriter
         $currency = $pot->currency;
 
         $this->db->connection()->transaction(function () use ($user, $potId, $minor, $currency, $memo): void {
-            $potBalance = $this->balance->balanceForPot($potId);
+            $potBalance = $this->balance->balanceForPot($potId, $user);
             if ($minor > $potBalance) {
                 throw new InsufficientUnallocatedException(
                     'Amount exceeds balance in this pot.'
@@ -296,7 +305,7 @@ final class PotWriter
         $currency = $fromPot->currency;
 
         $this->db->connection()->transaction(function () use ($user, $fromPotId, $toPotId, $minor, $currency, $memo): void {
-            $sourceBalance = $this->balance->balanceForPot($fromPotId);
+            $sourceBalance = $this->balance->balanceForPot($fromPotId, $user);
             if ($minor > $sourceBalance) {
                 throw new InsufficientUnallocatedException(
                     'Amount exceeds balance in the source pot.'
@@ -345,7 +354,7 @@ final class PotWriter
         }
 
         $this->db->connection()->transaction(function () use ($user, $pot): void {
-            $balance = $this->balance->balanceForPot($pot->id);
+            $balance = $this->balance->balanceForPot($pot->id, $user);
 
             if ($balance > 0) {
                 // Release balance back to unallocated before archiving (D-09 / Pitfall 4)
@@ -371,6 +380,11 @@ final class PotWriter
      * Restore an archived pot to active status. No balance is restored —
      * the pot comes back empty (D-09).
      *
+     * One-pot-per-goal (D-11) is re-checked here: if another active pot
+     * claimed this pot's goal while it was archived, the restored pot comes
+     * back UNLINKED instead of creating a second active pot on the same goal
+     * (WR-04).
+     *
      * A foreign or missing archived pot id is a silent no-op.
      */
     public function restore(User $user, int $potId): void
@@ -384,6 +398,24 @@ final class PotWriter
 
         if (! $pot instanceof Pot) {
             return;
+        }
+
+        // D-11 / WR-04: archive() keeps goal_id, and another pot may have
+        // been linked to the same goal in the meantime. Restoring must not
+        // produce two active pots on one goal — the restored pot loses its
+        // link when the goal is already taken.
+        if ($pot->goal_id !== null) {
+            $goalTaken = $this->db->connection()
+                ->table('pots')
+                ->where('user_id', $user->id)
+                ->where('goal_id', $pot->goal_id)
+                ->where('status', 'active')
+                ->where('id', '!=', $pot->id)
+                ->exists();
+
+            if ($goalTaken) {
+                $pot->goal_id = null;
+            }
         }
 
         $pot->status = 'active';

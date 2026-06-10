@@ -37,6 +37,15 @@ final class AccountBalanceQuery
      *
      * A positive result means the account has a credit balance. Returns 0 when
      * there are no transactions for this account/user pair.
+     *
+     * SINGLE-CURRENCY ASSUMPTION (IN-07): the sum has no currency filter and
+     * adds raw `amount_minor` across whatever currencies the account's
+     * transactions carry. For an account holding more than one transaction
+     * currency (e.g. an ICS account with USD Google Play settlements) the
+     * result mixes units. This deliberately mirrors the existing
+     * BalanceAnchorResolver fallback so the pot reconciliation header and the
+     * net-worth figure stay consistent; an FX-aware per-currency balance is a
+     * future improvement that must change both call paths together.
      */
     public function currentBalance(int $accountId, User $user): int
     {
