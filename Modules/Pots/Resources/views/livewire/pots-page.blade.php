@@ -17,6 +17,24 @@
         ->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
 @endphp
 
+{{--
+    Phone responsive pass (D-06, D-10, D-12, UI-SPEC §8).
+
+    At <768px:
+    - Pots render as .card-list-item rows (pot name .primary, balance .amount, account .secondary)
+    - Fund/Move/Create/Edit modals become bottom sheets (x-core::bottom-sheet)
+    - Row actions (Fund, Move, Edit) are always visible on phone (D-12)
+    At >=768px: existing card grid + Flux modals unchanged.
+--}}
+<style>
+    @media (min-width: 768px) {
+        .pots-phone-list { display: none !important; }
+    }
+    @media (max-width: 767px) {
+        .pots-desktop-list { display: none !important; }
+    }
+</style>
+
 <div class="mx-auto max-w-3xl px-4 py-12">
     {{-- Page header --}}
     <header class="mb-8 flex items-start justify-between gap-4">
@@ -27,8 +45,14 @@
         @if (count($accounts) > 0)
             <button
                 type="button"
-                x-on:click="$flux.modal('pot-form').show()"
-                wire:click="$set('editPotId', 0)"
+                x-on:click="
+                    $wire.set('editPotId', 0);
+                    if (window.innerWidth < 768) {
+                        $dispatch('open-sheet', { name: 'pot-form' });
+                    } else {
+                        $flux.modal('pot-form').show();
+                    }
+                "
                 class="inline-flex shrink-0 items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
             >Add pot</button>
         @endif
@@ -51,8 +75,42 @@
             @endif
         </div>
     @else
-        {{-- Account groups (D-14): grouped by account, ordered by account name --}}
-        <div class="space-y-8">
+        {{-- Phone: flat .card-list-item list across all accounts (D-06) --}}
+        <div class="pots-phone-list rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden">
+            @foreach ($groups as $accountId => $pots)
+                @foreach ($pots as $pot)
+                    <div class="card-list-item">
+                        <div class="flex-1 min-w-0">
+                            <p class="primary truncate">{{ $pot->name }}</p>
+                            <p class="secondary">{{ $pot->accountName }}</p>
+                        </div>
+                        <span class="amount">{{ $fmt($pot->balanceMinor, $pot->currency) }}</span>
+                        {{-- Row actions always visible on phone (D-12) --}}
+                        <button
+                            type="button"
+                            x-on:click="
+                                $wire.set('operationPotId', {{ $pot->id }});
+                                $wire.set('operationKind', 'fund');
+                                $dispatch('open-sheet', { name: 'pot-fund' });
+                            "
+                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                        >Fund</button>
+                        <button
+                            type="button"
+                            x-on:click="
+                                $wire.set('operationPotId', {{ $pot->id }});
+                                $wire.set('operationKind', 'transfer');
+                                $dispatch('open-sheet', { name: 'pot-move' });
+                            "
+                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                        >Move</button>
+                    </div>
+                @endforeach
+            @endforeach
+        </div>
+
+        {{-- Desktop: Account groups (D-14): grouped by account, ordered by account name --}}
+        <div class="pots-desktop-list space-y-8">
             @foreach ($groups as $accountId => $pots)
                 @php
                     /** @var \Modules\Pots\Public\Dto\PotRow[] $pots */
@@ -68,8 +126,15 @@
                         </h2>
                         <button
                             type="button"
-                            x-on:click="$flux.modal('pot-form').show()"
-                            wire:click="$set('accountId', '{{ $accountId }}'); $set('editPotId', 0)"
+                            x-on:click="
+                                $wire.set('accountId', '{{ $accountId }}');
+                                $wire.set('editPotId', 0);
+                                if (window.innerWidth < 768) {
+                                    $dispatch('open-sheet', { name: 'pot-form' });
+                                } else {
+                                    $flux.modal('pot-form').show();
+                                }
+                            "
                             class="rounded-md border border-slate-200 bg-transparent px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-900"
                         >Add pot</button>
                     </div>
@@ -157,7 +222,13 @@
                                         <button
                                             type="button"
                                             wire:click="$set('operationPotId', {{ $pot->id }}); $set('operationKind', 'fund')"
-                                            x-on:click="$flux.modal('pot-fund').show()"
+                                            x-on:click="
+                                                if (window.innerWidth < 768) {
+                                                    $dispatch('open-sheet', { name: 'pot-fund' });
+                                                } else {
+                                                    $flux.modal('pot-fund').show();
+                                                }
+                                            "
                                             class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100"
                                         >Fund</button>
 
@@ -165,7 +236,13 @@
                                         <button
                                             type="button"
                                             wire:click="$set('operationPotId', {{ $pot->id }}); $set('operationKind', 'transfer')"
-                                            x-on:click="$flux.modal('pot-move').show()"
+                                            x-on:click="
+                                                if (window.innerWidth < 768) {
+                                                    $dispatch('open-sheet', { name: 'pot-move' });
+                                                } else {
+                                                    $flux.modal('pot-move').show();
+                                                }
+                                            "
                                             class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100"
                                         >Move</button>
 
@@ -180,11 +257,23 @@
                                             <flux:menu>
                                                 <flux:menu.item
                                                     wire:click="openEdit({{ $pot->id }})"
-                                                    x-on:click="$flux.modal('pot-form').show()"
+                                                    x-on:click="
+                                                        if (window.innerWidth < 768) {
+                                                            $dispatch('open-sheet', { name: 'pot-form' });
+                                                        } else {
+                                                            $flux.modal('pot-form').show();
+                                                        }
+                                                    "
                                                 >Edit</flux:menu.item>
                                                 <flux:menu.item
                                                     wire:click="$set('operationPotId', {{ $pot->id }}); $set('operationKind', 'withdraw')"
-                                                    x-on:click="$flux.modal('pot-withdraw').show()"
+                                                    x-on:click="
+                                                        if (window.innerWidth < 768) {
+                                                            $dispatch('open-sheet', { name: 'pot-withdraw' });
+                                                        } else {
+                                                            $flux.modal('pot-withdraw').show();
+                                                        }
+                                                    "
                                                 >Withdraw</flux:menu.item>
                                                 <flux:menu.item wire:click="confirmArchive({{ $pot->id }})">Archive</flux:menu.item>
                                             </flux:menu>
@@ -252,7 +341,7 @@
                     </ul>
                 </div>
             @endforeach
-        </div>
+        </div>{{-- end .pots-desktop-list --}}
     @endif
 
     {{-- Archived pots disclosure --}}
@@ -299,6 +388,148 @@
             @endif
         </div>
     @endif
+
+    {{-- ------------------------------------------------------------------- --}}
+    {{-- Phone bottom sheet: Create / Edit pot (D-10, Pitfall 6)             --}}
+    {{-- At <768px: slides up as a sheet. At >=768px: flux modal handles it. --}}
+    {{-- ------------------------------------------------------------------- --}}
+    <x-core::bottom-sheet name="pot-form" title="{{ $editPotId ? 'Edit pot' : 'Create a pot' }}">
+        <form
+            wire:submit="{{ $editPotId ? 'updatePot' : 'createPot' }}"
+            class="space-y-4"
+        >
+            <div>
+                <label for="pot-name-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Name</label>
+                <input
+                    type="text"
+                    id="pot-name-sheet"
+                    wire:model="name"
+                    placeholder="e.g. Holiday fund"
+                    style="font-size: 16px;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                />
+                @if ($errorName !== '')
+                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorName }}</p>
+                @endif
+            </div>
+            <div>
+                <label for="pot-account-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Account</label>
+                <select
+                    id="pot-account-sheet"
+                    wire:model="accountId"
+                    @if ($editPotId) disabled @endif
+                    style="font-size: 16px;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 {{ $editPotId ? 'opacity-50 cursor-not-allowed' : '' }}"
+                >
+                    <option value="">Select an account</option>
+                    @foreach ($accounts as $account)
+                        <option value="{{ $account->id }}">{{ $account->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button
+                    type="submit"
+                    class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                >{{ $editPotId ? 'Save changes' : 'Save pot' }}</button>
+                <button
+                    type="button"
+                    wire:click="cancel"
+                    class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none dark:border-slate-700 dark:hover:text-slate-100"
+                >Cancel</button>
+            </div>
+        </form>
+    </x-core::bottom-sheet>
+
+    {{-- ------------------------------------------------------------------- --}}
+    {{-- Phone bottom sheet: Fund pot (D-10)                                  --}}
+    {{-- ------------------------------------------------------------------- --}}
+    <x-core::bottom-sheet name="pot-fund" title="Fund pot">
+        <form wire:submit="fundPot" class="space-y-4">
+            <div>
+                <label for="fund-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</label>
+                <input
+                    type="text"
+                    id="fund-amount-sheet"
+                    wire:model="operationAmount"
+                    inputmode="decimal"
+                    placeholder="0.00"
+                    style="font-size: 16px; font-variant-numeric: tabular-nums;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                />
+                @if ($errorAmount !== '')
+                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                @endif
+            </div>
+            <div>
+                <label for="fund-memo-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Note (optional)</label>
+                <input
+                    type="text"
+                    id="fund-memo-sheet"
+                    wire:model="operationMemo"
+                    placeholder="e.g. Monthly savings"
+                    style="font-size: 16px;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                />
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">Fund pot</button>
+                <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-fund' })" class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 focus:outline-none dark:border-slate-700">Cancel</button>
+            </div>
+        </form>
+    </x-core::bottom-sheet>
+
+    {{-- ------------------------------------------------------------------- --}}
+    {{-- Phone bottom sheet: Move pot (D-10)                                  --}}
+    {{-- ------------------------------------------------------------------- --}}
+    <x-core::bottom-sheet name="pot-move" title="Move funds">
+        @php
+            $moveSrcPotSheet = null;
+            foreach ($groups as $accountPots) {
+                foreach ($accountPots as $p) {
+                    if ($p->id === $operationPotId) { $moveSrcPotSheet = $p; break 2; }
+                }
+            }
+            $moveDestPotsSheet = $moveSrcPotSheet !== null
+                ? array_filter($potsForMove[$moveSrcPotSheet->accountId] ?? [], static fn($p) => $p->id !== $operationPotId)
+                : [];
+        @endphp
+        <form wire:submit="movePot" class="space-y-4">
+            <div>
+                <label for="move-to-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Move to</label>
+                <select
+                    id="move-to-sheet"
+                    wire:model="transferTargetPotId"
+                    style="font-size: 16px;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                >
+                    <option value="">{{ count($moveDestPotsSheet) === 0 ? 'No other pots' : 'Select a pot' }}</option>
+                    @foreach ($moveDestPotsSheet as $destPot)
+                        <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="move-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</label>
+                <input
+                    type="text"
+                    id="move-amount-sheet"
+                    wire:model="operationAmount"
+                    inputmode="decimal"
+                    placeholder="0.00"
+                    style="font-size: 16px; font-variant-numeric: tabular-nums;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                />
+                @if ($errorAmount !== '')
+                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                @endif
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" @disabled(count($moveDestPotsSheet) === 0) class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">Move funds</button>
+                <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-move' })" class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 focus:outline-none dark:border-slate-700">Cancel</button>
+            </div>
+        </form>
+    </x-core::bottom-sheet>
 
     {{-- ------------------------------------------------------------------- --}}
     {{-- Create / Edit modal (pot-form)                                       --}}
