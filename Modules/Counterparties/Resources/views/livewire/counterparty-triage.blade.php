@@ -212,7 +212,8 @@
                 </div>
             </div>
 
-            <p style="font-size: var(--text-xs); color: var(--color-text-muted); margin: 0; text-align: center;">
+            {{-- Kbd hint chips: hidden on touch devices per D-13 (pointer:coarse = hidden-touch) --}}
+            <p class="hidden-touch" style="font-size: var(--text-xs); color: var(--color-text-muted); margin: 0; text-align: center;">
                 <kbd class="kbd">Y</kbd> yes ·
                 <kbd class="kbd">N</kbd> no ·
                 <kbd class="kbd">S</kbd> skip ·
