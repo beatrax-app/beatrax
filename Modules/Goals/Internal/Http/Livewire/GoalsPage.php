@@ -386,21 +386,11 @@ final class GoalsPage extends Component
         // stays in the list). Scoped to the selected account when one is
         // chosen.
         $selectedAccountId = $this->accountId !== '' ? (int) $this->accountId : null;
-        $potsQuery = $db->connection()
-            ->table('pots')
-            ->where('user_id', $user->id)
-            ->where('status', 'active')
-            ->where(static function (Builder $q) use ($selectedAccountId): void {
-                if ($selectedAccountId !== null) {
-                    $q->where('account_id', $selectedAccountId);
-                }
-            })
-            ->whereNull('goal_id')
-            ->whereNull('category_id');
 
-        // If editing, also include the pot currently linked to this goal.
-        if ($this->editGoalId !== 0) {
-            $potsQuery = $db->connection()
+        // Single source for the base picker query so the edit-mode union
+        // branch cannot drift from the non-edit branch (IN-04).
+        $basePotsQuery = static function () use ($db, $user, $selectedAccountId): Builder {
+            return $db->connection()
                 ->table('pots')
                 ->where('user_id', $user->id)
                 ->where('status', 'active')
@@ -410,7 +400,14 @@ final class GoalsPage extends Component
                     }
                 })
                 ->whereNull('goal_id')
-                ->whereNull('category_id')
+                ->whereNull('category_id');
+        };
+
+        $potsQuery = $basePotsQuery();
+
+        // If editing, also include the pot currently linked to this goal.
+        if ($this->editGoalId !== 0) {
+            $potsQuery = $basePotsQuery()
                 ->union(
                     $db->connection()
                         ->table('pots')
