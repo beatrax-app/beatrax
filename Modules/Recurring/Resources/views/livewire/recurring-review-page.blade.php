@@ -81,7 +81,12 @@
             </p>
         </div>
     @else
-        <ul class="space-y-3">
+        {{-- D-06 power-surface fallback: wrap in overflow-x:auto at phone width.
+             The multi-action row (Approve/Reject/Snooze/Edit-name) cannot be
+             cleanly mapped to a card at <768px without significant redesign —
+             the overflow-x scroller ensures all columns remain reachable. --}}
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <ul class="space-y-3" style="min-width: 560px;">
             @foreach ($rows as $row)
                 <li class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700">
                     <div class="flex items-start justify-between gap-4">
@@ -189,5 +194,6 @@
                 </li>
             @endforeach
         </ul>
+        </div>{{-- end overflow-x scroller --}}
     @endif
 </div>

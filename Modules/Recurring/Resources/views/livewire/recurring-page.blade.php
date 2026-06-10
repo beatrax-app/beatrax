@@ -77,7 +77,39 @@
         @if (count($expenses) > 0)
             <section class="mb-8">
                 <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Recurring expenses</h2>
-                <ul class="space-y-2">
+
+                {{-- ============================================================
+                     PHONE card-list for expenses (visible only at <768px)
+                     ============================================================ --}}
+                <div class="md:hidden overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                    @foreach ($expenses as $row)
+                        <a
+                            href="{{ route('recurring.series.show', ['seriesId' => $row->seriesId]) }}"
+                            class="card-list-item block"
+                            data-testid="recurring-expense-card-{{ $row->seriesId }}"
+                        >
+                            <div class="min-w-0 flex-1">
+                                <p class="primary line-clamp-2">{{ $row->displayName() }}</p>
+                                <p class="secondary mt-0.5 truncate">
+                                    {{ ucfirst($row->cadence) }}
+                                    @if ($row->nextExpectedAt)
+                                        · {{ $row->nextExpectedAt->format('d M Y') }}
+                                    @endif
+                                    @if ($row->latestFundingChainLinkId !== null)
+                                        · chain
+                                    @endif
+                                </p>
+                            </div>
+                            <span class="amount" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}/mo</span>
+                        </a>
+                    @endforeach
+                </div>
+
+                {{-- ============================================================
+                     DESKTOP card-list (visible only at >=768px)
+                     Markup byte-identical to original.
+                     ============================================================ --}}
+                <ul class="hidden md:block space-y-2">
                     @foreach ($expenses as $row)
                         <li class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
                             <div class="flex items-center justify-between gap-4">
@@ -122,7 +154,36 @@
         @if (count($income) > 0)
             <section class="mb-8">
                 <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Recurring income</h2>
-                <ul class="space-y-2">
+
+                {{-- ============================================================
+                     PHONE card-list for income (visible only at <768px)
+                     ============================================================ --}}
+                <div class="md:hidden overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                    @foreach ($income as $row)
+                        <a
+                            href="{{ route('recurring.series.show', ['seriesId' => $row->seriesId]) }}"
+                            class="card-list-item block"
+                            data-testid="recurring-income-card-{{ $row->seriesId }}"
+                        >
+                            <div class="min-w-0 flex-1">
+                                <p class="primary line-clamp-2">{{ $row->displayName() }}</p>
+                                <p class="secondary mt-0.5 truncate">
+                                    {{ ucfirst($row->cadence) }}
+                                    @if ($row->nextExpectedAt)
+                                        · {{ $row->nextExpectedAt->format('d M Y') }}
+                                    @endif
+                                </p>
+                            </div>
+                            <span class="amount positive" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}/mo</span>
+                        </a>
+                    @endforeach
+                </div>
+
+                {{-- ============================================================
+                     DESKTOP card-list for income (visible only at >=768px)
+                     Markup byte-identical to original.
+                     ============================================================ --}}
+                <ul class="hidden md:block space-y-2">
                     @foreach ($income as $row)
                         <li class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
                             <div class="flex items-center justify-between gap-4">

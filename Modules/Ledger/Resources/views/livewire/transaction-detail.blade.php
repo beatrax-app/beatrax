@@ -22,6 +22,14 @@
 @endphp
 
 <div>
+    {{-- Mobile top bar (D-05): back affordance targeting /transactions parent list.
+         Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
+         The page title is "Transaction" + the posted date for context. --}}
+    <x-core::mobile-top-bar
+        :backUrl="route('transactions.index')"
+        title="Transaction"
+    />
+
     <main class="min-h-screen bg-white dark:bg-slate-950">
         <div class="mx-auto max-w-3xl px-8 py-12 space-y-6" data-testid="transaction-detail">
             <header class="space-y-1">
