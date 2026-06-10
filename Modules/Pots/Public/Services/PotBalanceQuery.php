@@ -40,11 +40,16 @@ final class PotBalanceQuery
     /**
      * Returns the signed SUM(amount_minor) for a pot — the pot's current
      * balance (D-06). Returns 0 when no movements exist.
+     *
+     * Takes the acting $user explicitly so this Public (cross-module) method
+     * can never read another user's pot balance from an unvalidated id
+     * (T-03-07 / WR-07). The ['user_id','pot_id'] index serves this shape.
      */
-    public function balanceForPot(int $potId): int
+    public function balanceForPot(int $potId, User $user): int
     {
         return (int) $this->db->connection()
             ->table('pot_movements')
+            ->where('user_id', $user->id)
             ->where('pot_id', $potId)
             ->sum('amount_minor');
     }
@@ -145,7 +150,7 @@ final class PotBalanceQuery
 
         $result = [];
         foreach ($rows as $row) {
-            $result[self::toInt($row->goal_id)] = $this->balanceForPot(self::toInt($row->id));
+            $result[self::toInt($row->goal_id)] = $this->balanceForPot(self::toInt($row->id), $user);
         }
 
         return $result;
@@ -222,6 +227,7 @@ final class PotBalanceQuery
 
         return (int) $this->db->connection()
             ->table('pot_movements')
+            ->where('user_id', $user->id)
             ->whereIn('pot_id', $activePotIds)
             ->sum('amount_minor');
     }
@@ -274,10 +280,11 @@ final class PotBalanceQuery
         $rows = [];
         foreach ($pots as $pot) {
             $potId = self::toInt($pot->id);
-            $balanceMinor = $this->balanceForPot($potId);
+            $balanceMinor = $this->balanceForPot($potId, $user);
 
             // Recent movements: latest 10 for this pot
             $movementRows = $connection->table('pot_movements')
+                ->where('user_id', $user->id)
                 ->where('pot_id', $potId)
                 ->orderByDesc('created_at')
                 ->orderByDesc('id')
