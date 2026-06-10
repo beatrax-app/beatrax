@@ -59,7 +59,37 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">No approved recurring series yet.</p>
         @endif
     @else
-        <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+        {{-- ============================================================
+             PHONE card-list (visible only at <768px)
+             Each card links to the series detail page (D-12).
+             ============================================================ --}}
+        <div class="md:hidden overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 -mx-6 mb-4">
+            @foreach ($rows as $row)
+                <a
+                    href="{{ route('recurring.series.show', ['seriesId' => $row->seriesId]) }}"
+                    class="card-list-item block"
+                    data-testid="fixed-payment-card-{{ $row->seriesId }}"
+                >
+                    <div class="min-w-0 flex-1">
+                        <p class="primary truncate">{{ $row->displayName() }}</p>
+                        <p class="secondary mt-0.5 truncate">
+                            <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $row->direction }}</span>
+                            <span class="ml-1">{{ ucfirst($row->cadence) }}</span>
+                            @if ($row->latestFundingChainLinkId !== null)
+                                · chain
+                            @endif
+                        </p>
+                    </div>
+                    <span class="amount" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}/mo</span>
+                </a>
+            @endforeach
+        </div>
+
+        {{-- ============================================================
+             DESKTOP row-list (visible only at >=768px)
+             Markup byte-identical to original.
+             ============================================================ --}}
+        <ul class="hidden md:block divide-y divide-slate-100 dark:divide-slate-800">
             @foreach ($rows as $row)
                 <li class="flex items-center justify-between gap-4 py-2">
                     <div class="min-w-0 flex-1">
