@@ -333,13 +333,17 @@ final class PotBalanceQuery
                 );
             }
 
-            // Category spend for the current period (D-12)
+            // Category spend for the current period (D-12). Filtered to the
+            // pot's currency: settled amounts are per-row currency-tagged and
+            // the view labels this figure with the pot's currency — summing
+            // mixed currencies in raw minor units would be dishonest (WR-08).
             $categoryId = $pot->category_id !== null ? self::toInt($pot->category_id) : null;
             $categorySpentMinor = null;
             if ($categoryId !== null) {
                 $spent = (int) $connection->table('transactions')
                     ->where('user_id', $user->id)
                     ->where('category_id', $categoryId)
+                    ->where('settled_currency', self::toStr($pot->currency))
                     ->where('settled_amount_minor', '<', 0)
                     ->where('posted_at', '>=', $period->start->toDateString())
                     ->where('posted_at', '<', $period->endExclusive->toDateString())
