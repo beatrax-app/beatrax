@@ -1,0 +1,68 @@
+@props([
+    'name'  => '',         // Flux modal name for dispatch (used by consuming component)
+    'title' => '',         // Sheet heading (optional)
+])
+
+{{--
+    Bottom sheet wrapper (D-10, UI-SPEC §6.3, Pitfall 6).
+
+    At >=768px: the .bottom-sheet CSS class is inactive (no override at desktop);
+    the slot renders normally and the Flux modal inside it behaves as a standard
+    centred dialog.
+
+    At <768px: the .bottom-sheet class activates (via @media (max-width: 767px) in
+    app.css), turning this into a fixed bottom panel that slides up from below.
+    A scrim appears behind it; Escape and outside-tap both close it.
+
+    Pitfall 6 mitigation: this component wraps the Livewire component that
+    CONTAINS the flux:modal trigger — not the <flux:modal> element itself —
+    so Flux's teleport to the top layer is never disrupted.
+
+    x-trap.inert is bound to `open` — focus is trapped while the sheet is open
+    and released on close. safe-area padding-bottom keeps content above the home
+    indicator on iOS.
+--}}
+<div
+    x-data="{ open: false }"
+    x-on:open-sheet.window="if ($event.detail && $event.detail.name === {{ Js::from($name) }}) { open = true; }"
+>
+    {{-- Scrim: only rendered/shown at phone width (CSS .bottom-sheet-scrim display:none at desktop) --}}
+    <div
+        class="bottom-sheet-scrim"
+        x-show="open"
+        x-on:click="open = false"
+        style="display: none;"
+        aria-hidden="true"
+    ></div>
+
+    {{-- Bottom sheet panel --}}
+    <div
+        class="bottom-sheet"
+        x-show="open"
+        x-trap.inert="open"
+        x-transition:enter="transition ease-[var(--ease-smooth)] duration-[250ms]"
+        x-transition:enter-start="translate-y-full"
+        x-transition:enter-end="translate-y-0"
+        x-transition:leave="transition ease-[var(--ease-smooth)] duration-[200ms]"
+        x-transition:leave-start="translate-y-0"
+        x-transition:leave-end="translate-y-full"
+        @keydown.escape="open = false"
+        role="dialog"
+        aria-modal="true"
+        @if ($title) aria-label="{{ $title }}" @endif
+    >
+        {{-- Drag handle (UI-SPEC §6.3) --}}
+        <div
+            style="width: 32px; height: 4px; background: var(--color-border-strong); border-radius: 2px; margin: 0 auto var(--space-3);"
+            aria-hidden="true"
+        ></div>
+
+        @if ($title)
+            <h2
+                style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin-bottom: var(--space-4);"
+            >{{ $title }}</h2>
+        @endif
+
+        {{ $slot }}
+    </div>
+</div>

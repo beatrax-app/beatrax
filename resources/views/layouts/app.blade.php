@@ -142,7 +142,20 @@
     >
         @auth
             <div class="flex min-h-screen">
-                @livewire('core.app-sidebar')
+                {{--
+                    Drawer wrapper (D-01/D-03, Phase 4 Plan 03).
+                    The sidebar is mounted exactly ONCE inside the drawer component.
+                    At >=1024px: .drawer-container is position:static — desktop static sidebar.
+                    At <1024px: slides in as a focus-trapped overlay from the left.
+                    The original @livewire('core.app-sidebar') call is now inside <x-core::drawer>.
+                --}}
+                <x-core::drawer />
+                {{--
+                    Mobile top bar (D-01/D-02/D-05, Phase 4 Plan 03).
+                    CSS-hidden at >=1024px — desktop layout is unchanged.
+                    Inserts before <main> so it stacks above the main content column on mobile.
+                --}}
+                <x-core::mobile-top-bar />
                 <main class="flex-1 min-w-0 overflow-auto">
                     @livewire('core.system-alerts-banner')
                     @livewire('categorization.rule-form-modal')
