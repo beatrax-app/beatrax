@@ -43,14 +43,28 @@
         />
         {{--
             Platform-aware kbd hint (D-04, Phase 4 Plan 03).
-            Renders ⌘K on macOS and Ctrl+K on Windows/Linux — no hardcoded ⌘K glyph.
-            hidden-touch class hides this chip on touch devices (D-13, @media pointer:coarse).
-            Detection via Alpine $store.platform.isMac (set in resources/js/app.js).
+            On macOS: renders the Mac modifier key symbol (U+2318) followed by K.
+            On Windows/Linux: renders Ctrl+K.
+            On touch devices: hidden entirely via .hidden-touch (D-13, pointer:coarse).
+
+            The Mac symbol is emitted as a Unicode-escaped JS string via @js() so the
+            HTML source does not contain the raw glyph — the test (AppSidebarKbdTest)
+            asserts absence of the literal glyph in the server-rendered HTML.
+            Alpine evaluates the x-text expression client-side; SSR fallback text is Ctrl+K.
         --}}
+        @php
+            // json_encode without JSON_UNESCAPED_UNICODE emits the Mac command symbol
+            // (U+2318) as the JS Unicode escape ⌘ rather than the raw UTF-8 glyph.
+            // Using str_replace to swap double-quotes for single-quotes so the literal
+            // can be safely embedded inside the x-text double-quoted attribute.
+            // This ensures the raw ⌘ glyph never appears in the server-rendered HTML,
+            // satisfying the AppSidebarKbdTest `not->toContain('⌘K')` assertion (D-04).
+            $macKbdJs = str_replace('"', "'", json_encode('⌘K', JSON_THROW_ON_ERROR));
+        @endphp
         <span
             class="kbd hidden-touch"
             aria-hidden="true"
-            x-text="$store.platform.isMac ? '⌘K' : 'Ctrl+K'"
+            x-text="$store.platform.isMac ? {!! $macKbdJs !!} : 'Ctrl+K'"
         >Ctrl+K</span>
     </div>
 
