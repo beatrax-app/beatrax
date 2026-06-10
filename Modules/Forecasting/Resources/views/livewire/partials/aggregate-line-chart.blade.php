@@ -62,6 +62,19 @@
         'grid' => ['borderColor' => '#E2E8F0'],
         'legend' => ['show' => false],
         'tooltip' => ['shared' => true, 'intersect' => false],
+        // D-11: phone-tuned responsive breakpoints baked into server-rendered
+        // options — chart fills the container at phone width with fewer x-axis
+        // labels and hidden legend; tooltip stays active on touch.
+        'responsive' => [
+            [
+                'breakpoint' => 768,
+                'options' => [
+                    'chart' => ['height' => 240],
+                    'xaxis' => ['tickAmount' => 4],
+                    'legend' => ['show' => false],
+                ],
+            ],
+        ],
     ];
 
     // Encode the options once with JSON flags that align with the
@@ -85,7 +98,11 @@
     a Livewire-driven horizon / scenario flip refreshes the line
     chart without remounting the component.
 --}}
+{{-- D-11: width:100% ensures the chart fills the container column at all
+     viewport widths including phone. The responsive[] breakpoints above
+     handle tick/label tuning at <768px. --}}
 <div
+    style="width:100%"
     x-data="{ chart: null }"
     x-init="
         if (! window.ApexCharts) { return; }

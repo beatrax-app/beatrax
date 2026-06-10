@@ -1,4 +1,6 @@
-<div class="p-6 space-y-6" data-testid="system-snapshot-page">
+{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the dense snapshot
+     key-value tables scroll horizontally at phone width. --}}
+<div class="p-6 space-y-6 overflow-x-auto" data-testid="system-snapshot-page">
     {{--
         Snapshot sections share a fixed-width key column so the
         divider between key and value stays in the same X position
