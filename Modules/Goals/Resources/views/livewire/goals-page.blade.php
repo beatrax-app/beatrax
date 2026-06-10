@@ -23,6 +23,15 @@
     ];
 @endphp
 
+{{--
+    Phone responsive pass (D-06, D-10, UI-SPEC §8/§9).
+
+    At <768px:
+    - Goals list renders as .card-list-item rows (name .primary, progress/target .secondary)
+    - The create/edit flux:modal form is replaced by a bottom sheet that slides up from below
+      (x-core::bottom-sheet). Trigger buttons dispatch open-sheet at phone width.
+    At >=768px (desktop): card grid + Flux modal unchanged.
+--}}
 <div class="mx-auto max-w-3xl px-4 py-12">
     {{-- Page header --}}
     <header class="mb-8 flex items-start justify-between gap-4">
@@ -30,10 +39,17 @@
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Goals</h1>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Track progress toward your savings targets.</p>
         </div>
+        {{-- Trigger: phone → dispatch open-sheet; desktop → $flux.modal().show() --}}
         <button
             type="button"
-            x-on:click="$flux.modal('goal-form').show()"
-            wire:click="$set('editGoalId', 0)"
+            x-on:click="
+                $wire.set('editGoalId', 0);
+                if (window.innerWidth < 768) {
+                    $dispatch('open-sheet', { name: 'goal-form' });
+                } else {
+                    $flux.modal('goal-form').show();
+                }
+            "
             class="inline-flex shrink-0 items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
         >Add goal</button>
     </header>
@@ -47,13 +63,68 @@
             </p>
             <button
                 type="button"
-                x-on:click="$flux.modal('goal-form').show()"
-                wire:click="$set('editGoalId', 0)"
+                x-on:click="
+                    $wire.set('editGoalId', 0);
+                    if (window.innerWidth < 768) {
+                        $dispatch('open-sheet', { name: 'goal-form' });
+                    } else {
+                        $flux.modal('goal-form').show();
+                    }
+                "
                 class="mt-4 inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
             >Add your first goal</button>
         </div>
     @else
-        <ul class="space-y-4">
+        {{-- Phone card list (hidden at >=768px via CSS .goals-phone-list display:none) --}}
+        <style>
+            @media (min-width: 768px) {
+                .goals-phone-list { display: none !important; }
+            }
+            @media (max-width: 767px) {
+                .goals-desktop-list { display: none !important; }
+            }
+        </style>
+
+        {{-- Phone: .card-list-item rows (D-06) --}}
+        <ul class="goals-phone-list space-y-0 rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden">
+            @foreach ($rows as $row)
+                @php
+                    $pct = $row->targetMinor > 0
+                        ? (int) round(min(100, $row->fractionComplete * 100))
+                        : 0;
+                @endphp
+                <li class="card-list-item">
+                    <div class="flex-1 min-w-0">
+                        <p class="primary truncate">{{ $row->name }}</p>
+                        <p class="secondary">
+                            {{ $fmt($row->contributedMinor, $row->currency) }} / {{ $fmt($row->targetMinor, $row->currency) }}
+                            @if ($row->progressState === 'overdue')
+                                · <span class="text-amber-600 dark:text-amber-400">Overdue</span>
+                            @elseif ($row->progressState === 'reached')
+                                · <span class="text-emerald-600 dark:text-emerald-400">Reached</span>
+                            @endif
+                        </p>
+                    </div>
+                    <span class="amount">{{ $pct }}%</span>
+                    {{-- Row actions — always visible on phone (D-12) --}}
+                    <button
+                        type="button"
+                        x-on:click="
+                            $wire.openEdit({{ $row->id }});
+                            if (window.innerWidth < 768) {
+                                $dispatch('open-sheet', { name: 'goal-form' });
+                            } else {
+                                $flux.modal('goal-form').show();
+                            }
+                        "
+                        class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none dark:hover:text-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    >Edit</button>
+                </li>
+            @endforeach
+        </ul>
+
+        {{-- Desktop: existing card list (unchanged at >=768px) --}}
+        <ul class="goals-desktop-list space-y-4">
             @foreach ($rows as $row)
                 @php
                     $pct = $row->targetMinor > 0
@@ -149,7 +220,13 @@
                             <button
                                 type="button"
                                 wire:click="openEdit({{ $row->id }})"
-                                x-on:click="$flux.modal('goal-form').show()"
+                                x-on:click="
+                                    if (window.innerWidth < 768) {
+                                        $dispatch('open-sheet', { name: 'goal-form' });
+                                    } else {
+                                        $flux.modal('goal-form').show();
+                                    }
+                                "
                                 class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100"
                             >Edit</button>
 
@@ -171,7 +248,7 @@
                     @endif
                 </li>
             @endforeach
-        </ul>
+        </ul>{{-- end .goals-desktop-list --}}
     @endif
 
     {{-- Archived goals disclosure --}}
@@ -227,7 +304,102 @@
     @endif
 
     {{-- ------------------------------------------------------------------- --}}
-    {{-- Flux create / edit modal                                             --}}
+    {{-- Phone bottom sheet (D-10, Pitfall 6)                                --}}
+    {{-- At <768px: slides up as a sheet. At >=768px: hidden (flux modal     --}}
+    {{-- handles desktop). Same Livewire wire: bindings as the flux modal.   --}}
+    {{-- ------------------------------------------------------------------- --}}
+    <x-core::bottom-sheet name="goal-form" title="{{ $editGoalId ? 'Edit goal' : 'Create a savings goal' }}">
+        <form
+            wire:submit="{{ $editGoalId ? 'updateGoal' : 'createGoal' }}"
+            class="space-y-4"
+        >
+            <div>
+                <label for="goal-name-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Name</label>
+                <input
+                    type="text"
+                    id="goal-name-sheet"
+                    wire:model="name"
+                    placeholder="e.g. Emergency fund"
+                    style="font-size: 16px;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                />
+                @if ($errorName !== '')
+                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorName }}</p>
+                @endif
+            </div>
+
+            @php
+                $amountCurrencySheet = $baseCurrency;
+                if ($editGoalId !== 0) {
+                    foreach ($rows as $goalRow) {
+                        if ($goalRow->id === $editGoalId) {
+                            $amountCurrencySheet = $goalRow->currency;
+                            break;
+                        }
+                    }
+                }
+            @endphp
+            <div>
+                <label for="goal-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Target amount ({{ $amountCurrencySheet }})</label>
+                <input
+                    type="text"
+                    id="goal-amount-sheet"
+                    wire:model="targetAmount"
+                    inputmode="decimal"
+                    placeholder="0.00"
+                    style="font-size: 16px; font-variant-numeric: tabular-nums;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                />
+                @if ($errorAmount !== '')
+                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                @endif
+            </div>
+
+            <div>
+                <label for="goal-date-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Target date</label>
+                <input
+                    type="date"
+                    id="goal-date-sheet"
+                    wire:model="targetDate"
+                    style="font-size: 16px;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                />
+                @if ($errorDate !== '')
+                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorDate }}</p>
+                @endif
+            </div>
+
+            <div>
+                <label for="goal-account-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Savings account (optional)</label>
+                <select
+                    id="goal-account-sheet"
+                    wire:model.live="accountId"
+                    style="font-size: 16px;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                >
+                    <option value="">No account — track manually</option>
+                    @foreach ($accounts as $account)
+                        <option value="{{ $account->id }}">{{ $account->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button
+                    type="submit"
+                    class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                >{{ $editGoalId ? 'Save changes' : 'Save goal' }}</button>
+                <button
+                    type="button"
+                    wire:click="cancel"
+                    class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none dark:border-slate-700 dark:hover:text-slate-100"
+                >Close</button>
+            </div>
+        </form>
+    </x-core::bottom-sheet>
+
+    {{-- ------------------------------------------------------------------- --}}
+    {{-- Flux create / edit modal (desktop, >=768px)                          --}}
     {{-- ------------------------------------------------------------------- --}}
     <flux:modal name="goal-form" dismissible>
         <div class="pt-[44px]" style="max-width: 520px;">
