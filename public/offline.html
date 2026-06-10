@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>You're offline — beatrax</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            height: 100%;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 40px 36px 36px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+        }
+
+        .heading-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f43f5e;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+            line-height: 1.2;
+            color: #0f172a;
+        }
+
+        p {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #475569;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #0f172a;
+            color: #f8fafc;
+            font-size: 15px;
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 120ms;
+        }
+        .btn:hover { opacity: 0.85; }
+
+        .privacy-note {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            html, body { background: #0b1220; color: #e2e8f0; }
+            .card { background: #0b1220; border-color: #1e293b; }
+            h1 { color: #f1f5f9; }
+            p { color: #94a3b8; }
+            .btn { background: #f1f5f9; color: #0f172a; }
+            .privacy-note { color: #475569; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="heading-row">
+            <span class="dot" aria-hidden="true"></span>
+            <h1>You're offline</h1>
+        </div>
+        <p>beatrax couldn't reach the server. Check your network and try again.</p>
+        <button class="btn" onclick="window.location.reload()">Try again</button>
+        <p class="privacy-note">Your financial data stays private — nothing is stored in the browser.</p>
+    </div>
+</body>
+</html>
