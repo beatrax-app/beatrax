@@ -258,7 +258,6 @@ final class PotBalanceQuery
                 'pots.status',
                 'pots.goal_id',
                 'pots.category_id',
-                'pots.created_at',
                 'accounts.name as account_name',
                 'goals.name as goal_name',
                 'categories.name as category_name',
@@ -349,16 +348,6 @@ final class PotBalanceQuery
                     ->where('posted_at', '<', $period->endExclusive->toDateString())
                     ->sum($connection->raw('-settled_amount_minor'));
                 $categorySpentMinor = $spent;
-            }
-
-            $potCreatedAtRaw = self::toStr($pot->created_at ?? null);
-            $potCreatedAt = '';
-            if ($potCreatedAtRaw !== '') {
-                try {
-                    $potCreatedAt = CarbonImmutable::parse($potCreatedAtRaw)->format('Y-m-d H:i');
-                } catch (\Throwable) {
-                    $potCreatedAt = '';
-                }
             }
 
             $rows[] = new PotRow(
