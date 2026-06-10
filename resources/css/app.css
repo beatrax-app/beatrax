@@ -127,6 +127,11 @@
     /* Layout */
     --side-w: 248px;
     --side-w-dev: 220px;
+
+    /* Mobile shell tokens (Phase 4, D-01/D-14/D-10) */
+    --top-bar-h: 48px;
+    --drawer-w: min(80vw, 280px);
+    --sheet-radius: 12px 12px 0 0;
 }
 
 .dark {
@@ -478,6 +483,13 @@ td.date,
 @media (prefers-reduced-motion: reduce) {
     .dot-live {
         box-shadow: none;
+    }
+    /* Phase 4: suppress drawer and bottom-sheet slide animations */
+    .drawer-container {
+        transition: none !important;
+    }
+    .bottom-sheet {
+        transition: none !important;
     }
 }
 
@@ -2633,4 +2645,228 @@ td.date,
     margin-top: var(--space-2);
     color: var(--color-amber);
     line-height: 1.4;
+}
+
+/*
+ * Phase 4: Mobile shell responsive rules.
+ *
+ * Drawer breakpoint (D-01/D-03): at <1024px the `.side` sidebar is
+ * hidden from the normal flow — the drawer component owns it. At
+ * >=1024px the .drawer-container is a static sidebar (no translate,
+ * no scrim, no top bar).
+ *
+ * Touch input (D-13): .hidden-touch hides kbd hint chips on coarse
+ * pointer devices (phone/tablet touchscreens).
+ */
+
+/* Sidebar: hidden from normal flow on phone/tablet; drawer component owns it */
+@media (max-width: 1023px) {
+    .side {
+        display: none;
+    }
+}
+
+/* Desktop: drawer container behaves as static sidebar (no translate, no scrim) */
+@media (min-width: 1024px) {
+    .drawer-container {
+        position: static !important;
+        transform: none !important;
+    }
+
+    .drawer-scrim {
+        display: none !important;
+    }
+
+    .top-bar {
+        display: none !important;
+    }
+}
+
+/* Touch device: hide kbd hint chips (D-13) */
+@media (pointer: coarse) {
+    .hidden-touch {
+        display: none !important;
+    }
+}
+
+/*
+ * Phase 4: Mobile shell component primitives.
+ * All classes use @theme token variables — no inline Tailwind utilities.
+ * Follows the .side / .side-item convention established above.
+ */
+@layer components {
+    /* card-list-item — phone card row primitive (D-06) */
+    .card-list-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        border-bottom: 1px solid var(--color-border);
+        text-decoration: none;
+        color: inherit;
+        transition: var(--tx-quick);
+    }
+
+    .card-list-item:hover,
+    .card-list-item:focus-visible {
+        background: var(--color-surface-2);
+    }
+
+    .card-list-item .primary {
+        font-size: var(--text-base);
+        font-weight: 500;
+        color: var(--color-text);
+    }
+
+    .card-list-item .secondary {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+    }
+
+    .card-list-item .amount {
+        margin-left: auto;
+        font-size: var(--text-base);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+    }
+
+    .card-list-item .amount.positive {
+        color: var(--color-emerald);
+    }
+
+    /* .top-bar — mobile top bar (D-01/D-02/D-14).
+     * Only visible at <1024px (CSS hidden at desktop via the .top-bar rule above).
+     * safe-area-inset-top handles the notch/Dynamic Island on phones. */
+    .top-bar {
+        display: flex;
+        align-items: center;
+        height: var(--top-bar-h);
+        padding: 0 var(--space-4);
+        padding-top: env(safe-area-inset-top);
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-bg-subtle);
+        gap: var(--space-3);
+        position: sticky;
+        top: 0;
+        z-index: 30;
+    }
+
+    .top-bar-title {
+        flex: 1;
+        text-align: center;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* .top-bar-btn — 44x44 tap target for hamburger, back, and palette buttons.
+     * D-14: minimum 44x44 interactive touch target (WCAG 2.5.5). */
+    .top-bar-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 44px;
+        min-height: 44px;
+        border-radius: var(--radius-md);
+        color: var(--color-text-muted);
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        transition: var(--tx-quick);
+        text-decoration: none;
+        flex-shrink: 0;
+    }
+
+    .top-bar-btn:hover {
+        background: var(--color-surface-2);
+    }
+
+    .top-bar-btn:focus-visible {
+        outline: 2px solid var(--color-emerald);
+        outline-offset: 2px;
+    }
+
+    /* .bottom-sheet — phone-only modal-to-sheet wrapper (D-10).
+     * At desktop falls through to normal Flux modal behavior. */
+    @media (max-width: 767px) {
+        .bottom-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 60;
+            background: var(--color-surface);
+            border-radius: var(--sheet-radius);
+            padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .bottom-sheet-scrim {
+            display: block !important;
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: rgba(15, 23, 42, 0.4);
+        }
+    }
+
+    /* .filter-trigger-row — phone search + filter badge row (D-07) */
+    .filter-trigger-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+    }
+
+    .filter-search {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 6px var(--space-3);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-faint);
+    }
+
+    .filter-search input {
+        flex: 1;
+        min-width: 0;
+        background: transparent;
+        border: 0;
+        outline: 0;
+        color: var(--color-text);
+        /* 16px minimum prevents iOS Safari auto-zoom (D-14) */
+        font-size: 16px;
+    }
+
+    .filter-search input::placeholder {
+        color: var(--color-text-faint);
+    }
+
+    .filter-trigger-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 6px var(--space-3);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: var(--tx-quick);
+    }
+
+    .filter-trigger-btn:hover {
+        background: var(--color-surface-2);
+    }
 }

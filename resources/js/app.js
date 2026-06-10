@@ -50,9 +50,33 @@ window.beatraxApplyChartTheme = function (options) {
 // CommandPaletteModal Blade view resolves through this
 // registration. Wraps Fuse.js with the configured weights +
 // threshold + ignoreLocation.
+//
+// Phase 4 additions inside the same alpine:init handler:
+//   - mobileNav store: drawer open/close/toggle for the mobile shell (D-01)
+//   - platform store: detects macOS for ⌘K vs Ctrl+K kbd labels (D-04)
 document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);
+
+        // Mobile navigation drawer state (Phase 4, D-01)
+        window.Alpine.store('mobileNav', {
+            drawerOpen: false,
+            open() { this.drawerOpen = true; },
+            close() { this.drawerOpen = false; },
+            toggle() { this.drawerOpen = !this.drawerOpen; },
+        });
+
+        // Platform detection for ⌘K vs Ctrl+K labels (Phase 4, D-04).
+        // Uses the modern userAgentData API first (Chromium 90+), falls back
+        // to the legacy navigator.platform string for Safari + Firefox.
+        window.Alpine.store('platform', {
+            isMac: Boolean(
+                (typeof navigator !== 'undefined') && (
+                    (navigator.userAgentData?.platform === 'macOS')
+                    || (navigator.platform || '').startsWith('Mac')
+                )
+            ),
+        });
     }
 });
 
