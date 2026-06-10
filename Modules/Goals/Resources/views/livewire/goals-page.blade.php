@@ -259,8 +259,23 @@
                 </div>
 
                 {{-- Target amount --}}
+                @php
+                    // D-05: target_currency is immutable and can diverge from the
+                    // user's current base currency — when editing, label the field
+                    // with the goal's own currency so the prefilled amount is not
+                    // misread as a base-currency figure (IN-06).
+                    $amountCurrency = $baseCurrency;
+                    if ($editGoalId !== 0) {
+                        foreach ($rows as $goalRow) {
+                            if ($goalRow->id === $editGoalId) {
+                                $amountCurrency = $goalRow->currency;
+                                break;
+                            }
+                        }
+                    }
+                @endphp
                 <div>
-                    <label for="goal-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Target amount ({{ $baseCurrency }})</label>
+                    <label for="goal-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Target amount ({{ $amountCurrency }})</label>
                     <input
                         type="text"
                         id="goal-amount"
