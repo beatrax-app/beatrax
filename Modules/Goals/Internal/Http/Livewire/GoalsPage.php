@@ -368,9 +368,12 @@ final class GoalsPage extends Component
             ->toArray();
 
         // Pot options for the linked-pot picker (D-11 / T-03-13):
-        // Only active pots owned by this user that are either unlinked or
-        // already linked to the goal being edited (so the current link stays
-        // in the list). Scoped to the selected account when one is chosen.
+        // Only active pots owned by this user that are fully unlinked —
+        // neither goal-linked nor category-linked (WR-05: selecting a
+        // category-linked pot here would silently destroy its category link)
+        // — or already linked to the goal being edited (so the current link
+        // stays in the list). Scoped to the selected account when one is
+        // chosen.
         $selectedAccountId = $this->accountId !== '' ? (int) $this->accountId : null;
         $potsQuery = $db->connection()
             ->table('pots')
@@ -381,9 +384,8 @@ final class GoalsPage extends Component
                     $q->where('account_id', $selectedAccountId);
                 }
             })
-            ->where(static function (Builder $q): void {
-                $q->whereNull('goal_id');
-            });
+            ->whereNull('goal_id')
+            ->whereNull('category_id');
 
         // If editing, also include the pot currently linked to this goal.
         if ($this->editGoalId !== 0) {
@@ -396,9 +398,8 @@ final class GoalsPage extends Component
                         $q->where('account_id', $selectedAccountId);
                     }
                 })
-                ->where(static function (Builder $q): void {
-                    $q->whereNull('goal_id');
-                })
+                ->whereNull('goal_id')
+                ->whereNull('category_id')
                 ->union(
                     $db->connection()
                         ->table('pots')
@@ -472,7 +473,11 @@ final class GoalsPage extends Component
      * Link $potId to $goalId using PotWriter::update. Fetches the pot's current
      * name first so the update does not blank it.
      *
-     * @throws \InvalidArgumentException on one-pot-per-goal violation (T-03-12)
+     * Rejects category-linked pots: PotWriter::update would otherwise null out
+     * `category_id` and silently destroy the user's category link (WR-05). The
+     * picker already excludes them, this guards against stale/tampered ids.
+     *
+     * @throws \InvalidArgumentException on one-pot-per-goal violation (T-03-12) or category-linked pot (WR-05)
      * @throws PotNotFoundException on cross-user pot id (T-03-11)
      */
     private function linkPotToGoal(
@@ -483,7 +488,20 @@ final class GoalsPage extends Component
         int $goalId,
     ): void {
         $user = $currentUser->user();
-        $name = $this->potName($potId, $user, $db);
+
+        $row = $db->connection()
+            ->table('pots')
+            ->where('user_id', $user->id)
+            ->where('id', $potId)
+            ->first(['name', 'category_id']);
+
+        if ($row !== null && $row->category_id !== null) {
+            throw new \InvalidArgumentException(
+                'This pot is linked to a category. Remove that link on the Pots page first.'
+            );
+        }
+
+        $name = ($row !== null && is_string($row->name)) ? $row->name : '';
         $potWriter->update($user, $potId, $name, $goalId, null);
     }
 
