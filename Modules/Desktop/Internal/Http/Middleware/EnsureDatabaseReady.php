@@ -57,6 +57,18 @@ final class EnsureDatabaseReady
      * (the user is already past welcome by then) and must not be
      * bounced back to the welcome screen mid-wizard.
      *
+     * `sw` covers the service-worker route (/sw.js). The SW is a public
+     * artifact — it must be fetchable on the very first install, before
+     * any user exists — so it must bypass the fresh-install gate
+     * (T-04-02-02 / PWA-03). Without this exemption the browser would
+     * receive a 302 when attempting to register the SW, causing
+     * `navigator.serviceWorker.register()` to fail silently.
+     *
+     * `site.webmanifest` and `pwa.icon` cover the web manifest and the
+     * PWA icon set — likewise public artifacts required before any user
+     * exists (the browser fetches the manifest to display the install
+     * affordance, and icons are referenced inside it).
+     *
      * @var array<int, string>
      */
     private const EXEMPT_ROUTE_PREFIXES = [
@@ -64,6 +76,9 @@ final class EnsureDatabaseReady
         'desktop.welcome',
         'signup',
         'setup',
+        'sw',
+        'site.webmanifest',
+        'pwa.icon',
     ];
 
     /**
