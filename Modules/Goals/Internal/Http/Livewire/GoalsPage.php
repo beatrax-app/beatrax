@@ -100,30 +100,32 @@ final class GoalsPage extends Component
 
         $accountId = $this->accountId !== '' ? (int) $this->accountId : null;
 
+        // WR-02: goal save + optional pot link run in ONE transaction so a
+        // failed link (one-pot-per-goal violation, cross-user pot id) rolls
+        // back the goal — no orphan goal and no duplicate on resubmit.
         try {
-            $goal = $writer->save(
-                $currentUser->user(),
-                $this->name,
-                $this->targetAmount,
-                $this->targetDate,
-                $accountId,
-            );
-        } catch (InvalidGoalAmountException $e) {
+            $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $accountId): void {
+                $goal = $writer->save(
+                    $currentUser->user(),
+                    $this->name,
+                    $this->targetAmount,
+                    $this->targetDate,
+                    $accountId,
+                );
+
+                // D-11: if a pot was selected, link it from the goal side via PotWriter.
+                if ($this->linkedPotId !== '') {
+                    $this->linkPotToGoal($currentUser, $db, $potWriter, (int) $this->linkedPotId, $goal->id);
+                }
+            });
+        } catch (InvalidGoalAmountException) {
             $this->errorAmount = 'Enter a valid amount greater than zero.';
 
             return;
-        }
+        } catch (\InvalidArgumentException $e) {
+            $this->errorLinkedPot = $e->getMessage();
 
-        // D-11: if a pot was selected, link it from the goal side via PotWriter.
-        if ($this->linkedPotId !== '') {
-            $potId = (int) $this->linkedPotId;
-            try {
-                $this->linkPotToGoal($currentUser, $db, $potWriter, $potId, $goal->id);
-            } catch (\InvalidArgumentException $e) {
-                $this->errorLinkedPot = $e->getMessage();
-
-                return;
-            }
+            return;
         }
 
         $this->resetForm();
