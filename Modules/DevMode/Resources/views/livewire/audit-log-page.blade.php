@@ -1,4 +1,6 @@
-<div class="p-8 space-y-6" data-testid="audit-log-page">
+{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the dense audit log
+     table scrolls horizontally at phone width without breaking the page layout. --}}
+<div class="p-8 space-y-6 overflow-x-auto" data-testid="audit-log-page">
     <header class="flex items-start justify-between gap-4">
         <div class="space-y-1">
             <h1 class="text-xl font-semibold text-[var(--color-text)]">Audit log</h1>

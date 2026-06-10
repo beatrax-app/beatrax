@@ -1,4 +1,6 @@
-<div class="p-8 space-y-6" data-testid="queue-inspector-page">
+{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures dense tables scroll
+     horizontally at phone width without breaking the page layout. --}}
+<div class="p-8 space-y-6 overflow-x-auto" data-testid="queue-inspector-page">
     <header class="space-y-1">
         <h1 class="text-xl font-semibold text-[var(--color-text)]">Queue inspector</h1>
         <p class="text-sm text-[var(--color-text-muted)]">Pending / failed / batches. Live counts; per-row actions; bulk select + triple-gate on destructive bulk delete.</p>
