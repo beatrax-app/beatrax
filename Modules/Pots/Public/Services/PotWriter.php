@@ -239,7 +239,7 @@ final class PotWriter
         $currency = $pot->currency;
 
         $this->db->connection()->transaction(function () use ($user, $potId, $minor, $currency, $memo): void {
-            $potBalance = $this->balance->balanceForPot($potId);
+            $potBalance = $this->balance->balanceForPot($potId, $user);
             if ($minor > $potBalance) {
                 throw new InsufficientUnallocatedException(
                     'Amount exceeds balance in this pot.'
@@ -305,7 +305,7 @@ final class PotWriter
         $currency = $fromPot->currency;
 
         $this->db->connection()->transaction(function () use ($user, $fromPotId, $toPotId, $minor, $currency, $memo): void {
-            $sourceBalance = $this->balance->balanceForPot($fromPotId);
+            $sourceBalance = $this->balance->balanceForPot($fromPotId, $user);
             if ($minor > $sourceBalance) {
                 throw new InsufficientUnallocatedException(
                     'Amount exceeds balance in the source pot.'
@@ -354,7 +354,7 @@ final class PotWriter
         }
 
         $this->db->connection()->transaction(function () use ($user, $pot): void {
-            $balance = $this->balance->balanceForPot($pot->id);
+            $balance = $this->balance->balanceForPot($pot->id, $user);
 
             if ($balance > 0) {
                 // Release balance back to unallocated before archiving (D-09 / Pitfall 4)
