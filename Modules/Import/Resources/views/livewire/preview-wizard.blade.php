@@ -141,7 +141,10 @@
                 @endforeach
             </section>
         @else
-            <section class="overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
+            {{-- D-06 / UI-SPEC §19: overflow-x:auto so the dense preview table
+                 scrolls horizontally at phone width without breaking the page layout.
+                 The table preserves min-w-full so columns do not collapse. --}}
+            <section class="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700" style="font-feature-settings: 'tnum';">
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>

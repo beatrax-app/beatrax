@@ -31,11 +31,15 @@
     }
 @endphp
 
+{{-- D-11: width:100% ensures the chart fills the container column at all
+     viewport widths including phone. The responsive[] breakpoints in the
+     server-rendered data-options handle tick/label tuning at <768px. --}}
 <div
     @class([
         'relative',
         'opacity-60 pointer-events-none' => $forecast->isComputing,
     ])
+    style="width:100%"
     x-data="{ chart: null }"
     x-init="
         if (! window.ApexCharts) { return; }

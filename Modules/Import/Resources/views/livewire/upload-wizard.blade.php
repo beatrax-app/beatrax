@@ -1,4 +1,6 @@
-<div class="space-y-6">
+{{-- D-06 / UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
+     scrolls horizontally at phone width rather than forcing page overflow. --}}
+<div class="space-y-6 overflow-x-auto">
     <header class="space-y-1">
         <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Upload statement</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">Drop in a bank, card, or PayPal export, or an email receipt file.</p>
