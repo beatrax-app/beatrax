@@ -559,9 +559,12 @@ final class PotsPage extends Component
             ->orderBy('name');
 
         if ($this->editPotId !== 0) {
-            // When editing, exclude goals linked to OTHER pots (allow the current pot's goal)
+            // When editing, exclude goals linked to OTHER pots (allow the current pot's goal).
+            // editPotId is client-controlled — scope to the user like every other
+            // read on user-owned tables (T-03-07 / WR-06).
             $currentPotGoalId = $db->connection()
                 ->table('pots')
+                ->where('user_id', $user->id)
                 ->where('id', $this->editPotId)
                 ->value('goal_id');
             $goalsToExclude = array_filter(
