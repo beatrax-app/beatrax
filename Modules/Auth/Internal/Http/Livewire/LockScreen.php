@@ -26,9 +26,14 @@ use Modules\Core\Public\Contracts\CurrentUser;
  *   T-05-11: PIN digits are never rendered in an <input>; the DOM only
  *             shows bullet glyphs, so no autocomplete, clipboard, or OS
  *             password-manager capture occurs.
- *   T-05-12: PIN digits never leave the component until submit(); the
- *             raw string is forwarded to PinVerificationService which
- *             sodium_memzero's derived keys after use.
+ *   T-05-12: PIN digits accumulate CLIENT-SIDE in transient Alpine state
+ *             (WR-10 fix) — no per-keypress network round-trip, and the PIN
+ *             is never bound to a public Livewire property, so it never
+ *             appears in the wire:snapshot DOM attribute or in Livewire
+ *             update responses. The full PIN crosses the wire exactly once,
+ *             as a submit() method argument, and is forwarded to
+ *             PinVerificationService which sodium_memzero's derived keys
+ *             after use.
  *   T-05-13: Idle dispatch only requests a server-side lock; the server
  *             last_activity_at is the authoritative source (D-17).
  *
@@ -40,8 +45,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
  */
 final class LockScreen extends Component
 {
-    /** Digits collected from the pad (never rendered in <input>). */
-    public string $pin = '';
 
     /** Rose-tinted error / status message shown above the pad. */
     public string $flashMessage = '';
@@ -79,43 +82,25 @@ final class LockScreen extends Component
     }
 
     // -------------------------------------------------------------------------
-    // PIN pad actions
-    // -------------------------------------------------------------------------
-
-    /** Append a digit (0-9) — capped at 10 digits. */
-    public function pressDigit(string $d): void
-    {
-        if (strlen($this->pin) < 10 && preg_match('/^[0-9]$/', $d) === 1) {
-            $this->pin .= $d;
-        }
-    }
-
-    /** Remove the last entered digit. */
-    public function backspace(): void
-    {
-        $this->pin = substr($this->pin, 0, -1);
-    }
-
-    /** Reset PIN to empty (e.g. after a failed attempt). */
-    public function clearPin(): void
-    {
-        $this->pin = '';
-    }
-
-    // -------------------------------------------------------------------------
     // Primary action
     // -------------------------------------------------------------------------
 
     /**
-     * Validate the PIN and unlock the session on success.
+     * Validate the submitted PIN and unlock the session on success.
+     *
+     * $pin arrives as a method argument from the client-side Alpine pad
+     * (WR-10): it is never bound to a public property, so it does not enter
+     * the component snapshot or subsequent responses. The client clears its
+     * local copy immediately on submit.
      *
      * On success: the session is unlocked, the browser is redirected to the
      * originally-requested page (or dashboard).
      *
-     * On failure: $flashMessage is set with attempts-remaining copy and
-     * $pin is reset.
+     * On failure: $flashMessage is set with attempts-remaining (or backoff)
+     * copy; the client-side pad is already empty.
      */
     public function submit(
+        string $pin,
         CurrentUser $currentUser,
         PinVerificationService $verifier,
         LockStateManager $lockState,
@@ -124,14 +109,14 @@ final class LockScreen extends Component
         DatabaseManager $db,
         Clock $clock,
     ): void {
-        if (preg_match('/^[0-9]{4,10}$/', $this->pin) !== 1) {
+        if (preg_match('/^[0-9]{4,10}$/', $pin) !== 1) {
             $this->flashMessage = 'PIN must be at least 4 digits.';
 
             return;
         }
 
         $user = $currentUser->user();
-        $dataKey = $verifier->verify($user->id, $this->pin, $session);
+        $dataKey = $verifier->verify($user->id, $pin, $session);
 
         if ($dataKey === null) {
             // WR-05: distinguish "backoff active" from "wrong PIN" — during
@@ -142,7 +127,6 @@ final class LockScreen extends Component
             if ($lockedUntil !== null) {
                 $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
                 $this->flashMessage = "Too many attempts — try again in {$seconds}s.";
-                $this->clearPin();
 
                 return;
             }
@@ -152,7 +136,6 @@ final class LockScreen extends Component
             $this->flashMessage = $remaining !== null
                 ? "Incorrect PIN. {$remaining} attempts remaining."
                 : 'Incorrect PIN.';
-            $this->clearPin();
 
             return;
         }

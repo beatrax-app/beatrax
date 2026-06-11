@@ -1,10 +1,17 @@
 {{--
     PIN pad partial — calm-slate token classes, accessible targets.
 
+    Requires the surrounding Alpine scope from lock-screen.blade.php:
+    `pin` (local string), press(d), back(), submitPin().
+
     Threat mitigations:
-      T-05-12: digits are displayed as bullet glyphs in an aria-live region,
-               never as <input type="password">. No autocomplete attribute is
-               set. OS password managers and screenshot tools see only bullets.
+      T-05-12 (WR-10): digits accumulate in client-side Alpine state — the
+               dots below render from the local `pin`, the buttons mutate it
+               locally, and only submitPin() sends the PIN to the server
+               (once, as a method argument). Digits are displayed as bullet
+               glyphs in an aria-live region, never as <input type="password">.
+               No autocomplete attribute is set. OS password managers and
+               screenshot tools see only bullets.
 
     Accessibility contract (UI-SPEC):
       - aria-label="Digit N" on each digit button.
@@ -23,16 +30,16 @@
 <div
     class="flex justify-center gap-2 py-3"
     aria-live="polite"
-    aria-label="{{ strlen($pin) }} digits entered"
+    x-bind:aria-label="pin.length + ' digits entered'"
 >
-    @for ($i = 0; $i < 10; $i++)
+    <template x-for="i in 10" :key="i">
         <span
-            class="h-3 w-3 rounded-full transition-colors duration-150 motion-reduce:transition-none
-                {{ $i < strlen($pin)
-                    ? 'bg-slate-900 dark:bg-slate-100'
-                    : 'bg-slate-200 dark:bg-slate-700' }}"
+            class="h-3 w-3 rounded-full transition-colors duration-150 motion-reduce:transition-none"
+            x-bind:class="i <= pin.length
+                ? 'bg-slate-900 dark:bg-slate-100'
+                : 'bg-slate-200 dark:bg-slate-700'"
         ></span>
-    @endfor
+    </template>
 </div>
 
 {{-- Backoff / flash label — assertive so screen readers interrupt for errors --}}
@@ -55,7 +62,7 @@
     @foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9] as $digit)
         <button
             type="button"
-            wire:click="pressDigit('{{ $digit }}')"
+            x-on:click="press('{{ $digit }}')"
             aria-label="Digit {{ $digit }}"
             class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
                    text-xl font-semibold text-slate-900 dark:text-slate-100
@@ -71,7 +78,7 @@
     {{-- Bottom row: Backspace | 0 | Confirm --}}
     <button
         type="button"
-        wire:click="backspace()"
+        x-on:click="back()"
         aria-label="Backspace"
         class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
                text-slate-600 dark:text-slate-400
@@ -92,7 +99,7 @@
 
     <button
         type="button"
-        wire:click="pressDigit('0')"
+        x-on:click="press('0')"
         aria-label="Digit 0"
         class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
                text-xl font-semibold text-slate-900 dark:text-slate-100
@@ -106,7 +113,7 @@
 
     <button
         type="button"
-        wire:click="submit()"
+        x-on:click="submitPin()"
         aria-label="Confirm PIN"
         class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-900 dark:bg-slate-100
                text-white dark:text-slate-900

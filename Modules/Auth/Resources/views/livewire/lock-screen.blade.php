@@ -3,15 +3,37 @@
             px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
             pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
             motion-reduce:transition-none"
-    x-data="{}"
+    {{--
+        WR-10 / T-05-12: PIN digits accumulate in this transient Alpine state,
+        never in a Livewire property — no per-keypress round-trips, and the
+        PIN never enters the wire:snapshot attribute or update responses. The
+        full PIN crosses the wire exactly once as $wire.submit(pin); the local
+        copy is cleared before the call resolves.
+    --}}
+    x-data="{
+        pin: '',
+        press(d) {
+            if (this.pin.length < 10) {
+                this.pin += d;
+            }
+        },
+        back() {
+            this.pin = this.pin.slice(0, -1);
+        },
+        submitPin() {
+            const p = this.pin;
+            this.pin = '';
+            $wire.submit(p);
+        },
+    }"
     x-on:keydown.window="
         const k = $event.key;
         if (k >= '0' && k <= '9') {
-            $wire.pressDigit(k);
+            press(k);
         } else if (k === 'Backspace') {
-            $wire.backspace();
+            back();
         } else if (k === 'Enter') {
-            $wire.submit();
+            submitPin();
         }
     "
 >
