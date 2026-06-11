@@ -291,7 +291,7 @@ Plans:
 | 1. Base-currency FX conversion | 5/5 | Complete | 2026-06-07 |
 | 2. Savings goals | 4/4 | Complete    | 2026-06-08 |
 | 3. Savings pots / envelopes | 4/4 | Complete   | 2026-06-09 |
-| 4. Responsive + installable PWA | 7/7 | Complete   | 2026-06-10 |
+| 4. Responsive + installable PWA | 9/9 | Complete   | 2026-06-11 |
 | 5. PIN / biometric app-lock | 0/0 | Not started | - |
 | 6. Bills / cash-flow calendar | 0/0 | Not started | - |
 | 7. Tax / deductible tagging + export | 0/0 | Not started | - |

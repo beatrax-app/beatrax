@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
 status: ready_to_plan
-stopped_at: Phase 03 complete (4/4) — ready to discuss Phase 4
-last_updated: 2026-06-10T16:01:35.336Z
+stopped_at: Phase 04 complete (9/9) — ready to discuss Phase 5
+last_updated: 2026-06-11T14:10:37.882Z
 progress:
   total_phases: 15
-  completed_phases: 2
-  total_plans: 13
-  completed_plans: 13
-  percent: 13
+  completed_phases: 3
+  total_plans: 20
+  completed_plans: 22
+  percent: 20
 ---
 
 # State: beatrax
@@ -23,16 +23,16 @@ progress:
 - **Requirements:** `.planning/REQUIREMENTS.md`
 - **Roadmap:** `.planning/ROADMAP.md`
 - **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-- **Current focus:** Phase 4 — responsive + installable pwa (seed 008)
+- **Current focus:** Phase 5 — pin / biometric app lock (seed 009)
 
 ## Current Position
 
-Phase: 03 (savings-pots-envelopes-seed-011) — EXECUTING
-Plan: 1 of 4
+Phase: 04 (responsive-installable-pwa-seed-008) — EXECUTING
+Plan: 1 of 7
 
 - **Milestone:** v1.3 "Local & in sync"
 - **Status:** Ready to plan
-- **Phase:** 4 of 15 (responsive + installable pwa (seed 008))
+- **Phase:** 5 of 15 (pin / biometric app lock (seed 009))
 - **Plan:** Not started
 - **Progress:** 2 of 15 phases complete — 13%
 
@@ -78,7 +78,8 @@ Phases [██              ] 2/15
 
 ### TODOs
 
-- (none yet)
+- Pre-existing test break (predates Phase 4): `Modules/DriftAlerts/tests/Feature/GlobalDriftThresholdSettingTest` — 4 tests fail with `baseCurrency => "Please choose a currency."` on settings save; the tests predate Phase 1's required baseCurrency field. Fix test setup (or relax validation) — surfaced 2026-06-10 during Phase 4 Wave 0 post-merge gate.
+- Host-toolchain note: `EmailScan` Integration (DiscoveryScanNoEmlBlobs, EmlOrphanCleanup) + `DevMode` (CommandSpawner, ArtisanStreamReconnect) tests are flaky under `pest --parallel` (pass serially) — run gates serially or fix isolation.
 
 ### Blockers
 
