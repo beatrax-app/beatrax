@@ -46,6 +46,20 @@ use Modules\Ledger\Public\Services\TransactionListQuery;
  */
 final class TransactionsList extends Component
 {
+    /**
+     * Maximum number of rows kept in the Livewire dehydrated snapshot.
+     *
+     * At ~200–400 bytes JSON-encoded per row, 500 rows ≈ 200 KB — well
+     * below Livewire 4's 4 MB snapshot limit. When exceeded, the oldest
+     * rows are trimmed from the front and the `$appendedCursorIds` guard
+     * is reset to only the guard key for the new tail row, preventing
+     * the trimmed pages from being appended again.
+     *
+     * Without this cap, a user scrolling through years of full-history
+     * data accumulates 5 000+ rows in the snapshot, eventually hitting
+     * the payload limit and corrupting the component state.
+     */
+    private const MAX_ACCUMULATED_ROWS = 500;
     public bool $fullHistory = false;
 
     public ?int $cursorId = null;
@@ -184,6 +198,22 @@ final class TransactionsList extends Component
                 $this->accumulatedRows[] = self::rowToArray($row);
             }
             $this->appendedCursorIds[$guardKey] = true;
+        }
+
+        // Cap the accumulated snapshot to MAX_ACCUMULATED_ROWS rows.
+        // Without this cap, a full-history scroll accumulates thousands of
+        // rows in the Livewire snapshot, which can hit the 4 MB payload
+        // limit and corrupt the component state.
+        // When trimmed: keep the newest MAX_ACCUMULATED_ROWS rows and reset
+        // the cursor guard to only the tail guard key so previously-trimmed
+        // pages are never re-appended.
+        if (count($this->accumulatedRows) > self::MAX_ACCUMULATED_ROWS) {
+            $this->accumulatedRows = array_values(
+                array_slice($this->accumulatedRows, -self::MAX_ACCUMULATED_ROWS)
+            );
+            // Reset guard to current guard key only; trimmed-out guards are
+            // no longer valid (the rows they protected have been discarded).
+            $this->appendedCursorIds = [$guardKey => true];
         }
 
         // Expose the pagination state so the blade sentinel and test harness
