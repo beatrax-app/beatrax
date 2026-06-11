@@ -19,7 +19,11 @@ use Modules\Core\Public\Contracts\Clock;
  *   - The same KDF salt is shared for PIN and password derivation within a
  *     single enrollment — the outputs are distinct because the secrets differ.
  *   - Each derived wrap key is zeroed immediately after use (sodium_memzero).
- *   - The data key itself is zeroed after both wraps are written.
+ *   - The data key local variable is zeroed after both wraps are written.
+ *     IN-08 caveat: PHP's sodium_memzero only zeroes refcount-1 buffers; when
+ *     the key has been handed to $session->put() the buffer is shared and the
+ *     bytes intentionally live on in the session — the memzero is best-effort
+ *     process-memory hygiene for the local reference, not a guarantee.
  *
  * The upsert uses updateOrInsert() scoped to user_id so enable() is
  * idempotent: re-enabling the lock (e.g. changing the PIN) replaces the
@@ -120,8 +124,10 @@ final class AppLockProvisioner
             $this->lockState->unlock($session, $dataKey);
         }
 
-        // Zero the data key last — after both wrap blobs are safely stored and the
-        // session copy (if any) has been written.
+        // Zero the local data-key reference last — after both wrap blobs are
+        // safely stored and the session copy (if any) has been written. When
+        // $session holds the key the buffer is shared (refcount > 1), so this
+        // is best-effort only (IN-08): the session copy persists by design.
         sodium_memzero($dataKey);
     }
 

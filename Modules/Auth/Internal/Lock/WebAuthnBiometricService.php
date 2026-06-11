@@ -41,7 +41,11 @@ use Webauthn\TrustPath\EmptyTrustPath;
  * The full origin (http://localhost:8000) is validated separately to avoid
  * Pitfall 3 from 05-RESEARCH: rpId vs. origin must BOTH be validated.
  *
- * All sensitive intermediate values are zeroed with sodium_memzero() after use.
+ * Sensitive intermediate values are zeroed with sodium_memzero() after use
+ * where possible. IN-08 caveat: PHP's sodium_memzero only zeroes refcount-1
+ * buffers — once the data key is stored in the session the buffer is shared
+ * and the bytes intentionally live on there (see LockStateManager custody
+ * note); the memzero calls are best-effort hygiene for local references.
  *
  * Session keys for pending challenge options:
  *   - CREATION_CHALLENGE_SESSION: pending creation challenge (base64).
@@ -421,7 +425,10 @@ final class WebAuthnBiometricService
                 return false;
             }
 
-            // Unlock the session with the recovered data key.
+            // Unlock the session with the recovered data key. The memzero is
+            // best-effort (IN-08): the session now shares the buffer, so only
+            // the local reference is affected — the session copy persists by
+            // design until lock().
             $this->lockState->unlock($session, $dataKey);
             sodium_memzero($dataKey);
 
