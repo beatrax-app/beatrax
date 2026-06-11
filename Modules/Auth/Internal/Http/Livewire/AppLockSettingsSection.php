@@ -398,7 +398,10 @@ final class AppLockSettingsSection extends Component
     /**
      * De-enroll biometric after verifying the current PIN (D-23).
      *
-     * Calls BiometricDeviceStore::deleteForUser on a correct PIN match.
+     * The PIN check is side-effect-free (AppLockProvisioner::verifyPin) so
+     * de-enrollment NEVER disables the lock or touches pin_hash / kdf_salt /
+     * pin_wrapped_key / password_wrapped_key. Only the user's
+     * user_biometric_credentials rows are deleted.
      */
     public function deenroll(
         CurrentUser $currentUser,
@@ -407,28 +410,14 @@ final class AppLockSettingsSection extends Component
     ): void {
         $user = $currentUser->user();
 
-        // D-23: require PIN confirmation before de-enrollment.
-        $result = $provisioner->disable($user->id, $this->deenrollPin);
-        if ($result === false) {
+        // D-23: require PIN confirmation before de-enrollment — without
+        // mutating any lock state (verify-only, no disable).
+        if (! $provisioner->verifyPin($user->id, $this->deenrollPin)) {
             $this->flashMessage = 'Incorrect PIN.';
 
             return;
         }
 
-        // Re-enable the lock (disable just verified the PIN; we only want to delete credentials).
-        // Actually provisioner->disable disables the lock entirely. For de-enroll only,
-        // we use PinVerificationService to verify the PIN without disabling the lock.
-        // Restore: re-call enable is too destructive. Instead: treat de-enroll as
-        // "verify PIN + delete biometric credentials" — do NOT disable the lock.
-        // The provisioner::disable path is wrong here. We need a lighter PIN check.
-        //
-        // Deviation (Rule 1 fix): use deleteForUser only after verifying the PIN
-        // via DB query (same as provisioner does internally) rather than disabling the lock.
-        //
-        // Since provisioner->disable already ran and may have disabled the lock,
-        // we just delete the credentials. The user's lock state after this call
-        // reflects the provisioner behavior. Document this as a known limitation:
-        // de-enroll via this path requires re-enabling the lock if it was disabled.
         $biometricStore->deleteForUser($user->id);
 
         $this->biometricEnrolled = false;
