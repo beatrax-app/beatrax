@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Lock;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 
@@ -37,6 +38,7 @@ final class AppLockProvisioner
         private readonly AppLockKeyWrap $keyWrap,
         private readonly PinHasher $pinHasher,
         private readonly Clock $clock,
+        private readonly LockStateManager $lockState,
     ) {}
 
     /**
@@ -47,8 +49,12 @@ final class AppLockProvisioner
      *     pin_wrapped_key, password_wrapped_key, failed_attempts=0.
      *   - All local copies of the data key and derived wrap keys have been
      *     zeroed with sodium_memzero.
+     *   - If $session is provided, the session is transitioned to the UNLOCKED
+     *     state with the data key stored (the user just proved their PIN + account
+     *     password, so an unlocked session with the key is the coherent post-enable
+     *     state — Gap B fix per QA review).
      */
-    public function enable(int $userId, string $pin, string $accountPassword): void
+    public function enable(int $userId, string $pin, string $accountPassword, ?Session $session = null): void
     {
         // Generate a fresh data key.
         $dataKey = random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
@@ -84,7 +90,16 @@ final class AppLockProvisioner
             ],
         );
 
-        // Zero the data key last — after both wrap blobs are safely stored.
+        // Unlock the session with the live data key so the caller's session is in a
+        // coherent state immediately after enable(): lock_enabled=true in the DB,
+        // but the session is UNLOCKED (key available). The user just proved their
+        // PIN + account password, so this matches the banking-app model (D-19, Gap B fix).
+        if ($session !== null) {
+            $this->lockState->unlock($session, $dataKey);
+        }
+
+        // Zero the data key last — after both wrap blobs are safely stored and the
+        // session copy (if any) has been written.
         sodium_memzero($dataKey);
     }
 

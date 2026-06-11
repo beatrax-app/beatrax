@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Hashing\Hasher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -197,7 +198,7 @@ final class AppLockSettingsSection extends Component
      *   T-05-17: accountPassword is used only transiently (Hasher::check + provisioner->enable);
      *            immediately cleared from props after use; never persisted.
      */
-    public function setPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher): void
+    public function setPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher, Session $session): void
     {
         // PIN length validation.
         if (strlen($this->newPin) < 4) {
@@ -222,7 +223,10 @@ final class AppLockSettingsSection extends Component
             return;
         }
 
-        $provisioner->enable($user->id, $this->newPin, $this->accountPassword);
+        // Pass the session so enable() stores the data key in the session immediately
+        // (Gap B fix: coherent post-enable state — the user just authenticated, so the
+        // session should be unlocked with the key available, not key-less/locked).
+        $provisioner->enable($user->id, $this->newPin, $this->accountPassword, $session);
 
         $this->lockEnabled = true;
         $this->flashMessage = '';
