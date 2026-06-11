@@ -7,10 +7,8 @@ declare(strict_types=1);
 use Illuminate\Contracts\Session\Session;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\AppLockKeyProbe;
-use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
-use Modules\Core\Models\User;
 
 /*
  * Feature coverage for the AppLockKeyProbe Livewire component (LOCK-04, D-19):
@@ -32,20 +30,6 @@ it('AppLockKeyProbe class exists', function (): void {
 });
 
 it('probe shows "released" and fingerprint when session is unlocked with a data key', function (): void {
-    $user = User::query()->create([
-        'username' => 'probe-alice',
-        'password' => 'probe-password',
-        'period_start_day' => 1,
-    ]);
-    $this->actingAs($user);
-
-    // Enable app lock so provisioner stores a wrapped key.
-    /** @var AppLockProvisioner $provisioner */
-    $provisioner = $this->app->make(AppLockProvisioner::class);
-    $provisioner->enable($user->id, '123456', 'probe-password');
-
-    // Simulate unlocked session: set the lock flag to false and put a
-    // synthetic data key into the session.
     $rawKey = 'test-data-key-32bytes-padding!!!';
 
     /** @var Session $session */
@@ -64,14 +48,6 @@ it('probe shows "released" and fingerprint when session is unlocked with a data 
 });
 
 it('probe shows "withheld" when session is locked', function (): void {
-    $user = User::query()->create([
-        'username' => 'probe-bob',
-        'password' => 'probe-password',
-        'period_start_day' => 1,
-    ]);
-    $this->actingAs($user);
-
-    // Simulate locked session.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
     $session->put(LockStateManager::SESSION_KEY, true);
@@ -83,13 +59,6 @@ it('probe shows "withheld" when session is locked', function (): void {
 });
 
 it('probe lock() action withholds the key and transitions to withheld state', function (): void {
-    $user = User::query()->create([
-        'username' => 'probe-charlie',
-        'password' => 'probe-password',
-        'period_start_day' => 1,
-    ]);
-    $this->actingAs($user);
-
     $rawKey = 'another-test-key-32bytes-pad!!!!';
 
     /** @var Session $session */
@@ -105,13 +74,6 @@ it('probe lock() action withholds the key and transitions to withheld state', fu
 });
 
 it('probe does not render the raw key bytes even when unlocked', function (): void {
-    $user = User::query()->create([
-        'username' => 'probe-dave',
-        'password' => 'probe-password',
-        'period_start_day' => 1,
-    ]);
-    $this->actingAs($user);
-
     $rawKey = 'secret-data-key-32bytes-padded!!';
 
     /** @var Session $session */
