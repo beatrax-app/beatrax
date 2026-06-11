@@ -36,7 +36,7 @@
 
 ### Track 2 — Take it with you
 
-- [ ] **Phase 4: Responsive + installable PWA (SEED-008)** - Phone-legible surfaces, installable, offline shell.
+- [x] **Phase 4: Responsive + installable PWA (SEED-008)** - Phone-legible surfaces, installable, offline shell. (completed 2026-06-10)
 - [ ] **Phase 5: PIN / biometric app-lock (SEED-009)** - App-lock + biometric + idle re-lock + at-rest key-unlock gate (LOCK-04).
 
 ### Track 3 — Insight & records
@@ -137,7 +137,7 @@ Plans:
   2. User can install beatrax as a PWA (manifest, icons, standalone display mode).
   3. With the network unavailable, the offline-shell service worker still serves the app shell.
 
-**Plans**: TBD
+**Plans**: 9 plans (01-07 shipped; 08-09 gap-closure from UAT) — see phase dir; 04-08 phone infinite-scroll accumulation, 04-09 counterparty toolbar + dev-console phone fixes
 **UI hint**: yes
 
 ### Phase 5: PIN / biometric app-lock (SEED-009)
@@ -291,7 +291,7 @@ Plans:
 | 1. Base-currency FX conversion | 5/5 | Complete | 2026-06-07 |
 | 2. Savings goals | 4/4 | Complete    | 2026-06-08 |
 | 3. Savings pots / envelopes | 4/4 | Complete   | 2026-06-09 |
-| 4. Responsive + installable PWA | 0/0 | Not started | - |
+| 4. Responsive + installable PWA | 7/7 | Complete   | 2026-06-10 |
 | 5. PIN / biometric app-lock | 0/0 | Not started | - |
 | 6. Bills / cash-flow calendar | 0/0 | Not started | - |
 | 7. Tax / deductible tagging + export | 0/0 | Not started | - |
