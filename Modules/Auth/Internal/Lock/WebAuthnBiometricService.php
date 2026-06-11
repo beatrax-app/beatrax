@@ -83,6 +83,29 @@ final class WebAuthnBiometricService
         $rpId = $this->rpId();
         $challenge = random_bytes(32);
 
+        // IN-02: list already-enrolled credential IDs as excludeCredentials so
+        // re-enrolling the same authenticator is rejected by the browser
+        // instead of creating a duplicate row (lock.js already decodes the
+        // field when present).
+        /** @var list<PublicKeyCredentialDescriptor> $excludeCredentials */
+        $excludeCredentials = [];
+        foreach ($this->store->findForUser($userId) as $cred) {
+            $credId = $cred->credential_id;
+            if (! is_string($credId)) {
+                continue;
+            }
+
+            $rawId = base64_decode($credId, strict: true);
+            if ($rawId === false) {
+                continue;
+            }
+
+            $excludeCredentials[] = PublicKeyCredentialDescriptor::create(
+                PublicKeyCredentialDescriptor::CREDENTIAL_TYPE_PUBLIC_KEY,
+                $rawId,
+            );
+        }
+
         $options = PublicKeyCredentialCreationOptions::create(
             rp: PublicKeyCredentialRpEntity::create('beatrax', $rpId),
             user: PublicKeyCredentialUserEntity::create(
@@ -99,6 +122,7 @@ final class WebAuthnBiometricService
                 authenticatorAttachment: 'platform',
                 userVerification: 'required',
             ),
+            excludeCredentials: $excludeCredentials,
         );
 
         // Persist challenge for later validation.
