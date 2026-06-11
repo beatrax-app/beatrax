@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
+use Modules\Auth\Internal\Http\Controllers\LockEngageController;
 use Modules\Auth\Internal\Http\Controllers\WebAuthnBiometricController;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
@@ -36,6 +37,11 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
 
     // App-lock screen — the calm-slate PIN pad (plan 05-03).
     Route::get('/lock', LockScreen::class)->name('auth.lock');
+
+    // Server-side lock-engage endpoint (Gap A fix, D-17/D-18).
+    // Called by lock.js via navigator.sendBeacon when the grace timer expires or
+    // the idle threshold is met on an app page. Returns 204 No Content.
+    Route::post('/lock/engage', LockEngageController::class)->name('auth.lock.engage');
 
     // Biometric challenge + verify endpoints (plan 05-05 WebAuthn).
     Route::post('/lock/biometric/challenge', [WebAuthnBiometricController::class, 'challenge'])

@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Http\Middleware;
 
+use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Contracts\Session\Session;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -19,6 +23,19 @@ use Symfony\Component\HttpFoundation\Response;
  * redirected to the app-lock screen. The lock screen (auth.lock) and the
  * logout route are exempt so the user can enter their PIN or sign out
  * without being trapped in a redirect loop.
+ *
+ * Idle-timeout enforcement (D-17, server-authoritative):
+ *   When the user's session is unlocked and the app-lock is enabled,
+ *   this middleware checks whether the idle timeout has elapsed since the
+ *   last recorded activity (last_activity_at in user_app_lock_configs).
+ *   If elapsed, it locks the session and redirects to /lock — matching the
+ *   server-authoritative model of D-17. Otherwise it refreshes the timestamp.
+ *
+ *   To avoid a DB query on every request, the lock config (lock_enabled,
+ *   idle_timeout_minutes) is cached in the session under a private key and
+ *   re-read from the DB only once per SESSION_CONFIG_TTL_SECONDS window.
+ *   The last_activity_at timestamp is written on every passing gated request
+ *   so the DB stays fresh even when the in-session config cache is active.
  *
  * Unauthenticated requests pass through untouched: guests are handled by
  * the Authenticate middleware that is prepended to the auth group; the lock
@@ -45,23 +62,93 @@ final readonly class AppLockMiddleware
         'auth.lock.biometric.challenge',
         'auth.lock.biometric.verify',
         'auth.lock.biometric.enroll',
+        'auth.lock.engage',
         'logout',
     ];
+
+    /**
+     * How long (in seconds) to trust the in-session config cache before
+     * re-reading lock_enabled + idle_timeout_minutes from the DB.
+     *
+     * 60 s is a reasonable balance: a user who changes idle_timeout_minutes in
+     * settings will see the new value within a minute, and the per-request
+     * write of last_activity_at keeps the DB fresh independently.
+     */
+    private const SESSION_CONFIG_TTL_SECONDS = 60;
+
+    /** Session key for the cached config snapshot. */
+    private const SESSION_CONFIG_CACHE = 'beatrax_lock_config_cache';
 
     public function __construct(
         private CurrentUser $currentUser,
         private LockStateManager $lockState,
         private UrlGenerator $urls,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
         if ($this->currentUser->isAuthenticated()) {
+            $session = $request->session();
             $routeName = $request->route()?->getName();
 
-            if ($this->lockState->isLocked($request->session())
-                && ! in_array($routeName, self::ALLOWED_ROUTE_NAMES, true)) {
-                return new RedirectResponse($this->urls->route('auth.lock'));
+            // If already locked, redirect to the lock screen (unless exempt).
+            if ($this->lockState->isLocked($session)) {
+                if (! in_array($routeName, self::ALLOWED_ROUTE_NAMES, true)) {
+                    return new RedirectResponse($this->urls->route('auth.lock'));
+                }
+
+                /** @var Response $response */
+                $response = $next($request);
+
+                return $response;
+            }
+
+            // Session is unlocked — enforce idle timeout when lock is enabled.
+            $userId = $this->currentUser->user()->id;
+            $config = $this->resolveConfig($session, $userId);
+
+            if ($config !== null && $config['lock_enabled']) {
+                $now = $this->clock->now();
+                $idleMs = $config['idle_timeout_minutes'] * 60 * 1000;
+
+                // Check whether idle timeout has elapsed since last_activity_at.
+                $lastActivity = $config['last_activity_at'];
+                if ($lastActivity !== null) {
+                    $elapsedMs = $now->diffInMilliseconds($lastActivity, absolute: true);
+
+                    if ($elapsedMs >= $idleMs) {
+                        // Idle timeout elapsed — lock the session (D-17 server-authoritative).
+                        $this->lockState->lock($session);
+
+                        // Invalidate the config cache so the next request re-reads from DB.
+                        $session->forget(self::SESSION_CONFIG_CACHE);
+
+                        if (! in_array($routeName, self::ALLOWED_ROUTE_NAMES, true)) {
+                            return new RedirectResponse($this->urls->route('auth.lock'));
+                        }
+
+                        /** @var Response $response */
+                        $response = $next($request);
+
+                        return $response;
+                    }
+                }
+
+                // Idle timeout not elapsed — refresh last_activity_at in the DB.
+                // Exempt routes (lock screen, logout) don't count as activity.
+                if (! in_array($routeName, self::ALLOWED_ROUTE_NAMES, true)) {
+                    $nowStr = $now->toDateTimeString();
+                    $this->db->connection()
+                        ->table('user_app_lock_configs')
+                        ->where('user_id', $userId)
+                        ->update(['last_activity_at' => $nowStr]);
+
+                    // Update the cached last_activity_at so the next request within
+                    // the TTL window uses the refreshed timestamp without a DB read.
+                    $this->refreshCachedActivity($session, $now);
+                }
             }
         }
 
@@ -69,5 +156,75 @@ final readonly class AppLockMiddleware
         $response = $next($request);
 
         return $response;
+    }
+
+    /**
+     * Return the cached lock config for $userId, refreshing from the DB when
+     * the TTL has expired or the cache is absent.
+     *
+     * Returns null when the user has no config row (lock never set up).
+     *
+     * @return array{lock_enabled: bool, idle_timeout_minutes: int, last_activity_at: CarbonImmutable|null, cached_at: int}|null
+     */
+    private function resolveConfig(Session $session, int $userId): ?array
+    {
+        $cached = $session->get(self::SESSION_CONFIG_CACHE);
+
+        $now = time();
+
+        if (is_array($cached)
+            && isset($cached['cached_at'])
+            && is_int($cached['cached_at'])
+            && ($now - $cached['cached_at']) < self::SESSION_CONFIG_TTL_SECONDS) {
+            /** @var array{lock_enabled: bool, idle_timeout_minutes: int, last_activity_at: CarbonImmutable|null, cached_at: int} $cached */
+            return $cached;
+        }
+
+        // Re-read from DB.
+        $row = $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->first(['lock_enabled', 'idle_timeout_minutes', 'last_activity_at']);
+
+        if ($row === null) {
+            return null;
+        }
+
+        $lastActivityRaw = $row->last_activity_at;
+        $lastActivity = null;
+        if (is_string($lastActivityRaw) || is_int($lastActivityRaw)) {
+            $lastActivity = CarbonImmutable::parse($lastActivityRaw);
+        }
+
+        $payload = [
+            'lock_enabled' => (bool) $row->lock_enabled,
+            'idle_timeout_minutes' => is_numeric($row->idle_timeout_minutes)
+                ? (int) $row->idle_timeout_minutes
+                : 5,
+            'last_activity_at' => $lastActivity,
+            'cached_at' => $now,
+        ];
+
+        $session->put(self::SESSION_CONFIG_CACHE, $payload);
+
+        return $payload;
+    }
+
+    /**
+     * Update the in-session config cache's last_activity_at field.
+     *
+     * Called after a successful DB write of last_activity_at so subsequent
+     * requests within the TTL window see the fresh timestamp without
+     * a DB query.
+     */
+    private function refreshCachedActivity(Session $session, CarbonImmutable $now): void
+    {
+        $cached = $session->get(self::SESSION_CONFIG_CACHE);
+        if (! is_array($cached)) {
+            return;
+        }
+
+        $cached['last_activity_at'] = $now;
+        $session->put(self::SESSION_CONFIG_CACHE, $cached);
     }
 }

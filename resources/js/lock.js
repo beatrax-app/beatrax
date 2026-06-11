@@ -97,9 +97,12 @@ document.addEventListener('alpine:init', () => {
             this._clearGrace();
             this._graceTimer = window.setTimeout(() => {
                 this._graceTimer = null;
-                // Grace elapsed — broadcast locked state to all tabs.
-                // The next Livewire request to the server will hit
-                // AppLockMiddleware and redirect to /lock (D-17/D-18).
+                // Grace elapsed — lock the server session via the engage endpoint
+                // (D-17/D-18, Gap A fix). navigator.sendBeacon survives tab closure/switch
+                // and does not block the page. Falls back to keepalive fetch when
+                // sendBeacon is unavailable.
+                this._serverLock();
+                // Also broadcast locked state to all tabs (UX convenience).
                 this._broadcast('locked');
             }, GRACE_MS);
         },
@@ -115,6 +118,55 @@ document.addEventListener('alpine:init', () => {
         // -----------------------------------------------------------------------
         // BroadcastChannel — D-05 cross-tab coordination
         // -----------------------------------------------------------------------
+
+        /**
+         * POST to /lock/engage to lock the server session (D-17, Gap A fix).
+         *
+         * Uses navigator.sendBeacon so the request survives tab switching or
+         * closing (the primary use case — backgrounding past the grace window).
+         * Falls back to fetch with keepalive:true on browsers where sendBeacon
+         * does not accept a body with Content-Type headers. The server returns
+         * 204 and no body is read.
+         *
+         * Called when:
+         *   1. The 30-second grace window elapses (background/blur past grace).
+         *   2. The idle ticker detects inactivity >= idle_timeout_minutes.
+         */
+        _serverLock() {
+            const url = '/lock/engage';
+            const csrfToken = _getCsrfToken();
+            const payload = JSON.stringify({});
+
+            // sendBeacon does not support custom headers; wrap the payload in
+            // a Blob with the correct MIME type so the CSRF token can be sent
+            // via the cookie-based XSRF-TOKEN mechanism (Laravel's default).
+            try {
+                if (typeof navigator.sendBeacon === 'function') {
+                    const blob = new Blob([payload], { type: 'application/json' });
+                    // Note: the CSRF cookie (XSRF-TOKEN) is automatically included
+                    // because sendBeacon sends cookies. Laravel's VerifyCsrfToken reads
+                    // both the header and the cookie — sendBeacon uses the cookie path.
+                    navigator.sendBeacon(url, blob);
+                    return;
+                }
+            } catch (e) {
+                // sendBeacon not available or threw — fall through to fetch.
+            }
+
+            // Fallback: fetch with keepalive so it survives tab close.
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': csrfToken,
+                },
+                body: payload,
+                keepalive: true,
+            }).catch(() => {
+                // Swallow — if the request fails the server-side idle check
+                // in AppLockMiddleware will catch it on the next request.
+            });
+        },
 
         /** Broadcast a lock-state message to all tabs. */
         _broadcast(state) {
@@ -153,14 +205,15 @@ document.addEventListener('alpine:init', () => {
             this._idleInterval = window.setInterval(() => {
                 const elapsed = Date.now() - this._lastActivity;
                 if (elapsed >= idleMs) {
-                    // Ask the server to lock via the Livewire component
-                    // listening on the current page (LockScreen ignores this
-                    // event; AppLockMiddleware handles it if the session
-                    // is on a protected page).
-                    if (window.Livewire) {
-                        window.Livewire.dispatch('idle-timeout-elapsed');
-                    }
-                    // Reset the timer so we don't spam the dispatch.
+                    // Idle threshold elapsed — lock the server session via the
+                    // engage endpoint (Gap A fix, D-17 server-authoritative).
+                    // Using _serverLock() instead of a Livewire dispatch so the
+                    // lock fires on all app pages, not just /lock (where
+                    // LockScreen is the only listener of idle-timeout-elapsed).
+                    this._serverLock();
+                    this.showVeil();
+                    this._broadcast('locked');
+                    // Reset the timer so we don't spam.
                     this._lastActivity = Date.now();
                 }
             }, 10000);
