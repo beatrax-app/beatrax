@@ -42,7 +42,19 @@ self.addEventListener('fetch', (event) => {
         );
         return;
     }
-    event.respondWith(
-        caches.match(event.request).then(cached => cached || fetch(event.request))
-    );
+    // Cache-first only for known static assets: hashed build bundles,
+    // icon files, and the offline shell. Every other request falls
+    // through to network-only so that future data endpoints (outside
+    // /livewire or /api) are never silently served stale.
+    const isStaticAsset =
+        url.pathname.startsWith('/build/')
+        || url.pathname.startsWith('/icons/')
+        || url.pathname === '/offline.html';
+    if (isStaticAsset) {
+        event.respondWith(
+            caches.match(event.request).then(cached => cached || fetch(event.request))
+        );
+        return;
+    }
+    // Network-only for everything else: no financial data is ever cached.
 });
