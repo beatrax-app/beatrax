@@ -82,19 +82,34 @@ final class AppLockProvisioner
         // Hash the PIN for fast verification (sodium_crypto_pwhash_str).
         $pinHash = $this->pinHasher->hash($pin);
 
-        // Upsert the configuration row — idempotent on user_id.
+        // Upsert the configuration row — idempotent on user_id. The query
+        // builder's updateOrInsert does not manage timestamps (IN-07), so
+        // they are set explicitly: created_at only when inserting.
+        $now = $this->clock->now()->toDateTimeString();
+        $exists = $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->exists();
+
+        $values = [
+            'pin_hash' => $pinHash,
+            'kdf_salt' => $salt,
+            'pin_wrapped_key' => $pinWrappedKey,
+            'password_wrapped_key' => $passwordWrappedKey,
+            'lock_enabled' => true,
+            'failed_attempts' => 0,
+            'locked_until' => null,
+            'last_activity_at' => $this->clock->now(),
+            'updated_at' => $now,
+        ];
+
+        if (! $exists) {
+            $values['created_at'] = $now;
+        }
+
         $this->db->connection()->table('user_app_lock_configs')->updateOrInsert(
             ['user_id' => $userId],
-            [
-                'pin_hash' => $pinHash,
-                'kdf_salt' => $salt,
-                'pin_wrapped_key' => $pinWrappedKey,
-                'password_wrapped_key' => $passwordWrappedKey,
-                'lock_enabled' => true,
-                'failed_attempts' => 0,
-                'locked_until' => null,
-                'last_activity_at' => $this->clock->now(),
-            ],
+            $values,
         );
 
         // Unlock the session with the live data key so the caller's session is in a
