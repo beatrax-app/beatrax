@@ -2659,18 +2659,28 @@ td.date,
  * pointer devices (phone/tablet touchscreens).
  */
 
-/* Sidebar: hidden from normal flow on phone/tablet; drawer component owns it */
+/* Sidebar: hidden from normal flow on phone/tablet; drawer component owns it.
+   The ONLY sidebar mount lives inside .drawer-container, so the hide rule must
+   not match there — otherwise the open drawer renders empty at phone width. */
 @media (max-width: 1023px) {
     .side {
         display: none;
     }
+
+    .drawer-container .side {
+        display: flex;
+    }
 }
 
-/* Desktop: drawer container behaves as static sidebar (no translate, no scrim) */
+/* Desktop: drawer container behaves as static sidebar (no translate, no scrim).
+   display must be forced too: the drawer's x-show leaves an inline
+   `display: none` when $store.mobileNav.drawerOpen is false, which would
+   otherwise hide the sidebar at every desktop width. */
 @media (min-width: 1024px) {
     .drawer-container {
         position: static !important;
         transform: none !important;
+        display: block !important;
     }
 
     .drawer-scrim {
