@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 // Wave 0 RED — implemented by plan 05-02
 
+use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 
 /*
@@ -20,6 +21,6 @@ it('AppLockMiddleware is registered as Livewire persistent middleware (RED until
     // is not registered as persistent middleware.
     expect(class_exists(AppLockMiddleware::class))->toBeTrue();
 
-    $persistentMiddleware = Livewire\Facades\Livewire::getPersistentMiddleware();
+    $persistentMiddleware = Livewire::getPersistentMiddleware();
     expect($persistentMiddleware)->toContain(AppLockMiddleware::class);
 });

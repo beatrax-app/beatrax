@@ -20,9 +20,16 @@ use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
 use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
 use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
+use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Http\Middleware\FirstUserOnlyMiddleware;
 use Modules\Auth\Internal\Http\Middleware\ForcePasswordChangeMiddleware;
 use Modules\Auth\Internal\Http\Middleware\RequireDeveloperMiddleware;
+use Modules\Auth\Internal\Lock\AppLockKdf;
+use Modules\Auth\Internal\Lock\AppLockKeyWrap;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Internal\Lock\PinHasher;
+use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
@@ -33,6 +40,7 @@ use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Auth\Public\Actions\ResetPasswordAction;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Auth\Public\Services\AppLockKeyService;
 
 /**
  * Service provider for the Auth module.
@@ -43,8 +51,11 @@ use Modules\Auth\Public\Actions\SignupAction;
  * password-reset actions, and registers the Livewire pages of the
  * authentication surface.
  *
- * One middleware runs on every authenticated route: the forced-password-
- * change guard.
+ * Two middleware run on every authenticated route:
+ *   1. AppLockMiddleware — the app-lock gate (D-01 server-authoritative).
+ *      Also registered as Livewire persistent middleware so /livewire/update
+ *      requests re-run the gate (T-05-06 bypass prevention).
+ *   2. ForcePasswordChangeMiddleware — password-change enforcement.
  */
 final class AuthServiceProvider extends ServiceProvider
 {
@@ -62,6 +73,15 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(RecoveryCodeFormatter::class);
         $this->app->singleton(RecoveryCodeNormalizer::class);
         $this->app->singleton(RecoveryCodeAuthenticator::class);
+
+        // App-lock infrastructure singletons (05-02).
+        $this->app->singleton(PinHasher::class);
+        $this->app->singleton(AppLockKdf::class);
+        $this->app->singleton(AppLockKeyWrap::class);
+        $this->app->singleton(LockStateManager::class);
+        $this->app->singleton(AppLockKeyService::class);
+        $this->app->singleton(PinVerificationService::class);
+        $this->app->singleton(AppLockProvisioner::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire, Router $router): void
@@ -82,6 +102,10 @@ final class AuthServiceProvider extends ServiceProvider
         $router->aliasMiddleware('first-user-only', FirstUserOnlyMiddleware::class);
         $router->aliasMiddleware('developer', RequireDeveloperMiddleware::class);
 
+        // Gate every authenticated route behind the app-lock screen (D-01).
+        // The middleware exempts auth.lock + logout to prevent redirect loops.
+        $router->pushMiddlewareToGroup('auth', AppLockMiddleware::class);
+
         // Enforce the forced-password-change flag on every authenticated
         // route. The middleware exempts the change-password page and the
         // logout route by name so a flagged user is never trapped.
@@ -93,6 +117,10 @@ final class AuthServiceProvider extends ServiceProvider
         // rejects guests before the module middleware run.
         $router->prependMiddlewareToGroup('auth', Authenticate::class);
 
+        // Re-run the lock gate on every Livewire component update request so
+        // a locked session cannot bypass the gate via /livewire/update (T-05-06).
+        $livewire->addPersistentMiddleware(AppLockMiddleware::class);
+
         $livewire->component('auth.login-page', LoginPage::class);
         $livewire->component('auth.signup-page', SignupPage::class);
         $livewire->component('auth.recovery-codes-display', RecoveryCodesDisplay::class);
@@ -100,5 +128,10 @@ final class AuthServiceProvider extends ServiceProvider
         $livewire->component('auth.add-user-page', AddUserPage::class);
         $livewire->component('auth.reset-password-page', ResetPasswordPage::class);
         $livewire->component('auth.manage-user-page', ManageUserPage::class);
+
+        // TODO (05-03): Register 'auth.lock-screen' => LockScreen::class
+        // TODO (05-04): Register 'auth.app-lock-settings-section' => AppLockSettingsSection::class
+        // These Livewire component classes do not exist yet; importing them would break autoload.
+        // Uncomment when plans 05-03 and 05-04 create the component files.
     }
 }
