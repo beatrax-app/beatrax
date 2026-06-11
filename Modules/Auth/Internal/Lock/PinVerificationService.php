@@ -64,6 +64,7 @@ final class PinVerificationService
         private readonly LockStateManager $lockState,
         private readonly Clock $clock,
         private readonly LogoutAction $logout,
+        private readonly BiometricDeviceStore $biometricStore,
     ) {}
 
     /**
@@ -145,6 +146,11 @@ final class PinVerificationService
                     'locked_until' => null,
                     'last_activity_at' => $this->clock->now(),
                 ]);
+
+            // D-16: a successful PIN unlock re-arms ALL of the user's
+            // biometric credentials (resets biometric_failed_count so a
+            // disarmed credential is usable again).
+            $this->biometricStore->resetAllForUser($userId);
 
             $this->lockState->unlock($session, $dataKey);
 
