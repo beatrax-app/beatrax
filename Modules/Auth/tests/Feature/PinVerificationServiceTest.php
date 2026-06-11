@@ -147,6 +147,48 @@ it('reaching the backoff threshold sets locked_until and blocks further attempts
     expect($result)->toBeNull('Correct PIN should still return null while locked_until is in the future');
 });
 
+it('successful PIN unlock re-arms disarmed biometric credentials (D-16 / WR-01)', function (): void {
+    $user = User::query()->create([
+        'username' => 'rearm-user',
+        'password' => 'whatever-password',
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+    $provisioner->enable($user->id, '123456', 'whatever-password');
+
+    /** @var \Modules\Auth\Internal\Lock\BiometricDeviceStore $store */
+    $store = $this->app->make(\Modules\Auth\Internal\Lock\BiometricDeviceStore::class);
+    $store->store($user->id, base64_encode('rearm-cred'), 'Rearm Device', str_repeat("\xEE", 32), 'fake-cbor', 'webauthn');
+
+    // Disarm the credential (5 consecutive biometric failures).
+    $cred = $store->findByCredentialId($user->id, base64_encode('rearm-cred'));
+    /** @var stdClass $cred */
+    for ($i = 0; $i < \Modules\Auth\Internal\Lock\BiometricDeviceStore::BIOMETRIC_DISABLE_THRESHOLD; $i++) {
+        $store->incrementFailureCount($cred->id);
+    }
+    $disarmed = $store->findByCredentialId($user->id, base64_encode('rearm-cred'));
+    /** @var stdClass $disarmed */
+    expect($store->isArmed($disarmed))->toBeFalse();
+
+    /** @var PinVerificationService $service */
+    $service = $this->app->make(PinVerificationService::class);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    // Successful PIN unlock must reset biometric_failed_count for all credentials.
+    $dataKey = $service->verify($user->id, '123456', $session);
+    expect($dataKey)->toBeString();
+
+    $rearmed = $store->findByCredentialId($user->id, base64_encode('rearm-cred'));
+    /** @var stdClass $rearmed */
+    expect($store->isArmed($rearmed))->toBeTrue();
+    expect((int) $rearmed->biometric_failed_count)->toBe(0);
+});
+
 it('reaching the failure cap signs the session out', function (): void {
     expect(class_exists(PinVerificationService::class))->toBeTrue();
 
