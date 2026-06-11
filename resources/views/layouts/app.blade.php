@@ -162,7 +162,7 @@
                     CSS-hidden at >=1024px — desktop layout is unchanged.
                     Inserts before <main> so it stacks above the main content column on mobile.
                 --}}
-                <x-core::mobile-top-bar />
+                <x-core::mobile-top-bar class="top-bar-global" />
                 <main class="flex-1 min-w-0 overflow-auto">
                     @livewire('core.system-alerts-banner')
                     @livewire('categorization.rule-form-modal')

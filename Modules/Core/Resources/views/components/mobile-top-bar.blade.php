@@ -14,7 +14,7 @@
     Detail: back affordance + page title + palette button (set :backUrl to parent URL).
     44×44 tap targets on all buttons (D-14 / WCAG 2.5.5).
 --}}
-<header class="top-bar" aria-label="Mobile navigation">
+<header {{ $attributes->merge(['class' => 'top-bar']) }} aria-label="Mobile navigation">
     {{-- Hamburger or back affordance --}}
     @if ($showBack)
         <a
