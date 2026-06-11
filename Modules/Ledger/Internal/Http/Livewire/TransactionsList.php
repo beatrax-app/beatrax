@@ -146,10 +146,21 @@ final class TransactionsList extends Component
         $this->nextCursorPostedAt = null;
     }
 
-    public function loadMore(int $nextCursorId, ?string $nextCursorPostedAt = null): void
+    /**
+     * Advance to the next cursor page.
+     *
+     * Reads `$this->nextCursorId` and `$this->nextCursorPostedAt` from the
+     * server-side Livewire snapshot rather than accepting them as browser-
+     * supplied parameters. This prevents a caller from forging a cursor value
+     * to skip rows or submit an unvalidated page offset. The snapshot values
+     * are set by the previous `render()` and are encrypted / HMAC-verified
+     * by Livewire before hydration — they cannot be tampered with by the
+     * browser.
+     */
+    public function loadMore(): void
     {
-        $this->cursorId = $nextCursorId;
-        $this->cursorPostedAt = $nextCursorPostedAt;
+        $this->cursorId = $this->nextCursorId;
+        $this->cursorPostedAt = $this->nextCursorPostedAt;
     }
 
     public function render(
