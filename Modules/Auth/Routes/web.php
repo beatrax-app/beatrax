@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
+use Modules\Auth\Internal\Http\Controllers\WebAuthnBiometricController;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Auth\Internal\Http\Livewire\LockScreen;
@@ -36,14 +37,15 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
     // App-lock screen — the calm-slate PIN pad (plan 05-03).
     Route::get('/lock', LockScreen::class)->name('auth.lock');
 
-    // Biometric challenge + verify endpoints — placeholder until 05-05.
-    Route::post('/lock/biometric/challenge', static function (): never {
-        abort(503, 'Biometric challenge not yet implemented — coming in plan 05-05.');
-    })->name('auth.lock.biometric.challenge');
+    // Biometric challenge + verify endpoints (plan 05-05 WebAuthn).
+    Route::post('/lock/biometric/challenge', [WebAuthnBiometricController::class, 'challenge'])
+        ->name('auth.lock.biometric.challenge');
 
-    Route::post('/lock/biometric/verify', static function (): never {
-        abort(503, 'Biometric verify not yet implemented — coming in plan 05-05.');
-    })->name('auth.lock.biometric.verify');
+    Route::post('/lock/biometric/verify', [WebAuthnBiometricController::class, 'verify'])
+        ->name('auth.lock.biometric.verify');
+
+    Route::post('/lock/biometric/enroll', [WebAuthnBiometricController::class, 'enroll'])
+        ->name('auth.lock.biometric.enroll');
 
     Route::get('/recovery-codes', RecoveryCodesDisplay::class)->name('auth.recovery-codes-display');
 
