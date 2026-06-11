@@ -10,6 +10,13 @@ use Native\Desktop\Facades\System;
 /**
  * Wraps the NativePHP Touch ID (macOS) prompt behind a plain boolean interface.
  *
+ * ⚠ STATUS: NOT YET WIRED (WR-08 — the native macOS Touch ID unlock path is
+ * DEFERRED). isAvailable()/prompt() have no callers: the lock screen offers
+ * only the WebAuthn (browser) biometric path this phase. Wiring requires a
+ * Desktop→Auth bridge (e.g. an Auth Public contract bound here) plus a
+ * lock-screen affordance inside the NativePHP bundle — deferred alongside
+ * D-20 custody. Do not document this as live native Touch ID coverage.
+ *
  * This class is the ONLY place in the codebase that calls
  * `System::canPromptTouchID()` and `System::promptTouchID()`. Its single
  * responsibility is to answer two questions:

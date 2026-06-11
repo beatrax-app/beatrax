@@ -11,6 +11,15 @@ use Native\Desktop\Facades\System;
  * Holds the already-unwrapped data key in the OS keychain (Electron
  * safeStorage) while the session is unlocked on the desktop build.
  *
+ * ⚠ STATUS: NOT YET WIRED (WR-08 — D-20 custody is DEFERRED). No caller
+ * invokes store()/read() anywhere: the Auth module cannot import this
+ * Internal class (module-boundary rule), and no Public KeyCustodian
+ * contract/bridge exists yet. Until Phase 14 wires a contract (Desktop
+ * binding here, pass-through default on web), the unlocked key follows the
+ * Auth module's session custody on ALL platforms — see the accepted-risk
+ * note on LockStateManager (WR-07). The class is registered and tested so
+ * the wiring is a contract + call-site change, not new crypto.
+ *
  * Design contract (D-20):
  *   - On the desktop bundle: the unwrapped data key must NEVER sit in a
  *     plaintext disk or session slot. `store()` encrypts it via
