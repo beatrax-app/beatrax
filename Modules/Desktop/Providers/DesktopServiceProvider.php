@@ -18,9 +18,12 @@ use Modules\Desktop\Internal\Listeners\ApplyCloseWindowChoice;
 use Modules\Desktop\Internal\Listeners\ContinuePendingFileIntentAfterLogin;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Listeners\HandleNativeOpenFile;
+use Modules\Desktop\Internal\Listeners\LockOnWindowHideOrClose;
 use Modules\Desktop\Internal\Listeners\NavigateOnNotificationDeepLink;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
+use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
+use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
 use Modules\Desktop\Internal\Native\PendingFileIntent;
 use Modules\Desktop\Internal\Native\WindowCloseBehavior;
@@ -34,7 +37,9 @@ use Modules\Import\Public\Events\TransactionImported;
 use Native\Desktop\Events\App\OpenFile;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
 use Native\Desktop\Events\Windows\WindowBlurred;
+use Native\Desktop\Events\Windows\WindowClosed;
 use Native\Desktop\Events\Windows\WindowFocused;
+use Native\Desktop\Events\Windows\WindowHidden;
 
 /**
  * Wires the Desktop module.
@@ -136,6 +141,20 @@ final class DesktopServiceProvider extends ServiceProvider
         // /desktop/close-action; the controller calls into this
         // listener which applies App::quit() / Window::current()->hide().
         $this->app->singleton(ApplyCloseWindowChoice::class);
+
+        // D-06 / T-05-25 macOS Touch ID biometric unlock (05-06).
+        // NativeBiometricUnlock is the sole place System::canPromptTouchID()
+        // and System::promptTouchID() are called; it returns only a bool
+        // (crypto/key-release stays in Auth module). Singleton so the
+        // bundle-running guard is evaluated once per container lifecycle.
+        $this->app->singleton(NativeBiometricUnlock::class);
+
+        // D-20 desktop key custody via OS keychain / Electron safeStorage.
+        // DesktopKeyCustodian wraps System::encrypt/decrypt to hold the
+        // already-unwrapped data key in the OS keychain while unlocked.
+        // Degrades to the Auth module's encrypted-session path when
+        // safeStorage is unavailable (headless CI, early-boot race).
+        $this->app->singleton(DesktopKeyCustodian::class);
 
         // OsThemeProbe is bound to the OsThemeSignal contract ONLY
         // when the app is running inside the NativePHP bundle. Under
@@ -301,6 +320,14 @@ final class DesktopServiceProvider extends ServiceProvider
         // absent and FileOpenIntake is invoked directly by feature
         // tests instead.
         $events->listen(OpenFile::class, [HandleNativeOpenFile::class, 'handle']);
+
+        // D-06 desktop immediate-lock: hide or close the window → withhold the data key
+        // with no grace period (T-05-24 — OS app-switcher snapshot must not show data).
+        // Both WindowHidden and WindowClosed route to the same handle() method.
+        // The listener itself does not call any NativePHP facade, so it needs no
+        // phpstan.neon allowlist entry — only the event import here does.
+        $events->listen(WindowHidden::class, [LockOnWindowHideOrClose::class, 'handle']);
+        $events->listen(WindowClosed::class, [LockOnWindowHideOrClose::class, 'handle']);
 
         // D-14 notification-click deep-link. The listener calls
         // Window::current()->url(...) — only meaningful inside the

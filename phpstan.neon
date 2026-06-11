@@ -81,6 +81,8 @@ parameters:
                 - Modules/Desktop/Internal/NativeAppServiceProvider.php
                 - Modules/Desktop/Internal/Native/AppMenuBuilder.php
                 - Modules/Desktop/Internal/Native/OsThemeProbe.php
+                - Modules/Desktop/Internal/Native/NativeBiometricUnlock.php
+                - Modules/Desktop/Internal/Native/DesktopKeyCustodian.php
                 - Modules/Desktop/Internal/Listeners/DispatchOsNotification.php
                 - Modules/Desktop/Internal/Listeners/SurfaceWorkerCrashAlert.php
                 - Modules/Desktop/Internal/Listeners/NavigateOnNotificationDeepLink.php
