@@ -40,24 +40,10 @@
 
         At >=768px (tablet/desktop), all order classes are reset (order-none) and
         the existing space-y-12 block layout is preserved exactly.
+
+        The responsive CSS rules for .dashboard-main and .dashboard-phone-order-*
+        live in resources/css/app.css (Phase 4 per-page responsive section).
     --}}
-    <style>
-        @media (max-width: 767px) {
-            .dashboard-main {
-                display: flex;
-                flex-direction: column;
-                gap: var(--space-8, 2rem);
-            }
-            .dashboard-phone-order-1  { order: 1; }
-            .dashboard-phone-order-2  { order: 2; }
-            .dashboard-phone-order-3  { order: 3; }
-            .dashboard-phone-order-4  { order: 4; }
-            .dashboard-phone-order-5  { order: 5; }
-            .dashboard-phone-order-6  { order: 6; }
-            .dashboard-phone-order-7  { order: 7; }
-            .dashboard-phone-order-8  { order: 8; }
-        }
-    </style>
 
     <div class="dashboard-main">
 
