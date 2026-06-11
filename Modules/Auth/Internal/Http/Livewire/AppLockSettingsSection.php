@@ -205,6 +205,13 @@ final class AppLockSettingsSection extends Component
      */
     public function setPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher, Session $session): void
     {
+        // WR-06 guard: enable() generates a NEW data key (and clears biometric
+        // enrollments). Re-running it on an already-enabled lock would silently
+        // rotate the key; PIN changes must go through changePin() instead.
+        if ($this->lockEnabled) {
+            return;
+        }
+
         // PIN length validation.
         if (strlen($this->newPin) < 4) {
             $this->flashMessage = 'PIN must be at least 4 digits.';
@@ -296,6 +303,9 @@ final class AppLockSettingsSection extends Component
         }
 
         $this->lockEnabled = false;
+        // WR-06: provisioner->disable() deleted all biometric credentials
+        // (their wraps held the now-destroyed data key) — mirror that in the UI.
+        $this->biometricEnrolled = false;
         $this->confirmingDisable = false;
         $this->currentPin = '';
         $this->flashMessage = '';
