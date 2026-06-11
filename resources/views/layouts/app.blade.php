@@ -145,7 +145,10 @@
         x-on:keydown.window="onKey($event)"
     >
         @auth
-            <div class="flex min-h-screen">
+            {{-- max-lg:flex-col — below 1024px the top bar must stack ABOVE main,
+                 not sit beside it as a flex-row column (the drawer is fixed and
+                 out of flow at phone width, so column order is top-bar → main). --}}
+            <div class="flex max-lg:flex-col min-h-screen">
                 {{--
                     Drawer wrapper (D-01/D-03, Phase 4 Plan 03).
                     The sidebar is mounted exactly ONCE inside the drawer component.
