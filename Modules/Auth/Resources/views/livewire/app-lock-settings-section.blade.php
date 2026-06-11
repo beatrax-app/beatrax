@@ -139,12 +139,103 @@
             </button>
         </div>
 
-        {{-- 3c: Biometric enrollment slot (05-05 wires enrollment; this plan shows the empty-state copy) --}}
-        <div class="py-1">
-            <p class="text-sm text-slate-400 dark:text-slate-500">
-                Biometric unlock is not available on this device.
-            </p>
+        {{-- 3c: Biometric enrollment row (05-05) --}}
+        <div
+            class="py-1"
+            x-data="{}"
+            x-init="
+                // Detect browser WebAuthn capability and tell the server (D-13).
+                if (window.PublicKeyCredential) {
+                    $wire.set('biometricCapable', true);
+                }
+            "
+        >
+            @if ($biometricCapable || $biometricEnrolled)
+                {{-- Capable platform: show enroll/de-enroll controls --}}
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-slate-900 dark:text-slate-100">{{ $biometricLabel }}</p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            @if ($biometricEnrolled)
+                                This device is enrolled for biometric unlock.
+                            @else
+                                Enroll this device to unlock with biometrics.
+                            @endif
+                        </p>
+                    </div>
+                    @if ($biometricEnrolled)
+                        <button
+                            type="button"
+                            wire:click="confirmDeenroll"
+                            class="min-h-[44px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-rose-600
+                                   hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2
+                                   dark:border-slate-600 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-slate-700 dark:focus-visible:ring-rose-400"
+                        >
+                            Remove
+                        </button>
+                    @else
+                        <button
+                            type="button"
+                            wire:click="startEnroll"
+                            class="min-h-[44px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900
+                                   hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                                   dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
+                        >
+                            Enroll
+                        </button>
+                    @endif
+                </div>
+            @else
+                {{-- Empty state: platform does not support WebAuthn --}}
+                <p class="text-sm text-slate-400 dark:text-slate-500">
+                    Biometric unlock is not available on this device.
+                </p>
+            @endif
         </div>
+
+        {{-- De-enroll confirmation modal (D-23) --}}
+        @if ($confirmingDeenroll)
+            <flux:modal wire:model="confirmingDeenroll" class="md:max-w-sm">
+                <div class="space-y-4 p-6">
+                    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+                        Remove biometric unlock — confirm with PIN
+                    </h3>
+                    <div class="space-y-1">
+                        <label for="deenroll-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">Current PIN</label>
+                        <input
+                            id="deenroll-pin-input"
+                            type="password"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            wire:model="deenrollPin"
+                            placeholder="········"
+                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
+                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                        />
+                    </div>
+                    <div class="flex gap-3">
+                        <button
+                            type="button"
+                            wire:click="deenroll"
+                            class="flex-1 min-h-[44px] rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white
+                                   hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
+                        >
+                            Remove biometric
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="$set('confirmingDeenroll', false)"
+                            class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
+                                   hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                                   dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
+                        >
+                            Keep biometric
+                        </button>
+                    </div>
+                </div>
+            </flux:modal>
+        @endif
 
     @endif
 

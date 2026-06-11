@@ -9,10 +9,13 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Http\Request;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PinVerificationService;
+use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
@@ -55,11 +58,23 @@ final class LockScreen extends Component
     // Lifecycle
     // -------------------------------------------------------------------------
 
-    public function mount(CurrentUser $currentUser): void
-    {
-        // Platform-aware label (best-effort from user agent context).
-        // 05-05 will also set $biometricAvailable based on enrolled credentials.
-        $this->biometricLabel = 'Use Touch ID';
+    public function mount(
+        CurrentUser $currentUser,
+        BiometricDeviceStore $biometricStore,
+        PlatformDetector $detector,
+        Request $request,
+    ): void {
+        $user = $currentUser->user();
+        $ua = $request->userAgent() ?? '';
+
+        // Platform-aware label from the user-agent string.
+        $this->biometricLabel = $detector->detectLabel($ua);
+
+        // Show biometric button only when the user has at least one armed credential.
+        $credentials = $biometricStore->findForUser($user->id);
+        $this->biometricAvailable = $credentials->contains(
+            fn (object $cred): bool => $biometricStore->isArmed($cred)
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -158,16 +173,23 @@ final class LockScreen extends Component
     }
 
     // -------------------------------------------------------------------------
-    // Biometric stub (05-05 implements)
+    // Biometric prompt (D-15: button-tap-to-prompt, no auto-fire)
     // -------------------------------------------------------------------------
 
     /**
-     * No-op stub — plan 05-05 wires up the WebAuthn assertion flow.
-     * The button calls this so it never errors before 05-05 lands.
+     * Dispatch a browser event that tells lock.js to invoke navigator.credentials.get.
+     *
+     * D-15: This method is only called when the user taps the biometric button.
+     * The browser event is NOT dispatched on render — no auto-firing.
+     *
+     * lock.js listens for 'beatrax:webauthn-get', calls navigator.credentials.get
+     * with the requestOptions fetched from /lock/biometric/challenge, then POSTs
+     * the assertion to /lock/biometric/verify.  On success, lock.js navigates
+     * to the redirect URL returned by the verify endpoint.
      */
     public function biometricPrompt(): void
     {
-        // Stub — 05-05 implements
+        $this->dispatch('beatrax:webauthn-get');
     }
 
     // -------------------------------------------------------------------------
