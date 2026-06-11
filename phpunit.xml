@@ -81,6 +81,9 @@
         <testsuite name="AuthUnit">
             <directory suffix="Test.php">./Modules/Auth/tests/Unit</directory>
         </testsuite>
+        <testsuite name="AuthFeature">
+            <directory suffix="Test.php">./Modules/Auth/tests/Feature</directory>
+        </testsuite>
         <testsuite name="EmailScanUnit">
             <directory suffix="Test.php">./Modules/EmailScan/tests/Unit</directory>
         </testsuite>
