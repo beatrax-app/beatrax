@@ -18,7 +18,7 @@ use Modules\Core\Models\User;
  * reports it and exits SUCCESS without writing.
  */
 
-function makeUser(string $username, bool $isDeveloper = false): User
+function makeGrantDevUser(string $username, bool $isDeveloper = false): User
 {
     /** @var Hasher $hasher */
     $hasher = app(Hasher::class);
@@ -32,7 +32,7 @@ function makeUser(string $username, bool $isDeveloper = false): User
 }
 
 it('flips is_developer=true on a known non-developer user', function (): void {
-    $user = makeUser('partner', isDeveloper: false);
+    $user = makeGrantDevUser('partner', isDeveloper: false);
 
     expect($user->is_developer)->toBeFalse();
 
@@ -50,7 +50,7 @@ it('exits non-zero for an unknown username', function (): void {
 });
 
 it('is idempotent — a re-grant on an existing developer succeeds without rewriting', function (): void {
-    $user = makeUser('already-dev', isDeveloper: true);
+    $user = makeGrantDevUser('already-dev', isDeveloper: true);
 
     $this->artisan('beatrax:grant-dev', ['username' => 'already-dev'])
         ->expectsOutputToContain('Already a developer: already-dev')
@@ -60,7 +60,7 @@ it('is idempotent — a re-grant on an existing developer succeeds without rewri
 });
 
 it('case-normalises the username argument to lowercase before lookup', function (): void {
-    makeUser('lower-partner', isDeveloper: false);
+    makeGrantDevUser('lower-partner', isDeveloper: false);
 
     $this->artisan('beatrax:grant-dev', ['username' => 'LOWER-PARTNER'])
         ->expectsOutputToContain('Granted developer to lower-partner')
