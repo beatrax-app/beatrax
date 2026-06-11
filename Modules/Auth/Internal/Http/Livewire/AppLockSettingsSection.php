@@ -143,6 +143,7 @@ final class AppLockSettingsSection extends Component
         BiometricDeviceStore $biometricStore,
         PlatformDetector $detector,
         Request $request,
+        Clock $clock,
     ): void {
         $user = $currentUser->user();
 
@@ -153,12 +154,16 @@ final class AppLockSettingsSection extends Component
 
         if ($row === null) {
             // Bootstrap a default row so subsequent reads never need null-guarding.
+            // updateOrInsert does not manage timestamps — set them explicitly (IN-07).
+            $now = $clock->now()->toDateTimeString();
             $db->connection()->table('user_app_lock_configs')->updateOrInsert(
                 ['user_id' => $user->id],
                 [
                     'lock_enabled' => false,
                     'idle_timeout_minutes' => 5,
                     'failed_attempts' => 0,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ],
             );
             $this->lockEnabled = false;

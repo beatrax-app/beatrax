@@ -193,7 +193,9 @@ final readonly class AppLockMiddleware
     {
         $cached = $session->get(self::SESSION_CONFIG_CACHE);
 
-        $now = time();
+        // IN-07: use the injected Clock (not raw time()) so the TTL window
+        // honours time-travel in tests like every other time read here.
+        $now = $this->clock->now()->getTimestamp();
 
         if (is_array($cached)
             && isset($cached['cached_at'])
