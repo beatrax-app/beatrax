@@ -128,6 +128,13 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // boundary. The mount-time UserInstalled safety-net + the
     // `?force=1` reset both bound their writes to the acting user.
     'setup',
+    // Phase 05 app-lock screen. The /lock route is session-scoped:
+    // it renders a PIN pad bound to the currently authenticated
+    // user's own lock state (pin_hash, failed_attempts, locked_until
+    // all keyed on the authenticated user_id). There is no data-bearing
+    // list of foreign rows — the lock screen never queries another user's
+    // transaction, account, or recurring data.
+    'auth.lock',
 ];
 
 /**
