@@ -62,8 +62,8 @@ it('accumulates rows across sequential loadMore calls', function (): void {
     expect($component->get('hasMore'))->toBeTrue();
     expect($component->get('nextCursorId'))->not->toBeNull();
 
-    // loadMore with page 1's cursor → appends page 2 (50 more rows).
-    $component->call('loadMore', $component->get('nextCursorId'), $component->get('nextCursorPostedAt'));
+    // loadMore reads the server-side cursor from the snapshot — no args passed.
+    $component->call('loadMore');
 
     $accumulated = $component->get('accumulatedRows');
     expect($accumulated)->toHaveCount(100);
@@ -72,8 +72,8 @@ it('accumulates rows across sequential loadMore calls', function (): void {
     expect($component->get('hasMore'))->toBeTrue();
     expect($component->get('nextCursorId'))->not->toBeNull();
 
-    // loadMore with page 2's cursor → appends the final partial page (30 rows).
-    $component->call('loadMore', $component->get('nextCursorId'), $component->get('nextCursorPostedAt'));
+    // loadMore reads the server-side cursor from the snapshot — no args passed.
+    $component->call('loadMore');
 
     $accumulated = $component->get('accumulatedRows');
     expect($accumulated)->toHaveCount(130);
@@ -85,8 +85,8 @@ it('has no duplicate ids in the accumulated set after all pages loaded', functio
     $component = Livewire::test(TransactionsList::class)
         ->set('currency', 'original');
 
-    $component->call('loadMore', $component->get('nextCursorId'), $component->get('nextCursorPostedAt'));
-    $component->call('loadMore', $component->get('nextCursorId'), $component->get('nextCursorPostedAt'));
+    $component->call('loadMore');
+    $component->call('loadMore');
 
     /** @var array<array{id: int}> $accumulated */
     $accumulated = $component->get('accumulatedRows');
@@ -99,7 +99,7 @@ it('resets accumulatedRows to a single page after toggleFullHistory', function (
     $component = Livewire::test(TransactionsList::class)
         ->set('currency', 'original');
 
-    $component->call('loadMore', $component->get('nextCursorId'), $component->get('nextCursorPostedAt'));
+    $component->call('loadMore');
 
     // Confirm we have 100 before the reset.
     expect($component->get('accumulatedRows'))->toHaveCount(100);
