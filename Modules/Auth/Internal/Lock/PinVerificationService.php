@@ -161,6 +161,35 @@ final class PinVerificationService
     }
 
     /**
+     * The active backoff deadline for this user, or null when no backoff
+     * window is in effect right now.
+     *
+     * Lets the lock screen distinguish "wrong PIN" from "backoff active"
+     * (WR-05) so a user entering their CORRECT PIN during the window is told
+     * to wait instead of being told the PIN is wrong.
+     */
+    public function lockedUntil(int $userId): ?CarbonImmutable
+    {
+        $row = $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->first(['locked_until']);
+
+        if ($row === null) {
+            return null;
+        }
+
+        $raw = $row->locked_until;
+        if (! is_string($raw) && ! is_int($raw)) {
+            return null;
+        }
+
+        $until = CarbonImmutable::parse($raw);
+
+        return $this->clock->now() < $until ? $until : null;
+    }
+
+    /**
      * Handle a wrong-PIN failure: increment counter, set backoff or sign out.
      */
     private function handleFailure(int $userId, int $currentAttempts, Session $session): null

@@ -67,6 +67,44 @@ it('correct PIN via Livewire component unlocks the session and redirects to dash
     expect($lockState->isLocked($session))->toBeFalse();
 });
 
+it('correct PIN during an active backoff window shows backoff copy, not "Incorrect PIN" (WR-05)', function (): void {
+    $user = User::query()->create([
+        'username' => 'backoff-dora',
+        'password' => 'whatever-password',
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+    $this->session([LockStateManager::SESSION_KEY => true]);
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+    $provisioner->enable($user->id, '123456', 'whatever-password');
+
+    // Simulate an active backoff window (5 failures, locked_until in the future).
+    /** @var \Illuminate\Database\DatabaseManager $db */
+    $db = $this->app->make(\Illuminate\Database\DatabaseManager::class);
+    $db->connection()->table('user_app_lock_configs')
+        ->where('user_id', $user->id)
+        ->update([
+            'failed_attempts' => 5,
+            'locked_until' => \Carbon\CarbonImmutable::now()->addSeconds(30)->toDateTimeString(),
+        ]);
+
+    Livewire::test(LockScreen::class)
+        ->set('pin', '123456')
+        ->call('submit')
+        ->assertNoRedirect()
+        ->assertSee('Too many attempts')
+        ->assertDontSee('Incorrect PIN');
+
+    // The session must remain locked during the backoff window.
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var LockStateManager $lockState */
+    $lockState = $this->app->make(LockStateManager::class);
+    expect($lockState->isLocked($session))->toBeTrue();
+});
+
 it('wrong PIN via Livewire component sets flash message and leaves the session locked', function (): void {
     $user = User::query()->create([
         'username' => 'carol',
