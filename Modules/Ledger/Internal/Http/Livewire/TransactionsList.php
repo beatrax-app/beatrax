@@ -103,9 +103,14 @@ final class TransactionsList extends Component
      * This prevents a Livewire re-render that does NOT advance the cursor
      * from appending the same page twice.
      *
+     * Must be `public` so Livewire dehydrates it into the encrypted snapshot
+     * and rehydrates it on every round-trip. A `protected` property is
+     * re-initialised to `[]` on every request, making the duplicate guard
+     * ineffective in real browser sessions.
+     *
      * @var array<int, true>
      */
-    protected array $appendedCursorIds = [];
+    public array $appendedCursorIds = [];
 
     public function mount(CurrentUser $currentUser): void
     {
