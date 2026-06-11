@@ -1,7 +1,20 @@
-<div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
+<div
+    class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
             px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
             pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
-            motion-reduce:transition-none">
+            motion-reduce:transition-none"
+    x-data="{}"
+    x-on:keydown.window="
+        const k = $event.key;
+        if (k >= '0' && k <= '9') {
+            $wire.pressDigit(k);
+        } else if (k === 'Backspace') {
+            $wire.backspace();
+        } else if (k === 'Enter') {
+            $wire.submit();
+        }
+    "
+>
     <div class="w-full max-w-sm px-6 space-y-6">
 
         {{-- App mark --}}
