@@ -40,7 +40,13 @@ use Symfony\Component\HttpFoundation\Response;
 final readonly class AppLockMiddleware
 {
     /** @var list<string> */
-    private const ALLOWED_ROUTE_NAMES = ['auth.lock', 'logout'];
+    private const ALLOWED_ROUTE_NAMES = [
+        'auth.lock',
+        'auth.lock.biometric.challenge',
+        'auth.lock.biometric.verify',
+        'auth.lock.biometric.enroll',
+        'logout',
+    ];
 
     public function __construct(
         private CurrentUser $currentUser,
