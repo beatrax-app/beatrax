@@ -46,6 +46,7 @@ use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Auth\Public\Actions\ResetPasswordAction;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\AppLockKeyService;
 
 /**
@@ -86,6 +87,7 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(AppLockKeyWrap::class);
         $this->app->singleton(LockStateManager::class);
         $this->app->singleton(AppLockKeyService::class);
+        $this->app->singleton(AppLockClientConfig::class);
         $this->app->singleton(PinVerificationService::class);
         $this->app->singleton(AppLockProvisioner::class);
 
