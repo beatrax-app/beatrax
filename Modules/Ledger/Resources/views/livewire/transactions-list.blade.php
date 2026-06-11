@@ -12,6 +12,12 @@
     // Whether the given Money value is positive (for phone card coloring).
     // Uses toMinor() > 0 so zero-value rows are not highlighted emerald.
     $isPositive = static fn (Money $money): bool => $money->toMinor() > 0;
+
+    // Helper to reconstruct a Money VO from the scalar array stored in
+    // $accumulatedRows (TransactionsList serialises Money as minor+currency
+    // pairs so Livewire can dehydrate the state). Used by the phone card list.
+    // @param array{amountMinor: int, amountCurrency: string} $row
+    $rowMoney = static fn (array $row): Money => Money::ofMinor($row['amountMinor'], $row['amountCurrency']);
 @endphp
 
 <div class="space-y-6">
@@ -46,30 +52,36 @@
              PHONE card-list (visible only at <768px)
              CSS hides this div at >=768px via `display:none`.
              Each card links to the transaction detail page (D-08).
+             Iterates $accumulatedRows (the serialised scalar projection
+             that TransactionsList accumulates across loadMore calls)
+             rather than $page->rows so rows APPEND on scroll instead
+             of replacing the visible page. Money is reconstructed from
+             the minor+currency pair via the $rowMoney helper above.
              ============================================================ --}}
         <div class="md:hidden">
             <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-                @foreach ($page->rows as $row)
+                @foreach ($accumulatedRows as $row)
+                    @php $rowAmt = $rowMoney($row); @endphp
                     <a
-                        href="{{ route('transactions.show', ['transactionId' => $row->id]) }}"
+                        href="{{ route('transactions.show', ['transactionId' => $row['id']]) }}"
                         wire:navigate
                         class="card-list-item block"
-                        data-testid="tx-card-{{ $row->id }}"
+                        data-testid="tx-card-{{ $row['id'] }}"
                     >
                         <div class="min-w-0 flex-1">
                             {{-- Primary: counterparty name (2-line truncate) --}}
-                            <p class="primary line-clamp-2">{{ $row->counterpartyName ?? '—' }}</p>
+                            <p class="primary line-clamp-2">{{ $row['counterpartyName'] ?? '—' }}</p>
                             {{-- Secondary: category chip + posted date --}}
                             <p class="secondary mt-0.5 truncate">
-                                @if ($row->categoryId !== null)
+                                @if ($row['categoryId'] !== null)
                                     <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">cat</span>
                                 @endif
-                                {{ $row->bookedAt }}
+                                {{ $row['bookedAt'] }}
                             </p>
                         </div>
                         {{-- Amount: tabular, right-aligned; positive = emerald --}}
-                        <span class="amount {{ $isPositive($row->amount) ? 'positive' : '' }}">
-                            {{ $fmt($row->amount) }}
+                        <span class="amount {{ $isPositive($rowAmt) ? 'positive' : '' }}">
+                            {{ $fmt($rowAmt) }}
                         </span>
                     </a>
                 @endforeach
@@ -79,10 +91,21 @@
                  Rendered inside this phone-only wrapper so the
                  IntersectionObserver never fires at desktop width.
                  wire:intersect fires loadMore when this element enters
-                 the viewport (Livewire 4 bundled directive). --}}
-            @if ($page->hasMore && $page->nextCursorId !== null)
+                 the viewport (Livewire 4 bundled directive).
+
+                 Re-keyed on $nextCursorId so Livewire 4 mounts a FRESH
+                 sentinel node after each morph — the IntersectionObserver
+                 re-binds to the new node and can fire again for the next
+                 cursor. Without the re-key the observer latches to the
+                 first sentinel element and goes dead after the first load.
+                 No `.once` modifier so the observer can re-arm each time.
+                 rootMargin="0px 0px 200px 0px" provides an early-trigger
+                 buffer so the next page begins loading before the user
+                 reaches the absolute bottom. --}}
+            @if ($hasMore && $nextCursorId !== null)
                 <div
-                    wire:intersect="loadMore({{ $page->nextCursorId }}, @js($page->nextCursorPostedAt))"
+                    wire:key="sentinel-{{ $nextCursorId }}"
+                    wire:intersect.margin.0px.0px.200px.0px="loadMore({{ $nextCursorId }}, @js($nextCursorPostedAt))"
                     class="flex justify-center py-4"
                     aria-hidden="true"
                 ></div>

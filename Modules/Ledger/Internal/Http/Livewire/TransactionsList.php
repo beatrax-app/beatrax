@@ -81,7 +81,7 @@ final class TransactionsList extends Component
      * pairs at render time so the phone card formatting matches the desktop
      * table (same `$fmt` closure).
      *
-     * @var array<int, array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string}>
+     * @var list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string}>
      */
     public array $accumulatedRows = [];
 
@@ -166,10 +166,12 @@ final class TransactionsList extends Component
 
         if ($guardKey === 0) {
             // First page or reset: replace accumulated rows with this page only.
-            $this->accumulatedRows = array_map(
+            // array_values() ensures the result is a sequential list, which
+            // satisfies the list<...> PHPStan type on $accumulatedRows.
+            $this->accumulatedRows = array_values(array_map(
                 static fn (TransactionRowDto $row): array => self::rowToArray($row),
                 $page->rows,
-            );
+            ));
             $this->appendedCursorIds = [0 => true];
         } elseif (! isset($this->appendedCursorIds[$guardKey])) {
             // New cursor page: append without duplicating.
