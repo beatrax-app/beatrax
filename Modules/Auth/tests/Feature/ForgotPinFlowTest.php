@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Internal\Lock\AppLockKdf;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
@@ -42,14 +43,14 @@ it('after password re-auth a new PIN re-wraps the data key and the same key is r
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
     // Read the original data key by unwrapping the pin wrap.
-    $row = app(\Illuminate\Database\DatabaseManager::class)
+    $row = app(DatabaseManager::class)
         ->connection()
         ->table('user_app_lock_configs')
         ->where('user_id', $user->id)
         ->first();
     expect($row)->not->toBeNull();
 
-    /** @var \stdClass $row */
+    /** @var stdClass $row */
     $kdfSalt = $row->kdf_salt;
     expect(is_string($kdfSalt))->toBeTrue();
 
@@ -67,14 +68,14 @@ it('after password re-auth a new PIN re-wraps the data key and the same key is r
     expect($result)->toBeTrue();
 
     // Verify the new PIN wrap decrypts to the SAME data key.
-    $row2 = app(\Illuminate\Database\DatabaseManager::class)
+    $row2 = app(DatabaseManager::class)
         ->connection()
         ->table('user_app_lock_configs')
         ->where('user_id', $user->id)
         ->first();
     expect($row2)->not->toBeNull();
 
-    /** @var \stdClass $row2 */
+    /** @var stdClass $row2 */
     $kdfSalt2 = $row2->kdf_salt;
     expect(is_string($kdfSalt2))->toBeTrue();
 
@@ -109,12 +110,12 @@ it('changePin preserves the data key under the new PIN', function (): void {
     $provisioner->enable($user->id, '1111', 'bob-password');
 
     // Capture original data key.
-    $row = app(\Illuminate\Database\DatabaseManager::class)
+    $row = app(DatabaseManager::class)
         ->connection()
         ->table('user_app_lock_configs')
         ->where('user_id', $user->id)
         ->first();
-    /** @var \stdClass $row */
+    /** @var stdClass $row */
     $kdfSalt = $row->kdf_salt;
     expect(is_string($kdfSalt))->toBeTrue();
 
@@ -128,12 +129,12 @@ it('changePin preserves the data key under the new PIN', function (): void {
     expect($result)->toBeFalse();
 
     // The old PIN still works (row unchanged).
-    $rowAfterFail = app(\Illuminate\Database\DatabaseManager::class)
+    $rowAfterFail = app(DatabaseManager::class)
         ->connection()
         ->table('user_app_lock_configs')
         ->where('user_id', $user->id)
         ->first();
-    /** @var \stdClass $rowAfterFail */
+    /** @var stdClass $rowAfterFail */
     expect($rowAfterFail->pin_wrapped_key)->toBe($row->pin_wrapped_key);
 
     // Correct current PIN succeeds.
@@ -141,12 +142,12 @@ it('changePin preserves the data key under the new PIN', function (): void {
     expect($result)->toBeTrue();
 
     // New PIN decrypts to the same data key.
-    $row3 = app(\Illuminate\Database\DatabaseManager::class)
+    $row3 = app(DatabaseManager::class)
         ->connection()
         ->table('user_app_lock_configs')
         ->where('user_id', $user->id)
         ->first();
-    /** @var \stdClass $row3 */
+    /** @var stdClass $row3 */
     $kdfSalt3 = $row3->kdf_salt;
     expect(is_string($kdfSalt3))->toBeTrue();
 
@@ -186,12 +187,12 @@ it('disable requires the correct PIN and clears all lock material on success', f
     expect($result)->toBeTrue();
     expect($provisioner->isEnabled($user->id))->toBeFalse();
 
-    $row = app(\Illuminate\Database\DatabaseManager::class)
+    $row = app(DatabaseManager::class)
         ->connection()
         ->table('user_app_lock_configs')
         ->where('user_id', $user->id)
         ->first();
-    /** @var \stdClass $row */
+    /** @var stdClass $row */
     expect($row->pin_hash)->toBeNull();
     expect($row->pin_wrapped_key)->toBeNull();
     expect($row->password_wrapped_key)->toBeNull();
