@@ -216,7 +216,17 @@
                 <a href="/dev" class="side-item">
                     <span class="ic" aria-hidden="true">›_</span>
                     Open Dev Console
-                    <span class="kbd" aria-hidden="true">⌘.</span>
+                    {{--
+                        Platform-aware dev-console kbd hint (IN-03, Phase 4).
+                        Follows the same Js::from() pattern as the palette hint above
+                        (CR-02) to keep raw Mac glyphs out of the server-rendered HTML.
+                        Alpine evaluates x-text client-side; SSR fallback text is Ctrl+.
+                    --}}
+                    <span
+                        class="kbd"
+                        aria-hidden="true"
+                        x-text="$store.platform.isMac ? {{ Js::from('⌘.') }} : 'Ctrl+.'"
+                    >Ctrl+.</span>
                 </a>
                 {{--
                     Live Dev-block pulse. wire:poll.5s refreshes
