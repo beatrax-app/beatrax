@@ -2692,6 +2692,15 @@ td.date,
     }
 }
 
+/* Detail pages mount their own top bar (back affordance, D-05) inside
+   <main> — suppress the layout's global hamburger bar so the two never
+   stack. Page-level bars never carry .top-bar-global. */
+@media (max-width: 1023px) {
+    body:has(main .top-bar) .top-bar-global {
+        display: none;
+    }
+}
+
 /* Touch device: hide kbd hint chips (D-13) */
 @media (pointer: coarse) {
     .hidden-touch {
