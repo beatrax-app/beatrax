@@ -29,9 +29,11 @@ use Modules\Auth\Internal\Http\Middleware\RequireDeveloperMiddleware;
 use Modules\Auth\Internal\Lock\AppLockKdf;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PinHasher;
 use Modules\Auth\Internal\Lock\PinVerificationService;
+use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
@@ -84,6 +86,10 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(AppLockKeyService::class);
         $this->app->singleton(PinVerificationService::class);
         $this->app->singleton(AppLockProvisioner::class);
+
+        // Biometric singletons (05-05).
+        $this->app->singleton(BiometricDeviceStore::class);
+        $this->app->singleton(PlatformDetector::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire, Router $router): void
