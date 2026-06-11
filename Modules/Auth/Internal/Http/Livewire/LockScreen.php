@@ -16,6 +16,7 @@ use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
@@ -121,6 +122,7 @@ final class LockScreen extends Component
         UrlGenerator $urls,
         Session $session,
         DatabaseManager $db,
+        Clock $clock,
     ): void {
         if (preg_match('/^[0-9]{4,10}$/', $this->pin) !== 1) {
             $this->flashMessage = 'PIN must be at least 4 digits.';
@@ -132,6 +134,19 @@ final class LockScreen extends Component
         $dataKey = $verifier->verify($user->id, $this->pin, $session);
 
         if ($dataKey === null) {
+            // WR-05: distinguish "backoff active" from "wrong PIN" — during
+            // an active locked_until window verify() returns null BEFORE
+            // checking the PIN, so even a correct PIN lands here and must
+            // not be reported as incorrect.
+            $lockedUntil = $verifier->lockedUntil($user->id);
+            if ($lockedUntil !== null) {
+                $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
+                $this->flashMessage = "Too many attempts — try again in {$seconds}s.";
+                $this->clearPin();
+
+                return;
+            }
+
             // Read remaining attempts to surface actionable copy.
             $remaining = $this->remainingAttempts($user->id, $db);
             $this->flashMessage = $remaining !== null
