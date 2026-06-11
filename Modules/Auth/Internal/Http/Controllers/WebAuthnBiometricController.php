@@ -32,13 +32,13 @@ use Modules\Core\Public\Contracts\CurrentUser;
  *   T-05-22: verifyAndRelease increments failure count on any failure.
  *   T-05-23: The browser only fires navigator.credentials.get on button tap.
  *
- * No CSRF token is needed for JSON API routes in Laravel because they use
- * the session cookie. Laravel's VerifyCsrfToken middleware skips routes
- * that return JSON, but to be safe the routes are added to the exclusion
- * list in the VerifyCsrfToken middleware (or declared as stateless).
- * Here they share the standard 'web' middleware group which includes CSRF;
- * the JS client must send the X-XSRF-TOKEN header (auto-handled by Axios/fetch
- * when reading the XSRF-TOKEN cookie — lock.js must include it).
+ * CSRF: these routes sit in the standard 'web' middleware group, so
+ * VerifyCsrfToken IS enforced — there is no JSON exemption and no exclusion
+ * list entry. The requests succeed because lock.js reads the XSRF-TOKEN
+ * cookie and sends its value back as the X-XSRF-TOKEN request header on
+ * every fetch; Laravel accepts the token only from a `_token` body field,
+ * the X-CSRF-TOKEN header, or the X-XSRF-TOKEN header (the cookie alone is
+ * never accepted as the supplied token).
  */
 final class WebAuthnBiometricController
 {
