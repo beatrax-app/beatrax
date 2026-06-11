@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
@@ -31,6 +32,22 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
 
         return new RedirectResponse($urls->route('login'));
     })->name('logout');
+
+    // App-lock screen — placeholder until 05-03 creates the LockScreen Livewire component.
+    // route('auth.lock') resolves immediately so AppLockMiddleware can redirect to it.
+    // 05-03 replaces this closure with: Route::get('/lock', LockScreen::class)->name('auth.lock')
+    Route::get('/lock', static function (): Response {
+        return response('Lock screen — coming in plan 05-03.', 200);
+    })->name('auth.lock');
+
+    // Biometric challenge + verify endpoints — placeholder until 05-05.
+    Route::post('/lock/biometric/challenge', static function (): never {
+        abort(503, 'Biometric challenge not yet implemented — coming in plan 05-05.');
+    })->name('auth.lock.biometric.challenge');
+
+    Route::post('/lock/biometric/verify', static function (): never {
+        abort(503, 'Biometric verify not yet implemented — coming in plan 05-05.');
+    })->name('auth.lock.biometric.verify');
 
     Route::get('/recovery-codes', RecoveryCodesDisplay::class)->name('auth.recovery-codes-display');
 

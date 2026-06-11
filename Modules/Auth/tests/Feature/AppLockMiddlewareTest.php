@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 // Wave 0 RED — implemented by plan 05-02
 
+use Illuminate\Contracts\Session\Session;
+use Illuminate\Http\Request;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
+use Symfony\Component\HttpFoundation\Response;
 
 /*
  * Feature coverage for AppLockMiddleware: gates every authenticated route
@@ -51,9 +54,16 @@ it('passes through when the session is unlocked', function (): void {
     ]);
     $this->actingAs($user);
 
-    $this->withSession([LockStateManager::SESSION_KEY => false])
-        ->get(route('dashboard'))
-        ->assertOk();
+    // The middleware should NOT redirect to auth.lock when unlocked.
+    // The dashboard may redirect elsewhere (e.g. imports.new for a new user) —
+    // we only assert that the lock screen redirect does NOT occur.
+    $response = $this->withSession([LockStateManager::SESSION_KEY => false])
+        ->get(route('dashboard'));
+
+    $lockScreenUrl = route('auth.lock');
+    $isRedirectToLock = $response->isRedirection()
+        && $response->headers->get('Location') === $lockScreenUrl;
+    expect($isRedirectToLock)->toBeFalse('Unlocked session should not redirect to auth.lock');
 });
 
 it('passes through when the route is auth.lock (exempt)', function (): void {
@@ -89,7 +99,22 @@ it('passes through when the route is logout (exempt)', function (): void {
 it('passes through for guests (unauthenticated requests are not locked)', function (): void {
     expect(class_exists(AppLockMiddleware::class))->toBeTrue();
 
-    $this->withSession([LockStateManager::SESSION_KEY => true])
-        ->get(route('login'))
-        ->assertOk();
+    // Verify the middleware does NOT redirect guests to the lock screen.
+    // The middleware short-circuits for unauthenticated requests (isAuthenticated() === false).
+    /** @var AppLockMiddleware $middleware */
+    $middleware = $this->app->make(AppLockMiddleware::class);
+
+    $request = Request::create(route('login', absolute: false), 'GET');
+    $request->setLaravelSession($this->app->make(Session::class));
+    $request->session()->put(LockStateManager::SESSION_KEY, true);
+
+    $passed = false;
+    $response = $middleware->handle($request, static function () use (&$passed): Response {
+        $passed = true;
+
+        return new Response('ok', 200);
+    });
+
+    expect($passed)->toBeTrue('Guest request should pass through AppLockMiddleware without redirect');
+    expect($response->getStatusCode())->toBe(200);
 });
