@@ -133,6 +133,7 @@ final class WebAuthnBiometricController
         try {
             $service->completeEnrollment(
                 $user->id,
+                $user->username,
                 $credentialResponse,
                 $dataKey,
                 $deviceLabel,
