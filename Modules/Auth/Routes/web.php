@@ -39,8 +39,9 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
     Route::get('/lock', LockScreen::class)->name('auth.lock');
 
     // Server-side lock-engage endpoint (Gap A fix, D-17/D-18).
-    // Called by lock.js via navigator.sendBeacon when the grace timer expires or
-    // the idle threshold is met on an app page. Returns 204 No Content.
+    // Called by lock.js via fetch(keepalive:true) — with the X-XSRF-TOKEN CSRF
+    // header — when the grace timer expires or the idle threshold is met on an
+    // app page. Returns 204 No Content.
     Route::post('/lock/engage', LockEngageController::class)->name('auth.lock.engage');
 
     // Biometric challenge + verify endpoints (plan 05-05 WebAuthn).
