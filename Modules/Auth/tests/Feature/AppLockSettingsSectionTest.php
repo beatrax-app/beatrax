@@ -106,6 +106,57 @@ it('changing the idle timeout preset persists without requiring PIN confirmation
     expect((int) $row->idle_timeout_minutes)->toBe(15);
 });
 
+it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (CR-01)', function (): void {
+    $user = settingsSectionUser('deenroll-user');
+    $this->actingAs($user);
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+    $provisioner->enable($user->id, '4321', 'settings-pass');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    // Enroll a biometric credential.
+    /** @var \Modules\Auth\Internal\Lock\BiometricDeviceStore $store */
+    $store = $this->app->make(\Modules\Auth\Internal\Lock\BiometricDeviceStore::class);
+    $store->store($user->id, base64_encode('deenroll-cred'), 'Test Device', str_repeat("\xAA", 32), 'fake-cbor', 'webauthn');
+
+    $before = $db->connection()->table('user_app_lock_configs')
+        ->where('user_id', $user->id)
+        ->first(['pin_hash', 'kdf_salt', 'pin_wrapped_key', 'password_wrapped_key']);
+    expect($before)->not->toBeNull();
+
+    // Wrong PIN: credentials stay, lock untouched.
+    Livewire::test(AppLockSettingsSection::class)
+        ->set('deenrollPin', '0000')
+        ->call('deenroll')
+        ->assertSee('Incorrect PIN.');
+
+    expect($db->connection()->table('user_biometric_credentials')->where('user_id', $user->id)->count())->toBe(1);
+    expect($provisioner->isEnabled($user->id))->toBeTrue();
+
+    // Correct PIN: only credentials deleted — lock stays enabled, key material intact.
+    Livewire::test(AppLockSettingsSection::class)
+        ->set('deenrollPin', '4321')
+        ->call('deenroll')
+        ->assertSet('biometricEnrolled', false);
+
+    expect($db->connection()->table('user_biometric_credentials')->where('user_id', $user->id)->count())->toBe(0);
+    expect($provisioner->isEnabled($user->id))->toBeTrue();
+
+    $after = $db->connection()->table('user_app_lock_configs')
+        ->where('user_id', $user->id)
+        ->first(['pin_hash', 'kdf_salt', 'pin_wrapped_key', 'password_wrapped_key']);
+    expect($after)->not->toBeNull();
+    /** @var stdClass $before */
+    /** @var stdClass $after */
+    expect($after->pin_hash)->toBe($before->pin_hash);
+    expect($after->kdf_salt)->toBe($before->kdf_salt);
+    expect($after->pin_wrapped_key)->toBe($before->pin_wrapped_key);
+    expect($after->password_wrapped_key)->toBe($before->password_wrapped_key);
+});
+
 it('disabling the lock requires the correct PIN — wrong PIN keeps lock enabled', function (): void {
     $user = settingsSectionUser('disable-user');
     $this->actingAs($user);

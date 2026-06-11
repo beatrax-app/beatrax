@@ -238,6 +238,34 @@ final class AppLockProvisioner
     }
 
     /**
+     * Verify a PIN against the stored hash WITHOUT any side effects.
+     *
+     * Used for D-23 confirmations that must not mutate lock state — e.g.
+     * biometric de-enrollment, which only deletes credential rows and must
+     * never touch pin_hash / kdf_salt / wrapped keys (CR-01 fix).
+     *
+     * Note: this check deliberately bypasses the failed-attempt backoff meter
+     * (D-10 scopes that meter to lock-screen unlock attempts); callers sit on
+     * an already-unlocked, authenticated settings surface.
+     *
+     * Returns false when no config row exists, no PIN is set, or the PIN
+     * does not match.
+     */
+    public function verifyPin(int $userId, string $pin): bool
+    {
+        $row = $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->first(['pin_hash']);
+
+        if ($row === null || ! is_string($row->pin_hash)) {
+            return false;
+        }
+
+        return $this->pinHasher->verify($pin, $row->pin_hash);
+    }
+
+    /**
      * Disables the app lock after verifying the current PIN (D-23 security downgrade confirmation).
      *
      * Clears all lock-related fields (pin_hash, kdf_salt, pin_wrapped_key,
