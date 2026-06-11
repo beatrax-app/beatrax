@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 // Plan 05-03 — LockScreen Livewire page
 
+use Illuminate\Contracts\Session\Session;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\LockScreen;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
@@ -58,8 +59,8 @@ it('correct PIN via Livewire component unlocks the session and redirects to dash
         ->assertRedirect(route('dashboard'));
 
     // Session must now be unlocked.
-    /** @var \Illuminate\Contracts\Session\Session $session */
-    $session = $this->app->make(\Illuminate\Contracts\Session\Session::class);
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
 
     /** @var LockStateManager $lockState */
     $lockState = $this->app->make(LockStateManager::class);
