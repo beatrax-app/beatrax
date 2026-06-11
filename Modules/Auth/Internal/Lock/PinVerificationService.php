@@ -36,8 +36,12 @@ final class PinVerificationService
     /** Number of failures before a time-based backoff begins. */
     private const BACKOFF_THRESHOLD = 5;
 
-    /** Total failures before the session is signed out permanently. */
-    private const HARD_CAP = 10;
+    /**
+     * Total failures before the session is signed out permanently.
+     * Public so UI surfaces (LockScreen attempts-remaining copy) reference
+     * the single source of truth instead of duplicating the number (IN-05).
+     */
+    public const HARD_CAP = 10;
 
     /**
      * Escalating backoff delays in seconds, indexed by the number of threshold
