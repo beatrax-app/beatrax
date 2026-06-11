@@ -172,10 +172,30 @@ final class ForecastPage extends Component
         $this->confirmingDeleteForScenarioId = null;
     }
 
-    public function deleteScenario(int $scenarioId, CurrentUser $currentUser, DeleteScenario $action): void
+    public function deleteScenario(int $scenarioId, CurrentUser $currentUser, DeleteScenario $action, ScenarioQuery $scenarioQuery): void
     {
+        // Re-validate ownership before invoking the action. `$scenarioId`
+        // arrives as a browser-supplied parameter — a malicious caller could
+        // supply any integer. We re-fetch the user's scenarios from the DB
+        // (same query as render()) and verify the requested id is in the
+        // result set. This is a cheap check: ScenarioQuery returns only the
+        // authenticated user's own scenarios, so any foreign id silently
+        // returns nothing and the delete is rejected without leaking information.
+        $user = $currentUser->user();
+        $owns = false;
+        foreach ($scenarioQuery->forUser($user) as $s) {
+            if ($s->id === $scenarioId) {
+                $owns = true;
+                break;
+            }
+        }
+        if (! $owns) {
+            $this->confirmingDeleteForScenarioId = null;
+
+            return;
+        }
         try {
-            ($action)($scenarioId, $currentUser->user());
+            ($action)($scenarioId, $user);
         } catch (NotFoundHttpException) {
             $this->confirmingDeleteForScenarioId = null;
 
