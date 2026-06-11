@@ -147,6 +147,9 @@ final class DesktopServiceProvider extends ServiceProvider
         // and System::promptTouchID() are called; it returns only a bool
         // (crypto/key-release stays in Auth module). Singleton so the
         // bundle-running guard is evaluated once per container lifecycle.
+        // ⚠ NOT YET WIRED — no caller exists; native Touch ID unlock is
+        // deferred (WR-08). The registration stands so wiring is a
+        // contract-only change later.
         $this->app->singleton(NativeBiometricUnlock::class);
 
         // D-20 desktop key custody via OS keychain / Electron safeStorage.
@@ -154,6 +157,9 @@ final class DesktopServiceProvider extends ServiceProvider
         // already-unwrapped data key in the OS keychain while unlocked.
         // Degrades to the Auth module's encrypted-session path when
         // safeStorage is unavailable (headless CI, early-boot race).
+        // ⚠ NOT YET WIRED — no caller exists; D-20 custody is deferred to
+        // the Phase 14 key-consumer work (WR-08). Until then the unlocked
+        // key follows session custody on all platforms (see LockStateManager).
         $this->app->singleton(DesktopKeyCustodian::class);
 
         // OsThemeProbe is bound to the OsThemeSignal contract ONLY
