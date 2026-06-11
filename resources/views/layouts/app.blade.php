@@ -223,6 +223,43 @@
                     ></div>
                 </template>
             </div>
+            {{--
+                Privacy veil (plan 05-03, D-07, T-05-11).
+                Drops synchronously on window background/blur (lock.js) to hide
+                financial data before OS screenshots. Starts opacity-0 /
+                pointer-events-none; lock.js flips classes on visibilitychange or
+                blur. 80ms CSS transition (motion-reduce:duration-0 for instant on
+                reduced-motion devices). Role/aria-modal/aria-label managed by JS.
+            --}}
+            <div
+                id="beatrax-veil"
+                class="fixed inset-0 z-[9999] flex items-center justify-center
+                       bg-white dark:bg-slate-950
+                       opacity-0 pointer-events-none
+                       transition-opacity duration-[80ms] motion-reduce:duration-0"
+                aria-hidden="true"
+            >
+                <img
+                    src="/icon.png"
+                    width="48"
+                    height="48"
+                    alt=""
+                    class="rounded-xl opacity-40"
+                    aria-hidden="true"
+                />
+            </div>
+            {{--
+                Idle-timeout injection (plan 05-03, D-17, T-05-13).
+                Emits window.beatraxIdleMs (milliseconds) only when the lock
+                feature is enabled for the current user. lock.js reads this value
+                to calibrate the idle watcher; when the variable is absent,
+                lock.js no-ops the idle tracker (lock disabled for this session).
+                Default: 300 000 ms (5 min). 05-04 will expose this as a
+                per-user setting.
+            --}}
+            @if ($currentUser->isAuthenticated())
+                <script>window.beatraxIdleMs = 300000;</script>
+            @endif
         @endauth
         @guest
             @yield('content')
