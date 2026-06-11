@@ -120,6 +120,23 @@
         empty-state copy in each card uses identical left-aligned typo so
         the two surfaces never visually disagree when one is empty.
     --}}
+    {{--
+        LOCK-04 dev-console probe — App-lock key gate state (D-19).
+
+        Shows 'released' + fingerprint when the data key is held in the
+        session (unlocked) and 'withheld' when locked. The raw key is never
+        rendered — only a truncated SHA-256 fingerprint proves presence (T-05-26).
+
+        D-22: lock gates the per-session UI release only; background workers
+        retain the data key independently of the session lock state.
+
+        Developer-gated surface (T-05-27): this page is already behind the
+        `developer` middleware — the probe does not add a second gate.
+    --}}
+    <div class="mt-4">
+        @livewire('auth.app-lock-key-probe')
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
         {{-- Recent runs card --}}
         <div class="card p-4 h-full" data-testid="recent-runs-card">
