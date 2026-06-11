@@ -139,6 +139,9 @@ final class WebAuthnBiometricService
      * it using AppLockKeyWrap (sodium_crypto_secretbox), and stores the blob
      * (secret || wrapped_key_bytes) in biometric_wrap_secret column.
      *
+     * @param  string  $username  The username used in creationOptions() (IN-03:
+     *                            the rebuilt options must mirror the issued
+     *                            user entity, not substitute the userId).
      * @param  array<string, mixed>  $credentialResponse  Browser attestation JSON.
      * @param  string  $dataKey  The caller's live data-key bytes (from session).
      * @param  string  $deviceLabel  Human-readable device label.
@@ -146,6 +149,7 @@ final class WebAuthnBiometricService
      */
     public function completeEnrollment(
         int $userId,
+        string $username,
         array $credentialResponse,
         string $dataKey,
         string $deviceLabel,
@@ -169,9 +173,9 @@ final class WebAuthnBiometricService
         $creationOptions = PublicKeyCredentialCreationOptions::create(
             rp: PublicKeyCredentialRpEntity::create('beatrax', $this->rpId()),
             user: PublicKeyCredentialUserEntity::create(
+                $username,
                 (string) $userId,
-                (string) $userId,
-                (string) $userId,
+                $username,
             ),
             challenge: $challenge,
             pubKeyCredParams: [
