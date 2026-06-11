@@ -124,6 +124,11 @@ final class AppLockSettingsSection extends Component
      */
     public bool $confirmingChangePin = false;
 
+    /**
+     * Whether the "forgot PIN" recovery modal is open (D-11/D-21).
+     */
+    public bool $confirmingForgotPin = false;
+
     // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------
@@ -344,6 +349,74 @@ final class AppLockSettingsSection extends Component
         $this->currentPin = '';
         $this->newPin = '';
         $this->confirmPin = '';
+        $this->flashMessage = '';
+    }
+
+    // -------------------------------------------------------------------------
+    // Action: forgot PIN — password-based recovery (D-11/D-21)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Open the forgot-PIN recovery modal.
+     */
+    public function confirmForgotPin(): void
+    {
+        $this->confirmingForgotPin = true;
+        $this->accountPassword = '';
+        $this->newPin = '';
+        $this->confirmPin = '';
+    }
+
+    /**
+     * Reset a forgotten PIN using the account password (D-11/D-21).
+     *
+     * The D-21 password recovery wrap is the authoritative recovery path:
+     * AppLockProvisioner::rewrapForNewPin() unwraps the data key from
+     * password_wrapped_key and re-wraps it under the new PIN — the data key
+     * survives unchanged (no key loss). The account password doubles as the
+     * D-23 confirmation for this security-sensitive change.
+     *
+     * Reachability: sign out from the lock screen → password login (which
+     * primes the session per WR-03) → Settings → "Forgot PIN?".
+     */
+    public function resetForgottenPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher): void
+    {
+        if (strlen($this->newPin) < 4) {
+            $this->flashMessage = 'PIN must be at least 4 digits.';
+
+            return;
+        }
+
+        if ($this->newPin !== $this->confirmPin) {
+            $this->flashMessage = "PINs don't match. Try again.";
+
+            return;
+        }
+
+        $user = $currentUser->user();
+
+        if (! $hasher->check($this->accountPassword, $user->password)) {
+            $this->flashMessage = 'Incorrect account password.';
+
+            return;
+        }
+
+        $result = $provisioner->rewrapForNewPin($user->id, $this->accountPassword, $this->newPin);
+
+        // Clear sensitive props immediately, success or not.
+        $this->accountPassword = '';
+        $this->newPin = '';
+        $this->confirmPin = '';
+
+        if ($result === false) {
+            // The recovery wrap is missing or corrupted — recovery impossible
+            // without the old PIN; the user must disable and re-enable the lock.
+            $this->flashMessage = 'PIN reset failed — the recovery key is unavailable.';
+
+            return;
+        }
+
+        $this->confirmingForgotPin = false;
         $this->flashMessage = '';
     }
 

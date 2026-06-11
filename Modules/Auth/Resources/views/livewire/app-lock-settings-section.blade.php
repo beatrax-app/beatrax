@@ -139,6 +139,19 @@
             </button>
         </div>
 
+        {{-- 3b': Forgot PIN recovery (D-11/D-21) — account password sets a new PIN --}}
+        <div class="py-1">
+            <button
+                type="button"
+                wire:click="confirmForgotPin"
+                class="text-sm text-slate-500 underline-offset-2 hover:underline
+                       focus:outline-none focus-visible:underline
+                       dark:text-slate-400"
+            >
+                Forgot your PIN? Reset it with your account password.
+            </button>
+        </div>
+
         {{-- 3c: Biometric enrollment row (05-05) --}}
         <div
             class="py-1"
@@ -298,6 +311,83 @@
                                dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                     >
                         Keep app lock
+                    </button>
+                </div>
+            </div>
+        </flux:modal>
+    @endif
+
+    {{-- ===== 3e': Forgot PIN recovery modal (D-11/D-21) ===== --}}
+    @if ($confirmingForgotPin)
+        <flux:modal wire:model="confirmingForgotPin" class="md:max-w-sm">
+            <div class="space-y-4 p-6">
+                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+                    Reset PIN — confirm with account password
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    Your account password recovers the lock key, so resetting the PIN never loses data.
+                </p>
+                <div class="space-y-3">
+                    <div class="space-y-1">
+                        <label for="forgot-account-password-input" class="block text-sm text-slate-700 dark:text-slate-300">Account password</label>
+                        <input
+                            id="forgot-account-password-input"
+                            type="password"
+                            autocomplete="current-password"
+                            wire:model="accountPassword"
+                            placeholder="Your account password"
+                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
+                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                        />
+                    </div>
+                    <div class="space-y-1">
+                        <label for="forgot-new-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">New PIN (4–10 digits)</label>
+                        <input
+                            id="forgot-new-pin-input"
+                            type="password"
+                            inputmode="numeric"
+                            autocomplete="new-password"
+                            wire:model="newPin"
+                            placeholder="········"
+                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
+                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                        />
+                    </div>
+                    <div class="space-y-1">
+                        <label for="forgot-confirm-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">Confirm new PIN</label>
+                        <input
+                            id="forgot-confirm-pin-input"
+                            type="password"
+                            inputmode="numeric"
+                            autocomplete="new-password"
+                            wire:model="confirmPin"
+                            placeholder="········"
+                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
+                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                        />
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button
+                        type="button"
+                        wire:click="resetForgottenPin"
+                        class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
+                               hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                               dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
+                    >
+                        Reset PIN
+                    </button>
+                    <button
+                        type="button"
+                        wire:click="$set('confirmingForgotPin', false)"
+                        class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
+                               hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                               dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
+                    >
+                        Cancel
                     </button>
                 </div>
             </div>
