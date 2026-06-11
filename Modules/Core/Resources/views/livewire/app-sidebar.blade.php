@@ -47,17 +47,18 @@
             On Windows/Linux: renders Ctrl+K.
             On touch devices: hidden entirely via .hidden-touch (D-13, pointer:coarse).
 
-            Js::from() JSON-encodes the Mac glyph so the raw U+2318 character never
-            appears in the server-rendered HTML — satisfying the AppSidebarKbdTest
-            `not->toContain('⌘K')` assertion (D-04). The double-brace {{ }} also
-            HTML-encodes the output, giving two layers of protection: the raw glyph
-            cannot appear as a literal, and any injected characters are entity-encoded.
-            Alpine evaluates the x-text expression client-side; SSR fallback text is Ctrl+K.
+            The Mac glyph is written as the JS string escape backslash-u2318
+            directly in the Alpine expression — no PHP interpolation at all — so
+            the raw U+2318 character never appears in the server-rendered HTML,
+            satisfying the AppSidebarKbdTest `not->toContain('⌘K')` assertion
+            (D-04). Do NOT swap this for Js::from(): Laravel 13's Js::from uses
+            JSON_UNESCAPED_UNICODE and emits the raw glyph. Alpine evaluates the
+            x-text expression client-side; SSR fallback text is Ctrl+K.
         --}}
         <span
             class="kbd hidden-touch"
             aria-hidden="true"
-            x-text="$store.platform.isMac ? {{ Js::from('⌘K') }} : 'Ctrl+K'"
+            x-text="$store.platform.isMac ? '\u2318K' : 'Ctrl+K'"
         >Ctrl+K</span>
     </div>
 
@@ -225,7 +226,7 @@
                     <span
                         class="kbd"
                         aria-hidden="true"
-                        x-text="$store.platform.isMac ? {{ Js::from('⌘.') }} : 'Ctrl+.'"
+                        x-text="$store.platform.isMac ? '\u2318.' : 'Ctrl+.'"
                     >Ctrl+.</span>
                 </a>
                 {{--
