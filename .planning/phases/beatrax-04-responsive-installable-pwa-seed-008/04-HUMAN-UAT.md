@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 04-responsive-installable-pwa-seed-008
 source: [04-VERIFICATION.md]
 started: 2026-06-10T22:02:05Z
-updated: 2026-06-11T00:15:00Z
+updated: 2026-06-11T01:30:00Z
 ---
 
 ## Current Test
@@ -59,19 +59,19 @@ blocked: 0
 ## Gaps
 
 ### Gap 1: Phone transactions infinite scroll replaces instead of appends
-status: failed
+status: resolved (04-08 — accumulatedRows state + re-keyed sentinel; 4 new feature tests prove 50→100→130 accumulation; browser re-check confirms no row replacement. Sentinel-fire-on-scroll unverifiable in occluded automation windows — IntersectionObserver suspended; one manual foreground scroll recommended.)
 severity: major
 test: 5
 detail: TransactionsList::loadMore() is cursor paging — the Livewire re-render swaps all 50 rows for the next 50. UI-SPEC promised infinite scroll (accumulating list). Additionally the wire:intersect sentinel never fired on scroll during testing (only a direct component.call advanced the cursor) — needs verification + likely an accumulate-rows property on the component with the card-list looping accumulated rows.
 
 ### Gap 2: Counterparty index desktop toolbar not collapsed at phone width
-status: failed
+status: resolved (04-09 — inline display:flex moved to inner wrapper; browser re-check at 390px: desktop toolbar display:none, one visible search input.)
 severity: minor
 test: 6
 detail: At <768px the index shows the filter-sheet trigger AND the original toolbar (duplicate search input, sort control, cards/list toggle). The original toolbar row needs phone-width hiding (its controls are reachable via the filter sheet).
 
 ### Gap 3: Dev Console internal sidebar cramped at phone width
-status: failed
+status: resolved (04-09 — stats tiles grid-cols-1 sm:grid-cols-3; browser re-check: tiles stack, no overlapping text.)
 severity: cosmetic
 test: 8
 detail: /dev/* keeps its two-pane layout at 390px; overview stats card headers overlap. Dev-only surface; acceptable to defer or fold into the next DevMode touch.
