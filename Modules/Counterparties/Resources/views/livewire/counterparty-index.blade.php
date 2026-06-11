@@ -48,7 +48,10 @@
     </div>
 
     {{-- Desktop (>=768px): search · sort · view toggle inline --}}
-    <div class="desktop-only" style="display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;">
+    {{-- Outer .desktop-only controls visibility (none at <768px, block at >=768px). --}}
+    {{-- Inner flex wrapper owns the layout so no inline display: leaks to phone width. --}}
+    <div class="desktop-only">
+        <div style="display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;">
         <div class="side-search" role="search" style="flex: 1 1 280px; min-width: 240px;">
             <span class="ic" aria-hidden="true">⌕</span>
             <input
@@ -77,6 +80,7 @@
                 aria-pressed="{{ $activeView === 'list' ? 'true' : 'false' }}"
                 wire:click="setView('list')"
             >≡ List</button>
+        </div>
         </div>
     </div>
 
