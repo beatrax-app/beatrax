@@ -44,7 +44,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
  */
 final class LockScreen extends Component
 {
-
     /** Rose-tinted error / status message shown above the pad. */
     public string $flashMessage = '';
 

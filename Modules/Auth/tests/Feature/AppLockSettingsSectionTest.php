@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Core\Models\User;
 
 /*
@@ -118,8 +119,8 @@ it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (
     $db = $this->app->make(DatabaseManager::class);
 
     // Enroll a biometric credential.
-    /** @var \Modules\Auth\Internal\Lock\BiometricDeviceStore $store */
-    $store = $this->app->make(\Modules\Auth\Internal\Lock\BiometricDeviceStore::class);
+    /** @var BiometricDeviceStore $store */
+    $store = $this->app->make(BiometricDeviceStore::class);
     $store->store($user->id, base64_encode('deenroll-cred'), 'Test Device', str_repeat("\xAA", 32), 'fake-cbor', 'webauthn');
 
     $before = $db->connection()->table('user_app_lock_configs')

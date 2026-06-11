@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 // Plan 05-03 — LockScreen Livewire page
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\LockScreen;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
@@ -81,13 +83,13 @@ it('correct PIN during an active backoff window shows backoff copy, not "Incorre
     $provisioner->enable($user->id, '123456', 'whatever-password');
 
     // Simulate an active backoff window (5 failures, locked_until in the future).
-    /** @var \Illuminate\Database\DatabaseManager $db */
-    $db = $this->app->make(\Illuminate\Database\DatabaseManager::class);
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
     $db->connection()->table('user_app_lock_configs')
         ->where('user_id', $user->id)
         ->update([
             'failed_attempts' => 5,
-            'locked_until' => \Carbon\CarbonImmutable::now()->addSeconds(30)->toDateTimeString(),
+            'locked_until' => CarbonImmutable::now()->addSeconds(30)->toDateTimeString(),
         ]);
 
     Livewire::test(LockScreen::class)

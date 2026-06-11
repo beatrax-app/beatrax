@@ -8,6 +8,7 @@ use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Core\Models\SystemAlert;
@@ -159,14 +160,14 @@ it('successful PIN unlock re-arms disarmed biometric credentials (D-16 / WR-01)'
     $provisioner = $this->app->make(AppLockProvisioner::class);
     $provisioner->enable($user->id, '123456', 'whatever-password');
 
-    /** @var \Modules\Auth\Internal\Lock\BiometricDeviceStore $store */
-    $store = $this->app->make(\Modules\Auth\Internal\Lock\BiometricDeviceStore::class);
+    /** @var BiometricDeviceStore $store */
+    $store = $this->app->make(BiometricDeviceStore::class);
     $store->store($user->id, base64_encode('rearm-cred'), 'Rearm Device', str_repeat("\xEE", 32), 'fake-cbor', 'webauthn');
 
     // Disarm the credential (5 consecutive biometric failures).
     $cred = $store->findByCredentialId($user->id, base64_encode('rearm-cred'));
     /** @var stdClass $cred */
-    for ($i = 0; $i < \Modules\Auth\Internal\Lock\BiometricDeviceStore::BIOMETRIC_DISABLE_THRESHOLD; $i++) {
+    for ($i = 0; $i < BiometricDeviceStore::BIOMETRIC_DISABLE_THRESHOLD; $i++) {
         $store->incrementFailureCount($cred->id);
     }
     $disarmed = $store->findByCredentialId($user->id, base64_encode('rearm-cred'));
