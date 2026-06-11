@@ -18,9 +18,20 @@ use Illuminate\Contracts\Session\Session;
  * (an uninitialized session is not locked — the user has not set up a PIN
  * yet, or the app has just been freshly booted with no lock state written).
  *
- * SECURITY NOTE: The data key held in DATA_KEY_SESSION is in-memory only
- * for the duration of the session; lock() clears it immediately. The
- * only persistent copy is the wrapped blob in user_app_lock_configs.
+ * SECURITY NOTE — key custody while unlocked (documented decision, WR-07):
+ * the data key stored under DATA_KEY_SESSION is part of the Laravel session
+ * payload, which the session driver serialises AT REST (with the file
+ * driver: storage/framework/sessions/*, owner-only permissions) for as long
+ * as the session stays unlocked. It is NOT "in-memory only". This is an
+ * accepted risk for a local-only, single-machine deployment: the session
+ * store and the SQLite database share the same disk and OS user, so an
+ * attacker who can read the session files can also read the DB. lock()
+ * removes the key from the session immediately; the only deliberate
+ * persistent copies are the wrapped blobs in user_app_lock_configs /
+ * user_biometric_credentials. Hardening path: D-20 desktop custody
+ * (Electron safeStorage via DesktopKeyCustodian) is built but deliberately
+ * NOT wired this phase (see WR-08 / Phase 14); wiring it would keep the
+ * at-rest session copy ciphertext on the desktop build.
  */
 final class LockStateManager
 {
