@@ -19,7 +19,7 @@
         data-testid="console-pane"
         wire:poll.5s
     >
-        <div class="grid grid-cols-3 gap-4 console-pane-head items-start">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 console-pane-head items-start">
             {{-- Worker heartbeat tile --}}
             <div data-testid="console-pane-heartbeat">
                 <div class="text-[11px] uppercase tracking-wide text-slate-400">Worker heartbeat</div>
