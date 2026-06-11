@@ -98,9 +98,8 @@ document.addEventListener('alpine:init', () => {
             this._graceTimer = window.setTimeout(() => {
                 this._graceTimer = null;
                 // Grace elapsed — lock the server session via the engage endpoint
-                // (D-17/D-18, Gap A fix). navigator.sendBeacon survives tab closure/switch
-                // and does not block the page. Falls back to keepalive fetch when
-                // sendBeacon is unavailable.
+                // (D-17/D-18, Gap A fix). fetch with keepalive:true survives tab
+                // closure/switch and does not block the page.
                 this._serverLock();
                 // Also broadcast locked state to all tabs (UX convenience).
                 this._broadcast('locked');
@@ -122,45 +121,27 @@ document.addEventListener('alpine:init', () => {
         /**
          * POST to /lock/engage to lock the server session (D-17, Gap A fix).
          *
-         * Uses navigator.sendBeacon so the request survives tab switching or
-         * closing (the primary use case — backgrounding past the grace window).
-         * Falls back to fetch with keepalive:true on browsers where sendBeacon
-         * does not accept a body with Content-Type headers. The server returns
-         * 204 and no body is read.
+         * Uses fetch with keepalive:true — like a beacon, a keepalive request
+         * survives tab switching/closing, but unlike navigator.sendBeacon it
+         * can carry CSRF headers. Laravel's VerifyCsrfToken accepts the token
+         * ONLY from a `_token` body field, the `X-CSRF-TOKEN` header, or the
+         * `X-XSRF-TOKEN` header (the XSRF-TOKEN cookie alone is never accepted
+         * as the supplied token), so sendBeacon — which cannot set headers —
+         * would always 419 here. The server returns 204 and no body is read.
          *
          * Called when:
          *   1. The 30-second grace window elapses (background/blur past grace).
          *   2. The idle ticker detects inactivity >= idle_timeout_minutes.
          */
         _serverLock() {
-            const url = '/lock/engage';
-            const csrfToken = _getCsrfToken();
-            const payload = JSON.stringify({});
-
-            // sendBeacon does not support custom headers; wrap the payload in
-            // a Blob with the correct MIME type so the CSRF token can be sent
-            // via the cookie-based XSRF-TOKEN mechanism (Laravel's default).
-            try {
-                if (typeof navigator.sendBeacon === 'function') {
-                    const blob = new Blob([payload], { type: 'application/json' });
-                    // Note: the CSRF cookie (XSRF-TOKEN) is automatically included
-                    // because sendBeacon sends cookies. Laravel's VerifyCsrfToken reads
-                    // both the header and the cookie — sendBeacon uses the cookie path.
-                    navigator.sendBeacon(url, blob);
-                    return;
-                }
-            } catch (e) {
-                // sendBeacon not available or threw — fall through to fetch.
-            }
-
-            // Fallback: fetch with keepalive so it survives tab close.
-            fetch(url, {
+            fetch('/lock/engage', {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-XSRF-TOKEN': csrfToken,
+                    'X-XSRF-TOKEN': _getCsrfToken(),
                 },
-                body: payload,
+                body: JSON.stringify({}),
                 keepalive: true,
             }).catch(() => {
                 // Swallow — if the request fails the server-side idle check
