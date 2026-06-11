@@ -168,9 +168,11 @@ it('disabling the lock requires the correct PIN — wrong PIN keeps lock enabled
     $provisioner->enable($user->id, '4321', 'settings-pass');
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
-    // Wrong PIN: lock stays enabled.
+    // Wrong PIN: lock stays enabled. IN-10: must be a NUMERIC wrong PIN —
+    // a non-numeric value fails the #[Validate] regex so the property would
+    // stay '' and the test would pass by coincidence (empty PIN also fails).
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', 'wrong')
+        ->set('currentPin', '0000')
         ->call('disable')
         ->assertSee('Incorrect PIN.');
 
