@@ -47,7 +47,9 @@
             </button>
         @endif
 
-        {{-- Sign out — the forgot-PIN escape hatch (D-03) --}}
+        {{-- Sign out (D-03). Forgot-PIN recovery (D-11/D-21): sign out →
+             password login (primes the session, WR-03) → Settings →
+             "Forgot your PIN?" resets it via the password recovery wrap. --}}
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button

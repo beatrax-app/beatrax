@@ -93,6 +93,46 @@ it('after password re-auth a new PIN re-wraps the data key and the same key is r
     sodium_memzero($recoveredDataKey);
 });
 
+it('settings Forgot PIN flow resets the PIN via the account password (WR-02)', function (): void {
+    $user = User::query()->create([
+        'username' => 'forgot-ui-user',
+        'password' => bcrypt('forgot-ui-pass'),
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+    $provisioner->enable($user->id, '1234', 'forgot-ui-pass');
+
+    // Wrong account password: rejected, PIN unchanged.
+    \Livewire\Livewire::test(\Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection::class)
+        ->call('confirmForgotPin')
+        ->assertSet('confirmingForgotPin', true)
+        ->set('accountPassword', 'wrong-password')
+        ->set('newPin', '5678')
+        ->set('confirmPin', '5678')
+        ->call('resetForgottenPin')
+        ->assertSee('Incorrect account password.');
+
+    expect($provisioner->verifyPin($user->id, '1234'))->toBeTrue();
+
+    // Correct account password: PIN re-wrapped to the new value.
+    \Livewire\Livewire::test(\Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection::class)
+        ->call('confirmForgotPin')
+        ->set('accountPassword', 'forgot-ui-pass')
+        ->set('newPin', '5678')
+        ->set('confirmPin', '5678')
+        ->call('resetForgottenPin')
+        ->assertSet('confirmingForgotPin', false)
+        ->assertSet('accountPassword', '')
+        ->assertSet('newPin', '');
+
+    expect($provisioner->verifyPin($user->id, '5678'))->toBeTrue();
+    expect($provisioner->verifyPin($user->id, '1234'))->toBeFalse();
+    expect($provisioner->isEnabled($user->id))->toBeTrue();
+});
+
 it('changePin preserves the data key under the new PIN', function (): void {
     $user = User::query()->create([
         'username' => 'bob',
