@@ -34,8 +34,9 @@ use Symfony\Component\HttpFoundation\Response;
  *   To avoid a DB query on every request, the lock config (lock_enabled,
  *   idle_timeout_minutes) is cached in the session under a private key and
  *   re-read from the DB only once per SESSION_CONFIG_TTL_SECONDS window.
- *   The last_activity_at timestamp is written on every passing gated request
- *   so the DB stays fresh even when the in-session config cache is active.
+ *   The last_activity_at timestamp is written on every passing gated
+ *   NON-Livewire request (see LIVEWIRE_HEADER below — WR-04) so the DB stays
+ *   fresh even when the in-session config cache is active.
  *
  * Unauthenticated requests pass through untouched: guests are handled by
  * the Authenticate middleware that is prepended to the auth group; the lock
@@ -65,6 +66,19 @@ final readonly class AppLockMiddleware
         'auth.lock.engage',
         'logout',
     ];
+
+    /**
+     * Header present on every Livewire update request (the Livewire JS client
+     * always sends it; RequireLivewireHeaders rejects updates without it).
+     *
+     * WR-04: Livewire update traffic — including wire:poll machine traffic —
+     * must NOT count as user activity, or any page with a polling component
+     * keeps last_activity_at fresh forever and the server idle lock (D-17)
+     * never fires on an unattended machine. Genuine interaction on
+     * Livewire-heavy pages is reported by the lock.js activity heartbeat
+     * (POST auth.lock.activity), a plain fetch request.
+     */
+    private const LIVEWIRE_HEADER = 'X-Livewire';
 
     /**
      * How long (in seconds) to trust the in-session config cache before
@@ -137,8 +151,11 @@ final readonly class AppLockMiddleware
                 }
 
                 // Idle timeout not elapsed — refresh last_activity_at in the DB.
-                // Exempt routes (lock screen, logout) don't count as activity.
-                if (! in_array($routeName, self::ALLOWED_ROUTE_NAMES, true)) {
+                // Exempt routes (lock screen, logout) don't count as activity,
+                // and neither do Livewire update requests (WR-04): wire:poll
+                // traffic would otherwise hold the idle timer open forever.
+                if (! in_array($routeName, self::ALLOWED_ROUTE_NAMES, true)
+                    && ! $request->headers->has(self::LIVEWIRE_HEADER)) {
                     $nowStr = $now->toDateTimeString();
                     $this->db->connection()
                         ->table('user_app_lock_configs')
