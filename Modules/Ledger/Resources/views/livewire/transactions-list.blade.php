@@ -105,7 +105,7 @@
             @if ($hasMore && $nextCursorId !== null)
                 <div
                     wire:key="sentinel-{{ $nextCursorId }}"
-                    wire:intersect.margin.0px.0px.200px.0px="loadMore({{ $nextCursorId }}, @js($nextCursorPostedAt))"
+                    wire:intersect.margin.0px.0px.200px.0px="loadMore"
                     class="flex justify-center py-4"
                     aria-hidden="true"
                 ></div>
@@ -218,7 +218,7 @@
                 <div class="flex justify-center">
                     <button
                         type="button"
-                        wire:click="loadMore({{ $page->nextCursorId }}, @js($page->nextCursorPostedAt))"
+                        wire:click="loadMore"
                         class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                     >Load more</button>
                 </div>

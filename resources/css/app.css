@@ -2947,3 +2947,50 @@ td.date,
         -webkit-overflow-scrolling: touch;
     }
 }
+
+/*
+ * Phase 4: Per-page phone-responsive rules (WR-05 / WR-06).
+ *
+ * These rules were previously emitted as inline <style> blocks inside the
+ * Livewire component root divs (dashboard.blade.php, settings-page.blade.php).
+ * Inline component styles are a footgun: they are not scoped, they apply to
+ * the entire document, and on some Livewire rendering paths they can be
+ * duplicated. Moved here alongside the rest of the Phase 4 responsive rules.
+ */
+
+/* Dashboard phone posture (D-15, UI-SPEC §9).
+ *
+ * At <768px the dashboard column switches to a flex container with explicit
+ * order values so the inbox-like posture is achieved without moving markup.
+ * At >=768px all order classes are reset and the existing space-y-12 block
+ * layout is preserved exactly.
+ */
+@media (max-width: 767px) {
+    .dashboard-main {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-8, 2rem);
+    }
+    .dashboard-phone-order-1  { order: 1; }
+    .dashboard-phone-order-2  { order: 2; }
+    .dashboard-phone-order-3  { order: 3; }
+    .dashboard-phone-order-4  { order: 4; }
+    .dashboard-phone-order-5  { order: 5; }
+    .dashboard-phone-order-6  { order: 6; }
+    .dashboard-phone-order-7  { order: 7; }
+    .dashboard-phone-order-8  { order: 8; }
+}
+
+/* Settings page phone posture (UI-SPEC §19, D-22).
+ *
+ * At <768px: max-width constraint is removed; .settings-grid collapses to a
+ * single column. Desktop multi-column unchanged. The specificity of the
+ * media query is sufficient to override Tailwind's grid utilities without
+ * needing !important.
+ */
+@media (max-width: 767px) {
+    .settings-grid {
+        display: flex;
+        flex-direction: column;
+    }
+}

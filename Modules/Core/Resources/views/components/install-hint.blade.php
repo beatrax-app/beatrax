@@ -21,6 +21,14 @@
         installable: false,
         deferredPrompt: null,
         init() {
+            // Check localStorage persistence before showing.
+            // If the user dismissed within the last 30 days, stay hidden.
+            try {
+                const ts = parseInt(localStorage.getItem('beatrax-install-hint-dismissed') || '0', 10);
+                if (ts > 0 && Date.now() - ts < 30 * 24 * 3600 * 1000) {
+                    return;
+                }
+            } catch (e) {}
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 this.deferredPrompt = e;
@@ -34,6 +42,7 @@
         },
         dismiss() {
             this.shown = false;
+            try { localStorage.setItem('beatrax-install-hint-dismissed', String(Date.now())); } catch (e) {}
         },
         async install() {
             if (!this.deferredPrompt) return;
