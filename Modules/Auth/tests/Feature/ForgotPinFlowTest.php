@@ -238,3 +238,41 @@ it('disable requires the correct PIN and clears all lock material on success', f
     expect($row->password_wrapped_key)->toBeNull();
     expect((int) $row->failed_attempts)->toBe(0);
 });
+
+it('disable() and re-enable() both delete stale biometric credentials (WR-06)', function (): void {
+    $user = User::query()->create([
+        'username' => 'stale-cred-user',
+        'password' => bcrypt('stale-pass'),
+        'period_start_day' => 1,
+    ]);
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+    /** @var \Modules\Auth\Internal\Lock\BiometricDeviceStore $store */
+    $store = $this->app->make(\Modules\Auth\Internal\Lock\BiometricDeviceStore::class);
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $credCount = static fn (): int => $db->connection()
+        ->table('user_biometric_credentials')
+        ->where('user_id', $user->id)
+        ->count();
+
+    // Enable + enroll, then DISABLE: the credential must not survive (its
+    // wrap holds the data key disable() destroys).
+    $provisioner->enable($user->id, '1234', 'stale-pass');
+    $store->store($user->id, base64_encode('stale-cred-1'), 'Old Device', str_repeat("\x05", 32), 'fake-cbor', 'webauthn');
+    expect($credCount())->toBe(1);
+
+    expect($provisioner->disable($user->id, '1234'))->toBeTrue();
+    expect($credCount())->toBe(0);
+
+    // Enable + enroll, then RE-ENABLE: enable() mints a new data key, so any
+    // pre-existing credential (old key wrap) must be cleared too.
+    $provisioner->enable($user->id, '1234', 'stale-pass');
+    $store->store($user->id, base64_encode('stale-cred-2'), 'Old Device 2', str_repeat("\x06", 32), 'fake-cbor', 'webauthn');
+    expect($credCount())->toBe(1);
+
+    $provisioner->enable($user->id, '5678', 'stale-pass');
+    expect($credCount())->toBe(0);
+});

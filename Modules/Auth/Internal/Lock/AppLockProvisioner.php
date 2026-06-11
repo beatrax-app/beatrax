@@ -39,6 +39,7 @@ final class AppLockProvisioner
         private readonly PinHasher $pinHasher,
         private readonly Clock $clock,
         private readonly LockStateManager $lockState,
+        private readonly BiometricDeviceStore $biometricStore,
     ) {}
 
     /**
@@ -56,6 +57,12 @@ final class AppLockProvisioner
      */
     public function enable(int $userId, string $pin, string $accountPassword, ?Session $session = null): void
     {
+        // WR-06: enable() generates a NEW data key, which invalidates every
+        // existing per-device biometric wrap (they hold the OLD key). Delete
+        // stale credentials so a leftover enrollment from a previous
+        // enable/disable cycle can never unlock with divergent key material.
+        $this->biometricStore->deleteForUser($userId);
+
         // Generate a fresh data key.
         $dataKey = random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
 
@@ -322,13 +329,13 @@ final class AppLockProvisioner
      * Disables the app lock after verifying the current PIN (D-23 security downgrade confirmation).
      *
      * Clears all lock-related fields (pin_hash, kdf_salt, pin_wrapped_key,
-     * password_wrapped_key, failed_attempts, locked_until) and sets lock_enabled=false.
+     * password_wrapped_key, failed_attempts, locked_until), sets
+     * lock_enabled=false, AND deletes all biometric credentials (WR-06): the
+     * per-device wraps hold the data key disable() just destroyed, so a
+     * surviving credential would unlock a future re-enabled lock with stale
+     * key material.
      *
      * Returns false when $pin is wrong — the lock stays enabled in that case.
-     *
-     * Note: biometric credentials (user_biometric_credentials rows) are cleared by
-     * plan 05-05's disable path; this method only clears PIN material from
-     * user_app_lock_configs.
      */
     public function disable(int $userId, string $pin): bool
     {
@@ -357,6 +364,10 @@ final class AppLockProvisioner
                 'failed_attempts' => 0,
                 'locked_until' => null,
             ]);
+
+        // WR-06: the wrapped data key is gone — remove every biometric
+        // credential that wrapped it.
+        $this->biometricStore->deleteForUser($userId);
 
         return true;
     }
