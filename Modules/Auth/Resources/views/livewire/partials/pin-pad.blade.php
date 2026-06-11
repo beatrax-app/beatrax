@@ -1,0 +1,122 @@
+{{--
+    PIN pad partial — calm-slate token classes, accessible targets.
+
+    Threat mitigations:
+      T-05-12: digits are displayed as bullet glyphs in an aria-live region,
+               never as <input type="password">. No autocomplete attribute is
+               set. OS password managers and screenshot tools see only bullets.
+
+    Accessibility contract (UI-SPEC):
+      - aria-label="Digit N" on each digit button.
+      - aria-label="Backspace" on the backspace button.
+      - aria-label="Confirm PIN" on the submit button.
+      - dot display wrapped in aria-live="polite" region announcing "{N} digits entered".
+      - backoff label in aria-live="assertive" slot.
+
+    Sizing contract (UI-SPEC):
+      - Minimum 44 × 44 px touch targets everywhere.
+      - 64 px × 64 px on phone (h-16 w-16).
+      - 56 px × 56 px on desktop (sm:h-14 sm:w-14).
+--}}
+
+{{-- Dot display — aria-live so screen readers announce digit count changes --}}
+<div
+    class="flex justify-center gap-2 py-3"
+    aria-live="polite"
+    aria-label="{{ strlen($pin) }} digits entered"
+>
+    @for ($i = 0; $i < 10; $i++)
+        <span
+            class="h-3 w-3 rounded-full transition-colors duration-150 motion-reduce:transition-none
+                {{ $i < strlen($pin)
+                    ? 'bg-slate-900 dark:bg-slate-100'
+                    : 'bg-slate-200 dark:bg-slate-700' }}"
+        ></span>
+    @endfor
+</div>
+
+{{-- Backoff / flash label — assertive so screen readers interrupt for errors --}}
+@if ($flashMessage !== '')
+    <div
+        class="text-center text-sm text-rose-600 dark:text-rose-400 py-1"
+        aria-live="assertive"
+        role="alert"
+    >
+        {{ $flashMessage }}
+    </div>
+@else
+    <div class="py-1" aria-live="assertive"></div>
+@endif
+
+{{-- PIN pad grid --}}
+<div class="grid grid-cols-3 gap-2" role="group" aria-label="PIN pad">
+
+    {{-- Digits 1–9 --}}
+    @foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9] as $digit)
+        <button
+            type="button"
+            wire:click="pressDigit('{{ $digit }}')"
+            aria-label="Digit {{ $digit }}"
+            class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
+                   text-xl font-semibold text-slate-900 dark:text-slate-100
+                   transition-colors duration-[80ms] motion-reduce:transition-none
+                   hover:bg-slate-200 dark:hover:bg-slate-700
+                   active:bg-slate-300 dark:active:bg-slate-600
+                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100 focus-visible:ring-offset-2"
+        >
+            {{ $digit }}
+        </button>
+    @endforeach
+
+    {{-- Bottom row: Backspace | 0 | Confirm --}}
+    <button
+        type="button"
+        wire:click="backspace()"
+        aria-label="Backspace"
+        class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
+               text-slate-600 dark:text-slate-400
+               transition-colors duration-[80ms] motion-reduce:transition-none
+               hover:bg-slate-200 dark:hover:bg-slate-700
+               active:bg-slate-300 dark:active:bg-slate-600
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100 focus-visible:ring-offset-2"
+    >
+        {{-- Backspace icon (inline SVG, decorative) --}}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             class="h-5 w-5" aria-hidden="true">
+            <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
+            <line x1="18" y1="9" x2="12" y2="15"/>
+            <line x1="12" y1="9" x2="18" y2="15"/>
+        </svg>
+    </button>
+
+    <button
+        type="button"
+        wire:click="pressDigit('0')"
+        aria-label="Digit 0"
+        class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
+               text-xl font-semibold text-slate-900 dark:text-slate-100
+               transition-colors duration-[80ms] motion-reduce:transition-none
+               hover:bg-slate-200 dark:hover:bg-slate-700
+               active:bg-slate-300 dark:active:bg-slate-600
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100 focus-visible:ring-offset-2"
+    >
+        0
+    </button>
+
+    <button
+        type="button"
+        wire:click="submit()"
+        aria-label="Confirm PIN"
+        class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-900 dark:bg-slate-100
+               text-white dark:text-slate-900
+               text-sm font-semibold
+               transition-colors duration-[80ms] motion-reduce:transition-none
+               hover:bg-slate-700 dark:hover:bg-slate-200
+               active:bg-slate-600 dark:active:bg-slate-300
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100 focus-visible:ring-offset-2"
+    >
+        OK
+    </button>
+
+</div>

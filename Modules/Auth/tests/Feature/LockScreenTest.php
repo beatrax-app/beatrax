@@ -44,6 +44,7 @@ it('correct PIN via Livewire component unlocks the session and redirects to dash
         'period_start_day' => 1,
     ]);
     $this->actingAs($user);
+    $this->session([LockStateManager::SESSION_KEY => true]);
 
     // Enable app lock so the provisioner writes the PIN hash + wrapped key.
     /** @var AppLockProvisioner $provisioner */
@@ -51,9 +52,7 @@ it('correct PIN via Livewire component unlocks the session and redirects to dash
     $provisioner->enable($user->id, '123456', 'whatever-password');
 
     // Use Livewire testing helper to submit the correct PIN.
-    Livewire::actingAs($user)
-        ->withSession([LockStateManager::SESSION_KEY => true])
-        ->test(LockScreen::class)
+    Livewire::test(LockScreen::class)
         ->set('pin', '123456')
         ->call('submit')
         ->assertRedirect(route('dashboard'));
@@ -74,14 +73,13 @@ it('wrong PIN via Livewire component sets flash message and leaves the session l
         'period_start_day' => 1,
     ]);
     $this->actingAs($user);
+    $this->session([LockStateManager::SESSION_KEY => true]);
 
     /** @var AppLockProvisioner $provisioner */
     $provisioner = $this->app->make(AppLockProvisioner::class);
     $provisioner->enable($user->id, '123456', 'whatever-password');
 
-    Livewire::actingAs($user)
-        ->withSession([LockStateManager::SESSION_KEY => true])
-        ->test(LockScreen::class)
+    Livewire::test(LockScreen::class)
         ->set('pin', '000000')
         ->call('submit')
         ->assertNoRedirect()
