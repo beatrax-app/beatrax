@@ -166,6 +166,68 @@ it('idle not elapsed passes through and refreshes last_activity_at', function ()
     expect($isRedirectToLock)->toBeFalse('Session should not be idle-locked when activity was recent');
 });
 
+it('Livewire update requests do NOT refresh last_activity_at (WR-04)', function (): void {
+    $user = User::query()->create([
+        'username' => 'poll-user',
+        'password' => bcrypt('poll-pass'),
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    $staleActivity = CarbonImmutable::now()->subSeconds(30)->toDateTimeString();
+    DB::connection()->table('user_app_lock_configs')->insert([
+        'user_id' => $user->id,
+        'lock_enabled' => true,
+        'idle_timeout_minutes' => 5,
+        'failed_attempts' => 0,
+        'last_activity_at' => $staleActivity,
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    // A request carrying the X-Livewire header (poll / update traffic) must
+    // not count as user activity.
+    $this->withSession([LockStateManager::SESSION_KEY => false])
+        ->withHeaders(['X-Livewire' => '1'])
+        ->get('/help/data-locations');
+
+    $row = DB::connection()->table('user_app_lock_configs')
+        ->where('user_id', $user->id)
+        ->first(['last_activity_at']);
+    /** @var stdClass $row */
+    expect((string) $row->last_activity_at)->toBe($staleActivity);
+});
+
+it('POST /lock/activity heartbeat refreshes last_activity_at and returns 204 (WR-04)', function (): void {
+    $user = User::query()->create([
+        'username' => 'heartbeat-user',
+        'password' => bcrypt('heartbeat-pass'),
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    $staleActivity = CarbonImmutable::now()->subSeconds(45)->toDateTimeString();
+    DB::connection()->table('user_app_lock_configs')->insert([
+        'user_id' => $user->id,
+        'lock_enabled' => true,
+        'idle_timeout_minutes' => 5,
+        'failed_attempts' => 0,
+        'last_activity_at' => $staleActivity,
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    $this->withSession([LockStateManager::SESSION_KEY => false])
+        ->postJson(route('auth.lock.activity'))
+        ->assertStatus(204);
+
+    $row = DB::connection()->table('user_app_lock_configs')
+        ->where('user_id', $user->id)
+        ->first(['last_activity_at']);
+    /** @var stdClass $row */
+    expect((string) $row->last_activity_at)->not->toBe($staleActivity);
+});
+
 it('POST /lock/engage locks the session and returns 204', function (): void {
     $user = User::query()->create([
         'username' => 'engage-user',
