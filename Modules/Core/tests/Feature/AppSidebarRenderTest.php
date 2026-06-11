@@ -15,7 +15,8 @@ use Modules\Core\Models\User;
  *      Console's existence is never disclosed via HTML.
  *  (2) Authenticated developer (is_developer=true) → renders →
  *      response contains "side-dev-block" + the literal "Developer"
- *      heading + the literal "dot-live" class + the kbd hint "⌘.".
+ *      heading + the literal "dot-live" class + the platform-aware
+ *      kbd hint binding (JS escape \u2318. — never the raw glyph, IN-03).
  *  (3) The account caption renders "developer · local" for developers
  *      and "local" for non-developers.
  *  (4) The brand row literal is `beatrax` (post-rename string per
@@ -57,7 +58,10 @@ it('renders the Dev block with heading, dot, and kbd hint for a developer', func
     $component->assertSee('Developer');
     $component->assertSee('Open Dev Console');
     $component->assertSee('dot-live', escape: false);
-    $component->assertSee('⌘.', escape: false);
+    // IN-03: the dev-console kbd hint is platform-aware via Alpine —
+    // the server HTML carries the JS escape sequence, never the raw glyph.
+    $component->assertSee('\u2318.', escape: false);
+    $component->assertDontSee('⌘.', escape: false);
 });
 
 it('renders the developer account caption "developer · local" for a developer', function (): void {
