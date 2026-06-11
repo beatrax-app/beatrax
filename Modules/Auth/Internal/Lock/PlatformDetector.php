@@ -14,6 +14,13 @@ namespace Modules\Auth\Internal\Lock;
  *   - Windows         → "Use Windows Hello"
  *   - Android/generic → "Use fingerprint"
  *
+ * Known limitation (IN-09, accepted): iPadOS 13+ Safari in desktop mode sends
+ * a "Macintosh" user-agent, so those iPads get the macOS "Use Touch ID" label
+ * instead of "Use Face ID". Cosmetic only — the WebAuthn flow itself is
+ * unaffected. Fixing it would require client-side detection
+ * (navigator.userAgentData / maxTouchPoints), which is not worth the wiring
+ * for a label on a single-user local app.
+ *
  * Platform key contract:
  *   - 'nativephp_macos' — only when running inside the NativePHP macOS bundle
  *     on macOS (caller passes $isNativeMacos=true from System::canPromptTouchID()).
