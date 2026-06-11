@@ -15,6 +15,7 @@ use Modules\Auth\Internal\Console\ResetPasswordCommand;
 use Modules\Auth\Internal\Fortify\FortifyServiceProvider;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
+use Modules\Auth\Internal\Http\Livewire\LockScreen;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
 use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
@@ -129,9 +130,9 @@ final class AuthServiceProvider extends ServiceProvider
         $livewire->component('auth.reset-password-page', ResetPasswordPage::class);
         $livewire->component('auth.manage-user-page', ManageUserPage::class);
 
-        // TODO (05-03): Register 'auth.lock-screen' => LockScreen::class
+        $livewire->component('auth.lock-screen', LockScreen::class);
         // TODO (05-04): Register 'auth.app-lock-settings-section' => AppLockSettingsSection::class
-        // These Livewire component classes do not exist yet; importing them would break autoload.
-        // Uncomment when plans 05-03 and 05-04 create the component files.
+        // AppLockSettingsSection does not exist yet; importing it would break autoload.
+        // Uncomment when plan 05-04 creates the component file.
     }
 }
