@@ -157,7 +157,103 @@ Commits confirmed in git log:
 - 36a0f88 (Task 3 GREEN) — FOUND
 
 ---
+
+## Checkpoint QA Fixes (2026-06-12)
+
+Four gaps found during Task 4 human-verify were fixed and committed atomically
+by a continuation executor. All tests green, PHPStan level 10 clean, Pint clean.
+
+### Gap A — BLOCKING: server-authoritative idle enforcement (commit 6d5defe)
+
+**Root cause:** `idle-timeout-elapsed` Livewire dispatch was a no-op on app pages
+because only `LockScreen` (mounted at /lock) had the `#[On]` listener. Background-past-grace
+showed the client-side veil but left the server session unlocked; idle timeout never fired.
+
+**Fix:**
+1. `AppLockMiddleware` now enforces idle timeout server-side on every authenticated
+   request. Reads `last_activity_at` + `idle_timeout_minutes` from `user_app_lock_configs`
+   (cached in the session for 60 s to avoid a DB query per request). If elapsed >= idle
+   threshold → lock session + redirect to /lock. Otherwise → refresh `last_activity_at`.
+2. New `POST /lock/engage` route (name: `auth.lock.engage`) handled by
+   `LockEngageController` — returns 204, calls `AppLockKeyService::withhold()`.
+   Added to `AppLockMiddleware::ALLOWED_ROUTE_NAMES`.
+3. `lock.js` rewired: `_serverLock()` posts to `/lock/engage` via `navigator.sendBeacon`
+   (keepalive fetch fallback) — survives tab close. Grace-elapsed and idle-ticker both
+   call `_serverLock()`. Dead `Livewire.dispatch('idle-timeout-elapsed')` removed.
+
+**Tests added (AppLockQaGapsTest):**
+- idle elapsed → redirect /lock + session locked
+- idle not elapsed → passes through without false lock
+- POST /lock/engage → 204 + session locked
+- POST /lock/engage already locked → 204 no-op
+
+### Gap B — MAJOR: coherent post-enable session state (commit 4885e19)
+
+**Root cause:** `AppLockProvisioner::enable()` zeroed the data key before the session
+was touched, leaving the session with no lock flag AND no data key — WITHHELD while
+the app was browsable.
+
+**Fix:** `AppLockProvisioner::enable()` now accepts an optional `?Session $session = null`
+parameter. When provided, calls `LockStateManager::unlock($session, $dataKey)` before
+`sodium_memzero()` — placing the live key in the session immediately after enable.
+`AppLockSettingsSection::setPin()` passes the session.
+
+**Chosen behavior:** post-enable session is UNLOCKED with the key available. The user just
+proved their PIN + account password, so unlocked is the coherent state (D-19, banking-app
+model). No forced re-lock on enable.
+
+**Tests added (AppLockQaGapsTest):**
+- `enable()` with session → data key available in session
+- `enable()` without session → backward compat, no session side effect
+- `AppLockSettingsSection::setPin` via Livewire → data key available after enable
+
+### Gap C — MINOR: keyboard PIN entry (commit c36f102)
+
+**Root cause:** Only mouse/touch taps on PIN pad buttons registered input. Typing digits
+or pressing Enter/Backspace on the keyboard had no effect.
+
+**Fix:** Added `x-on:keydown.window` Alpine listener on the lock-screen container:
+- Digits 0-9 call `$wire.pressDigit(k)` (respects the 10-digit cap via pressDigit())
+- Backspace calls `$wire.backspace()`
+- Enter calls `$wire.submit()`
+
+UI-SPEC does not explicitly specify keyboard support, but accessibility expectation
+requires it. The UI-SPEC specifies all tappable elements at least 44px (phone-first design)
+which implies the pad is the primary input; keyboard is additive.
+
+### Gap D — MINOR: lock screen rendered inside full app shell (commit 2699ad8)
+
+**Root cause:** `LockScreen::render()` extended `layouts.app` which includes the full
+drawer/sidebar/top-bar/veil/modals — exposing nav structure while locked.
+
+**UI-SPEC verdict:** Section 1 explicitly states "Full-viewport, no sidebar, no top bar.
+Replaces the entire authenticated layout while locked."
+
+**Fix:** Created `resources/views/layouts/lock.blade.php` — a minimal bare layout with
+the same `<head>` (theme, PWA, Vite, Livewire) but plain `<body>` rendering only
+`@yield('content')`. No veil (redundant on the lock screen itself), no sidebar, no modals.
+`LockScreen::render()` now extends `layouts.lock`.
+
+### QA Fix Metrics
+
+| Gap | Severity | Files changed | Tests added | Commit |
+|-----|----------|---------------|-------------|--------|
+| A (idle enforcement) | BLOCKING | AppLockMiddleware, LockEngageController, web.php, lock.js | 4 | 6d5defe |
+| B (post-enable state) | MAJOR | AppLockProvisioner, AppLockSettingsSection | 3 + test file | 4885e19 |
+| C (keyboard input) | MINOR | lock-screen.blade.php | 0 | c36f102 |
+| D (layout chrome) | MINOR | lock.blade.php, LockScreen | 0 | 2699ad8 |
+
+**Quality gates post-fix:**
+- `vendor/bin/pest Modules/Auth/tests/Feature/AppLockQaGapsTest.php` — 7/7 PASS
+- `vendor/bin/pest Modules/Auth/tests/Feature/AppLockMiddlewareTest.php` — 6/6 PASS
+- `vendor/bin/pest Modules/Auth/tests/Feature/LockScreenTest.php` — 3/3 PASS
+- `vendor/bin/pest Modules/Auth/tests/Feature/AppLockSettingsSectionTest.php` — 6/6 PASS
+- `vendor/bin/pest Modules/Desktop/tests/` — 115/115 PASS
+- `vendor/bin/phpstan analyse` [changed files] — 0 errors at level 10
+- `vendor/bin/pint --test` [changed PHP files] — PASSED
+
+---
 *Phase: 05-pin-biometric-app-lock-seed-009*
 *Plan: 06*
-*Completed (Tasks 1-3): 2026-06-11*
-*Task 4: Awaiting human verification*
+*Tasks 1-3 completed: 2026-06-11*
+*QA gap fixes (Task 4 follow-up): 2026-06-12*
