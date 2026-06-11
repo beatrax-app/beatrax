@@ -279,8 +279,24 @@ final class WebAuthnBiometricService
         }
 
         // Pre-identify the credential so we can increment failure count on error.
+        // lock.js serialises rawId as base64url WITHOUT padding, while the store
+        // keeps credential_id in STANDARD base64 (base64_encode at enrollment).
+        // Normalise to the stored encoding before lookup — otherwise the catch
+        // path below never matches a row and the D-16 failure throttle silently
+        // never engages (CR-04). Standard base64 is accepted as a fallback so
+        // non-browser callers remain compatible.
         $rawIdValue = $assertion['rawId'] ?? null;
-        $credentialId = is_string($rawIdValue) ? $rawIdValue : base64_encode('');
+        $credentialId = '';
+        if (is_string($rawIdValue) && $rawIdValue !== '') {
+            foreach ([SODIUM_BASE64_VARIANT_URLSAFE_NO_PADDING, SODIUM_BASE64_VARIANT_ORIGINAL] as $variant) {
+                try {
+                    $credentialId = base64_encode(sodium_base642bin($rawIdValue, $variant, ''));
+                    break;
+                } catch (\SodiumException) {
+                    // Not this encoding — try the next variant.
+                }
+            }
+        }
 
         try {
             /** @var PublicKeyCredential $credential */
