@@ -595,18 +595,19 @@ final class ForecastPage extends Component
         // Wave 3 shortfall band overlay (RESEARCH Pattern 1). Render
         // the rose-50 region BELOW the buffer floor so the user sees
         // immediately where the projected balance dips below the floor.
-        $annotations = [];
+        // ApexCharts v5 requires the full annotations object shape: a bare []
+        // serializes to a JSON array, clobbers the library's annotation
+        // defaults, and crashes drawImageAnnos on annotations.images.
+        $annotations = ['yaxis' => [], 'xaxis' => [], 'points' => [], 'images' => []];
         if ($effectiveBufferMinor !== null) {
             $bufferValue = $effectiveBufferMinor / 100;
-            $annotations = [
-                'yaxis' => [
-                    [
-                        'y' => $yMin - 10,
-                        'y2' => $bufferValue,
-                        'fillColor' => '#FECDD3', // rose-50
-                        'opacity' => 0.4,
-                        'label' => ['text' => '', 'position' => 'left'],
-                    ],
+            $annotations['yaxis'] = [
+                [
+                    'y' => $yMin - 10,
+                    'y2' => $bufferValue,
+                    'fillColor' => '#FECDD3', // rose-50
+                    'opacity' => 0.4,
+                    'label' => ['text' => '', 'position' => 'left'],
                 ],
             ];
         }

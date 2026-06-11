@@ -38,8 +38,11 @@
         ],
         'stroke' => ['curve' => 'straight', 'width' => 2.5],
         'colors' => ['#0F172A'],
-        'annotations' => $aggregateBufferFloor > 0 ? [
-            'yaxis' => [
+        // ApexCharts v5 requires the full annotations object shape: a bare []
+        // serializes to a JSON array, clobbers the library's annotation
+        // defaults, and crashes drawImageAnnos on annotations.images.
+        'annotations' => [
+            'yaxis' => $aggregateBufferFloor > 0 ? [
                 [
                     'y' => $yMin - 1,
                     'y2' => $bufferValue,
@@ -47,8 +50,11 @@
                     'opacity' => 0.4,
                     'label' => ['text' => '', 'position' => 'left'],
                 ],
-            ],
-        ] : [],
+            ] : [],
+            'xaxis' => [],
+            'points' => [],
+            'images' => [],
+        ],
         'xaxis' => [
             'type' => 'datetime',
             'labels' => ['style' => ['fontSize' => '12px', 'colors' => '#64748B']],
