@@ -104,4 +104,164 @@ final class AppLockProvisioner
 
         return (bool) $row->lock_enabled;
     }
+
+    /**
+     * Re-wraps the data key under a new PIN using the password recovery wrap (D-11/D-21).
+     *
+     * The password-derived wrap (password_wrapped_key) is the authoritative recovery
+     * path: it survives a forgotten PIN because the account password is always available
+     * after re-authentication. After this call the PIN wrap and the PIN hash reflect
+     * the new PIN; the password wrap is unchanged (it still decrypts to the same key K).
+     *
+     * Returns false when:
+     *   - No config row exists for the user.
+     *   - $accountPassword is wrong (unwrap fails).
+     *   - The password_wrapped_key blob is corrupted.
+     *
+     * Every derived wrap key and the data key are zeroed with sodium_memzero after use.
+     */
+    public function rewrapForNewPin(int $userId, string $accountPassword, string $newPin): bool
+    {
+        $row = $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->first(['kdf_salt', 'password_wrapped_key']);
+
+        if ($row === null) {
+            return false;
+        }
+
+        if (! is_string($row->kdf_salt) || ! is_string($row->password_wrapped_key)) {
+            return false;
+        }
+
+        // Unwrap data key using the account-password wrap.
+        $pwWrapKey = $this->kdf->deriveWrapKey($accountPassword, $row->kdf_salt);
+        $dataKey = $this->keyWrap->unwrap($row->password_wrapped_key, $pwWrapKey);
+        sodium_memzero($pwWrapKey);
+
+        if ($dataKey === false) {
+            return false;
+        }
+
+        // Re-wrap under the new PIN.
+        $newPinWrapKey = $this->kdf->deriveWrapKey($newPin, $row->kdf_salt);
+        $newPinWrappedKey = $this->keyWrap->wrap($dataKey, $newPinWrapKey);
+        sodium_memzero($newPinWrapKey);
+        sodium_memzero($dataKey);
+
+        $newPinHash = $this->pinHasher->hash($newPin);
+
+        $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->update([
+                'pin_hash' => $newPinHash,
+                'pin_wrapped_key' => $newPinWrappedKey,
+                'failed_attempts' => 0,
+                'locked_until' => null,
+            ]);
+
+        return true;
+    }
+
+    /**
+     * Changes the PIN after verifying the current PIN (D-23 security downgrade confirmation).
+     *
+     * Reads the data key from the current PIN wrap, then writes a new pin_hash and
+     * pin_wrapped_key under $newPin. The password_wrapped_key is not touched — the
+     * recovery wrap remains valid.
+     *
+     * Returns false when $currentPin is wrong or the blob is corrupted; the stored
+     * wraps are unchanged in that case.
+     */
+    public function changePin(int $userId, string $currentPin, string $newPin): bool
+    {
+        $row = $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->first(['kdf_salt', 'pin_hash', 'pin_wrapped_key']);
+
+        if ($row === null) {
+            return false;
+        }
+
+        if (! is_string($row->pin_hash) || ! $this->pinHasher->verify($currentPin, $row->pin_hash)) {
+            return false;
+        }
+
+        if (! is_string($row->kdf_salt) || ! is_string($row->pin_wrapped_key)) {
+            return false;
+        }
+
+        // Unwrap data key using the current PIN.
+        $curWrapKey = $this->kdf->deriveWrapKey($currentPin, $row->kdf_salt);
+        $dataKey = $this->keyWrap->unwrap($row->pin_wrapped_key, $curWrapKey);
+        sodium_memzero($curWrapKey);
+
+        if ($dataKey === false) {
+            return false;
+        }
+
+        // Re-wrap under the new PIN.
+        $newPinWrapKey = $this->kdf->deriveWrapKey($newPin, $row->kdf_salt);
+        $newPinWrappedKey = $this->keyWrap->wrap($dataKey, $newPinWrapKey);
+        sodium_memzero($newPinWrapKey);
+        sodium_memzero($dataKey);
+
+        $newPinHash = $this->pinHasher->hash($newPin);
+
+        $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->update([
+                'pin_hash' => $newPinHash,
+                'pin_wrapped_key' => $newPinWrappedKey,
+            ]);
+
+        return true;
+    }
+
+    /**
+     * Disables the app lock after verifying the current PIN (D-23 security downgrade confirmation).
+     *
+     * Clears all lock-related fields (pin_hash, kdf_salt, pin_wrapped_key,
+     * password_wrapped_key, failed_attempts, locked_until) and sets lock_enabled=false.
+     *
+     * Returns false when $pin is wrong — the lock stays enabled in that case.
+     *
+     * Note: biometric credentials (user_biometric_credentials rows) are cleared by
+     * plan 05-05's disable path; this method only clears PIN material from
+     * user_app_lock_configs.
+     */
+    public function disable(int $userId, string $pin): bool
+    {
+        $row = $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->first(['pin_hash']);
+
+        if ($row === null) {
+            return false;
+        }
+
+        if (! is_string($row->pin_hash) || ! $this->pinHasher->verify($pin, $row->pin_hash)) {
+            return false;
+        }
+
+        $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->update([
+                'lock_enabled' => false,
+                'pin_hash' => null,
+                'kdf_salt' => null,
+                'pin_wrapped_key' => null,
+                'password_wrapped_key' => null,
+                'failed_attempts' => 0,
+                'locked_until' => null,
+            ]);
+
+        return true;
+    }
 }
