@@ -29,13 +29,14 @@ beforeEach(function (): void {
     $this->account = $account;
     $this->run = $this->makeImportRun($this->fixtureUser);
 
-    // Seed 130 transactions with distinct posted_at values.
-    // The query orders DESC by (posted_at, id), so we produce a predictable
-    // cursor sequence: row seeded last (highest index) has the most recent
-    // date and appears first in the result set. We seed with ascending dates
-    // so row 130 has posted_at 2026-06-01 + 129 days = most recent.
+    // Seed 130 transactions with distinct posted_at values within the 90-day
+    // window. CarbonImmutable is set to 2026-06-15; the recent() query filters
+    // to posted_at >= 2026-03-17. We seed starting from 2026-04-01 (well inside
+    // the window) so all 130 rows are visible on the default recent view.
+    // Dates ascend so row 130 has the most recent date and appears first when
+    // the query orders DESC by (posted_at, id).
     for ($i = 0; $i < 130; $i++) {
-        $date = CarbonImmutable::parse('2025-01-01')->addDays($i)->toDateString();
+        $date = CarbonImmutable::parse('2026-04-01')->addDays($i)->toDateString();
         $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
             'amount_minor' => -100,
             'posted_at' => $date,
@@ -56,48 +57,36 @@ it('accumulates rows across sequential loadMore calls', function (): void {
     $accumulated = $component->get('accumulatedRows');
     expect($accumulated)->toBeArray()->toHaveCount(50);
 
-    // Read the first-page cursor from the component's $page (via the
-    // rendered view data). We need nextCursorId / nextCursorPostedAt to
-    // advance the cursor precisely.
-    /** @var \Modules\Ledger\Public\Dto\TransactionListPage $page1 */
-    $page1 = $component->get('page');
-    expect($page1->hasMore)->toBeTrue();
-    expect($page1->nextCursorId)->not->toBeNull();
+    // The component exposes hasMore, nextCursorId, nextCursorPostedAt as
+    // public properties so the sentinel and test harness can read them.
+    expect($component->get('hasMore'))->toBeTrue();
+    expect($component->get('nextCursorId'))->not->toBeNull();
 
     // loadMore with page 1's cursor → appends page 2 (50 more rows).
-    $component->call('loadMore', $page1->nextCursorId, $page1->nextCursorPostedAt);
+    $component->call('loadMore', $component->get('nextCursorId'), $component->get('nextCursorPostedAt'));
 
     $accumulated = $component->get('accumulatedRows');
     expect($accumulated)->toHaveCount(100);
 
-    // Read the page-2 cursor.
-    /** @var \Modules\Ledger\Public\Dto\TransactionListPage $page2 */
-    $page2 = $component->get('page');
-    expect($page2->hasMore)->toBeTrue();
-    expect($page2->nextCursorId)->not->toBeNull();
+    // Page 2 cursor.
+    expect($component->get('hasMore'))->toBeTrue();
+    expect($component->get('nextCursorId'))->not->toBeNull();
 
     // loadMore with page 2's cursor → appends the final partial page (30 rows).
-    $component->call('loadMore', $page2->nextCursorId, $page2->nextCursorPostedAt);
+    $component->call('loadMore', $component->get('nextCursorId'), $component->get('nextCursorPostedAt'));
 
     $accumulated = $component->get('accumulatedRows');
     expect($accumulated)->toHaveCount(130);
 
-    /** @var \Modules\Ledger\Public\Dto\TransactionListPage $page3 */
-    $page3 = $component->get('page');
-    expect($page3->hasMore)->toBeFalse();
+    expect($component->get('hasMore'))->toBeFalse();
 })->group('phase-4');
 
 it('has no duplicate ids in the accumulated set after all pages loaded', function (): void {
     $component = Livewire::test(TransactionsList::class)
         ->set('currency', 'original');
 
-    /** @var \Modules\Ledger\Public\Dto\TransactionListPage $page1 */
-    $page1 = $component->get('page');
-    $component->call('loadMore', $page1->nextCursorId, $page1->nextCursorPostedAt);
-
-    /** @var \Modules\Ledger\Public\Dto\TransactionListPage $page2 */
-    $page2 = $component->get('page');
-    $component->call('loadMore', $page2->nextCursorId, $page2->nextCursorPostedAt);
+    $component->call('loadMore', $component->get('nextCursorId'), $component->get('nextCursorPostedAt'));
+    $component->call('loadMore', $component->get('nextCursorId'), $component->get('nextCursorPostedAt'));
 
     /** @var array<array{id: int}> $accumulated */
     $accumulated = $component->get('accumulatedRows');
@@ -110,9 +99,7 @@ it('resets accumulatedRows to a single page after toggleFullHistory', function (
     $component = Livewire::test(TransactionsList::class)
         ->set('currency', 'original');
 
-    /** @var \Modules\Ledger\Public\Dto\TransactionListPage $page1 */
-    $page1 = $component->get('page');
-    $component->call('loadMore', $page1->nextCursorId, $page1->nextCursorPostedAt);
+    $component->call('loadMore', $component->get('nextCursorId'), $component->get('nextCursorPostedAt'));
 
     // Confirm we have 100 before the reset.
     expect($component->get('accumulatedRows'))->toHaveCount(100);
