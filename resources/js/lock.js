@@ -17,8 +17,8 @@
  * Design decisions:
  *   D-05: BroadcastChannel('beatrax:lock') syncs veil state across tabs.
  *   D-07: Veil drops on visibilitychange:hidden + window blur.
- *   D-17: Client idle timer dispatches 'idle-timeout-elapsed' to the Livewire
- *         component, which asks the server to lock and redirects.
+ *   D-17: The client idle timer POSTs to /lock/engage (_serverLock) so the
+ *         server session is locked authoritatively on any app page.
  *   D-18: GRACE_MS = 30 000ms. Return within the grace window lifts the veil
  *         without a server round-trip. After grace elapses the next Livewire
  *         request will hit AppLockMiddleware which redirects to /lock.
@@ -228,9 +228,9 @@ document.addEventListener('alpine:init', () => {
                 if (elapsed >= idleMs) {
                     // Idle threshold elapsed — lock the server session via the
                     // engage endpoint (Gap A fix, D-17 server-authoritative).
-                    // Using _serverLock() instead of a Livewire dispatch so the
-                    // lock fires on all app pages, not just /lock (where
-                    // LockScreen is the only listener of idle-timeout-elapsed).
+                    // _serverLock() fires on every app page; there is no
+                    // Livewire event path (the old 'idle-timeout-elapsed'
+                    // dispatch was removed — IN-04).
                     this._serverLock();
                     this.showVeil();
                     this._broadcast('locked');

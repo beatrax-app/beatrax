@@ -10,7 +10,6 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
-use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\LockStateManager;
@@ -147,27 +146,6 @@ final class LockScreen extends Component
         }
 
         $this->redirect($intendedUrl, navigate: false);
-    }
-
-    // -------------------------------------------------------------------------
-    // Idle timeout signal (from Alpine beatraxLock store — D-17)
-    // -------------------------------------------------------------------------
-
-    /**
-     * Dispatched by lock.js when the idle window expires.
-     *
-     * Locks the session server-side and redirects to the lock screen. This
-     * keeps the server authoritative (D-17); the client timer is a
-     * convenience trigger only.
-     */
-    #[On('idle-timeout-elapsed')]
-    public function idleLock(
-        LockStateManager $lockState,
-        Session $session,
-        UrlGenerator $urls,
-    ): void {
-        $lockState->lock($session);
-        $this->redirect($urls->route('auth.lock'), navigate: false);
     }
 
     // -------------------------------------------------------------------------
