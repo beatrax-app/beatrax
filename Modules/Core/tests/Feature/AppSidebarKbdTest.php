@@ -45,3 +45,10 @@ it('the authenticated sidebar contains the Ctrl+K label for non-Mac platforms', 
     $html = (string) $response->getContent();
     expect($html)->toContain('Ctrl');
 });
+
+it('the authenticated sidebar does not contain a hardcoded ⌘. dev-console glyph', function (): void {
+    $response = $this->actingAs($this->user)->get('/help/data-locations');
+    $response->assertOk();
+    $html = (string) $response->getContent();
+    expect($html)->not->toContain('⌘.');
+});
