@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Livewire\Component;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
+use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
@@ -130,6 +131,13 @@ it('does not allow production Livewire components to expose registry columns via
             // OAuthSecretsRepository hands plaintext to the file
             // sink only after submit() validates.
             'clientSecret',
+        ],
+        AppLockSettingsSection::class => [
+            // `$accountPassword` is the account password the user
+            // re-types to confirm a security downgrade (disabling the
+            // app lock / forgot-PIN re-wrap, D-23). The wire snapshot
+            // carries the user's own form input, not stored data.
+            'accountPassword',
         ],
     ];
 
