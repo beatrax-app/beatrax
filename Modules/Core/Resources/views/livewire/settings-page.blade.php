@@ -263,6 +263,13 @@
         </section>
     </div>
 
+    {{-- ===== App lock (PIN-based session lock, plan 05-04) ===== --}}
+    <div class="{{ $card }}">
+        <section id="app-lock">
+            @livewire('auth.app-lock-settings-section')
+        </section>
+    </div>
+
     {{-- ===== Importing (auto-import + aliases) ===== --}}
     <div class="{{ $card }} space-y-8">
         <section class="space-y-2">
