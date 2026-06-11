@@ -250,15 +250,21 @@
             </div>
             {{--
                 Idle-timeout injection (plan 05-03, D-17, T-05-13).
-                Emits window.beatraxIdleMs (milliseconds) only when the lock
-                feature is enabled for the current user. lock.js reads this value
-                to calibrate the idle watcher; when the variable is absent,
-                lock.js no-ops the idle tracker (lock disabled for this session).
-                Default: 300 000 ms (5 min). 05-04 will expose this as a
-                per-user setting.
+                Emits window.beatraxIdleMs (milliseconds) ONLY when the app lock
+                is enabled for the current user, using their configured
+                idle_timeout_minutes preset (1/5/15/30 — plan 05-04). lock.js
+                reads this value to calibrate the idle watcher; when the
+                variable is absent, lock.js no-ops the idle tracker and never
+                shows the veil — users without a lock must not be idle-locked
+                behind a veil they cannot dismiss. Resolved through the Auth
+                Public AppLockClientConfig service (module-boundary rule: the
+                layout never queries user_app_lock_configs directly).
             --}}
-            @if ($currentUser->isAuthenticated())
-                <script>window.beatraxIdleMs = 300000;</script>
+            @php($beatraxIdleMs = $currentUser->isAuthenticated()
+                ? $container->make(\Modules\Auth\Public\Services\AppLockClientConfig::class)->idleTimeoutMs($currentUser->user()->id)
+                : null)
+            @if ($beatraxIdleMs !== null)
+                <script>window.beatraxIdleMs = {{ $beatraxIdleMs }};</script>
             @endif
         @endauth
         @guest
