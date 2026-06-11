@@ -1,7 +1,7 @@
 {{-- SW view: emits JavaScript, not HTML. Route sets Content-Type: application/javascript.
      Blade is used only to inject the app version string via config() at request time.
      Pitfall 4: Vite::asset() injects the hashed URLs so precache survives every build. --}}
-const CACHE_NAME = 'beatrax-shell-v{{ config('nativephp.version') }}';
+const CACHE_NAME = 'beatrax-shell-v' + {{ Js::from(config('nativephp.version')) }};
 const STATIC_ASSETS = [
     '{{ Vite::asset('resources/css/app.css') }}',
     '{{ Vite::asset('resources/js/app.js') }}',
