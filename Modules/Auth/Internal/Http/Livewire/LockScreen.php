@@ -205,8 +205,7 @@ final class LockScreen extends Component
             return null;
         }
 
-        $hardCap = 10; // mirrors PinVerificationService::HARD_CAP
-        $remaining = $hardCap - (int) $failed;
+        $remaining = PinVerificationService::HARD_CAP - (int) $failed;
 
         return max(0, $remaining);
     }
