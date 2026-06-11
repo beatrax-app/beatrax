@@ -18,6 +18,7 @@ use Modules\Desktop\Internal\Listeners\ApplyCloseWindowChoice;
 use Modules\Desktop\Internal\Listeners\ContinuePendingFileIntentAfterLogin;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Listeners\HandleNativeOpenFile;
+use Modules\Desktop\Internal\Listeners\LockOnWindowHideOrClose;
 use Modules\Desktop\Internal\Listeners\NavigateOnNotificationDeepLink;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
@@ -34,7 +35,9 @@ use Modules\Import\Public\Events\TransactionImported;
 use Native\Desktop\Events\App\OpenFile;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
 use Native\Desktop\Events\Windows\WindowBlurred;
+use Native\Desktop\Events\Windows\WindowClosed;
 use Native\Desktop\Events\Windows\WindowFocused;
+use Native\Desktop\Events\Windows\WindowHidden;
 
 /**
  * Wires the Desktop module.
@@ -301,6 +304,14 @@ final class DesktopServiceProvider extends ServiceProvider
         // absent and FileOpenIntake is invoked directly by feature
         // tests instead.
         $events->listen(OpenFile::class, [HandleNativeOpenFile::class, 'handle']);
+
+        // D-06 desktop immediate-lock: hide or close the window → withhold the data key
+        // with no grace period (T-05-24 — OS app-switcher snapshot must not show data).
+        // Both WindowHidden and WindowClosed route to the same handle() method.
+        // The listener itself does not call any NativePHP facade, so it needs no
+        // phpstan.neon allowlist entry — only the event import here does.
+        $events->listen(WindowHidden::class, [LockOnWindowHideOrClose::class, 'handle']);
+        $events->listen(WindowClosed::class, [LockOnWindowHideOrClose::class, 'handle']);
 
         // D-14 notification-click deep-link. The listener calls
         // Window::current()->url(...) — only meaningful inside the
