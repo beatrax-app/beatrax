@@ -173,6 +173,54 @@ it('verifyAndRelease returns false when the credential is disarmed (D-16)', func
     expect($result)->toBeFalse();
 });
 
+it('verifyAndRelease increments biometric_failed_count when validation throws on a base64url rawId (CR-04)', function (): void {
+    $user = User::query()->create([
+        'username' => 'wa-frank',
+        'password' => 'whatever-password',
+        'period_start_day' => 1,
+    ]);
+
+    /** @var BiometricDeviceStore $store */
+    $store = $this->app->make(BiometricDeviceStore::class);
+
+    /** @var WebAuthnBiometricService $service */
+    $service = $this->app->make(WebAuthnBiometricService::class);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    // Enrollment stores credential_id in STANDARD base64.
+    $rawCredentialBytes = random_bytes(16);
+    $credentialId = base64_encode($rawCredentialBytes);
+    $store->store($user->id, $credentialId, 'Frank Device', str_repeat("\xDD", 32), 'fake-cbor', 'webauthn');
+
+    $session->put(WebAuthnBiometricService::REQUEST_CHALLENGE_SESSION, base64_encode(random_bytes(32)));
+
+    // The browser (lock.js) sends rawId base64url-encoded WITHOUT padding.
+    $rawIdBase64url = sodium_bin2base64($rawCredentialBytes, SODIUM_BASE64_VARIANT_URLSAFE_NO_PADDING);
+
+    // Structurally-plausible assertion with garbage payload — validation throws.
+    $result = $service->verifyAndRelease($user->id, [
+        'id' => $rawIdBase64url,
+        'rawId' => $rawIdBase64url,
+        'type' => 'public-key',
+        'response' => [
+            'authenticatorData' => 'Z2FyYmFnZQ',
+            'clientDataJSON' => 'Z2FyYmFnZQ',
+            'signature' => 'Z2FyYmFnZQ',
+            'userHandle' => null,
+        ],
+    ], $session);
+
+    expect($result)->toBeFalse();
+
+    // D-16: the failure throttle must engage despite the encoding mismatch.
+    $cred = $store->findByCredentialId($user->id, $credentialId);
+    expect($cred)->not->toBeNull();
+    /** @var stdClass $cred */
+    expect((int) $cred->biometric_failed_count)->toBe(1);
+});
+
 it('LockStateManager unlock then AppLockKeyService release returns the data key', function (): void {
     /** @var LockStateManager $lockState */
     $lockState = $this->app->make(LockStateManager::class);
