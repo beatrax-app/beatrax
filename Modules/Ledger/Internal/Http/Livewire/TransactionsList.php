@@ -60,6 +60,7 @@ final class TransactionsList extends Component
      * the payload limit and corrupting the component state.
      */
     private const MAX_ACCUMULATED_ROWS = 500;
+
     public bool $fullHistory = false;
 
     public ?int $cursorId = null;
@@ -219,9 +220,7 @@ final class TransactionsList extends Component
         // the cursor guard to only the tail guard key so previously-trimmed
         // pages are never re-appended.
         if (count($this->accumulatedRows) > self::MAX_ACCUMULATED_ROWS) {
-            $this->accumulatedRows = array_values(
-                array_slice($this->accumulatedRows, -self::MAX_ACCUMULATED_ROWS)
-            );
+            $this->accumulatedRows = array_slice($this->accumulatedRows, -self::MAX_ACCUMULATED_ROWS);
             // Reset guard to current guard key only; trimmed-out guards are
             // no longer valid (the rows they protected have been discarded).
             $this->appendedCursorIds = [$guardKey => true];

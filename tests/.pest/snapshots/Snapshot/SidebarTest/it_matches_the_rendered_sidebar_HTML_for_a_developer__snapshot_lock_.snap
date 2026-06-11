@@ -15,7 +15,7 @@
             disabled
         />
         
-                <span
+        <span
             class="kbd hidden-touch"
             aria-hidden="true"
             x-text="$store.platform.isMac ? '\u2318K' : 'Ctrl+K'"
@@ -116,7 +116,12 @@
                 <a href="/dev" class="side-item">
                     <span class="ic" aria-hidden="true">›_</span>
                     Open Dev Console
-                    <span class="kbd" aria-hidden="true">⌘.</span>
+                    
+                    <span
+                        class="kbd"
+                        aria-hidden="true"
+                        x-text="$store.platform.isMac ? '\u2318.' : 'Ctrl+.'"
+                    >Ctrl+.</span>
                 </a>
                 
                 <div class="dev-pulse" wire:poll.5s>
