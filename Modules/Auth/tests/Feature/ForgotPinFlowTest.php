@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Livewire\Livewire;
+use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Lock\AppLockKdf;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Core\Models\User;
 
 /*
@@ -106,7 +109,7 @@ it('settings Forgot PIN flow resets the PIN via the account password (WR-02)', f
     $provisioner->enable($user->id, '1234', 'forgot-ui-pass');
 
     // Wrong account password: rejected, PIN unchanged.
-    \Livewire\Livewire::test(\Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection::class)
+    Livewire::test(AppLockSettingsSection::class)
         ->call('confirmForgotPin')
         ->assertSet('confirmingForgotPin', true)
         ->set('accountPassword', 'wrong-password')
@@ -118,7 +121,7 @@ it('settings Forgot PIN flow resets the PIN via the account password (WR-02)', f
     expect($provisioner->verifyPin($user->id, '1234'))->toBeTrue();
 
     // Correct account password: PIN re-wrapped to the new value.
-    \Livewire\Livewire::test(\Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection::class)
+    Livewire::test(AppLockSettingsSection::class)
         ->call('confirmForgotPin')
         ->set('accountPassword', 'forgot-ui-pass')
         ->set('newPin', '5678')
@@ -248,8 +251,8 @@ it('disable() and re-enable() both delete stale biometric credentials (WR-06)', 
 
     /** @var AppLockProvisioner $provisioner */
     $provisioner = $this->app->make(AppLockProvisioner::class);
-    /** @var \Modules\Auth\Internal\Lock\BiometricDeviceStore $store */
-    $store = $this->app->make(\Modules\Auth\Internal\Lock\BiometricDeviceStore::class);
+    /** @var BiometricDeviceStore $store */
+    $store = $this->app->make(BiometricDeviceStore::class);
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
