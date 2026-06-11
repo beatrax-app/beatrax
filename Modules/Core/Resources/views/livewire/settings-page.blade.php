@@ -9,16 +9,10 @@
 {{--
     Phone responsive pass (UI-SPEC §19, D-22).
     At <768px: max-width constraint is removed; .settings-grid collapses to a
-    single column via the scoped style below. Desktop multi-column unchanged.
+    single column. Desktop multi-column unchanged.
+    The .settings-grid responsive CSS rule lives in resources/css/app.css
+    (Phase 4 per-page responsive section).
 --}}
-<style>
-    @media (max-width: 767px) {
-        .settings-grid {
-            display: flex !important;
-            flex-direction: column !important;
-        }
-    }
-</style>
 
 <div class="max-w-2xl mx-auto space-y-6" data-testid="settings-page">
     <header class="space-y-1">
