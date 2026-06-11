@@ -25,22 +25,15 @@ it('BiometricDeviceStore class exists (RED until 05-05)', function (): void {
     expect(class_exists(BiometricDeviceStore::class))->toBeTrue();
 });
 
-it('incrementFailureCount increments biometric_failed_count on the credential row', function (): void {
-    expect(class_exists(BiometricDeviceStore::class))->toBeTrue();
-
-    /** @var BiometricDeviceStore $store */
-    $store = app(BiometricDeviceStore::class);
-
-    expect(method_exists($store, 'incrementFailureCount'))->toBeTrue();
+it('exposes incrementFailureCount on the Wave 0 contract (DB behavior covered in BiometricEnrollmentTest)', function (): void {
+    // IN-10: this Unit suite has no DB; the behavioral increment/reset
+    // assertions live in BiometricEnrollmentTest (Feature, RefreshDatabase).
+    // This test only pins the Wave 0 method contract — titled accordingly.
+    expect(method_exists(BiometricDeviceStore::class, 'incrementFailureCount'))->toBeTrue();
 });
 
-it('resetFailureCount sets biometric_failed_count to 0', function (): void {
-    expect(class_exists(BiometricDeviceStore::class))->toBeTrue();
-
-    /** @var BiometricDeviceStore $store */
-    $store = app(BiometricDeviceStore::class);
-
-    expect(method_exists($store, 'resetFailureCount'))->toBeTrue();
+it('exposes resetFailureCount on the Wave 0 contract (DB behavior covered in BiometricEnrollmentTest)', function (): void {
+    expect(method_exists(BiometricDeviceStore::class, 'resetFailureCount'))->toBeTrue();
 });
 
 it('isArmed() returns true when failure count is below the threshold', function (): void {
