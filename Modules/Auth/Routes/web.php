@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Internal\Http\Controllers\LockEngageController;
 use Modules\Auth\Internal\Http\Controllers\WebAuthnBiometricController;
@@ -43,6 +44,14 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
     // header — when the grace timer expires or the idle threshold is met on an
     // app page. Returns 204 No Content.
     Route::post('/lock/engage', LockEngageController::class)->name('auth.lock.engage');
+
+    // Activity heartbeat (WR-04). lock.js POSTs here (throttled, max once per
+    // minute) when the user genuinely interacts. The endpoint body is a no-op:
+    // simply passing through AppLockMiddleware refreshes last_activity_at,
+    // because this is a plain (non-Livewire) request. Livewire update traffic
+    // — including wire:poll — deliberately does NOT count as activity.
+    Route::post('/lock/activity', static fn (): Response => new Response('', 204))
+        ->name('auth.lock.activity');
 
     // Biometric challenge + verify endpoints (plan 05-05 WebAuthn).
     Route::post('/lock/biometric/challenge', [WebAuthnBiometricController::class, 'challenge'])

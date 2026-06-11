@@ -31,6 +31,11 @@ const GRACE_MS = 30000; // D-18: 30 s grace window
 
 const IDLE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'scroll', 'wheel'];
 
+// Minimum interval between activity-heartbeat POSTs (WR-04). The server no
+// longer counts Livewire update traffic (wire:poll etc.) as user activity, so
+// genuine interaction on Livewire-heavy pages must be reported explicitly.
+const HEARTBEAT_MS = 60000;
+
 document.addEventListener('alpine:init', () => {
     if (!window.Alpine) {
         return;
@@ -164,9 +169,44 @@ document.addEventListener('alpine:init', () => {
         // Idle tracking — D-17
         // -----------------------------------------------------------------------
 
+        /** Timestamp of the last activity-heartbeat POST (ms since epoch). */
+        _lastHeartbeat: 0,
+
         /** Record that the user just interacted. */
         _resetActivity() {
             this._lastActivity = Date.now();
+            this._maybeHeartbeat();
+        },
+
+        /**
+         * POST a throttled activity heartbeat to the server (WR-04).
+         *
+         * AppLockMiddleware refreshes last_activity_at on plain (non-Livewire)
+         * requests only — wire:poll machine traffic no longer counts as
+         * activity. This heartbeat is how genuine interaction keeps the
+         * server-side idle timer (D-17) honest on Livewire-heavy pages.
+         * Throttled to once per HEARTBEAT_MS; only runs when the idle watcher
+         * is armed (activity listeners are registered in _startIdleWatch).
+         */
+        _maybeHeartbeat() {
+            const now = Date.now();
+            if (now - this._lastHeartbeat < HEARTBEAT_MS) {
+                return;
+            }
+            this._lastHeartbeat = now;
+
+            fetch('/lock/activity', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': _getCsrfToken(),
+                },
+                body: JSON.stringify({}),
+            }).catch(() => {
+                // Swallow — a missed heartbeat only means the server idle
+                // timer is slightly more aggressive than the client's.
+            });
         },
 
         /** Start the idle-check interval. No-ops when beatraxIdleMs is absent. */
