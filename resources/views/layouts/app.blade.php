@@ -243,7 +243,9 @@
             <script>
                 if ('serviceWorker' in navigator) {
                     window.addEventListener('load', function () {
-                        navigator.serviceWorker.register('/sw.js', { scope: '/' });
+                        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {
+                            // SW registration failed — app continues to work without offline support.
+                        });
                     });
                 }
             </script>
