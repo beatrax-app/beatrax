@@ -34,6 +34,7 @@ use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PinHasher;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
+use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
@@ -90,6 +91,7 @@ final class AuthServiceProvider extends ServiceProvider
         // Biometric singletons (05-05).
         $this->app->singleton(BiometricDeviceStore::class);
         $this->app->singleton(PlatformDetector::class);
+        $this->app->singleton(WebAuthnBiometricService::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire, Router $router): void
