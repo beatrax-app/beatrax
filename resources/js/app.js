@@ -1,5 +1,6 @@
 import ApexCharts from 'apexcharts';
 import { palette } from './palette.js';
+import './lock.js';
 
 // Stamp ApexCharts on the global so Alpine `x-init` handlers in
 // chart-rendering Blade components can call `new window.ApexCharts(...)`
