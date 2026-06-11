@@ -218,6 +218,223 @@ document.addEventListener('alpine:init', () => {
 
             // Start the idle tracker (no-ops when lock is disabled).
             this._startIdleWatch();
+
+            // ---------------------------------------------------------------
+            // WebAuthn unlock — beatrax:webauthn-get (D-15, T-05-23)
+            //
+            // Fired by LockScreen.biometricPrompt() on button tap only.
+            // Never auto-fires on render (D-15).
+            // Guard: no-op when the browser does not support WebAuthn.
+            // ---------------------------------------------------------------
+            document.addEventListener('beatrax:webauthn-get', async () => {
+                if (!window.PublicKeyCredential) {
+                    return;
+                }
+
+                try {
+                    // Fetch challenge options from the server.
+                    const challengeRes = await fetch('/lock/biometric/challenge', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-XSRF-TOKEN': _getCsrfToken(),
+                        },
+                        body: JSON.stringify({}),
+                    });
+
+                    if (!challengeRes.ok) {
+                        return;
+                    }
+
+                    const options = await challengeRes.json();
+
+                    // Deserialise base64url fields expected by the browser API.
+                    options.challenge = _decodeBase64url(options.challenge);
+                    if (Array.isArray(options.allowCredentials)) {
+                        options.allowCredentials = options.allowCredentials.map((c) => ({
+                            ...c,
+                            id: _decodeBase64url(c.id),
+                        }));
+                    }
+
+                    // Invoke the OS biometric prompt.
+                    const credential = await navigator.credentials.get({ publicKey: options });
+                    if (!credential) {
+                        return;
+                    }
+
+                    // Serialise the assertion for the server.
+                    const assertion = _serializeAssertion(credential);
+
+                    // POST assertion to verify endpoint.
+                    const verifyRes = await fetch('/lock/biometric/verify', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-XSRF-TOKEN': _getCsrfToken(),
+                        },
+                        body: JSON.stringify(assertion),
+                    });
+
+                    if (!verifyRes.ok) {
+                        return;
+                    }
+
+                    const result = await verifyRes.json();
+
+                    if (result.unlocked) {
+                        // Broadcast unlocked state to all tabs and navigate.
+                        this._broadcast('unlocked');
+                        window.location.href = result.redirect;
+                    }
+                } catch (e) {
+                    // Biometric cancelled or failed — no-op; user can retry or use PIN.
+                }
+            });
+
+            // ---------------------------------------------------------------
+            // WebAuthn enrollment — beatrax:webauthn-create (D-13)
+            //
+            // Fired by AppLockSettingsSection.startEnroll() on Enroll button tap.
+            // Guard: no-op when the browser does not support WebAuthn.
+            // ---------------------------------------------------------------
+            document.addEventListener('beatrax:webauthn-create', async () => {
+                if (!window.PublicKeyCredential) {
+                    return;
+                }
+
+                try {
+                    // Fetch creation options from the server.
+                    const challengeRes = await fetch('/lock/biometric/challenge?enroll=1', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-XSRF-TOKEN': _getCsrfToken(),
+                        },
+                        body: JSON.stringify({}),
+                    });
+
+                    if (!challengeRes.ok) {
+                        return;
+                    }
+
+                    const options = await challengeRes.json();
+
+                    // Deserialise base64url fields.
+                    options.challenge = _decodeBase64url(options.challenge);
+                    if (options.user && options.user.id) {
+                        options.user.id = _decodeBase64url(options.user.id);
+                    }
+                    if (Array.isArray(options.excludeCredentials)) {
+                        options.excludeCredentials = options.excludeCredentials.map((c) => ({
+                            ...c,
+                            id: _decodeBase64url(c.id),
+                        }));
+                    }
+
+                    // Invoke the OS biometric enrollment prompt.
+                    const credential = await navigator.credentials.create({ publicKey: options });
+                    if (!credential) {
+                        return;
+                    }
+
+                    // Serialise the attestation.
+                    const attestation = _serializeAttestation(credential);
+
+                    // POST attestation to enroll endpoint.
+                    const enrollRes = await fetch('/lock/biometric/enroll', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-XSRF-TOKEN': _getCsrfToken(),
+                        },
+                        body: JSON.stringify(attestation),
+                    });
+
+                    if (enrollRes.ok) {
+                        const result = await enrollRes.json();
+                        if (result.enrolled && window.Livewire) {
+                            window.Livewire.dispatch('biometric-enrolled');
+                        }
+                    }
+                } catch (e) {
+                    // Enrollment cancelled or failed — no-op.
+                }
+            });
         },
     });
 });
+
+// ---------------------------------------------------------------------------
+// WebAuthn serialisation helpers
+// ---------------------------------------------------------------------------
+
+/** Read the CSRF token from the XSRF-TOKEN cookie (set by Laravel). */
+function _getCsrfToken() {
+    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+/**
+ * Decode a base64url string to an ArrayBuffer.
+ * The WebAuthn browser API expects ArrayBuffers for binary fields.
+ */
+function _decodeBase64url(base64url) {
+    if (!base64url) return new Uint8Array(0).buffer;
+    // Normalise base64url → base64.
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    const binaryStr = atob(base64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+/**
+ * Encode an ArrayBuffer to a base64url string for sending to the server.
+ * The server's PHP base64_decode() accepts standard base64; we send base64url.
+ */
+function _encodeBase64url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+/**
+ * Serialise a PublicKeyCredential (assertion) for the server.
+ * The server expects base64-encoded fields (not base64url).
+ */
+function _serializeAssertion(credential) {
+    const response = credential.response;
+    return {
+        id: credential.id,
+        rawId: _encodeBase64url(credential.rawId),
+        type: credential.type,
+        response: {
+            authenticatorData: _encodeBase64url(response.authenticatorData),
+            clientDataJSON: _encodeBase64url(response.clientDataJSON),
+            signature: _encodeBase64url(response.signature),
+            userHandle: response.userHandle ? _encodeBase64url(response.userHandle) : null,
+        },
+    };
+}
+
+/**
+ * Serialise a PublicKeyCredential (attestation) for the server.
+ */
+function _serializeAttestation(credential) {
+    const response = credential.response;
+    return {
+        id: credential.id,
+        rawId: _encodeBase64url(credential.rawId),
+        type: credential.type,
+        response: {
+            attestationObject: _encodeBase64url(response.attestationObject),
+            clientDataJSON: _encodeBase64url(response.clientDataJSON),
+        },
+    };
+}
