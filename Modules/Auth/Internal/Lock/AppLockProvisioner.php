@@ -238,6 +238,59 @@ final class AppLockProvisioner
     }
 
     /**
+     * Establish a coherent app-lock session state right after credential login (WR-03).
+     *
+     * The LOCK-04 contract forbids the incoherent "unlocked UI, no data key"
+     * state: before this hook, a fresh password login produced exactly that
+     * (isLocked() defaulted to false with DATA_KEY_SESSION absent), so
+     * AppLockKeyService::release() returned null on a nominally-unlocked
+     * session with no surface prompting the PIN to restore the key.
+     *
+     * At login time the plaintext account password is available, so the data
+     * key is recovered through the D-21 password recovery wrap and the session
+     * is unlocked WITH the key — password re-auth is a strictly stronger gate
+     * than the PIN, so skipping the PIN screen here is sound (banking-app
+     * model, D-02). If the password wrap cannot be unwrapped (e.g. stale wrap
+     * after an account-password change), the session starts LOCKED instead and
+     * the PIN/biometric restores the key via the lock screen — never the
+     * incoherent unlocked/key-less state.
+     *
+     * No-op when the lock is not enabled for the user.
+     */
+    public function primeSessionAfterLogin(int $userId, string $accountPassword, Session $session): void
+    {
+        $row = $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->first(['lock_enabled', 'kdf_salt', 'password_wrapped_key']);
+
+        if ($row === null || ! (bool) $row->lock_enabled) {
+            return;
+        }
+
+        if (! is_string($row->kdf_salt) || ! is_string($row->password_wrapped_key)) {
+            $this->lockState->lock($session);
+
+            return;
+        }
+
+        $pwWrapKey = $this->kdf->deriveWrapKey($accountPassword, $row->kdf_salt);
+        $dataKey = $this->keyWrap->unwrap($row->password_wrapped_key, $pwWrapKey);
+        sodium_memzero($pwWrapKey);
+
+        if ($dataKey === false) {
+            // Fail closed: corrupted/stale wrap → start locked; the PIN wrap
+            // is still intact and unlocks via the lock screen.
+            $this->lockState->lock($session);
+
+            return;
+        }
+
+        $this->lockState->unlock($session, $dataKey);
+        sodium_memzero($dataKey);
+    }
+
+    /**
      * Verify a PIN against the stored hash WITHOUT any side effects.
      *
      * Used for D-23 confirmations that must not mutate lock state — e.g.
