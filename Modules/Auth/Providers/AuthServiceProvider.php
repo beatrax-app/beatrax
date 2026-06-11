@@ -14,6 +14,7 @@ use Modules\Auth\Internal\Console\RegenerateRecoveryCodesCommand;
 use Modules\Auth\Internal\Console\ResetPasswordCommand;
 use Modules\Auth\Internal\Fortify\FortifyServiceProvider;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
+use Modules\Auth\Internal\Http\Livewire\AppLockKeyProbe;
 use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Auth\Internal\Http\Livewire\LockScreen;
@@ -141,5 +142,11 @@ final class AuthServiceProvider extends ServiceProvider
 
         $livewire->component('auth.lock-screen', LockScreen::class);
         $livewire->component('auth.app-lock-settings-section', AppLockSettingsSection::class);
+
+        // LOCK-04 dev-console probe (D-19): mounted on the dev overview page
+        // behind the `developer` middleware (T-05-27). Shows released/withheld
+        // with a truncated SHA-256 fingerprint to prove key presence without
+        // disclosing key material.
+        $livewire->component('auth.app-lock-key-probe', AppLockKeyProbe::class);
     }
 }
