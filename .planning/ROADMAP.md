@@ -37,7 +37,7 @@
 ### Track 2 — Take it with you
 
 - [x] **Phase 4: Responsive + installable PWA (SEED-008)** - Phone-legible surfaces, installable, offline shell. (completed 2026-06-10)
-- [ ] **Phase 5: PIN / biometric app-lock (SEED-009)** - App-lock + biometric + idle re-lock + at-rest key-unlock gate (LOCK-04).
+- [x] **Phase 5: PIN / biometric app-lock (SEED-009)** - App-lock + biometric + idle re-lock + at-rest key-unlock gate (LOCK-04). (completed 2026-06-11)
 
 ### Track 3 — Insight & records
 
@@ -155,12 +155,29 @@ Plans:
 **Plans**: 6 plans (serial Wave 1-6 due to shared AuthServiceProvider/routes/layout)
 **UI hint**: yes
 Plans:
-- [ ] 05-01-PLAN.md — Wave 1: schema (2 tables) + crypto primitives (PinHasher/AppLockKdf/AppLockKeyWrap) + LockStateManager + Public AppLockKeyService + Wave 0 test scaffolding
-- [ ] 05-02-PLAN.md — Wave 2: lock enforcement — AppLockMiddleware (web + Livewire persistent), PinVerificationService (backoff/sign-out), AppLockProvisioner (double-wrapped key), 30-day rolling session (D-02), provider/route wiring
-- [ ] 05-03-PLAN.md — Wave 3: lock screen Livewire + PIN pad + privacy veil + lock.js (idle/grace/BroadcastChannel)
-- [ ] 05-04-PLAN.md — Wave 4: App Lock settings section (enable/disable, PIN setup/change, idle preset, forgot-PIN re-wrap) + D-23 confirmations
-- [ ] 05-05-PLAN.md — Wave 5: biometric (LOCK-02) — BiometricDeviceStore, WebAuthn enroll/assert, platform-aware lock-screen button, native macOS path wiring
-- [ ] 05-06-PLAN.md — Wave 6: desktop window-hide/close lock (D-06) + macOS Touch ID + desktop key custody (D-20) + LOCK-04 dev-console probe + human-verify gate
+**Wave 1**
+
+- [x] 05-01-PLAN.md — Wave 1: schema (2 tables) + crypto primitives (PinHasher/AppLockKdf/AppLockKeyWrap) + LockStateManager + Public AppLockKeyService + Wave 0 test scaffolding
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 05-02-PLAN.md — Wave 2: lock enforcement — AppLockMiddleware (web + Livewire persistent), PinVerificationService (backoff/sign-out), AppLockProvisioner (double-wrapped key), 30-day rolling session (D-02), provider/route wiring
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 05-03-PLAN.md — Wave 3: lock screen Livewire + PIN pad + privacy veil + lock.js (idle/grace/BroadcastChannel)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 05-04-PLAN.md — Wave 4: App Lock settings section (enable/disable, PIN setup/change, idle preset, forgot-PIN re-wrap) + D-23 confirmations
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [x] 05-05-PLAN.md — Wave 5: biometric (LOCK-02) — BiometricDeviceStore, WebAuthn enroll/assert, platform-aware lock-screen button, native macOS path wiring
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [x] 05-06-PLAN.md — Wave 6: desktop window-hide/close lock (D-06) + macOS Touch ID + desktop key custody (D-20) + LOCK-04 dev-console probe + human-verify gate
 
 ### Phase 6: Bills / cash-flow calendar
 
@@ -299,7 +316,7 @@ Plans:
 | 2. Savings goals | 4/4 | Complete    | 2026-06-08 |
 | 3. Savings pots / envelopes | 4/4 | Complete   | 2026-06-09 |
 | 4. Responsive + installable PWA | 9/9 | Complete   | 2026-06-11 |
-| 5. PIN / biometric app-lock | 0/0 | Not started | - |
+| 5. PIN / biometric app-lock | 6/6 | Complete   | 2026-06-11 |
 | 6. Bills / cash-flow calendar | 0/0 | Not started | - |
 | 7. Tax / deductible tagging + export | 0/0 | Not started | - |
 | 8. Full-text search over history | 0/0 | Not started | - |

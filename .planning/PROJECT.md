@@ -59,8 +59,8 @@ end-to-end-encrypted device sync) is the critical path and the dominant risk.
 - [x] Savings pots / envelopes (virtual sub-balances over a real account) — SEED-011 (validated in Phase 3, 2026-06-10)
 
 **Track 2 — Take it with you**
-- [ ] Responsive + installable PWA over the self-hosted web UI — SEED-008
-- [ ] PIN / biometric app-lock (also the at-rest key-unlock gate for sync) — SEED-009
+- [x] Responsive + installable PWA over the self-hosted web UI — SEED-008 (validated in Phase 4, 2026-06-10)
+- [x] PIN / biometric app-lock (also the at-rest key-unlock gate for sync) — SEED-009 (validated in Phase 5, 2026-06-12; Touch ID / desktop-bundle paths await desktop-runtime UAT)
 
 **Track 3 — Insight & records**
 - [ ] Bills / cash-flow calendar
@@ -132,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-11 — Phase 4 (Responsive + installable PWA, SEED-008) complete: installable PWA (manifest, icons, versioned service worker with app-shell cache that never caches financial HTML, offline page), mobile shell (top bar, drawer, bottom sheet), phone responsive pass across all ~36 surfaces, ApexCharts 3→5, phone infinite scroll on transactions (PWA-01/02/03).*
+*Last updated: 2026-06-12 — Phase 5 (PIN/biometric app-lock, SEED-009) complete: PIN lock with Argon2id + libsodium key-wrap chain, server-authoritative middleware (idle timeout + engage beacon), lock screen + privacy veil + cross-tab sync, settings (enable/change/disable PIN, forgot-PIN re-wrap), WebAuthn biometric enrollment/unlock, desktop hide/close lock listener, and the LOCK-04 AppLockKeyService release gate Phase 14 consumes (dev-console probe proves released/withheld). Browser QA + 24 review findings fixed; Touch ID + desktop-bundle paths tracked in 05-HUMAN-UAT.md. Prior: Phase 4 (Responsive + installable PWA, SEED-008) complete: installable PWA (manifest, icons, versioned service worker with app-shell cache that never caches financial HTML, offline page), mobile shell (top bar, drawer, bottom sheet), phone responsive pass across all ~36 surfaces, ApexCharts 3→5, phone infinite scroll on transactions (PWA-01/02/03).*
