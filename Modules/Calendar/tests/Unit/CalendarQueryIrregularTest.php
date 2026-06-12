@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Calendar\Internal\Services\CalendarQuery;
+use Modules\Calendar\Tests\TestCase;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
+
+uses(TestCase::class, RefreshDatabase::class);
 
 /*
  * CalendarQuery — irregular-cadence series placement (CAL-01 edge).
@@ -42,7 +46,7 @@ function cqirSeries(User $user, string $cadence, ?CarbonImmutable $nextExpectedA
 {
     return RecurringSeries::query()->create([
         'user_id' => $user->id,
-        'direction' => 'outbound',
+        'direction' => 'expense',
         'detected_name' => $name,
         'state' => 'approved',
         'cadence' => $cadence,
