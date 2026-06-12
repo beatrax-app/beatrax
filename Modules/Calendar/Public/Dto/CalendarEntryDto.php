@@ -24,9 +24,9 @@ final class CalendarEntryDto extends Data
         public readonly string $name,
         public readonly int $amountMinor,
         public readonly string $currency,
-        /** 'inbound' | 'outbound' */
+        /** 'expense' | 'income' — mirrors RecurringSeries::$direction */
         public readonly string $direction,
-        public readonly int $accountId,
+        public readonly ?int $accountId,
         public readonly string $accountName,
         public readonly ?int $counterpartyId,
         public readonly ?string $counterpartySlug,
