@@ -23,7 +23,7 @@ use Spatie\LaravelData\Data;
 final class TaxYearData extends Data
 {
     /**
-     * @param array<int, array<string, mixed>> $categories
+     * @param  array<int, array<string, mixed>>  $categories
      */
     public function __construct(
         public readonly int $year,

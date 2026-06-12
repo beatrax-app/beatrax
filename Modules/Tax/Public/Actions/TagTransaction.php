@@ -79,10 +79,10 @@ final class TagTransaction
                 ['user_id' => $userId, 'transaction_id' => $transactionId],
                 [
                     'deduction_category_id' => $deductionCategoryId,
-                    'note'                  => $note,
-                    'tax_year_override'     => $taxYearOverride,
-                    'updated_at'            => $now,
-                    'created_at'            => $now,
+                    'note' => $note,
+                    'tax_year_override' => $taxYearOverride,
+                    'updated_at' => $now,
+                    'created_at' => $now,
                 ],
             );
 
