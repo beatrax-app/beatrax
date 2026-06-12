@@ -32,6 +32,7 @@
             <directory>Modules/Budgets/tests/Unit</directory>
             <directory>Modules/Calendar/tests/Unit</directory>
             <directory>Modules/Tax/tests/Unit</directory>
+            <directory>Modules/Search/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
@@ -59,6 +60,7 @@
             <directory>Modules/CashBook/tests/Feature</directory>
             <directory>Modules/Calendar/tests/Feature</directory>
             <directory>Modules/Tax/tests/Feature</directory>
+            <directory>Modules/Search/tests/Feature</directory>
         </testsuite>
         <testsuite name="Contracts">
             <directory>tests/Contracts</directory>
