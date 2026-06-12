@@ -32,13 +32,7 @@ final class IndexTransactionOnImport
 
     public function handle(TransactionImported $event): void
     {
-        $transactionId = $event->transaction->id;
-
-        // Guard: ensure the id is a valid integer before passing to the writer.
-        if (! is_numeric($transactionId)) {
-            return;
-        }
-
-        $this->writer->upsertForTransaction((int) $transactionId);
+        // Transaction::$id is typed int in the model @property — no cast needed.
+        $this->writer->upsertForTransaction($event->transaction->id);
     }
 }

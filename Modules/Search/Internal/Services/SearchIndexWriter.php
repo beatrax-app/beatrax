@@ -71,7 +71,7 @@ final class SearchIndexWriter implements SearchIndexWriterContract
         // Build the denormalized search body.
         // chr(12) = form-feed — not trigram-indexable, avoids cross-field
         // false positives (RESEARCH Assumption A2).
-        $newBody = $counterparty . chr(12) . $description . chr(12) . $note;
+        $newBody = $counterparty.chr(12).$description.chr(12).$note;
 
         // Read the OLD body before upserting so we can delete the stale FTS entry.
         $existingDoc = $connection
@@ -88,8 +88,8 @@ final class SearchIndexWriter implements SearchIndexWriterContract
         $connection->table('transaction_search_docs')->upsert(
             [
                 'transaction_id' => $transactionId,
-                'user_id'        => $userId,
-                'search_body'    => $newBody,
+                'user_id' => $userId,
+                'search_body' => $newBody,
             ],
             ['transaction_id'],
             ['user_id', 'search_body'],

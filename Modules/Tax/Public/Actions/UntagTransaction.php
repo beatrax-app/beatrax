@@ -6,6 +6,7 @@ namespace Modules\Tax\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Tax\Public\Events\TransactionUntagged;
 
 /**
@@ -25,6 +26,7 @@ final class UntagTransaction
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Dispatcher $events,
+        private readonly ?SearchIndexWriterContract $searchIndex = null,
     ) {}
 
     public function execute(int $userId, int $transactionId): void
@@ -40,6 +42,10 @@ final class UntagTransaction
                 userId: $userId,
                 transactionId: $transactionId,
             ));
+
+            // Re-index so the note text is removed from search results.
+            // Optional nullable injection — no-op when Search module is absent (RESEARCH A4).
+            $this->searchIndex?->upsertForTransaction($transactionId);
         }
     }
 }
