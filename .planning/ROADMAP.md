@@ -195,7 +195,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 06-01-PLAN.md — Module scaffold: CalendarEntryDto/CalendarDayDto contracts + provider/route/migration + Forecasting 180/365 horizon extension (D-14) + Wave 0 RED tests
+- [x] 06-01-PLAN.md — Module scaffold: CalendarEntryDto/CalendarDayDto contracts + provider/route/migration + Forecasting 180/365 horizon extension (D-14) + Wave 0 RED tests
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -329,7 +329,7 @@ Plans:
 | 3. Savings pots / envelopes | 4/4 | Complete   | 2026-06-09 |
 | 4. Responsive + installable PWA | 9/9 | Complete   | 2026-06-11 |
 | 5. PIN / biometric app-lock | 6/6 | Complete   | 2026-06-11 |
-| 6. Bills / cash-flow calendar | 0/3 | Not started | - |
+| 6. Bills / cash-flow calendar | 1/3 | In Progress|  |
 | 7. Tax / deductible tagging + export | 0/0 | Not started | - |
 | 8. Full-text search over history | 0/0 | Not started | - |
 | 9. Unusual-charge / anomaly alerts | 0/0 | Not started | - |

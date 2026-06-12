@@ -80,6 +80,7 @@ Phases [██              ] 2/15
 
 - Pre-existing test break (predates Phase 4): `Modules/DriftAlerts/tests/Feature/GlobalDriftThresholdSettingTest` — 4 tests fail with `baseCurrency => "Please choose a currency."` on settings save; the tests predate Phase 1's required baseCurrency field. Fix test setup (or relax validation) — surfaced 2026-06-10 during Phase 4 Wave 0 post-merge gate.
 - Host-toolchain note: `EmailScan` Integration (DiscoveryScanNoEmlBlobs, EmlOrphanCleanup) + `DevMode` (CommandSpawner, ArtisanStreamReconnect) tests are flaky under `pest --parallel` (pass serially) — run gates serially or fix isolation.
+- Pre-existing test break (predates Phase 6, verified failing at fe0f513): `CrossUserIsolationTest` "covers or allow-lists every auth-gated GET route" guard fails on 14 uncovered routes from earlier phases (goals.index, pots.index, counterparties.*, budgets.index, cashbook.index, chains.index/hints, drift.watch, settings.aliases, community.mystery-merchants, core.help.data-locations, dev.logs.stats). Each needs a probe case or allow-list entry — surfaced 2026-06-12 during Phase 6 Wave 1 post-merge gate (calendar.index WAS covered there).
 
 ### Blockers
 
