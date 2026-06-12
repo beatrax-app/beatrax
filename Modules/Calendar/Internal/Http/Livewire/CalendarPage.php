@@ -232,9 +232,22 @@ final class CalendarPage extends Component
      * Explicit arrays are stored as-is — INCLUDING the empty array, which
      * is the legitimate "everything off" state (CR-01). Null in the DB is
      * reserved for "never configured" (defaults re-resolve at mount).
+     *
+     * Write-side sanitization (WR-07): the arrays are public Livewire
+     * properties the client can set to arbitrary content without going
+     * through the ownership-validated toggle actions. Both arrays are
+     * filtered to ints and intersected against the user's owned accounts
+     * BEFORE persisting, so the DB never stores attacker-shaped payloads
+     * or foreign account ids (defense-in-depth on top of the read-side
+     * intersection in CalendarQuery).
      */
-    public function persistAccountPrefs(CurrentUser $currentUser): void
+    public function persistAccountPrefs(CurrentUser $currentUser, DatabaseManager $db): void
     {
+        $ownedIds = $this->fetchOwnedAccountIds($db, $currentUser->id());
+
+        $this->visibleAccountIds = self::sanitizeAccountIds($this->visibleAccountIds, $ownedIds);
+        $this->balanceAccountIds = self::sanitizeAccountIds($this->balanceAccountIds, $ownedIds);
+
         UserPreference::query()->updateOrCreate(
             ['user_id' => $currentUser->id()],
             [
@@ -407,6 +420,28 @@ final class CalendarPage extends Component
         }
 
         return $ids;
+    }
+
+    /**
+     * Drop everything that is not an int referring to an account the user
+     * owns (WR-07). Typed `array<array-key, mixed>` deliberately: public
+     * Livewire array properties are client-controlled and their docblock
+     * list<int> shape cannot be trusted at this boundary.
+     *
+     * @param  array<array-key, mixed>  $ids
+     * @param  list<int>  $ownedIds
+     * @return list<int>
+     */
+    private static function sanitizeAccountIds(array $ids, array $ownedIds): array
+    {
+        $clean = [];
+        foreach ($ids as $id) {
+            if (is_int($id) && in_array($id, $ownedIds, true) && ! in_array($id, $clean, true)) {
+                $clean[] = $id;
+            }
+        }
+
+        return $clean;
     }
 
     /**

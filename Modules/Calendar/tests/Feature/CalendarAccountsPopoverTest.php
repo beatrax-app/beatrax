@@ -169,6 +169,32 @@ it('persistAccountPrefs saves choices to user_preferences and a reload reflects 
         ->assertSet('balanceAccountIds', [$aid]);
 });
 
+it('persistAccountPrefs strips foreign account ids before writing to user_preferences (WR-07)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = capUser('cap-sanitize');
+    $otherUser = capUser('cap-sanitize-owner');
+    $ownId = capAccount($db, $user->id, 'Own ASN', 'asn');
+    $foreignId = capAccount($db, $otherUser->id, 'Foreign ASN', 'asn');
+
+    // Bypass the ownership-validated toggle actions by setting the public
+    // properties directly (what a tampered Livewire payload would do).
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
+        ->set('visibleAccountIds', [$ownId, $foreignId])
+        ->set('balanceAccountIds', [$foreignId])
+        ->call('persistAccountPrefs')
+        ->assertSet('visibleAccountIds', [$ownId])
+        ->assertSet('balanceAccountIds', []);
+
+    // The persisted row must contain only owned ids.
+    $row = $db->connection()->table('user_preferences')
+        ->where('user_id', $user->id)
+        ->first(['calendar_entries_accounts', 'calendar_balance_accounts']);
+    expect($row)->not->toBeNull();
+    expect(json_decode((string) $row->calendar_entries_accounts, true))->toBe([$ownId]);
+    expect(json_decode((string) $row->calendar_balance_accounts, true))->toBe([]);
+});
+
 it('toggleBalanceAccount silently ignores a foreign account ID', function (): void {
     $db = app(DatabaseManager::class);
     $user = capUser('cap-foreign');
