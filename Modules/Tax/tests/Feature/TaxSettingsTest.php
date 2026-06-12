@@ -250,6 +250,32 @@ it('rename throws NotFoundHttpException on a cross-user category id (T-07-13)', 
 // archive
 // ────────────────────────────────────────────────────────────────────────────
 
+it('seeding a second country appends after the first country\'s sort_order block — no interleave (IN-04)', function (): void {
+    $user = taxSettingsUser('tax-seed-sort-order');
+
+    /** @var TaxCategoryWriter $writer */
+    $writer = app(TaxCategoryWriter::class);
+
+    $nlCount = $writer->seedFromCorpus($user, 'nl');
+    $writer->seedFromCorpus($user, 'de');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $rows = $db->connection()->table('tax_deduction_categories')
+        ->where('user_id', $user->id)
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get(['country_code', 'sort_order']);
+
+    // All NL rows must sort strictly before all DE rows.
+    $maxNl = max(array_map(fn ($r) => (int) $r->sort_order, array_filter($rows->all(), fn ($r) => $r->country_code === 'nl')));
+    $minDe = min(array_map(fn ($r) => (int) $r->sort_order, array_filter($rows->all(), fn ($r) => $r->country_code === 'de')));
+
+    expect($maxNl)->toBe($nlCount - 1)
+        ->and($minDe)->toBeGreaterThan($maxNl);
+});
+
 it('rename to an existing name throws a friendly RuntimeException instead of a QueryException (WR-11)', function (): void {
     $user = taxSettingsUser('tax-rename-dup');
 
