@@ -812,6 +812,10 @@ arch('Modules\\Forecasting\\Internal is only used inside Modules\\Forecasting (c
     ->expect('Modules\\Forecasting\\Internal')
     ->toOnlyBeUsedIn('Modules\\Forecasting');
 
+arch('Modules\\Search\\Internal is only used inside Modules\\Search')
+    ->expect('Modules\\Search\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Search');
+
 arch('ProjectionPipeline is never imported by Modules\\Forecasting\\Internal\\Http (noSynchronousForecastingInRequestLifecycle)')
     ->expect('Modules\\Forecasting\\Internal\\Pipeline\\ProjectionPipeline')
     ->not->toBeUsedIn([
