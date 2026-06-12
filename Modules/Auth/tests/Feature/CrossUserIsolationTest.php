@@ -157,6 +157,7 @@ const ISOLATION_ROUTE_COVERED = [
     'chains.review',
     'drift.index',
     'forecast.index',
+    'calendar.index',
     'inboxes.index',
     'oauth.connect',
     'oauth.callback',
@@ -362,6 +363,13 @@ it('does not surface the owner figures on the partner dashboard or first-run red
 it('renders the partner settings page without the owner data', function (): void {
     $this->actingAs($this->partner)
         ->get('/settings')
+        ->assertOk()
+        ->assertDontSee('OWNER MERCHANT BV');
+});
+
+it('renders the partner calendar page without the owner data', function (): void {
+    $this->actingAs($this->partner)
+        ->get('/calendar')
         ->assertOk()
         ->assertDontSee('OWNER MERCHANT BV');
 });

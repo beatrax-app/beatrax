@@ -36,6 +36,10 @@
         <span class="ic" aria-hidden="true">↗</span>
         Forecasts
     </a>
+    <a href="https://beatrax.test/calendar" class="side-item ">
+        <span class="ic" aria-hidden="true">▦</span>
+        Calendar
+    </a>
 
     <div class="side-section-label">MONEY</div>
     <a href="https://beatrax.test/recurring" class="side-item ">
