@@ -121,7 +121,7 @@ final class CalendarPage extends Component
     {
         $display = $this->resolveDisplay();
         $prev = CarbonImmutable::parse(sprintf('%04d-%02d-01', $display['year'], $display['month']))->subMonth();
-        $this->year  = $prev->year;
+        $this->year = $prev->year;
         $this->month = $prev->month;
         $this->selectedDay = null;
     }
@@ -139,7 +139,7 @@ final class CalendarPage extends Component
             return;
         }
 
-        $this->year  = $next->year;
+        $this->year = $next->year;
         $this->month = $next->month;
         $this->selectedDay = null;
     }
@@ -155,7 +155,7 @@ final class CalendarPage extends Component
         }
 
         $display = $this->resolveDisplay();
-        $parsed  = CarbonImmutable::parse($date);
+        $parsed = CarbonImmutable::parse($date);
 
         if ($parsed->year !== $display['year'] || $parsed->month !== $display['month']) {
             return;
@@ -236,10 +236,10 @@ final class CalendarPage extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
     ): View {
-        $user    = $currentUser->user();
+        $user = $currentUser->user();
         $display = $this->resolveDisplay();
-        $year    = $display['year'];
-        $month   = $display['month'];
+        $year = $display['year'];
+        $month = $display['month'];
 
         // CalendarQuery handles security (T-06-02): intersects account IDs against
         // user-owned accounts; foreign IDs are silently dropped.
@@ -292,26 +292,26 @@ final class CalendarPage extends Component
             /** @var stdClass $account */
             $accountId = self::toInt($account->id);
             $accountRoster[] = [
-                'id'   => $accountId,
+                'id' => $accountId,
                 'name' => self::toString($account->name ?? null),
                 'kind' => self::toString($account->kind ?? null),
             ];
         }
 
         // Ceiling month: today + 12 months (D-14)
-        $ceiling    = CarbonImmutable::now()->addMonths(12);
-        $atCeiling  = ($year > $ceiling->year)
+        $ceiling = CarbonImmutable::now()->addMonths(12);
+        $atCeiling = ($year > $ceiling->year)
             || ($year === $ceiling->year && $month >= $ceiling->month);
 
         $view = $views->make('calendar::livewire.calendar-page', [
-            'days'           => $days,
-            'hasEntries'     => $hasEntries,
+            'days' => $days,
+            'hasEntries' => $hasEntries,
             'selectedDayDto' => $selectedDayDto,
-            'displayYear'    => $year,
-            'displayMonth'   => $month,
+            'displayYear' => $year,
+            'displayMonth' => $month,
             'isComputingAny' => $isComputingAny,
-            'accountRoster'  => $accountRoster,
-            'atCeiling'      => $atCeiling,
+            'accountRoster' => $accountRoster,
+            'atCeiling' => $atCeiling,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound */
@@ -333,8 +333,8 @@ final class CalendarPage extends Component
      */
     private function resolveDisplay(): array
     {
-        $now   = CarbonImmutable::now();
-        $year  = ($this->year !== null && $this->year >= 2000 && $this->year <= 2100)
+        $now = CarbonImmutable::now();
+        $year = ($this->year !== null && $this->year >= 2000 && $this->year <= 2100)
             ? $this->year
             : $now->year;
         $month = ($this->month !== null && $this->month >= 1 && $this->month <= 12)

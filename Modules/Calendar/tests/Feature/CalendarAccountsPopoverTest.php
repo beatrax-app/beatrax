@@ -36,16 +36,16 @@ function capAccount(DatabaseManager $db, int $userId, string $name, string $kind
     $hex = bin2hex(random_bytes(4));
 
     return $db->connection()->table('accounts')->insertGetId([
-        'user_id'          => $userId,
-        'name'             => $name,
-        'slug'             => 'cap-'.strtolower($kind).'-'.$hex,
-        'kind'             => $kind,
-        'iban'             => 'NL00CAP'.strtoupper($hex),
+        'user_id' => $userId,
+        'name' => $name,
+        'slug' => 'cap-'.strtolower($kind).'-'.$hex,
+        'kind' => $kind,
+        'iban' => 'NL00CAP'.strtoupper($hex),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 0,
         'opening_balance_as_of_date' => '2026-01-01',
-        'created_at'       => '2026-01-01 00:00:00',
-        'updated_at'       => '2026-01-01 00:00:00',
+        'created_at' => '2026-01-01 00:00:00',
+        'updated_at' => '2026-01-01 00:00:00',
     ]);
 }
 
@@ -58,9 +58,9 @@ afterEach(function (): void {
 });
 
 it('toggleBalanceAccount removes an account from balanceAccountIds and does not touch visibleAccountIds', function (): void {
-    $db   = app(DatabaseManager::class);
+    $db = app(DatabaseManager::class);
     $user = capUser('cap-bal-off');
-    $aid  = capAccount($db, $user->id, 'ASN Checking', 'asn');
+    $aid = capAccount($db, $user->id, 'ASN Checking', 'asn');
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
@@ -72,9 +72,9 @@ it('toggleBalanceAccount removes an account from balanceAccountIds and does not 
 });
 
 it('toggleBalanceAccount adds an account to balanceAccountIds when it is currently absent', function (): void {
-    $db   = app(DatabaseManager::class);
+    $db = app(DatabaseManager::class);
     $user = capUser('cap-bal-on');
-    $aid  = capAccount($db, $user->id, 'ASN Checking 2', 'asn');
+    $aid = capAccount($db, $user->id, 'ASN Checking 2', 'asn');
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
@@ -84,9 +84,9 @@ it('toggleBalanceAccount adds an account to balanceAccountIds when it is current
 });
 
 it('toggleEntriesAccount removes an account from visibleAccountIds and does not touch balanceAccountIds', function (): void {
-    $db   = app(DatabaseManager::class);
+    $db = app(DatabaseManager::class);
     $user = capUser('cap-entries-off');
-    $aid  = capAccount($db, $user->id, 'PayPal', 'paypal');
+    $aid = capAccount($db, $user->id, 'PayPal', 'paypal');
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
@@ -98,9 +98,9 @@ it('toggleEntriesAccount removes an account from visibleAccountIds and does not 
 });
 
 it('persistAccountPrefs saves choices to user_preferences and a reload reflects them', function (): void {
-    $db   = app(DatabaseManager::class);
+    $db = app(DatabaseManager::class);
     $user = capUser('cap-persist');
-    $aid  = capAccount($db, $user->id, 'ICS Card', 'ics');
+    $aid = capAccount($db, $user->id, 'ICS Card', 'ics');
 
     // Toggle balance off, persist, then reload and verify
     Livewire::actingAs($user)
@@ -115,7 +115,7 @@ it('persistAccountPrefs saves choices to user_preferences and a reload reflects 
 });
 
 it('toggleBalanceAccount silently ignores a foreign account ID', function (): void {
-    $db   = app(DatabaseManager::class);
+    $db = app(DatabaseManager::class);
     $user = capUser('cap-foreign');
     $otherUser = capUser('cap-foreign-owner');
     $foreignId = capAccount($db, $otherUser->id, 'Foreign Account', 'asn');
@@ -129,8 +129,8 @@ it('toggleBalanceAccount silently ignores a foreign account ID', function (): vo
 });
 
 it('toggleEntriesAccount silently ignores a foreign account ID', function (): void {
-    $db        = app(DatabaseManager::class);
-    $user      = capUser('cap-foreign-entries');
+    $db = app(DatabaseManager::class);
+    $user = capUser('cap-foreign-entries');
     $otherUser = capUser('cap-foreign-entries-owner');
     $foreignId = capAccount($db, $otherUser->id, 'Foreign Account 2', 'asn');
 
