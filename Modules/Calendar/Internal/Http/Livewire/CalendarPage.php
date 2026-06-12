@@ -12,6 +12,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Calendar\Internal\Services\CalendarQuery;
 use Modules\Core\Models\UserPreference;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use stdClass;
 
@@ -121,9 +122,9 @@ final class CalendarPage extends Component
     /**
      * Navigate to the previous month (always allowed — no lower bound).
      */
-    public function prevMonth(): void
+    public function prevMonth(Clock $clock): void
     {
-        $display = $this->resolveDisplay();
+        $display = $this->resolveDisplay($clock);
         $prev = CarbonImmutable::parse(sprintf('%04d-%02d-01', $display['year'], $display['month']))->subMonth();
         $this->year = $prev->year;
         $this->month = $prev->month;
@@ -134,12 +135,12 @@ final class CalendarPage extends Component
      * Navigate to the next month. No-op when the next month would exceed
      * the 12-month forward forecast horizon (T-06-01, D-14).
      */
-    public function nextMonth(): void
+    public function nextMonth(Clock $clock): void
     {
-        $display = $this->resolveDisplay();
+        $display = $this->resolveDisplay($clock);
         $next = CarbonImmutable::parse(sprintf('%04d-%02d-01', $display['year'], $display['month']))->addMonth();
 
-        if ($this->exceedsCeiling($next->year, $next->month)) {
+        if ($this->exceedsCeiling($next->year, $next->month, $clock)) {
             return;
         }
 
@@ -152,7 +153,7 @@ final class CalendarPage extends Component
      * Select a day and open the day panel (desktop) or bottom sheet (phone).
      * Validates that the date is a Y-m-d string within the display month.
      */
-    public function selectDay(string $date): void
+    public function selectDay(string $date, Clock $clock): void
     {
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1) {
             return;
@@ -168,7 +169,7 @@ final class CalendarPage extends Component
             return;
         }
 
-        $display = $this->resolveDisplay();
+        $display = $this->resolveDisplay($clock);
         $parsed = CarbonImmutable::parse($date);
 
         if ($parsed->year !== $display['year'] || $parsed->month !== $display['month']) {
@@ -262,9 +263,10 @@ final class CalendarPage extends Component
         CalendarQuery $calendarQuery,
         CurrentUser $currentUser,
         DatabaseManager $db,
+        Clock $clock,
     ): View {
         $user = $currentUser->user();
-        $display = $this->resolveDisplay();
+        $display = $this->resolveDisplay($clock);
         $year = $display['year'];
         $month = $display['month'];
 
@@ -330,7 +332,7 @@ final class CalendarPage extends Component
         }
 
         // Ceiling month: today + 12 months (D-14)
-        $ceiling = CarbonImmutable::now()->addMonths(12);
+        $ceiling = $clock->now()->addMonths(12);
         $atCeiling = ($year > $ceiling->year)
             || ($year === $ceiling->year && $month >= $ceiling->month);
 
@@ -364,11 +366,14 @@ final class CalendarPage extends Component
      * WR-05) so a tampered ?year=&month= URL cannot render a month beyond
      * the forecast horizon — the same invariant nextMonth() enforces.
      *
+     * "Now" comes from the injected Clock contract (WR-11) so the page and
+     * CalendarQuery can never disagree about the current moment.
+     *
      * @return array{year: int, month: int}
      */
-    private function resolveDisplay(): array
+    private function resolveDisplay(Clock $clock): array
     {
-        $now = CarbonImmutable::now();
+        $now = $clock->now();
         $year = ($this->year !== null && $this->year >= 2000 && $this->year <= 2100)
             ? $this->year
             : $now->year;
@@ -390,9 +395,9 @@ final class CalendarPage extends Component
      * True when the given year+month is at or beyond the 12-month forward
      * forecast ceiling (D-14).
      */
-    private function exceedsCeiling(int $year, int $month): bool
+    private function exceedsCeiling(int $year, int $month, Clock $clock): bool
     {
-        $ceiling = CarbonImmutable::now()->addMonths(12);
+        $ceiling = $clock->now()->addMonths(12);
 
         return ($year > $ceiling->year)
             || ($year === $ceiling->year && $month > $ceiling->month);
