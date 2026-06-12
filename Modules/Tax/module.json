@@ -1,0 +1,11 @@
+{
+    "name": "Tax",
+    "alias": "tax",
+    "description": "Tax-deductible tagging, per-year categorisation, and CSV/PDF export for Dutch IB/OB tax filing.",
+    "keywords": ["tax", "deductions", "tagging", "export"],
+    "priority": 10,
+    "providers": [
+        "Modules\\Tax\\Providers\\TaxServiceProvider"
+    ],
+    "files": []
+}
