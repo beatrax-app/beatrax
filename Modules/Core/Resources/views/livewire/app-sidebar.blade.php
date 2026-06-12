@@ -155,6 +155,15 @@
             <span class="side-badge muted" aria-label="{{ $navCounts['budgets'] }} budgets">{{ $navCount('budgets') }}</span>
         @endif
     </a>
+    {{-- Tax tagging + per-year export (D-17). The muted side-badge shows the
+         lifetime tagged item count when > 0; hidden when zero for calm posture. --}}
+    <a href="{{ route('tax.index') }}" class="side-item {{ $isActive('/tax') }}">
+        <span class="ic" aria-hidden="true">⊞</span>
+        Tax
+        @if (($navCounts['tax_tagged'] ?? 0) > 0)
+            <span class="side-badge muted" aria-label="{{ $navCounts['tax_tagged'] }} items tagged as tax-relevant">{{ $navCount('tax_tagged') }}</span>
+        @endif
+    </a>
     <a href="{{ route('goals.index') }}" class="side-item {{ $isActive('/goals') }}">
         <span class="ic" aria-hidden="true">◎</span>
         Goals
