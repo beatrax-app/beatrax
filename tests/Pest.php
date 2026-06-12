@@ -46,6 +46,7 @@ foreach (
         'Modules/Recurring' => Modules\Recurring\Tests\TestCase::class,
         'Modules/Tax' => Modules\Tax\Tests\TestCase::class,
         'Modules/Transfers' => Modules\Transfers\Tests\TestCase::class,
+        'Modules/Search' => Modules\Search\Tests\TestCase::class,
     ] as $module => $testCase
 ) {
     pest()->extend($testCase)
