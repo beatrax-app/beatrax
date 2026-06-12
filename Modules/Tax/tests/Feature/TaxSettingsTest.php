@@ -250,6 +250,111 @@ it('rename throws NotFoundHttpException on a cross-user category id (T-07-13)', 
 // archive
 // ────────────────────────────────────────────────────────────────────────────
 
+it('rename to an existing name throws a friendly RuntimeException instead of a QueryException (WR-11)', function (): void {
+    $user = taxSettingsUser('tax-rename-dup');
+
+    /** @var TaxCategoryWriter $writer */
+    $writer = app(TaxCategoryWriter::class);
+
+    $writer->add($user->id, 'Existing Name');
+    $renameMe = $writer->add($user->id, 'Old Name');
+
+    expect(fn () => $writer->rename($user->id, $renameMe, 'Existing Name'))
+        ->toThrow(RuntimeException::class, 'A category with this name already exists.');
+});
+
+it('rename to the SAME name is a no-op, not a duplicate error (WR-11)', function (): void {
+    $user = taxSettingsUser('tax-rename-same');
+
+    /** @var TaxCategoryWriter $writer */
+    $writer = app(TaxCategoryWriter::class);
+
+    $catId = $writer->add($user->id, 'Stable Name');
+
+    // Renaming a row to its own current name must not trip the guard.
+    $writer->rename($user->id, $catId, 'Stable Name');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    expect($db->connection()->table('tax_deduction_categories')
+        ->where('id', $catId)->value('name'))->toBe('Stable Name');
+});
+
+it('renameCategory surfaces empty/duplicate-name errors inline instead of 500ing (WR-11)', function (): void {
+    $user = taxSettingsUser('tax-rename-ui');
+
+    /** @var TaxCategoryWriter $writer */
+    $writer = app(TaxCategoryWriter::class);
+    $writer->add($user->id, 'Taken Name');
+    $catId = $writer->add($user->id, 'Renameable');
+
+    $component = Livewire::actingAs($user)->test(TaxSettingsSection::class);
+
+    $component->call('renameCategory', $catId, '');
+    expect($component->get('renameError'))->toBe('Category name cannot be empty.');
+
+    $component->call('renameCategory', $catId, 'Taken Name');
+    expect($component->get('renameError'))->toBe('A category with this name already exists.');
+
+    // A valid rename clears the error and persists.
+    $component->call('renameCategory', $catId, 'Renamed OK');
+    expect($component->get('renameError'))->toBe('');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    expect($db->connection()->table('tax_deduction_categories')
+        ->where('id', $catId)->value('name'))->toBe('Renamed OK');
+});
+
+it('unarchive restores an archived category to active (WR-11)', function (): void {
+    $user = taxSettingsUser('tax-unarchive');
+
+    /** @var TaxCategoryWriter $writer */
+    $writer = app(TaxCategoryWriter::class);
+    $catId = $writer->add($user->id, 'Resurrect Me');
+    $writer->archive($user->id, $catId);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    expect($db->connection()->table('tax_deduction_categories')
+        ->where('id', $catId)->value('status'))->toBe('archived');
+
+    $writer->unarchive($user->id, $catId);
+
+    expect($db->connection()->table('tax_deduction_categories')
+        ->where('id', $catId)->value('status'))->toBe('active');
+});
+
+it('unarchive throws NotFoundHttpException on a cross-user category id (T-07-13)', function (): void {
+    $owner = taxSettingsUser('tax-unarchive-owner');
+    $intruder = taxSettingsUser('tax-unarchive-intruder');
+
+    /** @var TaxCategoryWriter $writer */
+    $writer = app(TaxCategoryWriter::class);
+    $catId = $writer->add($owner->id, 'Owner Archived Cat');
+    $writer->archive($owner->id, $catId);
+
+    expect(fn () => $writer->unarchive($intruder->id, $catId))
+        ->toThrow(NotFoundHttpException::class);
+});
+
+it('unarchiveCategory restores via the settings component (WR-11)', function (): void {
+    $user = taxSettingsUser('tax-unarchive-ui');
+
+    /** @var TaxCategoryWriter $writer */
+    $writer = app(TaxCategoryWriter::class);
+    $catId = $writer->add($user->id, 'UI Restore Cat');
+    $writer->archive($user->id, $catId);
+
+    Livewire::actingAs($user)->test(TaxSettingsSection::class)
+        ->call('unarchiveCategory', $catId);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    expect($db->connection()->table('tax_deduction_categories')
+        ->where('id', $catId)->value('status'))->toBe('active');
+});
+
 it('archive sets status to archived for the owning user', function (): void {
     $user = taxSettingsUser('tax-archive-01');
 

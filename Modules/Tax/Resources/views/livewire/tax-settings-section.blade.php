@@ -58,13 +58,50 @@
         @else
             <ul class="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800" role="list">
                 @foreach ($active as $cat)
-                    <li class="toggle-row group" data-testid="category-row-{{ $cat->id }}">
-                        <span class="flex-1 text-sm text-slate-900 dark:text-slate-100">
-                            {{ $cat->name }}
-                        </span>
+                    <li
+                        class="toggle-row group"
+                        data-testid="category-row-{{ $cat->id }}"
+                        x-data="{ editing: false, name: @js($cat->name) }"
+                    >
+                        {{-- Display row --}}
+                        <template x-if="! editing">
+                            <span class="flex-1 text-sm text-slate-900 dark:text-slate-100">
+                                {{ $cat->name }}
+                            </span>
+                        </template>
+                        {{-- Inline rename input (WR-11) --}}
+                        <template x-if="editing">
+                            <input
+                                type="text"
+                                x-model="name"
+                                x-on:keydown.enter.prevent="$wire.renameCategory({{ $cat->id }}, name); editing = false"
+                                x-on:keydown.escape.stop="editing = false; name = @js($cat->name)"
+                                class="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                aria-label="New name for {{ $cat->name }}"
+                                data-testid="rename-input-{{ $cat->id }}"
+                            />
+                        </template>
                         @if ($cat->corpus_key !== null)
                             <span class="text-xs text-[var(--color-text-faint)] mr-2" aria-label="from corpus">from corpus</span>
                         @endif
+                        <template x-if="! editing">
+                            <button
+                                type="button"
+                                x-on:click="editing = true; $nextTick(() => $el.closest('li').querySelector('input')?.focus())"
+                                class="pill-btn-ghost text-xs opacity-0 group-hover:opacity-100 focus:opacity-100 mr-1"
+                                aria-label="Rename {{ $cat->name }}"
+                                data-testid="rename-btn-{{ $cat->id }}"
+                            >Rename</button>
+                        </template>
+                        <template x-if="editing">
+                            <button
+                                type="button"
+                                x-on:click="$wire.renameCategory({{ $cat->id }}, name); editing = false"
+                                class="pill-btn-ghost text-xs mr-1"
+                                aria-label="Save new name for {{ $cat->name }}"
+                                data-testid="rename-save-{{ $cat->id }}"
+                            >Save</button>
+                        </template>
                         <button
                             type="button"
                             wire:click="archiveCategory({{ $cat->id }})"
@@ -74,6 +111,10 @@
                     </li>
                 @endforeach
             </ul>
+        @endif
+
+        @if ($renameError !== '')
+            <p class="mt-1 text-xs text-[var(--color-rose)]" data-testid="rename-category-error">{{ $renameError }}</p>
         @endif
 
         {{-- Add category form --}}
@@ -112,8 +153,16 @@
                 </summary>
                 <ul class="mt-2 divide-y divide-slate-100 dark:divide-slate-800" role="list">
                     @foreach ($archived as $cat)
-                        <li class="toggle-row py-1">
+                        <li class="toggle-row group py-1">
                             <span class="flex-1 text-sm text-[var(--color-text-muted)]">{{ $cat->name }}</span>
+                            {{-- WR-11: archiving is reversible. --}}
+                            <button
+                                type="button"
+                                wire:click="unarchiveCategory({{ $cat->id }})"
+                                class="pill-btn-ghost text-xs opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                aria-label="Restore {{ $cat->name }}"
+                                data-testid="unarchive-btn-{{ $cat->id }}"
+                            >Restore</button>
                         </li>
                     @endforeach
                 </ul>

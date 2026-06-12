@@ -68,6 +68,16 @@ final class TaxCategoryWriter
     }
 
     /**
+     * Restore an archived category to active. User-scoped: throws NotFoundHttpException on cross-user id.
+     *
+     * @throws NotFoundHttpException When the category id is not owned by the user (T-07-13).
+     */
+    public function unarchive(int $userId, int $categoryId): void
+    {
+        $this->writer->unarchive($userId, $categoryId);
+    }
+
+    /**
      * List the user's deduction categories ordered by sort_order then name.
      *
      * @return list<\stdClass>
