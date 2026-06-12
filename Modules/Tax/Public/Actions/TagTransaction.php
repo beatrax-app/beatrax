@@ -6,7 +6,8 @@ namespace Modules\Tax\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Tax\Public\Events\TransactionTagged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -30,6 +31,7 @@ final class TagTransaction
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Dispatcher $events,
+        private readonly Clock $clock,
     ) {}
 
     public function execute(
@@ -63,9 +65,11 @@ final class TagTransaction
             }
         }
 
-        // (3) Range-check tax_year_override (T-07-03).
+        // (3) Range-check tax_year_override (T-07-03). Time arrives via the
+        // injected Clock so the ±10-year window is testable with the
+        // standard clock fake (IN-06).
         if ($taxYearOverride !== null) {
-            $currentYear = Carbon::now()->year;
+            $currentYear = $this->clock->now()->year;
             if ($taxYearOverride < $currentYear - 10 || $taxYearOverride > $currentYear + 10) {
                 throw new \InvalidArgumentException(
                     "tax_year_override {$taxYearOverride} is outside the allowed range (current year ±10).",
@@ -74,7 +78,7 @@ final class TagTransaction
         }
 
         // (4) Idempotent upsert — unique(user_id, transaction_id).
-        $now = Carbon::now()->toDateTimeString();
+        $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
 
         $exists = $connection
@@ -84,36 +88,26 @@ final class TagTransaction
             ->exists();
 
         if ($exists) {
-            // Non-destructive one-tap path (CR-03): a bare re-tag (all-null
-            // payload, e.g. the ghost "Tag" button on an already-tagged row)
-            // must never wipe an existing tag's category/note/override. Only
-            // a save carrying at least one value rewrites the payload columns.
-            // created_at is never touched on update — it is the "when was
-            // this first tagged" audit signal (WR-02).
-            $values = ['updated_at' => $now];
-            if ($deductionCategoryId !== null || $note !== null || $taxYearOverride !== null) {
-                $values['deduction_category_id'] = $deductionCategoryId;
-                $values['note'] = $note;
-                $values['tax_year_override'] = $taxYearOverride;
-            }
-
-            $connection
-                ->table('tax_transaction_tags')
-                ->where('user_id', $userId)
-                ->where('transaction_id', $transactionId)
-                ->update($values);
+            $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now);
         } else {
-            $connection
-                ->table('tax_transaction_tags')
-                ->insert([
-                    'user_id' => $userId,
-                    'transaction_id' => $transactionId,
-                    'deduction_category_id' => $deductionCategoryId,
-                    'note' => $note,
-                    'tax_year_override' => $taxYearOverride,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
+            try {
+                $connection
+                    ->table('tax_transaction_tags')
+                    ->insert([
+                        'user_id' => $userId,
+                        'transaction_id' => $transactionId,
+                        'deduction_category_id' => $deductionCategoryId,
+                        'note' => $note,
+                        'tax_year_override' => $taxYearOverride,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]);
+            } catch (UniqueConstraintViolationException) {
+                // Lost the select-then-insert race against a concurrent
+                // request — the row exists now; retry as the guarded
+                // update instead of surfacing a 500 (IN-06).
+                $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now);
+            }
         }
 
         // (5) Notify listeners.
@@ -122,5 +116,36 @@ final class TagTransaction
             transactionId: $transactionId,
             deductionCategoryId: $deductionCategoryId,
         ));
+    }
+
+    /**
+     * Guarded update for an existing tag row.
+     *
+     * Non-destructive one-tap path (CR-03): a bare re-tag (all-null payload,
+     * e.g. the ghost "Tag" button on an already-tagged row) must never wipe
+     * an existing tag's category/note/override — only a save carrying at
+     * least one value rewrites the payload columns. created_at is never
+     * touched on update — it is the "first tagged" audit signal (WR-02).
+     */
+    private function updateExisting(
+        int $userId,
+        int $transactionId,
+        ?int $deductionCategoryId,
+        ?string $note,
+        ?int $taxYearOverride,
+        string $now,
+    ): void {
+        $values = ['updated_at' => $now];
+        if ($deductionCategoryId !== null || $note !== null || $taxYearOverride !== null) {
+            $values['deduction_category_id'] = $deductionCategoryId;
+            $values['note'] = $note;
+            $values['tax_year_override'] = $taxYearOverride;
+        }
+
+        $this->db->connection()
+            ->table('tax_transaction_tags')
+            ->where('user_id', $userId)
+            ->where('transaction_id', $transactionId)
+            ->update($values);
     }
 }
