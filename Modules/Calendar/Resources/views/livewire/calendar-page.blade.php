@@ -198,6 +198,11 @@
                             if ($day->date->month !== $displayMonth) $cellClasses .= ' cal-cell--other-month';
                             elseif ($day->isPast && !$day->isToday) $cellClasses .= ' cal-cell--past';
 
+                            // IN-06: cells render whole euros (half-up) as a deliberate density
+                            // trade-off — sub-euro balances can read "−€0"/"€1" while the day
+                            // panel shows two decimals. The panel is the precise surface; the
+                            // grid corner is a glanceable magnitude, and the rose risk tint
+                            // (driven by the exact minor-unit sign, not this string) stays correct.
                             $balanceStr = $day->isComputing
                                 ? '—'
                                 : (($day->eodBalanceMinor < 0 ? '−' : '') . '€' . number_format(abs($day->eodBalanceMinor / 100), 0, ',', '.'));
