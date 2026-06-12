@@ -139,6 +139,7 @@ final class TaxCsvExporter
         if (is_scalar($value)) {
             return (string) $value;
         }
+
         return '';
     }
 }
