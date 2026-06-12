@@ -6,11 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Calendar\Internal\Services\CalendarQuery;
-use Modules\Calendar\Tests\TestCase;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 /*
  * CalendarQuery — past-day paid/missed reconciliation (CAL-01, D-07, D-08).
@@ -122,6 +119,8 @@ function cqpdOccurrence(DatabaseManager $db, int $userId, int $seriesId, string 
         'updated_at' => $observedAt.' 00:00:00',
     ]);
 }
+
+uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     // "Today" is June 12 so June 1–11 are past days

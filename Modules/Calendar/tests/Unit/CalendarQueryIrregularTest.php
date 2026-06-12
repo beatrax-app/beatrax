@@ -5,11 +5,8 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Calendar\Internal\Services\CalendarQuery;
-use Modules\Calendar\Tests\TestCase;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 /*
  * CalendarQuery — irregular-cadence series placement (CAL-01 edge).
@@ -57,6 +54,8 @@ function cqirSeries(User $user, string $cadence, ?CarbonImmutable $nextExpectedA
         'next_expected_at' => $nextExpectedAt,
     ]);
 }
+
+uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-06-12 00:00:00');
