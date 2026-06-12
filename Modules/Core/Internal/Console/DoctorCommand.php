@@ -14,6 +14,7 @@ use Modules\Core\Internal\Console\Probes\ProbeResult;
 use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
+use Modules\Search\Public\Services\FtsHealthCheck;
 
 /**
  * Runs the beatrax operational doctor: a homogeneous iteration over
@@ -56,6 +57,7 @@ final class DoctorCommand extends Command
         private readonly WalModeProbe $walProbe,
         private readonly SynchronousModeProbe $synchronousProbe,
         private readonly BackupFreshnessProbe $backupFreshnessProbe,
+        private readonly ?FtsHealthCheck $ftsHealth = null,
     ) {
         parent::__construct();
     }
@@ -82,9 +84,25 @@ final class DoctorCommand extends Command
             $this->synchronousProbe,
             $this->backupFreshnessProbe,
         ];
+
         foreach ($probes as $probe) {
             $result = $probe->run();
             $this->reportProbe($probe, $result, $blockers, $warnings);
+        }
+
+        // FtsHealthCheck is optional (null when the Search module is absent or
+        // class_exists() guard has not yet activated it). It lives in Search Public,
+        // so DoctorCommand (Core Internal) can import it without violating the
+        // arch boundary. We create the ProbeResult here so FtsHealthCheck itself
+        // never needs to import Core Internal types (BoundaryArchTest D-24 / T-08-05).
+        if ($this->ftsHealth !== null) {
+            $ftsResult = new ProbeResult($this->ftsHealth->severity(), $this->ftsHealth->message());
+            $this->line(sprintf('%-24s %-8s %s', $this->ftsHealth->label(), $ftsResult->severity, $ftsResult->message));
+            if ($ftsResult->severity === 'critical') {
+                $blockers[] = $this->ftsHealth->label();
+            } elseif ($ftsResult->severity === 'warning') {
+                $warnings[] = $this->ftsHealth->label();
+            }
         }
 
         // ext-imap is reported separately as informational-only — the

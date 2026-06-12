@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Import\Public\Events\TransactionImported;
+use Modules\Search\Internal\Console\ReindexSearchCommand;
 use Modules\Search\Internal\Http\Livewire\PaletteSearchEndpoint;
 use Modules\Search\Internal\Listeners\IndexTransactionOnImport;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
@@ -98,6 +99,11 @@ final class SearchServiceProvider extends ServiceProvider
                 TransactionImported::class,
                 [IndexTransactionOnImport::class, 'handle'],
             );
+        }
+
+        // Plan 02: search:reindex artisan command (chunked FTS rebuild, D-24)
+        if (class_exists(ReindexSearchCommand::class) && $this->app->runningInConsole()) {
+            $this->commands([ReindexSearchCommand::class]);
         }
 
         // Plan 05: palette search endpoint Livewire component
