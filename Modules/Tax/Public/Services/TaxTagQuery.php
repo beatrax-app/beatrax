@@ -156,6 +156,37 @@ final class TaxTagQuery
         );
     }
 
+    /**
+     * Fetch the ids of untagged transactions for a given counterparty + tax year.
+     *
+     * Used by HandlesTaxTagging::applyBatchTag to tag all siblings in one pass.
+     * Scoped to $userId — returns only rows owned by this user (T-07-20).
+     *
+     * @return list<int>
+     */
+    public function untaggedIdsForCounterparty(int $userId, int $counterpartyId, int $taxYear): array
+    {
+        $rows = $this->db->connection()
+            ->table('transactions AS t')
+            ->leftJoin('tax_transaction_tags AS tag', static function (JoinClause $join) use ($userId): void {
+                $join->on('tag.transaction_id', '=', 't.id')
+                    ->where('tag.user_id', '=', $userId);
+            })
+            ->whereNull('tag.id')
+            ->where('t.user_id', $userId)
+            ->where('t.counterparty_id', $counterpartyId)
+            ->whereRaw(
+                'CAST(strftime(\'%Y\', t.booked_at) AS INTEGER) = ?',
+                [$taxYear],
+            )
+            ->pluck('t.id');
+
+        /** @var list<int> $result */
+        $result = array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rows->all()));
+
+        return $result;
+    }
+
     private static function toInt(mixed $value): int
     {
         return is_numeric($value) ? (int) $value : 0;
