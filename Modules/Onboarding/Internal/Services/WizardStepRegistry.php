@@ -13,9 +13,10 @@ namespace Modules\Onboarding\Internal\Services;
  * dots render against it.
  *
  * Skippable steps are the four connector steps (bank, paypal, card,
- * email) and the optional `budgets` step; the wizard's bookend steps
- * (`welcome`, `done`) and the `first-import` step are not skippable. A
- * `skip` call on a non-skippable step is a no-op at the SetupWizard layer.
+ * email) and the optional `budgets` + `tax-country` steps; the wizard's
+ * bookend steps (`welcome`, `done`) and the `first-import` step are not
+ * skippable. A `skip` call on a non-skippable step is a no-op at the
+ * SetupWizard layer.
  */
 final class WizardStepRegistry
 {
@@ -28,6 +29,7 @@ final class WizardStepRegistry
         'connect-email',
         'first-import',
         'budgets',
+        'tax-country',
         'done',
     ];
 
@@ -38,6 +40,7 @@ final class WizardStepRegistry
         'connect-card',
         'connect-email',
         'budgets',
+        'tax-country',
     ];
 
     /** @return list<string> */

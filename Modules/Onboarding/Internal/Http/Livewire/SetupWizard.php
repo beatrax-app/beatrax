@@ -24,9 +24,9 @@ use Psr\Log\LoggerInterface;
 /**
  * Parent Livewire component for the first-run setup wizard. Owns the
  * `currentStepKey` state, the rendered progress dots, and the dispatch
- * chain that advances the user through the eight canonical wizard steps
- * (welcome, connect-bank, connect-card, connect-email, first-import,
- * done).
+ * chain that advances the user through the nine canonical wizard steps
+ * (welcome, the four connector steps, first-import, budgets,
+ * tax-country, done).
  *
  * On mount the component:
  *   - Re-runs WizardProgressInitializer (idempotent safety net so the
