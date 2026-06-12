@@ -2690,6 +2690,24 @@ td.date,
         height: auto !important;
     }
 
+    /*
+     * Desktop sidebar: one scroll context, full-height column. The base
+     * `.side` rule (sticky + 100vh + overflow-y: auto) exists for the
+     * mobile drawer, where the panel is a fixed 100dvh slide-in that must
+     * scroll internally. On desktop that combination gives the nav its own
+     * scrollbar next to the page scrollbar once the list outgrows the
+     * viewport. Here the sidebar instead stretches with the page column
+     * (`min-height: 100%` against the stretched .drawer-container) and
+     * scrolls together with the content — no second scrollbar, and the
+     * column background always fills down to the page bottom.
+     */
+    .side {
+        position: static;
+        height: auto;
+        min-height: 100%;
+        overflow-y: visible;
+    }
+
     .drawer-scrim {
         display: none !important;
     }
