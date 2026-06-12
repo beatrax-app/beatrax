@@ -255,9 +255,16 @@ trait HandlesTaxTagging
         $ids = $q->untaggedIdsForCounterparty($user->id, $cpId, $taxYear);
 
         // Prefer the snapshot taken at trigger-tag save time; fall back to the
-        // live picker state for the picker-still-open case (D-03 same category).
-        $categoryId = $this->batchSuggestion['categoryId'] ?? $this->pickerCategoryId;
-        $note = $this->batchSuggestion['note'] ?? ($this->pickerNote !== '' ? $this->pickerNote : null);
+        // live picker state ONLY when no snapshot was taken (picker-still-open
+        // case). array_key_exists — not ?? — because a snapshotted null means
+        // "the trigger tag was saved with NO category/note" and must not fall
+        // through to picker state from an unrelated row (WR-03 / D-03).
+        $categoryId = array_key_exists('categoryId', $this->batchSuggestion)
+            ? $this->batchSuggestion['categoryId']
+            : $this->pickerCategoryId;
+        $note = array_key_exists('note', $this->batchSuggestion)
+            ? $this->batchSuggestion['note']
+            : ($this->pickerNote !== '' ? $this->pickerNote : null);
 
         foreach ($ids as $txId) {
             $tag->execute(

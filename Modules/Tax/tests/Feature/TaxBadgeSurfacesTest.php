@@ -468,6 +468,52 @@ describe('TransactionsList tax badge', function (): void {
         $component->assertDontSee('Assign to tax year');
     });
 
+    it('applyBatchTag honours a snapshotted "No category" — it never falls through to live picker state from another row (WR-03)', function (): void {
+        $user = badgeUser('tx-list-batch-nullcat-user');
+        $db = app(DatabaseManager::class);
+        $cpId = badgeCp($db, $user->id, 'Batch NoCat Gym');
+        $tx1 = badgeTx($db, $user->id, $cpId, '2026-06-01 00:00:00');
+        $tx2 = badgeTx($db, $user->id, $cpId, '2026-06-02 00:00:00');
+        $tx3 = badgeTx($db, $user->id, $cpId, '2026-06-03 00:00:00');
+        // Unrelated, already-tagged row from a different counterparty —
+        // editing it opens the picker WITHOUT recomputing the suggestion.
+        $txOther = badgeTx($db, $user->id, null, '2026-06-04 00:00:00');
+        badgeTag($db, $user->id, $txOther);
+
+        $catId = (int) $db->connection()->table('tax_deduction_categories')->insertGetId([
+            'user_id' => $user->id,
+            'name' => 'Unrelated Cat',
+            'short_name' => 'Unrel',
+            'status' => 'active',
+            'sort_order' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Save the trigger tag with NO category (snapshot stores categoryId=null).
+        $component = Livewire::actingAs($user)->test(TransactionsList::class);
+        $component->dispatch('tax-tag', id: $tx1);
+        $component->call('saveTaxCategory');
+
+        // Pollute the live picker state via an unrelated row before applying.
+        $component->dispatch('tax-edit-tag', id: $txOther);
+        $component->set('pickerCategoryId', $catId);
+        $component->set('pickerNote', 'unrelated note');
+
+        $component->call('applyBatchTag');
+
+        foreach ([$tx2, $tx3] as $sibling) {
+            $row = $db->connection()->table('tax_transaction_tags')
+                ->where('user_id', $user->id)
+                ->where('transaction_id', $sibling)
+                ->first(['deduction_category_id', 'note']);
+
+            expect($row)->not->toBeNull();
+            expect($row->deduction_category_id)->toBeNull();
+            expect($row->note)->toBeNull();
+        }
+    });
+
     it('does not show another user\'s badge state (cross-user isolation)', function (): void {
         $owner = badgeUser('tx-list-owner');
         $partner = badgeUser('tx-list-partner');
