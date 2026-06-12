@@ -20,11 +20,12 @@ it('it_rebuilds_the_fts_index', function (): void {
     // Wave 0 RED — implemented in Plan 02
     $userId = $this->searchTestUser('reindex-user-a');
 
-    // Seed transactions BEFORE reindex (no prior index entries exist)
+    // Seed transactions BEFORE reindex (no prior index entries exist —
+    // $seedFts: false keeps the fixture from pre-populating the index)
     for ($i = 1; $i <= 3; $i++) {
         $this->searchTestTransaction($userId, [
             'counterparty_name' => "Vendor {$i}",
-        ]);
+        ], seedFts: false);
     }
 
     /** @var DatabaseManager $db */
