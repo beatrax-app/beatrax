@@ -73,10 +73,15 @@ trait HandlesTaxTagging
      * properties by the time the banner is clicked (D-03: one confirmation
      * applies the SAME category as the trigger tag).
      *
-     * Keys: 'counterpartyId' (int), 'counterpartyName' (string), 'untaggedCount' (int),
-     * 'categoryId' (int|null, optional), 'note' (string|null, optional).
+     * 'taxYear' is the TRIGGER transaction's booked year (WR-05): "also tag
+     * the other gym payments like this one" is keyed to the year of the row
+     * the user just tagged, not the seasonal current tax year — and storing
+     * it prevents drift between the tag action and the banner click.
      *
-     * @var array{counterpartyId: int, counterpartyName: string, untaggedCount: int, categoryId?: int|null, note?: string|null}|null
+     * Keys: 'counterpartyId' (int), 'counterpartyName' (string), 'untaggedCount' (int),
+     * 'taxYear' (int, optional), 'categoryId' (int|null, optional), 'note' (string|null, optional).
+     *
+     * @var array{counterpartyId: int, counterpartyName: string, untaggedCount: int, taxYear?: int, categoryId?: int|null, note?: string|null}|null
      */
     public ?array $batchSuggestion = null;
 
@@ -117,7 +122,11 @@ trait HandlesTaxTagging
 
         // (3) Compute batch suggestion (D-03) — only when not already dismissed.
         if (! $this->batchSuggestionDismissed) {
-            $taxYear = $this->resolveCurrentTaxYear($c);
+            // WR-05: key the suggestion to the TRIGGER transaction's booked
+            // year (openPickerFor just resolved it), not the seasonal current
+            // tax year — tagging old history must suggest siblings from the
+            // same year as the row the user tagged.
+            $taxYear = $this->pickerBookedYear ?? $this->resolveCurrentTaxYear($c);
             $suggestion = $q->untaggedCountForCounterparty($user->id, $id, $taxYear);
 
             if ($suggestion->untaggedCount >= 2) {
@@ -125,6 +134,7 @@ trait HandlesTaxTagging
                     'counterpartyId' => $suggestion->counterpartyId,
                     'counterpartyName' => $suggestion->counterpartyName,
                     'untaggedCount' => $suggestion->untaggedCount,
+                    'taxYear' => $taxYear,
                 ];
             } else {
                 $this->batchSuggestion = null;
@@ -251,7 +261,10 @@ trait HandlesTaxTagging
 
         $user = $u->user();
         $cpId = $this->batchSuggestion['counterpartyId'];
-        $taxYear = $this->resolveCurrentTaxYear($c);
+        // WR-05: reuse the year snapshotted when the suggestion was computed
+        // so the banner can never apply to a different year than it counted
+        // (the seasonal year is only a fallback for stale snapshots).
+        $taxYear = $this->batchSuggestion['taxYear'] ?? $this->resolveCurrentTaxYear($c);
 
         // Fetch the untagged transaction ids for this counterparty/year.
         $ids = $q->untaggedIdsForCounterparty($user->id, $cpId, $taxYear);
