@@ -8,7 +8,9 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
+use Modules\Tax\Internal\Http\Livewire\TaxPage;
 use Modules\Tax\Internal\Http\Livewire\TaxSettingsSection;
+use Modules\Tax\Internal\Http\Livewire\TaxSummaryCard;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Services\TaxCsvExporter;
@@ -65,6 +67,8 @@ final class TaxServiceProvider extends ServiceProvider
         // Plan 04: Tax settings section (country choice + category CRUD)
         $livewire->component('tax.settings-section', TaxSettingsSection::class);
 
-        // TODO: Plan 05 adds TaxPage, TaxSummaryCard component registration here.
+        // Plan 05: /tax cockpit page + dashboard summary card
+        $livewire->component('tax.tax-page', TaxPage::class);
+        $livewire->component('tax.summary-card', TaxSummaryCard::class);
     }
 }
