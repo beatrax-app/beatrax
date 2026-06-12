@@ -47,9 +47,11 @@
                 @if (count($availableYears) > 0)
                     <div class="flex flex-wrap gap-1" role="group" aria-label="Select tax year">
                         @php
+                            // Render ALL available years — history is retained forever
+                            // (project constraint); the container flex-wraps past one
+                            // row, so a hard cap would silently hide older years (IN-05).
                             $years = array_unique(array_merge([$year], $availableYears));
                             rsort($years);
-                            $years = array_slice($years, 0, 5);
                         @endphp
                         @foreach ($years as $y)
                             <button
