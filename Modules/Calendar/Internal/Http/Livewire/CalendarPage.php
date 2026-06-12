@@ -4,52 +4,47 @@ declare(strict_types=1);
 
 namespace Modules\Calendar\Internal\Http\Livewire;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Modules\Calendar\Internal\Services\CalendarQuery;
+use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
  * `/calendar` Livewire page — cash-flow calendar surface.
  *
- * Phase 6 Plan 01 establishes the bootable shell with #[Url] properties
- * and a static render. CalendarQuery (Plan 02) and the full grid UI
- * (Plan 03) are not yet available — this component returns an empty page
- * shell so the route registers and the browser can visit /calendar.
+ * Phase 6 Plan 02 wires CalendarQuery into the render method so the
+ * page returns real data: entry placement, balance line, paid/missed
+ * state, and drill-through links.
  *
  * Security notes (T-06-01, T-06-02):
- *   - month and year arrive from the URL as untrusted integers; Plan 03
- *     validates bounds (month 1–12, year within forecast coverage).
- *   - visibleAccountIds and balanceAccountIds arrive from URL/Livewire
- *     payload; Plan 02/03 MUST intersect these against the authenticated
- *     user's owned accounts before passing to ForecastQuery or CalendarQuery.
- *     The type declarations (?int / list<int>) are established here; the
- *     validation logic lands in Plan 02 when CalendarQuery is wired.
- *
- * Service collaborators arrive as parameters on render() and action
- * methods. Constructor injection is banned on Livewire Component subclasses
- * by phpstan-strict-rules.
+ *   - month and year are clamped to valid ranges before use.
+ *   - visibleAccountIds and balanceAccountIds are passed directly to
+ *     CalendarQuery which INTERSECTS them against the authenticated
+ *     user's owned accounts before any forUser/forecast call. No
+ *     server-side enforcement is needed here beyond the clamp — the
+ *     CalendarQuery service is the security boundary.
  */
 final class CalendarPage extends Component
 {
     /**
      * Display month (1–12). Null = current month.
-     * Bounds validation (1–12) added in Plan 03.
      */
     #[Url(as: 'month', except: null)]
     public ?int $month = null;
 
     /**
      * Display year (e.g. 2026). Null = current year.
-     * Bounds validation (within forecast coverage) added in Plan 03.
      */
     #[Url(as: 'year', except: null)]
     public ?int $year = null;
 
     /**
      * Account IDs whose recurring entries appear on the grid.
-     * Null = all accounts (default: entries all ON per D-03).
-     * MUST be intersected against user-owned accounts before use (T-06-02).
+     * Empty = all accounts (default: entries all ON per D-02).
+     * Intersected against user-owned accounts in CalendarQuery (T-06-02).
      *
      * @var list<int>
      */
@@ -57,8 +52,8 @@ final class CalendarPage extends Component
 
     /**
      * Account IDs whose forecast balances are summed for the balance line.
-     * Null = spendable default (checking + PayPal ON; savings + ICS OFF per D-03).
-     * MUST be intersected against user-owned accounts before use (T-06-02).
+     * Empty = spendable default (checking + PayPal ON; ICS OFF per D-03).
+     * Intersected against user-owned accounts in CalendarQuery (T-06-02).
      *
      * @var list<int>
      */
@@ -70,9 +65,56 @@ final class CalendarPage extends Component
      */
     public ?string $selectedDay = null;
 
-    public function render(ViewFactory $views): View
+    public function render(ViewFactory $views, CalendarQuery $calendarQuery, CurrentUser $currentUser): View
     {
-        $view = $views->make('calendar::livewire.calendar-page');
+        $user = $currentUser->user();
+
+        // Resolve display year and month (clamp to valid ranges)
+        $now = CarbonImmutable::now();
+        $year = ($this->year !== null && $this->year >= 2000 && $this->year <= 2100)
+            ? $this->year
+            : $now->year;
+        $month = ($this->month !== null && $this->month >= 1 && $this->month <= 12)
+            ? $this->month
+            : $now->month;
+
+        // CalendarQuery handles security (T-06-02): intersects account IDs against
+        // user-owned accounts; foreign IDs are silently dropped.
+        $days = $calendarQuery->forMonth(
+            $user,
+            $year,
+            $month,
+            $this->visibleAccountIds,
+            $this->balanceAccountIds,
+        );
+
+        // Determine empty state: no entries across any day in the grid
+        $hasEntries = false;
+        foreach ($days as $day) {
+            if ($day->entries !== []) {
+                $hasEntries = true;
+                break;
+            }
+        }
+
+        // Resolve the day DTO for the selected day (for the day panel)
+        $selectedDayDto = null;
+        if ($this->selectedDay !== null) {
+            foreach ($days as $day) {
+                if ($day->date->toDateString() === $this->selectedDay) {
+                    $selectedDayDto = $day;
+                    break;
+                }
+            }
+        }
+
+        $view = $views->make('calendar::livewire.calendar-page', [
+            'days' => $days,
+            'hasEntries' => $hasEntries,
+            'selectedDayDto' => $selectedDayDto,
+            'displayYear' => $year,
+            'displayMonth' => $month,
+        ]);
 
         /** @phpstan-ignore-next-line method.notFound */
         $view->extends('layouts.app', ['title' => 'Calendar · beatrax']);

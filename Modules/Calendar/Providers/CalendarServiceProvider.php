@@ -7,21 +7,21 @@ namespace Modules\Calendar\Providers;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
+use Modules\Calendar\Internal\Services\CalendarQuery;
 
 /**
  * Wires the Calendar module: migrations, routes, views, and the
  * CalendarPage Livewire component registration.
  *
- * CalendarQuery (Internal\Services) arrives in Plan 02 and will be
- * bound as a singleton in register() at that point. The register()
- * body is intentionally empty for Plan 01 — CalendarPage does not
- * inject CalendarQuery yet.
+ * CalendarQuery is registered as a singleton — it is stateless (all state
+ * flows through forMonth() arguments) so a shared instance is safe and
+ * avoids repeated DI resolution overhead on multi-component pages.
  */
 final class CalendarServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // CalendarQuery singleton binding added in Plan 02 once the class exists.
+        $this->app->singleton(CalendarQuery::class);
     }
 
     public function boot(LivewireManager $livewire): void
