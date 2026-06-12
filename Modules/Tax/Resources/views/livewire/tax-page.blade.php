@@ -115,14 +115,12 @@
                     >Set up tax categories</a>
                 </div>
             </div>
-            @return
-        @endif
+        @elseif ($data !== null)
 
         {{-- ────────────────────────────────────────────────────────────────── --}}
         {{-- Year-totals strip (D-11/D-12)                                      --}}
         {{-- ────────────────────────────────────────────────────────────────── --}}
 
-        @if ($data !== null)
             <div class="tax-totals-strip mb-6">
                 <div class="flex flex-col">
                     <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">Total deductions</span>
