@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Event;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Events\TransactionTagged;
@@ -282,9 +284,9 @@ it('the ±10-year override window follows the injected Clock, not the wall clock
     $txId = taxTestTransaction($db, $userId);
 
     // Freeze the Clock at 2030 — valid window becomes 2020..2040.
-    $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
-    $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2030, 6, 15));
-    app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+    $clock = Mockery::mock(Clock::class);
+    $clock->allows('now')->andReturn(CarbonImmutable::create(2030, 6, 15));
+    app()->instance(Clock::class, $clock);
 
     /** @var TagTransaction $action */
     $action = app(TagTransaction::class);

@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
@@ -327,9 +329,9 @@ describe('TransactionsList tax badge', function (): void {
         // WR-09: freeze the clock consistent with the June-2026 fixtures so
         // this test cannot rot when the real calendar moves past the fixture
         // year (resolveCurrentTaxYear is seasonal).
-        $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
-        $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2026, 6, 15));
-        app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+        $clock = Mockery::mock(Clock::class);
+        $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 6, 15));
+        app()->instance(Clock::class, $clock);
 
         $cpId = badgeCp($db, $user->id, 'Batch Gym');
         $tx1 = badgeTx($db, $user->id, $cpId, '2026-06-01 00:00:00');
@@ -365,9 +367,9 @@ describe('TransactionsList tax badge', function (): void {
         $db = app(DatabaseManager::class);
 
         // WR-09: frozen clock consistent with the June-2026 fixtures.
-        $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
-        $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2026, 6, 15));
-        app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+        $clock = Mockery::mock(Clock::class);
+        $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 6, 15));
+        app()->instance(Clock::class, $clock);
 
         $cpId = badgeCp($db, $user->id, 'Batch Insurer');
         $tx1 = badgeTx($db, $user->id, $cpId, '2026-06-01 00:00:00');
@@ -438,9 +440,9 @@ describe('TransactionsList tax badge', function (): void {
         $db = app(DatabaseManager::class);
 
         // Freeze the clock: June 2026 → current tax year = 2026.
-        $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
-        $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2026, 6, 15));
-        app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+        $clock = Mockery::mock(Clock::class);
+        $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 6, 15));
+        app()->instance(Clock::class, $clock);
 
         // Row booked in a DIFFERENT year (2024) than the current tax year (2026).
         $txId = badgeTx($db, $user->id, null, '2024-03-10 00:00:00');
@@ -469,9 +471,9 @@ describe('TransactionsList tax badge', function (): void {
         $user = badgeUser('tx-list-same-year-user');
         $db = app(DatabaseManager::class);
 
-        $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
-        $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2026, 6, 15));
-        app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+        $clock = Mockery::mock(Clock::class);
+        $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 6, 15));
+        app()->instance(Clock::class, $clock);
 
         $txId = badgeTx($db, $user->id, null, '2026-06-01 00:00:00');
 
@@ -533,9 +535,9 @@ describe('TransactionsList tax badge', function (): void {
         $db = app(DatabaseManager::class);
 
         // Wall clock says June 2026 → seasonal tax year would be 2026.
-        $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
-        $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2026, 6, 15));
-        app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+        $clock = Mockery::mock(Clock::class);
+        $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 6, 15));
+        app()->instance(Clock::class, $clock);
 
         $cpId = badgeCp($db, $user->id, 'Old History Gym');
         // Trigger + 2 siblings booked in 2024; 1 sibling booked in 2026.
