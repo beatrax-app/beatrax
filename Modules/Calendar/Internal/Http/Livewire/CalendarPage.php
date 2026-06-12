@@ -337,6 +337,10 @@ final class CalendarPage extends Component
      * clamping to valid ranges. Called by both render() and action methods
      * so the clamping logic lives in one place.
      *
+     * Also clamps to the 12-month forward forecast ceiling (T-06-01, D-14,
+     * WR-05) so a tampered ?year=&month= URL cannot render a month beyond
+     * the forecast horizon — the same invariant nextMonth() enforces.
+     *
      * @return array{year: int, month: int}
      */
     private function resolveDisplay(): array
@@ -348,6 +352,13 @@ final class CalendarPage extends Component
         $month = ($this->month !== null && $this->month >= 1 && $this->month <= 12)
             ? $this->month
             : $now->month;
+
+        // 12-month forward ceiling (D-14, WR-05)
+        $ceiling = $now->addMonths(12);
+        if ($year > $ceiling->year || ($year === $ceiling->year && $month > $ceiling->month)) {
+            $year = $ceiling->year;
+            $month = $ceiling->month;
+        }
 
         return ['year' => $year, 'month' => $month];
     }
