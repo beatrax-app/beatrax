@@ -64,6 +64,19 @@ final class TaxCategoryWriter
                 continue;
             }
 
+            // A user-created category may already carry this exact name —
+            // inserting would violate unique(user_id, name) and 500 the
+            // settings/wizard country pickers (WR-01). Skip; the user's own
+            // category wins.
+            $nameTaken = $connection->table('tax_deduction_categories')
+                ->where('user_id', $user->id)
+                ->where('name', $name)
+                ->exists();
+
+            if ($nameTaken) {
+                continue;
+            }
+
             $shortName = is_string($entry['short_name'] ?? null) ? $entry['short_name'] : null;
             $hint = is_string($entry['hint'] ?? null) ? $entry['hint'] : null;
 
