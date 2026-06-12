@@ -230,7 +230,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 07-03-PLAN.md — dompdf legitimacy gate + TaxCsvExporter (D-15 audit CSV) + TaxPdfRenderer (D-14 summary + grouped tables)
+- [x] 07-03-PLAN.md — dompdf legitimacy gate + TaxCsvExporter (D-15 audit CSV) + TaxPdfRenderer (D-14 summary + grouped tables)
 
 **Wave 4** *(blocked on Wave 3)*
 
@@ -352,7 +352,7 @@ Plans:
 | 4. Responsive + installable PWA | 9/9 | Complete   | 2026-06-11 |
 | 5. PIN / biometric app-lock | 6/6 | Complete   | 2026-06-11 |
 | 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
-| 7. Tax / deductible tagging + export | 3/6 | In Progress|  |
+| 7. Tax / deductible tagging + export | 4/6 | In Progress|  |
 | 8. Full-text search over history | 0/0 | Not started | - |
 | 9. Unusual-charge / anomaly alerts | 0/0 | Not started | - |
 | 10. SPIKE — op-log/CRDT merge layer | 0/0 | Not started | - |
