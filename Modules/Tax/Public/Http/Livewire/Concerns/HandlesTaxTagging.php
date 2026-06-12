@@ -7,9 +7,9 @@ namespace Modules\Tax\Public\Http\Livewire\Concerns;
 use Livewire\Attributes\On;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
+use Modules\Tax\Public\Services\TaxCategoryWriter;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
 /**
