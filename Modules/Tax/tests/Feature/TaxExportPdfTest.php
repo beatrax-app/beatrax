@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Tax\Internal\Services\TaxPdfRenderer;
+use Modules\Tax\Internal\Services\TaxYearQuery;
 
 /*
  * Feature tests for TaxPdfRenderer — the D-14 PDF export.
@@ -168,7 +169,7 @@ it('a free-text note with <script> is HTML-escaped in the rendered view HTML', f
     tpdfTag($db, $user->id, $txId, $catId, ['note' => '<script>alert(1)</script>']);
 
     // Render the Blade view HTML directly (not the PDF bytes) to assert escaping.
-    $data = app(\Modules\Tax\Internal\Services\TaxYearQuery::class)->forUser($user->id, 2025);
+    $data = app(TaxYearQuery::class)->forUser($user->id, 2025);
     $html = view('tax::pdf.export', ['year' => 2025, 'data' => $data])->render();
 
     // The literal <script> must NOT appear in the HTML output.
