@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Services\NavCountsService;
+use Modules\Tax\Public\Actions\TagTransaction;
+use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
 /*
@@ -360,7 +362,7 @@ it('tagging a transaction invalidates the cached nav counts (WR-06)', function (
     // Warm the cache BEFORE tagging.
     expect($service->forUser($userId)['tax_tagged'])->toBe(0);
 
-    app(\Modules\Tax\Public\Actions\TagTransaction::class)->execute($userId, $txId, null, null, null);
+    app(TagTransaction::class)->execute($userId, $txId, null, null, null);
 
     // Without invalidation this would still read the stale cached 0 for up
     // to 300 seconds.
@@ -381,7 +383,7 @@ it('untagging a transaction invalidates the cached nav counts (WR-06)', function
     // Warm the cache BEFORE untagging.
     expect($service->forUser($userId)['tax_tagged'])->toBe(1);
 
-    app(\Modules\Tax\Public\Actions\UntagTransaction::class)->execute($userId, $txId);
+    app(UntagTransaction::class)->execute($userId, $txId);
 
     expect($service->forUser($userId)['tax_tagged'])->toBe(0);
 });

@@ -31,7 +31,7 @@ function taxPageUser(string $username = 'tax-page-user', bool $withCountry = tru
     // Passing it to create() silently drops it, which previously masked the
     // CR-01 @return blade bug.
     if ($withCountry) {
-        app(\Illuminate\Database\DatabaseManager::class)->connection()
+        app(DatabaseManager::class)->connection()
             ->table('users')
             ->where('id', $user->id)
             ->update(['tax_country_code' => 'nl']);
