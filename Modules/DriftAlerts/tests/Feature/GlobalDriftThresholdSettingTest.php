@@ -10,8 +10,15 @@ use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Internal\DriftEvaluator;
 use Modules\DriftAlerts\Models\DriftAlert;
+use Modules\Ledger\Models\Currency;
 
 uses(RefreshDatabase::class);
+
+beforeEach(function (): void {
+    // SettingsPage::save() validates baseCurrency against
+    // `exists:currencies,code`; seed EUR so the default passes.
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+});
 
 /*
  * /settings global drift threshold field tests. Persists to
