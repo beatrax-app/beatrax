@@ -113,7 +113,7 @@ trait HandlesTaxTagging
         $tag->execute($user->id, $id, null, null, null);
 
         // (2) Open the picker for the optional category/note/year selection.
-        $this->openPickerFor($id, $c, $writer, $u);
+        $this->openPickerFor($id, $c, $writer, $u, $q);
 
         // (3) Compute batch suggestion (D-03) — only when not already dismissed.
         if (! $this->batchSuggestionDismissed) {
@@ -155,7 +155,7 @@ trait HandlesTaxTagging
             $this->pickerYearOverride = $existing->taxYearOverride;
         }
 
-        $this->openPickerFor($id, $c, $writer, $u);
+        $this->openPickerFor($id, $c, $writer, $u, $q);
     }
 
     // ── Actions ──────────────────────────────────────────────────────────────
@@ -335,6 +335,7 @@ trait HandlesTaxTagging
         Clock $c,
         TaxCategoryWriter $writer,
         CurrentUser $u,
+        TaxTagQuery $q,
     ): void {
         $this->taxPickerTxId = $id;
         $this->pickerIsNewCatOpen = false;
@@ -343,9 +344,10 @@ trait HandlesTaxTagging
         // Load categories fresh.
         $this->pickerCategories = $writer->listForUser($u->user()->id);
 
-        // Resolve booked year for the year-assignment row.
+        // Resolve booked year + current tax year for the D-10 year-assignment
+        // row (rendered when they differ — CR-02).
         $this->pickerTaxYear = $this->resolveCurrentTaxYear($c);
-        $this->pickerBookedYear = null; // Will be populated by the surface if needed.
+        $this->pickerBookedYear = $q->bookedYearFor($u->user()->id, $id);
     }
 
     private function resolveCurrentTaxYear(Clock $c): int
