@@ -89,8 +89,9 @@ final class TaxCategoryWriter
     /**
      * Create a user-owned category (corpus_key null).
      *
-     * @throws \RuntimeException When a category with the same name already exists for the user.
      * @return int The new category's id.
+     *
+     * @throws \RuntimeException When a category with the same name already exists for the user.
      */
     public function add(int $userId, string $name, ?string $shortName = null, ?string $hint = null): int
     {
@@ -166,7 +167,7 @@ final class TaxCategoryWriter
             ->first();
 
         if ($existing === null) {
-            throw new NotFoundHttpException();
+            throw new NotFoundHttpException;
         }
 
         $connection->table('tax_deduction_categories')
@@ -193,7 +194,7 @@ final class TaxCategoryWriter
             ->first();
 
         if ($existing === null) {
-            throw new NotFoundHttpException();
+            throw new NotFoundHttpException;
         }
 
         $connection->table('tax_deduction_categories')

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Mockery\MockInterface;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
+use Psr\Log\LoggerInterface;
 
 /*
  * Unit tests for TaxCorpusLoader — the built-in deduction category corpus.
@@ -48,8 +50,8 @@ it('all six shipped country files parse and yield at least 3 entries each', func
 })->with(['nl', 'de', 'be', 'fr', 'gb', 'us']);
 
 it('logs a warning and returns empty list when the corpus file contains malformed YAML', function (): void {
-    /** @var \Psr\Log\LoggerInterface&\Mockery\MockInterface $logger */
-    $logger = Mockery::mock(\Psr\Log\LoggerInterface::class);
+    /** @var LoggerInterface&MockInterface $logger */
+    $logger = Mockery::mock(LoggerInterface::class);
     $logger->shouldReceive('warning')->once();
 
     $loader = new TaxCorpusLoader($logger);
