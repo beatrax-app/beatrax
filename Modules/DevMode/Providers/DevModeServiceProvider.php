@@ -368,6 +368,8 @@ final class DevModeServiceProvider extends ServiceProvider
                 ['id' => 'inboxes.index', 'label' => 'Email', 'hint' => 'Connected inboxes', 'icon' => '✉', 'route' => 'inboxes.index', 'keywords' => ['inbox', 'gmail', 'imap']],
                 ['id' => 'uncategorized', 'label' => 'Categorization', 'hint' => 'Review uncategorized transactions', 'icon' => '⌕', 'route' => 'uncategorized', 'keywords' => ['rules', 'tag']],
                 ['id' => 'settings', 'label' => 'Settings', 'hint' => 'App preferences', 'icon' => '⚙', 'route' => 'settings', 'keywords' => ['prefs', 'config', 'profile']],
+                // Phase 07 — Tax cockpit (D-17 ⌘K palette entry)
+                ['id' => 'tax.index', 'label' => 'Tax', 'hint' => 'Deductible records and per-year export', 'icon' => '⊞', 'route' => 'tax.index', 'keywords' => ['deduction', 'aangifte', 'export', 'records']],
             ];
 
             foreach ($nav as $row) {
