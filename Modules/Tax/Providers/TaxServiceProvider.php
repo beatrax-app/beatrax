@@ -54,6 +54,10 @@ final class TaxServiceProvider extends ServiceProvider
         $this->app->singleton(TaxCorpusLoader::class);
         $this->app->singleton(TaxCategoryWriter::class);
 
+        // Public category-writer facade — the surface consumed by the
+        // HandlesTaxTagging trait inside other modules' components (WR-07).
+        $this->app->singleton(\Modules\Tax\Public\Services\TaxCategoryWriter::class);
+
         // Public country-setup surface for cross-module consumers
         // (the Onboarding wizard's tax-country step).
         $this->app->singleton(TaxCountrySetup::class);
