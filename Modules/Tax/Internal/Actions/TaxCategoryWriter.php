@@ -46,7 +46,15 @@ final class TaxCategoryWriter
         $now = Carbon::now()->toDateTimeString();
         $inserted = 0;
 
-        foreach ($entries as $index => $entry) {
+        // IN-04: continue sort_order AFTER the user's existing categories
+        // (as add() does) so seeding a second country appends its block
+        // instead of interleaving pairwise with the first country's set.
+        $maxOrder = $connection->table('tax_deduction_categories')
+            ->where('user_id', $user->id)
+            ->max('sort_order');
+        $sortBase = is_numeric($maxOrder) ? (int) $maxOrder + 1 : 0;
+
+        foreach ($entries as $entry) {
             $key = is_string($entry['key'] ?? null) ? $entry['key'] : '';
             $name = is_string($entry['name'] ?? null) ? $entry['name'] : '';
             if ($key === '' || $name === '') {
@@ -88,7 +96,7 @@ final class TaxCategoryWriter
                 'corpus_key' => $key,
                 'country_code' => $countryCode,
                 'status' => 'active',
-                'sort_order' => $index,
+                'sort_order' => $sortBase + $inserted,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
