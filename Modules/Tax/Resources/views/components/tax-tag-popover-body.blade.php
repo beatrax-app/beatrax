@@ -182,10 +182,10 @@
                 Assign to tax year:
             </p>
             <div style="display: flex; gap: var(--space-2);">
+                {{-- Booked-year button (override = null): never amber — amber marks the override (IN-01). --}}
                 <button
                     type="button"
                     wire:click="$set('pickerYearOverride', null)"
-                    @class(['tax-badge--amber' => $pickerYearOverride !== null])
                     style="border: 1px solid var(--color-border, #e2e8f0); border-radius: 9999px; padding: 2px 10px; font-size: var(--text-xs, 12px); cursor: pointer; background: {{ $pickerYearOverride === null ? 'var(--color-emerald-bg, #d1fae5)' : 'transparent' }}; color: {{ $pickerYearOverride === null ? 'var(--color-emerald, #10b981)' : 'var(--color-text-muted, #64748b)' }};"
                 >{{ $pickerBookedYear }}</button>
                 <button
