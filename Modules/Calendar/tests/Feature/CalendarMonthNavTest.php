@@ -76,6 +76,16 @@ it('nextMonth is a no-op when the next month exceeds the 12-month forecast horiz
         ->assertSet('year', 2027);
 });
 
+it('clamps a tampered ?year=&month= beyond the 12-month horizon to the ceiling month (WR-05)', function (): void {
+    $user = cmnUser('cmn-url-ceiling');
+
+    // today = 2026-06-12 → ceiling = 2027-06. A direct URL for 2099-12 must
+    // render the ceiling month, not a far-future grid of phantom data.
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 12, 'year' => 2099])
+        ->assertSee('Jun 2027');
+});
+
 it('clamps an invalid #[Url] month value (0) to the current month', function (): void {
     $user = cmnUser('cmn-clamp-zero');
 
