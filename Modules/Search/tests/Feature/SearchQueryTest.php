@@ -85,6 +85,11 @@ it('it_finds_transactions_by_tax_note', function (): void {
         'updated_at' => now(),
     ]);
 
+    // Re-seed FTS index to include the tax note in the search body.
+    // In production this is done by SearchIndexWriter (Plan 02). In Plan 03
+    // tests we populate the FTS tables directly (parallel worktree constraint).
+    $this->seedFtsIndex($txId, $this->userAId);
+
     /** @var SearchQuery $searchQuery */
     $searchQuery = app(SearchQuery::class);
     $user = User::findOrFail($this->userAId);
@@ -205,29 +210,39 @@ it('it_filters_by_account', function (): void {
         'created_at' => now(), 'updated_at' => now(),
     ]);
 
-    $db->table('transactions')->insert([
+    $txAId = $db->table('transactions')->insertGetId([
         'user_id' => $this->userAId, 'account_id' => $accountAId, 'import_run_id' => $runId,
         'fingerprint' => hash('sha256', 'a1-'.bin2hex(random_bytes(4))),
+        'fingerprint_version' => 3,
         'posted_at' => '2026-01-15', 'booked_at' => '2026-01-15 00:00:00',
         'value_date' => '2026-01-15', 'type' => 'expense',
         'amount_minor' => -100, 'currency' => 'EUR',
         'settled_amount_minor' => -100, 'settled_currency' => 'EUR',
         'counterparty_name' => 'Shared Counterparty',
         'counterparty_normalized' => 'shared counterparty',
-        'description' => 'from account A', 'created_at' => now(), 'updated_at' => now(),
+        'normalization_version' => 1,
+        'description' => 'from account A',
+        'source_format' => 'asn-csv', 'source_row_index' => 1,
+        'created_at' => now(), 'updated_at' => now(),
     ]);
+    $this->seedFtsIndex($txAId, $this->userAId);
 
-    $db->table('transactions')->insert([
+    $txBId = $db->table('transactions')->insertGetId([
         'user_id' => $this->userAId, 'account_id' => $accountBId, 'import_run_id' => $runId,
         'fingerprint' => hash('sha256', 'b1-'.bin2hex(random_bytes(4))),
+        'fingerprint_version' => 3,
         'posted_at' => '2026-01-15', 'booked_at' => '2026-01-15 00:00:00',
         'value_date' => '2026-01-15', 'type' => 'expense',
         'amount_minor' => -200, 'currency' => 'EUR',
         'settled_amount_minor' => -200, 'settled_currency' => 'EUR',
         'counterparty_name' => 'Shared Counterparty',
         'counterparty_normalized' => 'shared counterparty',
-        'description' => 'from account B', 'created_at' => now(), 'updated_at' => now(),
+        'normalization_version' => 1,
+        'description' => 'from account B',
+        'source_format' => 'asn-csv', 'source_row_index' => 2,
+        'created_at' => now(), 'updated_at' => now(),
     ]);
+    $this->seedFtsIndex($txBId, $this->userAId);
 
     /** @var SearchQuery $searchQuery */
     $searchQuery = app(SearchQuery::class);
@@ -272,7 +287,7 @@ it('it_filters_by_category', function (): void {
 
     $catId = $db->table('categories')->insertGetId([
         'name' => 'Groceries', 'slug' => 'groceries-'.bin2hex(random_bytes(3)),
-        'type' => 'expense', 'created_at' => now(), 'updated_at' => now(),
+        'kind' => 'expense', 'created_at' => now(), 'updated_at' => now(),
     ]);
 
     $txId = $this->searchTestTransaction($this->userAId, [
