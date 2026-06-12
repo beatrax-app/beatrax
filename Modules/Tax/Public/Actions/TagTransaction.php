@@ -14,7 +14,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Tags a transaction with a deduction category.
  *
  * Ownership is checked before every write (T-07-01, T-07-02).
- * An idempotent updateOrInsert ensures re-tagging is safe.
+ * Re-tagging is idempotent AND non-destructive: an all-null payload on an
+ * already-tagged row (the one-tap path) leaves the existing category, note,
+ * and year override intact; created_at is never rewritten on update.
  * Dispatches TransactionTagged after every successful write.
  *
  * Security guarantees:
@@ -73,18 +75,46 @@ final class TagTransaction
 
         // (4) Idempotent upsert — unique(user_id, transaction_id).
         $now = Carbon::now()->toDateTimeString();
-        $this->db->connection()
+        $connection = $this->db->connection();
+
+        $exists = $connection
             ->table('tax_transaction_tags')
-            ->updateOrInsert(
-                ['user_id' => $userId, 'transaction_id' => $transactionId],
-                [
+            ->where('user_id', $userId)
+            ->where('transaction_id', $transactionId)
+            ->exists();
+
+        if ($exists) {
+            // Non-destructive one-tap path (CR-03): a bare re-tag (all-null
+            // payload, e.g. the ghost "Tag" button on an already-tagged row)
+            // must never wipe an existing tag's category/note/override. Only
+            // a save carrying at least one value rewrites the payload columns.
+            // created_at is never touched on update — it is the "when was
+            // this first tagged" audit signal (WR-02).
+            $values = ['updated_at' => $now];
+            if ($deductionCategoryId !== null || $note !== null || $taxYearOverride !== null) {
+                $values['deduction_category_id'] = $deductionCategoryId;
+                $values['note'] = $note;
+                $values['tax_year_override'] = $taxYearOverride;
+            }
+
+            $connection
+                ->table('tax_transaction_tags')
+                ->where('user_id', $userId)
+                ->where('transaction_id', $transactionId)
+                ->update($values);
+        } else {
+            $connection
+                ->table('tax_transaction_tags')
+                ->insert([
+                    'user_id' => $userId,
+                    'transaction_id' => $transactionId,
                     'deduction_category_id' => $deductionCategoryId,
                     'note' => $note,
                     'tax_year_override' => $taxYearOverride,
-                    'updated_at' => $now,
                     'created_at' => $now,
-                ],
-            );
+                    'updated_at' => $now,
+                ]);
+        }
 
         // (5) Notify listeners.
         $this->events->dispatch(new TransactionTagged(

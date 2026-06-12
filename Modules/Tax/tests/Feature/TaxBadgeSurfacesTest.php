@@ -189,6 +189,71 @@ function badgeTag(DatabaseManager $db, int $userId, int $txId): void
     ]);
 }
 
+/**
+ * Seed $count transactions on ONE shared account/import-run for paging tests.
+ * Returns the transaction ids ordered newest-first (list render order).
+ *
+ * @return list<int>
+ */
+function badgeTxBatch(DatabaseManager $db, int $userId, int $count): array
+{
+    $suffix = bin2hex(random_bytes(4));
+
+    $accountId = $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId,
+        'name' => 'Batch ASN '.$suffix,
+        'slug' => 'batch-asn-'.$suffix,
+        'kind' => 'asn',
+        'iban' => 'NL00ASNB'.strtoupper($suffix),
+        'default_currency' => 'EUR',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $runId = $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $userId,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/batch-run-'.$suffix.'.csv',
+        'sha256' => hash('sha256', 'batch-run-'.$suffix),
+        'uploaded_at' => now(),
+        'status' => 'committed',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $ids = [];
+    for ($i = 0; $i < $count; $i++) {
+        // Newest first: i=0 is the most recent posted_at (top of page 1).
+        $date = now()->subDays($i)->format('Y-m-d');
+        $ids[] = $db->connection()->table('transactions')->insertGetId([
+            'user_id' => $userId,
+            'account_id' => $accountId,
+            'import_run_id' => $runId,
+            'fingerprint' => hash('sha256', 'batch-tx-'.$i.'-'.bin2hex(random_bytes(8))),
+            'posted_at' => $date,
+            'booked_at' => $date.' 00:00:00',
+            'value_date' => $date,
+            'amount_minor' => -1000 - $i,
+            'currency' => 'EUR',
+            'settled_amount_minor' => -1000 - $i,
+            'settled_currency' => 'EUR',
+            'counterparty_name' => 'Batch Vendor '.$i,
+            'counterparty_id' => null,
+            'counterparty_normalized' => 'batch-vendor-'.$i,
+            'normalization_version' => 1,
+            'description' => 'Batch tx '.$i,
+            'type' => 'expense',
+            'source_format' => 'asn-csv',
+            'source_row_index' => $i + 1,
+            'fingerprint_version' => 3,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    return $ids;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Surface 1: TransactionsList
 // ─────────────────────────────────────────────────────────────────────────────
@@ -330,6 +395,28 @@ describe('TransactionsList tax badge', function (): void {
             expect((int) $row->deduction_category_id)->toBe($catId);
             expect($row->note)->toBe('trigger note');
         }
+    });
+
+    it('keeps tax state on previously-accumulated phone rows after loadMore (CR-03 regression)', function (): void {
+        $user = badgeUser('tx-list-loadmore-user');
+        $db = app(DatabaseManager::class);
+
+        // 51 rows → page 1 holds 50, loadMore() fetches the 51st.
+        $ids = badgeTxBatch($db, $user->id, 51);
+        $page1TxId = $ids[0]; // Newest row — guaranteed on page 1.
+
+        $component = Livewire::actingAs($user)->test(TransactionsList::class);
+        $component->dispatch('tax-tag', id: $page1TxId);
+        $component->call('closePicker');
+        $component->assertSee('data-testid="tax-badge-tagged-'.$page1TxId.'"', false);
+
+        // loadMore advances to page 2 — the page-1 row only remains in the
+        // accumulated phone list. Its tagged state must NOT reset to the
+        // untagged ghost (which would enable a destructive stale re-tag).
+        $component->call('loadMore');
+
+        $component->assertSee('data-testid="tax-badge-tagged-'.$page1TxId.'"', false);
+        $component->assertDontSee('data-testid="tax-badge-untagged-'.$page1TxId.'"', false);
     });
 
     it('renders the year-override row when the booked year differs from the tax year, and persists the override (CR-02 / D-10)', function (): void {
