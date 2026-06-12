@@ -2994,3 +2994,226 @@ td.date,
         flex-direction: column;
     }
 }
+
+/* ============================================================
+ * Calendar page component classes (UI-SPEC Phase 06 §10).
+ *
+ * All values reference existing @theme tokens — no new tokens.
+ * Dark mode flips automatically via the .dark companion block.
+ * ============================================================ */
+@layer components {
+    /* §6.1 Toolbar */
+    .cal-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-3, 12px) 0;
+        border-bottom: 1px solid var(--color-border);
+        margin-bottom: var(--space-3, 12px);
+    }
+
+    /* §5 Calendar grid — 7-column Mon–Sun */
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        border-top: 1px solid var(--color-border);
+        border-left: 1px solid var(--color-border);
+        border-radius: var(--radius-lg, 0.5rem);
+        overflow: hidden;
+    }
+
+    /* §6.3 Day cell */
+    .cal-cell {
+        position: relative;
+        min-height: 96px;
+        padding: var(--space-2, 8px);
+        border-right: 1px solid var(--color-border);
+        border-bottom: 1px solid var(--color-border);
+        cursor: pointer;
+        background: var(--color-surface);
+        transition: background 150ms ease;
+    }
+
+    .cal-cell:hover {
+        background: var(--color-surface-2);
+    }
+
+    .cal-cell:focus {
+        outline: 2px solid var(--color-border-strong);
+        outline-offset: -2px;
+    }
+
+    /* Today ring */
+    .cal-cell--today {
+        box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+    }
+
+    /* Risk day tint (balance < 0) */
+    .cal-cell--risk {
+        background: var(--color-rose-bg);
+    }
+
+    .cal-cell--risk:hover {
+        background: var(--color-rose-bg);
+        filter: brightness(0.97);
+    }
+
+    /* Other-month cell (greyed out) */
+    .cal-cell--other-month {
+        background: var(--color-bg-subtle);
+    }
+
+    .cal-cell--other-month:hover {
+        background: var(--color-surface-2);
+    }
+
+    /* Past day (current month, before today) */
+    .cal-cell--past {
+        /* Slightly dimmed day number handled via inline style on .cal-day-num */
+    }
+
+    /* §6.3 Day number (top-left) */
+    .cal-day-num {
+        font-size: var(--text-sm, 0.8125rem);
+        font-weight: 600;
+        line-height: 1.2;
+        color: var(--color-text);
+    }
+
+    /* §6.3 Day-end balance corner (top-right) */
+    .cal-day-balance {
+        font-size: var(--text-xs, 0.75rem);
+        font-weight: 400;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-muted);
+        text-align: right;
+        line-height: 1.2;
+    }
+
+    /* §6.3 Entry row */
+    .cal-entry {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-1, 4px);
+        font-size: var(--text-xs, 0.75rem);
+        line-height: 1.4;
+        height: 20px;
+        overflow: hidden;
+        color: var(--color-text);
+        margin-top: 2px;
+    }
+
+    /* Inflow: amount in emerald */
+    .cal-entry--inflow .flex-shrink-0 {
+        color: var(--color-emerald);
+    }
+
+    /* Approximate: dotted underline + faint color on name */
+    .cal-entry--approx .flex-1 {
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        color: var(--color-text-faint);
+    }
+
+    /* Paid (past day) */
+    .cal-entry--paid .cal-day-num {
+        color: var(--color-emerald);
+    }
+
+    /* Overflow badge */
+    .cal-overflow {
+        font-size: var(--text-xs, 0.75rem);
+        font-weight: 400;
+        color: var(--color-text-faint);
+        margin-top: 2px;
+    }
+
+    /* Phone entry count badge */
+    .cal-entry-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 16px;
+        padding: 0 var(--space-2, 8px);
+        border-radius: var(--radius-full, 9999px);
+        background: var(--color-surface-2);
+        color: var(--color-text-muted);
+        font-size: var(--text-xs, 0.75rem);
+        margin-top: var(--space-1, 4px);
+    }
+
+    /* §6.4 Desktop right-rail day panel */
+    .cal-day-panel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 320px;
+        height: 100vh;
+        background: var(--color-surface);
+        border-left: 1px solid var(--color-border);
+        box-shadow: var(--shadow-lg);
+        overflow-y: auto;
+        z-index: 40;
+        padding: var(--space-4, 16px);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3, 12px);
+        /* Panel slide animation: translateX(100%) → translateX(0) */
+        transform: translateX(0);
+    }
+
+    /* §6.4 Day panel header: date + close button */
+    .cal-panel-header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        padding-bottom: var(--space-3, 12px);
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    /* §6.4 Balance rows (SOD / EOD) */
+    .cal-panel-bal-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-2, 8px) 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    /* §6.4 Panel entry row */
+    .cal-panel-entry {
+        padding: var(--space-3, 12px) 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    /* §6.2 Month summary strip */
+    .cal-summary-strip {
+        font-size: var(--text-sm, 0.8125rem);
+        font-weight: 400;
+        padding: var(--space-2, 8px) 0;
+        line-height: 1.5;
+        margin-bottom: var(--space-2, 8px);
+    }
+}
+
+/* Phone: compact cell, entry-count badge only, no balance corner.
+ * Min cell height 44px (Phase 4 D-14 touch-target rule).
+ * Day panel hidden entirely at phone width (bottom sheet takes over). */
+@media (max-width: 767px) {
+    .cal-cell {
+        min-height: 44px;
+        padding: var(--space-1, 4px);
+    }
+
+    .cal-day-panel {
+        display: none !important;
+    }
+}
+
+/* Reduced-motion: suppress day-panel slide transition (mirrors existing app.css rule). */
+@media (prefers-reduced-motion: reduce) {
+    .cal-day-panel {
+        transition: none !important;
+    }
+}
