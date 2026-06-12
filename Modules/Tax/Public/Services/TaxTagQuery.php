@@ -128,9 +128,9 @@ final class TaxTagQuery
         $cpRow = $connection
             ->table('counterparties')
             ->where('id', $cpId)
-            ->first(['name']);
+            ->first(['display_name']);
 
-        $cpName = $cpRow !== null ? self::toStr($cpRow->name) : '';
+        $cpName = $cpRow !== null ? self::toStr($cpRow->display_name) : '';
 
         // Count OTHER untagged transactions for this counterparty in the effective tax year.
         $untaggedCount = $connection
@@ -144,7 +144,7 @@ final class TaxTagQuery
             ->where('t.counterparty_id', $cpId)
             ->where('t.id', '!=', $transactionId)
             ->whereRaw(
-                'COALESCE(CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) = ?',
+                'CAST(strftime(\'%Y\', t.booked_at) AS INTEGER) = ?',
                 [$taxYear],
             )
             ->count();

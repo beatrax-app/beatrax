@@ -79,7 +79,7 @@ final class TaxYearQuery
                 'cat.name AS category_name',
                 'cat.short_name AS category_short_name',
                 'a.name AS account_name',
-                'cp.name AS counterparty_name',
+                'cp.display_name AS counterparty_name',
                 'cp.iban AS counterparty_iban',
             ])
             ->get();

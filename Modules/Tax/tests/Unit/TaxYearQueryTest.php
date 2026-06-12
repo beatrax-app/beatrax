@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Tax\Public\Dto\TaxYearData;
 use Modules\Tax\Public\Services\TaxYearQuery;
+
+uses(RefreshDatabase::class);
 
 /*
  * Unit tests for TaxYearQuery — the grouped tax-year query service.
