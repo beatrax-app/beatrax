@@ -146,7 +146,11 @@ trait HandlesTaxTagging
     ): void {
         $user = $u->user();
 
-        // Pre-fill picker from the existing tag.
+        // Open first (resets row-specific picker fields — WR-04), then
+        // pre-fill from the existing tag. A tag-lookup miss therefore leaves
+        // CLEAN fields rather than another row's stale values.
+        $this->openPickerFor($id, $c, $writer, $u, $q);
+
         $tags = $q->forTransactionIds($user->id, [$id]);
         if (isset($tags[$id])) {
             $existing = $tags[$id];
@@ -154,8 +158,6 @@ trait HandlesTaxTagging
             $this->pickerNote = $existing->note ?? '';
             $this->pickerYearOverride = $existing->taxYearOverride;
         }
-
-        $this->openPickerFor($id, $c, $writer, $u, $q);
     }
 
     // ── Actions ──────────────────────────────────────────────────────────────
@@ -347,6 +349,13 @@ trait HandlesTaxTagging
         $this->taxPickerTxId = $id;
         $this->pickerIsNewCatOpen = false;
         $this->pickerInlineNewName = '';
+
+        // Reset row-specific fields so state never bleeds between rows when
+        // the picker is re-opened without an intermediate closePicker()
+        // (WR-04). editTaxTag() prefills these AFTER this call.
+        $this->pickerNote = '';
+        $this->pickerCategoryId = null;
+        $this->pickerYearOverride = null;
 
         // Load categories fresh.
         $this->pickerCategories = $writer->listForUser($u->user()->id);
