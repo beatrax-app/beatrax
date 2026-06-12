@@ -149,7 +149,8 @@
         @endphp
 
         <div @class(['no-cat-section' => $isNoCategory])>
-            <h2>{{ $isNoCategory ? 'Uncategorised' : e($catName) }}</h2>
+            {{-- {{ }} already escapes — an extra e() double-encodes & < ' (WR-10). --}}
+            <h2>{{ $isNoCategory ? 'Uncategorised' : $catName }}</h2>
 
             <table class="tx-table">
                 <thead>
