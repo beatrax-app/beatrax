@@ -2675,12 +2675,19 @@ td.date,
 /* Desktop: drawer container behaves as static sidebar (no translate, no scrim).
    display must be forced too: the drawer's x-show leaves an inline
    `display: none` when $store.mobileNav.drawerOpen is false, which would
-   otherwise hide the sidebar at every desktop width. */
+   otherwise hide the sidebar at every desktop width.
+   height must be forced too: the drawer panel's inline `height: 100dvh`
+   (mobile slide-in sizing) would otherwise cap the static container at one
+   viewport, so the sticky `.side` inside has no travel and scrolls away
+   with the page on any view taller than the viewport. `auto` lets the
+   container stretch with the flex row (default align-items: stretch), and
+   the sticky 100vh `.side` pins to the viewport while the page scrolls. */
 @media (min-width: 1024px) {
     .drawer-container {
         position: static !important;
         transform: none !important;
         display: block !important;
+        height: auto !important;
     }
 
     .drawer-scrim {
