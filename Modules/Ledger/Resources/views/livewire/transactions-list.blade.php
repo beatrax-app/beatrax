@@ -22,34 +22,64 @@
     // Tax state map: array<int, array{taxTagged: bool, taxCategoryShortName: ?string}>
     // Batch-loaded once per render — no N+1 (Pitfall 1).
     $taxState ??= [];
+
+    // Search mode flags (passed by TransactionsList::render() in both branches)
+    $isSearchMode ??= false;
+    $searchQuery ??= '';
+    $searchTotalCount ??= 0;
+    $searchTotalOut ??= 0;
+    $searchTotalIn ??= 0;
+    $didYouMean ??= null;
+    $searchRows ??= [];
+    $activeFilterCount ??= 0;
+    $availableAccounts ??= [];
+    $availableCategories ??= [];
+
+    // Format minor-unit amount (settled EUR, nl_NL) for the summary strip
+    $fmtMinor = static fn (int $minor): string => Money::ofMinor(abs($minor), 'EUR')->format('nl_NL');
 @endphp
 
 <div class="space-y-6">
     {{-- Tax tag picker — rendered once for the whole list (not per-row). --}}
     @include('tax::components.tax-tag-popover')
+
+    {{-- ============================================================
+         SEARCH TOOLBAR (Phase 8 — always visible on /transactions)
+         ============================================================ --}}
+    @include('ledger::livewire.partials.search-toolbar')
+
     <header class="flex items-end justify-between gap-4">
         <div class="space-y-1">
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Transactions</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">
-                {{ $fullHistory ? 'Full history.' : 'Recent transactions (last 90 days).' }}
+                @if ($isSearchMode)
+                    Searching all history
+                @else
+                    {{ $fullHistory ? 'Full history.' : 'Recent transactions (last 90 days).' }}
+                @endif
             </p>
         </div>
-        <div class="flex items-center gap-2">
-            <flux:radio.group wire:model.live="currency" variant="segmented" aria-label="Currency view">
-                <flux:radio value="eur" label="EUR only" />
-                <flux:radio value="original" label="Original currency" />
-            </flux:radio.group>
-            <button
-                type="button"
-                wire:click="toggleFullHistory"
-                class="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-            >
-                {{ $fullHistory ? 'Show recent only' : 'Show full history' }}
-            </button>
-        </div>
+        @if (! $isSearchMode)
+            <div class="flex items-center gap-2">
+                <flux:radio.group wire:model.live="currency" variant="segmented" aria-label="Currency view">
+                    <flux:radio value="eur" label="EUR only" />
+                    <flux:radio value="original" label="Original currency" />
+                </flux:radio.group>
+                <button
+                    type="button"
+                    wire:click="toggleFullHistory"
+                    class="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
+                >
+                    {{ $fullHistory ? 'Show recent only' : 'Show full history' }}
+                </button>
+            </div>
+        @endif
     </header>
 
-    @if (count($page->rows) === 0)
+    @if ($isSearchMode && count($page->rows) === 0 && $searchTotalCount === 0)
+        {{-- No-results state (D-21) --}}
+        @include('ledger::livewire.partials.search-no-results')
+    @elseif (! $isSearchMode && count($page->rows) === 0)
         <p class="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500 dark:bg-slate-950 dark:text-slate-400 dark:border-slate-700">
             Nothing here for this period.
         </p>
@@ -63,13 +93,14 @@
              rather than $page->rows so rows APPEND on scroll instead
              of replacing the visible page. Money is reconstructed from
              the minor+currency pair via the $rowMoney helper above.
+             In search mode: snippet rendered as a second line (D-30).
              ============================================================ --}}
         <div class="md:hidden">
             <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
                 @foreach ($accumulatedRows as $row)
                     @php $rowAmt = $rowMoney($row); @endphp
                     <div
-                        class="card-list-item group"
+                        class="card-list-item group {{ $isSearchMode ? 'srch-row' : '' }}"
                         data-testid="tx-card-{{ $row['id'] }}"
                         style="display: flex; align-items: center;"
                     >
@@ -81,6 +112,13 @@
                             <div class="min-w-0 flex-1">
                                 {{-- Primary: counterparty name (2-line truncate) --}}
                                 <p class="primary line-clamp-2">{{ $row['counterpartyName'] ?? '—' }}</p>
+                                {{-- Search snippet second line (D-30 — phone two-line snippet rows) --}}
+                                @if ($isSearchMode && isset($searchRows[$row['id']]))
+                                    @php $sRow = $searchRows[$row['id']]; @endphp
+                                    @if ($sRow->snippet !== null)
+                                        <p class="srch-snippet">{{ $sRow->snippet }}</p>
+                                    @endif
+                                @endif
                                 {{-- Secondary: category chip + posted date --}}
                                 <p class="secondary mt-0.5 truncate">
                                     @if ($row['categoryId'] !== null)
@@ -133,7 +171,9 @@
         {{-- ============================================================
              DESKTOP table (visible only at >=768px)
              CSS hides this div at <768px via `display:none`.
-             Markup is byte-identical to what existed before this plan.
+             In search mode: counterparty cell uses {!! !!} for server-
+             built FTS highlight markup (T-08-09 security boundary).
+             Snippet rendered as a second line beneath counterparty.
              ============================================================ --}}
         <div class="hidden md:block">
             <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
@@ -152,17 +192,10 @@
                             @php
                                 $rowTaxState = $taxState[$row->id] ?? ['taxTagged' => false, 'taxCategoryShortName' => null];
                                 $rowArr = ['id' => $row->id, 'taxTagged' => $rowTaxState['taxTagged'], 'taxCategoryShortName' => $rowTaxState['taxCategoryShortName']];
+                                $isSearchRow = $isSearchMode && isset($searchRows[$row->id]);
+                                $sRow = $isSearchRow ? $searchRows[$row->id] : null;
                             @endphp
-                            <tr class="group">
-                                {{-- Date cell carries the drill-into-detail
-                                     affordance: clicking it routes to the
-                                     transaction-detail page where the
-                                     reclassify control + chain drawer live.
-                                     The counterparty cell to the right owns
-                                     the counterparty-profile click-through.
-                                     Splitting the two affordances onto
-                                     distinct cells means each row has one
-                                     link per visible navigation target. --}}
+                            <tr class="group {{ $isSearchMode ? 'srch-row' : '' }}">
                                 <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                     <a
                                         href="{{ route('transactions.show', ['transactionId' => $row->id]) }}"
@@ -171,46 +204,46 @@
                                         data-testid="tx-row-link-{{ $row->id }}"
                                     >{{ $row->bookedAt }}</a>
                                 </td>
-                                {{-- Counterparty cell renders the resolved
-                                     counterparty's display name. When the
-                                     row's counterparty_id has been resolved
-                                     by the CounterpartyResolver chain
-                                     (counterpartySlug is non-null), wrap
-                                     the name in a link routing to
-                                     counterparties.profile. self_account
-                                     counterparties also route here — the
-                                     profile page detects the type and
-                                     renders the self-account stub instead
-                                     of the standard profile body. Rows
-                                     without a resolved counterparty (pre-
-                                     resolver history, pathological rows,
-                                     GC-pruned references) render the name
-                                     as plain text. The chain-link badge
-                                     appears next to rows that participate
-                                     in a confirmed/candidate chain_link
-                                     regardless of counterparty state. --}}
                                 <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
-                                    @if ($row->counterpartySlug !== null)
-                                        <a
-                                            href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
-                                            wire:navigate
-                                            class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
-                                            data-testid="tx-row-counterparty-link-{{ $row->id }}"
-                                        >{{ $row->counterpartyName ?? '—' }}</a>
+                                    {{-- In search mode: use {!! !!} ONLY for server-built FTS
+                                         highlight() markup — never for raw user input (T-08-09). --}}
+                                    @if ($isSearchRow && $sRow !== null && $sRow->highlightedCounterparty !== null)
+                                        @if ($row->counterpartySlug !== null)
+                                            <a
+                                                href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
+                                                wire:navigate
+                                                class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                                data-testid="tx-row-counterparty-link-{{ $row->id }}"
+                                            >{!! $sRow->highlightedCounterparty !!}</a>
+                                        @else
+                                            <span data-testid="tx-row-counterparty-text-{{ $row->id }}">{!! $sRow->highlightedCounterparty !!}</span>
+                                        @endif
+                                        @if ($sRow->snippet !== null)
+                                            <p class="srch-snippet">{{ $sRow->snippet }}</p>
+                                        @endif
                                     @else
-                                        <span data-testid="tx-row-counterparty-text-{{ $row->id }}">{{ $row->counterpartyName ?? '—' }}</span>
-                                    @endif
-                                    @if (isset(($chainTxIds ?? [])[$row->id]))
-                                        <span
-                                            class="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
-                                            title="Part of a chain — open this row to view"
-                                            data-testid="tx-row-chain-badge-{{ $row->id }}"
-                                        >
-                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 015.656 5.656l-3 3a4 4 0 01-5.656-5.656M10.172 13.828a4 4 0 01-5.656-5.656l3-3a4 4 0 015.656 5.656"/>
-                                            </svg>
-                                            chain
-                                        </span>
+                                        @if ($row->counterpartySlug !== null)
+                                            <a
+                                                href="{{ route('counterparties.profile', ['slug' => $row->counterpartySlug]) }}"
+                                                wire:navigate
+                                                class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                                data-testid="tx-row-counterparty-link-{{ $row->id }}"
+                                            >{{ $row->counterpartyName ?? '—' }}</a>
+                                        @else
+                                            <span data-testid="tx-row-counterparty-text-{{ $row->id }}">{{ $row->counterpartyName ?? '—' }}</span>
+                                        @endif
+                                        @if (isset(($chainTxIds ?? [])[$row->id]))
+                                            <span
+                                                class="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
+                                                title="Part of a chain — open this row to view"
+                                                data-testid="tx-row-chain-badge-{{ $row->id }}"
+                                            >
+                                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 015.656 5.656l-3 3a4 4 0 01-5.656-5.656M10.172 13.828a4 4 0 01-5.656-5.656l3-3a4 4 0 015.656 5.656"/>
+                                                </svg>
+                                                chain
+                                            </span>
+                                        @endif
                                     @endif
                                 </td>
                                 <td class="px-4 py-2 text-slate-500 dark:text-slate-400">
@@ -220,14 +253,20 @@
                                         key('cat-picker-' . $row->id)
                                     )
                                 </td>
-                                {{-- Tax badge: hover-reveal on desktop (D-19/D-20). --}}
+                                {{-- Tax badge: hover-reveal on desktop (D-19/D-20). Unchanged on search rows. --}}
                                 <td class="px-4 py-2">
                                     <x-tax::tax-badge :transaction="$rowArr" :showAlways="false" />
                                 </td>
                                 <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
-                                    <span class="block text-sm text-slate-900 dark:text-slate-100">{{ $fmt($row->amount) }}</span>
-                                    @if ($currency === 'original' && $row->secondaryAmount !== null)
-                                        <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">{{ $fmt($row->secondaryAmount) }}</span>
+                                    @if ($isSearchMode)
+                                        <span class="block text-sm text-slate-900 dark:text-slate-100">
+                                            {{ Money::ofMinor($row->amountMinor, $row->amountCurrency)->format($row->amountCurrency === 'EUR' ? 'nl_NL' : 'en_US') }}
+                                        </span>
+                                    @else
+                                        <span class="block text-sm text-slate-900 dark:text-slate-100">{{ $fmt($row->amount) }}</span>
+                                        @if ($currency === 'original' && $row->secondaryAmount !== null)
+                                            <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">{{ $fmt($row->secondaryAmount) }}</span>
+                                        @endif
                                     @endif
                                 </td>
                             </tr>
