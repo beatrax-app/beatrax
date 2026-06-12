@@ -323,6 +323,14 @@ describe('TransactionsList tax badge', function (): void {
     it('batch suggestion fires for ≥2 untagged siblings and does not re-surface after apply', function (): void {
         $user = badgeUser('tx-list-batch-sug-user');
         $db = app(DatabaseManager::class);
+
+        // WR-09: freeze the clock consistent with the June-2026 fixtures so
+        // this test cannot rot when the real calendar moves past the fixture
+        // year (resolveCurrentTaxYear is seasonal).
+        $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+        $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2026, 6, 15));
+        app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+
         $cpId = badgeCp($db, $user->id, 'Batch Gym');
         $tx1 = badgeTx($db, $user->id, $cpId, '2026-06-01 00:00:00');
         $tx2 = badgeTx($db, $user->id, $cpId, '2026-06-02 00:00:00');
@@ -355,6 +363,12 @@ describe('TransactionsList tax badge', function (): void {
     it('applyBatchTag applies the SAME category and note as the saved trigger tag (D-03)', function (): void {
         $user = badgeUser('tx-list-batch-cat-user');
         $db = app(DatabaseManager::class);
+
+        // WR-09: frozen clock consistent with the June-2026 fixtures.
+        $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+        $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2026, 6, 15));
+        app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+
         $cpId = badgeCp($db, $user->id, 'Batch Insurer');
         $tx1 = badgeTx($db, $user->id, $cpId, '2026-06-01 00:00:00');
         $tx2 = badgeTx($db, $user->id, $cpId, '2026-06-02 00:00:00');
