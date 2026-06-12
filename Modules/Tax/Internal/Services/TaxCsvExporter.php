@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Internal\Services;
 
+use League\Csv\EscapeFormula;
 use League\Csv\Writer;
 use Modules\Core\Models\User;
 
@@ -35,6 +36,12 @@ final class TaxCsvExporter
     public function export(User $user, int $year): string
     {
         $writer = Writer::createFromString();
+
+        // WR-08: mitigate spreadsheet formula injection — descriptions,
+        // counterparties, and user-typed notes are free text and this CSV is
+        // explicitly meant to be opened in Excel by an accountant. Cells
+        // starting with = + - @ (or tab/CR) are prefixed with a single quote.
+        $writer->addFormatter(new EscapeFormula());
 
         // D-15 column order — exact, tested.
         $writer->insertOne([
