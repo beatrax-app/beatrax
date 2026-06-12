@@ -3,9 +3,14 @@
 
     $fmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format('nl_NL');
     $input = 'block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100';
+
+    // Tax state map: array<int, array{taxTagged: bool, taxCategoryShortName: ?string}>
+    $taxState ??= [];
 @endphp
 
 <div class="mx-auto max-w-3xl px-4 py-12">
+    {{-- Tax tag picker — rendered once for the whole page (not per-row). --}}
+    @include('tax::components.tax-tag-popover')
     <header class="mb-8">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Cash book</h1>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -77,7 +82,12 @@
             {{-- Phone (<768px): .card-list-item per entry (D-06 daily-driver) --}}
             <div class="phone-only">
                 @foreach ($entries as $entry)
-                    @php $isPositive = (int) $entry->settled_amount_minor > 0; @endphp
+                    @php
+                        $isPositive = (int) $entry->settled_amount_minor > 0;
+                        $entryId = (int) $entry->id;
+                        $entryTaxState = $taxState[$entryId] ?? ['taxTagged' => false, 'taxCategoryShortName' => null];
+                        $entryTaxRow = ['id' => $entryId, 'taxTagged' => $entryTaxState['taxTagged'], 'taxCategoryShortName' => $entryTaxState['taxCategoryShortName']];
+                    @endphp
                     <div wire:key="manual-phone-{{ $entry->id }}" class="card-list-item" style="display: flex; justify-content: space-between;">
                         <div style="min-width: 0; flex: 1 1 auto;">
                             <span class="primary">{{ $entry->counterparty_name }}</span>
@@ -87,6 +97,8 @@
                             </span>
                         </div>
                         <div style="flex: 0 0 auto; text-align: right; display: flex; align-items: center; gap: var(--space-2);">
+                            {{-- Tax badge: always-visible at phone width (D-21). --}}
+                            <x-tax::tax-badge :transaction="$entryTaxRow" :showAlways="true" />
                             <span
                                 class="amount{{ $isPositive ? ' positive' : '' }}"
                                 style="{{ $isPositive ? 'color: var(--color-emerald)' : '' }}"
@@ -106,7 +118,12 @@
             {{-- Desktop (>=768px): existing list layout --}}
             <ul class="desktop-only divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-700">
                 @foreach ($entries as $entry)
-                    <li wire:key="manual-{{ $entry->id }}" class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                    @php
+                        $dEntryId = (int) $entry->id;
+                        $dEntryTaxState = $taxState[$dEntryId] ?? ['taxTagged' => false, 'taxCategoryShortName' => null];
+                        $dEntryTaxRow = ['id' => $dEntryId, 'taxTagged' => $dEntryTaxState['taxTagged'], 'taxCategoryShortName' => $dEntryTaxState['taxCategoryShortName']];
+                    @endphp
+                    <li wire:key="manual-{{ $entry->id }}" class="group flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-slate-900 dark:text-slate-100">{{ $entry->counterparty_name }}</p>
                             <p class="text-xs text-slate-500 dark:text-slate-400">
@@ -114,6 +131,8 @@
                                 @if ($entry->category_name)· {{ $entry->category_name }}@endif
                             </p>
                         </div>
+                        {{-- Tax badge: hover-reveal on desktop (D-19/D-20). --}}
+                        <x-tax::tax-badge :transaction="$dEntryTaxRow" :showAlways="false" />
                         <span class="shrink-0 font-medium {{ (int) $entry->settled_amount_minor < 0 ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-400' }}" style="font-variant-numeric: tabular-nums;">
                             {{ $fmt((int) $entry->settled_amount_minor) }}
                         </span>

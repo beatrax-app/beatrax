@@ -13,6 +13,8 @@ use Livewire\Component;
 use Modules\CashBook\Internal\Actions\RecordManualTransaction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
+use Modules\Tax\Public\Services\TaxTagQuery;
 
 /**
  * `/cash` — the Cash book. A form to hand-enter a transaction (typically cash)
@@ -25,6 +27,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
  */
 final class CashBookPage extends Component
 {
+    use HandlesTaxTagging;
+
     public string $direction = 'expense';
 
     public string $amount = '';
@@ -94,7 +98,7 @@ final class CashBookPage extends Component
         $this->dispatch('toast', message: 'Cash entry removed.');
     }
 
-    public function render(CurrentUser $currentUser, DatabaseManager $db, ViewFactory $views): View
+    public function render(CurrentUser $currentUser, DatabaseManager $db, ViewFactory $views, TaxTagQuery $taxTagQuery): View
     {
         $user = $currentUser->user();
         $connection = $db->connection();
@@ -115,9 +119,14 @@ final class CashBookPage extends Component
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        // Batch-load tax state for all manual entries (Pitfall 1 — ONE query).
+        $entryIds = array_map(static fn (object $row): int => is_numeric($row->id) ? (int) $row->id : 0, $entries->all());
+        $taxState = $this->taxTagStateFor($entryIds, $taxTagQuery, $currentUser);
+
         $view = $views->make('cashbook::livewire.cash-book-page', [
             'entries' => $entries,
             'categories' => $categories,
+            'taxState' => $taxState,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
