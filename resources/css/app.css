@@ -3196,6 +3196,174 @@ td.date,
     }
 }
 
+/*
+ * Phase 07 — Tax / Deductible Tagging + Per-Year Export
+ *
+ * UI-SPEC Section 14: 8 new CSS classes for the /tax cockpit, badge surfaces,
+ * and export buttons. All resolve from existing @theme tokens — no new variables.
+ *
+ * .tax-badge*      — Tagged state pill + untagged ghost hover variant + amber override chip
+ * .tax-section*    — Category section container + sticky header
+ * .tax-totals-strip — Year-totals KPI bar
+ * .batch-tag-banner — Batch suggestion banner
+ * .tax-export-btn  — Export buttons (pill-btn-ghost size + style)
+ *
+ * These classes are defined here so Plan 06 (badge surfaces on transactions
+ * list, detail, counterparty tabs, cash book) can reuse them without touching
+ * app.css again.
+ */
+@layer components {
+    /* Tagged state pill: emerald fill, xs text, full radius, tabular-nums */
+    .tax-badge {
+        display: inline-flex;
+        align-items: center;
+        height: 18px;
+        min-width: 28px;
+        padding: 0 var(--space-2);
+        border-radius: var(--radius-full);
+        background: var(--color-emerald-bg);
+        color: var(--color-emerald);
+        font-size: var(--text-xs);
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        transition: var(--tx-quick);
+    }
+
+    /* Ghost hover tag button — opacity 0 at rest (.row-cta pattern), 1 on hover/focus/touch */
+    .tax-badge--untagged {
+        display: inline-flex;
+        align-items: center;
+        height: 18px;
+        min-width: 20px;
+        padding: 0 var(--space-2);
+        border-radius: var(--radius-full);
+        background: var(--color-surface-2);
+        color: var(--color-text-faint);
+        font-size: var(--text-xs);
+        font-weight: 400;
+        cursor: pointer;
+        border: 0;
+        transition: var(--tx-quick);
+        /* .row-cta reveal: opacity 0 at rest on desktop pointer:fine */
+        opacity: 0;
+    }
+
+    .triage-row:hover .tax-badge--untagged,
+    .triage-row:focus-within .tax-badge--untagged,
+    .always-show-touch .tax-badge--untagged,
+    .tax-badge--untagged:focus-visible {
+        opacity: 1;
+    }
+
+    @media (pointer: coarse) {
+        .tax-badge--untagged {
+            opacity: 1;
+            min-height: 44px;
+        }
+    }
+
+    /* Year-override pill: amber fill (D-10 — tax year differs from booked year) */
+    .tax-badge--amber {
+        display: inline-flex;
+        align-items: center;
+        height: 18px;
+        padding: 0 var(--space-2);
+        border-radius: var(--radius-full);
+        background: var(--color-amber-bg);
+        color: var(--color-amber);
+        font-size: var(--text-xs);
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    /* Category section container */
+    .tax-section {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-xs);
+        overflow: hidden;
+    }
+
+    /* Sticky section header row */
+    .tax-section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-3) var(--space-4);
+        background: var(--color-surface-2);
+        border-bottom: 1px solid var(--color-border);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    /* Year-totals KPI bar */
+    .tax-totals-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-6);
+        align-items: center;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-xs);
+        padding: var(--space-4) var(--space-6);
+        min-height: 64px;
+    }
+
+    /* Batch-tag suggestion banner — info/action prompt below popover */
+    .batch-tag-banner {
+        background: var(--color-blue-bg);
+        color: var(--color-blue);
+        border-radius: var(--radius-md);
+        padding: var(--space-3);
+        font-size: var(--text-base);
+        animation: batch-banner-in 150ms var(--ease-smooth) both;
+    }
+
+    @keyframes batch-banner-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .batch-tag-banner {
+            animation: none;
+        }
+    }
+
+    /* Export button — pill-btn-ghost size + style with border */
+    .tax-export-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 8px var(--space-4);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        color: var(--color-text-muted);
+        border: 1px solid var(--color-border);
+        font-size: var(--text-base);
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--tx-quick);
+        text-decoration: none;
+    }
+
+    .tax-export-btn:hover {
+        background: var(--color-surface-2);
+        color: var(--color-text);
+    }
+
+    .tax-export-btn:disabled,
+    .tax-export-btn[aria-busy="true"] {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
 /* Phone: compact cell, entry-count badge only, no balance corner.
  * Min cell height 44px (Phase 4 D-14 touch-target rule).
  * Day panel hidden entirely at phone width (bottom sheet takes over). */
