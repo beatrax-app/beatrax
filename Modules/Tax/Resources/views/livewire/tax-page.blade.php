@@ -171,7 +171,7 @@
                         </p>
                     @else
                         <p style="font-size: var(--text-base); color: var(--color-text-faint); margin-top: var(--space-2);">
-                            Look for the ⌾ icon on any transaction row to start tagging.
+                            Look for the “Tag” button on any transaction row to start tagging.
                         </p>
                     @endif
                     <a
