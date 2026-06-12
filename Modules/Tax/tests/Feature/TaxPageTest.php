@@ -18,14 +18,26 @@ uses(RefreshDatabase::class);
 
 function taxPageUser(string $username = 'tax-page-user', bool $withCountry = true): User
 {
-    return User::query()->create([
+    $user = User::query()->create([
         'username' => $username,
         'password' => 'test-password',
         'is_developer' => false,
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
-        'tax_country_code' => $withCountry ? 'nl' : null,
     ]);
+
+    // tax_country_code is NOT mass-assignable on User (it is written via
+    // DatabaseManager by TaxSettingsSection) — persist it the same way here.
+    // Passing it to create() silently drops it, which previously masked the
+    // CR-01 @return blade bug.
+    if ($withCountry) {
+        app(\Illuminate\Database\DatabaseManager::class)->connection()
+            ->table('users')
+            ->where('id', $user->id)
+            ->update(['tax_country_code' => 'nl']);
+    }
+
+    return $user;
 }
 
 /**
@@ -292,5 +304,11 @@ it('shows the first-visit empty state when no tax country is set', function (): 
     $this->actingAs($user)
         ->get('/tax')
         ->assertOk()
-        ->assertSee('Which country do you file taxes in?');
+        ->assertSee('Which country do you file taxes in?')
+        // CR-01 regression: the (non-existent) @return directive must not leak
+        // into the output, and the cockpit body must NOT render below the
+        // first-visit setup prompt.
+        ->assertDontSee('@return')
+        ->assertDontSee('Total deductions')
+        ->assertDontSee('Nothing tagged for');
 });
