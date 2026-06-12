@@ -98,6 +98,11 @@ final class TaxTagQuery
      * Compact year summary (count + total) for the sidebar / dashboard.
      *
      * Uses COALESCE to respect tax_year_override for each tagged row.
+     *
+     * totalMinor is the DEDUCTIONS total only (non-income rows), matching
+     * the /tax cockpit's headline "Total deductions" KPI — folding income
+     * and deductions into one absolute sum produced a figure that matched
+     * neither number on /tax (IN-08). count still covers ALL tagged items.
      */
     public function summaryForUser(int $userId, int $year): TaxYearSummary
     {
@@ -109,7 +114,7 @@ final class TaxTagQuery
                 'COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) = ?',
                 [$year],
             )
-            ->selectRaw('COUNT(*) AS cnt, SUM(ABS(t.settled_amount_minor)) AS total_minor')
+            ->selectRaw("COUNT(*) AS cnt, SUM(CASE WHEN t.type = 'income' THEN 0 ELSE ABS(t.settled_amount_minor) END) AS total_minor")
             ->first();
 
         return new TaxYearSummary(
