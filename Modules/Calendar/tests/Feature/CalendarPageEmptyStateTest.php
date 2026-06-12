@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
+use Modules\Calendar\Tests\TestCase;
 use Modules\Core\Models\User;
+
+uses(TestCase::class, RefreshDatabase::class);
 
 /*
  * CalendarPage — empty state when no approved series exist.
