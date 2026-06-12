@@ -41,7 +41,7 @@
 
 ### Track 3 — Insight & records
 
-- [ ] **Phase 6: Bills / cash-flow calendar** - Upcoming fixed payments on a calendar with running projected balance.
+- [x] **Phase 6: Bills / cash-flow calendar** - Upcoming fixed payments on a calendar with running projected balance. (completed 2026-06-12)
 - [ ] **Phase 7: Tax / deductible tagging + per-year export** - Tag tax-relevant transactions and export a year's set.
 - [ ] **Phase 8: Full-text search over history** - Fast, filterable search across all retained history.
 - [ ] **Phase 9: Unusual-charge / anomaly alerts** - Baseline-relative anomaly flags through the existing alerts surface.
@@ -203,7 +203,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 06-03-PLAN.md — /calendar page UI: 7-col grid + Accounts popover + day panel/bottom sheet drill-through (CAL-03) + summary strip + sidebar + palette + human-verify
+- [x] 06-03-PLAN.md — /calendar page UI: 7-col grid + Accounts popover + day panel/bottom sheet drill-through (CAL-03) + summary strip + sidebar + palette + human-verify
 
 ### Phase 7: Tax / deductible tagging + per-year export
 
@@ -329,7 +329,7 @@ Plans:
 | 3. Savings pots / envelopes | 4/4 | Complete   | 2026-06-09 |
 | 4. Responsive + installable PWA | 9/9 | Complete   | 2026-06-11 |
 | 5. PIN / biometric app-lock | 6/6 | Complete   | 2026-06-11 |
-| 6. Bills / cash-flow calendar | 2/3 | In Progress|  |
+| 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
 | 7. Tax / deductible tagging + export | 0/0 | Not started | - |
 | 8. Full-text search over history | 0/0 | Not started | - |
 | 9. Unusual-charge / anomaly alerts | 0/0 | Not started | - |
