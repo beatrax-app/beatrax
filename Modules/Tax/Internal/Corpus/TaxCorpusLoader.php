@@ -36,7 +36,7 @@ final class TaxCorpusLoader
      * Load the deduction category entries for the given country code.
      *
      * @param  string  $countryCode  ISO-3166 alpha-2, lowercase (e.g. 'nl')
-     * @return list<array<int|string, mixed>>  Each entry has at least 'key' and 'name'.
+     * @return list<array<int|string, mixed>> Each entry has at least 'key' and 'name'.
      */
     public function loadForCountry(string $countryCode): array
     {

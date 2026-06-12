@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
+use Modules\Tax\Internal\Http\Livewire\TaxSettingsSection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /*
@@ -180,7 +182,7 @@ it('add rejects a duplicate category name for the same user', function (): void 
     $writer->add($user->id, 'Duplicate Category');
 
     expect(fn () => $writer->add($user->id, 'Duplicate Category'))
-        ->toThrow(\RuntimeException::class);
+        ->toThrow(RuntimeException::class);
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -248,21 +250,64 @@ it('archive throws NotFoundHttpException on a cross-user category id (T-07-13)',
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// Livewire section tests (Task 3) — stubs to be implemented with TaxSettingsSection
+// Livewire section tests (Task 3) — TaxSettingsSection component
 // ────────────────────────────────────────────────────────────────────────────
 
 it('the component mounts and exposes the user tax_country_code', function (): void {
-    // TODO: Task 3 — TaxSettingsSection Livewire component
-})->skip('built in Plan 04 Task 3');
+    $user = taxSettingsUser('tax-livewire-01');
+    $this->actingAs($user);
+
+    Livewire::test(TaxSettingsSection::class)
+        ->assertSet('taxCountryCode', '');
+
+    // Set a country directly on the DB and re-mount.
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $db->connection()->table('users')->where('id', $user->id)->update(['tax_country_code' => 'nl']);
+
+    Livewire::test(TaxSettingsSection::class)
+        ->assertSet('taxCountryCode', 'nl');
+});
 
 it('setTaxCountry seeds categories and persists users.tax_country_code', function (): void {
-    // TODO: Task 3 — TaxSettingsSection setTaxCountry
-})->skip('built in Plan 04 Task 3');
+    $user = taxSettingsUser('tax-livewire-02');
+    $this->actingAs($user);
+
+    Livewire::test(TaxSettingsSection::class)
+        ->call('setTaxCountry', 'nl')
+        ->assertSet('taxCountryCode', 'nl');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $countryCode = $db->connection()->table('users')->where('id', $user->id)->value('tax_country_code');
+    expect($countryCode)->toBe('nl');
+
+    $categoryCount = $db->connection()->table('tax_deduction_categories')
+        ->where('user_id', $user->id)
+        ->where('country_code', 'nl')
+        ->count();
+    expect($categoryCount)->toBeGreaterThan(0);
+});
 
 it('setTaxCountry rejects a code outside the allow-list (no-op)', function (): void {
-    // TODO: Task 3 — TaxSettingsSection allow-list enforcement
-})->skip('built in Plan 04 Task 3');
+    $user = taxSettingsUser('tax-livewire-03');
+    $this->actingAs($user);
 
-it('settings page includes the tax settings section', function (): void {
-    // TODO: Task 3 — @livewire injection in settings-page.blade.php
-})->skip('built in Plan 04 Task 3');
+    Livewire::test(TaxSettingsSection::class)
+        ->call('setTaxCountry', 'xx')
+        ->assertSet('taxCountryCode', ''); // unchanged — no-op
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $countryCode = $db->connection()->table('users')->where('id', $user->id)->value('tax_country_code');
+    expect($countryCode)->toBeNull();
+});
+
+it('settings page blade includes the tax settings section livewire tag', function (): void {
+    $content = file_get_contents(
+        dirname(__DIR__, 4).'/Modules/Core/Resources/views/livewire/settings-page.blade.php'
+    );
+    assert(is_string($content));
+    expect($content)->toContain("@livewire('tax.settings-section')");
+});
