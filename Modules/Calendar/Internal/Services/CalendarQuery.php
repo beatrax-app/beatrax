@@ -576,6 +576,14 @@ final readonly class CalendarQuery
      * each currency bucket to the user's base reporting currency before summing
      * (D-05, CR-02). Minor units are never added across currencies.
      *
+     * Past days (WR-09, D-07): the balance line uses REAL balances up to
+     * (and excluding) today — cumulative `transactions.amount_minor` sums
+     * across the balance accounts, bucketed per currency and FX-converted
+     * like the projection (mirrors ForecastQuery's
+     * resolveAnchorFromTransactionsSum anchor semantics). Past days never
+     * depend on forecast runs, so they stay known even while a projection
+     * is computing.
+     *
      * Internal-transfer net-neutrality (D-04): because per-account forecasts already
      * include both legs of an own-account transfer, the combined sum naturally nets them.
      * No additional deduction is performed.
@@ -666,6 +674,68 @@ final readonly class CalendarQuery
                     $map[$dateStr] = [$map[$dateStr][0], true];
                 }
                 $cur = $cur->addDay();
+            }
+        }
+
+        // Past-day actuals (WR-09, D-07): overwrite every grid day before
+        // today with the real cumulative balance — actuals are derived from
+        // transactions, not forecast runs, so they also override the
+        // computing fill above.
+        $today = $this->clock->now()->startOfDay();
+        $gridStart = $monthStart->startOfWeek(CarbonImmutable::MONDAY);
+        $gridEnd = $monthEnd->startOfDay()->endOfWeek(CarbonImmutable::SUNDAY)->startOfDay();
+        $yesterday = $today->subDay();
+        $pastEnd = $gridEnd->lt($yesterday) ? $gridEnd : $yesterday;
+
+        if ($pastEnd->gte($gridStart)) {
+            // Cumulative base per currency: everything before the visible grid.
+            /** @var array<string, int> $cumByCurrency */
+            $cumByCurrency = [];
+            $baseRows = $this->db->connection()->table('transactions')
+                ->where('user_id', $user->id)  // T-06-03: user-scoped
+                ->whereIn('account_id', $effectiveBalance)
+                ->where('posted_at', '<', $gridStart->toDateString())
+                ->groupBy('currency')
+                ->selectRaw('currency, SUM(amount_minor) as sum_minor')
+                ->get();
+            foreach ($baseRows as $row) {
+                /** @var stdClass $row */
+                $cumByCurrency[self::toString($row->currency)] = self::toInt($row->sum_minor);
+            }
+
+            // Daily per-currency deltas inside the visible grid window.
+            /** @var array<string, array<string, int>> $deltaByDateCurrency */
+            $deltaByDateCurrency = [];
+            $deltaRows = $this->db->connection()->table('transactions')
+                ->where('user_id', $user->id)  // T-06-03: user-scoped
+                ->whereIn('account_id', $effectiveBalance)
+                ->whereBetween('posted_at', [$gridStart->toDateString(), $pastEnd->toDateString()])
+                ->groupBy('posted_at', 'currency')
+                ->selectRaw('posted_at, currency, SUM(amount_minor) as sum_minor')
+                ->get();
+            foreach ($deltaRows as $row) {
+                /** @var stdClass $row */
+                $deltaByDateCurrency[self::toString($row->posted_at)][self::toString($row->currency)]
+                    = self::toInt($row->sum_minor);
+            }
+
+            // Walk the past grid days, carrying the cumulative balance forward.
+            // convertToBase is a zero-query passthrough for base-currency
+            // buckets (the dominant case); non-base buckets hit the cached-by-
+            // SQLite exchange_rates lookup per (day, currency).
+            $cursor = $gridStart;
+            while ($cursor->lte($pastEnd)) {
+                $dateStr = $cursor->toDateString();
+                foreach ($deltaByDateCurrency[$dateStr] ?? [] as $currency => $deltaMinor) {
+                    $cumByCurrency[$currency] = ($cumByCurrency[$currency] ?? 0) + $deltaMinor;
+                }
+                $totalMinor = 0;
+                foreach ($cumByCurrency as $currency => $sumMinor) {
+                    $converted = $this->fxService->convertToBase(Money::ofMinor($sumMinor, $currency), $baseCurrency);
+                    $totalMinor += $converted->converted->toMinor();
+                }
+                $map[$dateStr] = [$totalMinor, false];
+                $cursor = $cursor->addDay();
             }
         }
 
