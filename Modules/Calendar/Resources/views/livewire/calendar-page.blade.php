@@ -22,7 +22,10 @@
 
     {{-- §6.2 Month summary strip (hidden when no risk days, unless computing) --}}
     @php
-        $riskDays = array_filter($days, fn ($d) => $d->isRisk);
+        // IN-05: count only days OF the display month — the Mon–Sun grid
+        // carries lead-in/lead-out cells from adjacent months, and a June
+        // view must not headline "dips below €0 on Jul 1".
+        $riskDays = array_filter($days, fn ($d) => $d->isRisk && $d->date->month === $displayMonth);
         $riskDayList = array_values($riskDays);
         $riskCount = count($riskDayList);
     @endphp
