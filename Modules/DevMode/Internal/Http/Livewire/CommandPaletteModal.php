@@ -13,6 +13,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
+use Modules\Search\Public\Contracts\SearchResultsProvider;
 
 /**
  * Global command-palette modal.
@@ -144,10 +145,12 @@ final class CommandPaletteModal extends Component
         NavigationRegistry $nav,
         DevCommandRegistry $commands,
         AppActionRegistry $actions,
+        ?SearchResultsProvider $searchProvider = null,
     ): View {
         return $views->make('dev::livewire.command-palette-modal', [
             'registry' => $this->buildRegistry($user, $nav, $commands, $actions),
             'recent' => $this->recent,
+            'searchAvailable' => $searchProvider !== null,
         ]);
     }
 

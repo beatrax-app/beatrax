@@ -48,4 +48,17 @@
     >
         <span aria-hidden="true">⌕</span>
     </button>
+
+    {{-- Search magnifier button (D-25, UI-SPEC #9, Phase 8 Plan 05).
+         Opens the palette in its full-screen phone mode (D-29).
+         44px tap target (D-08 / WCAG 2.5.5). aria-label required for icon-only button. --}}
+    <button
+        type="button"
+        class="top-bar-btn"
+        aria-label="Search transactions"
+        x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
+        style="width: 44px; height: var(--top-bar-h, 56px); display: grid; place-items: center; color: var(--color-text-muted, #64748b);"
+    >
+        <span aria-hidden="true">⌕</span>
+    </button>
 </header>

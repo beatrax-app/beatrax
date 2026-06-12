@@ -33,13 +33,21 @@
         <span class="version-chip">v{{ config('nativephp.version') }}</span>
     </div>
 
-    <div class="side-search" role="search">
+    {{-- Search affordance (D-25, Phase 8 Plan 05). Click dispatches palette:open. --}}
+    <div
+        class="side-search"
+        role="search"
+        x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
+        style="cursor: pointer;"
+    >
         <span class="ic" aria-hidden="true">⌕</span>
         <input
             type="text"
-            placeholder="Search or jump to…"
-            aria-label="Search or jump to"
-            disabled
+            placeholder="Search…"
+            aria-label="Open search palette"
+            readonly
+            x-on:focus="window.Livewire && window.Livewire.dispatch('palette:open')"
+            style="cursor: pointer;"
         />
         {{--
             Platform-aware kbd hint (D-04, Phase 4 Plan 03).
