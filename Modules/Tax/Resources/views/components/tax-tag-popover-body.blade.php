@@ -14,7 +14,7 @@
         >Note <span style="color: var(--color-text-faint, #94a3b8);">(optional)</span></label>
         <textarea
             id="tax-picker-note-{{ $taxPickerTxId ?? 'none' }}"
-            wire:model.defer="pickerNote"
+            wire:model="pickerNote"
             rows="1"
             placeholder="Invoice #, date, or other reference…"
             style="
@@ -110,13 +110,13 @@
 
     <hr style="border: 0; border-top: 1px solid var(--color-border, #e2e8f0); margin: 0;" />
 
-    {{-- Inline new-category quick-add --}}
-    <div x-data="{ open: $wire.pickerIsNewCatOpen }">
+    {{-- Inline new-category quick-add (server-rendered via @if — no Alpine state needed). --}}
+    <div>
         @if ($pickerIsNewCatOpen ?? false)
             <div style="display: flex; gap: var(--space-2);">
                 <input
                     type="text"
-                    wire:model.defer="pickerInlineNewName"
+                    wire:model="pickerInlineNewName"
                     placeholder="New category name…"
                     style="
                         flex: 1 1 auto;
