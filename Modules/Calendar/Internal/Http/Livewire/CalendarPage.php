@@ -49,8 +49,12 @@ final class CalendarPage extends Component
 
     /**
      * Account IDs whose recurring entries appear on the grid.
-     * Empty = all accounts (default: entries all ON per D-02).
-     * Intersected against user-owned accounts in CalendarQuery (T-06-02).
+     *
+     * Materialized to an EXPLICIT list of owned account IDs in mount()
+     * (CR-01): the D-02 "entries all ON" default becomes the full owned
+     * set, so popover checkboxes always reflect effective behavior and
+     * deselect-all ([]) is representable. Intersected against user-owned
+     * accounts in CalendarQuery (T-06-02).
      *
      * @var list<int>
      */
@@ -58,7 +62,9 @@ final class CalendarPage extends Component
 
     /**
      * Account IDs whose forecast balances are summed for the balance line.
-     * Empty = spendable default (checking + PayPal ON; ICS OFF per D-03).
+     *
+     * Materialized to an EXPLICIT list in mount() (CR-01): the D-03
+     * spendable default becomes the concrete spendable account-id set.
      * Intersected against user-owned accounts in CalendarQuery (T-06-02).
      *
      * @var list<int>
@@ -73,44 +79,42 @@ final class CalendarPage extends Component
 
     /**
      * Load persisted account preferences from user_preferences on first
-     * page load. Empty arrays stay as-is (CalendarQuery resolves defaults).
+     * page load, then materialize the defaults into EXPLICIT account-id
+     * lists (CR-01):
+     *
+     *   - A null DB column means "never configured" → entries default to
+     *     ALL owned accounts (D-02); balance defaults to the spendable
+     *     set (D-03).
+     *   - A stored array — including the empty array (deselect-all) — is
+     *     taken literally, intersected against owned accounts (T-06-02).
+     *
+     * After mount the component state always holds explicit IDs, so the
+     * popover checkboxes, the toggle actions, and CalendarQuery all agree.
      */
-    public function mount(CurrentUser $currentUser, DatabaseManager $db): void
+    public function mount(CurrentUser $currentUser, CalendarQuery $calendarQuery): void
     {
-        $userId = $currentUser->id();
+        $user = $currentUser->user();
+        $ownedIds = $calendarQuery->ownedAccountIds($user);
 
-        $row = $db->connection()->table('user_preferences')
-            ->where('user_id', $userId)
-            ->first(['calendar_entries_accounts', 'calendar_balance_accounts']);
+        $pref = UserPreference::query()
+            ->where('user_id', $user->id)
+            ->first();
 
-        if ($row instanceof stdClass) {
-            $entriesRaw = $row->calendar_entries_accounts;
-            if (is_string($entriesRaw) && $entriesRaw !== '') {
-                $decoded = json_decode($entriesRaw, true);
-                if (is_array($decoded)) {
-                    $ints = [];
-                    foreach ($decoded as $v) {
-                        if (is_int($v)) {
-                            $ints[] = $v;
-                        }
-                    }
-                    $this->visibleAccountIds = $ints;
-                }
-            }
+        $entriesPref = self::toIntListOrNull($pref?->calendar_entries_accounts);
+        $balancePref = self::toIntListOrNull($pref?->calendar_balance_accounts);
 
-            $balanceRaw = $row->calendar_balance_accounts;
-            if (is_string($balanceRaw) && $balanceRaw !== '') {
-                $decoded = json_decode($balanceRaw, true);
-                if (is_array($decoded)) {
-                    $bInts = [];
-                    foreach ($decoded as $v) {
-                        if (is_int($v)) {
-                            $bInts[] = $v;
-                        }
-                    }
-                    $this->balanceAccountIds = $bInts;
-                }
-            }
+        if ($entriesPref !== null) {
+            $this->visibleAccountIds = array_values(array_intersect($entriesPref, $ownedIds));
+        } elseif ($this->visibleAccountIds === []) {
+            // Never configured → D-02 default: entries all ON.
+            $this->visibleAccountIds = $ownedIds;
+        }
+
+        if ($balancePref !== null) {
+            $this->balanceAccountIds = array_values(array_intersect($balancePref, $ownedIds));
+        } elseif ($this->balanceAccountIds === []) {
+            // Never configured → D-03 default: spendable set ON.
+            $this->balanceAccountIds = $calendarQuery->spendableAccountIds($user);
         }
     }
 
@@ -214,18 +218,18 @@ final class CalendarPage extends Component
      * Persist the current account preference arrays to user_preferences.
      * Called on popover close so the UI round-trip stays one network call
      * rather than one per toggle.
+     *
+     * Explicit arrays are stored as-is — INCLUDING the empty array, which
+     * is the legitimate "everything off" state (CR-01). Null in the DB is
+     * reserved for "never configured" (defaults re-resolve at mount).
      */
     public function persistAccountPrefs(CurrentUser $currentUser): void
     {
         UserPreference::query()->updateOrCreate(
             ['user_id' => $currentUser->id()],
             [
-                'calendar_entries_accounts' => $this->visibleAccountIds === []
-                    ? null
-                    : $this->visibleAccountIds,
-                'calendar_balance_accounts' => $this->balanceAccountIds === []
-                    ? null
-                    : $this->balanceAccountIds,
+                'calendar_entries_accounts' => $this->visibleAccountIds,
+                'calendar_balance_accounts' => $this->balanceAccountIds,
             ],
         );
     }
@@ -241,14 +245,36 @@ final class CalendarPage extends Component
         $year = $display['year'];
         $month = $display['month'];
 
+        // Build the account roster for the Accounts popover (also needed to
+        // decide the zero-account filter semantics below).
+        $accounts = $db->connection()->table('accounts')
+            ->where('user_id', $user->id)
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get(['id', 'name', 'kind']);
+
+        $accountRoster = [];
+        foreach ($accounts as $account) {
+            /** @var stdClass $account */
+            $accountId = self::toInt($account->id);
+            $accountRoster[] = [
+                'id' => $accountId,
+                'name' => self::toString($account->name ?? null),
+                'kind' => self::toString($account->kind ?? null),
+            ];
+        }
+
         // CalendarQuery handles security (T-06-02): intersects account IDs against
         // user-owned accounts; foreign IDs are silently dropped.
+        // A user with zero accounts has nothing to filter on — pass null
+        // ("no filter") so series not yet linked to any account still render
+        // (CR-01: explicit [] otherwise means deselect-all).
         $days = $calendarQuery->forMonth(
             $user,
             $year,
             $month,
-            $this->visibleAccountIds,
-            $this->balanceAccountIds,
+            $accountRoster === [] ? null : $this->visibleAccountIds,
+            $accountRoster === [] ? null : $this->balanceAccountIds,
         );
 
         // Determine empty state: no entries across any day in the grid
@@ -278,24 +304,6 @@ final class CalendarPage extends Component
                 $isComputingAny = true;
                 break;
             }
-        }
-
-        // Build the account roster for the Accounts popover.
-        $accounts = $db->connection()->table('accounts')
-            ->where('user_id', $user->id)
-            ->orderBy('name')
-            ->orderBy('id')
-            ->get(['id', 'name', 'kind']);
-
-        $accountRoster = [];
-        foreach ($accounts as $account) {
-            /** @var stdClass $account */
-            $accountId = self::toInt($account->id);
-            $accountRoster[] = [
-                'id' => $accountId,
-                'name' => self::toString($account->name ?? null),
-                'kind' => self::toString($account->kind ?? null),
-            ];
         }
 
         // Ceiling month: today + 12 months (D-14)
@@ -378,6 +386,30 @@ final class CalendarPage extends Component
         }
 
         return $ids;
+    }
+
+    /**
+     * Normalize a UserPreference array cast value into a list of ints,
+     * preserving the null-vs-array distinction (CR-01): null means "never
+     * configured"; an array — even empty — is an explicit user choice.
+     * Non-int members (legacy/corrupt JSON) are dropped.
+     *
+     * @return list<int>|null
+     */
+    private static function toIntListOrNull(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $ints = [];
+        foreach ($value as $v) {
+            if (is_int($v)) {
+                $ints[] = $v;
+            }
+        }
+
+        return $ints;
     }
 
     private static function toInt(mixed $value): int
