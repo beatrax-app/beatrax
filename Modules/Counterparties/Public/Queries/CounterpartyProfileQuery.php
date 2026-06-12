@@ -115,6 +115,85 @@ final readonly class CounterpartyProfileQuery
     }
 
     /**
+     * Batched variant of `identityForId` — minimal identity (slug +
+     * display name + type) per counterparty id, resolved in a single
+     * query. Missing or cross-user ids are silently absent from the
+     * result map. Lets list surfaces (the calendar's entry map) hydrate
+     * deep-links without N per-id lookups.
+     *
+     * @param  list<int>  $ids
+     * @return array<int, array{slug: string, displayName: string, type: string}>
+     */
+    public function identitiesForIds(User $user, array $ids): array
+    {
+        $clean = array_values(array_unique(array_filter($ids, static fn (int $id): bool => $id > 0)));
+        if ($clean === []) {
+            return [];
+        }
+
+        // Raw query builder via DatabaseManager — sidesteps the
+        // Eloquent\Builder __call → Query\Builder forwarding that triggers
+        // larastan-strict `staticMethod.dynamicCall` on `whereIn()`. The
+        // explicit user_id filter is the primary cross-user scope here.
+        $rows = $this->db->connection()->table('counterparties')
+            ->where('user_id', $user->id)
+            ->whereIn('id', $clean)
+            ->get(['id', 'slug', 'display_name', 'type']);
+
+        $map = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $id = is_numeric($row->id) ? (int) $row->id : 0;
+            if ($id <= 0) {
+                continue;
+            }
+            $map[$id] = [
+                'slug' => is_string($row->slug) ? $row->slug : '',
+                'displayName' => is_string($row->display_name) ? $row->display_name : '',
+                'type' => is_string($row->type) ? $row->type : '',
+            ];
+        }
+
+        return $map;
+    }
+
+    /**
+     * Resolve counterparty ids for a list of slugs in one query — the
+     * batched existence check behind the calendar's cluster-key fallback
+     * (a series with no occurrence-linked counterparty may still match a
+     * counterparty by `cluster_counterparty_key` == slug). Unknown or
+     * cross-user slugs are silently absent from the result map.
+     *
+     * @param  list<string>  $slugs
+     * @return array<string, int>
+     */
+    public function idsBySlugs(User $user, array $slugs): array
+    {
+        $clean = array_values(array_unique(array_filter($slugs, static fn (string $slug): bool => $slug !== '')));
+        if ($clean === []) {
+            return [];
+        }
+
+        // Raw query builder via DatabaseManager — same
+        // `staticMethod.dynamicCall` sidestep as identitiesForIds above.
+        $rows = $this->db->connection()->table('counterparties')
+            ->where('user_id', $user->id)
+            ->whereIn('slug', $clean)
+            ->get(['id', 'slug']);
+
+        $map = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $id = is_numeric($row->id) ? (int) $row->id : 0;
+            if ($id > 0 && is_string($row->slug) && $row->slug !== '') {
+                $map[$row->slug] = $id;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
      * Returns up to `$limit` most-recent transactions tied to the
      * counterparty, ordered newest-first. Each row is a stdClass with
      * the columns the Overview Recent activity strip + the Transactions
