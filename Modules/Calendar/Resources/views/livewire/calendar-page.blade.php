@@ -87,7 +87,9 @@
             <div
                 x-show="popoverOpen"
                 @click.outside="popoverOpen = false; $wire.persistAccountPrefs()"
-                @keydown.escape.window="popoverOpen = false; $wire.persistAccountPrefs()"
+                {{-- IN-08: guard on popoverOpen — a window-scoped Escape (e.g. closing
+                     the day panel) must not fire a persistence round-trip --}}
+                @keydown.escape.window="if (popoverOpen) { popoverOpen = false; $wire.persistAccountPrefs() }"
                 class="absolute right-0 z-30 mt-1 rounded-lg border bg-white py-2 shadow-lg dark:bg-slate-900"
                 style="min-width: 260px; border-color: var(--color-border); top: 100%;"
                 role="dialog"
