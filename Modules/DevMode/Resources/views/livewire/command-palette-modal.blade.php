@@ -2,6 +2,7 @@
     /**
      * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, keywords: list<string>}> $registry
      * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}> $recent
+     * @var bool $searchAvailable  True when Search module is wired (SearchResultsProvider bound).
      *
      * Global command-palette modal mounted in both base layouts
      * (resources/views/layouts/app.blade.php and the dev-shell
@@ -26,7 +27,16 @@
      * selectors that survive whatever cascade quirk the inline path
      * tripped over, and match the dark-mode pattern used by every
      * other Dev Console page.
+     *
+     * Phase 08-05 additions:
+     *   - Server-backed Transactions + entity sections (D-01, D-19, D-28).
+     *     Gated on $searchAvailable (null-safe: palette works when Search unbound).
+     *   - Token autocomplete overlay (D-26) — srch-token-suggest CSS class.
+     *   - "See all N results →" row navigates to /transactions?q={query} (D-01).
+     *   - Recent transaction-search entries persisted via pickEntry path (D-10, D-13).
+     *   - Footer kbd hint copy from Copywriting Contract (D-26).
      */
+    $searchAvailable = $searchAvailable ?? false;
 @endphp
 
 <div
@@ -39,30 +49,71 @@
 >
     <template x-if="visible">
         <div
-            class="palette-scrim fixed inset-0 z-[9999] flex items-start justify-center bg-slate-950/45 backdrop-blur-sm pt-[12vh]"
+            class="palette-scrim fixed inset-0 z-[9999] flex items-start justify-center bg-slate-950/45 backdrop-blur-sm pt-[12vh]
+                   max-md:p-0 max-md:pt-0 max-md:items-start"
             x-on:click.self="close()"
         >
+            {{-- Desktop palette (>= 768px) + phone full-screen sheet (< 768px) --}}
             <div
-                class="palette w-[min(760px,92vw)] rounded-xl overflow-hidden shadow-2xl bg-white dark:bg-[#0b1220] text-slate-900 dark:text-slate-100 ring-1 ring-slate-200 dark:ring-slate-700"
+                class="palette w-[min(760px,92vw)] rounded-xl overflow-hidden shadow-2xl bg-white dark:bg-[#0b1220] text-slate-900 dark:text-slate-100 ring-1 ring-slate-200 dark:ring-slate-700
+                       max-md:w-full max-md:h-full max-md:rounded-none max-md:ring-0 max-md:shadow-none phone-palette-sheet"
                 role="dialog"
                 aria-modal="true"
                 aria-label="Command palette"
             >
-                <div class="palette-input flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-                    <span class="ic text-slate-400 dark:text-slate-500" aria-hidden="true">⌕</span>
-                    <input
-                        x-ref="input"
-                        x-model="query"
-                        type="text"
-                        placeholder="Type to search views, commands, and actions. Press Esc to close."
-                        aria-label="Type to search views, commands, and actions"
-                        class="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                    />
+                <div class="palette-input flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative">
+                    {{-- Loading spinner or search icon --}}
+                    <span
+                        class="ic text-slate-400 dark:text-slate-500"
+                        aria-hidden="true"
+                        x-show="!serverLoading"
+                    >⌕</span>
+                    <span
+                        class="ic text-slate-400 dark:text-slate-500 animate-spin"
+                        aria-hidden="true"
+                        x-show="serverLoading"
+                        style="display:none"
+                    >↻</span>
+
+                    <div class="flex-1 relative">
+                        <input
+                            x-ref="input"
+                            x-model="query"
+                            x-on:input="onQueryChange()"
+                            type="text"
+                            placeholder="Type to search views, commands, and actions. Press Esc to close."
+                            aria-label="Type to search views, commands, and actions"
+                            class="w-full bg-transparent border-0 outline-none text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                            autocomplete="off"
+                        />
+
+                        {{-- Token autocomplete overlay (D-26, UI-SPEC #7) --}}
+                        <template x-if="tokenSuggestVisible && tokenSuggestions.length > 0">
+                            <div
+                                class="srch-token-suggest"
+                                x-on:click.outside="tokenSuggestVisible = false"
+                                role="listbox"
+                                aria-label="Token suggestions"
+                            >
+                                <template x-for="(suggestion, i) in tokenSuggestions" :key="suggestion">
+                                    <div
+                                        class="srch-token-suggest-row"
+                                        :class="i === tokenActiveIndex ? 'srch-token-suggest-row--selected' : ''"
+                                        x-on:click="applyTokenSuggestion(suggestion)"
+                                        role="option"
+                                        :aria-selected="i === tokenActiveIndex"
+                                        x-text="suggestion"
+                                    ></div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+
                     <span class="kbd" aria-hidden="true">esc</span>
                 </div>
 
-                <div class="palette-body flex min-h-[280px] max-h-[60vh]">
-                    <aside class="palette-rail w-[180px] p-3 border-r border-slate-200 dark:border-slate-700 text-sm overflow-y-auto">
+                <div class="palette-body flex min-h-[280px] max-h-[60vh] max-md:max-h-full max-md:flex-1">
+                    <aside class="palette-rail w-[180px] p-3 border-r border-slate-200 dark:border-slate-700 text-sm overflow-y-auto max-md:hidden">
                         <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">View</div>
                         <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Dev</div>
                         <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Action</div>
@@ -81,6 +132,128 @@
                     </aside>
 
                     <main class="palette-results flex-1 p-2 overflow-y-auto">
+                        {{-- Server-backed sections — only rendered when Search module is wired and query >= 2 chars (D-01) --}}
+                        @if($searchAvailable)
+                        <template x-if="query.length >= 2">
+                            <div>
+                                {{-- Section 1: Transactions (D-01, D-19, UI-SPEC #6) --}}
+                                <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
+                                    Transactions
+                                </div>
+
+                                <template x-if="serverTransactionHits.length > 0">
+                                    <div>
+                                        <template x-for="hit in serverTransactionHits" :key="hit.id">
+                                            <div
+                                                class="palette-row palette-txn-row flex items-start gap-3 px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                x-on:click="executeTransactionHit(hit)"
+                                            >
+                                                <span class="ic w-5 text-center text-slate-400 dark:text-slate-500 mt-0.5 shrink-0" aria-hidden="true">≡</span>
+                                                <div class="palette-txn-row-text flex-1 min-w-0">
+                                                    {{-- Line 1: counterparty name + amount (D-19) --}}
+                                                    <div class="flex items-baseline gap-2">
+                                                        <span
+                                                            class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate"
+                                                            x-html="hit.counterpartyName || '(no name)'"
+                                                        ></span>
+                                                        <span
+                                                            class="text-xs text-slate-500 dark:text-slate-400 shrink-0 font-variant-numeric tabular-nums ml-auto"
+                                                            x-text="hit.amount"
+                                                        ></span>
+                                                    </div>
+                                                    {{-- Line 2: matched snippet (D-19) --}}
+                                                    <template x-if="hit.snippet">
+                                                        <div
+                                                            class="text-xs text-slate-500 dark:text-slate-400 truncate"
+                                                            x-html="hit.snippet"
+                                                        ></div>
+                                                    </template>
+                                                </div>
+                                                <span class="palette-source palette-source--txn text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 shrink-0">txn</span>
+                                            </div>
+                                        </template>
+
+                                        {{-- "See all N results →" row (D-01) --}}
+                                        <div
+                                            class="palette-row palette-see-all flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                            x-on:click="seeAllResults()"
+                                        >
+                                            <span class="w-5 text-center text-slate-400 dark:text-slate-500 shrink-0" aria-hidden="true">→</span>
+                                            <span class="text-sm" x-text="'See all ' + serverTotalCount + ' results →'"></span>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <template x-if="serverTransactionHits.length === 0 && !serverLoading">
+                                    <div class="px-4 py-2 text-sm text-slate-400 dark:text-slate-500"
+                                         x-text="'No transactions match &quot;' + query + '&quot;'">
+                                    </div>
+                                </template>
+
+                                {{-- Section 2: Counterparties (D-28) --}}
+                                <template x-if="serverEntityHits.filter(e => e.type === 'counterparty').length > 0">
+                                    <div>
+                                        <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
+                                            Counterparties
+                                        </div>
+                                        <template x-for="entity in serverEntityHits.filter(e => e.type === 'counterparty').slice(0, 3)" :key="entity.id + '-' + entity.type">
+                                            <div
+                                                class="palette-row flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                x-on:click="execute({ url: entity.url })"
+                                            >
+                                                <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">◈</span>
+                                                <span class="flex-1 text-sm" x-text="entity.label"></span>
+                                                <span class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">counterparty</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                {{-- Section 3: Categories (D-28) --}}
+                                <template x-if="serverEntityHits.filter(e => e.type === 'category').length > 0">
+                                    <div>
+                                        <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
+                                            Categories
+                                        </div>
+                                        <template x-for="entity in serverEntityHits.filter(e => e.type === 'category').slice(0, 3)" :key="entity.id + '-' + entity.type">
+                                            <div
+                                                class="palette-row flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                x-on:click="execute({ url: entity.url })"
+                                            >
+                                                <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">⊞</span>
+                                                <span class="flex-1 text-sm" x-text="entity.label"></span>
+                                                <span class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">category</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                {{-- Section 4: Goals / Pots / Recurring (D-28) --}}
+                                <template x-if="serverEntityHits.filter(e => ['goal','pot','recurring'].includes(e.type)).length > 0">
+                                    <div>
+                                        <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
+                                            Goals &amp; Recurring
+                                        </div>
+                                        <template x-for="entity in serverEntityHits.filter(e => ['goal','pot','recurring'].includes(e.type)).slice(0, 3)" :key="entity.id + '-' + entity.type">
+                                            <div
+                                                class="palette-row flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                x-on:click="execute({ url: entity.url })"
+                                            >
+                                                <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">◎</span>
+                                                <span class="flex-1 text-sm" x-text="entity.label"></span>
+                                                <span class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800" x-text="entity.type"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                {{-- Section divider before Fuse results --}}
+                                <div class="h-px bg-slate-100 dark:bg-slate-800 my-2 mx-3"></div>
+                            </div>
+                        </template>
+                        @endif
+
+                        {{-- Section 5: Existing Fuse.js commands/views/actions results (D-01 ordering) --}}
                         <template x-for="(hit, i) in results.slice(0, 50)" :key="hit.item.id">
                             <div
                                 class="palette-row flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer"
@@ -103,7 +276,7 @@
                                 <span class="kbd" aria-hidden="true">↩</span>
                             </div>
                         </template>
-                        <template x-if="results.length === 0">
+                        <template x-if="results.length === 0 && serverTransactionHits.length === 0">
                             <div class="p-4 text-center text-sm text-slate-500 dark:text-slate-400">No results.</div>
                         </template>
                     </main>
@@ -113,6 +286,9 @@
                     <span><span class="kbd">↑</span><span class="kbd">↓</span> navigate</span>
                     <span><span class="kbd">↩</span> select</span>
                     <span><span class="kbd">esc</span> close</span>
+                    @if($searchAvailable)
+                    <span class="hidden sm:inline text-slate-400 dark:text-slate-500">Try <span class="font-mono text-[10px]">account:</span> · <span class="font-mono text-[10px]">after:</span> · <span class="font-mono text-[10px]">amount:&gt;50</span></span>
+                    @endif
                     <span class="ml-auto" x-text="results.length + ' results'"></span>
                 </div>
             </div>
