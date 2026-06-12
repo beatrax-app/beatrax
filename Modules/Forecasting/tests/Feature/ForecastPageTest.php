@@ -65,7 +65,7 @@ it('renders the page heading + subheading + the Adjust buffers helper link', fun
 
     $response->assertOk()
         ->assertSeeText('Forecast')
-        ->assertSeeText('Where your balance is heading — over the next 30, 60, or 90 days.')
+        ->assertSeeText('Where your balance is heading — over the next 30 to 365 days.')
         ->assertSee('Adjust buffers');
 });
 

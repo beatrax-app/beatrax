@@ -263,7 +263,7 @@ it('dispatches three ProjectForecastJob horizons after successful save', functio
         ->call('save')
         ->assertSet('saved', true);
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 3);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 5);
 });
 
 it('throws OpeningBalanceDivergenceWarning carrying the precise diff values', function (): void {
