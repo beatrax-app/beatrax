@@ -17,6 +17,12 @@ use Modules\Recurring\Models\RecurringSeries;
  * The floor is the earliest observed occurrence (created_at fallback)
  * minus a small slack, so history months before a subscription's first
  * payment never render phantom "Expected — not found" entries.
+ *
+ * Anchor-indexed stepping (WR-04): monthly+ occurrences are computed by
+ * index from the nextExpectedAt anchor, so an end-of-month billing day
+ * (the 31st) is preserved in months that have it — chained no-overflow
+ * stepping permanently drifted to the 28th after February — and the same
+ * bill lands on the same day no matter which month is being viewed.
  */
 
 function cqplUser(string $suffix): User
@@ -172,6 +178,47 @@ it('uses the first observed occurrence as the inception floor (WR-03)', function
     // February 2026 (before inception): no phantom entry.
     $february = $calendarQuery->forMonth($user, 2026, 2);
     expect(cqplEntryDates($february, 'April-Born'))->toBe([]);
+});
+
+it('preserves an end-of-month anchor across short months (WR-04 drift)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cqplUser('eom-anchor');
+
+    // Bill anchored on the 31st (nextExpectedAt 2026-07-31), observed since
+    // January so history months are inside the inception floor.
+    $series = cqplSeries($user, 'EndOfMonth-Bill', CarbonImmutable::parse('2026-07-31'));
+    cqplOccurrence($db, $user->id, $series->id, '2026-01-31');
+
+    /** @var CalendarQuery $calendarQuery */
+    $calendarQuery = app(CalendarQuery::class);
+
+    // February has no 31st → no-overflow clamps to Feb 28…
+    $february = $calendarQuery->forMonth($user, 2026, 2);
+    expect(cqplEntryDates($february, 'EndOfMonth-Bill'))->toBe(['2026-02-28']);
+
+    // …but March must return to the 31st (chained stepping drifted to Mar 28
+    // and never recovered), and May likewise.
+    $march = $calendarQuery->forMonth($user, 2026, 3);
+    expect(cqplEntryDates($march, 'EndOfMonth-Bill'))->toBe(['2026-03-31']);
+
+    $may = $calendarQuery->forMonth($user, 2026, 5);
+    expect(cqplEntryDates($may, 'EndOfMonth-Bill'))->toBe(['2026-05-31']);
+});
+
+it('places the anchor month itself on the anchor day (WR-04 invertibility)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cqplUser('eom-invert');
+
+    // Backward-then-forward symmetry: viewing the anchor's own month after
+    // having stepped through short months must still land on the 31st.
+    $series = cqplSeries($user, 'July-Anchor', CarbonImmutable::parse('2026-07-31'));
+    cqplOccurrence($db, $user->id, $series->id, '2026-01-31');
+
+    /** @var CalendarQuery $calendarQuery */
+    $calendarQuery = app(CalendarQuery::class);
+
+    $july = $calendarQuery->forMonth($user, 2026, 7);
+    expect(cqplEntryDates($july, 'July-Anchor'))->toBe(['2026-07-31']);
 });
 
 it('keeps an entry expected slightly before its first observed payment (WR-03 slack)', function (): void {
