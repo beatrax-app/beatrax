@@ -3411,3 +3411,423 @@ td.date,
         transition: none !important;
     }
 }
+
+/* ==========================================================================
+   Phase 8 — Full-text search & filter UI (.srch-* namespace)
+   UI-SPEC tokens: D-19 search toolbar, D-20 filter chips, D-21 no-results,
+   D-22 result row highlight/snippet.
+   ========================================================================== */
+
+/* ── Search toolbar container ────────────────────────────────────────────── */
+.srch-toolbar {
+    padding: var(--space-3, 12px) 0 var(--space-2, 8px);
+    border-bottom: 1px solid var(--color-border, oklch(93% 0 0));
+    margin-bottom: var(--space-3, 12px);
+}
+
+/* ── Search input wrapper ─────────────────────────────────────────────────── */
+.srch-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+}
+
+.srch-input-wrap--loading .srch-icon {
+    opacity: 0.4;
+}
+
+.srch-icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: var(--color-muted, oklch(60% 0 0));
+    line-height: 1;
+    pointer-events: none;
+}
+
+.srch-input {
+    flex: 1;
+    height: 36px;
+    padding: 0 var(--space-2, 8px);
+    border: 1px solid var(--color-border, oklch(93% 0 0));
+    border-radius: 6px;
+    background: var(--color-surface, oklch(99% 0 0));
+    font-size: 0.875rem;
+    color: var(--color-text, oklch(15% 0 0));
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.srch-input:focus {
+    border-color: var(--color-accent, oklch(55% 0.2 260));
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--color-accent, oklch(55% 0.2 260)) 20%, transparent);
+}
+
+.srch-spinner {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    color: var(--color-muted, oklch(60% 0 0));
+}
+
+/* ── Filter chip row (desktop) ───────────────────────────────────────────── */
+.srch-chips {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    flex-wrap: wrap;
+    margin-top: var(--space-2, 8px);
+}
+
+/* ── Filter chip ─────────────────────────────────────────────────────────── */
+.srch-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1, 4px);
+    padding: 4px 10px;
+    border: 1px solid var(--color-border, oklch(93% 0 0));
+    border-radius: 9999px;
+    background: transparent;
+    font-size: 0.8125rem;
+    color: var(--color-muted, oklch(60% 0 0));
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+}
+
+.srch-chip:hover {
+    background: var(--color-hover, oklch(96% 0 0));
+    border-color: var(--color-border-strong, oklch(85% 0 0));
+    color: var(--color-text, oklch(15% 0 0));
+}
+
+.srch-chip--active {
+    background: color-mix(in oklch, var(--color-accent, oklch(55% 0.2 260)) 10%, transparent);
+    border-color: var(--color-accent, oklch(55% 0.2 260));
+    color: var(--color-accent, oklch(55% 0.2 260));
+    font-weight: 500;
+}
+
+.srch-chip-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    line-height: 1;
+    color: inherit;
+    opacity: 0.7;
+    padding: 0;
+}
+
+.srch-chip-close:hover {
+    opacity: 1;
+}
+
+/* ── Clear-all button ─────────────────────────────────────────────────────── */
+.srch-clear-all {
+    font-size: 0.8125rem;
+    color: var(--color-muted, oklch(60% 0 0));
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.srch-clear-all:hover {
+    color: var(--color-text, oklch(15% 0 0));
+}
+
+/* ── Summary strip ───────────────────────────────────────────────────────── */
+.srch-strip {
+    margin-top: var(--space-2, 8px);
+    font-size: 0.8125rem;
+    color: var(--color-muted, oklch(60% 0 0));
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Result rows ─────────────────────────────────────────────────────────── */
+.srch-row {
+    /* Subtle left accent when in search mode */
+    border-left: 2px solid var(--color-accent, oklch(55% 0.2 260));
+}
+
+.srch-snippet {
+    font-size: 0.75rem;
+    color: var(--color-muted, oklch(60% 0 0));
+    margin-top: 2px;
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+}
+
+/* FTS5 highlight marks — server-generated <mark> tags (T-08-09: safe) */
+mark {
+    background: color-mix(in oklch, oklch(85% 0.18 95) 40%, transparent);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+/* ── No-results state ────────────────────────────────────────────────────── */
+.srch-no-results {
+    padding: var(--space-6, 24px) 0;
+    text-align: center;
+}
+
+.srch-no-results__heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text, oklch(15% 0 0));
+    margin-bottom: var(--space-2, 8px);
+}
+
+.srch-no-results__body {
+    font-size: 0.875rem;
+    color: var(--color-muted, oklch(60% 0 0));
+    margin-bottom: var(--space-3, 12px);
+}
+
+.srch-no-results__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px);
+    justify-content: center;
+    margin-bottom: var(--space-3, 12px);
+}
+
+.srch-no-results__suggestion {
+    font-size: 0.875rem;
+    color: var(--color-muted, oklch(60% 0 0));
+}
+
+.srch-did-you-mean {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-accent, oklch(55% 0.2 260));
+    text-decoration: underline;
+    font-size: inherit;
+    padding: 0;
+}
+
+/* ── Popover panel (Alpine.js driven, replaces flux:popover) ─────────────── */
+.srch-popover {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 50;
+    min-width: 200px;
+    background: var(--color-surface, oklch(99% 0 0));
+    border: 1px solid var(--color-border, oklch(93% 0 0));
+    border-radius: 8px;
+    box-shadow: 0 4px 12px oklch(0% 0 0 / 10%);
+}
+
+.srch-popover-inner {
+    padding: var(--space-3, 12px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+}
+
+/* ── Popover internals ───────────────────────────────────────────────────── */
+.srch-filter-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-muted, oklch(60% 0 0));
+    display: block;
+}
+
+.srch-date-preset {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    color: var(--color-text, oklch(15% 0 0));
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.srch-date-preset:hover {
+    background: var(--color-hover, oklch(96% 0 0));
+}
+
+.srch-date-range {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+}
+
+.srch-date-input {
+    flex: 1;
+    height: 32px;
+    padding: 0 6px;
+    border: 1px solid var(--color-border, oklch(93% 0 0));
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    background: var(--color-surface, oklch(99% 0 0));
+    color: var(--color-text, oklch(15% 0 0));
+}
+
+.srch-date-sep {
+    font-size: 0.875rem;
+    color: var(--color-muted, oklch(60% 0 0));
+}
+
+.srch-chip-meta {
+    font-size: 0.6875rem;
+    color: var(--color-muted, oklch(60% 0 0));
+}
+
+.srch-check-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--color-text, oklch(15% 0 0));
+}
+
+.srch-checkbox {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.srch-dir-group {
+    display: flex;
+    gap: var(--space-3, 12px);
+}
+
+.srch-radio-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1, 4px);
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--color-text, oklch(15% 0 0));
+}
+
+.srch-radio {
+    cursor: pointer;
+}
+
+.srch-amount-range {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+}
+
+.srch-amount-input {
+    flex: 1;
+    height: 32px;
+    padding: 0 6px;
+    border: 1px solid var(--color-border, oklch(93% 0 0));
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    background: var(--color-surface, oklch(99% 0 0));
+    color: var(--color-text, oklch(15% 0 0));
+}
+
+/* ── Phone filter sheet sections ─────────────────────────────────────────── */
+.srch-sheet-section-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-muted, oklch(60% 0 0));
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: var(--space-2, 8px);
+}
+
+.srch-sheet-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+}
+
+.srch-date-presets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-1, 4px);
+    margin-bottom: var(--space-2, 8px);
+}
+
+.srch-sheet-footer {
+    display: flex;
+    gap: var(--space-3, 12px);
+    padding-top: var(--space-4, 16px);
+    border-top: 1px solid var(--color-border, oklch(93% 0 0));
+}
+
+.srch-sheet-apply {
+    flex: 1;
+    height: 40px;
+    background: var(--color-accent, oklch(55% 0.2 260));
+    color: oklch(99% 0 0);
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.srch-sheet-clear {
+    flex: 1;
+    height: 40px;
+    background: none;
+    border: 1px solid var(--color-border, oklch(93% 0 0));
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: var(--color-muted, oklch(60% 0 0));
+    cursor: pointer;
+}
+
+/* ── Phone filters button + badge ────────────────────────────────────────── */
+.srch-filters-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1, 4px);
+    padding: 6px 12px;
+    border: 1px solid var(--color-border, oklch(93% 0 0));
+    border-radius: 9999px;
+    background: transparent;
+    font-size: 0.875rem;
+    color: var(--color-muted, oklch(60% 0 0));
+    cursor: pointer;
+}
+
+.srch-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    background: var(--color-accent, oklch(55% 0.2 260));
+    color: oklch(99% 0 0);
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* ── Reduced-motion: suppress popover transitions ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .srch-input,
+    .srch-chip,
+    .srch-popover {
+        transition: none !important;
+    }
+}
