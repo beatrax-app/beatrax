@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
+use Modules\Calendar\Tests\TestCase;
 use Modules\Core\Models\User;
+
+uses(TestCase::class, RefreshDatabase::class);
 
 /*
  * CalendarPage — daily balance line sourced from ForecastQuery (CAL-02).
@@ -52,28 +56,67 @@ function cpblAccount(DatabaseManager $db, int $userId, string $name): int
     ]);
 }
 
+/**
+ * Seed or update a forecast_run for the given user with one account's data.
+ *
+ * ForecastQuery reads a SINGLE forecast_runs row per (user_id, horizon_days,
+ * scenario_id) tuple, then looks up accounts[$accountId] inside result_json.
+ * Multiple calls for the same user upsert into the same row's accounts block.
+ */
 function cpblForecastRun(DatabaseManager $db, int $userId, int $accountId, string $date, int $pointMinor): void
 {
-    // Seed a completed forecast_run with a single-day result_json so the
-    // ForecastQuery can return a ForecastDto for the test assertion.
-    $resultJson = json_encode([
-        'points' => [
-            ['date' => $date, 'lowMinor' => $pointMinor - 100, 'pointMinor' => $pointMinor, 'highMinor' => $pointMinor + 100, 'currency' => 'EUR'],
-        ],
-        'todayBalanceMinor' => $pointMinor,
-        'seriesConfidence' => [],
-    ]);
+    // Check if a run already exists for this user+horizon combination
+    $existing = $db->connection()->table('forecast_runs')
+        ->where('user_id', $userId)
+        ->where('horizon_days', 365)
+        ->whereNull('scenario_id')
+        ->first(['id', 'result_json']);
 
-    $db->connection()->table('forecast_runs')->insert([
-        'user_id' => $userId,
+    $accountBlock = [
         'account_id' => $accountId,
-        'scenario_id' => null,
-        'horizon_days' => 365,
-        'status' => 'complete',
-        'result_json' => $resultJson,
-        'created_at' => '2026-06-12 00:00:00',
-        'updated_at' => '2026-06-12 00:00:00',
-    ]);
+        'account_name' => 'Test Account',
+        'default_currency' => 'EUR',
+        'today_balance_minor' => $pointMinor,
+        'points' => [
+            [
+                'date' => $date,
+                'low_minor' => $pointMinor - 100,
+                'point_minor' => $pointMinor,
+                'high_minor' => $pointMinor + 100,
+                'currency' => 'EUR',
+            ],
+        ],
+    ];
+
+    if ($existing !== null) {
+        // Merge the new account block into the existing result_json
+        $decoded = json_decode($existing->result_json, associative: true); // @phpstan-ignore-line
+        if (! is_array($decoded)) {
+            $decoded = ['as_of' => '2026-06-12', 'accounts' => []];
+        }
+        $decoded['accounts'][(string) $accountId] = $accountBlock;
+
+        $db->connection()->table('forecast_runs')
+            ->where('id', $existing->id) // @phpstan-ignore-line
+            ->update(['result_json' => json_encode($decoded), 'updated_at' => '2026-06-12 00:00:00']);
+    } else {
+        $resultJson = json_encode([
+            'as_of' => '2026-06-12',
+            'accounts' => [
+                (string) $accountId => $accountBlock,
+            ],
+        ]);
+
+        $db->connection()->table('forecast_runs')->insert([
+            'user_id' => $userId,
+            'scenario_id' => null,
+            'horizon_days' => 365,
+            'status' => 'complete',
+            'result_json' => $resultJson,
+            'created_at' => '2026-06-12 00:00:00',
+            'updated_at' => '2026-06-12 00:00:00',
+        ]);
+    }
 }
 
 beforeEach(function (): void {

@@ -30,6 +30,7 @@
             <directory>Modules/DevMode/tests/Unit</directory>
             <directory>Modules/Onboarding/tests/Unit</directory>
             <directory>Modules/Budgets/tests/Unit</directory>
+            <directory>Modules/Calendar/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
@@ -55,6 +56,7 @@
             <directory>Modules/Onboarding/tests/Feature</directory>
             <directory>Modules/Budgets/tests/Feature</directory>
             <directory>Modules/CashBook/tests/Feature</directory>
+            <directory>Modules/Calendar/tests/Feature</directory>
         </testsuite>
         <testsuite name="Contracts">
             <directory>tests/Contracts</directory>
