@@ -20,11 +20,11 @@
     x-data="{
         open: false,
         init() {
-            this.$watch(() => @js($taxPickerTxId), (v) => { this.open = v !== null; });
+            this.$watch(() => $wire.taxPickerTxId, (v) => { this.open = (v !== null && v !== undefined); });
         },
         closeAll() {
             this.open = false;
-            @this.closePicker();
+            $wire.closePicker();
         }
     }"
     x-on:keydown.escape.window="if (open) { closeAll(); }"

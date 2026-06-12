@@ -22,6 +22,6 @@
         <h3 style="font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 var(--space-3);">
             Recent activity
         </h3>
-        @include('counterparties::livewire.profile-tabs._recent-activity', ['rows' => $recentActivity])
+        @include('counterparties::livewire.profile-tabs._recent-activity', ['rows' => $recentActivity, 'taxState' => $taxState ?? []])
     </x-counterparties::frame>
 </div>

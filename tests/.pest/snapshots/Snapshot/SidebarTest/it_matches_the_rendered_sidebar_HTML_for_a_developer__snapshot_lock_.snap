@@ -69,6 +69,11 @@
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
+    
+    <a href="https://beatrax.test/tax" class="side-item ">
+        <span class="ic" aria-hidden="true">⊞</span>
+        Tax
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     <a href="https://beatrax.test/goals" class="side-item ">
         <span class="ic" aria-hidden="true">◎</span>
         Goals
