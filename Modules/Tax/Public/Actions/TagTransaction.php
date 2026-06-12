@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Tax\Public\Events\TransactionTagged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -32,6 +33,7 @@ final class TagTransaction
         private readonly DatabaseManager $db,
         private readonly Dispatcher $events,
         private readonly Clock $clock,
+        private readonly ?SearchIndexWriterContract $searchIndex = null,
     ) {}
 
     public function execute(
@@ -116,6 +118,10 @@ final class TagTransaction
             transactionId: $transactionId,
             deductionCategoryId: $deductionCategoryId,
         ));
+
+        // (6) Re-index the transaction so the tax note is searchable.
+        // Optional nullable injection — no-op when Search module is absent (RESEARCH A4).
+        $this->searchIndex?->upsertForTransaction($transactionId);
     }
 
     /**
