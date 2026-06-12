@@ -143,8 +143,10 @@ final readonly class CalendarQuery
             $user,
         );
 
-        // Build balance map: date string => [sumMinor, isComputing]
-        $balanceMap = $this->buildBalanceMap($effectiveBalance, $user, $year, $month, $monthStart, $monthEnd);
+        // Build balance map: date string => [sumMinor, isComputing], plus the
+        // FX-converted sum of today's forecast anchors for today's SoD (WR-08)
+        ['map' => $balanceMap, 'todayAnchorMinor' => $todayAnchorMinor]
+            = $this->buildBalanceMap($effectiveBalance, $user, $year, $month, $monthStart, $monthEnd);
 
         // Build past-day occurrence set: seriesId => list<string date>
         $occurrenceMap = $this->buildOccurrenceMap($user, $monthStart, $monthEnd);
@@ -157,7 +159,9 @@ final readonly class CalendarQuery
 
         // Assemble CalendarDayDto for each grid day
         $days = [];
-        $prevEod = null; // track previous day eod for sod of next day
+        // SoD chain (WR-08): null until a KNOWN (non-computing) EoD is seen —
+        // a day after a data-less day must report "SoD unknown", not a fake 0.
+        $prevEod = null;
 
         // First pass: compute eod map for entire grid (needed for sod chain)
         $eodMinorMap = [];
@@ -177,10 +181,12 @@ final readonly class CalendarQuery
             // Balance data
             [$eodMinor, $isComputing] = $eodMinorMap[$dateStr] ?? [0, true];
 
-            // SoD = prior day's EoD
-            $sodMinor = 0;
-            if ($prevEod !== null) {
-                $sodMinor = $prevEod;
+            // SoD = prior day's EoD when known; today falls back to the
+            // forecast's as-of anchor sum (yesterday is a past day with no
+            // forecast point, so the chain alone would leave today unknown).
+            $sodMinor = $prevEod;
+            if ($sodMinor === null && $isToday) {
+                $sodMinor = $todayAnchorMinor;
             }
 
             $isRisk = ! $isComputing && $eodMinor < 0;
@@ -226,7 +232,8 @@ final readonly class CalendarQuery
                 entries: $entries,
             );
 
-            $prevEod = $eodMinor;
+            // Only a KNOWN EoD feeds the next day's SoD (WR-08)
+            $prevEod = $isComputing ? null : $eodMinor;
         }
 
         return $days;
@@ -573,8 +580,12 @@ final readonly class CalendarQuery
      * include both legs of an own-account transfer, the combined sum naturally nets them.
      * No additional deduction is performed.
      *
+     * Also returns `todayAnchorMinor` (WR-08): the FX-converted sum of each
+     * account's `todayBalanceMinor` forecast anchor — today's start-of-day
+     * balance. Null when no account contributed or any account is computing.
+     *
      * @param  list<int>  $effectiveBalance
-     * @return array<string, array{0: int, 1: bool}> date => [eodMinor, isComputing]
+     * @return array{map: array<string, array{0: int, 1: bool}>, todayAnchorMinor: int|null}
      */
     private function buildBalanceMap(
         array $effectiveBalance,
@@ -593,12 +604,14 @@ final readonly class CalendarQuery
                 $cursor = $cursor->addDay();
             }
 
-            return $map;
+            return ['map' => $map, 'todayAnchorMinor' => null];
         }
 
         /** @var array<string, array<string, int>> $byDateCurrency */
         $byDateCurrency = [];
         $isComputingAny = false;
+        $baseCurrency = $user->base_currency;
+        $todayAnchorMinor = null;
 
         // Fetch each account's forecast ONCE (Pitfall 2 — no per-day re-fetch)
         foreach ($effectiveBalance as $accountId) {
@@ -611,6 +624,13 @@ final readonly class CalendarQuery
                 continue;
             }
 
+            // Today's SoD anchor (WR-08): FX-converted sum of the as-of balances
+            $anchorConverted = $this->fxService->convertToBase(
+                Money::ofMinor($dto->todayBalanceMinor, $dto->defaultCurrency),
+                $baseCurrency,
+            );
+            $todayAnchorMinor = ($todayAnchorMinor ?? 0) + $anchorConverted->converted->toMinor();
+
             // Sum pointMinor per (date, currency) bucket. Each ForecastPointDto
             // carries its account's currency — buckets keep currencies separate
             // so a USD account's points are never added raw to EUR points (CR-02).
@@ -622,7 +642,6 @@ final readonly class CalendarQuery
 
         // Build map for the dates we have data for, FX-converting each currency
         // bucket to the user's base reporting currency before summing (D-05).
-        $baseCurrency = $user->base_currency;
         $map = [];
 
         foreach ($byDateCurrency as $dateStr => $byCurrency) {
@@ -650,7 +669,8 @@ final readonly class CalendarQuery
             }
         }
 
-        return $map;
+        // A partially-computing aggregate has no honest SoD anchor (WR-08)
+        return ['map' => $map, 'todayAnchorMinor' => $isComputingAny ? null : $todayAnchorMinor];
     }
 
     // -------------------------------------------------------------------------
