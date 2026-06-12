@@ -271,9 +271,14 @@ final class TransactionsList extends Component
             }
         }
 
-        // Batch-load tax tag state for the current page (Pitfall 1 — ONE query).
-        // Merges taxTagged + taxCategoryShortName into each accumulated row array.
-        $taxState = $this->taxTagStateFor($rowIds, $taxTagQuery, $currentUser);
+        // Batch-load tax tag state for the current page PLUS every accumulated
+        // phone row (Pitfall 1 — still ONE query). Loading only the current
+        // page's ids previously reset rows from earlier pages back to
+        // "untagged" on every loadMore(), exposing a stale ghost Tag button
+        // that could silently wipe an existing tag (CR-03).
+        $accIds = array_map(static fn (array $r): int => $r['id'], $this->accumulatedRows);
+        $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
+        $taxState = $this->taxTagStateFor($stateIds, $taxTagQuery, $currentUser);
         foreach ($this->accumulatedRows as &$accRow) {
             $accRowId = $accRow['id'];
             $accRow['taxTagged'] = $taxState[$accRowId]['taxTagged'] ?? false;
