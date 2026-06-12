@@ -164,6 +164,8 @@ final class TaxCategoryWriter
      * Rename a category. User-scoped: throws NotFoundHttpException on cross-user id.
      *
      * @throws NotFoundHttpException When the category id is not owned by the user (T-07-13).
+     * @throws \InvalidArgumentException When the new name is empty.
+     * @throws \RuntimeException When another category already carries the new name (WR-11).
      */
     public function rename(int $userId, int $categoryId, string $name): void
     {
@@ -181,6 +183,18 @@ final class TaxCategoryWriter
 
         if ($existing === null) {
             throw new NotFoundHttpException;
+        }
+
+        // Duplicate-name guard mirroring add() — surfaces a friendly message
+        // instead of an uncaught unique(user_id, name) QueryException (WR-11).
+        $nameTaken = $connection->table('tax_deduction_categories')
+            ->where('user_id', $userId)
+            ->where('name', $name)
+            ->where('id', '!=', $categoryId)
+            ->exists();
+
+        if ($nameTaken) {
+            throw new \RuntimeException('A category with this name already exists.');
         }
 
         $connection->table('tax_deduction_categories')
@@ -215,6 +229,35 @@ final class TaxCategoryWriter
             ->where('user_id', $userId)
             ->update([
                 'status' => 'archived',
+                'updated_at' => Carbon::now()->toDateTimeString(),
+            ]);
+    }
+
+    /**
+     * Restore an archived category to active. User-scoped: throws
+     * NotFoundHttpException on cross-user id. Makes archiving reversible
+     * from the product (WR-11).
+     *
+     * @throws NotFoundHttpException When the category id is not owned by the user (T-07-13).
+     */
+    public function unarchive(int $userId, int $categoryId): void
+    {
+        $connection = $this->db->connection();
+
+        $existing = $connection->table('tax_deduction_categories')
+            ->where('id', $categoryId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($existing === null) {
+            throw new NotFoundHttpException;
+        }
+
+        $connection->table('tax_deduction_categories')
+            ->where('id', $categoryId)
+            ->where('user_id', $userId)
+            ->update([
+                'status' => 'active',
                 'updated_at' => Carbon::now()->toDateTimeString(),
             ]);
     }
