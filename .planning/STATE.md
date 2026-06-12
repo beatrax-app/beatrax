@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
-status: executing
-stopped_at: Phase 7 UI-SPEC approved
-last_updated: "2026-06-12T18:25:23.104Z"
+status: ready_to_plan
+stopped_at: Phase 07 complete (6/6) — ready to discuss Phase 8
+last_updated: 2026-06-12T19:48:56.064Z
 progress:
   total_phases: 15
   completed_phases: 7
@@ -23,7 +23,7 @@ progress:
 - **Requirements:** `.planning/REQUIREMENTS.md`
 - **Roadmap:** `.planning/ROADMAP.md`
 - **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-- **Current focus:** Phase 07 — tax-deductible-tagging-per-year-export
+- **Current focus:** Phase 8 — full text search over history
 
 ## Current Position
 
@@ -31,8 +31,8 @@ Phase: 07 (tax-deductible-tagging-per-year-export) — COMPLETE
 Plan: 6 of 6 (all complete)
 
 - **Milestone:** v1.3 "Local & in sync"
-- **Status:** Phase 07 complete (awaiting UAT), Phase 08 next
-- **Phase:** 6 of 15 (bills / cash flow calendar)
+- **Status:** Ready to plan
+- **Phase:** 8 of 15 (full text search over history)
 - **Plan:** Not started
 - **Progress:** 2 of 15 phases complete — 13%
 
