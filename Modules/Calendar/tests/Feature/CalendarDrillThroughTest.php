@@ -78,6 +78,23 @@ it('renders a link to /recurring/series/{seriesId} for each day-panel entry', fu
         ->assertSee('/recurring/series/'.$series->id, false);
 });
 
+it('ignores an impossible tampered selectDay date instead of throwing (WR-06)', function (): void {
+    $user = cdtUser('cdt-tamper-date');
+    cdtSeries($user, 'Tamper Series');
+
+    // "2026-13-01" / "2026-99-99" pass the shape regex but are not real
+    // dates — CarbonImmutable::parse() would throw InvalidFormatException.
+    // The action must no-op, not 500.
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
+        ->call('selectDay', '2026-13-01')
+        ->assertSet('selectedDay', null)
+        ->call('selectDay', '2026-99-99')
+        ->assertSet('selectedDay', null)
+        ->call('selectDay', '2026-06-15')
+        ->assertSet('selectedDay', '2026-06-15');
+});
+
 it('renders a link to /counterparties/{slug} when the series has a resolved counterparty', function (): void {
     $db = app(DatabaseManager::class);
     $user = cdtUser('cdt-counterparty-link');
