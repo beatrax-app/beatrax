@@ -325,6 +325,45 @@ it('NavCountsService.compute includes a tax_tagged integer key', function (): vo
         ->and($counts['tax_tagged'])->toBe(2);
 });
 
+it('tagging a transaction invalidates the cached nav counts (WR-06)', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $userId = nctUser($db, 'ncs-invalidate-tag');
+    $txId = nctTransaction($db, $userId);
+
+    /** @var NavCountsService $service */
+    $service = app(NavCountsService::class);
+
+    // Warm the cache BEFORE tagging.
+    expect($service->forUser($userId)['tax_tagged'])->toBe(0);
+
+    app(\Modules\Tax\Public\Actions\TagTransaction::class)->execute($userId, $txId, null, null, null);
+
+    // Without invalidation this would still read the stale cached 0 for up
+    // to 300 seconds.
+    expect($service->forUser($userId)['tax_tagged'])->toBe(1);
+});
+
+it('untagging a transaction invalidates the cached nav counts (WR-06)', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $userId = nctUser($db, 'ncs-invalidate-untag');
+    $txId = nctTransaction($db, $userId);
+    nctTag($db, $userId, $txId);
+
+    /** @var NavCountsService $service */
+    $service = app(NavCountsService::class);
+
+    // Warm the cache BEFORE untagging.
+    expect($service->forUser($userId)['tax_tagged'])->toBe(1);
+
+    app(\Modules\Tax\Public\Actions\UntagTransaction::class)->execute($userId, $txId);
+
+    expect($service->forUser($userId)['tax_tagged'])->toBe(0);
+});
+
 it('NavCountsService tax_tagged count reflects only the requesting user tags', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);

@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Providers;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
+use Modules\Tax\Internal\Listeners\InvalidateNavCounts;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
 use Modules\Tax\Internal\Http\Livewire\TaxSettingsSection;
 use Modules\Tax\Internal\Http\Livewire\TaxSummaryCard;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
+use Modules\Tax\Public\Events\TransactionTagged;
+use Modules\Tax\Public\Events\TransactionUntagged;
 use Modules\Tax\Public\Services\TaxCountrySetup;
 use Modules\Tax\Public\Services\TaxCsvExporter;
 use Modules\Tax\Public\Services\TaxPdfRenderer;
@@ -55,8 +59,13 @@ final class TaxServiceProvider extends ServiceProvider
         $this->app->singleton(TaxCountrySetup::class);
     }
 
-    public function boot(LivewireManager $livewire): void
+    public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
+        // WR-06: drop the per-user nav-counts cache on every tag/untag so
+        // the sidebar tax_tagged badge refreshes promptly.
+        $events->listen(TransactionTagged::class, [InvalidateNavCounts::class, 'handle']);
+        $events->listen(TransactionUntagged::class, [InvalidateNavCounts::class, 'handle']);
+
         if (is_dir(__DIR__.'/../Database/Migrations')) {
             $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         }

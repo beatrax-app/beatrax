@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Public\Actions;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Modules\Tax\Public\Events\TransactionUntagged;
 
 /**
  * Removes the tax tag for a transaction.
@@ -13,20 +15,31 @@ use Illuminate\Database\DatabaseManager;
  * to a different user (0 rows deleted, no exception). This matches the
  * lifecycle-no-op convention (GoalWriter lifecycle methods).
  *
+ * Dispatches TransactionUntagged when a tag row was actually deleted, so
+ * count caches (sidebar nav badge) can be invalidated (WR-06).
+ *
  * Uses raw DatabaseManager only — no Eloquent statics.
  */
 final class UntagTransaction
 {
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly Dispatcher $events,
     ) {}
 
     public function execute(int $userId, int $transactionId): void
     {
-        $this->db->connection()
+        $deleted = $this->db->connection()
             ->table('tax_transaction_tags')
             ->where('user_id', $userId)
             ->where('transaction_id', $transactionId)
             ->delete();
+
+        if ($deleted > 0) {
+            $this->events->dispatch(new TransactionUntagged(
+                userId: $userId,
+                transactionId: $transactionId,
+            ));
+        }
     }
 }
