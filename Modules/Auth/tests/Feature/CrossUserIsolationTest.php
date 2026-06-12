@@ -151,12 +151,7 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // list of foreign rows — the lock screen never queries another user's
     // transaction, account, or recurring data.
     'auth.lock',
-    // Phase 07 — Tax tagging + export. The /tax route is currently a
-    // 501 closure stub (no TaxPage component or cross-user data yet).
-    // The real TaxPage + a two-user data-scoped isolation probe lands
-    // in Plan 05 of Phase 07. At that point this allow-list entry will
-    // be replaced by an entry in ISOLATION_ROUTE_COVERED.
-    'tax.index',
+    // (Plan 07-05 moved tax.index to ISOLATION_ROUTE_COVERED — real probe below)
 ];
 
 /**
@@ -198,6 +193,9 @@ const ISOLATION_ROUTE_COVERED = [
     'chains.index',
     'chains.hints',
     'drift.watch',
+    // Phase 07 — Tax cockpit: two-user tagged-transaction probe is below (Plan 07-05).
+    // ISOLATION_ROUTE_COVERED entry honors the contract promised in the Plan 01 allow-list comment.
+    'tax.index',
 ];
 
 function xuiUser(string $username, bool $developer = false): User
@@ -681,6 +679,149 @@ it('does not bleed the owner mystery descriptions into the partner mystery-merch
         ->assertOk()
         ->assertSee('Mystery merchants')
         ->assertDontSee('OWNER MYSTERY DESCRIPTION XJ91');
+});
+
+it('does not bleed the owner tagged transactions into the partner tax page (T-07-15)', function (): void {
+    // Tag a transaction for the OWNER under a recognisable counterparty.
+    $ownerSuffix = bin2hex(random_bytes(4));
+    $ownerAccountId = $this->db->connection()->table('accounts')->insertGetId([
+        'user_id' => $this->owner->id,
+        'name' => 'Owner Tax Account '.$ownerSuffix,
+        'slug' => 'xui-tax-acct-'.$ownerSuffix,
+        'kind' => 'asn',
+        'iban' => 'NL00ASNB'.strtoupper($ownerSuffix),
+        'default_currency' => 'EUR',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+    $ownerRunId = $this->db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $this->owner->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/xui-tax-'.$ownerSuffix.'.csv',
+        'sha256' => hash('sha256', 'xui-tax-run-'.$ownerSuffix),
+        'uploaded_at' => '2026-05-19 00:00:00',
+        'status' => 'committed',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+    $ownerTxId = $this->db->connection()->table('transactions')->insertGetId([
+        'user_id' => $this->owner->id,
+        'account_id' => $ownerAccountId,
+        'import_run_id' => $ownerRunId,
+        'fingerprint' => hash('sha256', 'xui-tax-tx-'.$ownerSuffix),
+        'posted_at' => '2026-06-15',
+        'booked_at' => '2026-06-15 00:00:00',
+        'value_date' => '2026-06-15',
+        'amount_minor' => -9999,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -9999,
+        'settled_currency' => 'EUR',
+        'counterparty_normalized' => 'owner-secret-deductible-merchant',
+        'counterparty_name' => 'OWNER SECRET DEDUCTIBLE MERCHANT BV',
+        'normalization_version' => 1,
+        'description' => 'owner-secret-deductible-tx',
+        'type' => 'expense',
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint_version' => 3,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    // Owner tax category + tag
+    $ownerCatId = $this->db->connection()->table('tax_deduction_categories')->insertGetId([
+        'user_id' => $this->owner->id,
+        'name' => 'Owner Secret Category',
+        'short_name' => 'Owner Cat',
+        'corpus_key' => 'xui_owner_'.$ownerSuffix,
+        'status' => 'active',
+        'sort_order' => 0,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+    $this->db->connection()->table('tax_transaction_tags')->insert([
+        'user_id' => $this->owner->id,
+        'transaction_id' => $ownerTxId,
+        'deduction_category_id' => $ownerCatId,
+        'note' => 'owner-secret-note',
+        'tax_year_override' => null,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    // The partner gets a tagged item in their own year so their /tax is non-empty.
+    $partnerSuffix = bin2hex(random_bytes(4));
+    $partnerAccountId = $this->db->connection()->table('accounts')->insertGetId([
+        'user_id' => $this->partner->id,
+        'name' => 'Partner Tax Account '.$partnerSuffix,
+        'slug' => 'xui-tax-p-'.$partnerSuffix,
+        'kind' => 'asn',
+        'iban' => 'NL00ASNC'.strtoupper($partnerSuffix),
+        'default_currency' => 'EUR',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+    $partnerRunId = $this->db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $this->partner->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/xui-tax-p-'.$partnerSuffix.'.csv',
+        'sha256' => hash('sha256', 'xui-tax-prun-'.$partnerSuffix),
+        'uploaded_at' => '2026-05-19 00:00:00',
+        'status' => 'committed',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+    $partnerTxId = $this->db->connection()->table('transactions')->insertGetId([
+        'user_id' => $this->partner->id,
+        'account_id' => $partnerAccountId,
+        'import_run_id' => $partnerRunId,
+        'fingerprint' => hash('sha256', 'xui-tax-ptx-'.$partnerSuffix),
+        'posted_at' => '2026-06-15',
+        'booked_at' => '2026-06-15 00:00:00',
+        'value_date' => '2026-06-15',
+        'amount_minor' => -5000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -5000,
+        'settled_currency' => 'EUR',
+        'counterparty_normalized' => 'partner-visible-merchant',
+        'counterparty_name' => 'PARTNER VISIBLE MERCHANT BV',
+        'normalization_version' => 1,
+        'description' => 'partner-visible-tx',
+        'type' => 'expense',
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint_version' => 3,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+    $partnerCatId = $this->db->connection()->table('tax_deduction_categories')->insertGetId([
+        'user_id' => $this->partner->id,
+        'name' => 'Partner Category',
+        'short_name' => 'Partner Cat',
+        'corpus_key' => 'xui_partner_'.$partnerSuffix,
+        'status' => 'active',
+        'sort_order' => 0,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+    $this->db->connection()->table('tax_transaction_tags')->insert([
+        'user_id' => $this->partner->id,
+        'transaction_id' => $partnerTxId,
+        'deduction_category_id' => $partnerCatId,
+        'note' => null,
+        'tax_year_override' => null,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    // Partner visits /tax — must see their own data, never the owner's.
+    // The year param is 2026 (booked_at 2026-06-15 for both fixtures).
+    $this->actingAs($this->partner)
+        ->get('/tax?year=2026')
+        ->assertOk()
+        ->assertDontSee('OWNER SECRET DEDUCTIBLE MERCHANT BV')
+        ->assertDontSee('Owner Secret Category')
+        ->assertDontSee('owner-secret-note');
 });
 
 it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {

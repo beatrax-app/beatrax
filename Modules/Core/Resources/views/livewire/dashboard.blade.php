@@ -161,6 +161,12 @@
         @livewire('goals.summary-card')
     </div>
 
+    {{-- Tax summary card (D-18) — tagged total + item count for the seasonal
+         tax year (Jan-Apr → previous year; May-Dec → current year). Links to /tax. --}}
+    <div>
+        @livewire('tax.summary-card')
+    </div>
+
     {{-- Upcoming content (order 5 on phone): fixed payments, spending trend, savings insights --}}
     <div class="dashboard-phone-order-5 space-y-12">
         {{-- Inline "Fixed monthly payments" card — top six approved
