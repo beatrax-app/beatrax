@@ -1,0 +1,11 @@
+{
+    "name": "Search",
+    "alias": "search",
+    "description": "Full-text transaction search and entity name navigation via FTS5 trigram index and ⌘K palette.",
+    "keywords": ["search", "fts", "palette", "filters"],
+    "priority": 8,
+    "providers": [
+        "Modules\\Search\\Providers\\SearchServiceProvider"
+    ],
+    "files": []
+}
