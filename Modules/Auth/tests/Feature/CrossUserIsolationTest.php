@@ -135,6 +135,12 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // list of foreign rows — the lock screen never queries another user's
     // transaction, account, or recurring data.
     'auth.lock',
+    // Phase 07 — Tax tagging + export. The /tax route is currently a
+    // 501 closure stub (no TaxPage component or cross-user data yet).
+    // The real TaxPage + a two-user data-scoped isolation probe lands
+    // in Plan 05 of Phase 07. At that point this allow-list entry will
+    // be replaced by an entry in ISOLATION_ROUTE_COVERED.
+    'tax.index',
 ];
 
 /**

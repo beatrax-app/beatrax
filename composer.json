@@ -104,7 +104,8 @@
             "Modules\\Receipts\\Tests\\": "Modules/Receipts/tests/",
             "Modules\\FX\\Tests\\": "Modules/FX/tests/",
             "Modules\\Recurring\\Tests\\": "Modules/Recurring/tests/",
-            "Modules\\Transfers\\Tests\\": "Modules/Transfers/tests/"
+            "Modules\\Transfers\\Tests\\": "Modules/Transfers/tests/",
+            "Modules\\Tax\\Tests\\": "Modules/Tax/tests/"
         }
     },
     "scripts": {
