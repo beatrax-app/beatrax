@@ -5,8 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Routing\Router;
+use Livewire\Livewire;
 use Modules\Categorization\Models\CategorizationRule;
 use Modules\Core\Models\User;
+use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\Transaction;
@@ -128,6 +130,20 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // boundary. The mount-time UserInstalled safety-net + the
     // `?force=1` reset both bound their writes to the acting user.
     'setup',
+    // 16-05 follow-up: dev.logs.stats joins the dev.logs family above.
+    // The stats endpoint (LogStreamController::stats) returns byte /
+    // line counts over the same system-wide laravel-YYYY-MM-DD.log the
+    // tailer streams — operator-level file metadata, no user-row data.
+    // Same EnsureDeveloperMode gate as every other /dev/* route
+    // (non-developers see 404).
+    'dev.logs.stats',
+    // "Where is my data?" privacy help page. The HelpDataLocations
+    // component renders install-level paths from UserDataPathService
+    // (SQLite file, secrets dir, framework caches) plus an export CTA
+    // branched on the ACTING user's own is_developer flag read via
+    // CurrentUser exclusively — it queries no user-scoped rows at all,
+    // so there is no foreign data to bleed.
+    'core.help.data-locations',
     // Phase 05 app-lock screen. The /lock route is session-scoped:
     // it renders a PIN pad bound to the currently authenticated
     // user's own lock state (pin_hash, failed_attempts, locked_until
@@ -170,6 +186,18 @@ const ISOLATION_ROUTE_COVERED = [
     'imports.new',
     'imports.preview',
     'imports.results',
+    'settings.aliases',
+    'community.mystery-merchants',
+    'counterparties.index',
+    'counterparties.triage',
+    'counterparties.profile',
+    'budgets.index',
+    'cashbook.index',
+    'goals.index',
+    'pots.index',
+    'chains.index',
+    'chains.hints',
+    'drift.watch',
 ];
 
 function xuiUser(string $username, bool $developer = false): User
@@ -188,8 +216,13 @@ function xuiUser(string $username, bool $developer = false): User
  * user and returns the transaction id. Raw inserts keep the fixture
  * independent of any module's factory wiring.
  */
-function xuiTransaction(DatabaseManager $db, int $userId, string $counterparty): int
-{
+function xuiTransaction(
+    DatabaseManager $db,
+    int $userId,
+    string $counterparty,
+    string $description = 'cross-user fixture',
+    string $sourceFormat = 'asn-csv',
+): int {
     $suffix = bin2hex(random_bytes(4));
 
     $accountId = $db->connection()->table('accounts')->insertGetId([
@@ -229,9 +262,9 @@ function xuiTransaction(DatabaseManager $db, int $userId, string $counterparty):
         'counterparty_normalized' => strtolower($counterparty),
         'counterparty_name' => $counterparty,
         'normalization_version' => 1,
-        'description' => 'cross-user fixture',
+        'description' => $description,
         'type' => 'expense',
-        'source_format' => 'asn-csv',
+        'source_format' => $sourceFormat,
         'source_row_index' => 1,
         'fingerprint_version' => 3,
         'created_at' => '2026-05-19 00:00:00',
@@ -254,6 +287,43 @@ function xuiRecurringSeries(DatabaseManager $db, int $userId, string $name): int
         'latest_currency' => 'EUR',
         'variance_tolerance_percent' => 25,
         'cluster_key' => 'xui::'.bin2hex(random_bytes(4)),
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+}
+
+/**
+ * Seeds a counterparty row for the user and returns its id. The
+ * `type` value must be one of the trigger-enforced set
+ * (merchant|personal|bank|government|self_account|unknown).
+ */
+function xuiCounterparty(DatabaseManager $db, int $userId, string $type, string $slug, string $displayName): int
+{
+    return $db->connection()->table('counterparties')->insertGetId([
+        'user_id' => $userId,
+        'type' => $type,
+        'slug' => $slug,
+        'display_name' => $displayName,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+}
+
+/**
+ * Seeds a bare account row (pots / goals pickers need one) and
+ * returns its id.
+ */
+function xuiAccount(DatabaseManager $db, int $userId, string $name): int
+{
+    $suffix = bin2hex(random_bytes(4));
+
+    return $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId,
+        'name' => $name,
+        'slug' => 'xui-acct-'.$suffix,
+        'kind' => 'asn',
+        'iban' => 'NL00XACC'.strtoupper($suffix),
+        'default_currency' => 'EUR',
         'created_at' => '2026-05-19 00:00:00',
         'updated_at' => '2026-05-19 00:00:00',
     ]);
@@ -378,6 +448,239 @@ it('renders the partner calendar page without the owner data', function (): void
         ->get('/calendar')
         ->assertOk()
         ->assertDontSee('OWNER MERCHANT BV');
+});
+
+it('does not bleed the owner counterparties into the partner counterparties index', function (): void {
+    xuiCounterparty($this->db, $this->owner->id, 'merchant', 'owner-secret-counterparty', 'Owner Secret Counterparty');
+    xuiCounterparty($this->db, $this->partner->id, 'merchant', 'partner-visible-counterparty', 'Partner Visible Counterparty');
+
+    $this->actingAs($this->partner)
+        ->get('/counterparties')
+        ->assertOk()
+        ->assertSee('Partner Visible Counterparty')
+        ->assertDontSee('Owner Secret Counterparty');
+});
+
+it('does not bleed the owner unknown counterparty into the partner triage queue', function (): void {
+    xuiCounterparty($this->db, $this->owner->id, 'unknown', 'owner-unknown-token', 'OWNER UNKNOWN MERCHANT TOKEN');
+
+    $this->actingAs($this->partner)
+        ->get('/counterparties/triage')
+        ->assertOk()
+        ->assertSee('Triage unknown counterparties')
+        ->assertDontSee('OWNER UNKNOWN MERCHANT TOKEN');
+});
+
+it('returns 404 (never 403) when the partner requests the owner counterparty profile slug', function (): void {
+    xuiCounterparty($this->db, $this->owner->id, 'merchant', 'owner-secret-counterparty', 'Owner Secret Counterparty');
+
+    $response = $this->actingAs($this->partner)
+        ->get('/counterparties/owner-secret-counterparty');
+
+    expect($response->status())->toBe(404);
+    expect($response->status())->not->toBe(403);
+});
+
+it('does not bleed the owner budget category into the partner budgets page', function (): void {
+    $ownerCategory = Category::query()->create([
+        'user_id' => $this->owner->id,
+        'name' => 'Owner Secret Category',
+        'slug' => 'xui-owner-secret-category',
+        'kind' => 'expense',
+        'display_order' => 40,
+    ]);
+
+    $this->db->connection()->table('category_budgets')->insert([
+        'user_id' => $this->owner->id,
+        'category_id' => $ownerCategory->id,
+        'period_type' => 'monthly',
+        'budget_minor' => 50000,
+        'currency' => 'EUR',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $this->actingAs($this->partner)
+        ->get('/budgets')
+        ->assertOk()
+        ->assertSee('Budgets')
+        ->assertDontSee('Owner Secret Category');
+});
+
+it('does not bleed the owner manual cash entries into the partner cash book', function (): void {
+    xuiTransaction($this->db, $this->owner->id, 'OWNER CASH MERCHANT BV', sourceFormat: 'manual');
+    xuiTransaction($this->db, $this->partner->id, 'PARTNER CASH MERCHANT BV', sourceFormat: 'manual');
+
+    $this->actingAs($this->partner)
+        ->get('/cash')
+        ->assertOk()
+        ->assertSee('PARTNER CASH MERCHANT BV')
+        ->assertDontSee('OWNER CASH MERCHANT BV');
+});
+
+it('does not bleed the owner goals into the partner goals page', function (): void {
+    $insertGoal = function (int $userId, string $name): void {
+        $this->db->connection()->table('goals')->insert([
+            'user_id' => $userId,
+            'account_id' => null,
+            'name' => $name,
+            'target_minor' => 100000,
+            'target_currency' => 'EUR',
+            'start_date' => '2026-01-01',
+            'target_date' => '2026-12-31',
+            'status' => 'active',
+            'created_at' => '2026-05-19 00:00:00',
+            'updated_at' => '2026-05-19 00:00:00',
+        ]);
+    };
+
+    $insertGoal($this->owner->id, 'Owner Secret Goal');
+    $insertGoal($this->partner->id, 'Partner Visible Goal');
+
+    $this->actingAs($this->partner)
+        ->get('/goals')
+        ->assertOk()
+        ->assertSee('Partner Visible Goal')
+        ->assertDontSee('Owner Secret Goal');
+});
+
+it('does not bleed the owner pots into the partner pots page', function (): void {
+    $ownerAccountId = xuiAccount($this->db, $this->owner->id, 'Owner Pot Account');
+
+    $this->db->connection()->table('pots')->insert([
+        'user_id' => $this->owner->id,
+        'account_id' => $ownerAccountId,
+        'goal_id' => null,
+        'category_id' => null,
+        'name' => 'Owner Secret Pot',
+        'currency' => 'EUR',
+        'status' => 'active',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $this->actingAs($this->partner)
+        ->get('/pots')
+        ->assertOk()
+        ->assertSee('Pots')
+        ->assertDontSee('Owner Secret Pot')
+        ->assertDontSee('Owner Pot Account');
+});
+
+it('does not bleed the owner confirmed chain into the partner chains index', function (): void {
+    $fundingTxId = xuiTransaction($this->db, $this->owner->id, 'OWNER FUNDING SOURCE BV');
+
+    $this->db->connection()->table('chain_links')->insert([
+        'user_id' => $this->owner->id,
+        'from_transaction_id' => $this->ownerTransactionId,
+        'to_transaction_id' => $fundingTxId,
+        'kind' => 'paypal_funding',
+        'state' => 'confirmed',
+        'confidence' => 1.0,
+        'resolver' => 'auto',
+        'evidence' => '{}',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $this->actingAs($this->partner)
+        ->get('/chains')
+        ->assertOk()
+        ->assertSee('Chains')
+        ->assertDontSee('OWNER MERCHANT BV')
+        ->assertDontSee('OWNER FUNDING SOURCE BV');
+});
+
+it('does not bleed the owner hint candidates into the partner chain hints queue', function (): void {
+    // A receipt-derived hint: candidate state + NULL to-endpoint is
+    // the trigger-permitted shape for `funded_by_card_hint`.
+    $this->db->connection()->table('chain_links')->insert([
+        'user_id' => $this->owner->id,
+        'from_transaction_id' => $this->ownerTransactionId,
+        'to_transaction_id' => null,
+        'kind' => 'funded_by_card_hint',
+        'state' => 'candidate',
+        'confidence' => 0.7,
+        'resolver' => 'auto',
+        'evidence' => '{"card_last_four":"4242"}',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $this->actingAs($this->partner)
+        ->get('/chains/hints')
+        ->assertOk()
+        ->assertSee('Hints')
+        ->assertDontSee('OWNER MERCHANT BV');
+});
+
+it('does not bleed the owner subscription series into the partner drift watch page', function (): void {
+    // Give the owner series two observed amounts so it genuinely
+    // qualifies for the drift-watch list (the query skips series with
+    // fewer than two occurrence points).
+    $seed = function (string $date, int $amount): void {
+        $txId = xuiTransaction($this->db, $this->owner->id, 'OWNER SUB CHARGE BV');
+        $this->db->connection()->table('recurring_series_occurrences')->insert([
+            'user_id' => $this->owner->id,
+            'recurring_series_id' => $this->ownerSeriesId,
+            'transaction_id' => $txId,
+            'observed_at' => $date,
+            'observed_amount_minor' => $amount,
+            'observed_currency' => 'EUR',
+            'created_at' => '2026-05-19 00:00:00',
+            'updated_at' => '2026-05-19 00:00:00',
+        ]);
+    };
+    $seed('2026-04-15', -1000);
+    $seed('2026-05-15', -1100);
+
+    $this->actingAs($this->partner)
+        ->get('/drift/watch')
+        ->assertOk()
+        ->assertSee('Subscription drift')
+        ->assertDontSee('Owner Subscription');
+});
+
+it('does not bleed the owner merchant aliases into the partner aliases settings page', function (): void {
+    $insertAlias = function (int $userId, string $pattern, string $friendlyName): void {
+        $this->db->connection()->table('merchant_aliases')->insert([
+            'user_id' => $userId,
+            'pattern' => $pattern,
+            'generalized_pattern' => $pattern,
+            'friendly_name' => $friendlyName,
+            'created_at' => '2026-05-19 00:00:00',
+            'updated_at' => '2026-05-19 00:00:00',
+        ]);
+    };
+
+    $insertAlias($this->owner->id, 'OWNER RAW PATTERN 123', 'Owner Secret Alias');
+    $insertAlias($this->partner->id, 'PARTNER RAW PATTERN 456', 'Partner Visible Alias');
+
+    // The full-page GET renders only the layout chrome in the test
+    // environment (same as AliasesSettingsPageTest, which asserts
+    // content at the component level), so probe the component render
+    // directly — the page route still gets its assertOk smoke check.
+    $this->actingAs($this->partner)
+        ->get('/settings/aliases')
+        ->assertOk();
+
+    Livewire::actingAs($this->partner)
+        ->test(AliasesSettingsPage::class)
+        ->assertSee('Partner Visible Alias')
+        ->assertDontSee('Owner Secret Alias');
+});
+
+it('does not bleed the owner mystery descriptions into the partner mystery-merchants page', function (): void {
+    // An unresolvable description (no alias, no corpus match) becomes
+    // a mystery card on the OWNER's page — it must never surface on
+    // the partner's.
+    xuiTransaction($this->db, $this->owner->id, 'OWNER MYSTERY MERCHANT BV', description: 'OWNER MYSTERY DESCRIPTION XJ91');
+
+    $this->actingAs($this->partner)
+        ->get('/community/mystery-merchants')
+        ->assertOk()
+        ->assertSee('Mystery merchants')
+        ->assertDontSee('OWNER MYSTERY DESCRIPTION XJ91');
 });
 
 it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {
