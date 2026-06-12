@@ -190,8 +190,20 @@ Plans:
   2. Each calendar day shows expected inflows/outflows and a running projected balance.
   3. User can drill from a calendar entry to its recurring series / counterparty.
 
-**Plans**: TBD
+**Plans**: 3 plans (serial Wave 1-3 due to shared Calendar module files + interface-first ordering)
 **UI hint**: yes
+Plans:
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — Module scaffold: CalendarEntryDto/CalendarDayDto contracts + provider/route/migration + Forecasting 180/365 horizon extension (D-14) + Wave 0 RED tests
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 06-02-PLAN.md — CalendarQuery service: entry placement + account-pref defaults + combined FX-converted balance line + past-day paid/missed reconciliation
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 06-03-PLAN.md — /calendar page UI: 7-col grid + Accounts popover + day panel/bottom sheet drill-through (CAL-03) + summary strip + sidebar + palette + human-verify
 
 ### Phase 7: Tax / deductible tagging + per-year export
 
@@ -317,7 +329,7 @@ Plans:
 | 3. Savings pots / envelopes | 4/4 | Complete   | 2026-06-09 |
 | 4. Responsive + installable PWA | 9/9 | Complete   | 2026-06-11 |
 | 5. PIN / biometric app-lock | 6/6 | Complete   | 2026-06-11 |
-| 6. Bills / cash-flow calendar | 0/0 | Not started | - |
+| 6. Bills / cash-flow calendar | 0/3 | Not started | - |
 | 7. Tax / deductible tagging + export | 0/0 | Not started | - |
 | 8. Full-text search over history | 0/0 | Not started | - |
 | 9. Unusual-charge / anomaly alerts | 0/0 | Not started | - |
