@@ -245,6 +245,28 @@ it('summaryForUser returns totalMinor and count for the year', function (): void
         ->and($summary->totalMinor)->toBe(3000);
 });
 
+it('summaryForUser totalMinor counts deductions only — tagged income is excluded from the total but not the count (IN-08)', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $userId = nctUser($db, 'ttq-summary-income');
+    $catId = nctCategory($db, $userId, 'Mixed Cat');
+
+    $expense = nctTransaction($db, $userId, ['settled_amount_minor' => -50000, 'booked_at' => '2025-02-01 00:00:00']);
+    $income = nctTransaction($db, $userId, ['settled_amount_minor' => 50000, 'type' => 'income', 'booked_at' => '2025-03-01 00:00:00']);
+
+    nctTag($db, $userId, $expense, $catId);
+    nctTag($db, $userId, $income, $catId);
+
+    /** @var TaxTagQuery $query */
+    $query = app(TaxTagQuery::class);
+    $summary = $query->summaryForUser($userId, 2025);
+
+    // Matches the /tax cockpit headline (€500 deductions), NOT €1.000.
+    expect($summary->totalMinor)->toBe(50000)
+        ->and($summary->count)->toBe(2);
+});
+
 it('untaggedCountForCounterparty excludes the just-tagged transaction', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
