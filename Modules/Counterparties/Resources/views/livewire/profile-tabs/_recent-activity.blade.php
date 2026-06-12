@@ -28,7 +28,8 @@
                 $txTaxState = isset($taxState[$txId]) ? $taxState[$txId] : ['taxTagged' => false, 'taxCategoryShortName' => null];
                 $txRowArr = ['id' => $txId, 'taxTagged' => $txTaxState['taxTagged'], 'taxCategoryShortName' => $txTaxState['taxCategoryShortName']];
             @endphp
-            <li style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); font-variant-numeric: tabular-nums;">
+            {{-- .group enables the desktop hover-reveal of the untagged tax badge (CR-04). --}}
+            <li class="group" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); font-variant-numeric: tabular-nums;">
                 <span style="color: var(--color-text-muted); white-space: nowrap;">{{ $date }}</span>
                 <span style="flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;">{{ $desc }}</span>
                 {{-- Tax badge on counterparty transaction rows (D-19/D-20). --}}
