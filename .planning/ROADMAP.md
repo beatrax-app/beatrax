@@ -216,7 +216,29 @@ Plans:
   2. User can view all tax-tagged transactions for a chosen year.
   3. User can export a year's tax-tagged set as CSV/PDF.
 
-**Plans**: TBD
+**Plans**: 6 plans (5 waves; serial due to the shared Tax module provider + interface-first ordering)
+**UI hint**: yes
+Plans:
+**Wave 1**
+
+- [ ] 07-01-PLAN.md — Tax module scaffold: 2 tables + users.tax_country_code + DTOs/events + TagTransaction/UntagTransaction + all service binds + Wave 0 RED tests
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 07-02-PLAN.md — Read layer: TaxYearQuery (grouped, override-aware, settled-EUR totals) + TaxTagQuery (badge/dashboard/batch) + NavCounts tax_tagged
+- [ ] 07-04-PLAN.md — Corpus (NL/DE/BE/FR/GB/US) + TaxCorpusLoader + TaxCategoryWriter (provenance-safe seed/CRUD) + Settings Tax section
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 07-03-PLAN.md — dompdf legitimacy gate + TaxCsvExporter (D-15 audit CSV) + TaxPdfRenderer (D-14 summary + grouped tables)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 07-05-PLAN.md — /tax cockpit: year switcher + grouped sections + stream-download exports + dashboard card + sidebar/⌘K + real cross-user probe + UAT
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 07-06-PLAN.md — Shared tax-badge + picker popover/bottom-sheet + batch-tag banner across four surfaces (list/detail/counterparty/cashbook) + UAT
 
 ### Phase 8: Full-text search over history
 
@@ -330,7 +352,7 @@ Plans:
 | 4. Responsive + installable PWA | 9/9 | Complete   | 2026-06-11 |
 | 5. PIN / biometric app-lock | 6/6 | Complete   | 2026-06-11 |
 | 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
-| 7. Tax / deductible tagging + export | 0/0 | Not started | - |
+| 7. Tax / deductible tagging + export | 0/6 | Planned | - |
 | 8. Full-text search over history | 0/0 | Not started | - |
 | 9. Unusual-charge / anomaly alerts | 0/0 | Not started | - |
 | 10. SPIKE — op-log/CRDT merge layer | 0/0 | Not started | - |
