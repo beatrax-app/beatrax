@@ -75,8 +75,8 @@ it('fans RecurringSeriesApproved out to 3 baseline ProjectForecastJob dispatches
 
     $listener->handle($event);
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 3);
-    expect(elBaselineHorizonsFor($user->id))->toBe([30, 60, 90]);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 5);
+    expect(elBaselineHorizonsFor($user->id))->toBe([30, 60, 90, 180, 365]);
 });
 
 it('fans RecurringSeriesCadenceFlipped out to 3 dispatches', function (): void {
@@ -94,8 +94,8 @@ it('fans RecurringSeriesCadenceFlipped out to 3 dispatches', function (): void {
 
     $listener->handle($event);
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 3);
-    expect(elBaselineHorizonsFor($user->id))->toBe([30, 60, 90]);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 5);
+    expect(elBaselineHorizonsFor($user->id))->toBe([30, 60, 90, 180, 365]);
 });
 
 it('fans RecurringSeriesRejected out to 3 dispatches', function (): void {
@@ -108,8 +108,8 @@ it('fans RecurringSeriesRejected out to 3 dispatches', function (): void {
 
     $listener->handle($event);
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 3);
-    expect(elBaselineHorizonsFor($user->id))->toBe([30, 60, 90]);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 5);
+    expect(elBaselineHorizonsFor($user->id))->toBe([30, 60, 90, 180, 365]);
 });
 
 it('fans RecurringSeriesMetricsRefreshed out to 3 dispatches', function (): void {
@@ -129,8 +129,8 @@ it('fans RecurringSeriesMetricsRefreshed out to 3 dispatches', function (): void
 
     $listener->handle($event);
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 3);
-    expect(elBaselineHorizonsFor($user->id))->toBe([30, 60, 90]);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 5);
+    expect(elBaselineHorizonsFor($user->id))->toBe([30, 60, 90, 180, 365]);
 });
 
 it('fans DriftAlertDismissedCancelled out to 3 dispatches', function (): void {
@@ -147,8 +147,8 @@ it('fans DriftAlertDismissedCancelled out to 3 dispatches', function (): void {
 
     $listener->handle($event);
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 3);
-    expect(elBaselineHorizonsFor($user->id))->toBe([30, 60, 90]);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 5);
+    expect(elBaselineHorizonsFor($user->id))->toBe([30, 60, 90, 180, 365]);
 });
 
 it('fans RecurringSeriesApproved out to 3 baseline + 3 per-scenario dispatches when the user owns one saved scenario', function (): void {
@@ -170,7 +170,7 @@ it('fans RecurringSeriesApproved out to 3 baseline + 3 per-scenario dispatches w
 
     $listener->handle($event);
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 6);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 10);
     Bus::assertDispatched(ProjectForecastJob::class, fn (ProjectForecastJob $j): bool => $j->scenarioId === $scenarioId && $j->horizonDays === 30);
 });
 
@@ -183,7 +183,7 @@ it('ProjectForecastOnScenarioChange fans ScenarioCreated out to 6 dispatches (3 
 
     $listener->handle($event);
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 6);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 10);
     Bus::assertDispatched(ProjectForecastJob::class, fn (ProjectForecastJob $j): bool => $j->scenarioId === null && $j->horizonDays === 30);
     Bus::assertDispatched(ProjectForecastJob::class, fn (ProjectForecastJob $j): bool => $j->scenarioId === 42 && $j->horizonDays === 90);
 });
@@ -197,7 +197,7 @@ it('ProjectForecastOnScenarioChange fans ScenarioMutated out to 6 dispatches', f
 
     $listener->handle($event);
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 6);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 10);
 });
 
 it('ProjectForecastOnScenarioChange fans ScenarioDeleted out to 3 baseline-only dispatches', function (): void {
@@ -209,6 +209,6 @@ it('ProjectForecastOnScenarioChange fans ScenarioDeleted out to 3 baseline-only 
 
     $listener->handle($event);
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 3);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 5);
     Bus::assertDispatched(ProjectForecastJob::class, fn (ProjectForecastJob $j): bool => $j->scenarioId === null);
 });

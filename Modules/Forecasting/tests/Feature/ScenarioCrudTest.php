@@ -299,7 +299,7 @@ it('12. Listener fan-out: ScenarioMutated triggers exactly 6 ProjectForecastJob 
     $this->app->make(ProjectForecastOnScenarioChange::class);
     ($add)($scenarioId, $this->user, 'cancel_series', new CancelSeriesPayload(seriesId: $seriesId));
 
-    Bus::assertDispatchedTimes(ProjectForecastJob::class, 6);
+    Bus::assertDispatchedTimes(ProjectForecastJob::class, 10);
     Bus::assertDispatched(ProjectForecastJob::class, fn (ProjectForecastJob $j): bool => $j->scenarioId === null && $j->horizonDays === 30);
     Bus::assertDispatched(ProjectForecastJob::class, fn (ProjectForecastJob $j): bool => $j->scenarioId === $scenarioId && $j->horizonDays === 60);
     Bus::assertNotDispatched(ProjectForecastJob::class, fn (ProjectForecastJob $j): bool => $j->scenarioId === $unrelatedId);
