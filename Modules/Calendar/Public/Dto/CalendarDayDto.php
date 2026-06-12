@@ -31,8 +31,13 @@ final class CalendarDayDto extends Data
         public readonly bool $isPast,
         /** Projected eodBalanceMinor < 0 after FX conversion (D-09) */
         public readonly bool $isRisk,
-        /** Start-of-day balance in minor units of the base reporting currency */
-        public readonly int $sodBalanceMinor,
+        /**
+         * Start-of-day balance in minor units of the base reporting currency.
+         * Null = unknown (WR-08): the prior grid day carried no computed
+         * balance (past day, first grid day, computing forecast), so no
+         * honest SoD figure exists — the view renders "—", never a fake €0.
+         */
+        public readonly ?int $sodBalanceMinor,
         /** End-of-day projected balance in minor units of the base reporting currency */
         public readonly int $eodBalanceMinor,
         public readonly string $currency,

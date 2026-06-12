@@ -23,11 +23,13 @@
     >×</button>
 </div>
 
-{{-- SOD balance --}}
+{{-- SOD balance — "—" when computing OR when no honest SoD exists (WR-08:
+     null sodBalanceMinor means the prior day carried no computed balance;
+     rendering €0,00 there would state a fake figure) --}}
 <div class="cal-panel-bal-row">
     <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">Start of day</span>
     <span class="tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: var(--color-text);">
-        @if ($dayDto->isComputing)
+        @if ($dayDto->isComputing || $dayDto->sodBalanceMinor === null)
             —
         @else
             {{ $dayDto->sodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->sodBalanceMinor / 100), 2, ',', '.') }}
