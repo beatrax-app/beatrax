@@ -233,6 +233,11 @@ final readonly class CalendarQuery
      * When $effectiveVisible is null it means "all accounts visible" (D-02 default).
      * When $effectiveVisible is [] it means no accounts matched the filter → no entries.
      *
+     * Query budget (WR-01): placement runs first and entirely in memory; all
+     * counterparty/account metadata is then resolved through BATCHED lookups
+     * for the placed series only — at most 5 queries per render, independent
+     * of the number of approved series.
+     *
      * @param  list<RecurringSeriesDto>  $allSeries
      * @param  array<int, int>  $accountIdForSeries
      * @param  list<int>|null  $effectiveVisible  null = all visible; [] = none visible
@@ -246,8 +251,10 @@ final readonly class CalendarQuery
         CarbonImmutable $monthEnd,
         User $user,
     ): array {
-        $entryMap = [];
-
+        // First pass: gate + filter + placement (cheap, zero queries). Series
+        // that place no dates in the display month cost nothing further.
+        /** @var list<array{series: RecurringSeriesDto, accountId: int|null, dates: list<CarbonImmutable>}> $placed */
+        $placed = [];
         foreach ($allSeries as $series) {
             // Irregular gate (Pitfall 4): exclude irregular with null nextExpectedAt
             if ($series->cadence === 'irregular' && $series->nextExpectedAt === null) {
@@ -269,36 +276,68 @@ final readonly class CalendarQuery
             }
             // effectiveVisible === null → all accounts on; include even unlinked series
 
-            // Resolve counterparty: primary path via occurrences→transactions→counterparty_id;
-            // fallback path via cluster_counterparty_key → counterparties.slug (D-16).
-            $counterpartyId = $this->seriesQuery->counterpartyIdForSeries($series->seriesId, $user);
+            // Find occurrence dates in the display month
+            $occurrenceDates = $this->placeSeriesInMonth($series, $monthStart, $monthEnd);
+            if ($occurrenceDates === []) {
+                continue;
+            }
+
+            $placed[] = ['series' => $series, 'accountId' => $accountId, 'dates' => $occurrenceDates];
+        }
+
+        if ($placed === []) {
+            return [];
+        }
+
+        $placedSeriesIds = array_map(static fn (array $p): int => $p['series']->seriesId, $placed);
+
+        // Batched metadata resolution (WR-01).
+        // Primary counterparty path: occurrences→transactions→counterparty_id.
+        $counterpartyIdBySeries = $this->seriesQuery->counterpartyIdsForSeriesIds($placedSeriesIds, $user);
+        $identityByCounterpartyId = $this->counterpartyQuery->identitiesForIds(
+            $user,
+            array_values(array_unique(array_values($counterpartyIdBySeries))),
+        );
+
+        // Fallback path (D-16): series with no occurrence-linked counterparty
+        // may still resolve via cluster_counterparty_key == counterparties.slug.
+        $unresolvedSeriesIds = array_values(array_filter(
+            $placedSeriesIds,
+            static fn (int $id): bool => ! isset($counterpartyIdBySeries[$id]),
+        ));
+        $clusterKeyBySeries = $unresolvedSeriesIds !== []
+            ? $this->clusterKeysForSeriesIds($unresolvedSeriesIds, $user)
+            : [];
+        $counterpartyIdBySlug = $clusterKeyBySeries !== []
+            ? $this->counterpartyQuery->idsBySlugs($user, array_values(array_unique(array_values($clusterKeyBySeries))))
+            : [];
+
+        // Account display names: one query for the whole owned roster.
+        $accountNames = $this->accountNamesForUser($user);
+
+        $entryMap = [];
+        foreach ($placed as $placement) {
+            $series = $placement['series'];
+            $accountId = $placement['accountId'];
+
+            $counterpartyId = $counterpartyIdBySeries[$series->seriesId] ?? null;
             $counterpartySlug = null;
             if ($counterpartyId !== null) {
-                $identity = $this->counterpartyQuery->identityForId($user, $counterpartyId);
-                $counterpartySlug = $identity['slug'] ?? null;
+                $counterpartySlug = $identityByCounterpartyId[$counterpartyId]['slug'] ?? null;
             } else {
-                // Fallback: look up counterparty by cluster_counterparty_key as slug.
-                // This resolves counterparties for series that have no linked occurrences yet
-                // but whose cluster_counterparty_key matches a known counterparty slug.
-                $counterpartySlug = $this->resolveCounterpartySlugByClusterKey($series->seriesId, $user);
-                if ($counterpartySlug !== null) {
-                    // Verify the counterparty exists and belongs to the user (T-06-02)
-                    $profile = $this->counterpartyQuery->bySlug($user, $counterpartySlug);
-                    if ($profile !== null) {
-                        $counterpartyId = $profile->id;
-                    } else {
-                        $counterpartySlug = null;
-                    }
+                // Fallback: cluster_counterparty_key as slug, verified against
+                // the user's own counterparties (T-06-02).
+                $clusterKey = $clusterKeyBySeries[$series->seriesId] ?? null;
+                if ($clusterKey !== null && isset($counterpartyIdBySlug[$clusterKey])) {
+                    $counterpartyId = $counterpartyIdBySlug[$clusterKey];
+                    $counterpartySlug = $clusterKey;
                 }
             }
 
-            // Resolve account name (empty string when series has no account link)
-            $accountName = $accountId !== null ? $this->resolveAccountName($accountId, $user) : '';
+            // Account name (empty string when series has no account link)
+            $accountName = $accountId !== null ? ($accountNames[$accountId] ?? '') : '';
 
-            // Find occurrence dates in the display month
-            $occurrenceDates = $this->placeSeriesInMonth($series, $monthStart, $monthEnd);
-
-            foreach ($occurrenceDates as $date) {
+            foreach ($placement['dates'] as $date) {
                 $dateStr = $date->toDateString();
                 $entry = new CalendarEntryDto(
                     seriesId: $series->seriesId,
@@ -743,47 +782,54 @@ final readonly class CalendarQuery
     // -------------------------------------------------------------------------
 
     /**
-     * Resolve the display name for an account. Returns an empty string
-     * if the account is not found (or not owned by the user).
+     * Resolve the display names for ALL accounts owned by the user in one
+     * query (WR-01). Map: account id => name.
+     *
+     * @return array<int, string>
      */
-    private function resolveAccountName(int $accountId, User $user): string
+    private function accountNamesForUser(User $user): array
     {
-        $row = $this->db->connection()->table('accounts')
-            ->where('id', $accountId)
+        $rows = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
-            ->first(['name']);
+            ->get(['id', 'name']);
 
-        if ($row === null) {
-            return '';
+        $map = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $map[self::toInt($row->id)] = self::toString($row->name ?? null);
         }
 
-        /** @var stdClass $row */
-        return self::toString($row->name ?? null);
+        return $map;
     }
 
     /**
-     * Look up the counterparty slug via the series' cluster_counterparty_key.
-     * Returns null if the series has no cluster_counterparty_key.
+     * Batched lookup of `cluster_counterparty_key` for the given series ids
+     * (WR-01). Series with no key are absent from the result map.
      *
-     * This is the fallback counterparty resolution path (D-16): when a series
-     * has no linked occurrences yet, the cluster_counterparty_key may still
-     * identify the counterparty by matching a counterparty slug.
+     * This feeds the fallback counterparty resolution path (D-16): when a
+     * series has no linked occurrences yet, the cluster_counterparty_key may
+     * still identify the counterparty by matching a counterparty slug.
+     *
+     * @param  list<int>  $seriesIds
+     * @return array<int, string>
      */
-    private function resolveCounterpartySlugByClusterKey(int $seriesId, User $user): ?string
+    private function clusterKeysForSeriesIds(array $seriesIds, User $user): array
     {
-        $row = $this->db->connection()->table('recurring_series')
-            ->where('id', $seriesId)
+        $rows = $this->db->connection()->table('recurring_series')
+            ->whereIn('id', $seriesIds)
             ->where('user_id', $user->id)  // T-06-02: user-scoped
-            ->first(['cluster_counterparty_key']);
+            ->get(['id', 'cluster_counterparty_key']);
 
-        if ($row === null) {
-            return null;
+        $map = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $key = self::toString($row->cluster_counterparty_key ?? null);
+            if ($key !== '') {
+                $map[self::toInt($row->id)] = $key;
+            }
         }
 
-        /** @var stdClass $row */
-        $key = self::toString($row->cluster_counterparty_key ?? null);
-
-        return $key !== '' ? $key : null;
+        return $map;
     }
 
     private static function toInt(mixed $value): int

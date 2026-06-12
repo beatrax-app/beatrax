@@ -322,6 +322,64 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
+     * Batched variant of `counterpartyIdForSeries` — resolve the most
+     * frequent `transactions.counterparty_id` per series for every id in
+     * `$seriesIds` in a single grouped query. Series whose occurrences
+     * never resolved to a counterparty are silently absent from the
+     * result map. Cross-user safe (occurrences are scoped to the user).
+     *
+     * Callers that need the counterparty for a list of series on a single
+     * page render (the calendar's entry map) reach for this method instead
+     * of looping over `counterpartyIdForSeries`, which would issue N
+     * queries.
+     *
+     * @param  array<int|string, mixed>  $seriesIds
+     * @return array<int, int>
+     */
+    public function counterpartyIdsForSeriesIds(array $seriesIds, User $user): array
+    {
+        $clean = [];
+        foreach ($seriesIds as $id) {
+            $i = is_numeric($id) ? (int) $id : 0;
+            if ($i > 0) {
+                $clean[] = $i;
+            }
+        }
+        $unique = array_values(array_unique($clean));
+        if ($unique === []) {
+            return [];
+        }
+
+        $rows = $this->db->connection()->table('recurring_series_occurrences as o')
+            ->join('transactions as t', 't.id', '=', 'o.transaction_id')
+            ->whereIn('o.recurring_series_id', $unique)
+            ->where('o.user_id', $user->id)
+            ->whereNotNull('t.counterparty_id')
+            ->groupBy('o.recurring_series_id', 't.counterparty_id')
+            ->orderByRaw('COUNT(*) DESC')
+            ->selectRaw('o.recurring_series_id as series_id, t.counterparty_id as counterparty_id')
+            ->get();
+
+        $map = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $seriesId = self::toInt($row->series_id);
+            if ($seriesId === 0 || isset($map[$seriesId])) {
+                // The highest-COUNT(*) row per series wins thanks to the
+                // ORDER BY COUNT(*) DESC ordering — mirrors the single-id
+                // variant's most-frequent-counterparty rule.
+                continue;
+            }
+            $counterpartyId = self::toInt($row->counterparty_id);
+            if ($counterpartyId > 0) {
+                $map[$seriesId] = $counterpartyId;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
      * The approved / cadence-changed recurring series whose occurrences belong
      * to the given counterparty — powers the "Recurring" card on a counterparty
      * profile. Cross-user safe (every join is scoped to the user).
