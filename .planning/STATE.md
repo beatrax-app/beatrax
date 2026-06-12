@@ -4,13 +4,13 @@ milestone: v1.3
 milestone_name: Local & in sync
 status: executing
 stopped_at: Phase 7 UI-SPEC approved
-last_updated: "2026-06-12T17:18:36.902Z"
+last_updated: "2026-06-12T18:25:23.104Z"
 progress:
   total_phases: 15
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 37
-  completed_plans: 36
-  percent: 40
+  completed_plans: 37
+  percent: 47
 ---
 
 # State: beatrax
@@ -27,11 +27,11 @@ progress:
 
 ## Current Position
 
-Phase: 07 (tax-deductible-tagging-per-year-export) — EXECUTING
-Plan: 1 of 6
+Phase: 07 (tax-deductible-tagging-per-year-export) — COMPLETE
+Plan: 6 of 6 (all complete)
 
 - **Milestone:** v1.3 "Local & in sync"
-- **Status:** Executing Phase 07
+- **Status:** Phase 07 complete (awaiting UAT), Phase 08 next
 - **Phase:** 6 of 15 (bills / cash flow calendar)
 - **Plan:** Not started
 - **Progress:** 2 of 15 phases complete — 13%
@@ -69,6 +69,11 @@ Phases [██              ] 2/15
 - GoalsPage: createGoal()/updateGoal() separate actions with editGoalId property — matches Wave 0 test stub names (Plan 01 stubs are authoritative over plan spec naming).
 - GoalsSummaryCard: top-3 nearest-finishing sorted by projectedFinishDate (null last) using usort, no extra ForecastQuery dependency.
 - goals.index route closure stub swapped for GoalsPage::class in Plan 04 once the class exists at boot time.
+- HandlesTaxTagging placed in Public namespace (not Internal) to comply with TaxBoundaryTest arch rule — cross-module traits must be in Public.
+- Tax popover rendered via @include() not <x-component> so Livewire view-scope properties (taxPickerTxId etc.) are accessible without prop passing.
+- Alpine $wire.taxPickerTxId watch drives popover open/close (not @js() snapshot which only captures initial value).
+- taxTagStateFor issues ONE whereIn query per render for the full page batch (Pitfall-1 guard).
+- batchSuggestionDismissed flag prevents batch suggestion re-surfacing after apply or dismiss (Pitfall-7 guard).
 
 ### Critical path
 
@@ -88,9 +93,9 @@ Phases [██              ] 2/15
 
 ## Session Continuity
 
-- **Last session:** 2026-06-12T17:18:36.893Z
-- **Stopped at:** Phase 7 UI-SPEC approved
-- **Resume by:** Approve Task 4 UAT (type "approved") or describe issues to fix; then complete 02-04 and mark Phase 2 done.
+- **Last session:** 2026-06-12T18:24:03Z
+- **Stopped at:** Phase 07 Plan 06 complete — awaiting browser UAT checkpoint (four-surface tax tagging)
+- **Resume by:** Complete browser UAT on the four surfaces (TransactionsList, TransactionDetail, CounterpartyProfile, CashBookPage) and signal "approved" to proceed to Phase 08.
 
 ---
 *State initialized: 2026-06-07 for milestone v1.3 "Local & in sync"*

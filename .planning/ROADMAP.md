@@ -238,7 +238,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4)*
 
-- [ ] 07-06-PLAN.md — Shared tax-badge + picker popover/bottom-sheet + batch-tag banner across four surfaces (list/detail/counterparty/cashbook) + UAT
+- [x] 07-06-PLAN.md — Shared tax-badge + picker popover/bottom-sheet + batch-tag banner across four surfaces (list/detail/counterparty/cashbook) + UAT
 
 ### Phase 8: Full-text search over history
 
