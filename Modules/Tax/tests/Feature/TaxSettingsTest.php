@@ -118,6 +118,35 @@ it('seedFromCorpus never overwrites a renamed corpus-key row (Pitfall-4 / T-07-1
     expect($after)->toBe($renamedName);
 });
 
+it('seedFromCorpus skips a corpus entry whose name collides with a user-created category (WR-01)', function (): void {
+    $user = taxSettingsUser('tax-seed-name-collision');
+
+    /** @var TaxCategoryWriter $writer */
+    $writer = app(TaxCategoryWriter::class);
+
+    // The user created a category named exactly like the NL corpus entry
+    // "Giften" BEFORE selecting a country.
+    $userCatId = $writer->add($user->id, 'Giften');
+
+    // Seeding NL must NOT throw a unique(user_id, name) QueryException —
+    // the colliding corpus entry is skipped, the rest seeds normally.
+    $count = $writer->seedFromCorpus($user, 'nl');
+    expect($count)->toBeGreaterThan(0);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $giftenRows = $db->connection()->table('tax_deduction_categories')
+        ->where('user_id', $user->id)
+        ->where('name', 'Giften')
+        ->get();
+
+    // Exactly one "Giften" row — the user's own (corpus_key null) wins.
+    expect($giftenRows)->toHaveCount(1)
+        ->and((int) $giftenRows[0]->id)->toBe($userCatId)
+        ->and($giftenRows[0]->corpus_key)->toBeNull();
+});
+
 it('switching country with seedFromCorpus adds new entries and deletes nothing (additive)', function (): void {
     $user = taxSettingsUser('tax-seed-04');
 
