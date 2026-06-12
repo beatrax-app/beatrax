@@ -20,9 +20,9 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
  *
  *  2. The `skipRest` action marks every non-`done` row `skipped` and
  *     redirects to `/`. A user who has already done `welcome` and
- *     `connect-bank` keeps those rows intact; the remaining five
- *     (connect-paypal, connect-card, connect-email, first-import, done)
- *     all flip to `skipped` in one call.
+ *     `connect-bank` keeps those rows intact; the remaining seven
+ *     (connect-paypal, connect-card, connect-email, first-import,
+ *     budgets, tax-country, done) all flip to `skipped` in one call.
  *
  *  3. The `skip` handler is a no-op on non-skippable steps (welcome,
  *     first-import, done) — the WizardStepRegistry's `isSkippable`
@@ -64,10 +64,10 @@ it('advances past a skippable step and marks the wizard_progress row as skipped'
 });
 
 it('marks every non-done step skipped and redirects to / when skipRest is called', function (): void {
-    // User has finished welcome + connect-bank; the remaining five
+    // User has finished welcome + connect-bank; the remaining seven
     // rows (connect-paypal, connect-card, connect-email, first-import,
-    // done) should all flip to skipped when the user hits "Resume
-    // later →".
+    // budgets, tax-country, done) should all flip to skipped when the
+    // user hits "Resume later →".
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
         ->where('step_key', 'welcome')
@@ -96,7 +96,7 @@ it('marks every non-done step skipped and redirects to / when skipRest is called
         ->pluck('step_key')
         ->all();
     sort($skippedRows);
-    expect($skippedRows)->toBe(['budgets', 'connect-card', 'connect-email', 'connect-paypal', 'done', 'first-import']);
+    expect($skippedRows)->toBe(['budgets', 'connect-card', 'connect-email', 'connect-paypal', 'done', 'first-import', 'tax-country']);
 });
 
 it('is a no-op on non-skippable steps', function (): void {

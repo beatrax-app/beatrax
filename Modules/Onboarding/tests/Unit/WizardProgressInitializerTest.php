@@ -15,11 +15,11 @@ uses(RefreshDatabase::class);
  * wizard_progress row per step the WizardStepRegistry enumerates for a
  * freshly-installed user, and the idempotency guard that lets re-fires
  * from a UserInstalled listener never duplicate or overwrite already-
- * progressed steps. Step set is currently 8 entries
+ * progressed steps. Step set is currently 9 entries
  * (welcome / connect-bank / connect-paypal / connect-card /
- * connect-email / first-import / budgets / done) — the assertions read the
- * registry rather than hard-coding the expected count, so future
- * connector additions don't trip this test.
+ * connect-email / first-import / budgets / tax-country / done) — the
+ * assertions read the registry rather than hard-coding the expected
+ * count, so future connector additions don't trip this test.
  */
 
 beforeEach(function (): void {
