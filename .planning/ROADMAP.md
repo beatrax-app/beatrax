@@ -221,12 +221,12 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 07-01-PLAN.md — Tax module scaffold: 2 tables + users.tax_country_code + DTOs/events + TagTransaction/UntagTransaction + all service binds + Wave 0 RED tests
+- [x] 07-01-PLAN.md — Tax module scaffold: 2 tables + users.tax_country_code + DTOs/events + TagTransaction/UntagTransaction + all service binds + Wave 0 RED tests
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 07-02-PLAN.md — Read layer: TaxYearQuery (grouped, override-aware, settled-EUR totals) + TaxTagQuery (badge/dashboard/batch) + NavCounts tax_tagged
-- [ ] 07-04-PLAN.md — Corpus (NL/DE/BE/FR/GB/US) + TaxCorpusLoader + TaxCategoryWriter (provenance-safe seed/CRUD) + Settings Tax section
+- [x] 07-02-PLAN.md — Read layer: TaxYearQuery (grouped, override-aware, settled-EUR totals) + TaxTagQuery (badge/dashboard/batch) + NavCounts tax_tagged
+- [x] 07-04-PLAN.md — Corpus (NL/DE/BE/FR/GB/US) + TaxCorpusLoader + TaxCategoryWriter (provenance-safe seed/CRUD) + Settings Tax section
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -352,7 +352,7 @@ Plans:
 | 4. Responsive + installable PWA | 9/9 | Complete   | 2026-06-11 |
 | 5. PIN / biometric app-lock | 6/6 | Complete   | 2026-06-11 |
 | 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
-| 7. Tax / deductible tagging + export | 0/6 | Planned | - |
+| 7. Tax / deductible tagging + export | 3/6 | In Progress|  |
 | 8. Full-text search over history | 0/0 | Not started | - |
 | 9. Unusual-charge / anomaly alerts | 0/0 | Not started | - |
 | 10. SPIKE — op-log/CRDT merge layer | 0/0 | Not started | - |

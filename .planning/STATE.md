@@ -4,7 +4,7 @@ milestone: v1.3
 milestone_name: Local & in sync
 status: executing
 stopped_at: Phase 7 UI-SPEC approved
-last_updated: "2026-06-12T15:22:26.960Z"
+last_updated: "2026-06-12T15:25:32.599Z"
 progress:
   total_phases: 15
   completed_phases: 6
@@ -23,15 +23,15 @@ progress:
 - **Requirements:** `.planning/REQUIREMENTS.md`
 - **Roadmap:** `.planning/ROADMAP.md`
 - **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-- **Current focus:** Phase 06 — bills-cash-flow-calendar
+- **Current focus:** Phase 07 — tax-deductible-tagging-per-year-export
 
 ## Current Position
 
-Phase: 06 (bills-cash-flow-calendar) — EXECUTING
-Plan: 1 of 3
+Phase: 07 (tax-deductible-tagging-per-year-export) — EXECUTING
+Plan: 1 of 6
 
 - **Milestone:** v1.3 "Local & in sync"
-- **Status:** Executing Phase 06
+- **Status:** Executing Phase 07
 - **Phase:** 6 of 15 (bills / cash flow calendar)
 - **Plan:** Not started
 - **Progress:** 2 of 15 phases complete — 13%
