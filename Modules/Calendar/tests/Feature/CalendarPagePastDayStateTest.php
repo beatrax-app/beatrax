@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
+use Modules\Calendar\Tests\TestCase;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
+
+uses(TestCase::class, RefreshDatabase::class);
 
 /*
  * CalendarPage — past-day paid/missed state (CAL-02, D-07).
@@ -38,7 +42,7 @@ function cppdsSeries(User $user, string $name, CarbonImmutable $nextExpectedAt):
 {
     return RecurringSeries::query()->create([
         'user_id' => $user->id,
-        'direction' => 'outbound',
+        'direction' => 'expense',
         'detected_name' => $name,
         'state' => 'approved',
         'cadence' => 'monthly',
@@ -52,15 +56,68 @@ function cppdsSeries(User $user, string $name, CarbonImmutable $nextExpectedAt):
 
 function cppdsOccurrence(DatabaseManager $db, int $userId, int $seriesId, string $observedAt): void
 {
+    static $cppdsOccCounter = 0;
+    $cppdsOccCounter++;
+
+    // Create an account for the FK chain (transactions → accounts)
+    $hex = bin2hex(random_bytes(4));
+    $accountId = $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId,
+        'name' => 'CPPDS ASN',
+        'slug' => 'cppds-'.$hex,
+        'kind' => 'asn',
+        'iban' => 'NL00CPPDS'.strtoupper($hex),
+        'default_currency' => 'EUR',
+        'opening_balance_minor' => 0,
+        'opening_balance_as_of_date' => '2026-01-01',
+        'created_at' => $observedAt.' 00:00:00',
+        'updated_at' => $observedAt.' 00:00:00',
+    ]);
+
+    $runId = $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $userId,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/cppds-'.$cppdsOccCounter.'.csv',
+        'sha256' => str_pad((string) ($cppdsOccCounter + 100), 64, 'b'),
+        'uploaded_at' => $observedAt.' 00:00:00',
+        'status' => 'imported',
+        'created_at' => $observedAt.' 00:00:00',
+        'updated_at' => $observedAt.' 00:00:00',
+    ]);
+
+    $txId = $db->connection()->table('transactions')->insertGetId([
+        'user_id' => $userId,
+        'account_id' => $accountId,
+        'import_run_id' => $runId,
+        'fingerprint' => str_pad((string) ($cppdsOccCounter + 100), 64, 'b'),
+        'fingerprint_version' => 3,
+        'posted_at' => $observedAt,
+        'booked_at' => $observedAt.' 00:00:00',
+        'value_date' => $observedAt,
+        'amount_minor' => -1500,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -1500,
+        'settled_currency' => 'EUR',
+        'counterparty_normalized' => 'cppds-counterparty',
+        'counterparty_name' => 'CPPDS Test',
+        'normalization_version' => 1,
+        'description' => 'cppds occurrence fixture',
+        'type' => 'expense',
+        'source_format' => 'asn-csv',
+        'source_row_index' => $cppdsOccCounter + 100,
+        'created_at' => $observedAt.' 00:00:00',
+        'updated_at' => $observedAt.' 00:00:00',
+    ]);
+
     $db->connection()->table('recurring_series_occurrences')->insert([
         'user_id' => $userId,
         'recurring_series_id' => $seriesId,
         'observed_at' => $observedAt,
         'observed_amount_minor' => -1500,
         'observed_currency' => 'EUR',
-        'transaction_id' => null,
-        'created_at' => $observedAt,
-        'updated_at' => $observedAt,
+        'transaction_id' => $txId,
+        'created_at' => $observedAt.' 00:00:00',
+        'updated_at' => $observedAt.' 00:00:00',
     ]);
 }
 
