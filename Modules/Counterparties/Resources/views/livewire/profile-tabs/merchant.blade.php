@@ -95,6 +95,6 @@
                 style="background: transparent; border: 0; font-size: var(--text-xs); color: var(--color-text); text-decoration: underline; cursor: pointer;"
             >See all {{ $profile->transactionCount }} →</button>
         </div>
-        @include('counterparties::livewire.profile-tabs._recent-activity', ['rows' => $recentActivity])
+        @include('counterparties::livewire.profile-tabs._recent-activity', ['rows' => $recentActivity, 'taxState' => $taxState ?? []])
     </x-counterparties::frame>
 </div>

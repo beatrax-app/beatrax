@@ -15,6 +15,8 @@ use Modules\Categorization\Public\Events\CategorizationDiverged;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
+use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
+use Modules\Tax\Public\Services\TaxTagQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -53,6 +55,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class TransactionDetail extends Component
 {
+    use HandlesTaxTagging;
+
     public int $transactionId = 0;
 
     /**
@@ -225,6 +229,7 @@ final class TransactionDetail extends Component
         CurrentUser $currentUser,
         ViewFactory $views,
         ChainLinkQuery $chainQuery,
+        TaxTagQuery $taxTagQuery,
     ): View {
         // Eager-load the resolved counterparty so the Blade can
         // render the click-through anchor to counterparties.profile
@@ -251,9 +256,18 @@ final class TransactionDetail extends Component
             $currentUser->user(),
         );
 
+        // Batch-load tax state for this single transaction (Pitfall 1 — reuses same path).
+        $taxState = $this->taxTagStateFor([$this->transactionId], $taxTagQuery, $currentUser);
+        $txTaxRow = [
+            'id' => $this->transactionId,
+            'taxTagged' => $taxState[$this->transactionId]['taxTagged'] ?? false,
+            'taxCategoryShortName' => $taxState[$this->transactionId]['taxCategoryShortName'] ?? null,
+        ];
+
         $view = $views->make('ledger::livewire.transaction-detail', [
             'transaction' => $transaction,
             'chainAvailable' => $chainAvailable,
+            'txTaxRow' => $txTaxRow,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

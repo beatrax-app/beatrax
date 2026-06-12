@@ -22,6 +22,9 @@
 @endphp
 
 <div>
+    {{-- Tax tag picker — rendered once per page (not per row). --}}
+    @include('tax::components.tax-tag-popover')
+
     {{-- Mobile top bar (D-05): back affordance targeting /transactions parent list.
          Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
          The page title is "Transaction" + the posted date for context. --}}
@@ -80,6 +83,20 @@
                     </div>
                 @endif
             </dl>
+
+            {{-- Tax badge: sits next to the reclassify section per D-01 --}}
+            @if (isset($txTaxRow))
+                <section
+                    aria-label="Tax tag"
+                    class="border-t border-slate-200 pt-6 dark:border-slate-700"
+                    data-testid="tax-tag-section"
+                >
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm text-slate-500 dark:text-slate-400">Tax deductible</span>
+                        <x-tax::tax-badge :transaction="$txTaxRow" :showAlways="true" />
+                    </div>
+                </section>
+            @endif
 
             <section
                 aria-labelledby="reclassify-heading"

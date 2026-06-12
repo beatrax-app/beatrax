@@ -18,9 +18,15 @@
     // pairs so Livewire can dehydrate the state). Used by the phone card list.
     // @param array{amountMinor: int, amountCurrency: string} $row
     $rowMoney = static fn (array $row): Money => Money::ofMinor($row['amountMinor'], $row['amountCurrency']);
+
+    // Tax state map: array<int, array{taxTagged: bool, taxCategoryShortName: ?string}>
+    // Batch-loaded once per render — no N+1 (Pitfall 1).
+    $taxState ??= [];
 @endphp
 
 <div class="space-y-6">
+    {{-- Tax tag picker — rendered once for the whole list (not per-row). --}}
+    @include('tax::components.tax-tag-popover')
     <header class="flex items-end justify-between gap-4">
         <div class="space-y-1">
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Transactions</h1>
@@ -62,28 +68,35 @@
             <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
                 @foreach ($accumulatedRows as $row)
                     @php $rowAmt = $rowMoney($row); @endphp
-                    <a
-                        href="{{ route('transactions.show', ['transactionId' => $row['id']]) }}"
-                        wire:navigate
-                        class="card-list-item block"
+                    <div
+                        class="card-list-item group"
                         data-testid="tx-card-{{ $row['id'] }}"
+                        style="display: flex; align-items: center;"
                     >
-                        <div class="min-w-0 flex-1">
-                            {{-- Primary: counterparty name (2-line truncate) --}}
-                            <p class="primary line-clamp-2">{{ $row['counterpartyName'] ?? '—' }}</p>
-                            {{-- Secondary: category chip + posted date --}}
-                            <p class="secondary mt-0.5 truncate">
-                                @if ($row['categoryId'] !== null)
-                                    <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">cat</span>
-                                @endif
-                                {{ $row['bookedAt'] }}
-                            </p>
-                        </div>
+                        <a
+                            href="{{ route('transactions.show', ['transactionId' => $row['id']]) }}"
+                            wire:navigate
+                            class="block min-w-0 flex-1"
+                        >
+                            <div class="min-w-0 flex-1">
+                                {{-- Primary: counterparty name (2-line truncate) --}}
+                                <p class="primary line-clamp-2">{{ $row['counterpartyName'] ?? '—' }}</p>
+                                {{-- Secondary: category chip + posted date --}}
+                                <p class="secondary mt-0.5 truncate">
+                                    @if ($row['categoryId'] !== null)
+                                        <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">cat</span>
+                                    @endif
+                                    {{ $row['bookedAt'] }}
+                                </p>
+                            </div>
+                        </a>
+                        {{-- Tax badge: always-visible at phone width (D-21). --}}
+                        <x-tax::tax-badge :transaction="$row" :showAlways="true" />
                         {{-- Amount: tabular, right-aligned; positive = emerald --}}
                         <span class="amount {{ $isPositive($rowAmt) ? 'positive' : '' }}">
                             {{ $fmt($rowAmt) }}
                         </span>
-                    </a>
+                    </div>
                 @endforeach
             </div>
 
@@ -130,12 +143,17 @@
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Date</th>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Counterparty</th>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Category</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Tax</th>
                             <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
                         @foreach ($page->rows as $row)
-                            <tr>
+                            @php
+                                $rowTaxState = $taxState[$row->id] ?? ['taxTagged' => false, 'taxCategoryShortName' => null];
+                                $rowArr = ['id' => $row->id, 'taxTagged' => $rowTaxState['taxTagged'], 'taxCategoryShortName' => $rowTaxState['taxCategoryShortName']];
+                            @endphp
+                            <tr class="group">
                                 {{-- Date cell carries the drill-into-detail
                                      affordance: clicking it routes to the
                                      transaction-detail page where the
@@ -201,6 +219,10 @@
                                         ['transactionId' => $row->id, 'categoryId' => $row->categoryId],
                                         key('cat-picker-' . $row->id)
                                     )
+                                </td>
+                                {{-- Tax badge: hover-reveal on desktop (D-19/D-20). --}}
+                                <td class="px-4 py-2">
+                                    <x-tax::tax-badge :transaction="$rowArr" :showAlways="false" />
                                 </td>
                                 <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
                                     <span class="block text-sm text-slate-900 dark:text-slate-100">{{ $fmt($row->amount) }}</span>

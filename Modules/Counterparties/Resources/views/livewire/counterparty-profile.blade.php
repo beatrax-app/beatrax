@@ -21,6 +21,8 @@
 @endphp
 
 <div style="padding: var(--space-6) var(--space-4); max-width: 980px; margin: 0 auto;" class="space-y-6">
+    {{-- Tax tag picker — rendered once per profile (not per row). --}}
+    @include('tax::components.tax-tag-popover')
     {{-- Mobile top bar back affordance (D-05): shown at <1024px with ← to /counterparties.
          Must live INSIDE the root div — Livewire allows only one root element. --}}
     <x-core::mobile-top-bar
@@ -139,6 +141,7 @@
                 'taxYears' => $taxYears,
                 'ibanRevealed' => $ibanRevealed,
                 'recurringSeries' => $recurringSeries ?? [],
+                'taxState' => $taxState ?? [],
             ])
 
             @if ($activeTab === 'overview' && $supportResource !== null && $supportResource->hasAny())

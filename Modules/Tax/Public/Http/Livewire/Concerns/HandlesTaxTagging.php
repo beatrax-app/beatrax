@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Tax\Internal\Http\Livewire\Concerns;
+namespace Modules\Tax\Public\Http\Livewire\Concerns;
 
 use Livewire\Attributes\On;
 use Modules\Core\Public\Contracts\Clock;
@@ -65,6 +65,9 @@ trait HandlesTaxTagging
 
     /**
      * Batch-tag suggestion data. null = no pending suggestion.
+     * Stored as a plain string-keyed array so Livewire can dehydrate it.
+     *
+     * Keys: 'counterpartyId' (int), 'counterpartyName' (string), 'untaggedCount' (int).
      *
      * @var array{counterpartyId: int, counterpartyName: string, untaggedCount: int}|null
      */
@@ -230,7 +233,7 @@ trait HandlesTaxTagging
         }
 
         $user = $u->user();
-        $cpId = (int) $this->batchSuggestion['counterpartyId'];
+        $cpId = $this->batchSuggestion['counterpartyId'];
         $taxYear = $this->resolveCurrentTaxYear($c);
 
         // Fetch the untagged transaction ids for this counterparty/year.

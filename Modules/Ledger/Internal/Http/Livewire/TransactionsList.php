@@ -13,6 +13,8 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
 use Modules\Ledger\Public\Services\TransactionListQuery;
+use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
+use Modules\Tax\Public\Services\TaxTagQuery;
 
 /**
  * The `/transactions` list page. Defaults to a 90-day recent window;
@@ -46,6 +48,8 @@ use Modules\Ledger\Public\Services\TransactionListQuery;
  */
 final class TransactionsList extends Component
 {
+    use HandlesTaxTagging;
+
     /**
      * Maximum number of rows kept in the Livewire dehydrated snapshot.
      *
@@ -169,6 +173,7 @@ final class TransactionsList extends Component
         TransactionListQuery $listQuery,
         ViewFactory $views,
         DatabaseManager $db,
+        TaxTagQuery $taxTagQuery,
     ): View {
         $user = $currentUser->user();
 
@@ -266,12 +271,23 @@ final class TransactionsList extends Component
             }
         }
 
+        // Batch-load tax tag state for the current page (Pitfall 1 — ONE query).
+        // Merges taxTagged + taxCategoryShortName into each accumulated row array.
+        $taxState = $this->taxTagStateFor($rowIds, $taxTagQuery, $currentUser);
+        foreach ($this->accumulatedRows as &$accRow) {
+            $accRowId = $accRow['id'];
+            $accRow['taxTagged'] = $taxState[$accRowId]['taxTagged'] ?? false;
+            $accRow['taxCategoryShortName'] = $taxState[$accRowId]['taxCategoryShortName'] ?? null;
+        }
+        unset($accRow);
+
         return $views->make('ledger::livewire.transactions-list', [
             'page' => $page,
             'accumulatedRows' => $this->accumulatedRows,
             'fullHistory' => $this->fullHistory,
             'currency' => $this->currency,
             'chainTxIds' => $chainTxIds,
+            'taxState' => $taxState,
         ]);
     }
 
@@ -281,7 +297,10 @@ final class TransactionsList extends Component
      * integer + currency code pair; the blade view reconstructs them at
      * render time via `Money::ofMinor()`.
      *
-     * @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string}
+     * taxTagged + taxCategoryShortName default to false/null here; they are
+     * overwritten after batch-load in render() so the values are always fresh.
+     *
+     * @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string}
      */
     private static function rowToArray(TransactionRowDto $row): array
     {
@@ -295,6 +314,8 @@ final class TransactionsList extends Component
             'amountCurrency' => $row->amount->currency(),
             'secondaryMinor' => $row->secondaryAmount?->toMinor(),
             'secondaryCurrency' => $row->secondaryAmount?->currency(),
+            'taxTagged' => false,
+            'taxCategoryShortName' => null,
         ];
     }
 }
