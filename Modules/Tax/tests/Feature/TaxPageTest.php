@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fixtures
@@ -162,7 +163,7 @@ it('resolves tax.index route to TaxPage class (not a closure)', function (): voi
 it('applies seasonal default — February → previous year (month <= 4)', function (): void {
     $user = taxPageUser(username: 'seasonal-feb');
 
-    $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+    $clock = Mockery::mock(Clock::class);
     $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 2, 15));
     app()->instance(Clock::class, $clock);
 
@@ -175,7 +176,7 @@ it('applies seasonal default — February → previous year (month <= 4)', funct
 it('applies seasonal default — August → current year (month > 4)', function (): void {
     $user = taxPageUser(username: 'seasonal-aug');
 
-    $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+    $clock = Mockery::mock(Clock::class);
     $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 15));
     app()->instance(Clock::class, $clock);
 
@@ -190,7 +191,7 @@ it('shows tagged transactions grouped by deduction category', function (): void 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+    $clock = Mockery::mock(Clock::class);
     $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
     app()->instance(Clock::class, $clock);
 
@@ -209,7 +210,7 @@ it('changes results when the year switcher is used', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+    $clock = Mockery::mock(Clock::class);
     $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
     app()->instance(Clock::class, $clock);
 
@@ -220,12 +221,12 @@ it('changes results when the year switcher is used', function (): void {
 
     // Default: 2026 (August)
     $component->assertSee('Current Year Merchant BV')
-              ->assertDontSee('Past Year Merchant BV');
+        ->assertDontSee('Past Year Merchant BV');
 
     // Switch to 2025
     $component->set('year', 2025);
     $component->assertSee('Past Year Merchant BV')
-              ->assertDontSee('Current Year Merchant BV');
+        ->assertDontSee('Current Year Merchant BV');
 });
 
 it('shows the empty-year calm note when no tagged transactions exist for the year', function (): void {
@@ -233,7 +234,7 @@ it('shows the empty-year calm note when no tagged transactions exist for the yea
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+    $clock = Mockery::mock(Clock::class);
     $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
     app()->instance(Clock::class, $clock);
 
@@ -252,7 +253,7 @@ it('exportCsv returns a StreamedResponse with the correct filename and content t
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+    $clock = Mockery::mock(Clock::class);
     $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
     app()->instance(Clock::class, $clock);
 
@@ -271,7 +272,7 @@ it('exportPdf returns a StreamedResponse with the correct filename and content t
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+    $clock = Mockery::mock(Clock::class);
     $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
     app()->instance(Clock::class, $clock);
 
