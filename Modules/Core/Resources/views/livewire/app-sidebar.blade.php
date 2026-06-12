@@ -89,6 +89,10 @@
         <span class="ic" aria-hidden="true">↗</span>
         Forecasts
     </a>
+    <a href="{{ route('calendar.index') }}" class="side-item {{ $isActive('/calendar') }}">
+        <span class="ic" aria-hidden="true">▦</span>
+        Calendar
+    </a>
 
     <div class="side-section-label">MONEY</div>
     <a href="{{ route('recurring.index') }}" class="side-item {{ $isActive('/recurring') }}">
