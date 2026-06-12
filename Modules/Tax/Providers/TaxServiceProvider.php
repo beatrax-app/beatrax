@@ -13,6 +13,7 @@ use Modules\Tax\Internal\Http\Livewire\TaxSettingsSection;
 use Modules\Tax\Internal\Http\Livewire\TaxSummaryCard;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
+use Modules\Tax\Public\Services\TaxCountrySetup;
 use Modules\Tax\Public\Services\TaxCsvExporter;
 use Modules\Tax\Public\Services\TaxPdfRenderer;
 use Modules\Tax\Public\Services\TaxTagQuery;
@@ -27,6 +28,7 @@ use Modules\Tax\Public\Services\TaxYearQuery;
  *   Plan 02: TaxYearQuery, TaxTagQuery
  *   Plan 03: TaxCsvExporter, TaxPdfRenderer
  *   Plan 04: TaxCorpusLoader (Internal), TaxCategoryWriter (Internal)
+ *   Wizard tax-country step: TaxCountrySetup (Public facade)
  */
 final class TaxServiceProvider extends ServiceProvider
 {
@@ -47,6 +49,10 @@ final class TaxServiceProvider extends ServiceProvider
         // Plan 04 corpus + category writer (Internal classes)
         $this->app->singleton(TaxCorpusLoader::class);
         $this->app->singleton(TaxCategoryWriter::class);
+
+        // Public country-setup surface for cross-module consumers
+        // (the Onboarding wizard's tax-country step).
+        $this->app->singleton(TaxCountrySetup::class);
     }
 
     public function boot(LivewireManager $livewire): void
