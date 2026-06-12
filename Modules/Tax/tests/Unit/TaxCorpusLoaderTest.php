@@ -2,31 +2,73 @@
 
 declare(strict_types=1);
 
-use Modules\Tax\Public\Services\TaxCorpusLoader;
+use Mockery\MockInterface;
+use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
+use Psr\Log\LoggerInterface;
 
 /*
  * Unit tests for TaxCorpusLoader — the built-in deduction category corpus.
  *
- * Status: RED — skipped. Full implementation ships in Plan 04.
- *
- * These tests encode the requirements for TAX-03 (Dutch corpus seeding)
- * so Plan 04 can implement against this spec.
+ * Tests verify that the loader reads the bundled YAML files failure-tolerantly
+ * and returns well-formed entry arrays for each supported country.
  */
 
-it('loads the Dutch corpus for country code "NL"', function (): void {
-    // TODO Plan 04: assert TaxCorpusLoader returns non-empty array of category
-    // definitions for country_code=NL.
-})->skip('built in Plan 04');
+it('loads the Dutch corpus and returns a non-empty list with key and name', function (): void {
+    /** @var TaxCorpusLoader $loader */
+    $loader = app(TaxCorpusLoader::class);
+
+    $entries = $loader->loadForCountry('nl');
+
+    expect($entries)->not->toBeEmpty();
+    foreach ($entries as $entry) {
+        expect($entry)->toHaveKey('key');
+        expect($entry)->toHaveKey('name');
+        expect((string) $entry['key'])->not->toBeEmpty();
+        expect((string) $entry['name'])->not->toBeEmpty();
+    }
+});
 
 it('returns an empty list for an unsupported country code', function (): void {
-    // TODO Plan 04: assert empty result for country_code=XX (not in corpus).
-})->skip('built in Plan 04');
+    /** @var TaxCorpusLoader $loader */
+    $loader = app(TaxCorpusLoader::class);
 
-it('each corpus entry has name, short_name, corpus_key, country_code and status=active', function (): void {
-    // TODO Plan 04: assert each returned entry has required keys with correct types.
-})->skip('built in Plan 04');
+    expect($loader->loadForCountry('xx'))->toBeEmpty();
+    expect($loader->loadForCountry(''))->toBeEmpty();
+});
 
-it('seeding a user with NL corpus idempotently creates categories once', function (): void {
-    // TODO Plan 04: seed twice; assert exactly N rows in tax_deduction_categories,
-    // not 2*N (upsert on corpus_key+user_id).
-})->skip('built in Plan 04');
+it('all six shipped country files parse and yield at least 3 entries each', function (string $cc): void {
+    /** @var TaxCorpusLoader $loader */
+    $loader = app(TaxCorpusLoader::class);
+
+    $entries = $loader->loadForCountry($cc);
+
+    expect(count($entries))->toBeGreaterThanOrEqual(3);
+    foreach ($entries as $entry) {
+        expect($entry)->toHaveKey('key');
+        expect($entry)->toHaveKey('name');
+    }
+})->with(['nl', 'de', 'be', 'fr', 'gb', 'us']);
+
+it('logs a warning and returns empty list when the corpus file contains malformed YAML', function (): void {
+    /** @var LoggerInterface&MockInterface $logger */
+    $logger = Mockery::mock(LoggerInterface::class);
+    $logger->shouldReceive('warning')->once();
+
+    $loader = new TaxCorpusLoader($logger);
+
+    // Temporarily overwrite the NL corpus with malformed YAML, then restore.
+    $corpusPath = resource_path('corpus/tax/nl.yaml');
+    $backup = file_get_contents($corpusPath);
+    assert(is_string($backup));
+
+    // Write invalid YAML that triggers a ParseException via PARSE_EXCEPTION_ON_INVALID_TYPE.
+    file_put_contents($corpusPath, "entries:\n  - !!php/object 'O:8:\"stdClass\":0:{}'");
+
+    try {
+        $entries = $loader->loadForCountry('nl');
+        expect($entries)->toBeEmpty();
+    } finally {
+        // Always restore the original file.
+        file_put_contents($corpusPath, $backup);
+    }
+});
