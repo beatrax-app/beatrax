@@ -6,11 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Calendar\Internal\Services\CalendarQuery;
-use Modules\Calendar\Tests\TestCase;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 /*
  * CalendarQuery — account-preference resolution (CAL-01 D-02/D-03).
@@ -70,6 +67,8 @@ function cqapSeries(User $user, string $name): RecurringSeries
         'next_expected_at' => CarbonImmutable::parse('2026-06-15'),
     ]);
 }
+
+uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-06-12 00:00:00');
