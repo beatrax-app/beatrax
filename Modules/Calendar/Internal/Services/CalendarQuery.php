@@ -448,8 +448,9 @@ final readonly class CalendarQuery
      * Build a map of date => [eodMinor, isComputing] for balance-included accounts.
      *
      * Fetches each account's 365-day ForecastDto ONCE (Pitfall 2 — no per-day re-fetch).
-     * Sums pointMinor per date across accounts (mirrors computeAllAccountsAggregate).
-     * FX-converts each date's sum to the user's base reporting currency.
+     * Sums pointMinor per (date, currency) bucket across accounts, then FX-converts
+     * each currency bucket to the user's base reporting currency before summing
+     * (D-05, CR-02). Minor units are never added across currencies.
      *
      * Internal-transfer net-neutrality (D-04): because per-account forecasts already
      * include both legs of an own-account transfer, the combined sum naturally nets them.
@@ -478,8 +479,8 @@ final readonly class CalendarQuery
             return $map;
         }
 
-        /** @var array<string, int> $byDate */
-        $byDate = [];
+        /** @var array<string, array<string, int>> $byDateCurrency */
+        $byDateCurrency = [];
         $isComputingAny = false;
 
         // Fetch each account's forecast ONCE (Pitfall 2 — no per-day re-fetch)
@@ -493,36 +494,27 @@ final readonly class CalendarQuery
                 continue;
             }
 
-            // Sum pointMinor per date (mirrors computeAllAccountsAggregate)
+            // Sum pointMinor per (date, currency) bucket. Each ForecastPointDto
+            // carries its account's currency — buckets keep currencies separate
+            // so a USD account's points are never added raw to EUR points (CR-02).
             foreach ($dto->points as $point) {
-                $byDate[$point->date] = ($byDate[$point->date] ?? 0) + $point->pointMinor;
+                $byDateCurrency[$point->date][$point->currency]
+                    = ($byDateCurrency[$point->date][$point->currency] ?? 0) + $point->pointMinor;
             }
         }
 
-        // Build map for the grid dates, applying FX conversion
+        // Build map for the dates we have data for, FX-converting each currency
+        // bucket to the user's base reporting currency before summing (D-05).
         $baseCurrency = $user->base_currency;
         $map = [];
 
-        // Build the full grid date range
-        $cursor = $monthStart->subWeeks(1); // include lead-in dates for the grid
-        $gridEnd = $monthEnd->addWeeks(1);   // include trailing dates
-
-        // Only need to map dates in the forecast points; use the monthStart-derived grid
-        // Build map for each date in byDate that we have data for
-        foreach ($byDate as $dateStr => $sumMinor) {
-            // FX-convert to base currency (D-05)
-            // The forecast points are in the account's default_currency.
-            // For simplicity in the balance aggregation, we assume EUR (most accounts are EUR);
-            // true multi-currency FX conversion happens at the ExchangeRateService level.
-            // Since ForecastPointDto carries the account's defaultCurrency but we only have
-            // the sum across accounts, we apply convertToBase on the summed amount treating
-            // it as the base currency (EUR → EUR is a passthrough).
-            // For non-EUR multi-account sums: this is a known simplification documented here.
-            // The correct approach would sum per-currency, then convert each currency separately.
-            // For v1 (predominantly EUR accounts), the sum is already in EUR.
-            $money = Money::ofMinor($sumMinor, $baseCurrency);
-            $converted = $this->fxService->convertToBase($money, $baseCurrency);
-            $map[$dateStr] = [$converted->converted->toMinor(), $isComputingAny];
+        foreach ($byDateCurrency as $dateStr => $byCurrency) {
+            $totalMinor = 0;
+            foreach ($byCurrency as $currency => $sumMinor) {
+                $converted = $this->fxService->convertToBase(Money::ofMinor($sumMinor, $currency), $baseCurrency);
+                $totalMinor += $converted->converted->toMinor();
+            }
+            $map[$dateStr] = [$totalMinor, $isComputingAny];
         }
 
         // Fill dates with no forecast data (isComputing = true for missing dates when not computing overall)

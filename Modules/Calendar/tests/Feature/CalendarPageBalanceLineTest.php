@@ -34,7 +34,7 @@ function cpblUser(string $suffix = 'cpbl'): User
     ]);
 }
 
-function cpblAccount(DatabaseManager $db, int $userId, string $name): int
+function cpblAccount(DatabaseManager $db, int $userId, string $name, string $currency = 'EUR'): int
 {
     $hex = bin2hex(random_bytes(4));
 
@@ -44,7 +44,7 @@ function cpblAccount(DatabaseManager $db, int $userId, string $name): int
         'slug' => 'cpbl-'.$hex,
         'kind' => 'asn',
         'iban' => 'NL00CPBL'.strtoupper($hex),
-        'default_currency' => 'EUR',
+        'default_currency' => $currency,
         'opening_balance_minor' => 100000,
         'opening_balance_as_of_date' => '2026-06-01',
         'created_at' => '2026-06-01 00:00:00',
@@ -59,7 +59,7 @@ function cpblAccount(DatabaseManager $db, int $userId, string $name): int
  * scenario_id) tuple, then looks up accounts[$accountId] inside result_json.
  * Multiple calls for the same user upsert into the same row's accounts block.
  */
-function cpblForecastRun(DatabaseManager $db, int $userId, int $accountId, string $date, int $pointMinor): void
+function cpblForecastRun(DatabaseManager $db, int $userId, int $accountId, string $date, int $pointMinor, string $currency = 'EUR'): void
 {
     // Check if a run already exists for this user+horizon combination
     $existing = $db->connection()->table('forecast_runs')
@@ -71,7 +71,7 @@ function cpblForecastRun(DatabaseManager $db, int $userId, int $accountId, strin
     $accountBlock = [
         'account_id' => $accountId,
         'account_name' => 'Test Account',
-        'default_currency' => 'EUR',
+        'default_currency' => $currency,
         'today_balance_minor' => $pointMinor,
         'points' => [
             [
@@ -79,7 +79,7 @@ function cpblForecastRun(DatabaseManager $db, int $userId, int $accountId, strin
                 'low_minor' => $pointMinor - 100,
                 'point_minor' => $pointMinor,
                 'high_minor' => $pointMinor + 100,
-                'currency' => 'EUR',
+                'currency' => $currency,
             ],
         ],
     ];
@@ -140,6 +140,39 @@ it('renders the day-end balance from summed forecast points for balance-included
             'balanceAccountIds' => [$account1, $account2],
         ])
         ->assertSee('750');  // The summed balance €750.00 appears in the cell
+});
+
+it('FX-converts a USD account\'s forecast points to the base currency instead of adding raw minor units (CR-02)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cpblUser('cpbl-fx');
+    $eurAccount = cpblAccount($db, $user->id, 'ASN Checking', 'EUR');
+    $usdAccount = cpblAccount($db, $user->id, 'Google Play USD', 'USD');
+
+    // EUR→USD rate 2.0: USD 2 000.00 is worth EUR 1 000.00.
+    $db->connection()->table('exchange_rates')->insert([
+        'base_currency' => 'EUR',
+        'quote_currency' => 'USD',
+        'rate_date' => '2026-06-12',
+        'rate' => '2.00000000',
+        'source' => 'test',
+        'created_at' => '2026-06-12 00:00:00',
+        'updated_at' => '2026-06-12 00:00:00',
+    ]);
+
+    // EUR account: €1 234.00 on June 20; USD account: $2 000.00 on June 20.
+    cpblForecastRun($db, $user->id, $eurAccount, '2026-06-20', 123400, 'EUR');
+    cpblForecastRun($db, $user->id, $usdAccount, '2026-06-20', 200000, 'USD');
+
+    // Converted: 123400 + (200000 / 2) = 223400 minor → "€2.234" in the cell.
+    // A raw cross-currency sum would be 323400 minor → "€3.234".
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, [
+            'month' => 6,
+            'year' => 2026,
+            'balanceAccountIds' => [$eurAccount, $usdAccount],
+        ])
+        ->assertSee('2.234')
+        ->assertDontSee('3.234');
 });
 
 it('does not render balance data from another user\'s accounts', function (): void {
