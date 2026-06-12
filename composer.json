@@ -24,6 +24,7 @@
         "brick/math": "^0.14",
         "brick/money": "^0.11",
         "doctrine/sql-formatter": "^1.5",
+        "dompdf/dompdf": "^3.0",
         "genkgo/camt": "^2.10",
         "google/apiclient": "^2.19",
         "google/apiclient-services": "*",
