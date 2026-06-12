@@ -89,20 +89,18 @@ it('clamps a tampered ?year=&month= beyond the 12-month horizon to the ceiling m
 it('clamps an invalid #[Url] month value (0) to the current month', function (): void {
     $user = cmnUser('cmn-clamp-zero');
 
-    // month=0 is out of range; render() should use current month (6) instead.
-    $component = Livewire::actingAs($user)
-        ->test(CalendarPage::class, ['month' => 0, 'year' => 2026]);
-
-    // displayMonth passed to the view should be 6 (current month).
-    $component->assertSee('Calendar');
-    // We verify the render didn't crash; invalid month fell back to June.
+    // month=0 is out of range; render() must fall back to the current month
+    // (June 2026) — asserting the rendered month label proves the clamp
+    // actually happened (IN-04), not merely that the render survived.
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 0, 'year' => 2026])
+        ->assertSee('Jun 2026');
 });
 
 it('clamps an invalid #[Url] month value (13) to the current month', function (): void {
     $user = cmnUser('cmn-clamp-thirteen');
 
-    $component = Livewire::actingAs($user)
-        ->test(CalendarPage::class, ['month' => 13, 'year' => 2026]);
-
-    $component->assertSee('Calendar');
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 13, 'year' => 2026])
+        ->assertSee('Jun 2026');
 });
