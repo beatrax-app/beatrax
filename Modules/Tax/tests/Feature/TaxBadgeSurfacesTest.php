@@ -514,6 +514,46 @@ describe('TransactionsList tax badge', function (): void {
         }
     });
 
+    it('batch suggestion is keyed to the trigger transaction\'s booked year, not the seasonal current year (WR-05)', function (): void {
+        $user = badgeUser('tx-list-batch-year-user');
+        $db = app(DatabaseManager::class);
+
+        // Wall clock says June 2026 → seasonal tax year would be 2026.
+        $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+        $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2026, 6, 15));
+        app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+
+        $cpId = badgeCp($db, $user->id, 'Old History Gym');
+        // Trigger + 2 siblings booked in 2024; 1 sibling booked in 2026.
+        $trigger = badgeTx($db, $user->id, $cpId, '2024-02-01 00:00:00');
+        $sib2024a = badgeTx($db, $user->id, $cpId, '2024-03-01 00:00:00');
+        $sib2024b = badgeTx($db, $user->id, $cpId, '2024-04-01 00:00:00');
+        $sib2026 = badgeTx($db, $user->id, $cpId, '2026-05-01 00:00:00');
+
+        $component = Livewire::actingAs($user)->test(TransactionsList::class);
+        $component->dispatch('tax-tag', id: $trigger);
+
+        // The suggestion counts the 2024 siblings (2), not the 2026 one.
+        $suggestion = $component->get('batchSuggestion');
+        expect($suggestion)->not->toBeNull();
+        expect($suggestion['taxYear'])->toBe(2024);
+        expect($suggestion['untaggedCount'])->toBe(2);
+
+        // Applying tags the 2024 siblings and leaves the 2026 row untagged.
+        $component->call('applyBatchTag');
+
+        foreach ([$sib2024a, $sib2024b] as $sibling) {
+            expect($db->connection()->table('tax_transaction_tags')
+                ->where('user_id', $user->id)
+                ->where('transaction_id', $sibling)
+                ->exists())->toBeTrue();
+        }
+        expect($db->connection()->table('tax_transaction_tags')
+            ->where('user_id', $user->id)
+            ->where('transaction_id', $sib2026)
+            ->exists())->toBeFalse();
+    });
+
     it('opening the picker for another row resets note/category/year-override — no state bleed (WR-04)', function (): void {
         $user = badgeUser('tx-list-state-bleed-user');
         $db = app(DatabaseManager::class);
