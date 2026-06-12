@@ -250,7 +250,25 @@ Plans:
   1. User can search transactions by merchant/description across all retained history.
   2. Results are filterable by date range, account, amount, and category, and stay fast on multi-year data.
 
-**Plans**: TBD
+**Plans**: 5 plans (4 waves; new Search module, FTS5 trigram, guarded-provider keeps Wave 2 parallel)
+**UI hint**: yes
+Plans:
+**Wave 1**
+
+- [ ] 08-01-PLAN.md — Search module scaffold: FTS5 migration (trigram) + Public DTOs/contracts + guarded SearchServiceProvider + Wave 0 RED tests + boundary rule
+
+**Wave 2** *(blocked on Wave 1; the two run in parallel — disjoint files)*
+
+- [ ] 08-02-PLAN.md — Synchronous index: SearchIndexWriter + TransactionImported listener + Tax note hook + search:reindex + doctor FtsHealthCheck (D-23/D-24)
+- [ ] 08-03-PLAN.md — SearchQuery (FTS MATCH + filters + amount + highlight + summary + cursor) + QueryParser + EntityNameSearch + DidYouMean + SearchResultsProvider (SRCH-01/02)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 08-04-PLAN.md — /transactions search mode: #[Url] query+filters, toolbar/chips/popovers, summary strip, highlighted rows + snippet, no-results, phone bottom sheet (D-02/11/12/13)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 08-05-PLAN.md — Palette server-backed search + entity sections + token autocomplete + recent searches + sidebar/mobile affordances + UAT (D-01/10/25/28/29)
 
 ### Phase 9: Unusual-charge / anomaly alerts
 
