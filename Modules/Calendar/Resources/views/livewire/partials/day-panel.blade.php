@@ -1,0 +1,110 @@
+{{--
+    Day panel partial — §6.4 (desktop right-rail) and §6.5 (phone bottom sheet).
+
+    Included by calendar-page.blade.php in two contexts:
+      1. Inside <aside class="cal-day-panel"> for desktop right-rail
+      2. Inside <x-bottom-sheet name="day-detail"> for phone
+
+    $dayDto: CalendarDayDto
+
+    Renders: SOD balance, entry rows with series + counterparty drill links (CAL-03),
+    approximate note (D-15), paid/missed state, EOD balance.
+--}}
+<div class="cal-panel-header">
+    <span class="font-semibold" style="font-size: var(--text-md, 1rem); color: var(--color-text);">
+        {{ $dayDto->date->format('M j, Y') }}
+    </span>
+    <button
+        wire:click="$set('selectedDay', null)"
+        @click="panelOpen = false"
+        class="ml-auto flex h-8 w-8 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+        style="color: var(--color-text-muted);"
+        aria-label="Close day panel"
+    >×</button>
+</div>
+
+{{-- SOD balance --}}
+<div class="cal-panel-bal-row">
+    <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">Start of day</span>
+    <span class="tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: var(--color-text);">
+        @if ($dayDto->isComputing)
+            —
+        @else
+            {{ $dayDto->sodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->sodBalanceMinor / 100), 2, ',', '.') }}
+        @endif
+    </span>
+</div>
+
+{{-- Entry rows --}}
+@if ($dayDto->entries === [])
+    <p class="py-4 text-sm" style="color: var(--color-text-muted);">No payments on this day.</p>
+@else
+    <div class="overflow-y-auto flex-1">
+        @foreach ($dayDto->entries as $entry)
+            @php
+                $amountSign = $entry->direction === 'income' ? '+' : '−';
+                $amountStr  = $amountSign . '€' . number_format(abs($entry->amountMinor / 100), 2, ',', '.');
+                $amountColor = $entry->direction === 'income' ? 'var(--color-emerald)' : 'var(--color-text)';
+            @endphp
+            <div class="cal-panel-entry">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-1">
+                            <span class="font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: var(--color-text);">
+                                @if ($entry->isApproximate)
+                                    <span aria-hidden="true" style="color: var(--color-text-faint);">~</span>
+                                @endif
+                                {{ $entry->name }}
+                            </span>
+                            @if ($entry->isPaid)
+                                <span style="color: var(--color-emerald);" aria-label="Paid">✓</span>
+                            @elseif ($entry->isMissed)
+                                <span style="color: var(--color-amber);" aria-label="Expected — not found">!</span>
+                            @endif
+                        </div>
+                        <div class="mt-0.5 text-xs" style="color: var(--color-text-faint);">
+                            {{ $entry->accountName }}
+                        </div>
+                        @if ($entry->isApproximate)
+                            <div class="mt-0.5 text-xs italic" style="color: var(--color-text-faint);">
+                                ~ date approximate
+                            </div>
+                        @endif
+                        {{-- Drill-through links (CAL-03) --}}
+                        <div class="mt-1 flex flex-wrap gap-2 text-xs" style="color: var(--color-text-muted);">
+                            <a
+                                href="/recurring/series/{{ $entry->seriesId }}"
+                                class="underline hover:no-underline"
+                                style="color: var(--color-text-muted);"
+                                wire:navigate
+                            >↗ series</a>
+                            @if ($entry->counterpartySlug !== null)
+                                <a
+                                    href="/counterparties/{{ $entry->counterpartySlug }}"
+                                    class="underline hover:no-underline"
+                                    style="color: var(--color-text-muted);"
+                                    wire:navigate
+                                >↗ counterparty</a>
+                            @endif
+                        </div>
+                    </div>
+                    <span class="flex-shrink-0 tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: {{ $amountColor }};">
+                        {{ $amountStr }}
+                    </span>
+                </div>
+            </div>
+        @endforeach
+    </div>
+@endif
+
+{{-- EOD balance --}}
+<div class="cal-panel-bal-row mt-auto">
+    <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">End of day</span>
+    <span class="tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: {{ !$dayDto->isComputing && $dayDto->eodBalanceMinor < 0 ? 'var(--color-rose)' : 'var(--color-text)' }};">
+        @if ($dayDto->isComputing)
+            —
+        @else
+            {{ $dayDto->eodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->eodBalanceMinor / 100), 2, ',', '.') }}
+        @endif
+    </span>
+</div>
