@@ -57,9 +57,14 @@ final readonly class CalendarQuery
     private const array SPENDABLE_KINDS = ['asn', 'bank', 'cash', 'paypal', 'paypal_funding'];
 
     /**
-     * Tolerance window for past-day paid/missed matching (Pitfall 3).
-     * An occurrence observed within ±MATCH_WINDOW_DAYS of the expected date
-     * counts as "paid". Beyond this window the occurrence is unrelated.
+     * Tolerance window CAP for past-day paid/missed matching (Pitfall 3).
+     * An occurrence observed within the effective window of the expected
+     * date counts as "paid". Beyond this window the occurrence is unrelated.
+     *
+     * The effective window is clamped per cadence (WR-02) — see
+     * matchWindowDays(): sub-monthly cadences get half their interval
+     * (weekly → ±3 days) so one observed payment can never mark multiple
+     * adjacent expected entries paid; monthly+ keeps the full ±7 cap.
      */
     private const int MATCH_WINDOW_DAYS = 7;
 
@@ -143,6 +148,12 @@ final readonly class CalendarQuery
         // Build past-day occurrence set: seriesId => list<string date>
         $occurrenceMap = $this->buildOccurrenceMap($user, $monthStart, $monthEnd);
 
+        // Cadence per series — the paid-match window is cadence-clamped (WR-02)
+        $cadenceBySeries = [];
+        foreach ($allSeries as $series) {
+            $cadenceBySeries[$series->seriesId] = $series->cadence;
+        }
+
         // Assemble CalendarDayDto for each grid day
         $days = [];
         $prevEod = null; // track previous day eod for sod of next day
@@ -178,9 +189,10 @@ final readonly class CalendarQuery
             $entries = [];
             foreach ($rawEntries as $entry) {
                 if ($isPast) {
-                    // Check if there's an occurrence within ±MATCH_WINDOW_DAYS
+                    // Check if there's an occurrence within the cadence-clamped window (WR-02)
                     $observedDates = $occurrenceMap[$entry->seriesId] ?? [];
-                    $isPaid = $this->hasMatchingOccurrence($date, $observedDates);
+                    $windowDays = $this->matchWindowDays($cadenceBySeries[$entry->seriesId] ?? null);
+                    $isPaid = $this->hasMatchingOccurrence($date, $observedDates, $windowDays);
                     $isMissed = ! $isPaid;
                     $entries[] = new CalendarEntryDto(
                         seriesId: $entry->seriesId,
@@ -618,16 +630,41 @@ final readonly class CalendarQuery
     }
 
     /**
+     * Resolve the paid-match tolerance window for a cadence (WR-02).
+     *
+     * The window is clamped to half the cadence interval so adjacent
+     * expected occurrences can never both match the same observed payment
+     * (the unclamped ±7-day window over a 7-day weekly spacing marked up
+     * to three entries paid from a single occurrence). MATCH_WINDOW_DAYS
+     * stays the cap for monthly and longer cadences, whose spacing
+     * comfortably exceeds twice the cap.
+     */
+    private function matchWindowDays(?string $cadence): int
+    {
+        $cadenceDays = match ($cadence) {
+            'daily' => 1,
+            'weekly' => 7,
+            default => null, // monthly+ (and irregular): spacing exceeds 2× the cap
+        };
+
+        if ($cadenceDays === null) {
+            return self::MATCH_WINDOW_DAYS;
+        }
+
+        return min(self::MATCH_WINDOW_DAYS, intdiv($cadenceDays, 2));
+    }
+
+    /**
      * Return true if any observed date in $observedDates falls within
-     * ±MATCH_WINDOW_DAYS of the expected $date.
+     * ±$windowDays of the expected $date.
      *
      * @param  list<string>  $observedDates
      */
-    private function hasMatchingOccurrence(CarbonImmutable $date, array $observedDates): bool
+    private function hasMatchingOccurrence(CarbonImmutable $date, array $observedDates, int $windowDays): bool
     {
         $expected = $date->startOfDay();
-        $windowStart = $expected->subDays(self::MATCH_WINDOW_DAYS);
-        $windowEnd = $expected->addDays(self::MATCH_WINDOW_DAYS);
+        $windowStart = $expected->subDays($windowDays);
+        $windowEnd = $expected->addDays($windowDays);
 
         foreach ($observedDates as $observedDateStr) {
             $observed = CarbonImmutable::parse($observedDateStr)->startOfDay();

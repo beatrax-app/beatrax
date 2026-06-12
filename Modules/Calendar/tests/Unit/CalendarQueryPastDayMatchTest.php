@@ -34,14 +34,14 @@ function cqpdUser(string $suffix): User
     ]);
 }
 
-function cqpdSeries(User $user, string $name, CarbonImmutable $nextExpectedAt): RecurringSeries
+function cqpdSeries(User $user, string $name, CarbonImmutable $nextExpectedAt, string $cadence = 'monthly'): RecurringSeries
 {
     return RecurringSeries::query()->create([
         'user_id' => $user->id,
         'direction' => 'expense',
         'detected_name' => $name,
         'state' => 'approved',
-        'cadence' => 'monthly',
+        'cadence' => $cadence,
         'latest_amount_minor' => -1500,
         'latest_currency' => 'EUR',
         'variance_tolerance_percent' => 25,
@@ -252,6 +252,35 @@ it('does not mark a future-day entry as paid or missed', function (): void {
 
     expect($foundFuture)->toBeTrue('Future series entry should appear on the grid');
     expect($foundPaidOrMissed)->toBeFalse('Future entries must not be marked isPaid or isMissed');
+});
+
+it('clamps the weekly match window to ±3 days so one payment marks only the nearest entry paid (WR-02)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cqpdUser('weekly-clamp');
+
+    // Weekly series: nextExpectedAt June 15 places entries on June 1, 8, 15
+    // (June 1–11 are past relative to "today" June 12). One occurrence on
+    // June 8 must mark ONLY June 8 paid; June 1 is 7 days away — outside the
+    // clamped ±3-day weekly window — and stays missed.
+    $series = cqpdSeries($user, 'Weekly-Clamp', CarbonImmutable::parse('2026-06-15'), 'weekly');
+    cqpdOccurrence($db, $user->id, $series->id, '2026-06-08');
+
+    /** @var CalendarQuery $calendarQuery */
+    $calendarQuery = app(CalendarQuery::class);
+    $days = $calendarQuery->forMonth($user, 2026, 6);
+
+    $stateByDate = [];
+    foreach ($days as $day) {
+        foreach ($day->entries as $entry) {
+            if ($entry->name === 'Weekly-Clamp') {
+                $stateByDate[$day->date->toDateString()] = ['paid' => $entry->isPaid, 'missed' => $entry->isMissed];
+            }
+        }
+    }
+
+    expect($stateByDate['2026-06-08']['paid'] ?? null)->toBeTrue('The June 8 occurrence pays the June 8 entry');
+    expect($stateByDate['2026-06-01']['paid'] ?? null)->toBeFalse('June 1 is 7 days from the occurrence — outside the ±3 weekly window');
+    expect($stateByDate['2026-06-01']['missed'] ?? null)->toBeTrue('The unpaid June 1 weekly entry must read missed');
 });
 
 it('verifies MATCH_WINDOW_DAYS constant equals 7', function (): void {
