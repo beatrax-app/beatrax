@@ -6,13 +6,21 @@
         <span class="version-chip">v0.0.0-dev</span>
     </div>
 
-    <div class="side-search" role="search">
+    
+    <div
+        class="side-search"
+        role="search"
+        x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
+        style="cursor: pointer;"
+    >
         <span class="ic" aria-hidden="true">⌕</span>
         <input
             type="text"
-            placeholder="Search or jump to…"
-            aria-label="Search or jump to"
-            disabled
+            placeholder="Search…"
+            aria-label="Open search palette"
+            readonly
+            x-on:focus="window.Livewire && window.Livewire.dispatch('palette:open')"
+            style="cursor: pointer;"
         />
         
         <span
