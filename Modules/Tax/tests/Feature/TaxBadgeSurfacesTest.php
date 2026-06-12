@@ -514,6 +514,29 @@ describe('TransactionsList tax badge', function (): void {
         }
     });
 
+    it('opening the picker for another row resets note/category/year-override — no state bleed (WR-04)', function (): void {
+        $user = badgeUser('tx-list-state-bleed-user');
+        $db = app(DatabaseManager::class);
+        $txA = badgeTx($db, $user->id);
+        $txB = badgeTx($db, $user->id);
+        badgeTag($db, $user->id, $txA);
+
+        $component = Livewire::actingAs($user)->test(TransactionsList::class);
+
+        // Edit row A and type values WITHOUT saving.
+        $component->dispatch('tax-edit-tag', id: $txA);
+        $component->set('pickerNote', 'row A note');
+        $component->set('pickerYearOverride', 2025);
+
+        // Ghost-tag row B (no closePicker in between) — fields must be clean.
+        $component->dispatch('tax-tag', id: $txB);
+
+        expect($component->get('taxPickerTxId'))->toBe($txB);
+        expect($component->get('pickerNote'))->toBe('');
+        expect($component->get('pickerCategoryId'))->toBeNull();
+        expect($component->get('pickerYearOverride'))->toBeNull();
+    });
+
     it('does not show another user\'s badge state (cross-user isolation)', function (): void {
         $owner = badgeUser('tx-list-owner');
         $partner = badgeUser('tx-list-partner');
