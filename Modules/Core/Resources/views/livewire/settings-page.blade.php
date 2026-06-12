@@ -310,6 +310,14 @@
         </section>
     </div>
 
+    {{-- ===== Tax — country + deduction categories ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2" id="tax-settings">
+            <h2 class="{{ $cardHead }}">Tax</h2>
+            @livewire('tax.settings-section')
+        </section>
+    </div>
+
     {{-- ===== Shared merchant list ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="shared-merchant-list">

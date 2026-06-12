@@ -6,28 +6,25 @@ namespace Modules\Tax\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Tax\Internal\Actions\TaxCategoryWriter;
+use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
+use Modules\Tax\Internal\Http\Livewire\TaxSettingsSection;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
-use Modules\Tax\Public\Services\TaxCategoryWriter;
-use Modules\Tax\Public\Services\TaxCorpusLoader;
 use Modules\Tax\Public\Services\TaxCsvExporter;
 use Modules\Tax\Public\Services\TaxPdfRenderer;
 use Modules\Tax\Public\Services\TaxTagQuery;
 use Modules\Tax\Public\Services\TaxYearQuery;
 
 /**
- * Wires the Tax module: migrations, routes, views, and ALL service singleton
- * binds. Every Tax service class is pre-bound here in register() — lazily —
- * so downstream plans (02–05) that ship the actual service classes never need
- * to touch this file. Lazy binds are safe: the container only resolves the
- * class when it is first requested, not at registration time, so binding a
- * not-yet-existing class here does NOT break boot.
+ * Wires the Tax module: migrations, routes, views, Livewire components,
+ * and ALL service singleton binds.
  *
  * Service bind inventory (by implementing plan):
  *   Plan 01: TagTransaction, UntagTransaction
  *   Plan 02: TaxYearQuery, TaxTagQuery
  *   Plan 03: TaxCsvExporter, TaxPdfRenderer
- *   Plan 04: TaxCorpusLoader, TaxCategoryWriter
+ *   Plan 04: TaxCorpusLoader (Internal), TaxCategoryWriter (Internal)
  */
 final class TaxServiceProvider extends ServiceProvider
 {
@@ -45,7 +42,7 @@ final class TaxServiceProvider extends ServiceProvider
         $this->app->singleton(TaxCsvExporter::class);
         $this->app->singleton(TaxPdfRenderer::class);
 
-        // Plan 04 corpus + category writer
+        // Plan 04 corpus + category writer (Internal classes)
         $this->app->singleton(TaxCorpusLoader::class);
         $this->app->singleton(TaxCategoryWriter::class);
     }
@@ -65,7 +62,9 @@ final class TaxServiceProvider extends ServiceProvider
             $this->loadViewsFrom($viewsPath, 'tax');
         }
 
-        // TODO: Plan 04 adds TaxSettingsPage component registration here.
-        // TODO: Plan 05 adds TaxPage component registration here.
+        // Plan 04: Tax settings section (country choice + category CRUD)
+        $livewire->component('tax.settings-section', TaxSettingsSection::class);
+
+        // TODO: Plan 05 adds TaxPage, TaxSummaryCard component registration here.
     }
 }
