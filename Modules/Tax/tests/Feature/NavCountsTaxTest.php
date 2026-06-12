@@ -141,9 +141,8 @@ function nctCounterparty(DatabaseManager $db, int $userId, string $name = 'NCT C
 
     return $db->connection()->table('counterparties')->insertGetId([
         'user_id' => $userId,
-        'name' => $name,
+        'display_name' => $name,
         'slug' => 'nct-cp-'.$suffix,
-        'normalized_name' => strtolower($name),
         'type' => 'merchant',
         'created_at' => now(),
         'updated_at' => now(),
