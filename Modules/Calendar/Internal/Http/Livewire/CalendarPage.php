@@ -158,6 +158,16 @@ final class CalendarPage extends Component
             return;
         }
 
+        // The shape regex alone admits impossible dates ("2026-13-01",
+        // "2026-99-99") that make CarbonImmutable::parse() throw an
+        // InvalidFormatException — a 500 from a trivially tampered
+        // wire:click payload (WR-06). Validate the calendar date strictly
+        // before parsing.
+        [$y, $m, $d] = array_map(intval(...), explode('-', $date));
+        if (! checkdate($m, $d, $y)) {
+            return;
+        }
+
         $display = $this->resolveDisplay();
         $parsed = CarbonImmutable::parse($date);
 
