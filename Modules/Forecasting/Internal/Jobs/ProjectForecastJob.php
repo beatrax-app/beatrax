@@ -32,12 +32,12 @@ use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
  *    so a transient queue / DB hiccup retries without final-failing
  *    the run.
  *
- * Constructor-time validation: `horizonDays` must be one of the three
- * supported windows (30, 60, 90). Any other value raises
+ * Constructor-time validation: `horizonDays` must be one of the five
+ * supported windows (30, 60, 90, 180, 365). Any other value raises
  * `InvalidArgumentException` so a tampered Livewire payload or a
  * misuse from a later wave's feature flag cannot reach the queue
- * worker. The set is fixed for Phase 10; expansion (14, 180 days)
- * requires a deliberate code change.
+ * worker. Phase 6 extends the set from 3 to 5 horizons to support
+ * the 12-month calendar reach (D-14).
  *
  * Queue-uniqueness lock resolution is delegated to the shared
  * `Modules\Core\Public\Support\LockStore` helper: `uniqueVia()`
@@ -56,7 +56,7 @@ final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQ
     use SerializesModels;
 
     /** @var list<int> */
-    public const HORIZON_DAYS = [30, 60, 90];
+    public const HORIZON_DAYS = [30, 60, 90, 180, 365];
 
     public int $tries = 3;
 
@@ -70,7 +70,7 @@ final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQ
     ) {
         if (! in_array($this->horizonDays, self::HORIZON_DAYS, true)) {
             throw new InvalidArgumentException(sprintf(
-                'ProjectForecastJob: horizonDays must be one of [30, 60, 90]; got %d.',
+                'ProjectForecastJob: horizonDays must be one of [30, 60, 90, 180, 365]; got %d.',
                 $this->horizonDays,
             ));
         }

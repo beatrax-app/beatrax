@@ -19,7 +19,7 @@ use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
  *
  * uniqueFor=600, uniqueVia()=Cache repository, tries=3,
  * backoff=[60,300,900]. Plus constructor-time validation on
- * horizonDays ∈ {30, 60, 90}.
+ * horizonDays ∈ {30, 60, 90, 180, 365} (Phase 6 extended HORIZON_DAYS).
  */
 
 it('declares ShouldBeUniqueUntilProcessing and ShouldQueue', function (): void {
@@ -54,8 +54,24 @@ it('collapses two literal (5, null, 30) dispatches under the same uniqueId', fun
     expect($a->uniqueId())->toBe($b->uniqueId());
 });
 
-it('throws InvalidArgumentException when horizonDays is not 30 / 60 / 90', function (): void {
+it('throws InvalidArgumentException when horizonDays is not in the allowed set', function (): void {
     $call = fn (): ProjectForecastJob => new ProjectForecastJob(userId: 5, scenarioId: null, horizonDays: 45);
+
+    expect($call)->toThrow(InvalidArgumentException::class);
+});
+
+it('accepts horizonDays=180 without throwing (D-14 Phase 6 extension)', function (): void {
+    $job = new ProjectForecastJob(userId: 5, scenarioId: null, horizonDays: 180);
+    expect($job->horizonDays)->toBe(180);
+});
+
+it('accepts horizonDays=365 without throwing (D-14 Phase 6 extension)', function (): void {
+    $job = new ProjectForecastJob(userId: 5, scenarioId: null, horizonDays: 365);
+    expect($job->horizonDays)->toBe(365);
+});
+
+it('still throws InvalidArgumentException for an off-list value after the Phase 6 extension', function (): void {
+    $call = fn (): ProjectForecastJob => new ProjectForecastJob(userId: 5, scenarioId: null, horizonDays: 200);
 
     expect($call)->toThrow(InvalidArgumentException::class);
 });
