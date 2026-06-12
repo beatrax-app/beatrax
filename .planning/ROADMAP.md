@@ -234,7 +234,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 07-05-PLAN.md — /tax cockpit: year switcher + grouped sections + stream-download exports + dashboard card + sidebar/⌘K + real cross-user probe + UAT
+- [x] 07-05-PLAN.md — /tax cockpit: year switcher + grouped sections + stream-download exports + dashboard card + sidebar/⌘K + real cross-user probe + UAT
 
 **Wave 5** *(blocked on Wave 4)*
 
@@ -352,7 +352,7 @@ Plans:
 | 4. Responsive + installable PWA | 9/9 | Complete   | 2026-06-11 |
 | 5. PIN / biometric app-lock | 6/6 | Complete   | 2026-06-11 |
 | 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
-| 7. Tax / deductible tagging + export | 4/6 | In Progress|  |
+| 7. Tax / deductible tagging + export | 5/6 | In Progress|  |
 | 8. Full-text search over history | 0/0 | Not started | - |
 | 9. Unusual-charge / anomaly alerts | 0/0 | Not started | - |
 | 10. SPIKE — op-log/CRDT merge layer | 0/0 | Not started | - |

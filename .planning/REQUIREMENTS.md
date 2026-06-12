@@ -51,7 +51,7 @@
 
 #### TAX (deductible tagging + export)
 - [ ] **TAX-01**: User can tag a transaction as tax-relevant (with an optional deduction category).
-- [ ] **TAX-02**: User can view all tax-tagged transactions for a chosen year.
+- [x] **TAX-02**: User can view all tax-tagged transactions for a chosen year.
 - [x] **TAX-03**: User can export a year's tax-tagged set (CSV/PDF) for their records.
 
 #### SRCH (full-text search over history)
@@ -136,7 +136,7 @@ Each v1.3 requirement maps to exactly one phase. See `.planning/ROADMAP.md`.
 | CAL-02 | Phase 6 | Pending |
 | CAL-03 | Phase 6 | Pending |
 | TAX-01 | Phase 7 | Pending |
-| TAX-02 | Phase 7 | Pending |
+| TAX-02 | Phase 7 | Complete |
 | TAX-03 | Phase 7 | Complete |
 | SRCH-01 | Phase 8 | Pending |
 | SRCH-02 | Phase 8 | Pending |
