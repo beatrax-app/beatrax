@@ -7,6 +7,18 @@ namespace Modules\Search\Providers;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Import\Public\Events\TransactionImported;
+use Modules\Search\Internal\Http\Livewire\PaletteSearchEndpoint;
+use Modules\Search\Internal\Listeners\IndexTransactionOnImport;
+use Modules\Search\Internal\Services\DidYouMeanSuggester;
+use Modules\Search\Internal\Services\EntityNameSearch;
+use Modules\Search\Internal\Services\QueryParser;
+use Modules\Search\Internal\Services\SearchIndexWriter;
+use Modules\Search\Internal\Services\SearchResultsProviderImpl;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Search\Public\Contracts\SearchResultsProvider;
+use Modules\Search\Public\Services\FtsHealthCheck;
+use Modules\Search\Public\Services\SearchQuery;
 
 /**
  * Single owner of all Search module bindings and registrations.
@@ -29,42 +41,42 @@ final class SearchServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Plan 02: index writer + listener
-        if (class_exists(\Modules\Search\Internal\Services\SearchIndexWriter::class)) {
+        if (class_exists(SearchIndexWriter::class)) {
             $this->app->singleton(
-                \Modules\Search\Public\Contracts\SearchIndexWriterContract::class,
-                \Modules\Search\Internal\Services\SearchIndexWriter::class,
+                SearchIndexWriterContract::class,
+                SearchIndexWriter::class,
             );
         }
 
         // Plan 02: FTS health-check service (Public)
-        if (class_exists(\Modules\Search\Public\Services\FtsHealthCheck::class)) {
-            $this->app->singleton(\Modules\Search\Public\Services\FtsHealthCheck::class);
+        if (class_exists(FtsHealthCheck::class)) {
+            $this->app->singleton(FtsHealthCheck::class);
         }
 
         // Plan 03: SearchResultsProvider implementation (Internal)
-        if (class_exists(\Modules\Search\Internal\Services\SearchResultsProviderImpl::class)) {
+        if (class_exists(SearchResultsProviderImpl::class)) {
             $this->app->singleton(
-                \Modules\Search\Public\Contracts\SearchResultsProvider::class,
-                \Modules\Search\Internal\Services\SearchResultsProviderImpl::class,
+                SearchResultsProvider::class,
+                SearchResultsProviderImpl::class,
             );
         }
 
         // Plan 03: Public SearchQuery service
-        if (class_exists(\Modules\Search\Public\Services\SearchQuery::class)) {
-            $this->app->singleton(\Modules\Search\Public\Services\SearchQuery::class);
+        if (class_exists(SearchQuery::class)) {
+            $this->app->singleton(SearchQuery::class);
         }
 
         // Plan 03: Internal query-pipeline services
-        if (class_exists(\Modules\Search\Internal\Services\QueryParser::class)) {
-            $this->app->singleton(\Modules\Search\Internal\Services\QueryParser::class);
+        if (class_exists(QueryParser::class)) {
+            $this->app->singleton(QueryParser::class);
         }
 
-        if (class_exists(\Modules\Search\Internal\Services\EntityNameSearch::class)) {
-            $this->app->singleton(\Modules\Search\Internal\Services\EntityNameSearch::class);
+        if (class_exists(EntityNameSearch::class)) {
+            $this->app->singleton(EntityNameSearch::class);
         }
 
-        if (class_exists(\Modules\Search\Internal\Services\DidYouMeanSuggester::class)) {
-            $this->app->singleton(\Modules\Search\Internal\Services\DidYouMeanSuggester::class);
+        if (class_exists(DidYouMeanSuggester::class)) {
+            $this->app->singleton(DidYouMeanSuggester::class);
         }
     }
 
@@ -81,18 +93,18 @@ final class SearchServiceProvider extends ServiceProvider
         }
 
         // Plan 02: index the transaction on import (synchronous, D-23)
-        if (class_exists(\Modules\Search\Internal\Listeners\IndexTransactionOnImport::class)) {
+        if (class_exists(IndexTransactionOnImport::class)) {
             $events->listen(
-                \Modules\Import\Public\Events\TransactionImported::class,
-                [\Modules\Search\Internal\Listeners\IndexTransactionOnImport::class, 'handle'],
+                TransactionImported::class,
+                [IndexTransactionOnImport::class, 'handle'],
             );
         }
 
         // Plan 05: palette search endpoint Livewire component
-        if (class_exists(\Modules\Search\Internal\Http\Livewire\PaletteSearchEndpoint::class)) {
+        if (class_exists(PaletteSearchEndpoint::class)) {
             $livewire->component(
                 'search.palette-search-endpoint',
-                \Modules\Search\Internal\Http\Livewire\PaletteSearchEndpoint::class,
+                PaletteSearchEndpoint::class,
             );
         }
     }
