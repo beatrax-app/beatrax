@@ -3276,7 +3276,9 @@ td.date,
 
     .triage-row:hover .tax-badge--untagged,
     .triage-row:focus-within .tax-badge--untagged,
-    .always-show-touch .tax-badge--untagged,
+    .group:hover .tax-badge--untagged,
+    .group:focus-within .tax-badge--untagged,
+    .tax-badge--untagged.always-show-touch,
     .tax-badge--untagged:focus-visible {
         opacity: 1;
     }
