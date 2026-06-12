@@ -37,6 +37,9 @@ final class TaxSettingsSection extends Component
     /** Inline error message for the add form. */
     public string $addError = '';
 
+    /** Inline error message for the rename affordance (WR-11). */
+    public string $renameError = '';
+
     /** Success flash. */
     public bool $addSuccess = false;
 
@@ -109,7 +112,8 @@ final class TaxSettingsSection extends Component
     }
 
     /**
-     * Rename a category inline.
+     * Rename a category inline (WR-11: guards against empty and duplicate
+     * names with a friendly inline error instead of an uncaught exception).
      */
     public function renameCategory(
         int $categoryId,
@@ -117,10 +121,14 @@ final class TaxSettingsSection extends Component
         CurrentUser $currentUser,
         TaxCategoryWriter $writer,
     ): void {
+        $this->renameError = '';
+
         try {
             $writer->rename($currentUser->user()->id, $categoryId, $name);
         } catch (NotFoundHttpException) {
             // Cross-user attempt — silently ignore in the UI layer.
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            $this->renameError = $e->getMessage();
         }
     }
 
@@ -134,6 +142,22 @@ final class TaxSettingsSection extends Component
     ): void {
         try {
             $writer->archive($currentUser->user()->id, $categoryId);
+        } catch (NotFoundHttpException) {
+            // Cross-user attempt — silently ignore in the UI layer.
+        }
+    }
+
+    /**
+     * Restore an archived category to active (WR-11 — archiving is
+     * reversible from the Archived disclosure).
+     */
+    public function unarchiveCategory(
+        int $categoryId,
+        CurrentUser $currentUser,
+        TaxCategoryWriter $writer,
+    ): void {
+        try {
+            $writer->unarchive($currentUser->user()->id, $categoryId);
         } catch (NotFoundHttpException) {
             // Cross-user attempt — silently ignore in the UI layer.
         }
