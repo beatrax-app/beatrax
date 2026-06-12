@@ -3116,10 +3116,9 @@ td.date,
         color: var(--color-text-faint);
     }
 
-    /* Paid (past day) */
-    .cal-entry--paid .cal-day-num {
-        color: var(--color-emerald);
-    }
+    /* Paid (past day): the affordance is the inline ✓ span rendered by the
+       blade template — no descendant rule needed here (.cal-day-num is a
+       sibling of the entry rows, never a descendant of .cal-entry--paid). */
 
     /* Overflow badge */
     .cal-overflow {
