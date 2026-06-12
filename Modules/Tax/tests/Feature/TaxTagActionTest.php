@@ -274,6 +274,35 @@ it('accepts a tax_year_override within now±10 years', function (): void {
     expect($tag->tax_year_override)->toBe($validYear);
 });
 
+it('the ±10-year override window follows the injected Clock, not the wall clock (IN-06)', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $userId = taxTestUser($db, 'year-clock-fake');
+    $txId = taxTestTransaction($db, $userId);
+
+    // Freeze the Clock at 2030 — valid window becomes 2020..2040.
+    $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+    $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2030, 6, 15));
+    app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+
+    /** @var TagTransaction $action */
+    $action = app(TagTransaction::class);
+
+    // 2039 would be invalid against the real 2026 wall clock but is valid at 2030.
+    $action->execute($userId, $txId, null, null, 2039);
+
+    $stored = $db->connection()->table('tax_transaction_tags')
+        ->where('user_id', $userId)
+        ->where('transaction_id', $txId)
+        ->value('tax_year_override');
+    expect((int) $stored)->toBe(2039);
+
+    // 2019 is outside 2030−10.
+    expect(fn () => $action->execute($userId, $txId, null, null, 2019))
+        ->toThrow(InvalidArgumentException::class);
+});
+
 it('accepts null for tax_year_override', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
