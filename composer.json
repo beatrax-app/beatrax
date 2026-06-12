@@ -106,7 +106,8 @@
             "Modules\\FX\\Tests\\": "Modules/FX/tests/",
             "Modules\\Recurring\\Tests\\": "Modules/Recurring/tests/",
             "Modules\\Transfers\\Tests\\": "Modules/Transfers/tests/",
-            "Modules\\Tax\\Tests\\": "Modules/Tax/tests/"
+            "Modules\\Tax\\Tests\\": "Modules/Tax/tests/",
+            "Modules\\Search\\Tests\\": "Modules/Search/tests/"
         }
     },
     "scripts": {
