@@ -278,3 +278,26 @@ it('a transaction with tax_year_override appears in the override year, not the b
     $lines2026 = array_values(array_filter(explode("\n", trim($csv2026))));
     expect(count($lines2026))->toBe(1); // header only
 });
+
+it('escapes formula-leading cells so the CSV is safe to open in Excel (WR-08)', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = tceUser($db, 'tce-formula-user');
+    $catId = tceCategory($db, $user->id, 'Formula Cat');
+
+    $txId = tceTransaction($db, $user->id, [
+        'booked_at' => '2025-04-01 00:00:00',
+        'description' => '=HYPERLINK("http://evil.example","click")',
+        'counterparty_name' => '@payload',
+    ]);
+    tceTag($db, $user->id, $txId, $catId, ['note' => '=2+5+cmd|/c calc']);
+
+    /** @var TaxCsvExporter $exporter */
+    $exporter = app(TaxCsvExporter::class);
+    $csv = $exporter->export($user, 2025);
+
+    // league/csv EscapeFormula prefixes risky cells with a single quote.
+    expect($csv)->toContain("'=HYPERLINK")
+        ->and($csv)->toContain("'=2+5+cmd")
+        ->and($csv)->not->toContain(',"=HYPERLINK');
+});
