@@ -183,6 +183,11 @@
                 see the labels.
             --}}
             @livewire('dev.command-palette-modal')
+            {{-- Search palette endpoint — provides server-backed transaction + entity
+                 hits to the ⌘K palette via $wire.search(q) from palette.js.
+                 Mounted alongside the palette modal so the JS can reach $wire on
+                 every authenticated page (Plan 08-05, SRCH-02). --}}
+            @livewire('search.palette-search-endpoint')
             {{-- Arg-prompt modal for SAFE-tier commands with args
                  (config:show, beatrax:reset-password, etc.). The
                  palette dispatches `command-args:prompt` when the
