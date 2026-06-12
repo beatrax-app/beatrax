@@ -67,9 +67,16 @@ trait HandlesTaxTagging
      * Batch-tag suggestion data. null = no pending suggestion.
      * Stored as a plain string-keyed array so Livewire can dehydrate it.
      *
-     * Keys: 'counterpartyId' (int), 'counterpartyName' (string), 'untaggedCount' (int).
+     * 'categoryId' and 'note' are snapshotted from the picker when the
+     * trigger tag is saved — saveTaxCategory() resets the picker state via
+     * closePicker(), so applyBatchTag() can no longer read the live picker
+     * properties by the time the banner is clicked (D-03: one confirmation
+     * applies the SAME category as the trigger tag).
      *
-     * @var array{counterpartyId: int, counterpartyName: string, untaggedCount: int}|null
+     * Keys: 'counterpartyId' (int), 'counterpartyName' (string), 'untaggedCount' (int),
+     * 'categoryId' (int|null, optional), 'note' (string|null, optional).
+     *
+     * @var array{counterpartyId: int, counterpartyName: string, untaggedCount: int, categoryId?: int|null, note?: string|null}|null
      */
     public ?array $batchSuggestion = null;
 
@@ -172,6 +179,14 @@ trait HandlesTaxTagging
             $this->pickerYearOverride,
         );
 
+        // Snapshot the saved category/note onto the pending batch suggestion:
+        // closePicker() wipes the picker state, but a later applyBatchTag()
+        // must apply the SAME category + note as this trigger tag (D-03).
+        if ($this->batchSuggestion !== null) {
+            $this->batchSuggestion['categoryId'] = $this->pickerCategoryId;
+            $this->batchSuggestion['note'] = $this->pickerNote !== '' ? $this->pickerNote : null;
+        }
+
         $this->closePicker();
         $this->dispatch('toast', message: 'Tagged as tax-deductible.');
     }
@@ -239,12 +254,17 @@ trait HandlesTaxTagging
         // Fetch the untagged transaction ids for this counterparty/year.
         $ids = $q->untaggedIdsForCounterparty($user->id, $cpId, $taxYear);
 
+        // Prefer the snapshot taken at trigger-tag save time; fall back to the
+        // live picker state for the picker-still-open case (D-03 same category).
+        $categoryId = $this->batchSuggestion['categoryId'] ?? $this->pickerCategoryId;
+        $note = $this->batchSuggestion['note'] ?? ($this->pickerNote !== '' ? $this->pickerNote : null);
+
         foreach ($ids as $txId) {
             $tag->execute(
                 $user->id,
                 $txId,
-                $this->pickerCategoryId,
-                $this->pickerNote !== '' ? $this->pickerNote : null,
+                $categoryId,
+                $note,
                 null,
             );
         }

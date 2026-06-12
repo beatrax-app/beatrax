@@ -287,6 +287,51 @@ describe('TransactionsList tax badge', function (): void {
         expect($component->get('batchSuggestionDismissed'))->toBeTrue();
     });
 
+    it('applyBatchTag applies the SAME category and note as the saved trigger tag (D-03)', function (): void {
+        $user = badgeUser('tx-list-batch-cat-user');
+        $db = app(DatabaseManager::class);
+        $cpId = badgeCp($db, $user->id, 'Batch Insurer');
+        $tx1 = badgeTx($db, $user->id, $cpId, '2026-06-01 00:00:00');
+        $tx2 = badgeTx($db, $user->id, $cpId, '2026-06-02 00:00:00');
+        $tx3 = badgeTx($db, $user->id, $cpId, '2026-06-03 00:00:00');
+
+        $catId = (int) $db->connection()->table('tax_deduction_categories')->insertGetId([
+            'user_id' => $user->id,
+            'name' => 'Zorgkosten',
+            'short_name' => 'Zorg',
+            'country_code' => 'nl',
+            'corpus_key' => 'nl.zorgkosten',
+            'status' => 'active',
+            'sort_order' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // One-tap tag tx1, then pick a category + note and save — this is the
+        // flow that resets the picker state via closePicker() before the
+        // banner is clicked.
+        $component = Livewire::actingAs($user)->test(TransactionsList::class);
+        $component->dispatch('tax-tag', id: $tx1);
+        $component->set('pickerCategoryId', $catId);
+        $component->set('pickerNote', 'trigger note');
+        $component->call('saveTaxCategory');
+
+        // Apply the batch from the banner — siblings must inherit the SAME
+        // category + note as the trigger tag, not null (D-03 regression).
+        $component->call('applyBatchTag');
+
+        foreach ([$tx2, $tx3] as $sibling) {
+            $row = $db->connection()->table('tax_transaction_tags')
+                ->where('user_id', $user->id)
+                ->where('transaction_id', $sibling)
+                ->first(['deduction_category_id', 'note']);
+
+            expect($row)->not->toBeNull();
+            expect((int) $row->deduction_category_id)->toBe($catId);
+            expect($row->note)->toBe('trigger note');
+        }
+    });
+
     it('does not show another user\'s badge state (cross-user isolation)', function (): void {
         $owner = badgeUser('tx-list-owner');
         $partner = badgeUser('tx-list-partner');
