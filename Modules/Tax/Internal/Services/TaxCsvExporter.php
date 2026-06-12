@@ -41,7 +41,7 @@ final class TaxCsvExporter
         // counterparties, and user-typed notes are free text and this CSV is
         // explicitly meant to be opened in Excel by an accountant. Cells
         // starting with = + - @ (or tab/CR) are prefixed with a single quote.
-        $writer->addFormatter(new EscapeFormula());
+        $writer->addFormatter(new EscapeFormula);
 
         // D-15 column order — exact, tested.
         $writer->insertOne([
