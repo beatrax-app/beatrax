@@ -6,6 +6,7 @@ namespace Modules\Calendar\Internal\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\JoinClause;
 use Modules\Calendar\Public\Dto\CalendarDayDto;
 use Modules\Calendar\Public\Dto\CalendarEntryDto;
 use Modules\Core\Models\User;
@@ -263,10 +264,9 @@ final readonly class CalendarQuery
         CarbonImmutable $monthEnd,
         User $user,
     ): array {
-        // First pass: gate + filter + placement (cheap, zero queries). Series
-        // that place no dates in the display month cost nothing further.
-        /** @var list<array{series: RecurringSeriesDto, accountId: int|null, dates: list<CarbonImmutable>}> $placed */
-        $placed = [];
+        // First pass: gate + filter the candidate series (in memory).
+        /** @var list<array{series: RecurringSeriesDto, accountId: int|null}> $candidates */
+        $candidates = [];
         foreach ($allSeries as $series) {
             // Irregular gate (Pitfall 4): exclude irregular with null nextExpectedAt
             if ($series->cadence === 'irregular' && $series->nextExpectedAt === null) {
@@ -288,13 +288,35 @@ final readonly class CalendarQuery
             }
             // effectiveVisible === null → all accounts on; include even unlinked series
 
-            // Find occurrence dates in the display month
-            $occurrenceDates = $this->placeSeriesInMonth($series, $monthStart, $monthEnd);
+            $candidates[] = ['series' => $series, 'accountId' => $accountId];
+        }
+
+        if ($candidates === []) {
+            return [];
+        }
+
+        // Series-inception floors (WR-03): the backward projection must not
+        // fabricate expected occurrences from before the series existed.
+        $candidateIds = array_map(static fn (array $c): int => $c['series']->seriesId, $candidates);
+        $startFloors = $this->seriesStartFloors($candidateIds, $user);
+
+        // Placement (zero further queries). Series that place no dates in the
+        // display month cost nothing further (WR-01).
+        /** @var list<array{series: RecurringSeriesDto, accountId: int|null, dates: list<CarbonImmutable>}> $placed */
+        $placed = [];
+        foreach ($candidates as $candidate) {
+            $series = $candidate['series'];
+            $occurrenceDates = $this->placeSeriesInMonth(
+                $series,
+                $monthStart,
+                $monthEnd,
+                $startFloors[$series->seriesId] ?? null,
+            );
             if ($occurrenceDates === []) {
                 continue;
             }
 
-            $placed[] = ['series' => $series, 'accountId' => $accountId, 'dates' => $occurrenceDates];
+            $placed[] = ['series' => $series, 'accountId' => $candidate['accountId'], 'dates' => $occurrenceDates];
         }
 
         if ($placed === []) {
@@ -383,16 +405,28 @@ final readonly class CalendarQuery
      * placement only. Start from nextExpectedAt and step forward/backward so that
      * occurrences falling in the display month are collected.
      *
+     * Inception bound (WR-03): no expected occurrence is placed before
+     * $seriesStart (the series' first observed occurrence, or created_at as
+     * a fallback, minus a small slack — see seriesStartFloors()). Without
+     * this floor every history month before the series existed rendered a
+     * phantom "Expected — not found" entry.
+     *
      * @return list<CarbonImmutable>
      */
     private function placeSeriesInMonth(
         RecurringSeriesDto $series,
         CarbonImmutable $monthStart,
         CarbonImmutable $monthEnd,
+        ?CarbonImmutable $seriesStart = null,
     ): array {
         $next = $series->nextExpectedAt;
         if ($next === null) {
             // Already gated before calling this method, but guard defensively.
+            return [];
+        }
+
+        // Inception bound (WR-03): the whole display month predates the series.
+        if ($seriesStart !== null && $monthEnd->lt($seriesStart)) {
             return [];
         }
 
@@ -427,6 +461,7 @@ final readonly class CalendarQuery
         }
 
         // cursor is now <= monthEnd; walk back further until before monthStart
+        // (never below the inception floor — WR-03)
         while ($cursor->gt($monthStart)) {
             $prev = $this->retreat($cursor, $cadence);
             if ($prev === null) {
@@ -435,10 +470,14 @@ final readonly class CalendarQuery
             if ($prev->lt($monthStart)) {
                 break;
             }
+            if ($seriesStart !== null && $prev->lt($seriesStart)) {
+                break;
+            }
             $cursor = $prev;
         }
 
         // Now walk forward, collecting all dates in [monthStart, monthEnd]
+        // that don't predate the series' inception (WR-03)
         $results = [];
         $seen = [];
         $iterations = 0;
@@ -446,7 +485,7 @@ final readonly class CalendarQuery
 
         while ($cursor->lte($monthEnd) && $iterations < $maxIterations) {
             $iterations++;
-            if ($cursor->gte($monthStart)) {
+            if ($cursor->gte($monthStart) && ($seriesStart === null || $cursor->gte($seriesStart))) {
                 $dateStr = $cursor->toDateString();
                 if (! isset($seen[$dateStr])) {
                     $results[] = $cursor;
@@ -461,6 +500,52 @@ final readonly class CalendarQuery
         }
 
         return $results;
+    }
+
+    /**
+     * Batched inception floor per series (WR-03): the earliest observed
+     * occurrence date, falling back to the series row's created_at when no
+     * occurrences exist yet. A slack of MATCH_WINDOW_DAYS is subtracted so
+     * an entry expected slightly BEFORE its first observed payment (e.g.
+     * expected June 1, first paid June 3) is not dropped along with the
+     * genuine pre-inception phantoms.
+     *
+     * @param  list<int>  $seriesIds
+     * @return array<int, CarbonImmutable>
+     */
+    private function seriesStartFloors(array $seriesIds, User $user): array
+    {
+        $rows = $this->db->connection()->table('recurring_series as s')
+            ->leftJoin('recurring_series_occurrences as o', function (JoinClause $join) use ($user): void {
+                $join->on('o.recurring_series_id', '=', 's.id')
+                    ->where('o.user_id', '=', $user->id);
+            })
+            ->whereIn('s.id', $seriesIds)
+            ->where('s.user_id', $user->id)  // T-06-02: user-scoped
+            ->groupBy('s.id', 's.created_at')
+            ->selectRaw('s.id as id, s.created_at as created_at, MIN(o.observed_at) as first_observed')
+            ->get();
+
+        $map = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $seriesId = self::toInt($row->id);
+            if ($seriesId === 0) {
+                continue;
+            }
+            $raw = self::toString($row->first_observed ?? null);
+            if ($raw === '') {
+                $raw = self::toString($row->created_at ?? null);
+            }
+            if ($raw === '') {
+                continue; // no floor derivable — leave the series unbounded
+            }
+            $map[$seriesId] = CarbonImmutable::parse($raw)
+                ->startOfDay()
+                ->subDays(self::MATCH_WINDOW_DAYS);
+        }
+
+        return $map;
     }
 
     /**
