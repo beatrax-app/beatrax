@@ -36,7 +36,7 @@
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Forecast</h1>
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
-                Where your balance is heading — over the next 30, 60, or 90 days.
+                Where your balance is heading — over the next 30 to 365 days.
             </p>
         </div>
         <a
@@ -90,7 +90,7 @@
 
         <div class="mb-4 flex flex-wrap items-center gap-3">
             <div class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white p-1 dark:bg-slate-950 dark:border-slate-700" role="radiogroup" aria-label="Forecast horizon">
-                @foreach ([30, 60, 90] as $option)
+                @foreach (\Modules\Forecasting\Internal\Jobs\ProjectForecastJob::HORIZON_DAYS as $option)
                     <button
                         type="button"
                         role="radio"

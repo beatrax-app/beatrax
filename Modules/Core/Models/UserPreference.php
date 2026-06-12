@@ -35,11 +35,20 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  *     the user dismissed via the auto-update banner's "Skip this
  *     version" action. JSON-cast to `array` so SystemAlertsBanner
  *     can apply the suppression filter without per-row decoding.
+ *   - `calendar_entries_accounts` — JSON array of account IDs whose
+ *     recurring entries appear on the /calendar grid. Null = all accounts
+ *     (entries all ON per D-03). Resolved at CalendarQuery read time.
+ *   - `calendar_balance_accounts` — JSON array of account IDs whose
+ *     forecast balances are summed for the calendar balance line. Null =
+ *     spendable default (checking + PayPal ON; savings + ICS OFF per D-03).
+ *     Resolved at CalendarQuery read time.
  *
  * @property int $id
  * @property int|null $user_id
  * @property string $counterparty_index_view
  * @property array<array-key, mixed>|null $skipped_update_versions
+ * @property array<array-key, mixed>|null $calendar_entries_accounts
+ * @property array<array-key, mixed>|null $calendar_balance_accounts
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -55,6 +64,8 @@ final class UserPreference extends Model
         'user_id',
         'counterparty_index_view',
         'skipped_update_versions',
+        'calendar_entries_accounts',
+        'calendar_balance_accounts',
     ];
 
     /** @return array<string, string> */
@@ -62,6 +73,8 @@ final class UserPreference extends Model
     {
         return [
             'skipped_update_versions' => 'array',
+            'calendar_entries_accounts' => 'array',
+            'calendar_balance_accounts' => 'array',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
