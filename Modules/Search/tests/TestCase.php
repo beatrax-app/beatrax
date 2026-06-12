@@ -47,7 +47,7 @@ abstract class TestCase extends RootTestCase
      *
      * @param  array<string, mixed>  $overrides
      */
-    protected function searchTestTransaction(int $userId, array $overrides = []): int
+    protected function searchTestTransaction(int $userId, array $overrides = [], bool $seedFts = true): int
     {
         $db = $this->app->make(DatabaseManager::class)->connection();
         $suffix = bin2hex(random_bytes(4));
@@ -106,7 +106,11 @@ abstract class TestCase extends RootTestCase
 
         // Directly populate FTS index (Plan 03 worktree is parallel to Plan 02 which builds
         // SearchIndexWriter — seed FTS directly so tests do not depend on the writer).
-        $this->seedFtsIndex($txId, $userId);
+        // Tests that exercise the rebuild path (search:reindex) need a populated
+        // transactions table with an EMPTY index — they pass $seedFts = false.
+        if ($seedFts) {
+            $this->seedFtsIndex($txId, $userId);
+        }
 
         return $txId;
     }
