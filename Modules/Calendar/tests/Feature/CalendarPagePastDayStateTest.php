@@ -142,6 +142,21 @@ it('marks a past-day entry as paid when a matching occurrence exists within the 
         ->assertSee('paid', false);
 });
 
+it('renders past-day balance cells from actual transactions, not the computing em-dash (WR-09, D-07)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cppdsUser('cppds-actuals');
+    $series = cppdsSeries($user, 'Actuals Series', CarbonImmutable::parse('2026-06-05'));
+
+    // The occurrence fixture writes a real −€15,00 transaction on June 5;
+    // no forecast_run exists, so future days stay "—" while past days must
+    // show the real cumulative balance (−€15 from June 5 onward).
+    cppdsOccurrence($db, $user->id, $series->id, '2026-06-05');
+
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
+        ->assertSee('−€15');
+});
+
 it('marks a past-day entry as missed when no occurrence exists for an expected date that has passed', function (): void {
     $user = cppdsUser('cppds-missed');
     // Expected June 8, now it is June 12 — the entry should be flagged as missed
