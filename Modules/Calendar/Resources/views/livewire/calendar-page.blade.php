@@ -204,7 +204,8 @@
 
                             $ariaLabel = $day->date->format('F j, Y') . ': ' . $entryCount . ' ' . ($entryCount === 1 ? 'entry' : 'entries');
                             if (!$day->isComputing) {
-                                $ariaLabel .= ', projected balance €' . number_format(abs($day->eodBalanceMinor / 100), 0, ',', '.');
+                                // WR-10: announce the sign — a screen reader on a −€450 risk day must not hear "€450"
+                                $ariaLabel .= ', projected balance ' . ($day->eodBalanceMinor < 0 ? 'minus ' : '') . '€' . number_format(abs($day->eodBalanceMinor / 100), 0, ',', '.');
                             }
                         @endphp
                         <div
