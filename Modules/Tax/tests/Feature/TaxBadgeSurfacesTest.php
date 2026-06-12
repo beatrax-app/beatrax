@@ -332,6 +332,55 @@ describe('TransactionsList tax badge', function (): void {
         }
     });
 
+    it('renders the year-override row when the booked year differs from the tax year, and persists the override (CR-02 / D-10)', function (): void {
+        $user = badgeUser('tx-list-year-override-user');
+        $db = app(DatabaseManager::class);
+
+        // Freeze the clock: June 2026 → current tax year = 2026.
+        $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+        $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2026, 6, 15));
+        app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+
+        // Row booked in a DIFFERENT year (2024) than the current tax year (2026).
+        $txId = badgeTx($db, $user->id, null, '2024-03-10 00:00:00');
+
+        $component = Livewire::actingAs($user)->test(TransactionsList::class);
+        $component->dispatch('tax-tag', id: $txId);
+
+        // The picker now knows the booked year, so the D-10 row renders.
+        expect($component->get('pickerBookedYear'))->toBe(2024);
+        expect($component->get('pickerTaxYear'))->toBe(2026);
+        $component->assertSee('Assign to tax year');
+
+        // Choosing the current tax year persists tax_year_override on save.
+        $component->set('pickerYearOverride', 2026);
+        $component->call('saveTaxCategory');
+
+        $override = $db->connection()->table('tax_transaction_tags')
+            ->where('user_id', $user->id)
+            ->where('transaction_id', $txId)
+            ->value('tax_year_override');
+
+        expect((int) $override)->toBe(2026);
+    });
+
+    it('does not render the year-override row when booked year equals the tax year', function (): void {
+        $user = badgeUser('tx-list-same-year-user');
+        $db = app(DatabaseManager::class);
+
+        $clock = Mockery::mock(\Modules\Core\Public\Contracts\Clock::class);
+        $clock->allows('now')->andReturn(\Carbon\CarbonImmutable::create(2026, 6, 15));
+        app()->instance(\Modules\Core\Public\Contracts\Clock::class, $clock);
+
+        $txId = badgeTx($db, $user->id, null, '2026-06-01 00:00:00');
+
+        $component = Livewire::actingAs($user)->test(TransactionsList::class);
+        $component->dispatch('tax-tag', id: $txId);
+
+        expect($component->get('pickerBookedYear'))->toBe(2026);
+        $component->assertDontSee('Assign to tax year');
+    });
+
     it('does not show another user\'s badge state (cross-user isolation)', function (): void {
         $owner = badgeUser('tx-list-owner');
         $partner = badgeUser('tx-list-partner');

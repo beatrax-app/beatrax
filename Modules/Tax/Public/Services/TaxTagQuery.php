@@ -71,6 +71,30 @@ final class TaxTagQuery
     }
 
     /**
+     * Booked (calendar) year of a transaction, or null when the transaction
+     * does not exist or belongs to another user.
+     *
+     * Used by the tag picker to decide whether to render the D-10
+     * year-assignment row (booked year ≠ current tax year).
+     */
+    public function bookedYearFor(int $userId, int $transactionId): ?int
+    {
+        $bookedAt = $this->db->connection()
+            ->table('transactions')
+            ->where('id', $transactionId)
+            ->where('user_id', $userId)
+            ->value('booked_at');
+
+        if (! is_string($bookedAt) || strlen($bookedAt) < 4) {
+            return null;
+        }
+
+        $year = (int) substr($bookedAt, 0, 4);
+
+        return $year > 0 ? $year : null;
+    }
+
+    /**
      * Compact year summary (count + total) for the sidebar / dashboard.
      *
      * Uses COALESCE to respect tax_year_override for each tagged row.
