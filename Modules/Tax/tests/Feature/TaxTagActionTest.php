@@ -156,6 +156,35 @@ it('idempotently re-tags without duplicating the row', function (): void {
         ->and($tag->note)->toBe('Updated note');
 });
 
+it('re-tagging never rewrites created_at — the "first tagged" audit signal survives edits (WR-02)', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $userId = taxTestUser($db, 'tag-created-at');
+    $txId = taxTestTransaction($db, $userId);
+    $catId = taxTestCategory($db, $userId, 'Audit Cat');
+
+    app(TagTransaction::class)->execute($userId, $txId, $catId, 'first', null);
+
+    // Backdate created_at so any rewrite is detectable.
+    $original = now()->subDays(30)->toDateTimeString();
+    $db->connection()->table('tax_transaction_tags')
+        ->where('user_id', $userId)
+        ->where('transaction_id', $txId)
+        ->update(['created_at' => $original]);
+
+    // Edit the tag (picker save path).
+    app(TagTransaction::class)->execute($userId, $txId, $catId, 'edited', null);
+
+    $tag = $db->connection()->table('tax_transaction_tags')
+        ->where('user_id', $userId)
+        ->where('transaction_id', $txId)
+        ->first(['created_at', 'note']);
+
+    expect($tag->created_at)->toBe($original)
+        ->and($tag->note)->toBe('edited');
+});
+
 it('a bare re-tag (all-null payload) preserves the existing category, note, and year override (CR-03)', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
