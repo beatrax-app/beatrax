@@ -12,6 +12,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
+use Modules\Tax\Public\Services\TaxTagQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -38,6 +40,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class CounterpartyProfile extends Component
 {
+    use HandlesTaxTagging;
+
     public string $slug = '';
 
     public string $tab = 'overview';
@@ -73,6 +77,7 @@ final class CounterpartyProfile extends Component
         ViewFactory $views,
         SupportResourceProvider $supportResources,
         RecurringSeriesQuery $recurring,
+        TaxTagQuery $taxTagQuery,
     ): View {
         $user = $currentUser->user();
         $profile = $query->bySlug($user, $this->slug);
@@ -106,17 +111,23 @@ final class CounterpartyProfile extends Component
             ? $recurring->approvedSeriesForCounterparty($profile->id, $user)
             : [];
 
+        // Batch-load tax state for recent-activity rows (Pitfall 1).
+        $recentActivity = $query->recentActivity($cpModel, 10);
+        $recentIds = array_map(static fn (object $row): int => is_numeric($row->id) ? (int) $row->id : 0, $recentActivity->all());
+        $taxState = $this->taxTagStateFor($recentIds, $taxTagQuery, $currentUser);
+
         return $views->make('counterparties::livewire.counterparty-profile', [
             'profile' => $profile,
             'partial' => $partial,
             'supportResource' => $supportResource,
             'recurringSeries' => $recurringSeries,
-            'recentActivity' => $query->recentActivity($cpModel, 10),
+            'recentActivity' => $recentActivity,
             'categoryBreakdown' => $query->categoryBreakdown($cpModel),
             'fundingChain' => $query->fundingChainSummary($cpModel),
             'taxYears' => $query->taxYearBreakdown($cpModel),
             'activeTab' => $this->tab,
             'ibanRevealed' => $this->ibanRevealed,
+            'taxState' => $taxState,
         ]);
     }
 }
