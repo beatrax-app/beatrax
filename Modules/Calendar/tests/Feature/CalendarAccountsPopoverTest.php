@@ -12,12 +12,16 @@ use Modules\Core\Models\User;
  * CalendarPage — Accounts popover: two independent controls + persistence (D-02, D-03).
  *
  * Contract:
+ *   - mount() materializes the defaults into EXPLICIT account-id lists
+ *     (CR-01): entries = all owned accounts ON, balance = spendable set —
+ *     so the checkboxes render checked in the default state and the first
+ *     toggle does what the user intends.
  *   - Toggling "Count in balance" (toggleBalanceAccount) removes/adds the account
  *     from balanceAccountIds without touching visibleAccountIds.
  *   - Toggling "Show entries" (toggleEntriesAccount) removes/adds the account
  *     from visibleAccountIds without touching balanceAccountIds.
  *   - persistAccountPrefs() saves both arrays to user_preferences so a reload
- *     reflects the saved choice.
+ *     reflects the saved choice — including the explicit "everything off" [].
  *   - A foreign account ID is silently ignored by both toggle actions.
  */
 
@@ -55,6 +59,57 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     CarbonImmutable::setTestNow(null);
+});
+
+it('materializes defaults on first load: entries all ON, balance = spendable set (CR-01)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = capUser('cap-defaults');
+    $asnId = capAccount($db, $user->id, 'ASN Checking', 'asn');
+    $icsId = capAccount($db, $user->id, 'ICS Card', 'ics_card');
+
+    // Fresh user, no persisted prefs: the component state must hold EXPLICIT
+    // ids so the popover checkboxes render checked for the effective accounts.
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
+        ->assertSet('visibleAccountIds', fn (array $ids): bool => count($ids) === 2 && in_array($asnId, $ids, true) && in_array($icsId, $ids, true))
+        ->assertSet('balanceAccountIds', [$asnId]);
+});
+
+it('unchecking one account from the default all-on state hides only that account (CR-01 inversion regression)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = capUser('cap-uncheck-one');
+    $asnId = capAccount($db, $user->id, 'ASN Checking', 'asn');
+    $paypalId = capAccount($db, $user->id, 'PayPal', 'paypal');
+
+    // From the materialized default (both ON), unchecking ASN must leave
+    // PayPal visible — NOT flip to "only ASN visible" as the inverted
+    // pre-fix behavior did.
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
+        ->call('toggleEntriesAccount', $asnId)
+        ->assertSet('visibleAccountIds', [$paypalId]);
+});
+
+it('persists the explicit everything-off state and a reload keeps every checkbox off (CR-01)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = capUser('cap-all-off');
+    $aid = capAccount($db, $user->id, 'ASN Checking', 'asn');
+
+    // Toggle the only account off in both sets, persist.
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
+        ->call('toggleEntriesAccount', $aid)
+        ->call('toggleBalanceAccount', $aid)
+        ->assertSet('visibleAccountIds', [])
+        ->assertSet('balanceAccountIds', [])
+        ->call('persistAccountPrefs');
+
+    // Reload: [] must round-trip as the explicit deselect-all — NOT
+    // re-materialize into the defaults.
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
+        ->assertSet('visibleAccountIds', [])
+        ->assertSet('balanceAccountIds', []);
 });
 
 it('toggleBalanceAccount removes an account from balanceAccountIds and does not touch visibleAccountIds', function (): void {

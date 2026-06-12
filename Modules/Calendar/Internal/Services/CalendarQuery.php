@@ -87,21 +87,26 @@ final readonly class CalendarQuery
      * that ends the week containing the last day of the month (full weeks only,
      * Mon–Sun). Each day carries its entries and balance data.
      *
-     * @param  list<int>  $visibleAccountIds  IDs of accounts whose series entries appear (empty = all)
-     * @param  list<int>  $balanceAccountIds  IDs of accounts summed for the balance line (empty = spendable default)
+     * Null-vs-array semantics (CR-01): `null` means "never configured" and
+     * resolves to the default set (all accounts visible / spendable balance
+     * set per D-02, D-03). An explicit array — including the empty array —
+     * is taken literally, so "every account deselected" is representable.
+     *
+     * @param  list<int>|null  $visibleAccountIds  IDs of accounts whose series entries appear (null = all, D-02 default)
+     * @param  list<int>|null  $balanceAccountIds  IDs of accounts summed for the balance line (null = spendable default, D-03)
      * @return list<CalendarDayDto>
      */
     public function forMonth(
         User $user,
         int $year,
         int $month,
-        array $visibleAccountIds = [],
-        array $balanceAccountIds = [],
+        ?array $visibleAccountIds = null,
+        ?array $balanceAccountIds = null,
     ): array {
         // Resolve effective account sets, intersecting against owned accounts (T-06-02).
         // $effectiveVisible === null means "all accounts visible" (no filter specified).
         // $effectiveVisible === [] means "no visible accounts" (filter specified but everything dropped).
-        $ownedIds = $this->resolveOwnedAccountIds($user);
+        $ownedIds = $this->ownedAccountIds($user);
         $effectiveVisible = $this->resolveVisibleAccountIds($visibleAccountIds, $ownedIds);
         $effectiveBalance = $this->resolveBalanceAccountIds($balanceAccountIds, $ownedIds, $user);
 
@@ -610,11 +615,13 @@ final readonly class CalendarQuery
     /**
      * Resolve all account IDs owned by the user.
      *
-     * Used to intersect caller-supplied arrays (T-06-02).
+     * Used to intersect caller-supplied arrays (T-06-02), and by
+     * CalendarPage::mount() to materialize the D-02 "entries all ON"
+     * default into an explicit account-id list (CR-01).
      *
      * @return list<int>
      */
-    private function resolveOwnedAccountIds(User $user): array
+    public function ownedAccountIds(User $user): array
     {
         $rows = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
@@ -631,22 +638,24 @@ final readonly class CalendarQuery
     /**
      * Resolve the effective set of account IDs for entry visibility.
      *
-     * Returns null when all accounts are visible (empty input = D-02 default: ALL ON).
+     * Returns null when all accounts are visible (null input = D-02 default: ALL ON).
      * Returns list<int> (possibly empty) when caller specified an explicit filter.
      * An empty return means the filter matched nothing — no entries should appear.
      *
-     * Null vs [] distinction:
-     *   - null  → "all accounts on" — include even series not linked to an account yet
-     *   - []    → "nothing passed the filter" — no entries, not even unlinked series
+     * Null vs [] distinction (CR-01):
+     *   - null  → "never configured / all accounts on" — include even series
+     *             not linked to an account yet
+     *   - []    → explicit deselect-all (or nothing passed the filter) —
+     *             no entries, not even unlinked series
      *
-     * @param  list<int>  $callerIds
+     * @param  list<int>|null  $callerIds
      * @param  list<int>  $ownedIds
      * @return list<int>|null null = all visible
      */
-    private function resolveVisibleAccountIds(array $callerIds, array $ownedIds): ?array
+    private function resolveVisibleAccountIds(?array $callerIds, array $ownedIds): ?array
     {
-        if ($callerIds === []) {
-            // Empty = all accounts ON (D-02 default) — signal "all visible" with null
+        if ($callerIds === null) {
+            // Never configured = all accounts ON (D-02 default) — signal "all visible" with null
             return null;
         }
 
@@ -657,18 +666,19 @@ final readonly class CalendarQuery
     /**
      * Resolve the effective set of account IDs for balance aggregation.
      *
-     * Empty input = spendable default (D-03): accounts with kind in SPENDABLE_KINDS.
-     * Non-empty input = intersection with owned accounts (T-06-02).
+     * Null input = spendable default (D-03): accounts with kind in SPENDABLE_KINDS.
+     * Array input — including the explicit empty array (deselect-all, CR-01) —
+     * is intersected with owned accounts (T-06-02) and taken literally.
      *
-     * @param  list<int>  $callerIds
+     * @param  list<int>|null  $callerIds
      * @param  list<int>  $ownedIds
      * @return list<int>
      */
-    private function resolveBalanceAccountIds(array $callerIds, array $ownedIds, User $user): array
+    private function resolveBalanceAccountIds(?array $callerIds, array $ownedIds, User $user): array
     {
-        if ($callerIds === []) {
-            // Empty = spendable-kind default (D-03)
-            return $this->resolveSpendableAccountIds($user);
+        if ($callerIds === null) {
+            // Never configured = spendable-kind default (D-03)
+            return $this->spendableAccountIds($user);
         }
 
         // Intersect against owned IDs (T-06-02: drop any id the user does not own)
@@ -682,9 +692,12 @@ final readonly class CalendarQuery
      * ICS credit-card family OFF (their liability shows up via the funding-chain
      * settlement leg in the ASN account).
      *
+     * Public so CalendarPage::mount() can materialize the D-03 default into
+     * an explicit account-id list for the Accounts popover (CR-01).
+     *
      * @return list<int>
      */
-    private function resolveSpendableAccountIds(User $user): array
+    public function spendableAccountIds(User $user): array
     {
         $rows = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)

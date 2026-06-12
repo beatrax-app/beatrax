@@ -12,13 +12,16 @@ use Modules\Recurring\Models\RecurringSeries;
 /*
  * CalendarQuery — account-preference resolution (CAL-01 D-02/D-03).
  *
- * Tests the two default-resolution rules in CalendarQuery::forMonth:
+ * Tests the default-resolution rules in CalendarQuery::forMonth (CR-01:
+ * null = "never configured" → defaults; an explicit array — including the
+ * empty array — is taken literally):
  *
- *   1. Empty visibleAccountIds → all owned accounts' series appear.
- *   2. Empty balanceAccountIds → spendable kinds only:
+ *   1. Null visibleAccountIds → all owned accounts' series appear.
+ *   2. Null balanceAccountIds → spendable kinds only:
  *      ON: asn, bank, cash, paypal, paypal_funding
  *      OFF: ics, ics_card, ics_bulk_settle
- *   3. A foreign account id in either array is silently dropped (T-06-02).
+ *   3. An explicit empty visibleAccountIds array (deselect-all) → no entries.
+ *   4. A foreign account id in either array is silently dropped (T-06-02).
  *
  * Security note (T-06-02): both arrays are intersected against the user's
  * owned accounts before any forUser/forecast call.
@@ -78,7 +81,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow(null);
 });
 
-it('shows entries from all owned accounts when visibleAccountIds is empty', function (): void {
+it('shows entries from all owned accounts when visibleAccountIds is null (never configured)', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqapUser('all-visible');
 
@@ -93,8 +96,8 @@ it('shows entries from all owned accounts when visibleAccountIds is empty', func
     /** @var CalendarQuery $calendarQuery */
     $calendarQuery = app(CalendarQuery::class);
 
-    // Empty visibleAccountIds → all accounts ON (D-02 default)
-    $days = $calendarQuery->forMonth($user, 2026, 6, [], []);
+    // Null visibleAccountIds → all accounts ON (D-02 default)
+    $days = $calendarQuery->forMonth($user, 2026, 6, null, null);
 
     // Both series should appear (we can't easily check per-account without occurrences,
     // but the entry count for the month should include both series)
@@ -107,7 +110,7 @@ it('shows entries from all owned accounts when visibleAccountIds is empty', func
     expect($totalEntries)->toBeGreaterThanOrEqual(2);
 });
 
-it('defaults balance to spendable-kind accounts when balanceAccountIds is empty', function (): void {
+it('defaults balance to spendable-kind accounts when balanceAccountIds is null (never configured)', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqapUser('spendable-default');
 
@@ -121,9 +124,13 @@ it('defaults balance to spendable-kind accounts when balanceAccountIds is empty'
     // We cannot directly inspect the effective balance account IDs from the output,
     // but we can verify the day DTOs are returned (no crash) and that ICS is not
     // included in the balance by seeding a forecast for ICS only.
-    // When balance is empty → spendable default (asn ON, ics_card OFF).
+    // When balance is null → spendable default (asn ON, ics_card OFF).
     // Since no forecast runs exist, isComputing=true for all days regardless.
-    $days = $calendarQuery->forMonth($user, 2026, 6, [], []);
+    $days = $calendarQuery->forMonth($user, 2026, 6, null, null);
+
+    // The public spendableAccountIds helper (used by CalendarPage::mount to
+    // materialize the D-03 default, CR-01) must include asn and exclude ics_card.
+    expect($calendarQuery->spendableAccountIds($user))->toBe([$asnId]);
 
     // Should return 35 days (5 weeks: Mon May 25 – Sun Jun 28 for June 2026)
     // or similar Mon–Sun grid. Either way, should not throw.
@@ -146,6 +153,27 @@ it('defaults balance to spendable-kind accounts when balanceAccountIds is empty'
     unset($asnId, $icsId);
 });
 
+it('returns no entries for an explicit empty visibleAccountIds array (deselect-all, CR-01)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cqapUser('deselect-all');
+
+    cqapAccount($db, $user->id, 'ASN Checking', 'asn');
+    cqapSeries($user, 'Series-Hidden');
+
+    /** @var CalendarQuery $calendarQuery */
+    $calendarQuery = app(CalendarQuery::class);
+
+    // Explicit [] = every account deselected — the series must NOT appear.
+    $days = $calendarQuery->forMonth($user, 2026, 6, [], null);
+
+    $totalEntries = 0;
+    foreach ($days as $day) {
+        $totalEntries += count($day->entries);
+    }
+
+    expect($totalEntries)->toBe(0);
+});
+
 it('drops a foreign account id from visibleAccountIds (T-06-02)', function (): void {
     $db = app(DatabaseManager::class);
     $owner = cqapUser('foreign-visible-owner');
@@ -161,7 +189,7 @@ it('drops a foreign account id from visibleAccountIds (T-06-02)', function (): v
     $calendarQuery = app(CalendarQuery::class);
 
     // Pass the foreign account id as the only visible account
-    $days = $calendarQuery->forMonth($owner, 2026, 6, [$foreignAccountId], []);
+    $days = $calendarQuery->forMonth($owner, 2026, 6, [$foreignAccountId], null);
 
     // The foreign id must be dropped; no entries appear (owner has no account with that id)
     $totalEntries = 0;
@@ -188,7 +216,7 @@ it('drops a foreign account id from balanceAccountIds (T-06-02)', function (): v
     // Pass the foreign account id as the balance account
     // Should not throw NotFoundHttpException or leak data; should return isComputing=true
     // for all days (no valid balance accounts after intersection)
-    $days = $calendarQuery->forMonth($owner, 2026, 6, [], [$foreignAccountId]);
+    $days = $calendarQuery->forMonth($owner, 2026, 6, null, [$foreignAccountId]);
 
     expect($days)->toBeArray()->not->toBeEmpty();
 
