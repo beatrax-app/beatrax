@@ -3831,3 +3831,86 @@ mark {
         transition: none !important;
     }
 }
+
+/* ── Token autocomplete overlay (palette, UI-SPEC #7, D-26) ─────────────── */
+/* Appears below the search input when the user types a recognized token     */
+/* prefix (account:, amount:, after:, before:, category:).                  */
+.srch-token-suggest {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 30;
+    min-width: 180px;
+    max-width: 280px;
+    background: var(--color-surface-raised, #ffffff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-md, 6px);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.1));
+    padding: 4px 0;
+    animation: pop 160ms var(--ease-smooth, cubic-bezier(0.4, 0, 0.2, 1));
+}
+
+.srch-token-suggest-row {
+    padding: 8px 12px;
+    font-size: var(--text-sm, 0.8125rem);
+    color: var(--color-text, #0f172a);
+    cursor: pointer;
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+}
+
+.srch-token-suggest-row:hover,
+.srch-token-suggest-row--selected {
+    background: var(--color-surface-2, #f1f5f9);
+}
+
+/* ── Palette two-line transaction row (palette, UI-SPEC #6, D-19) ────────── */
+/* Matches existing .palette-row padding; two lines give natural >= 44px.   */
+.palette-txn-row {
+    padding: 8px 16px;
+}
+
+/* Source chip for palette transaction rows (muted, like the `view` chip).  */
+.palette-source--txn {
+    background: var(--color-surface-2, #f1f5f9);
+    color: var(--color-text-muted, #64748b);
+}
+
+/* ── Palette section heading within the results pane ─────────────────────── */
+.palette-section-label {
+    margin-top: var(--space-3, 12px);
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted, #64748b);
+}
+
+/* ── Phone full-screen palette sheet (UI-SPEC #9, D-29) ─────────────────── */
+/* On phone (< 768px) the palette switches from the 760px desktop modal to  */
+/* a full-screen fixed sheet: input pinned at top, results scroll beneath,  */
+/* swipe-down or × to dismiss. Applied via the `phone-palette-sheet` class  */
+/* combined with `max-md:` Tailwind utilities on the palette root element.  */
+@media (max-width: 767px) {
+    .phone-palette-sheet {
+        position: fixed;
+        inset: 0;
+        background: var(--color-surface-raised, #ffffff);
+        z-index: 40;
+        border-radius: 0;
+        box-shadow: none;
+        ring: none;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .phone-palette-sheet .palette-body {
+        flex: 1;
+        max-height: none;
+        min-height: 0;
+    }
+
+    /* Hide the category rail on phone — vertical space is precious. */
+    .phone-palette-sheet .palette-rail {
+        display: none;
+    }
+}
