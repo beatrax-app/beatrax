@@ -84,6 +84,9 @@ final class NavCountsService
             'budgets' => $count('category_budgets'),
             'subscriptions' => $count('recurring_series', static fn (Builder $query): Builder => $query->where('direction', 'expense')->whereIn('state', self::ACTIVE_STATES)),
             'imports' => $count('import_runs'),
+            // Phase 07: total tagged transactions for the sidebar badge (no year filter —
+            // the badge shows lifetime tagged count, not a per-year slice).
+            'tax_tagged' => $count('tax_transaction_tags'),
         ];
     }
 
