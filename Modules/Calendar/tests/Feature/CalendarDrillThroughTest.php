@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
-use Modules\Calendar\Tests\TestCase;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 /*
  * CalendarPage — day-panel drill-through links (CAL-03).
