@@ -191,9 +191,12 @@ Schedule::call(function (Dispatcher $bus): void {
     $bus->dispatch(new RevivedExpiredDriftSnoozesJob);
 })->name('drift-alerts.revive-snoozes')->hourly()->withoutOverlapping(30);
 
-// Daily forecast projection sweep: fans out three baseline
-// ProjectForecastJob dispatches (one per 30 / 60 / 90 horizon) per
-// user. The job's ShouldBeUniqueUntilProcessing lock keyed on
+// Daily forecast projection sweep: fans out one baseline
+// ProjectForecastJob dispatch per horizon in
+// ProjectForecastJob::HORIZON_DAYS per user (the Phase 6 extension
+// added two long horizons, so sizing queue load from a hardcoded
+// horizon list here would undercount). The job's
+// ShouldBeUniqueUntilProcessing lock keyed on
 // (userId, 'baseline', horizonDays) collapses any same-day duplicate
 // trigger into a single queued run; the withoutOverlapping(30) guard
 // here prevents this scheduler closure from racing with a previous
