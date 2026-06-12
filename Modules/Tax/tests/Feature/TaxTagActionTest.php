@@ -156,6 +156,33 @@ it('idempotently re-tags without duplicating the row', function (): void {
         ->and($tag->note)->toBe('Updated note');
 });
 
+it('a bare re-tag (all-null payload) preserves the existing category, note, and year override (CR-03)', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $userId = taxTestUser($db, 'tag-bare-retag');
+    $txId = taxTestTransaction($db, $userId);
+    $catId = taxTestCategory($db, $userId, 'Curated Category');
+    $overrideYear = now()->year - 1;
+
+    // Curated tag: category + note + year override.
+    app(TagTransaction::class)->execute($userId, $txId, $catId, 'Curated note', $overrideYear);
+
+    // One-tap re-tag (e.g. a stale ghost Tag button) sends an all-null payload —
+    // it must NOT wipe the curated values.
+    app(TagTransaction::class)->execute($userId, $txId, null, null, null);
+
+    $tag = $db->connection()
+        ->table('tax_transaction_tags')
+        ->where('user_id', $userId)
+        ->where('transaction_id', $txId)
+        ->first();
+
+    expect((int) $tag->deduction_category_id)->toBe($catId)
+        ->and($tag->note)->toBe('Curated note')
+        ->and((int) $tag->tax_year_override)->toBe($overrideYear);
+});
+
 it('throws NotFoundHttpException when the transaction belongs to another user', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
