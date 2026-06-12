@@ -400,10 +400,10 @@ final readonly class CalendarQuery
      * For irregular series (with non-null nextExpectedAt), the single date is
      * used directly if it falls within the display window — no stepping.
      *
-     * For regular cadences (weekly, monthly, quarterly, yearly), mirror the
-     * RangeProjector::envelope() step-forward logic without jitter — point-estimate
-     * placement only. Start from nextExpectedAt and step forward/backward so that
-     * occurrences falling in the display month are collected.
+     * For regular cadences (weekly, monthly, quarterly, yearly), occurrences
+     * are computed by index from the nextExpectedAt anchor (WR-04) — no
+     * jitter, point-estimate placement only. All dates falling in the
+     * display month are collected, both before and after the anchor.
      *
      * Inception bound (WR-03): no expected occurrence is placed before
      * $seriesStart (the series' first observed occurrence, or created_at as
@@ -439,64 +439,57 @@ final readonly class CalendarQuery
             return [];
         }
 
-        // For regular cadences, we need to find all occurrences in the month.
-        // Start at nextExpectedAt and walk forward; also walk backward from
-        // nextExpectedAt in case it's in a future month.
+        // For regular cadences, find all occurrences in the month by stepping
+        // BY OCCURRENCE INDEX from the anchor (nextExpectedAt) instead of
+        // chaining no-overflow steps (WR-04). Chained stepping permanently
+        // lost an end-of-month anchor after the first short month
+        // (Jan 31 → Feb 28 → Mar 28 → …) and made the backward-then-forward
+        // walk non-invertible (the same bill landed on different days of the
+        // month depending on which month was being viewed). Index stepping
+        // — anchor->addMonthsNoOverflow(k) for k = …,-1,0,1,… — preserves the
+        // day-31 anchor in months that have it and is symmetric in both
+        // directions.
         $cadence = $series->cadence;
         if (! in_array($cadence, ['weekly', 'monthly', 'quarterly', 'yearly'], true)) {
             return [];
         }
 
-        // Walk cursor to the earliest occurrence that could land in the month.
-        // First, align cursor to or before monthStart.
-        $cursor = $next->startOfDay();
+        $anchor = $next->startOfDay();
 
-        // Walk backward until cursor is before the month start (or at month start)
-        while ($cursor->gt($monthEnd)) {
-            $prev = $this->retreat($cursor, $cadence);
-            if ($prev === null) {
-                return [];
-            }
-            $cursor = $prev;
-        }
+        // Estimate the first occurrence index that could land in the month,
+        // then start one step earlier as a safety margin. The estimate is
+        // exact in month/year units for monthly+; the weekly day-count
+        // estimate tolerates a ±1-day boundary error via the margin.
+        $monthsDelta = ($monthStart->year - $anchor->year) * 12 + ($monthStart->month - $anchor->month);
+        $deltaDays = (int) floor(($monthStart->getTimestamp() - $anchor->getTimestamp()) / 86400);
+        $k = match ($cadence) {
+            'weekly' => (int) floor($deltaDays / 7) - 1,
+            'monthly' => $monthsDelta - 1,
+            'quarterly' => (int) floor($monthsDelta / 3) - 1,
+            'yearly' => ($monthStart->year - $anchor->year) - 1,
+        };
 
-        // cursor is now <= monthEnd; walk back further until before monthStart
-        // (never below the inception floor — WR-03)
-        while ($cursor->gt($monthStart)) {
-            $prev = $this->retreat($cursor, $cadence);
-            if ($prev === null) {
-                break;
-            }
-            if ($prev->lt($monthStart)) {
-                break;
-            }
-            if ($seriesStart !== null && $prev->lt($seriesStart)) {
-                break;
-            }
-            $cursor = $prev;
-        }
-
-        // Now walk forward, collecting all dates in [monthStart, monthEnd]
-        // that don't predate the series' inception (WR-03)
+        // Occurrence dates are strictly increasing in k, so collect from the
+        // estimated start until the first date past monthEnd.
         $results = [];
-        $seen = [];
         $iterations = 0;
         $maxIterations = 60; // safety cap
 
-        while ($cursor->lte($monthEnd) && $iterations < $maxIterations) {
+        while ($iterations < $maxIterations) {
             $iterations++;
-            if ($cursor->gte($monthStart) && ($seriesStart === null || $cursor->gte($seriesStart))) {
-                $dateStr = $cursor->toDateString();
-                if (! isset($seen[$dateStr])) {
-                    $results[] = $cursor;
-                    $seen[$dateStr] = true;
-                }
-            }
-            $advanced = $this->advance($cursor, $cadence);
-            if ($advanced === null) {
+            $occurrence = $this->occurrenceAt($anchor, $cadence, $k);
+            $k++;
+            if ($occurrence === null || $occurrence->gt($monthEnd)) {
                 break;
             }
-            $cursor = $advanced;
+            if ($occurrence->lt($monthStart)) {
+                continue;
+            }
+            // Inception bound (WR-03): skip dates from before the series existed
+            if ($seriesStart !== null && $occurrence->lt($seriesStart)) {
+                continue;
+            }
+            $results[] = $occurrence;
         }
 
         return $results;
@@ -549,29 +542,17 @@ final readonly class CalendarQuery
     }
 
     /**
-     * Advance cursor by one cadence step forward.
+     * The k-th occurrence of a series counted from its anchor date (WR-04).
+     * Negative k steps backward; every index is computed FROM THE ANCHOR so
+     * short months never permanently shift an end-of-month billing day.
      */
-    private function advance(CarbonImmutable $cursor, string $cadence): ?CarbonImmutable
+    private function occurrenceAt(CarbonImmutable $anchor, string $cadence, int $k): ?CarbonImmutable
     {
         return match ($cadence) {
-            'weekly' => $cursor->addDays(7),
-            'monthly' => $cursor->addMonthNoOverflow(),
-            'quarterly' => $cursor->addMonthsNoOverflow(3),
-            'yearly' => $cursor->addYearNoOverflow(),
-            default => null,
-        };
-    }
-
-    /**
-     * Retreat cursor by one cadence step backward.
-     */
-    private function retreat(CarbonImmutable $cursor, string $cadence): ?CarbonImmutable
-    {
-        return match ($cadence) {
-            'weekly' => $cursor->subDays(7),
-            'monthly' => $cursor->subMonthNoOverflow(),
-            'quarterly' => $cursor->subMonthsNoOverflow(3),
-            'yearly' => $cursor->subYearNoOverflow(),
+            'weekly' => $anchor->addDays(7 * $k),
+            'monthly' => $anchor->addMonthsNoOverflow($k),
+            'quarterly' => $anchor->addMonthsNoOverflow(3 * $k),
+            'yearly' => $anchor->addYearsNoOverflow($k),
             default => null,
         };
     }
