@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Modules\Anomaly\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Modules\Anomaly\Internal\AnomalyEvaluator;
+use Modules\Anomaly\Internal\Detectors\DuplicateChargeDetector;
+use Modules\Anomaly\Internal\Detectors\FirstTimeMerchantDetector;
+use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 
 /**
@@ -28,9 +32,17 @@ final class AnomalyServiceProvider extends ServiceProvider
     {
         $this->app->singleton(AnomalyAlertStateMachine::class);
 
+        // Plan 02: the three stateless detectors + the evaluator that
+        // orchestrates them. Singletons because they hold no per-request
+        // state (they read the DatabaseManager / Clock / RecurringSeriesQuery
+        // bindings, all themselves singletons).
+        $this->app->singleton(LargeVsTypicalDetector::class);
+        $this->app->singleton(FirstTimeMerchantDetector::class);
+        $this->app->singleton(DuplicateChargeDetector::class);
+        $this->app->singleton(AnomalyEvaluator::class);
+
         // TODO(Plan 03): bind AnomalyAlertQuery + the acknowledge / snooze
         //   / dismiss Public Actions as singletons.
-        // TODO(Plan 02): bind the AnomalyEvaluator detector singleton.
     }
 
     public function boot(): void
