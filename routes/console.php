@@ -7,6 +7,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\Schedule;
+use Modules\Anomaly\Internal\Jobs\ReviveExpiredAnomalySnoozesJob;
+use Modules\Anomaly\Internal\Jobs\SafetyNetAnomalySweepJob;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Internal\Jobs\CounterpartyGarbageCollectorJob;
 use Modules\DriftAlerts\Internal\Jobs\RevivedExpiredDriftSnoozesJob;
@@ -190,6 +192,39 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
 Schedule::call(function (Dispatcher $bus): void {
     $bus->dispatch(new RevivedExpiredDriftSnoozesJob);
 })->name('drift-alerts.revive-snoozes')->hourly()->withoutOverlapping(30);
+
+// Hourly anomaly snooze-revival sweep: dispatches a single
+// ReviveExpiredAnomalySnoozesJob that flips `anomaly_alerts.state` from
+// 'snoozed' to 'open' on rows whose `snoozed_until` has elapsed and
+// writes a transition row with reason='detector_revived_snooze' (Pattern
+// 4, cloned from drift-alerts.revive-snoozes). The sweep is global (no
+// per-user fan-out) — the state machine resolves the user_id from the row.
+// Method order .name() BEFORE .hourly()->withoutOverlapping() so the
+// CallbackEvent's description-required guard is satisfied before
+// withoutOverlapping reads it.
+// The companion AnomalyAlertQuery::openForUser query-time conditional
+// surfaces snoozed-but-expired rows immediately between sweeps so the
+// dashboard count + list stay honest without waiting for the hour tick.
+Schedule::call(function (Dispatcher $bus): void {
+    $bus->dispatch(new ReviveExpiredAnomalySnoozesJob);
+})->name('anomaly.revive-snoozes')->hourly()->withoutOverlapping(30);
+
+// Hourly anomaly safety-net sweep: fans out one SafetyNetAnomalySweepJob
+// per user, each re-evaluating that user's recently-imported-but-unalerted
+// transactions through the shared AnomalyEvaluator path — catching any
+// charge the reactive TransactionImported listener missed (D-12 safety
+// net). The job's ShouldBeUniqueUntilProcessing lock keyed on userId
+// collapses a same-hour re-dispatch into a single queued sweep; the
+// withoutOverlapping(30) guard prevents this closure from racing a prior
+// tick. Method order .name() BEFORE .hourly()->withoutOverlapping() —
+// CallbackEvent::withoutOverlapping throws LogicException otherwise.
+// User iteration via ->lazyById(100) so a multi-user deployment does not
+// load every user row into memory upfront (mirrors forecasting + fx).
+Schedule::call(function (Dispatcher $bus): void {
+    User::query()->lazyById(100)->each(function (User $user) use ($bus): void {
+        $bus->dispatch(new SafetyNetAnomalySweepJob($user->id));
+    });
+})->name('anomaly.safety-net-sweep')->hourly()->withoutOverlapping(30);
 
 // Daily forecast projection sweep: fans out one baseline
 // ProjectForecastJob dispatch per horizon in
