@@ -285,7 +285,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 09-01-PLAN.md — Module scaffold: 4 migrations (alerts/transitions/suppression-rules/users settings) + models + sole-mutator state machine (dismissed->open) + factories + Pest harness + fixture corpus + 3 arch invariants
+- [x] 09-01-PLAN.md — Module scaffold: 4 migrations (alerts/transitions/suppression-rules/users settings) + models + sole-mutator state machine (dismissed->open) + factories + Pest harness + fixture corpus + 3 arch invariants
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -393,7 +393,7 @@ Plans:
 | 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
 | 7. Tax / deductible tagging + export | 5/6 | In Progress|  |
 | 8. Full-text search over history | 5/5 | Complete   | 2026-06-13 |
-| 9. Unusual-charge / anomaly alerts | 0/5 | Planned | - |
+| 9. Unusual-charge / anomaly alerts | 1/5 | In Progress|  |
 | 10. SPIKE — op-log/CRDT merge layer | 0/0 | Not started | - |
 | 11. Change-capture + CRDT merge engine | 0/0 | Not started | - |
 | 12. Device identity + pairing | 0/0 | Not started | - |

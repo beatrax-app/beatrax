@@ -59,8 +59,8 @@
 - [x] **SRCH-02**: Search results are filterable (date range, account, amount, category) and fast on multi-year data.
 
 #### ANOM (unusual-charge alerts)
-- [ ] **ANOM-01**: System flags charges that are unusual versus the user's baseline (large-vs-typical, first-time merchant).
-- [ ] **ANOM-02**: Anomaly flags surface through the existing alerts surface and are dismissible/acknowledgeable.
+- [x] **ANOM-01**: System flags charges that are unusual versus the user's baseline (large-vs-typical, first-time merchant).
+- [x] **ANOM-02**: Anomaly flags surface through the existing alerts surface and are dismissible/acknowledgeable.
 
 ### Track 4 — Local-first E2E device sync (full P2P multi-master) — SEED-001
 
@@ -140,8 +140,8 @@ Each v1.3 requirement maps to exactly one phase. See `.planning/ROADMAP.md`.
 | TAX-03 | Phase 7 | Complete |
 | SRCH-01 | Phase 8 | Complete |
 | SRCH-02 | Phase 8 | Complete |
-| ANOM-01 | Phase 9 | Pending |
-| ANOM-02 | Phase 9 | Pending |
+| ANOM-01 | Phase 9 | Complete |
+| ANOM-02 | Phase 9 | Complete |
 | SYNC-04 | Phase 10 | Pending |
 | SYNC-01 | Phase 11 | Pending |
 | SYNC-02 | Phase 11 | Pending |

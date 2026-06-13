@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
-status: ready_to_plan
-stopped_at: Phase 08 complete (5/5) — ready to discuss Phase 9
-last_updated: 2026-06-13T15:28:16.743Z
+status: executing
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-06-13T17:33:13.895Z"
 progress:
   total_phases: 15
-  completed_phases: 7
-  total_plans: 42
-  completed_plans: 42
-  percent: 47
+  completed_phases: 8
+  total_plans: 47
+  completed_plans: 43
+  percent: 53
 ---
 
 # State: beatrax
@@ -23,18 +23,18 @@ progress:
 - **Requirements:** `.planning/REQUIREMENTS.md`
 - **Roadmap:** `.planning/ROADMAP.md`
 - **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-- **Current focus:** Phase 9 — unusual charge / anomaly alerts
+- **Current focus:** Phase 09 — unusual-charge-anomaly-alerts
 
 ## Current Position
 
-Phase: 08 (full-text-search-over-history) — EXECUTING
-Plan: 1 of 5
+Phase: 09 (unusual-charge-anomaly-alerts) — EXECUTING
+Plan: 1 of 5 — COMPLETE (09-01 Anomaly module scaffold)
 
 - **Milestone:** v1.3 "Local & in sync"
-- **Status:** Ready to plan
+- **Status:** Executing Phase 09
 - **Phase:** 9 of 15 (unusual charge / anomaly alerts)
-- **Plan:** Not started
-- **Progress:** 2 of 15 phases complete — 13%
+- **Plan:** 09-01 complete — Anomaly module scaffold (migrations, models, state machine, fixtures, arch invariants). Next: 09-02 evaluator.
+- **Progress:** [█████████░] 91%
 
 ```
 Phases [██              ] 2/15
@@ -74,6 +74,10 @@ Phases [██              ] 2/15
 - Alpine $wire.taxPickerTxId watch drives popover open/close (not @js() snapshot which only captures initial value).
 - taxTagStateFor issues ONE whereIn query per render for the full page batch (Pitfall-1 guard).
 - batchSuggestionDismissed flag prevents batch suggestion re-surfacing after apply or dismiss (Pitfall-7 guard).
+- [09-01] anomaly_alerts is a NEW per-transaction module keyed UNIQUE(transaction_id), not an extension of drift_alerts (D-01/D-16).
+- [09-01] AnomalyAlertStateMachine adds the diverging `dismissed -> open` undo edge (D-18); acknowledged stays terminal — only divergence from the drift map.
+- [09-01] noTransactionWritesFromAnomaly narrowed vs the Recurring analog to permit Transaction::query() reads (evaluator needs baselines) — forbids only writes (Transaction::create + table-builder writes).
+- [09-01] anomaly baseline/latest/currency columns nullable since first-time-merchant flags carry no per-merchant amount baseline.
 
 ### Critical path
 
@@ -93,9 +97,9 @@ Phases [██              ] 2/15
 
 ## Session Continuity
 
-- **Last session:** 2026-06-12T20:29:43.153Z
-- **Stopped at:** Phase 8 UI-SPEC approved
-- **Resume by:** Complete browser UAT on the four surfaces (TransactionsList, TransactionDetail, CounterpartyProfile, CashBookPage) and signal "approved" to proceed to Phase 08.
+- **Last session:** 2026-06-13T17:33:13.895Z
+- **Stopped at:** Completed 09-01-PLAN.md (Anomaly module scaffold)
+- **Resume by:** Execute Plan 09-02 (anomaly evaluator — three detectors over the nine-case fixture corpus). Run `/gsd:execute-phase 09`.
 
 ---
 *State initialized: 2026-06-07 for milestone v1.3 "Local & in sync"*
