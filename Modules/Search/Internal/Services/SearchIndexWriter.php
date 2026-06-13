@@ -22,7 +22,12 @@ use Modules\Search\Public\Contracts\SearchIndexWriterContract;
  *   - search_body separator is chr(12) (form-feed) — NOT trigram-indexable,
  *     avoids false-positive cross-field matches (RESEARCH Assumption A2).
  *   - Idempotent: calling upsertForTransaction multiple times for the same
- *     id produces the same result (FTS delete-then-insert is safe to repeat).
+ *     id produces the same result. The docs upsert + FTS delete + FTS insert
+ *     run inside a single DB transaction so a partial write can never desync
+ *     the inverted index (CR-03).
+ *   - CR-02: every write verifies the caller-supplied $actorUserId against the
+ *     stored owner so a forged transaction id can never touch another user's
+ *     index doc.
  */
 final class SearchIndexWriter implements SearchIndexWriterContract
 {
@@ -38,7 +43,7 @@ final class SearchIndexWriter implements SearchIndexWriterContract
      * chr(12)), and upserts both the `transaction_search_docs` row and the
      * FTS5 index entry.
      */
-    public function upsertForTransaction(int $transactionId): void
+    public function upsertForTransaction(int $transactionId, int $actorUserId): void
     {
         $connection = $this->db->connection();
 
@@ -55,6 +60,14 @@ final class SearchIndexWriter implements SearchIndexWriterContract
         }
 
         $userId = is_numeric($tx->user_id) ? (int) $tx->user_id : 0;
+
+        // CR-02: refuse to (re)index a transaction the actor does not own.
+        // The contract takes an explicit actor so a caller can never rebuild
+        // another user's index doc via a forged id — return early on mismatch.
+        if ($userId !== $actorUserId) {
+            return;
+        }
+
         $counterparty = is_string($tx->counterparty_name) ? $tx->counterparty_name : '';
         $description = is_string($tx->description) ? $tx->description : '';
 
@@ -73,42 +86,52 @@ final class SearchIndexWriter implements SearchIndexWriterContract
         // false positives (RESEARCH Assumption A2).
         $newBody = $counterparty.chr(12).$description.chr(12).$note;
 
-        // Read the OLD body before upserting so we can delete the stale FTS entry.
-        $existingDoc = $connection
-            ->table('transaction_search_docs')
-            ->select(['search_body'])
-            ->where('transaction_id', $transactionId)
-            ->first();
+        // CR-03: wrap read-old-body + docs-upsert + FTS delete + FTS insert in
+        // a single transaction so a partial write cannot leave duplicate FTS
+        // postings (ghost matches). The FTS 'delete' is issued whenever a docs
+        // row previously existed — NOT only when the old body was non-empty —
+        // because an empty-but-indexed prior body would otherwise stack a
+        // second posting on the same rowid on the next insert.
+        $connection->transaction(function () use ($connection, $transactionId, $userId, $newBody): void {
+            $existingDoc = $connection
+                ->table('transaction_search_docs')
+                ->select(['search_body'])
+                ->where('transaction_id', $transactionId)
+                ->first();
 
-        $oldBody = ($existingDoc !== null && is_string($existingDoc->search_body))
-            ? $existingDoc->search_body
-            : '';
+            $docExisted = $existingDoc !== null;
+            $oldBody = ($existingDoc !== null && is_string($existingDoc->search_body))
+                ? $existingDoc->search_body
+                : '';
 
-        // Upsert the denormalized doc (unique on transaction_id).
-        $connection->table('transaction_search_docs')->upsert(
-            [
-                'transaction_id' => $transactionId,
-                'user_id' => $userId,
-                'search_body' => $newBody,
-            ],
-            ['transaction_id'],
-            ['user_id', 'search_body'],
-        );
-
-        // Sync the FTS5 index.
-        // (a) Delete the old FTS entry — only when a prior doc existed.
-        if ($oldBody !== '') {
-            $connection->statement(
-                "INSERT INTO transaction_search_fts(transaction_search_fts, rowid, search_body) VALUES('delete', ?, ?)",
-                [$transactionId, $oldBody],
+            // Upsert the denormalized doc (unique on transaction_id).
+            $connection->table('transaction_search_docs')->upsert(
+                [
+                    'transaction_id' => $transactionId,
+                    'user_id' => $userId,
+                    'search_body' => $newBody,
+                ],
+                ['transaction_id'],
+                ['user_id', 'search_body'],
             );
-        }
 
-        // (b) Insert the new FTS entry.
-        $connection->statement(
-            'INSERT INTO transaction_search_fts(rowid, search_body) VALUES(?, ?)',
-            [$transactionId, $newBody],
-        );
+            // (a) Delete the old FTS entry whenever a prior doc row existed,
+            // using the body that was previously indexed. This is the
+            // documented external-content upsert pattern and prevents the
+            // index from accumulating duplicate postings on re-index.
+            if ($docExisted) {
+                $connection->statement(
+                    "INSERT INTO transaction_search_fts(transaction_search_fts, rowid, search_body) VALUES('delete', ?, ?)",
+                    [$transactionId, $oldBody],
+                );
+            }
+
+            // (b) Insert the new FTS entry.
+            $connection->statement(
+                'INSERT INTO transaction_search_fts(rowid, search_body) VALUES(?, ?)',
+                [$transactionId, $newBody],
+            );
+        });
     }
 
     /**
@@ -117,32 +140,41 @@ final class SearchIndexWriter implements SearchIndexWriterContract
      * Called when a transaction is permanently deleted so stale FTS entries
      * do not pollute results for future queries.
      */
-    public function deleteForTransaction(int $transactionId): void
+    public function deleteForTransaction(int $transactionId, int $actorUserId): void
     {
         $connection = $this->db->connection();
 
-        // Read the existing body for the FTS delete step.
-        $existingDoc = $connection
-            ->table('transaction_search_docs')
-            ->select(['search_body'])
-            ->where('transaction_id', $transactionId)
-            ->first();
+        $connection->transaction(function () use ($connection, $transactionId, $actorUserId): void {
+            // Read the existing doc — both for the FTS delete body and for the
+            // CR-02 ownership check.
+            $existingDoc = $connection
+                ->table('transaction_search_docs')
+                ->select(['user_id', 'search_body'])
+                ->where('transaction_id', $transactionId)
+                ->first();
 
-        $oldBody = ($existingDoc !== null && is_string($existingDoc->search_body))
-            ? $existingDoc->search_body
-            : '';
+            if ($existingDoc === null) {
+                return;
+            }
 
-        if ($oldBody !== '') {
-            // Delete from the FTS virtual table first.
+            $ownerId = is_numeric($existingDoc->user_id) ? (int) $existingDoc->user_id : 0;
+            if ($ownerId !== $actorUserId) {
+                // CR-02: never delete another user's index doc.
+                return;
+            }
+
+            $oldBody = is_string($existingDoc->search_body) ? $existingDoc->search_body : '';
+
+            // Delete from the FTS virtual table first (a docs row existed).
             $connection->statement(
                 "INSERT INTO transaction_search_fts(transaction_search_fts, rowid, search_body) VALUES('delete', ?, ?)",
                 [$transactionId, $oldBody],
             );
-        }
 
-        // Remove the content doc.
-        $connection->table('transaction_search_docs')
-            ->where('transaction_id', $transactionId)
-            ->delete();
+            // Remove the content doc.
+            $connection->table('transaction_search_docs')
+                ->where('transaction_id', $transactionId)
+                ->delete();
+        });
     }
 }
