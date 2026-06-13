@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
 status: executing
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-06-13T17:51:00.000Z"
+stopped_at: Completed 09-03-PLAN.md
+last_updated: "2026-06-13T18:35:00.000Z"
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 47
-  completed_plans: 44
-  percent: 54
+  completed_plans: 45
+  percent: 56
 ---
 
 # State: beatrax
@@ -28,12 +28,12 @@ progress:
 ## Current Position
 
 Phase: 09 (unusual-charge-anomaly-alerts) — EXECUTING
-Plan: 2 of 5 — COMPLETE (09-02 Anomaly evaluator + three detectors)
+Plan: 3 of 5 — COMPLETE (09-03 Anomaly read/write Public surface)
 
 - **Milestone:** v1.3 "Local & in sync"
 - **Status:** Executing Phase 09
 - **Phase:** 9 of 15 (unusual charge / anomaly alerts)
-- **Plan:** 09-02 complete — AnomalyEvaluator + RobustStatistics + three detectors (large-vs-typical, first-time, duplicate) + RecurringSeriesQuery membership + suppression filtering + idempotent insert. Next: 09-03 read/write surface.
+- **Plan:** 09-03 complete — AnomalyAlertQuery (revival-aware open/history/dismissed + count + per-detector breakdown) + reasons[]/Money DTO + pure mapper + AnomalySuppressionRuleQuery + five Public Actions (acknowledge/snooze/dismiss/dismiss-as-expected/remove-rule) with cross-user 404 + server-computed ±15% suppression + dismissed->open undo + lifecycle events. Next: 09-04 jobs (TransactionImported listener + backfill + sweeps).
 - **Progress:** [█████████░] 91%
 
 ```
@@ -83,6 +83,10 @@ Phases [██              ] 2/15
 - [09-02] FirstTimeMerchant judges large-vs-overall with a lower OVERALL_HISTORY_MIN (3) than the per-merchant thin cutoff (5).
 - [09-02] Duplicate = same counterparty + exact settled amount/currency/direction within 7 days, excluding pairs where BOTH are approved-recurring-series members (new RecurringSeriesQuery::seriesMembershipForTransactionIds Public method).
 - [09-02] Suppression checked BEFORE insert (D-17): reasons dropped per matching anomaly_suppression_rules row (counterparty OR null-counterparty fallback, detector, direction, amount band, currency); reasons canonically ordered before persistence.
+- [09-03] AnomalyAlertQuery resolves merchant name via a permitted ledger READ (transaction_id -> counterparty_id) since anomaly_alerts has no counterparty_id column; names via CounterpartyProfileQuery::identitiesForIds (no raw cross-module SELECT).
+- [09-03] Suppression band stored as [min(round(0.85x),round(1.15x)), max(...)] so the signed-amount band matches the evaluator's band_low <= settled <= band_high test (round(1.15x) is the more-negative band_low for an expense).
+- [09-03] Snooze (now, now+6mo] bounds enforced IN SnoozeAnomalyAlert (not the Livewire layer) so every caller is protected (T-09-10); 404 guard runs first.
+- [09-03] DismissAnomalyAlertAsExpected inserts no rule when latest_amount_minor is null (first-time-only flag has no band); RemoveAnomalySuppressionRule has two paths — settings delete-only vs undo (delete-by-source_anomaly_alert_id + dismissed->open re-open, D-18).
 
 ### Critical path
 
@@ -102,9 +106,9 @@ Phases [██              ] 2/15
 
 ## Session Continuity
 
-- **Last session:** 2026-06-13T17:51:00.000Z
-- **Stopped at:** Completed 09-02-PLAN.md (Anomaly evaluator + three detectors + suppression + idempotent insert)
-- **Resume by:** Execute Plan 09-03 (anomaly read/write surface — AnomalyAlertQuery + Public Actions + suppression management). Run `/gsd:execute-phase 09`.
+- **Last session:** 2026-06-13T18:35:00.000Z
+- **Stopped at:** Completed 09-03-PLAN.md (Anomaly read/write Public surface — query + DTO/mapper + five Actions + suppression create/undo + lifecycle events)
+- **Resume by:** Execute Plan 09-04 (anomaly jobs — TransactionImported listener + full-history backfill + safety-net + snooze-revival sweeps). Run `/gsd:execute-phase 09`.
 
 ---
 *State initialized: 2026-06-07 for milestone v1.3 "Local & in sync"*

@@ -293,7 +293,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 09-03-PLAN.md — Public surface: AnomalyAlertQuery + DTO/mapper + 5 Actions (ack/snooze/dismiss/dismiss-as-expected/remove-rule) + suppression-rule query + cross-user 404 + suppression ±15% band + undo (ANOM-02)
+- [x] 09-03-PLAN.md — Public surface: AnomalyAlertQuery + DTO/mapper + 5 Actions (ack/snooze/dismiss/dismiss-as-expected/remove-rule) + suppression-rule query + cross-user 404 + suppression ±15% band + undo (ANOM-02)
 
 **Wave 4** *(blocked on Wave 2+3)*
 
@@ -393,7 +393,7 @@ Plans:
 | 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
 | 7. Tax / deductible tagging + export | 5/6 | In Progress|  |
 | 8. Full-text search over history | 5/5 | Complete   | 2026-06-13 |
-| 9. Unusual-charge / anomaly alerts | 2/5 | In Progress|  |
+| 9. Unusual-charge / anomaly alerts | 3/5 | In Progress|  |
 | 10. SPIKE — op-log/CRDT merge layer | 0/0 | Not started | - |
 | 11. Change-capture + CRDT merge engine | 0/0 | Not started | - |
 | 12. Device identity + pairing | 0/0 | Not started | - |
