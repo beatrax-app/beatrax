@@ -15,8 +15,8 @@ use Modules\Core\Models\User;
  * receive the two mixed-type palette sections (transaction hits + entity name
  * hits) without importing any Search Internal class.
  *
- * @phpstan-type PaletteTransaction array{id: int, counterpartyName: ?string, snippet: ?string, amountMinor: int, amountCurrency: string, bookedAt: string}
- * @phpstan-type PaletteEntity array{type: string, name: string, slug: string}
+ * @phpstan-type PaletteTransaction array{id: int, counterpartyName: ?string, amount: string, snippet: ?string, url: string}
+ * @phpstan-type PaletteEntity array{id: int, type: string, label: string, url: string}
  */
 interface SearchResultsProvider
 {
