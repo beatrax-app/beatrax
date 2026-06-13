@@ -152,9 +152,12 @@
                                                 <div class="palette-txn-row-text flex-1 min-w-0">
                                                     {{-- Line 1: counterparty name + amount (D-19) --}}
                                                     <div class="flex items-baseline gap-2">
+                                                        {{-- x-text, NOT x-html: counterpartyName is raw user input
+                                                             (the palette does not highlight the name). Binding it with
+                                                             x-html would execute HTML in a merchant name (stored XSS). --}}
                                                         <span
                                                             class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate"
-                                                            x-html="hit.counterpartyName || '(no name)'"
+                                                            x-text="hit.counterpartyName || '(no name)'"
                                                         ></span>
                                                         <span
                                                             class="text-xs text-slate-500 dark:text-slate-400 shrink-0 font-variant-numeric tabular-nums ml-auto"
