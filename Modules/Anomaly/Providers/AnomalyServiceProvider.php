@@ -10,6 +10,8 @@ use Modules\Anomaly\Internal\Detectors\DuplicateChargeDetector;
 use Modules\Anomaly\Internal\Detectors\FirstTimeMerchantDetector;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
+use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
+use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
 
 /**
  * Wires the Anomaly module.
@@ -41,8 +43,14 @@ final class AnomalyServiceProvider extends ServiceProvider
         $this->app->singleton(DuplicateChargeDetector::class);
         $this->app->singleton(AnomalyEvaluator::class);
 
-        // TODO(Plan 03): bind AnomalyAlertQuery + the acknowledge / snooze
-        //   / dismiss Public Actions as singletons.
+        // Plan 03: the Public read surface. Singletons because they hold no
+        // per-request state (they read the DatabaseManager / Clock /
+        // CounterpartyProfileQuery bindings, all themselves singletons).
+        $this->app->singleton(AnomalyAlertQuery::class);
+        $this->app->singleton(AnomalySuppressionRuleQuery::class);
+
+        // TODO(Plan 03, Tasks 2-3): bind the acknowledge / snooze / dismiss /
+        //   dismiss-as-expected / remove-rule Public Actions as singletons.
     }
 
     public function boot(): void

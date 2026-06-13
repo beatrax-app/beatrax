@@ -1,0 +1,135 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Anomaly\Internal\Mapping;
+
+use Carbon\CarbonImmutable;
+use InvalidArgumentException;
+use Modules\Anomaly\Public\Dto\AnomalyAlertDto;
+use Modules\Ledger\Public\ValueObjects\Money;
+use stdClass;
+
+/**
+ * Shared hydrator for `anomaly_alerts` rows → `AnomalyAlertDto`.
+ *
+ * Static-only: no constructor dependencies. The mapper does not read
+ * services or touch the DB; it is pure-data transformation cloned from
+ * `DriftAlertDtoMapper`, re-keyed to the anomaly shape:
+ *   - `reasons` is a JSON list<string> column → decoded into a list.
+ *   - `baseline_amount_minor` / `latest_amount_minor` are nullable
+ *     (a first-time-merchant flag has no per-merchant amount baseline);
+ *     a null minor amount hydrates to a zero-amount Money in the settled
+ *     currency so call sites never branch on null.
+ *   - `currency` is nullable; when absent the DTO falls back to EUR so
+ *     the Money factory always receives a valid ISO code.
+ *   - There are NO annualized/threshold fields.
+ *
+ * The caller passes the merchant display name (resolved at the query
+ * layer from `CounterpartyProfileQuery::identitiesForIds`).
+ */
+final class AnomalyAlertDtoMapper
+{
+    /**
+     * @param  stdClass  $row  raw anomaly_alerts row
+     * @param  string|null  $displayName  resolved merchant display string
+     *                                    supplied by the query layer
+     */
+    public static function hydrate(stdClass $row, ?string $displayName = null): AnomalyAlertDto
+    {
+        $currency = self::toCurrency($row->currency ?? null);
+        $baselineAmount = Money::ofMinor(self::toInt($row->baseline_amount_minor ?? null), $currency);
+        $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor ?? null), $currency);
+
+        // The schema marks `detected_at` non-null, but a corrupted row
+        // could surface here as null or non-string. Fail loud with an
+        // identifying message rather than letting Carbon raise a bare
+        // InvalidFormatException out of an unscoped parse('').
+        $rawDetected = $row->detected_at ?? null;
+        if (! is_string($rawDetected) || $rawDetected === '') {
+            $rowId = isset($row->id) && is_numeric($row->id) ? (string) $row->id : '?';
+            throw new InvalidArgumentException(
+                "AnomalyAlertDtoMapper: anomaly_alerts row {$rowId} has missing or non-string detected_at.",
+            );
+        }
+        $detectedAt = CarbonImmutable::parse($rawDetected);
+
+        return new AnomalyAlertDto(
+            anomalyAlertId: self::toInt($row->id ?? null),
+            transactionId: self::toInt($row->transaction_id ?? null),
+            reasons: self::decodeReasons($row->reasons ?? null),
+            displayName: $displayName ?? '',
+            direction: self::toString($row->direction ?? null),
+            state: self::toString($row->state ?? null),
+            baselineAmount: $baselineAmount,
+            latestAmount: $latestAmount,
+            currency: $currency,
+            sensitivityPercentUsed: self::toInt($row->sensitivity_percent_used ?? null),
+            dismissedAs: self::toStringOrNull($row->dismissed_as ?? null),
+            detectedAt: $detectedAt,
+            actionedAt: self::toDateOrNull($row->actioned_at ?? null),
+            snoozedUntil: self::toDateOrNull($row->snoozed_until ?? null),
+        );
+    }
+
+    /**
+     * Decodes the `reasons` JSON column into a list<string>. A malformed
+     * or non-array payload degrades to an empty list rather than throwing
+     * — the renderer simply shows no reason chips.
+     *
+     * @return list<string>
+     */
+    private static function decodeReasons(mixed $value): array
+    {
+        if (! is_string($value) || $value === '') {
+            return [];
+        }
+
+        $decoded = json_decode($value, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map(static fn (mixed $r): string => is_string($r) ? $r : '', $decoded),
+            static fn (string $r): bool => $r !== '',
+        ));
+    }
+
+    private static function toDateOrNull(mixed $value): ?CarbonImmutable
+    {
+        if (is_string($value) && $value !== '') {
+            return CarbonImmutable::parse($value);
+        }
+
+        return null;
+    }
+
+    private static function toCurrency(mixed $value): string
+    {
+        return is_string($value) && $value !== '' ? $value : 'EUR';
+    }
+
+    private static function toInt(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    private static function toString(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        return is_scalar($value) ? (string) $value : '';
+    }
+
+    private static function toStringOrNull(mixed $value): ?string
+    {
+        if (is_string($value) && $value !== '') {
+            return $value;
+        }
+
+        return null;
+    }
+}
