@@ -83,6 +83,7 @@
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/",
+            "Modules\\Anomaly\\Tests\\": "Modules/Anomaly/tests/",
             "Modules\\Auth\\Tests\\": "Modules/Auth/tests/",
             "Modules\\Budgets\\Tests\\": "Modules/Budgets/tests/",
             "Modules\\Goals\\Tests\\": "Modules/Goals/tests/",

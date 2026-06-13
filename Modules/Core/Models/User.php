@@ -33,6 +33,9 @@ use Illuminate\Support\Carbon;
  * @property int $recurring_detection_window_months
  * @property int $recurring_income_min_amount_minor
  * @property int $drift_alert_threshold_percent
+ * @property int $anomaly_sensitivity_percent
+ * @property int $anomaly_min_amount_minor
+ * @property Carbon|null $anomaly_backfilled_at
  * @property string $theme
  * @property string|null $close_behavior
  * @property array<string, mixed>|null $community_settings
@@ -62,6 +65,9 @@ final class User extends Authenticatable
         'recurring_detection_window_months',
         'recurring_income_min_amount_minor',
         'drift_alert_threshold_percent',
+        'anomaly_sensitivity_percent',
+        'anomaly_min_amount_minor',
+        'anomaly_backfilled_at',
         'theme',
         'close_behavior',
         'community_settings',
@@ -82,6 +88,8 @@ final class User extends Authenticatable
         'recurring_detection_window_months' => 2,
         'recurring_income_min_amount_minor' => 200000,
         'drift_alert_threshold_percent' => 5,
+        'anomaly_sensitivity_percent' => 50,
+        'anomaly_min_amount_minor' => 1000,
         'theme' => 'system',
         'base_currency' => 'EUR',
     ];
@@ -101,6 +109,9 @@ final class User extends Authenticatable
             'recurring_detection_window_months' => 'integer',
             'recurring_income_min_amount_minor' => 'integer',
             'drift_alert_threshold_percent' => 'integer',
+            'anomaly_sensitivity_percent' => 'integer',
+            'anomaly_min_amount_minor' => 'integer',
+            'anomaly_backfilled_at' => 'immutable_datetime',
             'theme' => 'string',
             'close_behavior' => 'string',
             'community_settings' => 'array',
