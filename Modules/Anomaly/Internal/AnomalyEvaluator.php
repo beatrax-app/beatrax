@@ -80,6 +80,13 @@ final readonly class AnomalyEvaluator
         $currency = null;
 
         $largeResult = $this->largeDetector->fires($txn, $user, $sensitivity, $minFloor);
+        // CR-02: provenance of the `large` reason. TRUE only when
+        // LargeVsTypicalDetector actually tripped (large vs THIS merchant's
+        // own history or the category p95). FALSE when `large` is only the
+        // synthetic reason first-time injects (large vs the user's OVERALL
+        // spend). A per-merchant `large` suppression band must never mute
+        // the synthetic, overall-spend `large` of a brand-new merchant.
+        $largeFromMerchantBaseline = $largeResult !== null;
         if ($largeResult !== null) {
             $reasons[] = 'large';
             $baselineMinor = $largeResult['baseline_amount_minor'];
@@ -112,8 +119,10 @@ final readonly class AnomalyEvaluator
         $reasons = self::canonicalOrder($reasons);
 
         // D-17: drop suppressed reasons BEFORE insert. If none survive, no
-        // alert is inserted at all.
-        $reasons = $this->filterSuppressed($txn, $user, $direction, $reasons);
+        // alert is inserted at all. Provenance of `large` is passed so a
+        // per-merchant `large` band cannot mute a synthetic, overall-spend
+        // `large` injected by first-time (CR-02).
+        $reasons = $this->filterSuppressed($txn, $user, $direction, $reasons, $largeFromMerchantBaseline);
         if ($reasons === []) {
             return;
         }
@@ -161,21 +170,46 @@ final readonly class AnomalyEvaluator
      * settled amount falls within [band_low, band_high] in the same
      * currency. User-scoped explicitly (T-09-05).
      *
+     * CR-02: when the `large` reason is SYNTHETIC (injected by first-time
+     * because the charge is large vs OVERALL spend, not large vs this
+     * merchant's own baseline), it is excluded from the rule-matching set so
+     * a per-merchant `large` suppression band cannot mute it. The
+     * per-merchant band describes "this merchant's recurring large charge";
+     * a brand-new merchant has no such history, and silently muting its
+     * large-amount signal is exactly the fraud-adjacent case the feature
+     * exists to surface. (It also preserves the D-09 large+first_time
+     * coupling: `large` is never stripped while `first_time` survives.)
+     *
      * @param  array<string, mixed>  $txn
      * @param  list<string>  $reasons
      * @return list<string>
      */
-    private function filterSuppressed(array $txn, User $user, string $direction, array $reasons): array
+    private function filterSuppressed(array $txn, User $user, string $direction, array $reasons, bool $largeFromMerchantBaseline): array
     {
         $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
         $settledMinor = self::toInt($txn['settled_amount_minor'] ?? 0, 0);
         $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : 'EUR';
 
+        // The detector keys a `large` suppression rule may match against. A
+        // synthetic (first-time-injected) `large` is NOT eligible for
+        // suppression by a per-merchant `large` band (CR-02).
+        $matchableDetectors = $reasons;
+        if (! $largeFromMerchantBaseline) {
+            $matchableDetectors = array_values(array_filter(
+                $matchableDetectors,
+                static fn (string $reason): bool => $reason !== 'large',
+            ));
+        }
+
+        if ($matchableDetectors === []) {
+            return $reasons;
+        }
+
         $rules = $this->db->connection()->table('anomaly_suppression_rules')
             ->where('user_id', $user->id)
             ->where('direction', $direction)
             ->where('currency', $settledCurrency)
-            ->whereIn('detector', $reasons)
+            ->whereIn('detector', $matchableDetectors)
             ->where('amount_band_low_minor', '<=', $settledMinor)
             ->where('amount_band_high_minor', '>=', $settledMinor)
             ->when($counterpartyId !== null, function (Builder $query) use ($counterpartyId): void {
