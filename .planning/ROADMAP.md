@@ -44,7 +44,7 @@
 - [x] **Phase 6: Bills / cash-flow calendar** - Upcoming fixed payments on a calendar with running projected balance. (completed 2026-06-12)
 - [ ] **Phase 7: Tax / deductible tagging + per-year export** - Tag tax-relevant transactions and export a year's set.
 - [x] **Phase 8: Full-text search over history** - Fast, filterable search across all retained history. (completed 2026-06-13)
-- [ ] **Phase 9: Unusual-charge / anomaly alerts** - Baseline-relative anomaly flags through the existing alerts surface.
+- [x] **Phase 9: Unusual-charge / anomaly alerts** - Baseline-relative anomaly flags through the existing alerts surface. (completed 2026-06-13)
 
 ### Track 4 — Local-first E2E device sync (full P2P multi-master, SEED-001) — CRITICAL PATH
 
@@ -301,7 +301,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 3+4)*
 
-- [ ] 09-05-PLAN.md — UI: /drift type switch + anomaly row (reason chips) + dashboard tile + amber nav badge + settings (sensitivity/floor/suppression list) + first-activation backfill + human-verify (ANOM-02)
+- [x] 09-05-PLAN.md — UI: /drift type switch + anomaly row (reason chips) + dashboard tile + amber nav badge + settings (sensitivity/floor/suppression list) + first-activation backfill + human-verify (ANOM-02)
 
 ### Phase 10: SPIKE — op-log/CRDT merge-layer prototype
 
@@ -393,7 +393,7 @@ Plans:
 | 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
 | 7. Tax / deductible tagging + export | 5/6 | In Progress|  |
 | 8. Full-text search over history | 5/5 | Complete   | 2026-06-13 |
-| 9. Unusual-charge / anomaly alerts | 4/5 | In Progress|  |
+| 9. Unusual-charge / anomaly alerts | 5/5 | Complete   | 2026-06-13 |
 | 10. SPIKE — op-log/CRDT merge layer | 0/0 | Not started | - |
 | 11. Change-capture + CRDT merge engine | 0/0 | Not started | - |
 | 12. Device identity + pairing | 0/0 | Not started | - |

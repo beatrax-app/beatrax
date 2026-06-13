@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
-status: executing
-stopped_at: Completed 09-04-PLAN.md
-last_updated: "2026-06-13T19:05:00.000Z"
+status: ready_to_plan
+stopped_at: Phase 09 complete (5/5) — ready to discuss Phase 10
+last_updated: 2026-06-13T21:22:56.406Z
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 47
-  completed_plans: 46
-  percent: 57
+  completed_plans: 47
+  percent: 53
 ---
 
 # State: beatrax
@@ -23,7 +23,7 @@ progress:
 - **Requirements:** `.planning/REQUIREMENTS.md`
 - **Roadmap:** `.planning/ROADMAP.md`
 - **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-- **Current focus:** Phase 09 — unusual-charge-anomaly-alerts
+- **Current focus:** Phase 10 — spike — op log/crdt merge layer prototype
 
 ## Current Position
 
@@ -31,9 +31,9 @@ Phase: 09 (unusual-charge-anomaly-alerts) — EXECUTING
 Plan: 4 of 5 — COMPLETE (09-04 Anomaly detection orchestration: jobs + listener + scheduler)
 
 - **Milestone:** v1.3 "Local & in sync"
-- **Status:** Executing Phase 09
-- **Phase:** 9 of 15 (unusual charge / anomaly alerts)
-- **Plan:** 09-05 build tasks complete (HUMAN-VERIFY CHECKPOINT PENDING) — /drift type switch (#[Url type], drift|anomaly) owned by DriftAlerts consuming Anomaly Public AnomalyAlertQuery + five Actions; anomaly-alert-row (reason chips large/first-time/duplicate, baseline->actual sub-line, no per-year column, phone <details> ≥44px chips); DashboardAnomalyBadge tile (open count + detector breakdown, hidden at zero) + amber sidebar "Unusual charges" badge merged into navCounts['anomaly'] (revival-aware) via a core::livewire.app-sidebar ViewFactoryContract composer; AnomalySettingsSection (sensitivity + min-floor server-validated [1,100]/>=0, first-activation BackfillAnomaliesJob dispatch when anomaly_backfilled_at is null, visible+removable suppression-rules list). Dev DB migrated. Commits f27a06e/200f641/cf2324e. ANOM-02 implemented. NEXT: browser-MCP human UAT (Task 4 checkpoint) — orchestrator owns final completion + roadmap/requirements marking.
+- **Status:** Ready to plan
+- **Phase:** 10 of 15 (spike — op log/crdt merge layer prototype)
+- **Plan:** Not started
 - **Progress:** [██████████] 95%
 
 ```
