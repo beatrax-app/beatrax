@@ -129,6 +129,40 @@ it('creates a ±15% suppression rule per reason with provenance, then skips in-b
         ->and($aboveAlert->reasons)->toContain('large');
 });
 
+it('does not accumulate a duplicate rule when an identical natural-key rule already exists (WR-07)', function (): void {
+    $largeTxn = supTxn($this->db, (int) $this->user->id, $this->s, -2349, '2026-06-15');
+    /** @var AnomalyEvaluator $evaluator */
+    $evaluator = $this->app->make(AnomalyEvaluator::class);
+    $evaluator->evaluate($largeTxn, $this->user);
+    $alert = AnomalyAlert::query()->where('transaction_id', $largeTxn)->firstOrFail();
+
+    $cpId = (int) $this->db->connection()->table('transactions')->where('id', $largeTxn)->value('counterparty_id');
+
+    // Pre-seed a rule with the SAME natural key the dismissal would write
+    // (simulates a partial undo: the rule survived but the alert is open
+    // again, then the user re-dismisses).
+    $this->db->connection()->table('anomaly_suppression_rules')->insert([
+        'user_id' => $this->user->id, 'counterparty_id' => $cpId, 'detector' => 'large', 'direction' => 'expense',
+        'amount_band_low_minor' => (int) round(1.15 * -2349), 'amount_band_high_minor' => (int) round(0.85 * -2349),
+        'currency' => 'EUR', 'source_anomaly_alert_id' => null,
+        'created_at' => '2026-06-19 00:00:00', 'updated_at' => '2026-06-19 00:00:00',
+    ]);
+
+    /** @var DismissAnomalyAlertAsExpected $dismiss */
+    $dismiss = $this->app->make(DismissAnomalyAlertAsExpected::class);
+    $wrote = ($dismiss)($alert->id, $this->user);
+
+    // No NEW rule written: the natural key already exists, so the count for
+    // the large detector stays at exactly one.
+    expect($wrote)->toBeFalse()
+        ->and(
+            (int) $this->db->connection()->table('anomaly_suppression_rules')
+                ->where('user_id', $this->user->id)
+                ->where('detector', 'large')
+                ->count()
+        )->toBe(1);
+});
+
 it('marks the dismissed alert as expected and is cross-user guarded', function (): void {
     $largeTxn = supTxn($this->db, (int) $this->user->id, $this->s, -2349, '2026-06-15');
     /** @var AnomalyEvaluator $evaluator */

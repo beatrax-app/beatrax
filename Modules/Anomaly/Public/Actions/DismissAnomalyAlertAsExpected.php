@@ -6,6 +6,7 @@ namespace Modules\Anomaly\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Public\Events\AnomalyAlertDismissed;
@@ -161,9 +162,38 @@ final class DismissAnomalyAlertAsExpected
 
         $counterpartyId = $this->counterpartyIdForTransaction($user, $alert->transaction_id);
 
-        $rows = [];
+        // WR-07: make re-dismissal idempotent. The undo->re-dismiss edge
+        // deletes rules by source_anomaly_alert_id, but a partial undo (rule
+        // deleted, the re-open transition throws + the action retries) or any
+        // future dismiss path that lands without the early dismissed-guard
+        // could otherwise accumulate duplicate rows on the same natural key.
+        // Insert each reason only when no rule with the identical natural key
+        // already exists (matched on the bound columns, NULL-counterparty
+        // safe — a plain UNIQUE index would treat NULL counterparties as
+        // distinct and not dedupe them).
+        $connection = $this->db->connection();
+        $wrote = false;
+
         foreach ($reasons as $reason) {
-            $rows[] = [
+            $exists = $connection->table('anomaly_suppression_rules')
+                ->where('user_id', $user->id)
+                ->where('detector', $reason)
+                ->where('direction', $alert->direction)
+                ->where('amount_band_low_minor', $bandLow)
+                ->where('amount_band_high_minor', $bandHigh)
+                ->where('currency', $currency)
+                ->when(
+                    $counterpartyId === null,
+                    static fn (Builder $q) => $q->whereNull('counterparty_id'),
+                    static fn (Builder $q) => $q->where('counterparty_id', $counterpartyId),
+                )
+                ->exists();
+
+            if ($exists) {
+                continue;
+            }
+
+            $connection->table('anomaly_suppression_rules')->insert([
                 'user_id' => $user->id,
                 'counterparty_id' => $counterpartyId,
                 'detector' => $reason,
@@ -174,12 +204,11 @@ final class DismissAnomalyAlertAsExpected
                 'source_anomaly_alert_id' => $alert->id,
                 'created_at' => $nowString,
                 'updated_at' => $nowString,
-            ];
+            ]);
+            $wrote = true;
         }
 
-        $this->db->connection()->table('anomaly_suppression_rules')->insert($rows);
-
-        return true;
+        return $wrote;
     }
 
     /**
