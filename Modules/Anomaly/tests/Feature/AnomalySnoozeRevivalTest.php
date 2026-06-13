@@ -153,6 +153,35 @@ it('does NOT flip snoozed alerts whose snoozed_until is in the future', function
     expect(AnomalyAlertTransition::query()->where('anomaly_alert_id', $alert->id)->count())->toBe(0);
 });
 
+it('revives every expired snooze across users in one chunked sweep (WR-03)', function (): void {
+    $userA = asrUser('asr-chunk-a');
+    $userB = asrUser('asr-chunk-b');
+
+    $expired = [];
+    foreach (range(1, 6) as $n) {
+        $owner = $n % 2 === 0 ? $userA : $userB;
+        $expired[] = asrAlert(
+            $owner,
+            state: 'snoozed',
+            snoozedUntil: CarbonImmutable::parse('2026-05-20 08:00:00'),
+        )->id;
+    }
+
+    // A future snooze and an already-open alert must be untouched.
+    $future = asrAlert($userA, state: 'snoozed', snoozedUntil: CarbonImmutable::parse('2026-05-25 12:00:00'))->id;
+
+    asrRunJob();
+
+    foreach ($expired as $id) {
+        $fresh = AnomalyAlert::query()->findOrFail($id);
+        expect($fresh->state)->toBe('open')
+            ->and($fresh->snoozed_until)->toBeNull();
+        expect(AnomalyAlertTransition::query()->where('anomaly_alert_id', $id)->count())->toBe(1);
+    }
+
+    expect(AnomalyAlert::query()->findOrFail($future)->state)->toBe('snoozed');
+});
+
 it('AnomalyAlertQuery::openForUser surfaces the expired snooze before the sweep runs', function (): void {
     $user = asrUser('asr-querytime');
     $alert = asrAlert($user, state: 'snoozed', snoozedUntil: CarbonImmutable::parse('2026-05-20 08:00:00'));
