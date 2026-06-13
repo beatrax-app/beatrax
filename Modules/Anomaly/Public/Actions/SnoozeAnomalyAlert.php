@@ -27,8 +27,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * the action (not the Livewire layer) so every caller is protected.
  *
  * Idempotent when re-snoozing to the exact same target timestamp (silent
- * no-op, compared via Unix timestamps so it stays correct across
- * timezones). Cross-user invocation raises NotFoundHttpException.
+ * no-op). The comparison runs both sides through the same
+ * `toDateTimeString()` round-trip the persisted value uses, so a re-snooze
+ * to the same intended instant never writes a redundant transition/event
+ * even when the caller's `$until` carries a distinct offset or sub-second
+ * component. Cross-user invocation raises NotFoundHttpException.
  */
 final class SnoozeAnomalyAlert
 {
@@ -64,19 +67,24 @@ final class SnoozeAnomalyAlert
             throw new InvalidArgumentException('Snooze target may not exceed six months from now.');
         }
 
-        // Compare via Unix timestamps so the idempotency check stays
-        // correct across timezones (the stored snoozed_until casts in the
-        // app timezone while the caller's $until may carry a distinct
-        // offset from its ISO source).
+        $untilString = $until->toDateTimeString();
+
+        // Idempotency: compare the to-be-written string against the stored
+        // value's identical `toDateTimeString()` round-trip. snoozed_until
+        // is persisted via toDateTimeString() (dropping sub-second
+        // precision and the source offset) and re-hydrated in the app
+        // timezone, so a raw getTimestamp() comparison against the caller's
+        // $until could spuriously differ — and a genuine re-snooze to the
+        // same intended instant would write a redundant transition + event.
+        // Normalising both sides through the same round-trip makes the
+        // short-circuit fire exactly when the stored instant is unchanged.
         if (
             $alert->state === 'snoozed'
             && $alert->snoozed_until !== null
-            && $alert->snoozed_until->getTimestamp() === $until->getTimestamp()
+            && $alert->snoozed_until->toDateTimeString() === $untilString
         ) {
             return;
         }
-
-        $untilString = $until->toDateTimeString();
 
         $this->stateMachine->transition(
             $alert,
