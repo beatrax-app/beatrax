@@ -31,13 +31,13 @@ afterEach(function (): void {
 });
 
 it('does not flag a routine USD charge whose settled-EUR amount is typical', function (): void {
-    $user = anomalyCorpusUser();
+    $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('mixed-currency');
     $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
 
     /** @var LargeVsTypicalDetector $detector */
     $detector = $this->app->make(LargeVsTypicalDetector::class);
-    $txn = anomalyTxnRow($this->db, $txnId);
+    $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
 
     $result = $detector->fires($txn, $user, $user->anomaly_sensitivity_percent, $user->anomaly_min_amount_minor);
 
@@ -45,7 +45,7 @@ it('does not flag a routine USD charge whose settled-EUR amount is typical', fun
 });
 
 it('builds its baseline from settled minor units (the comparison currency is EUR)', function (): void {
-    $user = anomalyCorpusUser();
+    $user = AnomalyCorpusSeeder::makeUser();
     // Reuse the large-above fixture but flip the under-test charge to a USD
     // native amount whose settled-EUR stays at the typical €9.99 — the
     // detector must read settled, so it must still not fire.
@@ -54,7 +54,7 @@ it('builds its baseline from settled minor units (the comparison currency is EUR
 
     /** @var LargeVsTypicalDetector $detector */
     $detector = $this->app->make(LargeVsTypicalDetector::class);
-    $txn = anomalyTxnRow($this->db, $txnId);
+    $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
 
     // Native currency on the row is USD; the detector must not surface USD.
     expect($txn['currency'])->toBe('USD');
