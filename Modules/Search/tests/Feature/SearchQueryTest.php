@@ -376,3 +376,197 @@ it('escapes HTML in highlighted counterparty and snippet output', function (): v
             ->not->toContain('<img');
     }
 });
+
+// CR-01 (regression): a 2-char query and a bare-amount query must never emit
+// raw `<`/HTML in snippet or highlightedCounterparty. These branches never run
+// decorateHighlight (highlight gates at >= 3 chars / FTS path), so snippet must
+// stay null and the counterparty must remain the raw string — never marked-up
+// unescaped HTML.
+it('short and amount queries never emit raw html in snippet output', function (): void {
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => '<b>AB</b> Mart',
+        'counterparty_normalized' => 'ab mart',
+        'description' => 'tiny <i>note</i> ab',
+        'amount_minor' => -202400,       // €2024.00
+        'settled_amount_minor' => -202400,
+    ]);
+
+    /** @var SearchQuery $searchQuery */
+    $searchQuery = app(SearchQuery::class);
+    $user = User::findOrFail($this->userAId);
+
+    // 2-char query (below the FTS highlight threshold) → LIKE fallback, no highlight.
+    /** @var SearchResultPage $shortPage */
+    $shortPage = $searchQuery->search($user, 'AB', SearchFilters::empty());
+    foreach ($shortPage->rows as $row) {
+        expect($row->snippet)->toBeNull();
+        if ($row->highlightedCounterparty !== null) {
+            expect($row->highlightedCounterparty)->not->toContain('<b>')->not->toContain('<i>');
+        }
+    }
+
+    // Bare numeric (amount) query → amount branch, no FTS highlight.
+    /** @var SearchResultPage $amountPage */
+    $amountPage = $searchQuery->search($user, '2024', SearchFilters::empty());
+    expect($amountPage->totalCount)->toBeGreaterThan(0);
+    foreach ($amountPage->rows as $row) {
+        expect($row->snippet)->toBeNull();
+        if ($row->highlightedCounterparty !== null) {
+            expect($row->highlightedCounterparty)->not->toContain('<b>')->not->toContain('<i>');
+        }
+    }
+});
+
+// WR-02: a bare numeric query that also matches as text must NOT OR-in every
+// transaction whose amount equals that number. The amount branch only fires
+// when the text branch found zero candidates.
+it('does not conflate text matches with amount matches for numeric queries', function (): void {
+    // A transaction whose DESCRIPTION contains "2024" (text match).
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'Yearbook Shop',
+        'counterparty_normalized' => 'yearbook shop',
+        'description' => 'invoice for 2024 season',
+        'amount_minor' => -999, 'settled_amount_minor' => -999,
+    ]);
+
+    // An UNRELATED transaction whose AMOUNT is €2024.00 but no "2024" text.
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'Big Purchase',
+        'counterparty_normalized' => 'big purchase',
+        'description' => 'expensive thing',
+        'amount_minor' => -202400, 'settled_amount_minor' => -202400,
+    ]);
+
+    /** @var SearchQuery $searchQuery */
+    $searchQuery = app(SearchQuery::class);
+    $user = User::findOrFail($this->userAId);
+
+    // "2024" matches the text row; the €2024.00 amount row must NOT be ORed in.
+    /** @var SearchResultPage $page */
+    $page = $searchQuery->search($user, '2024', SearchFilters::empty());
+    expect($page->totalCount)->toBe(1)
+        ->and($page->rows[0]->counterpartyName)->toBe('Yearbook Shop');
+});
+
+// WR-03: filters-only search (empty text) must scope by user_id + filters
+// directly, NOT by materializing every transaction id into a whereIn.
+it('returns filters-only results without materializing all ids', function (): void {
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'Jan Vendor',
+        'posted_at' => '2026-02-10', 'booked_at' => '2026-02-10 00:00:00',
+    ]);
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'Old Vendor',
+        'posted_at' => '2024-02-10', 'booked_at' => '2024-02-10 00:00:00',
+    ]);
+
+    /** @var SearchQuery $searchQuery */
+    $searchQuery = app(SearchQuery::class);
+    $user = User::findOrFail($this->userAId);
+
+    // Empty query + a date filter — only the 2026 row matches.
+    /** @var SearchResultPage $page */
+    $page = $searchQuery->search($user, '', new SearchFilters(after: '2026-01-01'));
+    expect($page->totalCount)->toBe(1)
+        ->and($page->rows[0]->counterpartyName)->toBe('Jan Vendor');
+});
+
+// WR-01: the summary totals are labelled "€", so non-EUR-settled rows must not
+// be summed into the EUR total.
+it('summary totals exclude non-eur-settled rows', function (): void {
+    // EUR-settled out-row: -€10.00.
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'Summary Vendor',
+        'counterparty_normalized' => 'summary vendor',
+        'amount_minor' => -1000, 'currency' => 'EUR',
+        'settled_amount_minor' => -1000, 'settled_currency' => 'EUR',
+    ]);
+    // USD-settled out-row: must NOT be added to the € total.
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'Summary Vendor',
+        'counterparty_normalized' => 'summary vendor',
+        'amount_minor' => -7443, 'currency' => 'USD',
+        'settled_amount_minor' => -7443, 'settled_currency' => 'USD',
+    ]);
+
+    /** @var SearchQuery $searchQuery */
+    $searchQuery = app(SearchQuery::class);
+    $user = User::findOrFail($this->userAId);
+
+    /** @var SearchResultPage $page */
+    $page = $searchQuery->search($user, 'Summary Vendor', SearchFilters::empty());
+
+    // Both rows are counted, but only the EUR row contributes to the € total.
+    expect($page->totalCount)->toBe(2)
+        ->and($page->totalOutMinor)->toBe(-1000);
+});
+
+// WR-08: the advertised amount:/account:/category: tokens must actually apply.
+it('applies the amount token as a min filter', function (): void {
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'Token Shop',
+        'counterparty_normalized' => 'token shop',
+        'amount_minor' => -500, 'settled_amount_minor' => -500,
+    ]);
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'Token Shop',
+        'counterparty_normalized' => 'token shop',
+        'amount_minor' => -9000, 'settled_amount_minor' => -9000,
+    ]);
+
+    /** @var SearchQuery $searchQuery */
+    $searchQuery = app(SearchQuery::class);
+    $user = User::findOrFail($this->userAId);
+
+    // amount:>50 → only the €90.00 row (abs >= €50).
+    /** @var SearchResultPage $page */
+    $page = $searchQuery->search($user, 'Token Shop amount:>50', SearchFilters::empty());
+    expect($page->totalCount)->toBe(1)
+        ->and(abs($page->rows[0]->amountMinor))->toBe(9000);
+});
+
+it('resolves account and category name tokens to ids scoped to the user', function (): void {
+    $db = $this->app->make(DatabaseManager::class)->connection();
+
+    $suffix = bin2hex(random_bytes(4));
+    $accountId = $db->table('accounts')->insertGetId([
+        'user_id' => $this->userAId,
+        'name' => 'Vakantiegeld Spaar',
+        'slug' => 'vak-'.$suffix,
+        'kind' => 'asn',
+        'iban' => 'NL33ASNB'.strtoupper($suffix),
+        'default_currency' => 'EUR',
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $catId = $db->table('categories')->insertGetId([
+        'user_id' => $this->userAId,
+        'name' => 'Groceries', 'slug' => 'gro-'.$suffix,
+        'kind' => 'expense', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    // Matching row: right account + right category.
+    $matchTx = $this->searchTestTransaction($this->userAId, [
+        'account_id' => $accountId,
+        'category_id' => $catId,
+        'counterparty_name' => 'TokenMatch Vendor',
+        'counterparty_normalized' => 'tokenmatch vendor',
+    ]);
+
+    // Non-matching row: same counterparty, no account/category.
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'TokenMatch Vendor',
+        'counterparty_normalized' => 'tokenmatch vendor',
+    ]);
+
+    /** @var SearchQuery $searchQuery */
+    $searchQuery = app(SearchQuery::class);
+    $user = User::findOrFail($this->userAId);
+
+    // Case-insensitive prefix match: "vakantie" → the Vakantiegeld account,
+    // "grocer" → the Groceries category.
+    /** @var SearchResultPage $page */
+    $page = $searchQuery->search($user, 'TokenMatch account:vakantie category:grocer', SearchFilters::empty());
+    expect($page->totalCount)->toBe(1)
+        ->and($page->rows[0]->id)->toBe($matchTx);
+});
