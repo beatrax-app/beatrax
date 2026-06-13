@@ -73,6 +73,11 @@
         <span class="ic" aria-hidden="true">⚠</span>
         Drift Alerts
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
+    
+    <a href="https://beatrax.test/drift?type=anomaly" class="side-item">
+        <span class="ic" aria-hidden="true">◬</span>
+        Unusual charges
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     <a href="https://beatrax.test/budgets" class="side-item ">
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets
