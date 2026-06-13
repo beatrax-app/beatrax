@@ -68,20 +68,50 @@
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
-    <header class="mb-8 flex items-start justify-between gap-4">
+    <header class="mb-6 flex items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Drift alerts</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Alerts</h1>
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
-                Approved recurring series whose latest charge moved outside your threshold.
+                @if ($type === 'anomaly')
+                    Individual charges that look out of the ordinary for you.
+                @else
+                    Approved recurring series whose latest charge moved outside your threshold.
+                @endif
             </p>
         </div>
-        <a
-            href="{{ route('settings') }}#drift-threshold"
-            class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
-        >Adjust threshold →</a>
+        @if ($type === 'drift')
+            <a
+                href="{{ route('settings') }}#drift-threshold"
+                class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+            >Adjust threshold →</a>
+        @else
+            <a
+                href="{{ route('settings') }}#anomaly-detection"
+                class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+            >Adjust sensitivity →</a>
+        @endif
     </header>
 
-    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist">
+    {{-- Level 1 — type switch (D-02). Segmented button group; "type
+         first, lifecycle second". Stacks full-width on phone. --}}
+    <div class="mb-6 flex w-full gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800 sm:w-auto sm:inline-flex" role="tablist" aria-label="Alert type">
+        @foreach (['drift' => 'Subscription drift', 'anomaly' => 'Unusual charges'] as $typeKey => $typeLabel)
+            <button
+                type="button"
+                role="tab"
+                aria-selected="{{ $type === $typeKey ? 'true' : 'false' }}"
+                wire:click="setType('{{ $typeKey }}')"
+                @class([
+                    'flex-1 rounded-md px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 sm:flex-none',
+                    'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' => $type === $typeKey,
+                    'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $type !== $typeKey,
+                ])
+            >{{ $typeLabel }}</button>
+        @endforeach
+    </div>
+
+    {{-- Level 2 — lifecycle tabs (shared between types). --}}
+    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="Alert lifecycle">
         @foreach ($tabs as $key => $label)
             <button
                 type="button"
@@ -97,7 +127,59 @@
         @endforeach
     </nav>
 
-    @if ($tab === 'open')
+    @if ($type === 'anomaly')
+        @php
+            $anomalyFmt = static fn (Money $money): string => $money->currency() === 'EUR'
+                ? $money->format('nl_NL')
+                : $money->format('en_US');
+
+            $anomalyTintFor = static function (object $row): string {
+                $up = abs($row->latestAmount->toMinor()) >= abs($row->baselineAmount->toMinor());
+                if ($row->direction === 'expense') {
+                    return $up ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300';
+                }
+                // income: up is good (emerald), down is bad (rose)
+                return $up ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300';
+            };
+
+            $anomalyEmpty = [
+                'open' => ['No unusual charges', "beatrax watches your spending and flags charges that look out of the ordinary. When something unusual lands, it shows up here."],
+                'history' => ['No acknowledged charges yet', "Charges you've acknowledged will appear here so you can see what you've already reviewed."],
+                'dismissed' => ['Nothing dismissed yet', 'When you mark a charge as expected, it lands here with its suppression rule.'],
+            ];
+        @endphp
+
+        @if (count($anomalyRows) === 0)
+            @php [$emptyHeading, $emptyBody] = $anomalyEmpty[$tab] ?? $anomalyEmpty['open']; @endphp
+            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $emptyHeading }}</h2>
+                <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">{{ $emptyBody }}</p>
+            </div>
+        @else
+            <ul class="space-y-3" aria-live="polite">
+                @foreach ($anomalyRows as $anomaly)
+                    <li>
+                        @include('anomaly::livewire.partials.anomaly-alert-row', [
+                            'alert' => $anomaly,
+                            'tab' => $tab,
+                            'fmt' => $anomalyFmt,
+                            'tintFor' => $anomalyTintFor,
+                            'snoozeTargets' => $snoozeTargets,
+                        ])
+                    </li>
+                @endforeach
+            </ul>
+            @if (count($anomalyRows) >= 26)
+                <div class="mt-6 flex justify-center">
+                    <button
+                        type="button"
+                        wire:click="$set('cursorId', {{ $anomalyRows[count($anomalyRows) - 1]->anomalyAlertId }})"
+                        class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+                    >Load more</button>
+                </div>
+            @endif
+        @endif
+    @elseif ($tab === 'open')
         @if (count($grouped) === 0)
             <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
                 <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No open drift alerts</h2>
