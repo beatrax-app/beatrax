@@ -12,6 +12,8 @@ use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Public\Actions\AcknowledgeAnomalyAlert;
 use Modules\Anomaly\Public\Actions\DismissAnomalyAlert;
+use Modules\Anomaly\Public\Actions\DismissAnomalyAlertAsExpected;
+use Modules\Anomaly\Public\Actions\RemoveAnomalySuppressionRule;
 use Modules\Anomaly\Public\Actions\SnoozeAnomalyAlert;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
@@ -58,8 +60,10 @@ final class AnomalyServiceProvider extends ServiceProvider
         $this->app->singleton(SnoozeAnomalyAlert::class);
         $this->app->singleton(DismissAnomalyAlert::class);
 
-        // TODO(Plan 03, Task 3): bind DismissAnomalyAlertAsExpected +
-        //   RemoveAnomalySuppressionRule as singletons.
+        // Dismiss-as-expected (creates ±15% suppression rules, D-17) and
+        // the two-path rule removal (settings delete + undo re-open, D-18).
+        $this->app->singleton(DismissAnomalyAlertAsExpected::class);
+        $this->app->singleton(RemoveAnomalySuppressionRule::class);
     }
 
     public function boot(): void
