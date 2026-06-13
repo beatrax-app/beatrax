@@ -280,7 +280,28 @@ Plans:
   1. The system flags charges unusual versus the user's baseline (large-vs-typical, first-time merchant).
   2. Anomaly flags surface through the existing alerts surface and are dismissible/acknowledgeable.
 
-**Plans**: TBD
+**Plans**: 5 plans (5 waves; new Anomaly module cloning DriftAlerts; serial waves due to shared AnomalyServiceProvider + interface-first ordering)
+**UI hint**: yes
+Plans:
+**Wave 1**
+
+- [ ] 09-01-PLAN.md — Module scaffold: 4 migrations (alerts/transitions/suppression-rules/users settings) + models + sole-mutator state machine (dismissed->open) + factories + Pest harness + fixture corpus + 3 arch invariants
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 09-02-PLAN.md — AnomalyEvaluator: 3 detectors (large-vs-typical MAD/percentile, large-AND-first-time, duplicate 7d recurring-excluded) + min-floor + reasons aggregation + suppression check + idempotent insert (ANOM-01)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 09-03-PLAN.md — Public surface: AnomalyAlertQuery + DTO/mapper + 5 Actions (ack/snooze/dismiss/dismiss-as-expected/remove-rule) + suppression-rule query + cross-user 404 + suppression ±15% band + undo (ANOM-02)
+
+**Wave 4** *(blocked on Wave 2+3)*
+
+- [ ] 09-04-PLAN.md — Detection runtime: TransactionImported listener -> unique DetectAnomaliesJob + chunked guarded BackfillAnomaliesJob + hourly snooze-revival + safety-net sweep + scheduler wiring (ANOM-01, D-12/13/14)
+
+**Wave 5** *(blocked on Wave 3+4)*
+
+- [ ] 09-05-PLAN.md — UI: /drift type switch + anomaly row (reason chips) + dashboard tile + amber nav badge + settings (sensitivity/floor/suppression list) + first-activation backfill + human-verify (ANOM-02)
 
 ### Phase 10: SPIKE — op-log/CRDT merge-layer prototype
 
@@ -372,7 +393,7 @@ Plans:
 | 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
 | 7. Tax / deductible tagging + export | 5/6 | In Progress|  |
 | 8. Full-text search over history | 5/5 | Complete   | 2026-06-13 |
-| 9. Unusual-charge / anomaly alerts | 0/0 | Not started | - |
+| 9. Unusual-charge / anomaly alerts | 0/5 | Planned | - |
 | 10. SPIKE — op-log/CRDT merge layer | 0/0 | Not started | - |
 | 11. Change-capture + CRDT merge engine | 0/0 | Not started | - |
 | 12. Device identity + pairing | 0/0 | Not started | - |
