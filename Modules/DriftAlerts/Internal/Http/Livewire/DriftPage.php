@@ -127,10 +127,21 @@ final class DriftPage extends Component
 
     public function markAnomalyExpected(int $alertId, CurrentUser $currentUser, DismissAnomalyAlertAsExpected $action): void
     {
-        ($action)($alertId, $currentUser->user());
-        // The "Undo" affordance re-opens the anomaly and deletes the
-        // suppression rule the dismissal just created (D-18).
-        $this->dispatch('toast', message: 'Suppression rule added — Undo', undo: 'undoAnomalySuppression', undoArg: $alertId);
+        $ruleWritten = ($action)($alertId, $currentUser->user());
+
+        if ($ruleWritten) {
+            // The "Undo" affordance re-opens the anomaly and deletes the
+            // suppression rule the dismissal just created (D-18).
+            $this->dispatch('toast', message: 'Suppression rule added — Undo', undo: 'undoAnomalySuppression', undoArg: $alertId);
+
+            return;
+        }
+
+        // CR-01: no suppression rule could be written (the charge amount is
+        // unresolvable, e.g. its transaction was deleted). The dismissal
+        // still stands — surface that honestly rather than promising a mute
+        // + an Undo that would delete nothing.
+        $this->dispatch('toast', message: 'Dismissed as expected');
     }
 
     public function undoAnomalySuppression(int $alertId, CurrentUser $currentUser, RemoveAnomalySuppressionRule $action): void
