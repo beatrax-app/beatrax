@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\QueryParser;
 use Modules\Search\Public\Dto\SearchFilters;
@@ -77,16 +78,27 @@ final class SearchQuery
         $parsedFilters = $parsed['filters'];
 
         // Merge parsed token filters into the SearchFilters object
-        $filters = $this->mergeTokenFilters($filters, $parsedFilters);
+        $filters = $this->mergeTokenFilters($user, $filters, $parsedFilters);
 
-        // Step 2: build the candidate rowid set via FTS or LIKE fallback
+        // Step 2: build the candidate rowid set via FTS or LIKE fallback.
+        // A null result means "no text query" (filters-only mode) — the base
+        // query is scoped by user_id + filters directly, with no whereIn over a
+        // materialized id list (WR-03: avoids the SQLITE_MAX_VARIABLE_NUMBER
+        // crash on full history).
         $candidateIds = $this->resolveCandidateIds($user, $textQuery);
 
-        // Step 3: amount-query branch — numeric textQuery also matches by amount (D-07)
-        if (preg_match('/^\d+(?:[.,]\d{1,2})?$/', trim($textQuery)) === 1) {
+        // Step 3: amount-query branch — numeric textQuery ALSO matches by amount
+        // (D-07), but only when the text branch found no candidates. Otherwise a
+        // bare numeric query like "2024" would OR in every €2024.00 transaction
+        // and conflate "text contains 2024" with "amount is €2024.00" (WR-02).
+        if (
+            $candidateIds !== null
+            && $candidateIds === []
+            && preg_match('/^\d+(?:[.,]\d{1,2})?$/', trim($textQuery)) === 1
+        ) {
             $normalized = str_replace(',', '.', trim($textQuery));
             $minor = (int) round((float) $normalized * 100);
-            $amountIds = self::toIntList(
+            $candidateIds = self::toIntList(
                 $this->db->connection()
                     ->table('transactions')
                     ->where('user_id', $user->id)
@@ -94,8 +106,6 @@ final class SearchQuery
                     ->pluck('id')
                     ->all(),
             );
-            // Merge and deduplicate, keeping list<int> type
-            $candidateIds = array_values(array_unique(array_merge($candidateIds, $amountIds)));
         }
 
         // Step 4: build the result query over transactions
@@ -104,11 +114,17 @@ final class SearchQuery
         // Step 5: apply filter predicates
         $this->applyFilters($query, $user, $filters);
 
-        // Step 6: summary aggregate (clone before cursor/limit)
+        // Step 6: summary aggregate (clone before cursor/limit).
+        // WR-01: the strip totals are labelled "€", so the SUMs must only
+        // aggregate rows whose settlement leg is actually EUR. settled_amount_minor
+        // is the settled-EUR leg for FX rows (usually EUR) but a non-EUR-settled
+        // or unsettled (null) row would otherwise be summed into a number shown
+        // under a € label — a wrong total for a finance app. total_count stays the
+        // full match count; only the money totals are currency-constrained.
         $summary = (clone $query)->selectRaw(
-            'COUNT(*) as total_count,
-             SUM(CASE WHEN settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
-             SUM(CASE WHEN settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in',
+            "COUNT(*) as total_count,
+             SUM(CASE WHEN settled_currency = 'EUR' AND settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
+             SUM(CASE WHEN settled_currency = 'EUR' AND settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in",
         )->first();
 
         $totalCount = is_numeric($summary?->total_count) ? (int) $summary->total_count : 0;
@@ -125,7 +141,7 @@ final class SearchQuery
 
         // Step 8: highlight via FTS (only on the FTS path, not LIKE fallback)
         $highlights = [];
-        if (strlen($textQuery) >= 3 && count($candidateIds) > 0) {
+        if (strlen($textQuery) >= 3 && $candidateIds !== null && count($candidateIds) > 0) {
             $highlights = $this->loadHighlights($user, $textQuery, self::toIntList($sliced->pluck('id')->all()));
         }
 
@@ -186,17 +202,32 @@ final class SearchQuery
      * Merge parsed token filters (from QueryParser) into the SearchFilters DTO.
      * Token filters take precedence per RESEARCH OQ1.
      *
+     * WR-08: the palette advertises `account:`, `category:` and `amount:` tokens,
+     * so they must actually apply. `account:`/`category:` names are resolved to
+     * IDs scoped to the user (case-insensitive prefix match); `amount:` is wired
+     * into amountMin/amountMax/direction. Chip filter IDs and token-resolved IDs
+     * are merged.
+     *
      * @param  array<string, mixed>  $parsedFilters
      */
-    private function mergeTokenFilters(SearchFilters $filters, array $parsedFilters): SearchFilters
+    private function mergeTokenFilters(User $user, SearchFilters $filters, array $parsedFilters): SearchFilters
     {
-        // Merge accounts — combine chip accounts with token accounts
+        // Merge accounts — combine chip account IDs with token-resolved IDs.
         $accounts = $filters->accounts;
         if (isset($parsedFilters['accounts']) && is_array($parsedFilters['accounts'])) {
-            // Parsed accounts are account NAMES (strings), not IDs — they are informational
-            // here; the actual account-id lookup happens in applyFilters via user's accounts.
-            // We store them for UI display; account filter by name is not currently supported
-            // as the test spec uses account IDs. Skip name resolution for now.
+            $names = array_values(array_filter(
+                $parsedFilters['accounts'],
+                static fn (mixed $n): bool => is_string($n) && $n !== '',
+            ));
+            $resolved = $this->resolveNamesToIds($user, 'accounts', $names);
+            $accounts = array_values(array_unique([...$accounts, ...$resolved]));
+        }
+
+        // Merge categories — chip IDs + token-resolved IDs (case-insensitive).
+        $categories = $filters->categories;
+        if (isset($parsedFilters['category']) && is_string($parsedFilters['category']) && $parsedFilters['category'] !== '') {
+            $resolved = $this->resolveNamesToIds($user, 'categories', [$parsedFilters['category']], includeGlobal: true);
+            $categories = array_values(array_unique([...$categories, ...$resolved]));
         }
 
         $after = $filters->after;
@@ -209,50 +240,124 @@ final class SearchQuery
             $before = $parsedFilters['before'];
         }
 
+        // Wire amount: token into min/max/direction.
+        $amountMin = $filters->amountMin;
+        $amountMax = $filters->amountMax;
+        if (isset($parsedFilters['amount']) && is_string($parsedFilters['amount'])) {
+            [$amountMin, $amountMax] = $this->parseAmountToken($parsedFilters['amount'], $amountMin, $amountMax);
+        }
+
         return new SearchFilters(
             accounts: $accounts,
-            categories: $filters->categories,
+            categories: $categories,
             after: $after,
             before: $before,
-            amountMin: $filters->amountMin,
-            amountMax: $filters->amountMax,
+            amountMin: $amountMin,
+            amountMax: $amountMax,
             amountDirection: $filters->amountDirection,
         );
     }
 
     /**
-     * Resolve the candidate transaction ID set via FTS5 MATCH or LIKE fallback.
+     * Resolve a list of names to row IDs on a user-scoped table via a
+     * case-insensitive prefix match on the `name` column (WR-08). Categories
+     * also include global (seeded, null-user) rows when $includeGlobal is true.
      *
+     * Restricted to the `accounts` and `categories` tables — both expose a
+     * `name` column — so the raw LIKE predicate stays a literal string.
+     *
+     * @param  'accounts'|'categories'  $table
+     * @param  list<string>  $names
      * @return list<int>
      */
-    private function resolveCandidateIds(User $user, string $textQuery): array
+    private function resolveNamesToIds(User $user, string $table, array $names, bool $includeGlobal = false): array
+    {
+        if ($names === []) {
+            return [];
+        }
+
+        $query = $this->db->connection()
+            ->table($table)
+            ->where(function (Builder $scope) use ($user, $includeGlobal): void {
+                $scope->where('user_id', $user->id);
+                if ($includeGlobal) {
+                    $scope->orWhereNull('user_id');
+                }
+            })
+            ->where(function (Builder $match) use ($names): void {
+                foreach ($names as $name) {
+                    $like = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $name).'%';
+                    $match->orWhereRaw("LOWER(name) LIKE LOWER(?) ESCAPE '\\'", [$like]);
+                }
+            });
+
+        return self::toIntList($query->pluck('id')->all());
+    }
+
+    /**
+     * Parse an `amount:` token value into [min, max] decimal strings.
+     *
+     * Supports `>50` (min), `<50` (max), `50-100` (range), bare `50` (exact →
+     * min == max). Falls back to the existing values on an unrecognized token.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function parseAmountToken(string $token, ?string $currentMin, ?string $currentMax): array
+    {
+        $token = trim($token);
+
+        if ($token === '') {
+            return [$currentMin, $currentMax];
+        }
+
+        $normalize = static fn (string $v): string => str_replace(',', '.', $v);
+
+        if (str_starts_with($token, '>')) {
+            return [$normalize(substr($token, 1)), $currentMax];
+        }
+
+        if (str_starts_with($token, '<')) {
+            return [$currentMin, $normalize(substr($token, 1))];
+        }
+
+        if (preg_match('/^(\d+(?:[.,]\d{1,2})?)-(\d+(?:[.,]\d{1,2})?)$/', $token, $m) === 1) {
+            return [$normalize($m[1]), $normalize($m[2])];
+        }
+
+        if (preg_match('/^\d+(?:[.,]\d{1,2})?$/', $token) === 1) {
+            // Bare number → exact amount (min == max).
+            $n = $normalize($token);
+
+            return [$n, $n];
+        }
+
+        return [$currentMin, $currentMax];
+    }
+
+    /**
+     * Resolve the candidate transaction ID set via FTS5 MATCH or LIKE fallback.
+     *
+     * Returns null for the empty-text (filters-only) branch to signal that no
+     * whereIn candidate restriction should be applied (WR-03); otherwise a
+     * bounded list of matched transaction ids (possibly empty).
+     *
+     * @return list<int>|null
+     */
+    private function resolveCandidateIds(User $user, string $textQuery): ?array
     {
         if ($textQuery === '') {
-            // No text query — all of the user's transactions are candidates
-            return self::toIntList(
-                $this->db->connection()
-                    ->table('transactions')
-                    ->where('user_id', $user->id)
-                    ->pluck('id')
-                    ->all(),
-            );
+            // No text query (filters-only mode). Return null to signal "do not
+            // restrict by a candidate id list" — buildBaseQuery scopes by
+            // user_id and applyFilters() narrows from there. Materializing every
+            // transaction id into a whereIn would blow SQLITE_MAX_VARIABLE_NUMBER
+            // on full history (WR-03).
+            return null;
         }
 
         // Pitfall-6: FTS5 trigram requires >= 3 chars per token
         if (strlen($textQuery) < 3) {
             // LIKE fallback for short queries
-            return self::toIntList(
-                $this->db->connection()
-                    ->table('transactions')
-                    ->where('user_id', $user->id)
-                    ->where(static function (Builder $q) use ($textQuery): void {
-                        $like = '%'.$textQuery.'%';
-                        $q->where('counterparty_name', 'LIKE', $like)
-                            ->orWhere('description', 'LIKE', $like);
-                    })
-                    ->pluck('id')
-                    ->all(),
-            );
+            return $this->likeFallbackIds($user, $textQuery);
         }
 
         // FTS5 MATCH path — escape each word (Pitfall-1: double-quote wrap + double embedded quotes)
@@ -272,18 +377,7 @@ final class SearchQuery
 
         if ($ftsWords === []) {
             // All words are too short for FTS — fall back to LIKE
-            return self::toIntList(
-                $this->db->connection()
-                    ->table('transactions')
-                    ->where('user_id', $user->id)
-                    ->where(static function (Builder $q) use ($textQuery): void {
-                        $like = '%'.$textQuery.'%';
-                        $q->where('counterparty_name', 'LIKE', $like)
-                            ->orWhere('description', 'LIKE', $like);
-                    })
-                    ->pluck('id')
-                    ->all(),
-            );
+            return $this->likeFallbackIds($user, $textQuery);
         }
 
         $escaped = array_map(
@@ -309,16 +403,51 @@ final class SearchQuery
     }
 
     /**
+     * LIKE fallback used when the query is too short for the FTS5 trigram path.
+     *
+     * WR-04: escape `%` and `_` wildcards with an explicit `ESCAPE '\'` clause
+     * (SQLite has no default LIKE escape character), mirroring EntityNameSearch
+     * so a query containing `%`/`_` matches literally rather than as a wildcard.
+     *
+     * @return list<int>
+     */
+    private function likeFallbackIds(User $user, string $textQuery): array
+    {
+        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $textQuery).'%';
+
+        return self::toIntList(
+            $this->db->connection()
+                ->table('transactions')
+                ->where('user_id', $user->id)
+                ->where(static function (Builder $q) use ($like): void {
+                    $q->whereRaw("counterparty_name LIKE ? ESCAPE '\\'", [$like])
+                        ->orWhereRaw("description LIKE ? ESCAPE '\\'", [$like]);
+                })
+                ->pluck('id')
+                ->all(),
+        );
+    }
+
+    /**
      * Build the base query over transactions for the given candidate IDs.
      *
-     * @param  list<int>  $candidateIds
+     * When $candidateIds is null (filters-only mode), no id restriction is
+     * applied — the user_id predicate + applyFilters() scope the result set
+     * directly (WR-03). An empty list restricts to nothing (genuine zero-hit).
+     *
+     * @param  list<int>|null  $candidateIds
      */
-    private function buildBaseQuery(User $user, array $candidateIds): Builder
+    private function buildBaseQuery(User $user, ?array $candidateIds): Builder
     {
-        return $this->db->connection()
+        $query = $this->db->connection()
             ->table('transactions')
-            ->whereIn('transactions.id', $candidateIds)
-            ->where('transactions.user_id', $user->id)
+            ->where('transactions.user_id', $user->id);
+
+        if ($candidateIds !== null) {
+            $query->whereIn('transactions.id', $candidateIds);
+        }
+
+        return $query
             ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
             ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
             ->orderByDesc('transactions.posted_at')
@@ -543,9 +672,14 @@ final class SearchQuery
             if ($parts[0] !== '' && str_contains($parts[0], self::MARK_START)) {
                 $highlightedCounterparty = self::decorateHighlight($parts[0]);
             }
-            // snippet_body is always from the description/note part
+            // snippet_body is always from the description/note part.
+            // WR-07: the snippet still carries the MARK_START/MARK_END sentinels,
+            // so strip them before comparing to the raw counterparty name —
+            // otherwise the "don't repeat the counterparty" guard never matches
+            // and a snippet that merely duplicates the name still renders.
             $snippetBody = self::toString($highlight->snippet_body);
-            if ($snippetBody !== '' && $snippetBody !== self::toString($row->counterparty_name ?? '')) {
+            $snippetPlain = str_replace([self::MARK_START, self::MARK_END], '', $snippetBody);
+            if ($snippetBody !== '' && $snippetPlain !== self::toString($row->counterparty_name ?? '')) {
                 $snippet = self::decorateHighlight($snippetBody);
             }
         }
@@ -567,13 +701,16 @@ final class SearchQuery
     }
 
     /**
-     * Format a minor-unit amount as a simple decimal string for the palette hit shape.
+     * Format a minor-unit amount for the palette hit shape.
+     *
+     * IN-02: route through brick/money (via the Ledger Money VO) so the palette
+     * presents amounts exactly like the /transactions table (`€ 12,50` /
+     * `$74.43`) and never reintroduces float division for money (project rule).
+     * Money::format() auto-selects the locale from the currency code.
      */
     private function formatMinorAmount(int $minor, string $currency): string
     {
-        $major = $minor / 100.0;
-
-        return sprintf('%s %.2f', $currency, $major);
+        return Money::ofMinor($minor, $currency)->format();
     }
 
     private static function toInt(mixed $value): int
