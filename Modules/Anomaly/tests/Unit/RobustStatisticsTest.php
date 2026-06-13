@@ -55,6 +55,38 @@ it('computes a high percentile of a category sample', function (): void {
     expect($p95)->toBeLessThanOrEqual(3400.0);
 });
 
+it('treats a charge tying the percentile as exceeding it (WR-04 tie-inclusive boundary)', function (): void {
+    // For a small constant-ish sample p95 collapses onto the max; a repeat
+    // of that max must register as "exceeds" so a repeat-of-the-extreme
+    // charge is never a silent false negative.
+    $sample = [1000, 1000, 1000, 1000, 1000];
+    $p95 = RobustStatistics::percentile($sample, 95.0);
+    expect($p95)->toBe(1000.0);
+
+    // Tie fires (>=), strictly-below does not.
+    expect(RobustStatistics::exceedsPercentile(1000, $sample, 95.0))->toBeTrue();
+    expect(RobustStatistics::exceedsPercentile(999, $sample, 95.0))->toBeFalse();
+});
+
+it('exceedsPercentile fires on a charge equal to the historical max for a thin sample (WR-04)', function (): void {
+    $sample = [2750, 2890, 3100, 3400, 2600];
+    $p95 = RobustStatistics::percentile($sample, 95.0);
+
+    // p95 sits at or below the 3400 max; a repeat of the 3400 extreme fires.
+    expect(RobustStatistics::exceedsPercentile(3400, $sample, 95.0))->toBeTrue();
+});
+
+it('exceedsPercentile reduces the sample to absolute magnitudes (signed-safe)', function (): void {
+    // Expense-side negative sample; an equally-large negative charge ties.
+    $sample = [-2750, -2890, -3100, -3400, -2600];
+    expect(RobustStatistics::exceedsPercentile(-3400, $sample, 95.0))->toBeTrue();
+    expect(RobustStatistics::exceedsPercentile(-2000, $sample, 95.0))->toBeFalse();
+});
+
+it('exceedsPercentile returns false for an empty sample', function (): void {
+    expect(RobustStatistics::exceedsPercentile(5000, [], 95.0))->toBeFalse();
+});
+
 it('exposes the tunable named constants', function (): void {
     expect(RobustStatistics::WINDOW_MONTHS)->toBe(12);
     expect(RobustStatistics::THIN_HISTORY_CUTOFF)->toBe(5);

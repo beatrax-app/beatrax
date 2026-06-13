@@ -113,7 +113,11 @@ final readonly class LargeVsTypicalDetector
 
         $absSample = array_map('abs', $categorySample);
         $p95 = RobustStatistics::percentile($absSample, RobustStatistics::CATEGORY_PERCENTILE);
-        if ((float) $absMinor > $p95) {
+        // WR-04: tie-inclusive boundary — a charge EQUAL to the category p95
+        // (which collapses toward the sample max for small samples) fires,
+        // so a repeat of the largest-ever charge is not a silent false
+        // negative. See RobustStatistics::exceedsPercentile.
+        if (RobustStatistics::exceedsPercentile($absMinor, $categorySample, RobustStatistics::CATEGORY_PERCENTILE)) {
             return [
                 'baseline_amount_minor' => (int) round(-$p95),
                 'latest_amount_minor' => $settledMinor,
