@@ -42,6 +42,13 @@ use stdClass;
  */
 final readonly class AnomalyAlertQuery
 {
+    /**
+     * Default page size for the cursor-paginated list reads: 25 rows shown
+     * plus 1 look-ahead row the caller uses to decide whether a "next page"
+     * cursor exists (25 + 1 = 26). The look-ahead row is never rendered.
+     */
+    public const PAGE_SIZE_WITH_LOOKAHEAD = 26;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -61,7 +68,7 @@ final readonly class AnomalyAlertQuery
      *
      * @return list<AnomalyAlertDto>
      */
-    public function openForUser(User $user, ?int $cursorId = null, int $limit = 26): array
+    public function openForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
     {
         $query = $this->db->connection()->table('anomaly_alerts')
             ->where('user_id', $user->id)
@@ -81,7 +88,7 @@ final readonly class AnomalyAlertQuery
      *
      * @return list<AnomalyAlertDto>
      */
-    public function historyForUser(User $user, ?int $cursorId = null, int $limit = 26): array
+    public function historyForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
     {
         return $this->scoped($user, ['acknowledged'], $cursorId, $limit);
     }
@@ -92,7 +99,7 @@ final readonly class AnomalyAlertQuery
      *
      * @return list<AnomalyAlertDto>
      */
-    public function dismissedForUser(User $user, ?int $cursorId = null, int $limit = 26): array
+    public function dismissedForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
     {
         return $this->scoped($user, ['dismissed'], $cursorId, $limit);
     }
