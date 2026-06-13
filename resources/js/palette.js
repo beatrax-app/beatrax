@@ -70,7 +70,9 @@ export const palette = (registry, recent) => ({
     serverTotalCount: 0,
     serverLoading: false,
     _debounceTimer: null,
-    _searchEndpoint: null,
+    // wire:id (string) of the PaletteSearchEndpoint component. We store the id,
+    // never the component object — see _resolveSearchEndpoint() for why.
+    _searchEndpointId: null,
 
     // Token autocomplete state
     tokenSuggestions: [],
@@ -96,14 +98,22 @@ export const palette = (registry, recent) => ({
     },
 
     _resolveSearchEndpoint() {
-        // Find the mounted PaletteSearchEndpoint component by its
+        // Resolve the mounted PaletteSearchEndpoint component by its
         // data-testid attribute. The component renders a hidden root
         // element with data-testid="palette-search-endpoint".
+        //
+        // We store ONLY the wire:id string — never the component object.
+        // This Alpine component's `this` is a reactive proxy; assigning a
+        // Livewire component instance onto it wraps the instance in Alpine's
+        // reactivity, and a subsequent `.call()` leaks the proxy's raw-target
+        // key (`__v_raw`) as the method name → 500 MethodNotFoundException.
+        // Keeping the id (a plain string) reactive is safe; the live
+        // component is fetched fresh and unwrapped at call time in `_endpoint()`.
         const findEndpoint = () => {
             try {
                 const el = document.querySelector('[data-testid="palette-search-endpoint"]');
                 if (el && window.Livewire) {
-                    this._searchEndpoint = window.Livewire.find(el.getAttribute('wire:id'));
+                    this._searchEndpointId = el.getAttribute('wire:id');
                 }
             } catch (_) {
                 // Non-fatal — will retry on next debounce
@@ -114,6 +124,25 @@ export const palette = (registry, recent) => ({
         // might not be mounted at Alpine init time).
         findEndpoint();
         setTimeout(findEndpoint, 500);
+    },
+
+    // Resolve the live Livewire `$wire` proxy fresh at call time.
+    //
+    // Two hazards, both avoided here:
+    //  1. NEVER store the result on `this` — this Alpine component is reactive,
+    //     so an assigned $wire proxy gets double-wrapped and breaks (see
+    //     _resolveSearchEndpoint). Resolving into a local each call keeps it
+    //     outside Alpine's reactivity.
+    //  2. NEVER run it through Alpine.raw()/toRaw(). Livewire 4's find() returns
+    //     the $wire PROXY, which turns any unknown property read into a
+    //     server-method call. toRaw() probes `.__v_raw`, so the proxy hands back
+    //     a caller for a (non-existent) `__v_raw` method → 500
+    //     MethodNotFoundException. Use the proxy directly.
+    _endpoint() {
+        if (!this._searchEndpointId || !window.Livewire) {
+            return null;
+        }
+        return window.Livewire.find(this._searchEndpointId) || null;
     },
 
     open() {
@@ -134,7 +163,7 @@ export const palette = (registry, recent) => ({
                 // exists when `visible` flips true).
             }
             // Resolve endpoint lazily if not yet found
-            if (!this._searchEndpoint) {
+            if (!this._searchEndpointId) {
                 this._resolveSearchEndpoint();
             }
         });
@@ -238,21 +267,22 @@ export const palette = (registry, recent) => ({
 
     async _doServerFetch(q) {
         // Resolve endpoint lazily
-        if (!this._searchEndpoint) {
+        if (!this._searchEndpointId) {
             this._resolveSearchEndpoint();
         }
 
-        if (!this._searchEndpoint) {
+        const endpoint = this._endpoint();
+        if (!endpoint) {
             return;
         }
 
         this.serverLoading = true;
         try {
-            await this._searchEndpoint.call('search', q);
+            await endpoint.call('search', q);
             // Read fresh state from the Livewire component after the call
-            this.serverTransactionHits = this._searchEndpoint.get('transactionHits') || [];
-            this.serverEntityHits = this._searchEndpoint.get('entityHits') || [];
-            this.serverTotalCount = this._searchEndpoint.get('totalCount') || 0;
+            this.serverTransactionHits = endpoint.get('transactionHits') || [];
+            this.serverEntityHits = endpoint.get('entityHits') || [];
+            this.serverTotalCount = endpoint.get('totalCount') || 0;
         } catch (_) {
             // Non-fatal — gracefully degrade to Fuse-only results
         } finally {

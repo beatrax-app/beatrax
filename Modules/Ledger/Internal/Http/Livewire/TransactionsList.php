@@ -530,9 +530,15 @@ final class TransactionsList extends Component
      */
     private function availableCategories(DatabaseManager $db, int $userId): array
     {
+        // Categories are visible when global (seeded default tree, user_id IS
+        // NULL) OR owned by the user — the canonical scoping used across the
+        // categorization read paths. Filtering on user_id alone hid the chip
+        // entirely on installs that only use the global tree.
         $rows = $db->connection()
             ->table('categories')
-            ->where('user_id', $userId)
+            ->where(static function (Builder $query) use ($userId): void {
+                $query->whereNull('user_id')->orWhere('user_id', $userId);
+            })
             ->orderBy('name')
             ->get(['id', 'name'])
             ->all();
