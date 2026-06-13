@@ -33,6 +33,9 @@ final class IndexTransactionOnImport
     public function handle(TransactionImported $event): void
     {
         // Transaction::$id is typed int in the model @property — no cast needed.
-        $this->writer->upsertForTransaction($event->transaction->id);
+        // CR-02: the writer requires the authenticated actor. The import event
+        // carries the owning User; $event->user->id is a non-null int and is
+        // the row's owner, so the writer's ownership guard passes.
+        $this->writer->upsertForTransaction($event->transaction->id, $event->user->id);
     }
 }

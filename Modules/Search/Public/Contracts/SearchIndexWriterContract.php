@@ -26,14 +26,24 @@ interface SearchIndexWriterContract
      * the `transaction_search_docs` row and the FTS5 index entry.
      *
      * Safe to call multiple times for the same transaction (idempotent upsert).
+     *
+     * Multi-user isolation (CR-02): the caller MUST pass the authenticated
+     * actor's user id. The writer verifies `(int) $tx->user_id === $actorUserId`
+     * and returns early on mismatch, so a caller can never rebuild (or desync)
+     * another user's index doc via a forged transaction id. Callers that
+     * already operate on a server-owned row (the import listener) pass that
+     * row's `user_id`.
      */
-    public function upsertForTransaction(int $transactionId): void;
+    public function upsertForTransaction(int $transactionId, int $actorUserId): void;
 
     /**
      * Remove the FTS5 search document for the given transaction.
      *
      * Called when a transaction is permanently deleted so stale FTS entries
      * do not pollute results for future queries.
+     *
+     * Multi-user isolation (CR-02): the actor's user id is verified against
+     * the stored doc's `user_id`; a mismatch is a no-op.
      */
-    public function deleteForTransaction(int $transactionId): void;
+    public function deleteForTransaction(int $transactionId, int $actorUserId): void;
 }

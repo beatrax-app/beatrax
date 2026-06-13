@@ -121,7 +121,9 @@ final class TagTransaction
 
         // (6) Re-index the transaction so the tax note is searchable.
         // Optional nullable injection — no-op when Search module is absent (RESEARCH A4).
-        $this->searchIndex?->upsertForTransaction($transactionId);
+        // Pass the authenticated actor (CR-02): the writer verifies ownership
+        // so a forged transaction id can never reach another user's index doc.
+        $this->searchIndex?->upsertForTransaction($transactionId, $userId);
     }
 
     /**
