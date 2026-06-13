@@ -50,8 +50,12 @@ final class QueryParser
             $remainder = (string) preg_replace('/\bbefore:\S+/i', '', $remainder);
         }
 
-        // --- amount:>50, amount:<100, amount:50 ---
-        $amountCount = preg_match('/\bamount:([<>]?\d+(?:[.,]\d{1,2})?)/i', $remainder, $amountMatch);
+        // --- amount:>50, amount:<100, amount:50, amount:50-100 (range) ---
+        $amountCount = preg_match(
+            '/\bamount:([<>]?\d+(?:[.,]\d{1,2})?(?:-\d+(?:[.,]\d{1,2})?)?)/i',
+            $remainder,
+            $amountMatch,
+        );
         if ($amountCount > 0) {
             $filters['amount'] = $amountMatch[1];
             $remainder = (string) preg_replace('/\bamount:\S+/i', '', $remainder);
