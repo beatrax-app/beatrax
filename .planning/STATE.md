@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
 status: executing
-stopped_at: Completed 09-03-PLAN.md
-last_updated: "2026-06-13T18:35:00.000Z"
+stopped_at: Completed 09-04-PLAN.md
+last_updated: "2026-06-13T19:05:00.000Z"
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 47
-  completed_plans: 45
-  percent: 56
+  completed_plans: 46
+  percent: 57
 ---
 
 # State: beatrax
@@ -28,13 +28,13 @@ progress:
 ## Current Position
 
 Phase: 09 (unusual-charge-anomaly-alerts) — EXECUTING
-Plan: 3 of 5 — COMPLETE (09-03 Anomaly read/write Public surface)
+Plan: 4 of 5 — COMPLETE (09-04 Anomaly detection orchestration: jobs + listener + scheduler)
 
 - **Milestone:** v1.3 "Local & in sync"
 - **Status:** Executing Phase 09
 - **Phase:** 9 of 15 (unusual charge / anomaly alerts)
-- **Plan:** 09-03 complete — AnomalyAlertQuery (revival-aware open/history/dismissed + count + per-detector breakdown) + reasons[]/Money DTO + pure mapper + AnomalySuppressionRuleQuery + five Public Actions (acknowledge/snooze/dismiss/dismiss-as-expected/remove-rule) with cross-user 404 + server-computed ±15% suppression + dismissed->open undo + lifecycle events. Next: 09-04 jobs (TransactionImported listener + backfill + sweeps).
-- **Progress:** [█████████░] 91%
+- **Plan:** 09-04 complete — DetectAnomaliesJob ((userId,txnId)-unique, off the import txn) + EvaluateAnomaliesOnTransactionImport listener (queues, never inline, D-12/T-09-14) + BackfillAnomaliesJob (lazyById full-history, anomaly_backfilled_at wholesale guard, idempotent/resumable, D-13/D-14) + ReviveExpiredAnomalySnoozesJob (global hourly snoozed->open + audit) + SafetyNetAnomalySweepJob (per-user 30d NOT-EXISTS catch-up) + two scheduler entries (anomaly.revive-snoozes, anomaly.safety-net-sweep). All four jobs share the single AnomalyEvaluator::evaluate() path. Next: 09-05 UI (/drift type switch + settings toggle dispatching the backfill + nav badge + dashboard tile).
+- **Progress:** [██████████] 95%
 
 ```
 Phases [██              ] 2/15
@@ -87,6 +87,12 @@ Phases [██              ] 2/15
 - [09-03] Suppression band stored as [min(round(0.85x),round(1.15x)), max(...)] so the signed-amount band matches the evaluator's band_low <= settled <= band_high test (round(1.15x) is the more-negative band_low for an expense).
 - [09-03] Snooze (now, now+6mo] bounds enforced IN SnoozeAnomalyAlert (not the Livewire layer) so every caller is protected (T-09-10); 404 guard runs first.
 - [09-03] DismissAnomalyAlertAsExpected inserts no rule when latest_amount_minor is null (first-time-only flag has no band); RemoveAnomalySuppressionRule has two paths — settings delete-only vs undo (delete-by-source_anomaly_alert_id + dismissed->open re-open, D-18).
+- [09-04] All four anomaly jobs (reactive DetectAnomaliesJob, BackfillAnomaliesJob, SafetyNetAnomalySweepJob, ReviveExpiredAnomalySnoozesJob) route through the single AnomalyEvaluator::evaluate() path — zero duplicated detection logic.
+- [09-04] TransactionImported listener stays synchronous but only QUEUES a (userId,txnId)-unique DetectAnomaliesJob — baseline math never runs inline in the import transaction (D-12/T-09-14, asserted).
+- [09-04] BackfillAnomaliesJob is userId-unique + wholesale-no-ops when users.anomaly_backfilled_at is set (D-13); walks full history via lazyById(500), idempotent/resumable on UNIQUE(transaction_id), lands alerts in Open with no muting (D-14). Dispatched on first activation by the Plan 05 settings toggle (no dispatch site yet).
+- [09-04] SafetyNetAnomalySweepJob recency window = 30 days by transactions.created_at (import time); NOT EXISTS against anomaly_alerts so only genuinely-unalerted recent rows are re-evaluated; per-user fan-out via lazyById(100). The one-shot backfill owns full history.
+- [09-04] Both per-user jobs inject Clock (not the now() global helper) for the backfilled-at stamp / window cutoff — satisfies larastanStrictRules.noGlobalLaravelFunction + deterministic under setTestNow().
+- [09-04] anomaly.revive-snoozes stays global (state machine resolves user from the row, only flips snoozed->open — T-09-16); anomaly.safety-net-sweep fans out per-user. routes/console.php is outside the PHPStan paths scope by design, so the new Schedule:: entries are not gated there.
 
 ### Critical path
 
@@ -106,9 +112,9 @@ Phases [██              ] 2/15
 
 ## Session Continuity
 
-- **Last session:** 2026-06-13T18:35:00.000Z
-- **Stopped at:** Completed 09-03-PLAN.md (Anomaly read/write Public surface — query + DTO/mapper + five Actions + suppression create/undo + lifecycle events)
-- **Resume by:** Execute Plan 09-04 (anomaly jobs — TransactionImported listener + full-history backfill + safety-net + snooze-revival sweeps). Run `/gsd:execute-phase 09`.
+- **Last session:** 2026-06-13T19:05:00.000Z
+- **Stopped at:** Completed 09-04-PLAN.md (Anomaly detection orchestration — reactive DetectAnomaliesJob + TransactionImported listener + full-history BackfillAnomaliesJob + ReviveExpiredAnomalySnoozesJob + SafetyNetAnomalySweepJob + two scheduler entries)
+- **Resume by:** Execute Plan 09-05 (anomaly UI — /drift type switch consuming AnomalyAlertQuery + settings toggle dispatching BackfillAnomaliesJob on first activation + top-nav badge + dashboard tile). Run `/gsd:execute-phase 09`.
 
 ---
 *State initialized: 2026-06-07 for milestone v1.3 "Local & in sync"*
