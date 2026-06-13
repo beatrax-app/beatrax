@@ -156,6 +156,17 @@
             <span class="side-badge alert" aria-label="{{ $navCounts['drift'] }} open drift alerts">{{ $navCount('drift') }}</span>
         @endif
     </a>
+    {{-- Unusual charges — the anomaly section of the /drift alerts home
+         (D-02/D-03). Links to ?type=anomaly; amber .side-badge.alert
+         shows the open anomaly count (revival-aware, merged into
+         navCounts by the Anomaly nav-badge composer) and hides at zero. --}}
+    <a href="{{ route('drift.index', ['type' => 'anomaly']) }}" class="side-item">
+        <span class="ic" aria-hidden="true">◬</span>
+        Unusual charges
+        @if (($navCounts['anomaly'] ?? 0) > 0)
+            <span class="side-badge alert" aria-label="{{ $navCounts['anomaly'] }} open unusual charges">{{ $navCount('anomaly') }}</span>
+        @endif
+    </a>
     <a href="{{ route('budgets.index') }}" class="side-item {{ $isActive('/budgets') }}">
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets

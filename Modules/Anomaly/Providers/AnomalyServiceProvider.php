@@ -5,11 +5,16 @@ declare(strict_types=1);
 namespace Modules\Anomaly\Providers;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\View\Factory as ViewFactoryContract;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
+use Livewire\LivewireManager;
 use Modules\Anomaly\Internal\AnomalyEvaluator;
 use Modules\Anomaly\Internal\Detectors\DuplicateChargeDetector;
 use Modules\Anomaly\Internal\Detectors\FirstTimeMerchantDetector;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
+use Modules\Anomaly\Internal\Http\Livewire\AnomalySettingsSection;
+use Modules\Anomaly\Internal\Http\Livewire\DashboardAnomalyBadge;
 use Modules\Anomaly\Internal\Listeners\EvaluateAnomaliesOnTransactionImport;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Public\Actions\AcknowledgeAnomalyAlert;
@@ -19,6 +24,7 @@ use Modules\Anomaly\Public\Actions\RemoveAnomalySuppressionRule;
 use Modules\Anomaly\Public\Actions\SnoozeAnomalyAlert;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
+use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Public\Events\TransactionImported;
 
 /**
@@ -70,7 +76,7 @@ final class AnomalyServiceProvider extends ServiceProvider
         $this->app->singleton(RemoveAnomalySuppressionRule::class);
     }
 
-    public function boot(Dispatcher $events): void
+    public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
         if (is_dir(__DIR__.'/../Database/Migrations')) {
             $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
@@ -81,6 +87,13 @@ final class AnomalyServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'anomaly');
         }
+
+        // Plan 05 Livewire surface: the dashboard "Unusual charges" tile
+        // (D-03) and the Settings "Anomaly detection" section (D-11/D-18).
+        $livewire->component('anomaly.dashboard-anomaly-badge', DashboardAnomalyBadge::class);
+        $livewire->component('anomaly.settings-section', AnomalySettingsSection::class);
+
+        $this->registerNavBadgeComposer();
 
         // Plan 04: queue a unique DetectAnomaliesJob on every import (D-12).
         // The listener stays synchronous but only DISPATCHES the job — the
@@ -99,8 +112,54 @@ final class AnomalyServiceProvider extends ServiceProvider
         // registered in routes/console.php (anomaly.safety-net-sweep,
         // anomaly.revive-snoozes); the full-history backfill is dispatched
         // on first activation (Plan 05 settings toggle).
-        // TODO(Plan 05): register the Livewire SFCs (anomaly section of the
-        //   /drift alerts home, dashboard anomaly badge) + the top-nav
-        //   anomaly open-count badge view composer.
+    }
+
+    /**
+     * Inject the anomaly open-alert count into the sidebar nav as
+     * `navCounts['anomaly']` via the View Factory contract (the global
+     * `view()` helper is forbidden in module code).
+     *
+     * The sidebar's `AppSidebar` component already provides a `navCounts`
+     * map (from `NavCountsService`); this composer MERGES the
+     * revival-aware anomaly open count into that map so the value stays
+     * exactly equal to `AnomalyAlertQuery::openCountForUser` (which a raw
+     * `state='open'` COUNT would not — it must also surface snoozed-but-
+     * expired alerts). UI-SPEC §5 renders the amber `.side-badge.alert`
+     * when the count is > 0.
+     *
+     * A boot-scoped memo collapses repeated renders within a single boot
+     * cycle to a single COUNT query.
+     */
+    private function registerNavBadgeComposer(): void
+    {
+        $app = $this->app;
+        $factory = $app->make(ViewFactoryContract::class);
+
+        /** @var array<int, int> $cache */
+        $cache = [];
+
+        $factory->composer('core::livewire.app-sidebar', static function (View $compose) use ($app, &$cache): void {
+            $currentUser = $app->make(CurrentUser::class);
+
+            /** @var array<string, int> $navCounts */
+            $navCounts = (array) ($compose->getData()['navCounts'] ?? []);
+
+            if (! $currentUser->isAuthenticated()) {
+                $navCounts['anomaly'] = 0;
+                $compose->with('navCounts', $navCounts);
+
+                return;
+            }
+
+            $user = $currentUser->user();
+            $userId = $user->id;
+            if (! array_key_exists($userId, $cache)) {
+                $query = $app->make(AnomalyAlertQuery::class);
+                $cache[$userId] = $query->openCountForUser($user);
+            }
+
+            $navCounts['anomaly'] = $cache[$userId];
+            $compose->with('navCounts', $navCounts);
+        });
     }
 }
