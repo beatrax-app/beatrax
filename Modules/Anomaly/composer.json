@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/anomaly",
+    "description": "Anomaly module — per-transaction unusual-charge detection (large-vs-typical, first-time merchant, duplicate-charge), /drift alerts surface, suppression rules.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Anomaly\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Anomaly\\Tests\\": "tests/"
+        }
+    }
+}

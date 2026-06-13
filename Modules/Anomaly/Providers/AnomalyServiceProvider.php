@@ -1,0 +1,55 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Anomaly\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
+
+/**
+ * Wires the Anomaly module.
+ *
+ * register() binds the stateless in-tree services as singletons. In this
+ * wave only the sole-mutator state machine exists; the Public queries /
+ * actions, the detector, the queued jobs, and the Livewire surface land
+ * in later plans (02 evaluator, 03 read/write surface, 04 jobs, 05 UI)
+ * and register their own singletons / components here as they arrive.
+ *
+ * boot() conditionally loads the module's migrations, routes, and views.
+ * The TransactionImported listener, the top-nav anomaly badge composer,
+ * and the Livewire component registrations are intentionally left as
+ * Plan 04/05 TODO stubs — the import-completion hook is NOT wired here so
+ * the skeleton cannot fire detection before the evaluator exists.
+ */
+final class AnomalyServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(AnomalyAlertStateMachine::class);
+
+        // TODO(Plan 03): bind AnomalyAlertQuery + the acknowledge / snooze
+        //   / dismiss Public Actions as singletons.
+        // TODO(Plan 02): bind the AnomalyEvaluator detector singleton.
+    }
+
+    public function boot(): void
+    {
+        if (is_dir(__DIR__.'/../Database/Migrations')) {
+            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
+        }
+        if (is_file(__DIR__.'/../Routes/web.php')) {
+            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
+        }
+        if (is_dir(__DIR__.'/../Resources/views')) {
+            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'anomaly');
+        }
+
+        // TODO(Plan 04): subscribe the anomaly evaluator to the Import
+        //   module's TransactionImported event + register the scheduled
+        //   safety-net sweep and snooze-revival sweep in routes/console.php.
+        // TODO(Plan 05): register the Livewire SFCs (anomaly section of the
+        //   /drift alerts home, dashboard anomaly badge) + the top-nav
+        //   anomaly open-count badge view composer.
+    }
+}

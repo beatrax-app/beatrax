@@ -1,0 +1,11 @@
+{
+    "name": "Anomaly",
+    "alias": "anomaly",
+    "description": "Per-transaction unusual-charge detection (large-vs-typical, first-time merchant, duplicate-charge) surfaced through the /drift alerts home with its own state machine, audit-transition table, and user-visible suppression rules.",
+    "keywords": ["anomaly", "unusual-charge", "alerts", "fraud-adjacent"],
+    "priority": 12,
+    "providers": [
+        "Modules\\Anomaly\\Providers\\AnomalyServiceProvider"
+    ],
+    "files": []
+}
