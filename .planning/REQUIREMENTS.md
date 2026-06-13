@@ -55,8 +55,8 @@
 - [x] **TAX-03**: User can export a year's tax-tagged set (CSV/PDF) for their records.
 
 #### SRCH (full-text search over history)
-- [ ] **SRCH-01**: User can search transactions by merchant/description across all retained history.
-- [ ] **SRCH-02**: Search results are filterable (date range, account, amount, category) and fast on multi-year data.
+- [x] **SRCH-01**: User can search transactions by merchant/description across all retained history.
+- [x] **SRCH-02**: Search results are filterable (date range, account, amount, category) and fast on multi-year data.
 
 #### ANOM (unusual-charge alerts)
 - [ ] **ANOM-01**: System flags charges that are unusual versus the user's baseline (large-vs-typical, first-time merchant).
@@ -138,8 +138,8 @@ Each v1.3 requirement maps to exactly one phase. See `.planning/ROADMAP.md`.
 | TAX-01 | Phase 7 | Complete |
 | TAX-02 | Phase 7 | Complete |
 | TAX-03 | Phase 7 | Complete |
-| SRCH-01 | Phase 8 | Pending |
-| SRCH-02 | Phase 8 | Pending |
+| SRCH-01 | Phase 8 | Complete |
+| SRCH-02 | Phase 8 | Complete |
 | ANOM-01 | Phase 9 | Pending |
 | ANOM-02 | Phase 9 | Pending |
 | SYNC-04 | Phase 10 | Pending |

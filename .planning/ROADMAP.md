@@ -43,7 +43,7 @@
 
 - [x] **Phase 6: Bills / cash-flow calendar** - Upcoming fixed payments on a calendar with running projected balance. (completed 2026-06-12)
 - [ ] **Phase 7: Tax / deductible tagging + per-year export** - Tag tax-relevant transactions and export a year's set.
-- [ ] **Phase 8: Full-text search over history** - Fast, filterable search across all retained history.
+- [x] **Phase 8: Full-text search over history** - Fast, filterable search across all retained history. (completed 2026-06-13)
 - [ ] **Phase 9: Unusual-charge / anomaly alerts** - Baseline-relative anomaly flags through the existing alerts surface.
 
 ### Track 4 — Local-first E2E device sync (full P2P multi-master, SEED-001) — CRITICAL PATH
@@ -255,20 +255,20 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 08-01-PLAN.md — Search module scaffold: FTS5 migration (trigram) + Public DTOs/contracts + guarded SearchServiceProvider + Wave 0 RED tests + boundary rule
+- [x] 08-01-PLAN.md — Search module scaffold: FTS5 migration (trigram) + Public DTOs/contracts + guarded SearchServiceProvider + Wave 0 RED tests + boundary rule
 
 **Wave 2** *(blocked on Wave 1; the two run in parallel — disjoint files)*
 
-- [ ] 08-02-PLAN.md — Synchronous index: SearchIndexWriter + TransactionImported listener + Tax note hook + search:reindex + doctor FtsHealthCheck (D-23/D-24)
-- [ ] 08-03-PLAN.md — SearchQuery (FTS MATCH + filters + amount + highlight + summary + cursor) + QueryParser + EntityNameSearch + DidYouMean + SearchResultsProvider (SRCH-01/02)
+- [x] 08-02-PLAN.md — Synchronous index: SearchIndexWriter + TransactionImported listener + Tax note hook + search:reindex + doctor FtsHealthCheck (D-23/D-24)
+- [x] 08-03-PLAN.md — SearchQuery (FTS MATCH + filters + amount + highlight + summary + cursor) + QueryParser + EntityNameSearch + DidYouMean + SearchResultsProvider (SRCH-01/02)
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 08-04-PLAN.md — /transactions search mode: #[Url] query+filters, toolbar/chips/popovers, summary strip, highlighted rows + snippet, no-results, phone bottom sheet (D-02/11/12/13)
+- [x] 08-04-PLAN.md — /transactions search mode: #[Url] query+filters, toolbar/chips/popovers, summary strip, highlighted rows + snippet, no-results, phone bottom sheet (D-02/11/12/13)
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 08-05-PLAN.md — Palette server-backed search + entity sections + token autocomplete + recent searches + sidebar/mobile affordances + UAT (D-01/10/25/28/29)
+- [x] 08-05-PLAN.md — Palette server-backed search + entity sections + token autocomplete + recent searches + sidebar/mobile affordances + UAT (D-01/10/25/28/29)
 
 ### Phase 9: Unusual-charge / anomaly alerts
 
@@ -371,7 +371,7 @@ Plans:
 | 5. PIN / biometric app-lock | 6/6 | Complete   | 2026-06-11 |
 | 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
 | 7. Tax / deductible tagging + export | 5/6 | In Progress|  |
-| 8. Full-text search over history | 0/0 | Not started | - |
+| 8. Full-text search over history | 5/5 | Complete   | 2026-06-13 |
 | 9. Unusual-charge / anomaly alerts | 0/0 | Not started | - |
 | 10. SPIKE — op-log/CRDT merge layer | 0/0 | Not started | - |
 | 11. Change-capture + CRDT merge engine | 0/0 | Not started | - |

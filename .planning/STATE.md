@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
 status: ready_to_plan
-stopped_at: Phase 07 complete (6/6) — ready to discuss Phase 8
-last_updated: 2026-06-12T19:48:56.064Z
+stopped_at: Phase 08 complete (5/5) — ready to discuss Phase 9
+last_updated: 2026-06-13T15:28:16.743Z
 progress:
   total_phases: 15
   completed_phases: 7
-  total_plans: 37
-  completed_plans: 37
+  total_plans: 42
+  completed_plans: 42
   percent: 47
 ---
 
@@ -23,16 +23,16 @@ progress:
 - **Requirements:** `.planning/REQUIREMENTS.md`
 - **Roadmap:** `.planning/ROADMAP.md`
 - **Core value:** Show me, in one place, what I actually owe and where the money truly came from — across every account chain — so my monthly finances stop being a manual reconciliation puzzle.
-- **Current focus:** Phase 8 — full text search over history
+- **Current focus:** Phase 9 — unusual charge / anomaly alerts
 
 ## Current Position
 
-Phase: 07 (tax-deductible-tagging-per-year-export) — COMPLETE
-Plan: 6 of 6 (all complete)
+Phase: 08 (full-text-search-over-history) — EXECUTING
+Plan: 1 of 5
 
 - **Milestone:** v1.3 "Local & in sync"
 - **Status:** Ready to plan
-- **Phase:** 8 of 15 (full text search over history)
+- **Phase:** 9 of 15 (unusual charge / anomaly alerts)
 - **Plan:** Not started
 - **Progress:** 2 of 15 phases complete — 13%
 
@@ -93,8 +93,8 @@ Phases [██              ] 2/15
 
 ## Session Continuity
 
-- **Last session:** 2026-06-12T18:24:03Z
-- **Stopped at:** Phase 07 Plan 06 complete — awaiting browser UAT checkpoint (four-surface tax tagging)
+- **Last session:** 2026-06-12T20:29:43.153Z
+- **Stopped at:** Phase 8 UI-SPEC approved
 - **Resume by:** Complete browser UAT on the four surfaces (TransactionsList, TransactionDetail, CounterpartyProfile, CashBookPage) and signal "approved" to proceed to Phase 08.
 
 ---
