@@ -88,6 +88,65 @@ it('does not link a pending (unapproved) series to the counterparty card', funct
     expect(app(RecurringSeriesQuery::class)->approvedSeriesForCounterparty($cpId, $this->user))->toBe([]);
 });
 
+it('maps transaction ids to recurring-series membership (true/false per id)', function (): void {
+    $cpId = linkCounterparty($this->db, $this->user->id, 'netflix-link');
+    linkChain($this->db, $this->user->id, $cpId);
+
+    // The occurrence row inserted by linkChain carries the seeded txn id.
+    $memberTxnId = (int) $this->db->connection()->table('recurring_series_occurrences')
+        ->where('user_id', $this->user->id)
+        ->value('transaction_id');
+
+    // A second transaction NOT attached to any occurrence.
+    $accountId = $this->db->connection()->table('accounts')->insertGetId([
+        'user_id' => $this->user->id, 'name' => 'ASN2', 'slug' => 'mem-'.bin2hex(random_bytes(4)),
+        'kind' => 'asn', 'iban' => 'NL00MEMB'.substr(bin2hex(random_bytes(8)), 0, 10), 'default_currency' => 'EUR',
+        'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
+    ]);
+    $runId = $this->db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $this->user->id, 'source_format' => 'asn-csv', 'raw_file_path' => '/tmp/mem.csv',
+        'sha256' => hash('sha256', 'mem'.bin2hex(random_bytes(6))), 'uploaded_at' => '2026-05-01 00:00:00', 'status' => 'previewed',
+        'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
+    ]);
+    $loneTxnId = $this->db->connection()->table('transactions')->insertGetId([
+        'user_id' => $this->user->id, 'account_id' => $accountId, 'import_run_id' => $runId,
+        'fingerprint' => hash('sha256', 'mem-fp'.bin2hex(random_bytes(6))), 'posted_at' => '2026-05-02',
+        'booked_at' => '2026-05-02 00:00:00', 'value_date' => '2026-05-02',
+        'amount_minor' => -500, 'currency' => 'EUR', 'settled_amount_minor' => -500, 'settled_currency' => 'EUR',
+        'counterparty_normalized' => 'other', 'counterparty_name' => 'OTHER', 'normalization_version' => 1,
+        'type' => 'expense', 'source_format' => 'asn-csv', 'source_row_index' => 999,
+        'fingerprint_version' => 3, 'created_at' => '2026-05-02 00:00:00', 'updated_at' => '2026-05-02 00:00:00',
+    ]);
+
+    $map = app(RecurringSeriesQuery::class)->seriesMembershipForTransactionIds(
+        [$memberTxnId, $loneTxnId],
+        $this->user,
+    );
+
+    expect($map[$memberTxnId])->toBeTrue();
+    expect($map[$loneTxnId])->toBeFalse();
+});
+
+it('does not leak another user\'s occurrence membership', function (): void {
+    $cpId = linkCounterparty($this->db, $this->user->id, 'netflix-link');
+    linkChain($this->db, $this->user->id, $cpId);
+    $memberTxnId = (int) $this->db->connection()->table('recurring_series_occurrences')
+        ->where('user_id', $this->user->id)
+        ->value('transaction_id');
+
+    $other = User::create(['username' => 'other-mem', 'password' => 'fixture-password-12chars', 'period_start_day' => 1]);
+
+    // The member txn belongs to $this->user; querying as $other must not
+    // report it as a member.
+    $map = app(RecurringSeriesQuery::class)->seriesMembershipForTransactionIds([$memberTxnId], $other);
+
+    expect($map[$memberTxnId])->toBeFalse();
+});
+
+it('returns an empty map for an empty id list', function (): void {
+    expect(app(RecurringSeriesQuery::class)->seriesMembershipForTransactionIds([], $this->user))->toBe([]);
+});
+
 it('returns no counterparty for a series with no resolved occurrences', function (): void {
     $seriesId = $this->db->connection()->table('recurring_series')->insertGetId([
         'user_id' => $this->user->id, 'direction' => 'expense', 'detected_name' => 'Orphan',

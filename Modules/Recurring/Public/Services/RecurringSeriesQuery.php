@@ -294,6 +294,61 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
+     * Recurring-series membership for a batch of transaction ids. A
+     * transaction is "on a recurring series" iff a
+     * `recurring_series_occurrences` row carries its `transaction_id`
+     * (user-scoped). Returns a `transaction_id => bool` map covering every
+     * id passed in (ids with no occurrence row map to `false`).
+     *
+     * The Anomaly module's duplicate-charge detector consumes this Public
+     * method to exclude a near-twin pair where both sides are members of an
+     * approved recurring series (D-10) — a legit fortnightly/weekly
+     * subscription that happened to land twice in the duplicate window is
+     * not a real duplicate. Going through this Public surface keeps the
+     * `recurring_series_occurrences` table owned by Recurring; Anomaly never
+     * raw-joins it.
+     *
+     * Cross-user safe: the single batched query carries an explicit
+     * `where('user_id', ...)` (the global scope does not fire under
+     * queue/console where the evaluator runs).
+     *
+     * @param  array<int|string, mixed>  $transactionIds
+     * @return array<int, bool>
+     */
+    public function seriesMembershipForTransactionIds(array $transactionIds, User $user): array
+    {
+        $clean = [];
+        foreach ($transactionIds as $id) {
+            $i = is_numeric($id) ? (int) $id : 0;
+            if ($i > 0) {
+                $clean[] = $i;
+            }
+        }
+        $unique = array_values(array_unique($clean));
+        if ($unique === []) {
+            return [];
+        }
+
+        $members = $this->db->connection()->table('recurring_series_occurrences')
+            ->where('user_id', $user->id)
+            ->whereIn('transaction_id', $unique)
+            ->distinct()
+            ->pluck('transaction_id');
+
+        $memberSet = [];
+        foreach ($members as $value) {
+            $memberSet[self::toInt($value)] = true;
+        }
+
+        $map = [];
+        foreach ($unique as $id) {
+            $map[$id] = isset($memberSet[$id]);
+        }
+
+        return $map;
+    }
+
+    /**
      * The counterparty this series belongs to — the most frequent
      * `transactions.counterparty_id` across the series' occurrences, or null
      * when none of the occurrences resolved to a counterparty. Lets the series

@@ -7,7 +7,6 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
 use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
-use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
@@ -33,38 +32,15 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-function anomalyCorpusUser(): User
-{
-    return User::query()->create([
-        'username' => 'anom-'.bin2hex(random_bytes(4)),
-        'password' => 'fixture-password',
-        'period_start_day' => 1,
-        'default_currency_view' => 'eur_only',
-    ]);
-}
-
-/**
- * Loads the under-test transaction as the raw array the detector consumes.
- *
- * @return array<string, mixed>
- */
-function anomalyTxnRow(DatabaseManager $db, int $txnId): array
-{
-    /** @var stdClass $row */
-    $row = $db->connection()->table('transactions')->where('id', $txnId)->first();
-
-    return (array) $row;
-}
-
 it('fires the large reason exactly as the corpus expects', function (string $fixtureName, bool $expectLarge): void {
-    $user = anomalyCorpusUser();
+    $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load($fixtureName);
     $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
 
     /** @var LargeVsTypicalDetector $detector */
     $detector = $this->app->make(LargeVsTypicalDetector::class);
 
-    $txn = anomalyTxnRow($this->db, $txnId);
+    $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
     $result = $detector->fires($txn, $user, $user->anomaly_sensitivity_percent, $user->anomaly_min_amount_minor);
 
     if ($expectLarge) {
@@ -82,13 +58,13 @@ it('fires the large reason exactly as the corpus expects', function (string $fix
 ]);
 
 it('maps the default 50% sensitivity to k=3.0 (the large-above baseline)', function (): void {
-    $user = anomalyCorpusUser();
+    $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('large-above');
     $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
 
     /** @var LargeVsTypicalDetector $detector */
     $detector = $this->app->make(LargeVsTypicalDetector::class);
-    $txn = anomalyTxnRow($this->db, $txnId);
+    $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
 
     // At the default sensitivity the €23.49 charge against a stable €9.99
     // baseline trips; at a far less sensitive setting (k clamps high), the

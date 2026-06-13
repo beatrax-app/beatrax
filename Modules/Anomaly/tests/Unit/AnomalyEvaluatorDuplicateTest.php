@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Anomaly\Internal\Detectors\DuplicateChargeDetector;
+use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
+
+uses(RefreshDatabase::class);
+
+/*
+ * Duplicate-charge detector (D-10): same counterparty + exact settled
+ * amount + currency + direction within 7 days fires `duplicate`; a pair
+ * where BOTH charges are on the same approved recurring series is excluded
+ * (legit cadence-landed-twice). The min floor gates it.
+ */
+
+beforeEach(function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $this->db = $db;
+    CarbonImmutable::setTestNow('2026-06-16 12:00:00');
+});
+
+afterEach(function (): void {
+    CarbonImmutable::setTestNow();
+});
+
+it('fires for an exact duplicate within the 7-day window', function (): void {
+    $user = AnomalyCorpusSeeder::makeUser();
+    $fixture = AnomalyCorpusSeeder::load('duplicate-in-window');
+    $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
+
+    /** @var DuplicateChargeDetector $detector */
+    $detector = $this->app->make(DuplicateChargeDetector::class);
+    $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
+
+    expect($detector->fires($txn, $user, $user->anomaly_min_amount_minor))->toBeTrue();
+});
+
+it('does NOT fire when both charges are on the same approved recurring series', function (): void {
+    $user = AnomalyCorpusSeeder::makeUser();
+    $fixture = AnomalyCorpusSeeder::load('duplicate-recurring-excluded');
+    $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
+
+    /** @var DuplicateChargeDetector $detector */
+    $detector = $this->app->make(DuplicateChargeDetector::class);
+    $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
+
+    expect($detector->fires($txn, $user, $user->anomaly_min_amount_minor))->toBeFalse();
+});
+
+it('exposes DUPLICATE_WINDOW_DAYS = 7 as a named constant', function (): void {
+    expect(DuplicateChargeDetector::DUPLICATE_WINDOW_DAYS)->toBe(7);
+});

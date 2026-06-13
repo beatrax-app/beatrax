@@ -256,4 +256,33 @@ final class AnomalyCorpusSeeder
 
         return $fixture;
     }
+
+    /**
+     * Creates a fresh anomaly test user. Shared across every evaluator /
+     * detector test so the user shape (username, currency view) stays
+     * consistent.
+     */
+    public static function makeUser(): User
+    {
+        return User::query()->create([
+            'username' => 'anom-'.bin2hex(random_bytes(4)),
+            'password' => 'fixture-password',
+            'period_start_day' => 1,
+            'default_currency_view' => 'eur_only',
+        ]);
+    }
+
+    /**
+     * Loads a seeded transaction row as the raw associative array the
+     * detectors and the evaluator consume.
+     *
+     * @return array<string, mixed>
+     */
+    public static function transactionRow(DatabaseManager $db, int $txnId): array
+    {
+        /** @var \stdClass $row */
+        $row = $db->connection()->table('transactions')->where('id', $txnId)->first();
+
+        return (array) $row;
+    }
 }
