@@ -13,10 +13,18 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 /**
  * Duplicate-charge detector (D-10).
  *
- * Fires when a sibling charge exists for the SAME counterparty, the EXACT
- * same settled minor units + settled currency, the same direction, within
- * DUPLICATE_WINDOW_DAYS (7) of the charge under test — the common
- * "double-tap" / accidental re-charge pattern.
+ * Fires when an EARLIER sibling charge exists for the SAME counterparty,
+ * the EXACT same settled minor units + settled currency, the same
+ * direction, within DUPLICATE_WINDOW_DAYS (7) BACKWARD from the charge
+ * under test — the common "double-tap" / accidental re-charge pattern.
+ *
+ * The window is directional (backward-only, with an `id <` tie-break for
+ * same-day siblings) so a genuine double-charge produces exactly ONE alert
+ * — on the LATER charge of the pair — regardless of whether the reactive
+ * import path, the full-history backfill, or the safety-net sweep is the
+ * one evaluating the rows (WR-02). The earlier charge has no backward
+ * sibling at its own date, so it never mints a second alert for the same
+ * real-world duplicate.
  *
  * Recurring exclusion: when a sibling exists but BOTH the candidate and the
  * sibling are members of an approved recurring series (resolved through
@@ -35,10 +43,11 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 final readonly class DuplicateChargeDetector
 {
     /**
-     * Duplicate look-back window in days. 7 days covers the common
-     * double-tap / retry / accidental re-charge patterns without catching
-     * a legitimate weekly recurrence (those are additionally excluded via
-     * recurring-series membership).
+     * Duplicate look-back window in days, applied BACKWARD ONLY from the
+     * charge under test. 7 days covers the common double-tap / retry /
+     * accidental re-charge patterns without catching a legitimate weekly
+     * recurrence (those are additionally excluded via recurring-series
+     * membership).
      */
     public const DUPLICATE_WINDOW_DAYS = 7;
 
@@ -74,18 +83,25 @@ final readonly class DuplicateChargeDetector
 
         $anchor = CarbonImmutable::parse($postedAt);
         $windowOpen = $anchor->subDays(self::DUPLICATE_WINDOW_DAYS)->toDateString();
-        $windowClose = $anchor->addDays(self::DUPLICATE_WINDOW_DAYS)->toDateString();
+        $anchorDate = $anchor->toDateString();
 
-        // Find a sibling: same merchant, exact settled amount + currency,
-        // same direction, within the symmetric window, not itself.
+        // Find a sibling looking BACKWARD ONLY: same merchant, exact settled
+        // amount + currency, same direction, in [anchor-7d, anchor]. The
+        // window is directional so a genuine double-charge fires exactly
+        // ONCE — on the LATER charge of the pair — across the reactive,
+        // backfill, and safety-net-sweep paths (WR-02). The earlier charge
+        // has no backward sibling at its own date, so re-evaluating it never
+        // mints a second alert. For two charges on the SAME day the `id <
+        // $thisId` tie-break keeps the later (higher id) row as the one that
+        // fires.
         $siblingId = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->where('counterparty_id', $counterpartyId)
             ->where('settled_amount_minor', $settledMinor)
             ->where('settled_currency', $settledCurrency)
             ->whereIn('type', $types)
-            ->whereBetween('posted_at', [$windowOpen, $windowClose])
-            ->where('id', '!=', $thisId)
+            ->whereBetween('posted_at', [$windowOpen, $anchorDate])
+            ->where('id', '<', $thisId)
             ->value('id');
 
         if ($siblingId === null) {
