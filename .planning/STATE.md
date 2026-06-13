@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Local & in sync
 status: executing
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-06-13T17:33:13.895Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-06-13T17:51:00.000Z"
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 47
-  completed_plans: 43
-  percent: 53
+  completed_plans: 44
+  percent: 54
 ---
 
 # State: beatrax
@@ -28,12 +28,12 @@ progress:
 ## Current Position
 
 Phase: 09 (unusual-charge-anomaly-alerts) — EXECUTING
-Plan: 1 of 5 — COMPLETE (09-01 Anomaly module scaffold)
+Plan: 2 of 5 — COMPLETE (09-02 Anomaly evaluator + three detectors)
 
 - **Milestone:** v1.3 "Local & in sync"
 - **Status:** Executing Phase 09
 - **Phase:** 9 of 15 (unusual charge / anomaly alerts)
-- **Plan:** 09-01 complete — Anomaly module scaffold (migrations, models, state machine, fixtures, arch invariants). Next: 09-02 evaluator.
+- **Plan:** 09-02 complete — AnomalyEvaluator + RobustStatistics + three detectors (large-vs-typical, first-time, duplicate) + RecurringSeriesQuery membership + suppression filtering + idempotent insert. Next: 09-03 read/write surface.
 - **Progress:** [█████████░] 91%
 
 ```
@@ -78,6 +78,11 @@ Phases [██              ] 2/15
 - [09-01] AnomalyAlertStateMachine adds the diverging `dismissed -> open` undo edge (D-18); acknowledged stays terminal — only divergence from the drift map.
 - [09-01] noTransactionWritesFromAnomaly narrowed vs the Recurring analog to permit Transaction::query() reads (evaluator needs baselines) — forbids only writes (Transaction::create + table-builder writes).
 - [09-01] anomaly baseline/latest/currency columns nullable since first-time-merchant flags carry no per-merchant amount baseline.
+- [09-02] Large-vs-typical = median + k×MAD robust z (per-counterparty ≥5 samples) with per-category p95 fallback; settled-currency-only comparison; sensitivity->k clamp curve (50% -> 3.0); all tunables named constants.
+- [09-02] first-time-large carries BOTH first_time and large — a baseline-less new merchant's large-vs-overall finding IS the large evidence (evaluator records large when first-time fires).
+- [09-02] FirstTimeMerchant judges large-vs-overall with a lower OVERALL_HISTORY_MIN (3) than the per-merchant thin cutoff (5).
+- [09-02] Duplicate = same counterparty + exact settled amount/currency/direction within 7 days, excluding pairs where BOTH are approved-recurring-series members (new RecurringSeriesQuery::seriesMembershipForTransactionIds Public method).
+- [09-02] Suppression checked BEFORE insert (D-17): reasons dropped per matching anomaly_suppression_rules row (counterparty OR null-counterparty fallback, detector, direction, amount band, currency); reasons canonically ordered before persistence.
 
 ### Critical path
 
@@ -97,9 +102,9 @@ Phases [██              ] 2/15
 
 ## Session Continuity
 
-- **Last session:** 2026-06-13T17:33:13.895Z
-- **Stopped at:** Completed 09-01-PLAN.md (Anomaly module scaffold)
-- **Resume by:** Execute Plan 09-02 (anomaly evaluator — three detectors over the nine-case fixture corpus). Run `/gsd:execute-phase 09`.
+- **Last session:** 2026-06-13T17:51:00.000Z
+- **Stopped at:** Completed 09-02-PLAN.md (Anomaly evaluator + three detectors + suppression + idempotent insert)
+- **Resume by:** Execute Plan 09-03 (anomaly read/write surface — AnomalyAlertQuery + Public Actions + suppression management). Run `/gsd:execute-phase 09`.
 
 ---
 *State initialized: 2026-06-07 for milestone v1.3 "Local & in sync"*

@@ -289,7 +289,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 09-02-PLAN.md — AnomalyEvaluator: 3 detectors (large-vs-typical MAD/percentile, large-AND-first-time, duplicate 7d recurring-excluded) + min-floor + reasons aggregation + suppression check + idempotent insert (ANOM-01)
+- [x] 09-02-PLAN.md — AnomalyEvaluator: 3 detectors (large-vs-typical MAD/percentile, large-AND-first-time, duplicate 7d recurring-excluded) + min-floor + reasons aggregation + suppression check + idempotent insert (ANOM-01)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -393,7 +393,7 @@ Plans:
 | 6. Bills / cash-flow calendar | 3/3 | Complete   | 2026-06-12 |
 | 7. Tax / deductible tagging + export | 5/6 | In Progress|  |
 | 8. Full-text search over history | 5/5 | Complete   | 2026-06-13 |
-| 9. Unusual-charge / anomaly alerts | 1/5 | In Progress|  |
+| 9. Unusual-charge / anomaly alerts | 2/5 | In Progress|  |
 | 10. SPIKE — op-log/CRDT merge layer | 0/0 | Not started | - |
 | 11. Change-capture + CRDT merge engine | 0/0 | Not started | - |
 | 12. Device identity + pairing | 0/0 | Not started | - |
