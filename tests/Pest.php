@@ -21,6 +21,7 @@ pest()->extend(TestCase::class)->in('Unit');
  */
 foreach (
     [
+        'Modules/Anomaly' => Modules\Anomaly\Tests\TestCase::class,
         'Modules/Auth' => Modules\Auth\Tests\TestCase::class,
         'Modules/Budgets' => Modules\Budgets\Tests\TestCase::class,
         'Modules/Calendar' => Modules\Calendar\Tests\TestCase::class,

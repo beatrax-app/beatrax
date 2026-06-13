@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Providers\HorizonServiceProvider;
+use Modules\Anomaly\Providers\AnomalyServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
 use Modules\Budgets\Providers\BudgetsServiceProvider;
 use Modules\Calendar\Providers\CalendarServiceProvider;
@@ -46,6 +47,7 @@ return array_values(array_filter([
     ReceiptsServiceProvider::class,
     RecurringServiceProvider::class,
     DriftAlertsServiceProvider::class,
+    AnomalyServiceProvider::class,
     BudgetsServiceProvider::class,
     CalendarServiceProvider::class,
     GoalsServiceProvider::class,
