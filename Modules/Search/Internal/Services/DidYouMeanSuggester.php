@@ -15,8 +15,14 @@ use Modules\Core\Models\User;
  *   2. Corpus: top ~1000 most-frequent counterparty_name values for the user,
  *      tokenized into individual words.
  *   3. Comparison: last word of the query vs every corpus word via PHP `levenshtein()`.
- *   4. Threshold: only suggest when the closest distance is <= 2.
- *   5. Return: the closest corpus word, or null when no close enough match found.
+ *   4. Tie-break: equal-distance candidates are broken by corpus frequency
+ *      (the more frequent merchant wins) so the suggestion is deterministic and
+ *      useful (WR-06).
+ *   5. Threshold: only suggest when the closest distance is <= 2.
+ *   6. Return: the closest corpus word, or null when no close enough match found.
+ *      An exact corpus-word match is skipped as a candidate (a word is not a
+ *      "did you mean" for itself) but does NOT suppress suggestions derived from
+ *      other corpus words (WR-06).
  *
  * spellfix1 is not available in this SQLite build — confirmed via environment check.
  * PHP levenshtein() built-in is the designated fallback (RESEARCH Environment Availability).
@@ -56,8 +62,14 @@ final class DidYouMeanSuggester
             ->limit(1000)
             ->pluck('counterparty_name');
 
-        // Tokenize names into individual words
-        /** @var array<string, true> $corpusWords */
+        // Tokenize names into individual words, keeping each word's accumulated
+        // corpus frequency so distance ties can be broken by frequency (WR-06).
+        // The pluck preserves the freq-descending order from the query, but the
+        // first-seen order is not reliable for tie-breaks, so track freq instead
+        // of collapsing to a bool map.
+        // Keys are corpus words; PHP coerces purely-numeric word keys to int, so
+        // the key type is array-key, not string (normalized back below).
+        /** @var array<array-key, int> $corpusWords */
         $corpusWords = [];
         foreach ($names as $name) {
             if (! is_string($name)) {
@@ -70,7 +82,7 @@ final class DidYouMeanSuggester
             foreach ($tokens as $word) {
                 $word = trim($word);
                 if (strlen($word) >= 3) {
-                    $corpusWords[$word] = true;
+                    $corpusWords[$word] = ($corpusWords[$word] ?? 0) + 1;
                 }
             }
         }
@@ -79,20 +91,32 @@ final class DidYouMeanSuggester
             return null;
         }
 
-        // Find the closest corpus word by levenshtein distance
+        // Find the closest corpus word by levenshtein distance, breaking ties by
+        // corpus frequency (more frequent merchant wins). WR-06: do NOT abort the
+        // whole search on an exact corpus-word match — the zero-result was caused
+        // by a different query word or a filter, so skipping the exact word and
+        // suggesting for the rest is still useful. We simply skip the exact word
+        // as a candidate (it cannot be a "did you mean" for itself).
         $bestWord = null;
         $bestDist = PHP_INT_MAX;
+        $bestFreq = -1;
 
-        foreach (array_keys($corpusWords) as $corpusWord) {
-            // Skip exact matches (those would have been found by FTS)
-            if ($corpusWord === $targetWord) {
-                return null;
+        foreach ($corpusWords as $corpusWord => $freq) {
+            // Normalize the (possibly int-coerced) key back to a string so
+            // levenshtein() and the (string-typed) target comparison are exact.
+            $word = (string) $corpusWord;
+
+            if ($word === $targetWord) {
+                // Exact word — not a suggestion candidate, but does not suppress
+                // suggestions derived from other corpus words.
+                continue;
             }
 
-            $dist = levenshtein($targetWord, $corpusWord);
-            if ($dist < $bestDist) {
+            $dist = levenshtein($targetWord, $word);
+            if ($dist < $bestDist || ($dist === $bestDist && $freq > $bestFreq)) {
                 $bestDist = $dist;
-                $bestWord = $corpusWord;
+                $bestFreq = $freq;
+                $bestWord = $word;
             }
         }
 
