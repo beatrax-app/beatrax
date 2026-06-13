@@ -30,9 +30,17 @@ use stdClass;
  *  - The users.anomaly_backfilled_at guard makes the WHOLE job a no-op on
  *    a second dispatch: a non-null timestamp short-circuits before any
  *    iteration, so the job never re-walks years of history.
+ *  - WR-01: because the uniqueness lock is released the instant handle()
+ *    begins, the timestamp is CLAIMED with a conditional
+ *    `whereNull(...)->update(...)` BEFORE the walk — an atomic mutex so two
+ *    racing dispatches cannot both walk the full history. The loser (0
+ *    rows claimed) returns immediately. Trade-off: a worker crash
+ *    mid-walk leaves the row already stamped, so a retry no-ops rather
+ *    than resuming — the per-user hourly SafetyNetAnomalySweepJob (which
+ *    re-evaluates un-alerted recent imports) is the durable backstop that
+ *    picks up any rows a crashed backfill missed.
  *  - Per-row, the shared AnomalyEvaluator::evaluate() path is idempotent
- *    on UNIQUE(transaction_id): a crash + retry skips already-alerted
- *    rows, making the backfill resumable.
+ *    on UNIQUE(transaction_id): already-alerted rows are skipped silently.
  *
  * Memory contract: the user's full transaction history is enumerated via
  * ->lazyById(self::CHUNK) so a multi-year history never loads into memory
@@ -93,6 +101,27 @@ final class BackfillAnomaliesJob implements ShouldBeUniqueUntilProcessing, Shoul
             return;
         }
 
+        // WR-01: claim the backfill BEFORE the walk via a conditional
+        // update that acts as a mutex. ShouldBeUniqueUntilProcessing
+        // releases the uniqueness lock the moment handle() begins, so two
+        // close dispatches (a double-click, or a retry racing a slow first
+        // run) could both read anomaly_backfilled_at === null and both walk
+        // the full multi-year history. The whereNull(...)->update(...) is
+        // atomic: exactly one racer flips the row from null and gets a
+        // non-zero affected-row count; the loser sees 0 and returns. The
+        // per-row UNIQUE(transaction_id) seam already prevents duplicate
+        // alerts; this prevents the duplicate full-history WORK.
+        $claimed = $db->connection()->table('users')
+            ->where('id', $this->userId)
+            ->whereNull('anomaly_backfilled_at')
+            ->update(['anomaly_backfilled_at' => $clock->now()->toDateTimeString()]);
+
+        if ($claimed === 0) {
+            // Another run already claimed (and is walking, or finished) the
+            // backfill — do not re-walk history.
+            return;
+        }
+
         $db->connection()->table('transactions')
             ->where('user_id', $this->userId)
             ->select('id')
@@ -107,10 +136,5 @@ final class BackfillAnomaliesJob implements ShouldBeUniqueUntilProcessing, Shoul
                 // makes a re-run skip already-alerted rows (resumable).
                 $evaluator->evaluate($transactionId, $user);
             });
-
-        // D-13: mark the backfill complete so a second dispatch no-ops.
-        $db->connection()->table('users')
-            ->where('id', $this->userId)
-            ->update(['anomaly_backfilled_at' => $clock->now()->toDateTimeString()]);
     }
 }

@@ -17,8 +17,9 @@ uses(RefreshDatabase::class);
  * Feature coverage for the full-history BackfillAnomaliesJob: it
  * enumerates the user's whole transaction history via lazyById, lands
  * alerts in Open through the shared AnomalyEvaluator::evaluate() path, is
- * idempotent + resumable on UNIQUE(transaction_id), and no-ops once
- * users.anomaly_backfilled_at is set (D-13/D-14, T-09-15).
+ * idempotent on UNIQUE(transaction_id), claims the backfill BEFORE the walk
+ * (WR-01) so a concurrent dispatch cannot double-walk history, and no-ops
+ * once users.anomaly_backfilled_at is set (D-13/D-14, T-09-15).
  */
 
 function backfillRunJob(int $userId): void
@@ -92,6 +93,28 @@ it('is idempotent — re-running without resetting the guard never duplicates al
     // UNIQUE(transaction_id) + the anomaly_backfilled_at guard together
     // keep the alert count at exactly one across repeated runs.
     expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe(1);
+});
+
+it('claims the backfill before the walk so a racing run that already claimed never re-walks (WR-01)', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = AnomalyCorpusSeeder::makeUser();
+    AnomalyCorpusSeeder::seed($db, $user, AnomalyCorpusSeeder::load('large-above'));
+
+    // Simulate worker A having ALREADY claimed the backfill (stamped the
+    // guard) but not yet finished walking — the conditional whereNull claim
+    // is the mutex. The User model loaded inside handle() still reads the
+    // stamped value, so the early D-13 guard short-circuits; even if it did
+    // not, the claim update would affect 0 rows and bail. Either way worker
+    // B must NOT walk history.
+    $db->connection()->table('users')
+        ->where('id', $user->id)
+        ->update(['anomaly_backfilled_at' => '2026-06-13 00:00:00']);
+
+    backfillRunJob($user->id);
+
+    // No alerts: worker B never walked the (anomalous) history.
+    expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe(0);
 });
 
 it('only evaluates the owning user (cross-user isolation, T-09-16)', function (): void {
