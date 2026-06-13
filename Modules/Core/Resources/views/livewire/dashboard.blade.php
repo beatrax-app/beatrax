@@ -84,6 +84,13 @@
         @livewire('drift-alerts.dashboard-drift-badge')
     </div>
 
+    {{-- Unusual charges tile (D-03): a distinct anomaly indicator,
+         separate from the drift tile, hidden when there are zero open
+         anomalies. Cross-user scoping happens inside AnomalyAlertQuery. --}}
+    <div class="dashboard-phone-order-2">
+        @livewire('anomaly.dashboard-anomaly-badge')
+    </div>
+
     {{-- KPI tiles (order 3 on phone): the primary focal point of the dashboard.
          Single-column at <768px (overriding the md:grid-cols-3 grid), desktop
          3-up grid unchanged at >=768px.
