@@ -55,6 +55,9 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    /** Chunk size for the candidate walk (mirrors SafetyNetAnomalySweepJob). */
+    private const CHUNK = 500;
+
     public int $tries = 3;
 
     /** @var list<int> */
@@ -64,41 +67,45 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
     {
         $now = $clock->now()->toDateTimeString();
 
-        $rows = $db->connection()->table('anomaly_alerts')
+        // Chunk the candidate scan with lazyById so a large backlog of
+        // expired snoozes (across all users on a multi-user box) never loads
+        // every row into memory at once — mirroring SafetyNetAnomalySweepJob.
+        // The per-row state-machine transition stays inside the callback so
+        // each row is re-read fresh under its own row lock.
+        $db->connection()->table('anomaly_alerts')
             ->where('state', 'snoozed')
             ->whereNotNull('snoozed_until')
             ->where('snoozed_until', '<=', $now)
-            ->get(['id']);
-
-        foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $id = is_numeric($row->id) ? (int) $row->id : 0;
-            if ($id <= 0) {
-                continue;
-            }
-
-            try {
-                /** @var AnomalyAlert|null $alert */
-                $alert = AnomalyAlert::query()->where('id', $id)->first();
-                if ($alert === null || $alert->state !== 'snoozed') {
-                    continue;
+            ->orderBy('id')
+            ->select('id')
+            ->lazyById(self::CHUNK)
+            ->each(function (stdClass $row) use ($stateMachine): void {
+                $id = is_numeric($row->id) ? (int) $row->id : 0;
+                if ($id <= 0) {
+                    return;
                 }
 
-                $stateMachine->transition(
-                    $alert,
-                    'open',
-                    'detector_revived_snooze',
-                    'detector',
-                    null,
-                    ['snoozed_until' => null],
-                );
-            } catch (InvalidStateTransitionException) {
-                // A concurrent user action moved the row off 'snoozed'
-                // between the candidate scan and the state-machine row
-                // lock. The transition guard correctly refused the
-                // revival; skip this row and continue the sweep.
-                continue;
-            }
-        }
+                try {
+                    /** @var AnomalyAlert|null $alert */
+                    $alert = AnomalyAlert::query()->where('id', $id)->first();
+                    if ($alert === null || $alert->state !== 'snoozed') {
+                        return;
+                    }
+
+                    $stateMachine->transition(
+                        $alert,
+                        'open',
+                        'detector_revived_snooze',
+                        'detector',
+                        null,
+                        ['snoozed_until' => null],
+                    );
+                } catch (InvalidStateTransitionException) {
+                    // A concurrent user action moved the row off 'snoozed'
+                    // between the candidate scan and the state-machine row
+                    // lock. The transition guard correctly refused the
+                    // revival; skip this row and continue the sweep.
+                }
+            });
     }
 }
