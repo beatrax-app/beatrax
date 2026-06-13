@@ -236,6 +236,14 @@
         </div>
     </form>
 
+    {{-- ===== Anomaly detection (sensitivity, floor, suppression rules) ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2" id="anomaly-detection">
+            <h2 class="{{ $cardHead }}">Anomaly detection</h2>
+            @livewire('anomaly.settings-section')
+        </section>
+    </div>
+
     {{-- ===== Forecasting ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-3" id="forecast-buffers">
