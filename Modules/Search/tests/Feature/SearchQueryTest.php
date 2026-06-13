@@ -570,3 +570,32 @@ it('resolves account and category name tokens to ids scoped to the user', functi
     expect($page->totalCount)->toBe(1)
         ->and($page->rows[0]->id)->toBe($matchTx);
 });
+
+// WR-06: on a distance tie the suggester prefers the MORE FREQUENT corpus word,
+// and an exact match on a different corpus word does not suppress the suggestion.
+it('breaks did-you-mean ties by corpus frequency', function (): void {
+    // "kruidvat" appears 3× (more frequent), "kruidvit" once. Both are
+    // levenshtein distance 1 from the typo "kruidvet".
+    for ($i = 0; $i < 3; $i++) {
+        $this->searchTestTransaction($this->userAId, [
+            'counterparty_name' => 'Kruidvat',
+            'counterparty_normalized' => 'kruidvat',
+            'description' => "drogist bezoek {$i}",
+        ]);
+    }
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'Kruidvit',
+        'counterparty_normalized' => 'kruidvit',
+        'description' => 'andere drogist',
+    ]);
+
+    /** @var SearchQuery $searchQuery */
+    $searchQuery = app(SearchQuery::class);
+    $user = User::findOrFail($this->userAId);
+
+    // The typo matches nothing → suggester runs and prefers the frequent word.
+    /** @var SearchResultPage $page */
+    $page = $searchQuery->search($user, 'kruidvet', SearchFilters::empty());
+    expect($page->totalCount)->toBe(0)
+        ->and($page->didYouMean)->toBe('kruidvat');
+});
