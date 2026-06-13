@@ -110,6 +110,20 @@ final class ReindexSearchCommand extends Command
             "INSERT INTO transaction_search_fts(transaction_search_fts) VALUES('rebuild')",
         );
 
+        // WR-05: fail loudly on a partial run. If the number of indexed docs
+        // does not match the transaction count (e.g. a chunk failed / the
+        // process was interrupted mid-stream), the index is incomplete and
+        // search would silently return partial results. Surface a warning and a
+        // non-zero exit code so the operator (and CI / scheduler) notices.
+        if ($indexed !== $total) {
+            $this->warn(
+                "FTS reindex incomplete: indexed {$indexed} of {$total} transactions. ".
+                'The index may be partial — re-run search:reindex.',
+            );
+
+            return self::FAILURE;
+        }
+
         $this->info("FTS index rebuilt. {$indexed} transactions indexed.");
 
         return self::SUCCESS;
