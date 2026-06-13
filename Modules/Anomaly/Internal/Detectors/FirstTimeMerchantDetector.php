@@ -110,9 +110,11 @@ final readonly class FirstTimeMerchantDetector
             return false;
         }
 
-        $threshold = RobustStatistics::percentile($sample, RobustStatistics::CATEGORY_PERCENTILE);
-
-        return (float) $absMinor > $threshold;
+        // WR-04: tie-inclusive boundary — a first charge whose magnitude
+        // EQUALS the overall p95 fires (the percentile collapses toward the
+        // sample max for thin overall history). See
+        // RobustStatistics::exceedsPercentile.
+        return RobustStatistics::exceedsPercentile($absMinor, $sample, RobustStatistics::CATEGORY_PERCENTILE);
     }
 
     private static function toInt(mixed $value): int

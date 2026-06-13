@@ -178,6 +178,41 @@ final class RobustStatistics
     }
 
     /**
+     * Boundary-deliberate "is `x` at or above the p-th percentile of
+     * `sample`?" test (WR-04). Both the category-fallback large detector and
+     * the first-time-vs-overall detector judge a charge against a high
+     * percentile (p95). The comparison is TIE-INCLUSIVE (`>=`): a charge
+     * EQUAL to the percentile fires.
+     *
+     * Why `>=` and not `>`: for small samples linear interpolation collapses
+     * p95 toward the sample maximum, so under a strict `>` a charge that
+     * exactly REPEATS the largest-ever charge would never be flagged as
+     * large — a silent false negative at precisely the boundary the
+     * "large AND first-time" volume control leans on. Treating the tie as
+     * "fires" surfaces the repeat-of-the-extreme case the feature exists to
+     * catch. The risk of over-firing on a charge that merely equals a
+     * non-extreme p95 is negligible: p95 rarely lands exactly on an integer
+     * minor-unit charge value, and when it does (a clustered constant
+     * merchant) the charge genuinely IS at the top of the observed band.
+     *
+     * Callers pass absolute magnitudes; the sample is reduced to absolute
+     * magnitudes here so a sign convention never flips the comparison.
+     *
+     * @param  list<int|float>  $sample
+     */
+    public static function exceedsPercentile(int $x, array $sample, float $p): bool
+    {
+        if ($sample === []) {
+            return false;
+        }
+
+        $absSample = array_map(static fn (int|float $v): float => abs((float) $v), $sample);
+        $threshold = self::percentile($absSample, $p);
+
+        return abs((float) $x) >= $threshold;
+    }
+
+    /**
      * Maps the user's single `anomaly_sensitivity_percent` knob onto the
      * robust-z trip multiplier `k`. Higher sensitivity ⇒ lower k ⇒ more
      * alerts. Clamped to [K_MIN, K_MAX]. At 50% ⇒ 3.0.
