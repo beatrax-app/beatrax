@@ -10,6 +10,9 @@ use Modules\Anomaly\Internal\Detectors\DuplicateChargeDetector;
 use Modules\Anomaly\Internal\Detectors\FirstTimeMerchantDetector;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
+use Modules\Anomaly\Public\Actions\AcknowledgeAnomalyAlert;
+use Modules\Anomaly\Public\Actions\DismissAnomalyAlert;
+use Modules\Anomaly\Public\Actions\SnoozeAnomalyAlert;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
 
@@ -49,8 +52,14 @@ final class AnomalyServiceProvider extends ServiceProvider
         $this->app->singleton(AnomalyAlertQuery::class);
         $this->app->singleton(AnomalySuppressionRuleQuery::class);
 
-        // TODO(Plan 03, Tasks 2-3): bind the acknowledge / snooze / dismiss /
-        //   dismiss-as-expected / remove-rule Public Actions as singletons.
+        // The three lifecycle Actions. Singletons (state machine +
+        // dispatcher + clock dependencies are all singletons).
+        $this->app->singleton(AcknowledgeAnomalyAlert::class);
+        $this->app->singleton(SnoozeAnomalyAlert::class);
+        $this->app->singleton(DismissAnomalyAlert::class);
+
+        // TODO(Plan 03, Task 3): bind DismissAnomalyAlertAsExpected +
+        //   RemoveAnomalySuppressionRule as singletons.
     }
 
     public function boot(): void
