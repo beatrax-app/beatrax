@@ -116,7 +116,7 @@
                                 @if ($isSearchMode && isset($searchRows[$row['id']]))
                                     @php $sRow = $searchRows[$row['id']]; @endphp
                                     @if ($sRow->snippet !== null)
-                                        <p class="srch-snippet">{{ $sRow->snippet }}</p>
+                                        <p class="srch-snippet">{!! $sRow->snippet !!}</p>
                                     @endif
                                 @endif
                                 {{-- Secondary: category chip + posted date --}}
@@ -219,7 +219,7 @@
                                             <span data-testid="tx-row-counterparty-text-{{ $row->id }}">{!! $sRow->highlightedCounterparty !!}</span>
                                         @endif
                                         @if ($sRow->snippet !== null)
-                                            <p class="srch-snippet">{{ $sRow->snippet }}</p>
+                                            <p class="srch-snippet">{!! $sRow->snippet !!}</p>
                                         @endif
                                     @else
                                         @if ($row->counterpartySlug !== null)

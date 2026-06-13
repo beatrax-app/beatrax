@@ -339,3 +339,40 @@ it('user A cannot see user B transactions in search results', function (): void 
             $this->searchTestTransaction($this->userBId, ['counterparty_name' => 'dummy'])
         );
 });
+
+// T-08-09 (security): FTS highlight()/snippet() do not HTML-escape the
+// surrounding text. SearchQuery must escape it before injecting <mark>, or a
+// counterparty/description containing HTML becomes a stored-XSS payload when
+// the highlighted markup is rendered with {!! !!} / x-html.
+it('escapes HTML in highlighted counterparty and snippet output', function (): void {
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => '<img src=x onerror=alert(1)> Heijnmart',
+        'counterparty_normalized' => 'heijnmart',
+        'description' => 'weekly <script>alert(2)</script> heijnmart groceries',
+    ]);
+
+    /** @var SearchQuery $searchQuery */
+    $searchQuery = app(SearchQuery::class);
+    $user = User::findOrFail($this->userAId);
+
+    /** @var SearchResultPage $page */
+    $page = $searchQuery->search($user, 'heijnmart', SearchFilters::empty());
+
+    expect($page->rows)->not->toBeEmpty();
+    $row = $page->rows[0];
+
+    // The match is wrapped in real <mark> tags...
+    expect($row->highlightedCounterparty)->toContain('<mark>');
+    // ...but the user-supplied HTML is neutralised, never emitted raw.
+    expect($row->highlightedCounterparty)
+        ->not->toContain('<img')
+        ->toContain('&lt;img');
+
+    // The snippet's truncation window may not include the script token, but
+    // whatever it does include must never carry a raw, executable HTML tag.
+    if ($row->snippet !== null) {
+        expect($row->snippet)
+            ->not->toContain('<script')
+            ->not->toContain('<img');
+    }
+});

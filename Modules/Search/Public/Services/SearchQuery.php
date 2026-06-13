@@ -40,6 +40,20 @@ use stdClass;
  */
 final class SearchQuery
 {
+    /**
+     * Sentinel markers FTS5 highlight()/snippet() wrap around matched tokens.
+     * SQLite's highlight()/snippet() do NOT HTML-escape the surrounding text,
+     * so emitting literal `<mark>` and rendering raw in Blade is a stored-XSS
+     * vector (a counterparty named `<img onerror=…>` would execute). Instead we
+     * mark matches with control-char sentinels (STX/ETX — never present in
+     * transaction text and untouched by htmlspecialchars), then in
+     * decorateHighlight() escape the whole string and swap the sentinels for
+     * real `<mark>` tags. The result is safe to render with `{!! !!}`.
+     */
+    private const MARK_START = "\x02";
+
+    private const MARK_END = "\x03";
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly QueryParser $parser,
@@ -448,7 +462,7 @@ final class SearchQuery
                 'transaction_search_fts.rowid,
                  highlight(transaction_search_fts, 0, ?, ?) AS highlighted_body,
                  snippet(transaction_search_fts, 0, ?, ?, ?, 12) AS snippet_body',
-                ['<mark>', '</mark>', '<mark>', '</mark>', '…'],
+                [self::MARK_START, self::MARK_END, self::MARK_START, self::MARK_END, '…'],
             )
             ->whereRaw('transaction_search_fts MATCH ?', [$ftsMatch])
             ->join(
@@ -474,6 +488,24 @@ final class SearchQuery
     /**
      * Map a raw DB row + optional highlight to a SearchRowDto.
      */
+    /**
+     * Convert a sentinel-marked FTS fragment into XSS-safe highlight markup:
+     * HTML-escape the raw (user-controlled) text first, then swap the control-char
+     * sentinels for real <mark> tags. Escaping before substitution guarantees any
+     * HTML in counterparty/description/note text is neutralised while the marks
+     * survive (htmlspecialchars leaves STX/ETX untouched). Output is safe for {!! !!}.
+     */
+    private static function decorateHighlight(string $marked): string
+    {
+        $escaped = htmlspecialchars($marked, ENT_QUOTES, 'UTF-8');
+
+        return str_replace(
+            [self::MARK_START, self::MARK_END],
+            ['<mark>', '</mark>'],
+            $escaped,
+        );
+    }
+
     private function mapRow(stdClass $row, ?stdClass $highlight): SearchRowDto
     {
         $bookedAt = CarbonImmutable::parse(self::toString($row->booked_at));
@@ -500,19 +532,21 @@ final class SearchQuery
             }
         }
 
-        // Split highlighted_body on chr(12) (form-feed separator between counterparty and description)
+        // Split highlighted_body on chr(12) (form-feed separator between counterparty and description).
+        // Both fields carry control-char match sentinels (see MARK_START/MARK_END); decorateHighlight()
+        // HTML-escapes the raw text and converts the sentinels to <mark> tags so the output is XSS-safe.
         $highlightedCounterparty = null;
         $snippet = null;
         if ($highlight !== null) {
             $highlightedBody = self::toString($highlight->highlighted_body);
             $parts = explode(chr(12), $highlightedBody, 2);
-            if ($parts[0] !== '' && str_contains($parts[0], '<mark>')) {
-                $highlightedCounterparty = $parts[0];
+            if ($parts[0] !== '' && str_contains($parts[0], self::MARK_START)) {
+                $highlightedCounterparty = self::decorateHighlight($parts[0]);
             }
             // snippet_body is always from the description/note part
             $snippetBody = self::toString($highlight->snippet_body);
             if ($snippetBody !== '' && $snippetBody !== self::toString($row->counterparty_name ?? '')) {
-                $snippet = $snippetBody;
+                $snippet = self::decorateHighlight($snippetBody);
             }
         }
 
