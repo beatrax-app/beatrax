@@ -1,0 +1,118 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Anomaly\Public\Services;
+
+use Illuminate\Database\DatabaseManager;
+use Modules\Anomaly\Public\Dto\AnomalySuppressionRuleDto;
+use Modules\Core\Models\User;
+use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
+use Modules\Ledger\Public\ValueObjects\Money;
+use stdClass;
+
+/**
+ * Public read API over `anomaly_suppression_rules` for the settings
+ * surface (D-18). Lists every rule the user has created by dismissing an
+ * anomaly "as expected" so each can be reviewed and removed — nothing is
+ * muted invisibly.
+ *
+ * User-scoped explicitly. Merchant display names are resolved through the
+ * Counterparties Public surface (`identitiesForIds`); a rule keyed on a
+ * NULL `counterparty_id` (normalized-name fallback) surfaces with an
+ * empty display name and the renderer can show its band/detector alone.
+ */
+final readonly class AnomalySuppressionRuleQuery
+{
+    public function __construct(
+        private DatabaseManager $db,
+        private CounterpartyProfileQuery $counterpartyQuery,
+    ) {}
+
+    /**
+     * Returns the user's suppression rules (newest first) for the
+     * settings list.
+     *
+     * @return list<AnomalySuppressionRuleDto>
+     */
+    public function forUser(User $user): array
+    {
+        $rows = $this->db->connection()->table('anomaly_suppression_rules')
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $counterpartyIds = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $id = self::toIntOrNull($row->counterparty_id ?? null);
+            if ($id !== null) {
+                $counterpartyIds[] = $id;
+            }
+        }
+
+        $names = [];
+        if ($counterpartyIds !== []) {
+            $identities = $this->counterpartyQuery->identitiesForIds(
+                $user,
+                array_values(array_unique($counterpartyIds)),
+            );
+            foreach ($identities as $id => $identity) {
+                $names[$id] = $identity['displayName'];
+            }
+        }
+
+        $result = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $counterpartyId = self::toIntOrNull($row->counterparty_id ?? null);
+            $currency = self::toCurrency($row->currency ?? null);
+
+            $result[] = new AnomalySuppressionRuleDto(
+                id: self::toInt($row->id ?? null),
+                counterpartyId: $counterpartyId,
+                displayName: $counterpartyId !== null ? ($names[$counterpartyId] ?? '') : '',
+                detector: self::toString($row->detector ?? null),
+                direction: self::toString($row->direction ?? null),
+                bandLow: Money::ofMinor(self::toInt($row->amount_band_low_minor ?? null), $currency),
+                bandHigh: Money::ofMinor(self::toInt($row->amount_band_high_minor ?? null), $currency),
+                currency: $currency,
+            );
+        }
+
+        return $result;
+    }
+
+    private static function toCurrency(mixed $value): string
+    {
+        return is_string($value) && $value !== '' ? $value : 'EUR';
+    }
+
+    private static function toInt(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    private static function toIntOrNull(mixed $value): ?int
+    {
+        if (! is_numeric($value)) {
+            return null;
+        }
+        $int = (int) $value;
+
+        return $int > 0 ? $int : null;
+    }
+
+    private static function toString(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        return is_scalar($value) ? (string) $value : '';
+    }
+}
