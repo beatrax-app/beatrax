@@ -39,9 +39,9 @@ use Modules\Import\Public\Events\TransactionImported;
  * boot() conditionally loads the module's migrations, routes, and views
  * and (Plan 04) registers the synchronous TransactionImported listener
  * that QUEUES a unique DetectAnomaliesJob — detection runs on the queue,
- * never inline in the import transaction (D-12 / T-09-14). The top-nav
- * anomaly badge composer and the Livewire component registrations remain
- * Plan 05 TODO stubs.
+ * never inline in the import transaction (D-12 / T-09-14). It also (Plan 05)
+ * wires the top-nav anomaly badge view composer and registers the anomaly
+ * Livewire components.
  */
 final class AnomalyServiceProvider extends ServiceProvider
 {
