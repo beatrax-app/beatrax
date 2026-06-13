@@ -50,6 +50,10 @@ arch('Modules\\DriftAlerts\\Internal is only used inside Modules\\DriftAlerts')
     ->expect('Modules\\DriftAlerts\\Internal')
     ->toOnlyBeUsedIn('Modules\\DriftAlerts');
 
+arch('Modules\\Anomaly\\Internal is only used inside Modules\\Anomaly')
+    ->expect('Modules\\Anomaly\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Anomaly');
+
 arch('Modules\\Desktop\\Internal is only used inside Modules\\Desktop')
     ->expect('Modules\\Desktop\\Internal')
     ->toOnlyBeUsedIn('Modules\\Desktop');
@@ -805,6 +809,111 @@ it('does not allow any file other than DriftAlertStateMachine to mutate drift_al
     expect($hits)->toBe(
         [],
         "Only DriftAlertStateMachine may mutate drift_alerts.state. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+it('does not allow any file other than AnomalyAlertStateMachine to mutate anomaly_alerts.state (noOtherAnomalyAlertStateMutator)', function (): void {
+    // Only the AnomalyAlertStateMachine class may transition the per-
+    // alert state column. Other module code reads the row, and may
+    // UPDATE non-state companion columns (snoozed_until, actioned_at,
+    // dismissed_as) without going through the state machine; the grep
+    // targets the `state` column specifically so companion-column updates
+    // plus INSERTs into anomaly_alert_transitions stay legal. Migrations
+    // are exempt because they seed the schema + the trigger pair itself.
+    $hits = [];
+    $anomalyDir = base_path('Modules/Anomaly');
+    if (! is_dir($anomalyDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $allowedFile = base_path('Modules/Anomaly/Internal/StateMachines/AnomalyAlertStateMachine.php');
+    $migrationsDir = base_path('Modules/Anomaly/Database/Migrations');
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            $anomalyDir,
+            RecursiveDirectoryIterator::SKIP_DOTS,
+        ),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if ($path === $allowedFile) {
+            continue;
+        }
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        if (str_starts_with($path, $migrationsDir.DIRECTORY_SEPARATOR)) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (
+            preg_match("/->table\(['\"]anomaly_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[\\s*['\"]state['\"]/", $stripped) === 1
+            || preg_match('/AnomalyAlert::query\(\)[^;]*->update\(\s*\[\s*[\'"]state[\'"]/', $stripped) === 1
+        ) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "Only AnomalyAlertStateMachine may mutate anomaly_alerts.state. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+it('does not allow any file under Modules/Anomaly/ to mutate the transactions table (noTransactionWritesFromAnomaly)', function (): void {
+    // Phase 9 architectural boundary: the Anomaly module is read-only
+    // against the ledger. It evaluates transactions to flag unusual
+    // charges but never writes them — transaction-type ownership stays
+    // with the Phase 4 income detector / Ledger. Mirrors the Recurring
+    // noTransactionWritesFromRecurring invariant: the grep strips block +
+    // line comments first so legitimate PHPDoc references stay legal, and
+    // `tests/` is excluded so test factories can populate transactions
+    // directly. Reads (Transaction::query()->where()->get()) stay allowed.
+    $hits = [];
+    $anomalyDir = base_path('Modules/Anomaly');
+    if (! is_dir($anomalyDir)) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            $anomalyDir,
+            RecursiveDirectoryIterator::SKIP_DOTS,
+        ),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile()) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (preg_match('/\.php$/', $path) !== 1) {
+            continue;
+        }
+        if (str_contains($path, '/tests/')) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (
+            preg_match("/->table\(['\"]transactions['\"]\)[^;]*->(update|insert|delete)\\s*\\(/", $stripped) === 1
+            || preg_match('/Transaction::create\s*\(/', $stripped) === 1
+        ) {
+            $hits[] = $path;
+        }
+    }
+    expect($hits)->toBe(
+        [],
+        "Modules/Anomaly/ must not mutate the transactions table. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
 
