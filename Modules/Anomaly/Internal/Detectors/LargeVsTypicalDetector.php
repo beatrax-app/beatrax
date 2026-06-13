@@ -160,9 +160,20 @@ final readonly class LargeVsTypicalDetector
     }
 
     /**
-     * Context-derived MAD floor: the larger of the hard minimum and 1% of
-     * the sample median magnitude, so a high-value merchant's near-constant
-     * history does not trip on a tiny absolute deviation.
+     * Context-derived MAD floor (minor units): the larger of the hard
+     * minimum (MAD_FLOOR_MINOR, 50) and 1% of the sample median magnitude,
+     * so a high-value merchant's near-constant history does not trip on a
+     * tiny absolute deviation.
+     *
+     * NOTE: for any merchant whose median magnitude is below 5000 minor
+     * units (€50.00), `median * 0.01 < 50`, so the floor collapses to the
+     * hard MAD_FLOOR_MINOR — the 1%-of-median scaling only engages above a
+     * €50 median. That is intentional: cheap recurring merchants get the
+     * flat 50-minor-unit floor, larger merchants get a value-scaled floor.
+     *
+     * The max() is computed in float so the fractional 1% is not discarded
+     * before the comparison; only the final result is cast to int (the
+     * integer minor-unit denominator the robust-z uses).
      *
      * @param  list<int>  $sample
      */
@@ -170,7 +181,9 @@ final readonly class LargeVsTypicalDetector
     {
         $median = RobustStatistics::median(array_map('abs', $sample));
 
-        return (int) max((float) RobustStatistics::MAD_FLOOR_MINOR, $median * 0.01);
+        $floor = max((float) RobustStatistics::MAD_FLOOR_MINOR, $median * 0.01);
+
+        return (int) $floor;
     }
 
     private static function toInt(mixed $value): int
