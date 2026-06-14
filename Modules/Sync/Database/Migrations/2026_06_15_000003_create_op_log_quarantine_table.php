@@ -55,8 +55,10 @@ return new class extends Migration
 
         $connection = $this->db()->connection($this->getConnection());
 
+        // WR-04: index ordering matches the documented intent and the
+        // ->orderByDesc('created_at') hot-path query (DESC on created_at).
         $connection->statement(
-            'CREATE INDEX op_log_quarantine_user_idx ON op_log_quarantine (user_id, created_at)'
+            'CREATE INDEX op_log_quarantine_user_idx ON op_log_quarantine (user_id, created_at DESC)'
         );
     }
 
