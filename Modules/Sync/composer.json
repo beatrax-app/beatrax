@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/sync",
+    "description": "Sync module — throwaway CRDT op-log / HLC merge-layer spike (Phase 10). Validates the append-only, per-device-signed op-log merge model against the real migrated SQLite schema before Phase 11 production implementation.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Sync\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Sync\\Tests\\": "tests/"
+        }
+    }
+}
