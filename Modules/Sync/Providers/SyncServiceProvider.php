@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Providers;
 
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
@@ -34,7 +35,7 @@ final class SyncServiceProvider extends ServiceProvider
         // Default empty device-key map; tests override by constructing OpLogReplayer directly.
         $this->app->bind(
             OpLogReplayer::class,
-            fn ($app) => new OpLogReplayer($app->make(DatabaseManager::class), []),
+            fn (Application $app) => new OpLogReplayer($app->make(DatabaseManager::class), []),
         );
 
         $this->app->singleton(DeviceKeySigner::class);
