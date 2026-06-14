@@ -14,5 +14,6 @@
     "Ledger": true,
     "Onboarding": true,
     "Search": true,
+    "Sync": true,
     "Tax": true
 }

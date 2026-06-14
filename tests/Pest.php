@@ -45,9 +45,10 @@ foreach (
         'Modules/Onboarding' => Modules\Onboarding\Tests\TestCase::class,
         'Modules/Receipts' => Modules\Receipts\Tests\TestCase::class,
         'Modules/Recurring' => Modules\Recurring\Tests\TestCase::class,
+        'Modules/Search' => Modules\Search\Tests\TestCase::class,
+        'Modules/Sync' => Modules\Sync\Tests\TestCase::class,
         'Modules/Tax' => Modules\Tax\Tests\TestCase::class,
         'Modules/Transfers' => Modules\Transfers\Tests\TestCase::class,
-        'Modules/Search' => Modules\Search\Tests\TestCase::class,
     ] as $module => $testCase
 ) {
     pest()->extend($testCase)

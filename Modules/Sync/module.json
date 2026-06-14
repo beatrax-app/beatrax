@@ -1,0 +1,11 @@
+{
+    "name": "Sync",
+    "alias": "sync",
+    "description": "Throwaway CRDT op-log / HLC merge-layer spike: validates the append-only, per-device-signed op-log merge model (HLC ordering, LWW-per-field, tombstones, import dedup) against the real migrated SQLite schema before Phase 11 production implementation.",
+    "keywords": ["sync", "crdt", "op-log", "hlc", "spike"],
+    "priority": 28,
+    "providers": [
+        "Modules\\Sync\\Providers\\SyncServiceProvider"
+    ],
+    "files": []
+}
