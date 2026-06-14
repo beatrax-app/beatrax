@@ -170,29 +170,29 @@ final class OpLogWriter
 
         $this->db->connection()->transaction(function () use ($entry, $hlcL, $hlcC, $now): void {
             $this->db->connection()->table('op_log_entries')->insert([
-                'user_id'     => $entry->userId,
-                'device_id'   => $entry->deviceId,
-                'table_name'  => $entry->table,
-                'pk'          => (string) $entry->pk,
-                'field'       => $entry->field,
-                'op_type'     => $entry->opType->value,
-                'value'       => $entry->value,
-                'hlc_l'       => $entry->hlcL,
-                'hlc_c'       => $entry->hlcC,
-                'signature'   => $entry->signature,
+                'user_id' => $entry->userId,
+                'device_id' => $entry->deviceId,
+                'table_name' => $entry->table,
+                'pk' => (string) $entry->pk,
+                'field' => $entry->field,
+                'op_type' => $entry->opType->value,
+                'value' => $entry->value,
+                'hlc_l' => $entry->hlcL,
+                'hlc_c' => $entry->hlcC,
+                'signature' => $entry->signature,
                 'recorded_at' => $now,
             ]);
 
             // Persist the updated clock state atomically (D-12).
             $this->db->connection()->table('hlc_clock_state')->updateOrInsert(
                 [
-                    'id'        => 1,
-                    'user_id'   => $this->userId,
+                    'id' => 1,
+                    'user_id' => $this->userId,
                     'device_id' => $this->deviceId,
                 ],
                 [
-                    'last_l'     => $hlcL,
-                    'last_c'     => $hlcC,
+                    'last_l' => $hlcL,
+                    'last_c' => $hlcC,
                     'updated_at' => $now,
                 ],
             );

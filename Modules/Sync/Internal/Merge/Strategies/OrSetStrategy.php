@@ -27,7 +27,7 @@ final class OrSetStrategy implements MergeStrategyInterface
 {
     /**
      * @param  list<OpLogEntry>  $candidateEntries  HLC-sorted ascending.
-     * @return list<array{v: string, tag: string}>  The merged set of live elements.
+     * @return list<array{v: string, tag: string}> The merged set of live elements.
      */
     public function resolve(array $candidateEntries): mixed
     {

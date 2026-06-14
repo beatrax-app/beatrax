@@ -24,7 +24,7 @@ final class GCounterStrategy implements MergeStrategyInterface
 {
     /**
      * @param  list<OpLogEntry>  $candidateEntries  HLC-sorted ascending.
-     * @return int  The merged count: sum of per-device maxima.
+     * @return int The merged count: sum of per-device maxima.
      */
     public function resolve(array $candidateEntries): mixed
     {
