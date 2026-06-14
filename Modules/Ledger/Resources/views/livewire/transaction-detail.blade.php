@@ -166,6 +166,150 @@
                 key('provenance-' . $transaction->id),
             )
 
+            {{-- Note editor (OQ-A): calm textarea + Save button. --}}
+            <section
+                aria-labelledby="note-heading"
+                class="border-t border-slate-200 pt-6 space-y-3 dark:border-slate-700"
+                data-testid="note-editor"
+            >
+                <div class="space-y-1">
+                    <h2 id="note-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
+                        Note
+                    </h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">
+                        Personal note for this transaction. Visible only to you.
+                    </p>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="sr-only" for="transaction-note">Note</label>
+                    <textarea
+                        wire:model="note"
+                        id="transaction-note"
+                        rows="3"
+                        placeholder="Add a note…"
+                        class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
+                        data-testid="note-textarea"
+                    ></textarea>
+
+                    <div class="flex items-center gap-3">
+                        <button
+                            type="button"
+                            wire:click="saveNote"
+                            class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+                            data-testid="note-save-button"
+                        >
+                            Save note
+                        </button>
+
+                        @if ($noteSaved)
+                            <span
+                                class="text-sm text-emerald-600 dark:text-emerald-400"
+                                role="status"
+                                data-testid="note-saved-indicator"
+                            >Saved</span>
+                        @endif
+                    </div>
+                </div>
+            </section>
+
+            {{-- Counterparty reassignment (OQ-C): select picker — user-driven write only.
+                 Import-pipeline / GC writes are NOT user-driven and are NOT captured. --}}
+            @if (isset($counterparties) && $counterparties->isNotEmpty())
+                <section
+                    aria-labelledby="counterparty-heading"
+                    class="border-t border-slate-200 pt-6 space-y-3 dark:border-slate-700"
+                    data-testid="counterparty-reassignment"
+                    x-data="{ selectedCp: '' }"
+                >
+                    <div class="space-y-1">
+                        <h2 id="counterparty-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
+                            Reassign counterparty
+                        </h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">
+                            Override the resolved counterparty for this transaction.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <label class="sr-only" for="counterparty-select">Choose counterparty</label>
+                        <select
+                            id="counterparty-select"
+                            x-model="selectedCp"
+                            class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
+                            data-testid="counterparty-select"
+                        >
+                            <option value="">Choose a counterparty…</option>
+                            @foreach ($counterparties as $cp)
+                                <option value="{{ $cp->id }}"
+                                    {{ $transaction->counterparty_id == $cp->id ? 'selected' : '' }}
+                                >{{ $cp->display_name }}</option>
+                            @endforeach
+                        </select>
+
+                        <button
+                            type="button"
+                            :disabled="!selectedCp"
+                            @click="$wire.reassignCounterparty(Number(selectedCp))"
+                            class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
+                            data-testid="counterparty-reassign-button"
+                        >
+                            Reassign
+                        </button>
+                    </div>
+                </section>
+            @endif
+
+            {{-- Delete affordance: confirm-guarded delete with a danger-tone button. --}}
+            <section
+                aria-labelledby="delete-heading"
+                class="border-t border-slate-200 pt-6 space-y-3 dark:border-slate-700"
+                data-testid="delete-section"
+                x-data="{ confirmDelete: false }"
+            >
+                <div class="space-y-1">
+                    <h2 id="delete-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
+                        Delete transaction
+                    </h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">
+                        Permanently removes this transaction. This action cannot be undone.
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button
+                        type="button"
+                        x-show="!confirmDelete"
+                        @click="confirmDelete = true"
+                        class="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm hover:bg-rose-50 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-400"
+                        data-testid="delete-button"
+                    >
+                        Delete
+                    </button>
+
+                    <template x-if="confirmDelete">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm text-slate-700 dark:text-slate-300">Are you sure?</span>
+                            <button
+                                type="button"
+                                wire:click="deleteTransaction"
+                                class="rounded-md bg-rose-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-rose-800"
+                                data-testid="delete-confirm-button"
+                            >
+                                Yes, delete
+                            </button>
+                            <button
+                                type="button"
+                                @click="confirmDelete = false"
+                                class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </section>
+
             @if (($chainAvailable ?? false) === true)
                 {{-- UI-02 / CHN-04: "View chain" trigger opens the chain
                      drill-down drawer (D-90, first Flux flyout in the
