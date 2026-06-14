@@ -16,6 +16,19 @@ use Psr\Log\LoggerInterface;
  * Wired in SyncServiceProvider::boot() via a class_exists()-guarded
  * events->listen() call (D-01 / Plan 02 provider pattern).
  *
+ * ## Emit-after-commit contract (WR-06)
+ *
+ * OpLogWriter::writeEntry() opens its OWN DB transaction (op insert + HLC
+ * clock-state upsert). Emit sites MUST dispatch TransactionMutated only AFTER
+ * the originating write transaction has COMMITTED — never from inside an open
+ * transaction. If a mutation event were dispatched mid-transaction, the
+ * writer's transaction would degrade into a savepoint of the outer one: an
+ * outer rollback would then discard the op insert while the in-memory HLC tick
+ * had already advanced (recovered only on next boot from hlc_clock_state),
+ * breaking the op's atomicity-vs-outer-rollback guarantee. The reclassify path
+ * (TransactionDetail::reclassify) already closes its transaction before
+ * dispatching; all current and future emit sites must follow the same shape.
+ *
  * ## Never-throw contract (D-07)
  *
  * The entire handler body is wrapped in try/catch(\Throwable). A capture

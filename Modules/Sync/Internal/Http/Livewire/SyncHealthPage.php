@@ -37,6 +37,15 @@ final class SyncHealthPage extends Component
         $userId = $currentUser->user()->id;
 
         // Pitfall 4: every query filters by user_id — no global scope here.
+        //
+        // WR-05 invariant: the 7-day window compares lexicographically-sortable
+        // `Y-m-d H:i:s` strings. This holds because EVERY writer of
+        // op_log_quarantine.created_at uses `Clock::now()->toDateTimeString()`
+        // (Y-m-d H:i:s) and the column default is SQLite CURRENT_TIMESTAMP (same
+        // format). Any future writer that inserts a differently-formatted
+        // timestamp (e.g. ISO-8601 with a `T` separator or a timezone offset)
+        // would silently fall out of this window — so all writers MUST keep
+        // emitting `Y-m-d H:i:s`.
         $sevenDaysAgo = $clock->now()->subDays(7)->toDateTimeString();
 
         $recentCount = $db->connection()
