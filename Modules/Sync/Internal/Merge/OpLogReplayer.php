@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Merge;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\Strategies\GCounterStrategy;
@@ -41,6 +42,14 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
  *    durable. This is the production path — the spike only applied entries
  *    in-memory.
  *
+ * 5. **FTS5 freshness (D-11 / SE-01):** After the merge transaction commits,
+ *    the replayer calls SearchIndexWriterContract::upsertForTransaction() for
+ *    every SET/CreateRow-touched transactions row, and deleteForTransaction()
+ *    for every tombstoned transactions row. These calls happen OUTSIDE the
+ *    merge transaction (Pitfall 3 — FTS5 cannot participate in a SQLite
+ *    transaction that also writes to base tables). A FTS hiccup never breaks
+ *    merge determinism: each call is wrapped in try/catch → quarantine.
+ *
  * ## Security invariants (preserved from spike — T-10-01, T-10-02)
  *
  * I1 — User-id filter before apply: entries whose userId !== $userId are
@@ -73,12 +82,16 @@ final readonly class OpLogReplayer
      * @param  array<string, string>  $deviceKeys  device-id => hex Ed25519 public key.
      * @param  MergeRulesRegistry|null  $rules  Config-driven strategy registry (default: new instance).
      * @param  Clock|null  $wallClock  Clock for recorded_at timestamps (default: resolved from container).
+     * @param  SearchIndexWriterContract|null  $searchWriter  FTS5 freshness hook (D-11 / SE-01).
+     *                                                        Null disables FTS updates (used in OpLogRebuilder rebuild path where search is refreshed
+     *                                                        in bulk after rebuild, and in tests that do not need FTS).
      */
     public function __construct(
         private DatabaseManager $db,
         private array $deviceKeys = [],
         ?MergeRulesRegistry $rules = null,
         ?Clock $wallClock = null,
+        private readonly ?SearchIndexWriterContract $searchWriter = null,
     ) {
         $this->signer = new DeviceKeySigner;
         $this->rules = $rules ?? new MergeRulesRegistry;
@@ -230,8 +243,25 @@ final readonly class OpLogReplayer
         /** @var list<array{partnerId: int, deletedType: string}> $pairCascades */
         $pairCascades = [];
 
+        // FTS5 freshness tracking (D-11 / SE-01): collected inside transaction,
+        // consumed OUTSIDE the transaction (Pitfall 3 — FTS5 calls must be post-commit).
+        /** @var list<int> $touchedTransactionIds */
+        $touchedTransactionIds = [];
+
+        /** @var list<int> $tombstonedTransactionIds */
+        $tombstonedTransactionIds = [];
+
         $this->db->connection()->transaction(
-            function () use ($candidatesByField, $tombstones, $creates, $userId, $now, &$pairCascades): void {
+            function () use (
+                $candidatesByField,
+                $tombstones,
+                $creates,
+                $userId,
+                $now,
+                &$pairCascades,
+                &$touchedTransactionIds,
+                &$tombstonedTransactionIds,
+            ): void {
                 // --- CREATE_ROW path ---
                 foreach ($creates as $table => $rows) {
                     foreach ($rows as $pk => $fields) {
@@ -296,6 +326,11 @@ final readonly class OpLogReplayer
                         $this->db->connection()
                             ->table($table)
                             ->insertOrIgnore($payload);
+
+                        // Track for FTS freshness (transactions table only).
+                        if ($table === 'transactions' && is_int($pk)) {
+                            $touchedTransactionIds[] = $pk;
+                        }
                     }
                 }
 
@@ -355,6 +390,11 @@ final readonly class OpLogReplayer
                                     ->where('user_id', $userId)
                                     ->delete();
 
+                                // Track tombstoned transactions for FTS delete.
+                                if ($table === 'transactions' && is_int($pk)) {
+                                    $tombstonedTransactionIds[] = $pk;
+                                }
+
                                 continue;
                             }
                         }
@@ -376,6 +416,11 @@ final readonly class OpLogReplayer
                                 ->where('id', $pk)
                                 ->where('user_id', $userId)
                                 ->update([$field => $decodedValue]);
+                        }
+
+                        // Track touched transactions for FTS upsert.
+                        if ($table === 'transactions' && is_int($pk)) {
+                            $touchedTransactionIds[] = $pk;
                         }
                     }
                 }
@@ -417,6 +462,11 @@ final readonly class OpLogReplayer
                             ->where('id', $pk)
                             ->where('user_id', $userId)
                             ->delete();
+
+                        // Track tombstoned transactions for FTS delete.
+                        if ($table === 'transactions' && is_int($pk)) {
+                            $tombstonedTransactionIds[] = $pk;
+                        }
                     }
                 }
             },
@@ -472,6 +522,31 @@ final readonly class OpLogReplayer
                 'signature' => '',
                 'recorded_at' => $now,
             ]);
+
+            // Reclassified partner is a touched transaction — FTS doc must be rebuilt.
+            $touchedTransactionIds[] = $partnerId;
+        }
+
+        // Step 6: FTS5 freshness (D-11 / SE-01).
+        // MUST be OUTSIDE the merge transaction (Pitfall 3: FTS5 shadow-table writes
+        // cannot participate in a transaction that also touches the base table).
+        // A FTS hiccup never breaks merge determinism — each call is try/catch guarded.
+        if ($this->searchWriter !== null) {
+            foreach ($touchedTransactionIds as $txId) {
+                try {
+                    $this->searchWriter->upsertForTransaction($txId, $userId);
+                } catch (\Throwable) {
+                    $this->quarantineSearchError($txId, 'upsert', $userId, $now);
+                }
+            }
+
+            foreach ($tombstonedTransactionIds as $txId) {
+                try {
+                    $this->searchWriter->deleteForTransaction($txId, $userId);
+                } catch (\Throwable) {
+                    $this->quarantineSearchError($txId, 'delete', $userId, $now);
+                }
+            }
         }
     }
 
@@ -498,6 +573,31 @@ final readonly class OpLogReplayer
             ]);
         } catch (\Throwable) {
             // Quarantine write failure must not propagate — log and continue.
+        }
+    }
+
+    /**
+     * Write a structured quarantine record for a failed FTS5 freshness call.
+     * Never throws. An FTS hiccup must never break merge determinism.
+     *
+     * @param  string  $operation  'upsert'|'delete'
+     */
+    private function quarantineSearchError(int $transactionId, string $operation, int $userId, string $now): void
+    {
+        try {
+            $this->db->connection()->table('op_log_quarantine')->insert([
+                'user_id' => $userId,
+                'table_name' => 'transactions',
+                'pk' => (string) $transactionId,
+                'device_id' => 'system-fts',
+                'reason' => 'strategy_error',
+                'hlc_l' => 0,
+                'hlc_c' => 0,
+                'raw_value' => json_encode(['fts_operation' => $operation], JSON_THROW_ON_ERROR),
+                'created_at' => $now,
+            ]);
+        } catch (\Throwable) {
+            // Quarantine write failure must not propagate.
         }
     }
 }
