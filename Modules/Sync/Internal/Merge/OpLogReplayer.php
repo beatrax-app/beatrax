@@ -68,6 +68,21 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
  */
 final readonly class OpLogReplayer
 {
+    /**
+     * Device id for the pair-link cascade compensating op (D-08 / CR-03).
+     *
+     * Cascade ops are deterministically re-derived by the replayer on every
+     * replay (incremental AND rebuild), never network-received, so they carry
+     * no Ed25519 key and no signature. The signature gate allow-lists this
+     * device id via isSystemDevice().
+     */
+    public const string SYSTEM_CASCADE_DEVICE_ID = 'system-cascade';
+
+    /**
+     * Device id used to label FTS-freshness quarantine records.
+     */
+    private const string SYSTEM_FTS_DEVICE_ID = 'system-fts';
+
     private DeviceKeySigner $signer;
 
     private MergeRulesRegistry $rules;
@@ -160,6 +175,18 @@ final readonly class OpLogReplayer
     }
 
     /**
+     * Whether a device id belongs to a deterministically re-derived system op
+     * (e.g. the pair-link cascade) that legitimately bypasses the Ed25519
+     * signature gate (CR-03). These ops are produced ONLY by the replayer
+     * itself and are reproduced identically on rebuild, so they are trusted by
+     * construction. The I1 cross-user gate still applies to them.
+     */
+    private function isSystemDevice(string $deviceId): bool
+    {
+        return $deviceId === self::SYSTEM_CASCADE_DEVICE_ID;
+    }
+
+    /**
      * Replay a merged set of op-log entries against the real SQLite schema.
      *
      * 1. Persist each entry to op_log_entries (upsert-by-identity).
@@ -202,6 +229,20 @@ final readonly class OpLogReplayer
         foreach ($entries as $entry) {
             if ($entry->userId !== $userId) {
                 $this->quarantine($entry, 'cross_user', $now);
+
+                continue;
+            }
+
+            // CR-03: system cascade ops are deterministically re-derived by the
+            // replayer itself (never network-received), so they carry no device
+            // key and no signature. Allow-list them past the Ed25519 gate
+            // deterministically — both during incremental replay and during a
+            // full rebuild (which replays the persisted cascade op). The I1
+            // cross-user gate above STILL applies, and these ops only ever set
+            // a transaction's `type` for the scoped user, so they cannot be a
+            // privilege-escalation vector.
+            if ($this->isSystemDevice($entry->deviceId)) {
+                $verified[] = $entry;
 
                 continue;
             }
@@ -262,7 +303,9 @@ final readonly class OpLogReplayer
 
         // Step 4: apply within a single DB transaction.
         // Collect transfer deletions for pair-link cascade AFTER the transaction commits.
-        /** @var list<array{partnerId: int, deletedType: string}> $pairCascades */
+        // The tombstone HLC is captured so the compensating op can be given a real,
+        // monotonic HLC that sorts deterministically AFTER the tombstone (CR-03).
+        /** @var list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}> $pairCascades */
         $pairCascades = [];
 
         // FTS5 freshness tracking (D-11 / SE-01): collected inside transaction,
@@ -405,6 +448,8 @@ final readonly class OpLogReplayer
                                             $pairCascades[] = [
                                                 'partnerId' => $pairId,
                                                 'deletedType' => $txType,
+                                                'tombHlcL' => $tomb->hlcL,
+                                                'tombHlcC' => $tomb->hlcC,
                                             ];
                                         }
                                     }
@@ -484,6 +529,8 @@ final readonly class OpLogReplayer
                                     $pairCascades[] = [
                                         'partnerId' => $pairId,
                                         'deletedType' => $txType,
+                                        'tombHlcL' => $tomb->hlcL,
+                                        'tombHlcC' => $tomb->hlcC,
                                     ];
                                 }
                             }
@@ -541,20 +588,34 @@ final readonly class OpLogReplayer
                 ->where('user_id', $userId)
                 ->update(['type' => $newType]);
 
-            // Persist the compensating op to op_log_entries.
-            $this->db->connection()->table('op_log_entries')->insert([
-                'user_id' => $userId,
-                'device_id' => 'system-cascade',
-                'table_name' => 'transactions',
-                'pk' => (string) $partnerId,
-                'field' => 'type',
-                'op_type' => OpType::Set->value,
-                'value' => json_encode($newType, JSON_THROW_ON_ERROR),
-                'hlc_l' => 0,
-                'hlc_c' => 0,
-                'signature' => '',
-                'recorded_at' => $now,
-            ]);
+            // CR-03: persist the compensating op with a REAL, monotonic HLC that
+            // sorts deterministically AFTER the tombstone (tombstone HLC, counter+1,
+            // tie-broken by the SYSTEM_CASCADE_DEVICE_ID). The old code used HLC
+            // [0,0] + empty signature, which (a) sorted the cascade op FIRST so a
+            // rebuild re-ran the tombstone AFTER it and reverted the reclassification,
+            // and (b) was quarantined as missing_device_key/forged_signature on every
+            // re-replay. The signature gate now deterministically allow-lists
+            // SYSTEM_CASCADE_DEVICE_ID (see isSystemDevice()), and the rebuilder
+            // replays this persisted op so the cascade is reproduced byte-for-byte.
+            //
+            // upsert-by-identity keeps re-replay idempotent (the op is deterministic).
+            $this->db->connection()->table('op_log_entries')->updateOrInsert(
+                [
+                    'user_id' => $userId,
+                    'device_id' => self::SYSTEM_CASCADE_DEVICE_ID,
+                    'table_name' => 'transactions',
+                    'pk' => (string) $partnerId,
+                    'field' => 'type',
+                    'hlc_l' => $cascade['tombHlcL'],
+                    'hlc_c' => $cascade['tombHlcC'] + 1,
+                ],
+                [
+                    'op_type' => OpType::Set->value,
+                    'value' => json_encode($newType, JSON_THROW_ON_ERROR),
+                    'signature' => '',
+                    'recorded_at' => $now,
+                ],
+            );
 
             // Reclassified partner is a touched transaction — FTS doc must be rebuilt.
             $touchedTransactionIds[] = $partnerId;
@@ -622,7 +683,7 @@ final readonly class OpLogReplayer
                 'user_id' => $userId,
                 'table_name' => 'transactions',
                 'pk' => (string) $transactionId,
-                'device_id' => 'system-fts',
+                'device_id' => self::SYSTEM_FTS_DEVICE_ID,
                 'reason' => 'strategy_error',
                 'hlc_l' => 0,
                 'hlc_c' => 0,
