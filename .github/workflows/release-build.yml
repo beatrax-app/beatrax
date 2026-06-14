@@ -58,7 +58,7 @@ jobs:
                   ref: ${{ inputs.tag }}
 
             - name: Set up PHP
-              uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2
               with:
                   php-version: '8.5'
                   extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
@@ -112,7 +112,7 @@ jobs:
                   ref: ${{ inputs.tag }}
 
             - name: Set up PHP
-              uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2
               with:
                   php-version: '8.5'
                   extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json, zip, sodium
@@ -168,7 +168,7 @@ jobs:
                   ref: ${{ inputs.tag }}
 
             - name: Set up PHP
-              uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2
               with:
                   php-version: '8.5'
                   extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
