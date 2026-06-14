@@ -196,6 +196,13 @@ const ISOLATION_ROUTE_COVERED = [
     // Phase 07 — Tax cockpit: two-user tagged-transaction probe is below (Plan 07-05).
     // ISOLATION_ROUTE_COVERED entry honors the contract promised in the Plan 01 allow-list comment.
     'tax.index',
+    // Phase 11 — Sync-health surface (D-07). Unlike the sibling /dev/* routes
+    // on the allow-list above (operator-level, no foreign user-row data), this
+    // panel DOES bear user-scoped data: it lists the acting user's own
+    // op_log_quarantine rows. op_log_quarantine has no BelongsToUser global
+    // scope (Pitfall 4), so the user-id filter is hand-applied in the
+    // component and must be probed, not allow-listed. Two-developer probe below.
+    'dev.sync-health',
 ];
 
 function xuiUser(string $username, bool $developer = false): User
@@ -822,6 +829,43 @@ it('does not bleed the owner tagged transactions into the partner tax page (T-07
         ->assertDontSee('OWNER SECRET DEDUCTIBLE MERCHANT BV')
         ->assertDontSee('Owner Secret Category')
         ->assertDontSee('owner-secret-note');
+});
+
+it('does not bleed the owner quarantine rows into a second developer\'s sync-health panel (Pitfall 4, T-11-13)', function (): void {
+    // /dev/sync-health is user-scoped: op_log_quarantine has no
+    // BelongsToUser global scope, so the component hand-filters by the
+    // acting user_id. Two developers must each see only their own rows.
+    $seedQuarantine = function (int $userId, string $deviceId, string $reason): void {
+        $this->db->connection()->table('op_log_quarantine')->insert([
+            'user_id' => $userId,
+            'table_name' => 'transactions',
+            'pk' => '1',
+            'device_id' => $deviceId,
+            'reason' => $reason,
+            'created_at' => '2026-06-14 10:00:00',
+        ]);
+    };
+
+    // Owner (a developer per the beforeEach fixture) gets a quarantine row
+    // with a unique, recognisable device + reason token.
+    $seedQuarantine($this->owner->id, 'owner-secret-device-xj91', 'owner_secret_reason');
+
+    // A second developer with their own row — they must never see the owner's.
+    $devPartner = xuiUser('sync-health-dev-partner', developer: true);
+    $seedQuarantine($devPartner->id, 'dev-partner-device', 'dev_partner_reason');
+
+    $this->actingAs($devPartner)
+        ->get('/dev/sync-health')
+        ->assertOk()
+        ->assertSee('dev-partner-device')
+        ->assertDontSee('owner-secret-device-xj91')
+        ->assertDontSee('owner_secret_reason');
+
+    // Defense-in-depth: the non-developer partner is blocked entirely by
+    // EnsureDeveloperMode (404, never 403 — T-11-14).
+    $this->actingAs($this->partner)
+        ->get('/dev/sync-health')
+        ->assertNotFound();
 });
 
 it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {
