@@ -8,15 +8,22 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Builder;
 
 /**
- * Creates the hlc_clock_state table — a singleton-row store for the
- * Hybrid Logical Clock's persisted (l, c) state (D-12, SYNC-01).
+ * Creates the hlc_clock_state table — a per-(user_id, device_id) store for
+ * the Hybrid Logical Clock's persisted (l, c) state (D-12, SYNC-01).
  *
- * The singleton-row constraint (CHECK id = 1) cannot be expressed via
- * Blueprint, so this migration uses a raw SQL CREATE TABLE statement.
+ * The compound non-auto-increment PRIMARY KEY cannot be expressed cleanly
+ * via Blueprint, so this migration uses a raw SQL CREATE TABLE statement.
  *
  * Design notes:
- *   - One row per (user_id, device_id) pair on this device. The CHECK
- *     (id = 1) ensures exactly one physical row exists.
+ *   - One row per (user_id, device_id) pair. The composite PRIMARY KEY
+ *     (user_id, device_id) is what makes multi-device AND multi-user
+ *     support possible (a hard project constraint: "schema must permit a
+ *     second user later without migration pain"). A second device or a
+ *     second user simply inserts its own row; with no shared singleton row,
+ *     devices/users can never clobber each other's clock state.
+ *   - The previous design used `id INTEGER PRIMARY KEY CHECK (id = 1)`,
+ *     a singleton that threw a PK/CHECK violation the moment a second
+ *     (user_id, device_id) wrote an op (CR-01). That singleton is gone.
  *   - `last_l` and `last_c` are the persisted HLC high-water marks.
  *     OpLogWriter reads them on boot and calls HybridLogicalClock::receive()
  *     before the first tick() — this is the monotonic guard that prevents
@@ -36,12 +43,12 @@ return new class extends Migration
 
         $connection->statement("
             CREATE TABLE hlc_clock_state (
-                id         INTEGER PRIMARY KEY CHECK (id = 1),
                 user_id    INTEGER NOT NULL,
                 device_id  TEXT    NOT NULL,
                 last_l     INTEGER NOT NULL DEFAULT 0,
                 last_c     INTEGER NOT NULL DEFAULT 0,
-                updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
+                updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
+                PRIMARY KEY (user_id, device_id)
             )
         ");
     }

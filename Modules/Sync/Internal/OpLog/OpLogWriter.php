@@ -184,9 +184,11 @@ final class OpLogWriter
             ]);
 
             // Persist the updated clock state atomically (D-12).
+            // Key the upsert on the composite PRIMARY KEY (user_id, device_id)
+            // ONLY — the old 'id' => 1 singleton key (CR-01) is gone, so a
+            // second device/user gets its own row instead of colliding on id=1.
             $this->db->connection()->table('hlc_clock_state')->updateOrInsert(
                 [
-                    'id' => 1,
                     'user_id' => $this->userId,
                     'device_id' => $this->deviceId,
                 ],
