@@ -47,6 +47,10 @@ final class DevSidebarItems
         ['slug' => 'sql',      'label' => 'SQL',      'icon' => '⌕',  'route' => 'dev.sql', 'enabled' => true],
         ['slug' => 'horizon',  'label' => 'Horizon',  'icon' => '↗',  'route' => 'dev.horizon', 'enabled' => 'conditional'],
         ['slug' => 'system',   'label' => 'System',   'icon' => '◇',  'route' => 'dev.system', 'enabled' => true],
+        // The sync-health route lives in the Sync module; gated here via
+        // Router::has('dev.sync-health') at render time, so a build that
+        // ships without the Sync module degrades to nav-disabled.
+        ['slug' => 'sync-health', 'label' => 'Sync Health', 'icon' => '⇄', 'route' => 'dev.sync-health', 'enabled' => true],
     ];
 
     /**

@@ -73,7 +73,8 @@ it('exposes the full main-app + Dev Console nav roster from NavigationRegistry::
         ->and($ids)->toContain('dev.queue')
         ->and($ids)->toContain('dev.doctor')
         ->and($ids)->toContain('dev.sql')
-        ->and($ids)->toContain('dev.system');
+        ->and($ids)->toContain('dev.system')
+        ->and($ids)->toContain('dev.sync-health');
 });
 
 it('emits the merged palette JSON for a developer (view + dev SAFE + action; ZERO DESTRUCTIVE)', function (): void {
