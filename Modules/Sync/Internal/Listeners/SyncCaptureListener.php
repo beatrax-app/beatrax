@@ -94,20 +94,14 @@ final class SyncCaptureListener
         );
     }
 
-    /**
-     * @param  array<string, mixed>  $fields
-     */
-    private function writeCreateFields(int $transactionId, array $fields, OpLogWriter $writer): void
-    {
-        $writer->writeCreateRow(
-            table: 'transactions',
-            pk: $transactionId,
-            fields: $fields,
-        );
-    }
-
     private function handleCreate(TransactionMutated $event, OpLogWriter $writer): void
     {
-        $this->writeCreateFields($event->transactionId, $event->dirtyFields, $writer);
+        // IN-02: write the CreateRow snapshot directly — the previous
+        // writeCreateFields() one-line indirection added no value.
+        $writer->writeCreateRow(
+            table: 'transactions',
+            pk: $event->transactionId,
+            fields: $event->dirtyFields,
+        );
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Merge;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
@@ -115,8 +116,28 @@ final readonly class OpLogReplayer
             'g_counter' => new GCounterStrategy,
             'or_set' => new OrSetStrategy,
         ];
-        // Wall clock: injected (for tests/DI) or fall back to Carbon directly.
-        $this->clock = $wallClock ?? new class implements Clock
+        // Wall clock: injected (for tests/DI) or resolved from the container so
+        // it stays consistent with the rest of the codebase (IN-03). The
+        // container's Clock and the local Carbon fallback both honour
+        // CarbonImmutable::setTestNow(), so replay timestamps remain deterministic
+        // under tests either way. The container resolution is guarded because the
+        // replayer is also constructed outside a booted app (e.g. some unit tests).
+        $this->clock = $wallClock ?? $this->resolveClock();
+    }
+
+    /**
+     * Resolve a Clock from the container, falling back to a Carbon-backed Clock
+     * when no container binding is available (IN-03).
+     */
+    private function resolveClock(): Clock
+    {
+        $container = Container::getInstance();
+
+        if ($container->bound(Clock::class)) {
+            return $container->make(Clock::class);
+        }
+
+        return new class implements Clock
         {
             public function now(): CarbonImmutable
             {
