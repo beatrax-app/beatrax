@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Local & in sync
+milestone: v1.4
+milestone_name: Sync
 status: ready_to_plan
-stopped_at: Phase 09 complete (5/5) — ready to discuss Phase 10
-last_updated: 2026-06-13T21:22:56.406Z
+stopped_at: v1.3 shipped as v1.3.0 (Phases 1–9). v1.4 "Sync" active — ready to discuss Phase 10 (op-log/CRDT spike)
+last_updated: 2026-06-14T12:15:00.000Z
 progress:
-  total_phases: 15
-  completed_phases: 8
-  total_plans: 47
-  completed_plans: 47
-  percent: 53
+  total_phases: 6
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: beatrax
@@ -27,29 +27,24 @@ progress:
 
 ## Current Position
 
-Phase: 09 (unusual-charge-anomaly-alerts) — EXECUTING
-Plan: 4 of 5 — COMPLETE (09-04 Anomaly detection orchestration: jobs + listener + scheduler)
+Milestone v1.3 "Local & in sync" shipped 2026-06-14 as `v1.3.0` (Phases 1–9, all complete + verified). Track 4 carved out as the new active milestone v1.4 "Sync".
 
-- **Milestone:** v1.3 "Local & in sync"
+- **Milestone:** v1.4 "Sync" (local-first E2E device sync, SEED-001)
 - **Status:** Ready to plan
-- **Phase:** 10 of 15 (spike — op log/crdt merge layer prototype)
+- **Phase:** 10 (SPIKE — op-log/CRDT merge-layer prototype) — first of 6 (Phases 10–15)
 - **Plan:** Not started
-- **Progress:** [██████████] 95%
+- **Progress:** [          ] 0/6 phases
 
-```
-Phases [██              ] 2/15
-```
-
-**Next action:** Start Phase 3. Run `/gsd:discuss-phase 3` (recommended) or `/gsd:plan-phase 3`. Phase 2 left 2 tracked dev-DB test goals ("Emergency fund", "Holiday fund") created during UAT — archive/remove them if unwanted.
+**Next action:** Start the v1.4 sync work with the de-risking spike. Run `/gsd:discuss-phase 10` (recommended) or `/gsd:plan-phase 10`. Phase 10 gates the entire track and must validate before Phase 11 commits downstream sync work.
 
 ## Performance Metrics
 
 | Metric | Value |
 |--------|-------|
-| Phases planned | 15 |
-| Phases complete | 0 |
-| Plans complete | 0 |
-| Requirements mapped | 44/44 |
+| v1.3 phases shipped | 9/9 (41 plans) |
+| v1.4 phases planned | 6 (Phases 10–15) |
+| v1.4 phases complete | 0 |
+| v1.4 plans complete | 0 |
 
 ## Accumulated Context
 
@@ -112,9 +107,9 @@ Phases [██              ] 2/15
 
 ## Session Continuity
 
-- **Last session:** 2026-06-13T19:05:00.000Z
-- **Stopped at:** Completed 09-04-PLAN.md (Anomaly detection orchestration — reactive DetectAnomaliesJob + TransactionImported listener + full-history BackfillAnomaliesJob + ReviveExpiredAnomalySnoozesJob + SafetyNetAnomalySweepJob + two scheduler entries)
-- **Resume by:** Execute Plan 09-05 (anomaly UI — /drift type switch consuming AnomalyAlertQuery + settings toggle dispatching BackfillAnomaliesJob on first activation + top-nav badge + dashboard tile). Run `/gsd:execute-phase 09`.
+- **Last session:** 2026-06-14T12:15:00.000Z
+- **Stopped at:** Shipped v1.3 "Local & in sync" as `v1.3.0` — Phase 9 fully executed (UAT + deep review --fix + verification 30/30 + threat-secure 22/22), then re-scoped: Track 4 (Phases 10–15) carved out into the new active milestone v1.4 "Sync". v1.3 roadmap snapshot at `.planning/milestones/v1.3-ROADMAP.md`; milestone record in `.planning/MILESTONES.md`.
+- **Resume by:** Start the v1.4 sync work. Run `/gsd:discuss-phase 10` (the op-log/CRDT spike that gates the whole track).
 
 ---
-*State initialized: 2026-06-07 for milestone v1.3 "Local & in sync"*
+*State initialized: 2026-06-07 for milestone v1.3 "Local & in sync". v1.3 shipped 2026-06-14; v1.4 "Sync" active.*
