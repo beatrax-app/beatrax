@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -15,6 +16,7 @@ use Modules\Categorization\Public\Events\CategorizationDiverged;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
+use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -113,6 +115,7 @@ final class TransactionDetail extends Component
         string $newType,
         CurrentUser $currentUser,
         DatabaseManager $db,
+        Dispatcher $events,
     ): void {
         if (! in_array($newType, Transaction::TYPES, true)) {
             throw new InvalidArgumentException(sprintf(
@@ -151,6 +154,16 @@ final class TransactionDetail extends Component
                     ->update(['pair_transaction_id' => null]);
             }
         });
+
+        // Hand-wired capture emission (D-02): type reclassify enters the op-log
+        // as a per-field Set op. The pair partner's pair_transaction_id NULL-ing
+        // is a structural FK side-effect handled by the merge engine's cascade (D-08).
+        $events->dispatch(new TransactionMutated(
+            transactionId: $this->transactionId,
+            userId: $user->id,
+            mutationType: 'edit',
+            dirtyFields: ['type' => $newType],
+        ));
 
         $message = $breaksPair
             ? sprintf('Reclassified to %s — pair removed', $newType)

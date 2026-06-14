@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
+use Modules\Sync\Public\Events\TransactionMutated;
 
 /*
  * Feature tests for the manual reclassify action on
@@ -20,6 +22,13 @@ beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-05-15 12:00:00'));
+
+    // Suppress SyncCaptureListener: reclassify now dispatches TransactionMutated,
+    // but the Sync capture listener requires OpLogWriter with runtime device creds
+    // that are not bound in this test context. Fake the event so these tests remain
+    // focused on the Ledger behaviour (type change, pair break); Sync capture is
+    // covered separately in Modules/Sync/tests/Feature/OpLogCaptureWiringTest.
+    Event::fake([TransactionMutated::class]);
 
     /** @var Account $asnAccount */
     $asnAccount = Account::query()
