@@ -16,17 +16,32 @@ use Modules\Sync\Internal\Merge\OpLogReplayer;
  *
  * The normal day-to-day merge path (OpLogReplayer) applies incremental UPDATEs
  * and DELETEs — it NEVER drops triggers. This class provides the maintenance-window
- * path used during device onboarding or disaster recovery: wipe the covered tables,
- * replay the full persisted op-log from scratch, and confirm the rebuilt state equals
- * the incrementally-merged state.
+ * path used during device onboarding or disaster recovery: drop covered-table
+ * rows the op-log can recreate, replay the full persisted op-log from scratch,
+ * and end with the rebuilt state equal to the incrementally-merged state.
+ *
+ * ## Rebuild deletes only op-log-CREATED rows (CR-04)
+ *
+ * The op-log captures post-import USER edits only — import-created rows are
+ * immutable and never enter the log (SYNC-03). A from-scratch "DELETE all then
+ * replay" would wipe import rows that the SET-only log cannot recreate, so the
+ * rebuilt DB would NOT equal the incremental state. Instead rebuild() deletes
+ * only rows that have a `create_row` op in the log (the CreateRow ops recreate
+ * them) and PRESERVES import rows so their SET ops replay on top. Tombstones in
+ * the log delete rows during replay. The net result equals the incremental path.
  *
  * ## Safety invariants
  *
- * - DROP TRIGGER appears ONLY in this class (T-11-07). The grep-guard in
- *   TriggerAwareRebuildTest asserts no DROP TRIGGER exists outside this file.
+ * - DROP TRIGGER in production code is confined to this class. This is enforced
+ *   by the arch test in OpLogRebuilderTest ("no DROP TRIGGER outside the
+ *   rebuilder and the trigger-owning migrations"), NOT by any assertion in
+ *   TriggerAwareRebuildTest (an earlier docblock claimed a grep-guard there that
+ *   never existed — corrected per CR-04 / IN-01).
  * - Trigger snapshot, DROP, DELETE, replay, and restore ALL happen inside a SINGLE
  *   DB transaction. Any exception rolls back all of them: triggers and data both
  *   return to pre-rebuild state automatically (the rollback IS the D-10 safety path).
+ * - Deletion runs in FK-safe order (children before parents) so PRAGMA
+ *   foreign_keys=ON cannot abort the rebuild mid-way.
  * - rebuild() is scoped to a single user_id — no cross-user data is touched.
  * - The replayer is constructed without a SearchIndexWriterContract so FTS writes
  *   are suppressed during rebuild (avoids FTS/base-table transaction conflict).
@@ -98,11 +113,34 @@ final class OpLogRebuilder
                     );
                 }
 
-                // Step 3: delete all covered-table rows for this user.
-                foreach ($this->coveredTables as $table) {
+                // Step 3: delete ONLY the rows the op-log can recreate — i.e. rows
+                // that have a CreateRow op in the log for this user (CR-04).
+                //
+                // The op-log captures post-import USER edits only; import-created
+                // rows are immutable and never enter the log (SYNC-03). A naive
+                // "DELETE every covered-table row then replay" would wipe those
+                // import rows and the SET-only log could not recreate them, leaving
+                // the rebuilt DB empty for every imported row — so rebuild would NOT
+                // equal the incremental state. Instead we delete only op-log-CREATED
+                // rows (which the CreateRow ops will faithfully recreate) and PRESERVE
+                // import rows so their SET ops replay on top of them, exactly as the
+                // incremental path does. Tombstones in the log still delete rows
+                // during the replay below.
+                //
+                // Deletion runs in FK-safe order: children before parents. With
+                // PRAGMA foreign_keys=ON a raw DELETE that removed a parent before
+                // its children could abort the whole rebuild.
+                foreach ($this->fkSafeDeletionOrder() as $table) {
+                    $createdPks = $this->createdRowPks($userId, $table);
+
+                    if ($createdPks === []) {
+                        continue;
+                    }
+
                     $this->db->connection()
                         ->table($table)
                         ->where('user_id', $userId)
+                        ->whereIn('id', $createdPks)
                         ->delete();
                 }
 
@@ -154,6 +192,90 @@ final class OpLogRebuilder
         } finally {
             $this->releaseMaintenanceLock($userId);
         }
+    }
+
+    /**
+     * Covered tables ordered children-before-parents so a scoped DELETE never
+     * removes a parent row before its FK children (CR-04). Tables not listed
+     * here keep their registry order, appended after the explicitly-ordered set.
+     *
+     * The explicit ordering encodes the known FK dependencies among covered
+     * tables: category_budgets -> categories, tax_transaction_tags ->
+     * transactions, merchant_aliases/merchant_memories are leaf-ish. accounts is
+     * a parent of transactions but is delete_wins=false (never tombstoned) and
+     * is included for completeness so a CreateRow-driven rebuild deletes children
+     * first.
+     *
+     * @return list<string>
+     */
+    private function fkSafeDeletionOrder(): array
+    {
+        // Children first, parents last.
+        $preferred = [
+            'tax_transaction_tags',
+            'category_budgets',
+            'transactions',
+            'categorization_rules',
+            'merchant_aliases',
+            'merchant_memories',
+            'counterparties',
+            'pots',
+            'goals',
+            'categories',
+            'accounts',
+        ];
+
+        $covered = $this->coveredTables;
+
+        /** @var list<string> $ordered */
+        $ordered = [];
+
+        foreach ($preferred as $table) {
+            if (in_array($table, $covered, true)) {
+                $ordered[] = $table;
+            }
+        }
+
+        // Append any covered table not in the preferred list (config-driven, D-05).
+        foreach ($covered as $table) {
+            if (! in_array($table, $ordered, true)) {
+                $ordered[] = $table;
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * Primary keys of rows that the op-log can recreate for a table — i.e. rows
+     * that have at least one `create_row` op in the log for this user (CR-04).
+     *
+     * These are the only rows safe to DELETE before replay: the CreateRow ops
+     * will faithfully recreate them. Rows without a CreateRow op are import-created
+     * and immutable; they are preserved so their SET ops replay on top.
+     *
+     * @return list<int>
+     */
+    private function createdRowPks(int $userId, string $table): array
+    {
+        $rows = $this->db->connection()
+            ->table('op_log_entries')
+            ->where('user_id', $userId)
+            ->where('table_name', $table)
+            ->where('op_type', 'create_row')
+            ->distinct()
+            ->pluck('pk');
+
+        /** @var list<int> $pks */
+        $pks = [];
+
+        foreach ($rows as $pk) {
+            if (is_numeric($pk)) {
+                $pks[] = (int) $pk;
+            }
+        }
+
+        return $pks;
     }
 
     /**
