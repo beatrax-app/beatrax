@@ -138,6 +138,28 @@ final readonly class OpLogReplayer
     }
 
     /**
+     * Encode a strategy-resolved value into a form a SQLite column can bind.
+     *
+     * CR-02: LWW resolves to a scalar (or null), G-Counter to an int — both bind
+     * directly. OR-Set resolves to a `list<array{v,tag}>` (a PHP array), which a
+     * query-builder bind cannot accept ("Array to string conversion"). Any
+     * non-scalar, non-null result is JSON-encoded so the set survives the round
+     * trip through the column. Scalars and null pass through unchanged so the
+     * existing LWW/G-Counter behaviour is byte-for-byte identical.
+     *
+     * @throws \JsonException If a non-scalar value cannot be JSON-encoded; the
+     *                        caller catches this and routes the op to quarantine.
+     */
+    private function encodeColumnValue(mixed $resolved): mixed
+    {
+        if ($resolved === null || is_scalar($resolved)) {
+            return $resolved;
+        }
+
+        return json_encode($resolved, JSON_THROW_ON_ERROR);
+    }
+
+    /**
      * Replay a merged set of op-log entries against the real SQLite schema.
      *
      * 1. Persist each entry to op_log_entries (upsert-by-identity).
@@ -314,7 +336,11 @@ final readonly class OpLogReplayer
                             try {
                                 $strategyKey = $this->rules->strategyFor($table, $field);
                                 $strategy = $this->strategies[$strategyKey] ?? $this->strategies['lww'];
-                                $payload[$field] = $strategy->resolve($fieldEntries);
+                                // CR-02: a non-scalar strategy result (OrSet → list<array>)
+                                // must be JSON-encoded before it reaches a SQLite column.
+                                // Encoding inside the try means an encode failure also
+                                // routes to quarantine instead of aborting the whole batch.
+                                $payload[$field] = $this->encodeColumnValue($strategy->resolve($fieldEntries));
                             } catch (\Throwable) {
                                 $this->quarantine($fieldEntries[0], 'strategy_error', $now);
 
@@ -404,18 +430,25 @@ final readonly class OpLogReplayer
                             try {
                                 $strategyKey = $this->rules->strategyFor($table, $field);
                                 $strategy = $this->strategies[$strategyKey] ?? $this->strategies['lww'];
-                                $decodedValue = $strategy->resolve($fieldEntries);
+                                // CR-02: encode AND write inside the try. The original
+                                // code computed the value in the try but ran ->update()
+                                // outside it — so a non-scalar value (OrSet → list<array>)
+                                // threw during binding and propagated out of replay(),
+                                // rolling back the ENTIRE merge transaction. Now both the
+                                // encode and the column write are guarded: a single bad op
+                                // is quarantined and the rest of the batch survives.
+                                $columnValue = $this->encodeColumnValue($strategy->resolve($fieldEntries));
+
+                                $this->db->connection()
+                                    ->table($table)
+                                    ->where('id', $pk)
+                                    ->where('user_id', $userId)
+                                    ->update([$field => $columnValue]);
                             } catch (\Throwable) {
                                 $this->quarantine($fieldEntries[0], 'strategy_error', $now);
 
                                 continue;
                             }
-
-                            $this->db->connection()
-                                ->table($table)
-                                ->where('id', $pk)
-                                ->where('user_id', $userId)
-                                ->update([$field => $decodedValue]);
                         }
 
                         // Track touched transactions for FTS upsert.
