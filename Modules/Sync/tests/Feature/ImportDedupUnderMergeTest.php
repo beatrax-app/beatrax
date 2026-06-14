@@ -8,8 +8,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
-use Modules\Sync\Internal\OpLog\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
@@ -244,4 +244,12 @@ it('deduplicates via FingerprintComposer UNIQUE index and merges edit op-logs wi
         ->value('category_id');
 
     expect((int) $catIdAfter)->toBe($this->catB);
+
+    // Assert: production path persists ops to op_log_entries (SYNC-01).
+    // RED: fails until Plan 11-02 wires op_log_entries writes.
+    $logCount = $db->connection()
+        ->table('op_log_entries')
+        ->where('user_id', $userId)
+        ->count();
+    expect($logCount)->toBeGreaterThanOrEqual(2);
 });

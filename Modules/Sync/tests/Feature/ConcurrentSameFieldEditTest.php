@@ -6,8 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
-use Modules\Sync\Internal\OpLog\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
@@ -217,4 +217,13 @@ it('resolves concurrent same-field category_id edit via HLC + device-id tie-brea
         ->where('user_id', $this->user->id)
         ->count();
     expect($count)->toBe(1);
+
+    // Assert: production path persists both ops to op_log_entries (SYNC-01).
+    // RED: fails until Plan 11-02 wires op_log_entries writes in the production replayer.
+    $logCount = app(DatabaseManager::class)
+        ->connection()
+        ->table('op_log_entries')
+        ->where('user_id', $this->user->id)
+        ->count();
+    expect($logCount)->toBeGreaterThanOrEqual(2);
 });

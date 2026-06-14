@@ -6,8 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
-use Modules\Sync\Internal\OpLog\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
@@ -214,6 +214,15 @@ it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in forward ord
         ->value('category_id');
 
     expect((int) $catId)->toBe($this->catA);
+
+    // Assert: production path persists ops to op_log_entries (SYNC-01).
+    // RED: fails until Plan 11-02 wires op_log_entries writes.
+    $logCount = app(DatabaseManager::class)
+        ->connection()
+        ->table('op_log_entries')
+        ->where('user_id', $this->user->id)
+        ->count();
+    expect($logCount)->toBeGreaterThanOrEqual(3);
 });
 
 it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in reverse order', function (): void {
@@ -235,6 +244,15 @@ it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in reverse ord
         ->value('category_id');
 
     expect((int) $catId)->toBe($this->catA);
+
+    // Assert: production path persists ops to op_log_entries (SYNC-01).
+    // RED: fails until Plan 11-02 wires op_log_entries writes.
+    $logCount = app(DatabaseManager::class)
+        ->connection()
+        ->table('op_log_entries')
+        ->where('user_id', $this->user->id)
+        ->count();
+    expect($logCount)->toBeGreaterThanOrEqual(3);
 });
 
 it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in shuffled order', function (): void {
@@ -256,4 +274,13 @@ it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in shuffled or
         ->value('category_id');
 
     expect((int) $catId)->toBe($this->catA);
+
+    // Assert: production path persists ops to op_log_entries (SYNC-01).
+    // RED: fails until Plan 11-02 wires op_log_entries writes.
+    $logCount = app(DatabaseManager::class)
+        ->connection()
+        ->table('op_log_entries')
+        ->where('user_id', $this->user->id)
+        ->count();
+    expect($logCount)->toBeGreaterThanOrEqual(3);
 });

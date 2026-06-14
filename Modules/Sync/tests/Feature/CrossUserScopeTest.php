@@ -6,8 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
-use Modules\Sync\Internal\OpLog\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
@@ -205,6 +205,14 @@ it('replay($entries, u1->id) updates u1 row and leaves u2 row byte-for-byte unch
 
     // Compare every column — nothing changed.
     expect((array) $u2RowAfter)->toBe((array) $u2RowBefore);
+
+    // Assert: production replayer persists u1's op to op_log_entries (SYNC-01).
+    // RED: fails until Plan 11-02 wires op_log_entries writes in production replayer.
+    $logCount = $db->connection()
+        ->table('op_log_entries')
+        ->where('user_id', $this->u1->id)
+        ->count();
+    expect($logCount)->toBeGreaterThanOrEqual(1);
 });
 
 it('hostile cross-user entry (userId=u2 in replay($entries, u1->id)) does NOT mutate u2 row (T-10-02 defense-in-depth)', function (): void {

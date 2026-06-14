@@ -6,8 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
-use Modules\Sync\Internal\OpLog\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
@@ -166,6 +166,15 @@ it('tombstone (HLC 1001) wins over concurrent edit (HLC 1000) — row is absent 
         ->exists();
 
     expect($exists)->toBeFalse();
+
+    // Assert: production path persists ops to op_log_entries (SYNC-01).
+    // RED: fails until Plan 11-02 wires op_log_entries writes.
+    $logCount = app(DatabaseManager::class)
+        ->connection()
+        ->table('op_log_entries')
+        ->where('user_id', $this->userA->id)
+        ->count();
+    expect($logCount)->toBeGreaterThanOrEqual(2);
 });
 
 it('edit (HLC 1000) wins over tombstone (HLC 999) — row survives with edited notes', function (): void {
@@ -243,4 +252,13 @@ it('edit (HLC 1000) wins over tombstone (HLC 999) — row survives with edited n
 
     expect($row)->not->toBeNull();
     expect($row->notes)->toBe('edited');
+
+    // Assert: production path persists ops to op_log_entries (SYNC-01).
+    // RED: fails until Plan 11-02 wires op_log_entries writes.
+    $logCount = app(DatabaseManager::class)
+        ->connection()
+        ->table('op_log_entries')
+        ->where('user_id', $this->userB->id)
+        ->count();
+    expect($logCount)->toBeGreaterThanOrEqual(2);
 });
