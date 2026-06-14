@@ -12,6 +12,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-14
+
+**"Local & in sync"** — the largest release to date. Three tracks shipped:
+goals & motivation, take-it-with-you, and insight & records. The fourth track
+(local-first end-to-end-encrypted device sync) is in active development for a
+follow-up **v1.4** release.
+
+### Added
+
+- **Base-currency FX conversion** — non-EUR account balances now roll into a
+  single reporting currency you choose, using a pluggable, offline-capable rate
+  source. Closes the gap where non-EUR accounts were silently excluded from the
+  net-worth headline.
+- **Savings goals** — set a target amount and date, track contributions, and see
+  a forecast-driven projected finish date for each goal. The dashboard surfaces
+  your nearest-finishing goals at a glance.
+- **Savings pots / envelopes** — carve virtual sub-balances ("pots") out of a
+  real account and assign money to them without moving it between banks; pots
+  reconcile against the real account balance so the numbers always tie out.
+- **Responsive, installable PWA** — every screen is now phone-legible, and the
+  app installs to your home screen with an offline app-shell. Financial pages
+  are never cached offline (privacy by construction); the transactions list
+  gets phone infinite-scroll. Charts upgraded (ApexCharts 5).
+- **PIN / biometric app-lock** — protect the app with a PIN (Argon2id +
+  libsodium key-wrap) and/or device biometrics (WebAuthn / Touch ID), with a
+  server-authoritative idle re-lock, a privacy veil, and cross-tab lock sync.
+  Also establishes the at-rest key-unlock gate that the upcoming sync feature
+  will build on.
+- **Bills / cash-flow calendar** — upcoming fixed payments laid out on a
+  calendar with a running projected balance, so you can see what's due and what
+  you'll have left.
+- **Tax-deductible tagging + per-year export** — tag tax-relevant transactions
+  (with an optional deduction category and note) from the transactions list,
+  detail view, counterparty profile, or cash book; review a whole year on the
+  `/tax` cockpit; and export the year's set as CSV or PDF for your records.
+  Ships a six-country deduction-category corpus and a setup-wizard step.
+- **Full-text search over your entire history** — a fast FTS5 index over
+  merchant names, descriptions, and tax notes powers a ⌘K command palette and a
+  search-and-filter surface on `/transactions`, with date / account / amount /
+  category filters and typed `account:` / `category:` / `amount:` / `after:` /
+  `before:` tokens.
+- **Unusual-charge / anomaly alerts** — beatrax now proactively flags charges
+  that look out of the ordinary: much larger than your typical spend for that
+  merchant or category (robust median/MAD statistics), a large charge at a
+  brand-new merchant, or an apparent duplicate within a short window (excluding
+  known recurring series). Alerts appear through the existing alerts surface via
+  a "Subscription drift ↔ Unusual charges" switch, with reason chips, a
+  dashboard tile, and a nav badge. Each alert is acknowledge-/snooze-/dismiss-
+  able; "mark as expected" creates a narrow, server-computed suppression rule
+  you can see and remove in Settings (with one-tap undo). Detection runs on the
+  queue (never slowing imports), with a one-time full-history backfill on first
+  activation. Tunable sensitivity and a minimum-amount floor in Settings.
+
+### Security
+
+- The anomaly feature shipped with a full STRIDE threat model verified against
+  the implementation (22/22 threats closed): every background-job query is
+  explicitly user-scoped, suppression bands are computed server-side (never
+  client-trusted), alert state changes go through a single audited state
+  machine, and cross-user access returns 404.
+
 ## [1.2.0] - 2026-06-07
 
 ### Added
