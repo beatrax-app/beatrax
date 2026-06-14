@@ -1,0 +1,18 @@
+{
+    "Pots": true,
+    "Auth": true,
+    "Budgets": true,
+    "CashBook": true,
+    "Categorization": true,
+    "Community": true,
+    "Core": true,
+    "Counterparties": true,
+    "FX": true,
+    "Goals": true,
+    "Import": true,
+    "Ingestion": true,
+    "Ledger": true,
+    "Onboarding": true,
+    "Search": true,
+    "Tax": true
+}

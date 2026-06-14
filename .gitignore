@@ -65,8 +65,12 @@ yarn-error.log
 /local/paypal/*
 !/local/paypal/.gitkeep
 
-# Module activation state
-/modules_statuses.json
+# Module activation state — COMMITTED (not ignored): nwidart's FileActivator
+# reads this at boot, and Tax's provider gates route registration on
+# isEnabled(). When it was ignored, CI had no file, so `tax.index` never
+# registered and every feature test rendering the app shell 500'd
+# (RouteNotFoundException), blowing past the CI gate's time budget. Commit it so
+# every checkout (CI, build, contributors) gets a deterministic module set.
 
 # PHPStan cache
 /.phpstan-cache
