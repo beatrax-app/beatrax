@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -70,6 +71,12 @@ final class TransactionDetail extends Component
      */
     public string $reclassifyType = '';
 
+    /** User-editable note for this transaction (OQ-A). */
+    public string $note = '';
+
+    /** Flash indicator set to true after a successful note save. */
+    public bool $noteSaved = false;
+
     public function mount(int $transactionId, CurrentUser $currentUser, DatabaseManager $db): void
     {
         $this->transactionId = $transactionId;
@@ -81,18 +88,21 @@ final class TransactionDetail extends Component
         // strict ruleset rejects on a freshly resolved query. Same
         // pattern as UpdateTransactionCategory's category-visibility
         // pre-check.
-        $exists = $db->connection()
+        $row = $db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $currentUser->user()->id)
-            ->exists();
+            ->first(['id', 'note']);
 
-        if (! $exists) {
+        if ($row === null) {
             throw new NotFoundHttpException(sprintf(
                 'Transaction %d not found.',
                 $transactionId,
             ));
         }
+
+        // Load the existing note into the Livewire wire:model property.
+        $this->note = is_string($row->note) ? $row->note : '';
     }
 
     /**
@@ -238,11 +248,144 @@ final class TransactionDetail extends Component
         );
     }
 
+    /**
+     * Save the user-edited note on this transaction (OQ-A).
+     *
+     * Empty/blank input is normalised to NULL in the DB (IS NULL semantics).
+     * Every write is scoped by user_id (I2 guard). A TransactionMutated(edit)
+     * event is dispatched so the Sync capture listener records the change (D-02).
+     */
+    public function saveNote(
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        Dispatcher $events,
+    ): void {
+        $userId = $currentUser->user()->id;
+        $trimmed = trim($this->note);
+        $value = $trimmed === '' ? null : $trimmed;
+
+        $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)   // I2 guard
+            ->update(['note' => $value]);
+
+        // Hand-wired capture emission (D-02).
+        $events->dispatch(new TransactionMutated(
+            transactionId: $this->transactionId,
+            userId: $userId,
+            mutationType: 'edit',
+            dirtyFields: ['note' => $value],
+        ));
+
+        $this->noteSaved = true;
+        $this->dispatch('toast', message: 'Note saved');
+    }
+
+    /**
+     * Reassign this transaction's counterparty_id to a different user-owned
+     * counterparty (OQ-C).
+     *
+     * Cross-user counterparty: silent no-op (neither the transaction nor the
+     * op-log is mutated). This is the SOLE user-driven counterparty_id write path —
+     * import-pipeline (ResolveCounterpartyStage) and GC writes stay immutable.
+     */
+    public function reassignCounterparty(
+        int $newCounterpartyId,
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        Dispatcher $events,
+    ): void {
+        $userId = $currentUser->user()->id;
+
+        // Ownership-check the transaction (same as reclassify() pattern).
+        $exists = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)
+            ->exists();
+
+        if (! $exists) {
+            throw new NotFoundHttpException;
+        }
+
+        // Verify the target counterparty belongs to the same user.
+        $cpExists = $db->connection()
+            ->table('counterparties')
+            ->where('id', $newCounterpartyId)
+            ->where('user_id', $userId)
+            ->exists();
+
+        if (! $cpExists) {
+            // Cross-user or unknown counterparty — silent no-op (T-11-11).
+            return;
+        }
+
+        $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)   // I2 guard
+            ->update(['counterparty_id' => $newCounterpartyId]);
+
+        // Hand-wired capture emission (D-02): user-driven reassignment only.
+        $events->dispatch(new TransactionMutated(
+            transactionId: $this->transactionId,
+            userId: $userId,
+            mutationType: 'edit',
+            dirtyFields: ['counterparty_id' => $newCounterpartyId],
+        ));
+
+        $this->dispatch('toast', message: 'Counterparty updated');
+    }
+
+    /**
+     * Delete this transaction and emit a tombstone op so the Sync engine
+     * propagates the deletion across devices (D-03/D-08).
+     *
+     * Redirects to the transactions list after a successful delete.
+     */
+    public function deleteTransaction(
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        Dispatcher $events,
+        UrlGenerator $urls,
+    ): void {
+        $userId = $currentUser->user()->id;
+
+        // Ownership check before delete.
+        $exists = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)
+            ->exists();
+
+        if (! $exists) {
+            throw new NotFoundHttpException;
+        }
+
+        $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)   // I2 guard
+            ->delete();
+
+        // Tombstone emission — the listener records a delete_tombstone op (D-03).
+        $events->dispatch(new TransactionMutated(
+            transactionId: $this->transactionId,
+            userId: $userId,
+            mutationType: 'delete',
+            dirtyFields: [],
+        ));
+
+        $this->redirect($urls->route('transactions.index'), navigate: true);
+    }
+
     public function render(
         CurrentUser $currentUser,
         ViewFactory $views,
         ChainLinkQuery $chainQuery,
         TaxTagQuery $taxTagQuery,
+        DatabaseManager $db,
     ): View {
         // Eager-load the resolved counterparty so the Blade can
         // render the click-through anchor to counterparties.profile
@@ -277,10 +420,19 @@ final class TransactionDetail extends Component
             'taxCategoryShortName' => $taxState[$this->transactionId]['taxCategoryShortName'] ?? null,
         ];
 
+        // Load the user's counterparties for the reassignment picker.
+        // Only user-owned rows — WHERE user_id is mandatory (Pitfall 4).
+        $counterparties = $db->connection()
+            ->table('counterparties')
+            ->where('user_id', $currentUser->user()->id)
+            ->orderBy('display_name')
+            ->get(['id', 'display_name', 'slug']);
+
         $view = $views->make('ledger::livewire.transaction-detail', [
             'transaction' => $transaction,
             'chainAvailable' => $chainAvailable,
             'txTaxRow' => $txTaxRow,
+            'counterparties' => $counterparties,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
