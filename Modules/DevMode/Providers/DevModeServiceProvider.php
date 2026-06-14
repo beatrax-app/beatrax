@@ -402,6 +402,7 @@ final class DevModeServiceProvider extends ServiceProvider
                 ['id' => 'dev.sql', 'label' => 'SQL panel', 'hint' => 'SELECT-only browser', 'icon' => '⌕', 'route' => 'dev.sql', 'keywords' => ['query', 'schema']],
                 ['id' => 'dev.system', 'label' => 'System snapshot', 'hint' => 'Env + paths + config', 'icon' => '◇', 'route' => 'dev.system', 'keywords' => ['env', 'config']],
                 ['id' => 'dev.horizon', 'label' => 'Horizon', 'hint' => 'Embedded queue dashboard', 'icon' => '↗', 'route' => 'dev.horizon', 'keywords' => ['queue', 'dashboard']],
+                ['id' => 'dev.sync-health', 'label' => 'Sync Health', 'hint' => 'Quarantined / skipped merge ops', 'icon' => '⇄', 'route' => 'dev.sync-health', 'keywords' => ['sync', 'quarantine', 'merge', 'oplog']],
             ];
 
             foreach ($devNav as $row) {
