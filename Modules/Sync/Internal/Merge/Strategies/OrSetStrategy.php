@@ -42,14 +42,35 @@ final class OrSetStrategy implements MergeStrategyInterface
                 continue;
             }
 
-            /** @var array{added: list<array{v: string, tag: string}>, removed: list<string>} $decoded */
             $decoded = json_decode($entry->value, true, 512, JSON_THROW_ON_ERROR);
 
-            foreach ($decoded['added'] as $item) {
-                $addSet[$item['tag']] = $item['v'];
+            // WR-02: validate the OR-Set wire shape explicitly and throw a typed
+            // error on a malformed value, rather than relying on a downstream
+            // string-offset TypeError. The replayer catches this and quarantines
+            // the op with a meaningful 'strategy_error' reason.
+            $added = is_array($decoded) ? ($decoded['added'] ?? null) : null;
+            $removed = is_array($decoded) ? ($decoded['removed'] ?? null) : null;
+
+            if (! is_array($added) || ! is_array($removed)) {
+                throw new \UnexpectedValueException('Malformed OR-Set value: expected {added: [], removed: []}.');
             }
 
-            foreach ($decoded['removed'] as $removedTag) {
+            foreach ($added as $item) {
+                $tag = is_array($item) ? ($item['tag'] ?? null) : null;
+                $value = is_array($item) ? ($item['v'] ?? null) : null;
+
+                if (! is_string($tag) || ! is_string($value)) {
+                    throw new \UnexpectedValueException('Malformed OR-Set add entry: expected {v: string, tag: string}.');
+                }
+
+                $addSet[$tag] = $value;
+            }
+
+            foreach ($removed as $removedTag) {
+                if (! is_string($removedTag)) {
+                    throw new \UnexpectedValueException('Malformed OR-Set remove tag: expected a string.');
+                }
+
                 $removeSet[$removedTag] = true;
             }
         }

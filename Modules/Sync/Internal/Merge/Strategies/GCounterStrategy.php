@@ -37,7 +37,16 @@ final class GCounterStrategy implements MergeStrategyInterface
             }
 
             $decoded = json_decode($entry->value, true, 512, JSON_THROW_ON_ERROR);
-            $count = is_int($decoded) ? $decoded : 0;
+
+            // IN-04: a non-int decoded value (e.g. a float 3.0 or a string from a
+            // corrupted op) must NOT be silently coerced to 0 — that would LOWER a
+            // device's contribution and break convergence with no signal. Throw a
+            // typed error so the replayer quarantines the op with a precise reason.
+            if (! is_int($decoded)) {
+                throw new \UnexpectedValueException('Malformed G-Counter value: expected an integer total.');
+            }
+
+            $count = $decoded;
 
             if (! isset($perDeviceMax[$entry->deviceId]) || $count > $perDeviceMax[$entry->deviceId]) {
                 $perDeviceMax[$entry->deviceId] = $count;
