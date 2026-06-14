@@ -189,11 +189,13 @@ final readonly class OpLogReplayer
     /**
      * Replay a merged set of op-log entries against the real SQLite schema.
      *
-     * 1. Persist each entry to op_log_entries (upsert-by-identity).
-     * 2. Filter + verify signatures (I1 + Ed25519 gate) — rejected → quarantine.
-     * 3. Sort by HLC total order [l, c, device_id].
-     * 4. Single-pass resolve per (table, pk, field) via strategy dispatch.
-     * 5. Apply in a DB transaction (WHERE user_id = $userId on all writes — I2).
+     * 1. Filter + verify signatures (I1 + Ed25519 gate). Rejected → quarantine
+     *    ONLY (never the authoritative op-log). VERIFIED entries are persisted to
+     *    op_log_entries (upsert-by-identity) — so the durable log holds only
+     *    authenticated, scoped rows (WR-08).
+     * 2. Sort by HLC total order [l, c, device_id].
+     * 3. Single-pass resolve per (table, pk, field) via strategy dispatch.
+     * 4. Apply in a DB transaction (WHERE user_id = $userId on all writes — I2).
      *
      * @param  list<OpLogEntry>  $entries  Entries from all devices (any order).
      * @param  int  $userId  Scope all DB writes to this user.
@@ -202,28 +204,11 @@ final readonly class OpLogReplayer
     {
         $now = $this->clock->now()->toDateTimeString();
 
-        // Step 0: Persist entries to op_log_entries (upsert — replay is idempotent).
-        foreach ($entries as $entry) {
-            $this->db->connection()->table('op_log_entries')->updateOrInsert(
-                [
-                    'user_id' => $entry->userId,
-                    'device_id' => $entry->deviceId,
-                    'table_name' => $entry->table,
-                    'pk' => (string) $entry->pk,
-                    'field' => $entry->field,
-                    'hlc_l' => $entry->hlcL,
-                    'hlc_c' => $entry->hlcC,
-                ],
-                [
-                    'op_type' => $entry->opType->value,
-                    'value' => $entry->value,
-                    'signature' => $entry->signature,
-                    'recorded_at' => $now,
-                ],
-            );
-        }
-
         // Step 1: filter to the scoped userId (I1 defense in depth) + Ed25519 gate.
+        // WR-08: a rejected (forged / cross-user) entry is routed to quarantine
+        // ONLY — it is NEVER written to the authoritative op_log_entries table, so
+        // attacker-controlled rows can never become durable, replayable, or part of
+        // a log export. Only entries that pass the gate are persisted below.
         $verified = [];
 
         foreach ($entries as $entry) {
@@ -242,6 +227,7 @@ final readonly class OpLogReplayer
             // a transaction's `type` for the scoped user, so they cannot be a
             // privilege-escalation vector.
             if ($this->isSystemDevice($entry->deviceId)) {
+                $this->persistVerifiedEntry($entry, $now);
                 $verified[] = $entry;
 
                 continue;
@@ -263,6 +249,8 @@ final readonly class OpLogReplayer
                 continue;
             }
 
+            // Verified — persist to the authoritative durable log (WR-08).
+            $this->persistVerifiedEntry($entry, $now);
             $verified[] = $entry;
         }
 
@@ -642,6 +630,35 @@ final readonly class OpLogReplayer
                 }
             }
         }
+    }
+
+    /**
+     * Persist a VERIFIED entry to the authoritative op_log_entries table
+     * (upsert-by-identity, so replay is idempotent).
+     *
+     * WR-08: this is called ONLY after an entry passes the I1 + Ed25519 gate
+     * (or is an allow-listed system op), so the durable log never holds
+     * forged or cross-user rows.
+     */
+    private function persistVerifiedEntry(OpLogEntry $entry, string $now): void
+    {
+        $this->db->connection()->table('op_log_entries')->updateOrInsert(
+            [
+                'user_id' => $entry->userId,
+                'device_id' => $entry->deviceId,
+                'table_name' => $entry->table,
+                'pk' => (string) $entry->pk,
+                'field' => $entry->field,
+                'hlc_l' => $entry->hlcL,
+                'hlc_c' => $entry->hlcC,
+            ],
+            [
+                'op_type' => $entry->opType->value,
+                'value' => $entry->value,
+                'signature' => $entry->signature,
+                'recorded_at' => $now,
+            ],
+        );
     }
 
     /**

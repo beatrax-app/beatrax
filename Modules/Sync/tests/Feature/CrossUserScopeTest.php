@@ -270,6 +270,25 @@ it('hostile cross-user entry (userId=u2 in replay($entries, u1->id)) does NOT mu
         ->value('category_id');
 
     expect($u2CatIdAfter)->toBe($u2CatIdBefore);
+
+    // WR-08: the hostile cross-user entry must NEVER become a durable
+    // op_log_entries row — rejected entries go to quarantine ONLY, so a full
+    // rebuild or log export can never resurrect attacker-controlled content.
+    $persistedHostile = $db->connection()
+        ->table('op_log_entries')
+        ->where('table_name', 'transactions')
+        ->where('pk', (string) $this->txn2)
+        ->where('hlc_l', 9999)
+        ->count();
+    expect($persistedHostile)->toBe(0);
+
+    // It IS recorded in quarantine as cross_user.
+    $quarantined = $db->connection()
+        ->table('op_log_quarantine')
+        ->where('reason', 'cross_user')
+        ->where('pk', (string) $this->txn2)
+        ->count();
+    expect($quarantined)->toBeGreaterThanOrEqual(1);
 });
 
 it('cross-user scope holds even when entry references u2 pk but uses u1 userId in entry (WHERE user_id guard — T-10-02 I2)', function (): void {
