@@ -12,6 +12,7 @@ use Modules\Categorization\Public\Events\CategorizationDiverged;
 use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
+use Modules\Sync\Public\Events\TransactionMutated;
 
 /**
  * Default implementation of the Categorization Public `AssignsCategory`
@@ -53,6 +54,15 @@ final class AssignCategory implements AssignsCategory
                 transactionId: $transactionId,
                 categoryId: $categoryId,
                 userId: $user->id,
+            ));
+
+            // Hand-wired capture emission (D-02): only user-driven category edits
+            // enter the op-log. Import-pipeline writes stay immutable.
+            $this->events->dispatch(new TransactionMutated(
+                transactionId: $transactionId,
+                userId: $user->id,
+                mutationType: 'edit',
+                dirtyFields: ['category_id' => $categoryId],
             ));
 
             if ($categoryId !== null) {
