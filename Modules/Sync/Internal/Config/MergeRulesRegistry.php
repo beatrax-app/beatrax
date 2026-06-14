@@ -24,11 +24,25 @@ namespace Modules\Sync\Internal\Config;
 final class MergeRulesRegistry
 {
     /**
+     * Memoized rules map (WR-09). strategyFor()/requiredCreateColumns() are
+     * called once per (pk, field) in the replayer's CREATE and SET loops, so
+     * re-allocating the full literal array on every call wastes work in a
+     * merge of thousands of ops. Built once, then reused.
+     *
+     * @var array<string, array<string, mixed>>|null
+     */
+    private ?array $rules = null;
+
+    /**
      * @return array<string, array<string, mixed>>
      */
     public function rules(): array
     {
-        return [
+        if ($this->rules !== null) {
+            return $this->rules;
+        }
+
+        return $this->rules = [
             'transactions' => [
                 'category_id' => ['strategy' => 'lww', 'nullable' => true],
                 'note' => ['strategy' => 'lww', 'nullable' => true],
