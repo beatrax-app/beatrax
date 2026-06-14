@@ -147,6 +147,34 @@ it('renders the calm empty state when the acting user has zero quarantine rows',
     );
 });
 
+it('table honours the same 7-day window as the header — old rows do not render and copy stays truthful (WR-03)', function (): void {
+    $u1 = syncHealthUser('sync-health-window');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    // ONLY an old row (outside the 7-day window). The header count is 0 and the
+    // table must show the empty state — not a stale row with a "last 7 days" lie.
+    seedQuarantineRow($db, (int) $u1->id, [
+        'reason' => 'forged_signature',
+        'device_id' => 'device-ancient',
+        'created_at' => CarbonImmutable::now()->subDays(30)->toDateTimeString(),
+    ]);
+
+    $response = $this->actingAs($u1)->get('/dev/sync-health');
+
+    $response->assertOk();
+    $html = (string) $response->getContent();
+
+    // Header count is 0 and the empty state renders (table suppressed).
+    expect($html)->toContain('No skipped ops in the last 7 days.');
+    expect($html)->toContain('data-testid="sync-health-empty-state"');
+    expect($html)->not->toContain('data-testid="sync-health-table"');
+    // The old row's device id must NOT leak into the rendered page.
+    expect($html)->not->toContain('device-ancient');
+    expect(preg_match('#data-testid="quarantine-count"[^>]*>\s*0\s*<#s', $html))->toBe(1);
+});
+
 it('returns 404 from /dev/sync-health for a non-developer (EnsureDeveloperMode gate, T-11-14)', function (): void {
     syncHealthUser('sync-health-seed');
     $nonDev = syncHealthUser('sync-health-nondev', false);

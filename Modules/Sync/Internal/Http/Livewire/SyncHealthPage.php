@@ -45,9 +45,13 @@ final class SyncHealthPage extends Component
             ->where('created_at', '>=', $sevenDaysAgo)
             ->count();
 
+        // WR-03: apply the SAME 7-day window to the table as the header count,
+        // so the header total, the rendered rows, and the "last 7 days"
+        // empty-state copy can never disagree (e.g. header 0 vs 50 year-old rows).
         $recentSkips = $db->connection()
             ->table('op_log_quarantine')
             ->where('user_id', $userId)
+            ->where('created_at', '>=', $sevenDaysAgo)
             ->orderByDesc('created_at')
             ->limit(50)
             ->get();
