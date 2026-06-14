@@ -84,6 +84,11 @@ final class SyncServiceProvider extends ServiceProvider
     public function boot(Dispatcher $events): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
+        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'sync');
+
+        if (is_file(__DIR__.'/../Routes/web.php')) {
+            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
+        }
 
         // Plan 04: capture listener wired once the class exists (D-05).
         if (class_exists(SyncCaptureListener::class) &&
