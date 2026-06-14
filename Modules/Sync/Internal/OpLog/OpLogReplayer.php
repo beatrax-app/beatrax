@@ -94,7 +94,7 @@ final readonly class OpLogReplayer
 
             $pubKeyBin = sodium_hex2bin($pubKeyHex);
 
-            if (!$signer->verify($entry->signingPayload(), $entry->signature, $pubKeyBin)) {
+            if (! $signer->verify($entry->signingPayload(), $entry->signature, $pubKeyBin)) {
                 // Signature fails Ed25519 verification — skip forged/tampered entry.
                 continue;
             }
