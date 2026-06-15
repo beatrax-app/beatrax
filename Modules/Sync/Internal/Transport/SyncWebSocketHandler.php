@@ -13,6 +13,8 @@ use Amp\Websocket\WebsocketClient;
 use Amp\Websocket\WebsocketMessage;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
@@ -108,6 +110,8 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         private readonly string $localStaticPublic,
         private readonly string $localDeviceId,
         private readonly int $userId,
+        private readonly ?MergeRulesRegistry $rules = null,
+        private readonly ?SearchIndexWriterContract $searchWriter = null,
     ) {}
 
     /**
@@ -150,9 +154,17 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         // connection (which forces a re-read on reconnect).
         $deviceKeys = $this->registryService->deviceKeys($this->userId);
 
+        // WR-07: build the replayer with the same MergeRulesRegistry and
+        // SearchIndexWriterContract the container injects elsewhere, so ops
+        // replayed via the live sync path keep the FTS search index fresh (D-11 /
+        // SE-01) and use config-driven merge rules — matching every other replay
+        // path. Omitting them previously left the sync path with a null search
+        // writer (search index never updated) and a default registry.
         $replayer = new OpLogReplayer(
             db: $this->db,
             deviceKeys: $deviceKeys,
+            rules: $this->rules,
+            searchWriter: $this->searchWriter,
         );
 
         $session = new SyncSession(

@@ -11,6 +11,7 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Commands\SyncServeCommand;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
@@ -207,6 +208,13 @@ final class SyncServiceProvider extends ServiceProvider
                     localStaticPublic: '',  // by NativePHP ChildProcess or DeviceIdentityLoader.
                     localDeviceId: '',
                     userId: 0,
+                    // WR-07: pass the container-bound merge registry + FTS writer so the
+                    // live sync replay path keeps the search index fresh, matching every
+                    // other replay path. searchWriter is resolved when Search is present.
+                    rules: $this->app->make(MergeRulesRegistry::class),
+                    searchWriter: $this->app->bound(SearchIndexWriterContract::class)
+                        ? $this->app->make(SearchIndexWriterContract::class)
+                        : null,
                 ),
             );
         }
