@@ -392,17 +392,60 @@ final class PairingFlowModal extends Component
     }
 
     /**
-     * Cancel the in-flight pairing: expire the token (so the peer must restart)
-     * and reset the flow to the start (D-13 mid-flow cancel).
+     * Cancel an IN-FLIGHT pairing: expire the still-live token (so the peer must
+     * restart) and reset the flow to the start (D-13 mid-flow cancel).
+     *
+     * WR-03: only expire a token that is still pending/awaiting_confirm — never a
+     * just-confirmed token (that would flip a CONFIRMED token to EXPIRED and
+     * muddy the lifecycle). The success "Done" button uses closeModal() instead.
+     * The flux:modal @close hook can fire cancelPairing() a second time after we
+     * set open=false, but by then reset() has cleared pairingTokenId to '' so the
+     * expire branch below is skipped — the second call is an idempotent no-op.
      */
     public function cancelPairing(
         CurrentUser $currentUser,
         PairingTokenService $tokenService,
+        DatabaseManager $db,
     ): void {
         if ($this->pairingTokenId !== '') {
-            $tokenService->expire((int) $this->pairingTokenId, $currentUser->user()->id);
+            $userId = $currentUser->user()->id;
+            $tokenId = (int) $this->pairingTokenId;
+
+            $row = $db->connection()->table('pairing_tokens')
+                ->where('id', $tokenId)
+                ->where('user_id', $userId)
+                ->first(['state']);
+
+            // Only an unfinished handshake gets expired. A confirmed token is a
+            // completed pairing — leave its terminal state intact.
+            if ($row !== null && in_array($row->state, [
+                PairingStateMachine::PENDING,
+                PairingStateMachine::AWAITING_CONFIRM,
+            ], true)) {
+                $tokenService->expire($tokenId, $userId);
+            }
         }
 
+        $this->resetAndClose();
+    }
+
+    /**
+     * Close the modal after a SUCCESSFUL pairing (the success-step "Done"
+     * button, WR-03). Resets UI state and notifies the parent WITHOUT touching
+     * the now-confirmed token — closing success is not a cancel.
+     */
+    public function closeModal(): void
+    {
+        $this->resetAndClose();
+    }
+
+    /**
+     * Reset the flow to its initial state, close the modal, and tell the parent
+     * section to clear its open flag + refresh its device list. Shared tail of
+     * cancelPairing() and closeModal().
+     */
+    private function resetAndClose(): void
+    {
         $this->reset();
         $this->open = false;
         // Tell the parent section to clear pairingModalOpen + refresh its list.
