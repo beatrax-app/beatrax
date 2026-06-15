@@ -55,6 +55,12 @@ final class PairingTokenService
         string $ed25519PubHex,
         string $x25519PubHex,
     ): string {
+        // Reject malformed key material at the trust boundary (WR-01) so the
+        // stored *_pub_hex columns are always valid 32-byte hex and the later
+        // safety-number derivation can never throw a raw SodiumException.
+        SafetyNumberDeriver::hexToRawKey($ed25519PubHex);
+        SafetyNumberDeriver::hexToRawKey($x25519PubHex);
+
         $token = bin2hex(random_bytes(16)); // 128-bit, 32-char hex.
 
         $now = $this->clock->now();
@@ -86,6 +92,18 @@ final class PairingTokenService
         string $responderEd25519PubHex,
         string $responderX25519PubHex,
     ): object|false {
+        // The responder keys are attacker-controllable — validate them at the
+        // trust boundary (WR-01) so a non-hex / wrong-length key is rejected as
+        // a clean "invalid code" rather than persisted and exploded on later
+        // safety-number derivation. Treated as a handled accept-failure (false),
+        // matching the caller's existing invalid-code flash.
+        try {
+            SafetyNumberDeriver::hexToRawKey($responderEd25519PubHex);
+            SafetyNumberDeriver::hexToRawKey($responderX25519PubHex);
+        } catch (InvalidPublicKeyException) {
+            return false;
+        }
+
         $tokenHash = hash('sha256', $submittedToken);
         $now = $this->clock->now();
 

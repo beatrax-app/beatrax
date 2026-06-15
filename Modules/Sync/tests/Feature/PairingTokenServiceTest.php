@@ -121,6 +121,21 @@ it('extends the token TTL when the responder accepts near the original expiry (C
     expect($newExpiry->greaterThan($originalExpiry))->toBeTrue();
 });
 
+it('rejects an accept whose responder public key is not valid 64-char hex (WR-01)', function (): void {
+    $user = tokenUser('token-bad-key');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+
+    $token = $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
+
+    // A non-hex / wrong-length responder key must be rejected cleanly (false),
+    // not persisted and later exploded as a SodiumException.
+    $result = $service->accept($token, (int) $user->id, 'device-resp', 'not-hex', str_repeat('d', 64));
+
+    expect($result)->toBeFalse();
+});
+
 it('it_rejects_expired_token', function (): void {
     $user = tokenUser('token-expired');
 
