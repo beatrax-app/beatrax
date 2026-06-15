@@ -79,6 +79,17 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
     ) {}
 
     /**
+     * Return the local device_id used for mDNS TXT record advertisement.
+     *
+     * Called by SyncServeCommand to pass the device_id to MdnsAdvertiser::advertise()
+     * without exposing the handler's private field directly.
+     */
+    public function localDeviceId(): string
+    {
+        return $this->localDeviceId;
+    }
+
+    /**
      * Handle a new WebSocket client connection.
      */
     public function handleClient(WebsocketClient $client, Request $request, Response $response): void
