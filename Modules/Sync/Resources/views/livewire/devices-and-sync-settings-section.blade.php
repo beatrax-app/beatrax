@@ -1,5 +1,7 @@
 {{--
-    Devices & Sync settings section — UI-SPEC Surface A (Phase 12, D-02/D-09/D-10/D-11/D-12).
+    Devices & Sync settings section — UI-SPEC Surface A (Phase 12, D-02/D-09/D-10/D-11/D-12)
+    + Phase 13 D-06 sync-status surface + D-01 relay endpoint URL field.
+
     Mounted into the Core settings page via @livewire('sync.devices-and-sync-settings-section').
 
     Decisions enforced here:
@@ -10,6 +12,11 @@
       - D-10: NO revoke / remove action — view / rename / verify only.
       - D-11: "Pair a new device" opens the pairing-flow modal.
       - D-12: identity is generated only on enable-sync; until then no device list.
+      - D-06 (Phase 13): per-peer sync status + overall "up to date · synced Nm ago"
+        rendered via @livewire('sync.sync-status-section') when sync is on.
+      - D-01 (Phase 13): relay endpoint URL field (default none = LAN-direct);
+        non-HTTPS URL shows an insecure-connection warning (T-13-08 / Pitfall 6).
+        Writes are gated on app-lock (T-13-18).
 
     Copywriting + tokens follow UI-SPEC; calm-slate (sketch-findings-beatrax),
     weights 400/600 only, min-h-[44px] on all buttons, JetBrains Mono for the
@@ -181,6 +188,76 @@
             >
                 Pair a new device
             </button>
+
+            {{-- ===== D-06 (Phase 13): per-peer sync status surface ===== --}}
+            @livewire('sync.sync-status-section', key('sync-status-section'))
+
+            {{-- ===== D-01 (Phase 13): relay endpoint URL (default none) ===== --}}
+            <div class="space-y-3 pt-2">
+                <div>
+                    <label
+                        for="relay-endpoint-url"
+                        class="block text-sm font-semibold text-slate-900 dark:text-slate-100"
+                    >
+                        Relay endpoint
+                    </label>
+                    <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        Optional. When set, offline devices sync via this relay. Leave empty for LAN&#8209;direct only.
+                    </p>
+                </div>
+
+                <div class="flex gap-2">
+                    <input
+                        id="relay-endpoint-url"
+                        type="url"
+                        wire:model="relayEndpointUrl"
+                        placeholder="https://relay.example.com"
+                        aria-label="Relay endpoint URL"
+                        class="block min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                               placeholder:text-slate-400
+                               focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                               dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500
+                               dark:focus-visible:ring-slate-100"
+                        data-testid="relay-endpoint-input"
+                    />
+                    <button
+                        type="button"
+                        wire:click="saveRelayEndpoint"
+                        class="min-h-[44px] flex-shrink-0 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
+                               hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                               dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
+                        data-testid="relay-endpoint-save"
+                    >
+                        Save
+                    </button>
+                </div>
+
+                {{-- Non-HTTPS warning (T-13-08 / Pitfall 6) --}}
+                @if ($relayIsInsecure)
+                    <div
+                        class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700
+                               dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                        role="alert"
+                        data-testid="relay-insecure-warning"
+                    >
+                        <span aria-hidden="true" class="mt-0.5 flex-shrink-0">⚠</span>
+                        <span>
+                            This relay endpoint uses plain HTTP. While the relay never decrypts your data,
+                            an insecure connection exposes encrypted sizes and timing to network observers.
+                            Use an <strong>https://</strong> endpoint for best privacy.
+                        </span>
+                    </div>
+                @endif
+
+                {{-- Relay save flash message --}}
+                @if ($relayFlashMessage !== '')
+                    <p
+                        class="text-xs text-slate-600 dark:text-slate-400"
+                        role="status"
+                        data-testid="relay-flash"
+                    >{{ $relayFlashMessage }}</p>
+                @endif
+            </div>
         </div>
     @endif
 

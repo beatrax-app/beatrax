@@ -13,6 +13,7 @@ use Livewire\Component;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
 /**
@@ -36,6 +37,11 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
  *     rename (D-09). NO revoke / remove action (D-10) — view / rename / verify
  *     only.
  *   - Open the pairing-flow modal (D-11).
+ *   - Configure the relay endpoint URL (D-01 / Phase 13): default none (LAN-direct
+ *     out-of-box); non-HTTPS URL surfaces a warning (T-13-08 / Pitfall 6). Writes
+ *     are gated behind the existing app-lock requirement (T-13-18). The relay URL
+ *     field is shown only when sync is enabled. RelayConfig is injected via method DI
+ *     on mount/saveRelayEndpoint.
  *
  * Cross-module boundary (CLAUDE.md): the app-lock state is read via the Auth
  * public service AppLockClientConfig — never by querying user_app_lock_configs
@@ -82,6 +88,27 @@ final class DevicesAndSyncSettingsSection extends Component
     public string $renameValue = '';
 
     // -------------------------------------------------------------------------
+    // Relay endpoint URL (D-01 / Phase 13 Plan 06 / T-13-08)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Current relay endpoint URL bound to the input field.
+     * Default none (empty string = "not configured" → LAN-direct out-of-box, D-01).
+     */
+    public string $relayEndpointUrl = '';
+
+    /**
+     * Whether the configured relay URL uses plain HTTP (not HTTPS).
+     * Surfaces a warning per T-13-08 / Pitfall 6 in the blade view.
+     */
+    public bool $relayIsInsecure = false;
+
+    /**
+     * Flash message for relay-URL save operations (success or error).
+     */
+    public string $relayFlashMessage = '';
+
+    // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------
 
@@ -94,6 +121,7 @@ final class DevicesAndSyncSettingsSection extends Component
         DatabaseManager $db,
         AppLockClientConfig $lockConfig,
         DeviceRegistryService $registry,
+        RelayConfig $relayConfig,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -104,6 +132,10 @@ final class DevicesAndSyncSettingsSection extends Component
 
         $this->syncEnabled = $this->selfRowExists($db, $userId);
         $this->devices = $this->loadDevices($registry, $userId);
+
+        // Relay endpoint URL (D-01 default none, T-13-08 insecure flag).
+        $this->relayEndpointUrl = $relayConfig->endpointUrl() ?? '';
+        $this->relayIsInsecure = $relayConfig->isInsecure();
     }
 
     // -------------------------------------------------------------------------
@@ -238,6 +270,41 @@ final class DevicesAndSyncSettingsSection extends Component
 
         if ($this->appLockConfigured) {
             $this->flashMessage = '';
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Action: save relay endpoint URL (D-01 / T-13-08 / T-13-18)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Persist the relay endpoint URL via RelayConfig::setEndpointUrl().
+     *
+     * Gated behind app-lock being configured (T-13-18 — relay-config writes are
+     * protected by the same gate as sync enable). An empty URL clears the relay
+     * (reverts to LAN-direct, D-01). Non-HTTPS URLs are accepted but flagged
+     * insecure (T-13-08 / Pitfall 6 — the relay is ZK regardless, but an http://
+     * endpoint leaks metadata to a network observer).
+     */
+    public function saveRelayEndpoint(RelayConfig $relayConfig): void
+    {
+        // T-13-18: relay-URL writes are gated on the same app-lock requirement as
+        // sync enable. No relayUrl change is possible without an active app-lock.
+        if (! $this->appLockConfigured) {
+            $this->relayFlashMessage = 'Set an app lock first to change sync settings.';
+
+            return;
+        }
+
+        $url = trim($this->relayEndpointUrl);
+
+        try {
+            $relayConfig->setEndpointUrl($url === '' ? null : $url);
+            $this->relayIsInsecure = $relayConfig->isInsecure();
+            $this->relayEndpointUrl = $relayConfig->endpointUrl() ?? '';
+            $this->relayFlashMessage = $url === '' ? 'Relay endpoint cleared.' : 'Relay endpoint saved.';
+        } catch (\RuntimeException $e) {
+            $this->relayFlashMessage = 'Failed to save relay endpoint: '.$e->getMessage();
         }
     }
 
