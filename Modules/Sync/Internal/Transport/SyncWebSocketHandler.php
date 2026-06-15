@@ -6,8 +6,11 @@ namespace Modules\Sync\Internal\Transport;
 
 use Amp\Http\Server\Request;
 use Amp\Http\Server\Response;
+use Amp\TimeoutCancellation;
+use Amp\TimeoutException;
 use Amp\Websocket\Server\WebsocketClientHandler;
 use Amp\Websocket\WebsocketClient;
+use Amp\Websocket\WebsocketMessage;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
@@ -54,10 +57,39 @@ use Psr\Log\LoggerInterface;
  *   amphp caller can wrap receive loops in Amp\async() to keep the loop responsive.
  *   This class stays synchronous for testability.
  *
+ * ## DoS hardening (CR-05 / CR-06)
+ *
+ *   Every receive() — pre-auth handshake, catch-up, and the live loop — is bounded
+ *   by a TimeoutCancellation so a stalled or slow-loris peer cannot pin a fiber
+ *   indefinitely (CR-06). The catch-up frame loop is additionally bounded by
+ *   MAX_CATCHUP_FRAMES so a confirmed-but-malicious peer cannot declare an
+ *   unbounded frame_count and stream frames forever (CR-05). A peer that exceeds
+ *   either bound has its connection closed.
+ *
  * @internal Plan 04.
  */
 final class SyncWebSocketHandler implements WebsocketClientHandler
 {
+    /**
+     * Maximum number of catch-up frames accepted from a peer's declared
+     * frame_count (CR-05). Caps attacker-paced unbounded receive / op_log growth.
+     */
+    private const MAX_CATCHUP_FRAMES = 100_000;
+
+    /**
+     * Seconds to wait for the Noise handshake msg1 before closing the connection
+     * (CR-06). Bounds the pre-auth slow-loris window: a peer that connects but
+     * never sends msg1 is dropped instead of parking a fiber forever.
+     */
+    private const HANDSHAKE_TIMEOUT_SECONDS = 10.0;
+
+    /**
+     * Per-receive idle timeout (seconds) for catch-up and live-stream reads
+     * (CR-06). A peer that stalls mid-stream is dropped rather than pinning the
+     * fiber. Generous enough for legitimate slow links + large replay batches.
+     */
+    private const READ_TIMEOUT_SECONDS = 60.0;
+
     /**
      * @param  string  $localStaticSecret  32-byte X25519 secret key for the local device.
      * @param  string  $localStaticPublic  32-byte X25519 public key for the local device.
@@ -152,7 +184,13 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         $deviceKeys = $this->registryService->deviceKeys($this->userId);
 
         try {
-            while ($message = $client->receive()) {
+            // Each live read is bounded by an idle timeout (CR-06): a peer that
+            // authenticates then stalls is dropped rather than pinning this fiber.
+            while ($message = $this->receiveWithTimeout(
+                $client,
+                self::READ_TIMEOUT_SECONDS,
+                'live stream',
+            )) {
                 $ciphertext = $message->buffer();
                 $session->receiveOps($ciphertext, $this->userId, $deviceKeys);
             }
@@ -183,8 +221,14 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             $this->localStaticPublic,
         );
 
-        // Read msg1 from the initiator.
-        $msg1WsMessage = $client->receive();
+        // Read msg1 from the initiator, bounded by a handshake timeout (CR-06).
+        // A peer that connects and never sends msg1 is dropped instead of pinning
+        // this fiber forever (slow-loris pre-auth).
+        $msg1WsMessage = $this->receiveWithTimeout(
+            $client,
+            self::HANDSHAKE_TIMEOUT_SECONDS,
+            'Noise handshake msg1',
+        );
         if ($msg1WsMessage === null) {
             throw new \RuntimeException(
                 'SyncWebSocketHandler: peer disconnected before sending Noise msg1.'
@@ -220,8 +264,8 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
     {
         $deviceKeys = $this->registryService->deviceKeys($this->userId);
 
-        // 1. Receive peer's CATCH_UP_REQUEST.
-        $reqMsg = $client->receive();
+        // 1. Receive peer's CATCH_UP_REQUEST (timeout-bounded — CR-06).
+        $reqMsg = $this->receiveWithTimeout($client, self::READ_TIMEOUT_SECONDS, 'catch-up request');
         if ($reqMsg === null) {
             return;
         }
@@ -249,8 +293,8 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             json_encode($myReq, JSON_THROW_ON_ERROR)
         ));
 
-        // 4. Receive peer's CATCH_UP_RESPONSE + encrypted op frames.
-        $peerRespMsg = $client->receive();
+        // 4. Receive peer's CATCH_UP_RESPONSE + encrypted op frames (timeout-bounded — CR-06).
+        $peerRespMsg = $this->receiveWithTimeout($client, self::READ_TIMEOUT_SECONDS, 'catch-up response');
         if ($peerRespMsg === null) {
             return;
         }
@@ -258,12 +302,23 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         $decryptedPeerResp = $session->decrypt($peerRespMsg->buffer());
         $peerResp = $this->catchUp->parseControlMessage($decryptedPeerResp);
 
-        $frameCount = isset($peerResp['frame_count']) && is_int($peerResp['frame_count'])
+        $declaredFrameCount = isset($peerResp['frame_count']) && is_int($peerResp['frame_count'])
             ? $peerResp['frame_count']
             : 0;
 
+        // CR-05: clamp the attacker-declared frame_count. A negative value (WR-06)
+        // yields 0 (loop never runs); a huge value is capped so a malicious peer
+        // cannot stream frames unboundedly and grow the op_log without limit.
+        $frameCount = max(0, min($declaredFrameCount, self::MAX_CATCHUP_FRAMES));
+
         for ($i = 0; $i < $frameCount; $i++) {
-            $frameMsg = $client->receive();
+            // CR-06: each frame read is bounded by an idle timeout so a peer that
+            // declares N frames but stalls mid-stream cannot pin the fiber.
+            $frameMsg = $this->receiveWithTimeout(
+                $client,
+                self::READ_TIMEOUT_SECONDS,
+                'catch-up frame',
+            );
             if ($frameMsg === null) {
                 break;
             }
@@ -277,10 +332,41 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             json_encode($complete, JSON_THROW_ON_ERROR)
         ));
 
-        // Receive and consume peer's CATCH_UP_COMPLETE.
-        $completeMsg = $client->receive();
+        // Receive and consume peer's CATCH_UP_COMPLETE (timeout-bounded — CR-06).
+        $completeMsg = $this->receiveWithTimeout($client, self::READ_TIMEOUT_SECONDS, 'catch-up complete');
         if ($completeMsg !== null) {
             $session->decrypt($completeMsg->buffer());
+        }
+    }
+
+    /**
+     * Receive a WebSocket message bounded by an idle timeout (CR-06).
+     *
+     * Wraps WebsocketClient::receive() with an Amp\TimeoutCancellation so a peer
+     * that stalls (pre-auth slow-loris or mid-stream) cannot pin this fiber
+     * indefinitely. On timeout the connection is closed and a TimeoutException is
+     * thrown so the caller's existing try/catch logs and tears down the session.
+     *
+     * @param  float  $timeoutSeconds  Idle timeout for this single receive.
+     * @param  string  $phase  Human-readable phase label for the timeout error.
+     *
+     * @throws TimeoutException When the peer sends nothing within $timeoutSeconds.
+     */
+    private function receiveWithTimeout(
+        WebsocketClient $client,
+        float $timeoutSeconds,
+        string $phase,
+    ): ?WebsocketMessage {
+        try {
+            return $client->receive(new TimeoutCancellation($timeoutSeconds));
+        } catch (TimeoutException $e) {
+            $this->logger->warning('SyncWebSocketHandler: receive timed out — closing connection.', [
+                'phase' => $phase,
+                'timeout_seconds' => $timeoutSeconds,
+            ]);
+            $client->close();
+
+            throw $e;
         }
     }
 }

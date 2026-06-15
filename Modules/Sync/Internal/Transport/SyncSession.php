@@ -42,9 +42,9 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
  * ## Design notes
  *
  *   - NOT a singleton (mutable crypto state per peer). Each connection gets a new SyncSession.
- *   - receiveOps() calls OpLogReplayer::replay() inline. The SyncWebSocketHandler wraps
- *     large catch-up receive calls in Amp\async() so the event loop is not blocked
- *     (Pitfall 3, T-13-12). This class stays synchronous for testability.
+ *   - receiveOps() calls OpLogReplayer::replay() inline. The SyncWebSocketHandler bounds
+ *     attacker pacing via per-receive TimeoutCancellations and a MAX_CATCHUP_FRAMES cap
+ *     (Pitfall 3, T-13-12, CR-05/CR-06). This class stays synchronous for testability.
  *
  * @internal Plan 04 — used by SyncWebSocketHandler.
  */
@@ -259,10 +259,11 @@ final class SyncSession
         }
 
         // Step 4: replay verified entries.
-        // This call is synchronous. When running inside the amphp event loop
-        // (SyncWebSocketHandler), the handler wraps large catch-up batches in
-        // Amp\async() so the fiber yields and other connections remain responsive
-        // (Pitfall 3, T-13-12 accept/mitigate).
+        // This call is synchronous. The SyncWebSocketHandler bounds attacker pacing
+        // out-of-band: every receive() is wrapped in a TimeoutCancellation and the
+        // catch-up loop caps frame_count at MAX_CATCHUP_FRAMES (CR-05/CR-06), so a
+        // malicious peer cannot pin the fiber or grow the op_log unboundedly via
+        // this synchronous replay (Pitfall 3, T-13-12 accept/mitigate).
         $this->replayer->replay($verified, $userId);
     }
 
