@@ -6,7 +6,7 @@
         "dev": "vite"
     },
     "devDependencies": {
-        "@tailwindcss/vite": "^4.0",
+        "@tailwindcss/vite": "^4.3",
         "apexcharts": "^5.14.0",
         "axios": "^1.17.0",
         "concurrently": "^10.0",
