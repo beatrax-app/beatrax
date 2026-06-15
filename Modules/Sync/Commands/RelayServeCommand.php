@@ -231,6 +231,10 @@ final class RelayServeCommand extends Command
         // Extract the recipient device_id from the query string. Authorization is
         // bound to this $did (CR-04), so it must be resolved before the auth check.
         $query = $request->getUri()->getQuery();
+        // WR-08: initialize + annotate the parse_str() target. parse_str can build
+        // nested arrays from `did[]=x` syntax; the is_string() guard below degrades
+        // those to '' (safe), and the explicit init/annotation keeps this L10-clean.
+        /** @var array<string, mixed> $params */
         $params = [];
         parse_str($query, $params);
         $did = isset($params['did']) && is_string($params['did']) ? $params['did'] : '';
