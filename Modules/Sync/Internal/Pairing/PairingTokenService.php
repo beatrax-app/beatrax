@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
@@ -106,6 +107,16 @@ final class PairingTokenService
 
         $acceptedAt = $now->toIso8601String();
 
+        // Extend the window so the safety-number comparison does not race the
+        // original TTL (Pitfall 6). CR-02: a "grace extension" must only ever
+        // GROW the lifetime — take max(existing expiry, now + grace floor) so
+        // an early accept (the common case) never shortens the live handshake.
+        $graceExpiry = $now->addMinutes(self::ACCEPT_GRACE_MINUTES);
+        $existingExpiry = is_string($row->expires_at)
+            ? CarbonImmutable::parse($row->expires_at)
+            : $graceExpiry;
+        $newExpiry = $graceExpiry->greaterThan($existingExpiry) ? $graceExpiry : $existingExpiry;
+
         $this->db->connection()->table('pairing_tokens')
             ->where('id', $row->id)
             ->where('user_id', $userId)
@@ -115,9 +126,7 @@ final class PairingTokenService
                 'responder_x25519_pub_hex' => $responderX25519PubHex,
                 'state' => PairingStateMachine::AWAITING_CONFIRM,
                 'accepted_at' => $acceptedAt,
-                // Extend the window so the safety-number comparison does not race
-                // the original TTL (Pitfall 6).
-                'expires_at' => $now->addMinutes(self::ACCEPT_GRACE_MINUTES)->toIso8601String(),
+                'expires_at' => $newExpiry->toIso8601String(),
             ]);
 
         $accepted = $this->db->connection()->table('pairing_tokens')

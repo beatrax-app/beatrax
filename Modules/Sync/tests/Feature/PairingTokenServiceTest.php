@@ -70,6 +70,57 @@ it('it_rejects_already_used_token', function (): void {
     expect($second)->toBeFalse();
 });
 
+it('does not shorten the token TTL when the responder accepts early (CR-02)', function (): void {
+    $user = tokenUser('token-early-accept');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    // Issued at 10:00:00 → TTL +10m → original expiry 10:10:00.
+    $token = $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
+
+    $issued = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+    $originalExpiry = CarbonImmutable::parse($issued->expires_at);
+
+    // Responder accepts early (30s later). The +5m grace floor (10:05:30) is
+    // EARLIER than the original 10:10:00 expiry — the window must not shrink.
+    CarbonImmutable::setTestNow('2026-06-15 10:00:30');
+    $service->accept($token, (int) $user->id, 'device-resp', str_repeat('c', 64), str_repeat('d', 64));
+
+    $accepted = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+    $newExpiry = CarbonImmutable::parse($accepted->expires_at);
+
+    expect($newExpiry->greaterThanOrEqualTo($originalExpiry))->toBeTrue();
+});
+
+it('extends the token TTL when the responder accepts near the original expiry (CR-02)', function (): void {
+    $user = tokenUser('token-late-accept');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    // Issued at 10:00:00 → original expiry 10:10:00.
+    $token = $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
+
+    $issued = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+    $originalExpiry = CarbonImmutable::parse($issued->expires_at);
+
+    // Responder accepts at 10:09:00 → grace floor 10:14:00 > original → grows.
+    CarbonImmutable::setTestNow('2026-06-15 10:09:00');
+    $service->accept($token, (int) $user->id, 'device-resp', str_repeat('c', 64), str_repeat('d', 64));
+
+    $accepted = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+    $newExpiry = CarbonImmutable::parse($accepted->expires_at);
+
+    expect($newExpiry->greaterThan($originalExpiry))->toBeTrue();
+});
+
 it('it_rejects_expired_token', function (): void {
     $user = tokenUser('token-expired');
 
