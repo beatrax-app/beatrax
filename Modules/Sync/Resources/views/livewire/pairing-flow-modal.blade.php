@@ -259,9 +259,11 @@
             <p class="mx-auto max-w-xs text-sm text-slate-500 dark:text-slate-400">
                 This device is now trusted. Your data will sync once you connect.
             </p>
+            {{-- WR-03: success close uses closeModal() — it must NOT expire the
+                 just-confirmed token the way the in-flow cancel does. --}}
             <button
                 type="button"
-                wire:click="cancelPairing"
+                wire:click="closeModal"
                 class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
                        hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
