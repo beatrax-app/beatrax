@@ -12,6 +12,7 @@ use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\DB;
 use League\Uri\Http as HttpUri;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
@@ -102,9 +103,18 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    // Clean up the on-disk relay config + token written during the test.
-    $this->relayConfig->setEndpointUrl(null);
-    $this->relayConfig->setAuthToken(null);
+    // Clean up the on-disk relay config + token written during the test. Delete
+    // the files outright (not just clear the values) so no artifact is left in
+    // storage/app/secrets — keeping the working tree clean.
+    $tokenPath = UserDataPathService::secretsPath()
+        .DIRECTORY_SEPARATOR.'sync-relay-token.json';
+    $relayPath = UserDataPathService::appPath('sync/relay.json');
+
+    foreach ([$tokenPath, $relayPath] as $path) {
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
 });
 
 it('round-trips deliver -> drain -> confirm against the real relay handler (CR-01..CR-04)', function (): void {
