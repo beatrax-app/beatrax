@@ -44,6 +44,10 @@ return new class extends Migration
     {
         $this->schema()->create('pairing_tokens', static function (Blueprint $table): void {
             $table->id();
+            // No FK/cascade on user_id — consistent with op_log and the rest of
+            // the v1 schema (single-user). IN-05 forward-note: when multi-user
+            // account deletion lands, that sweep MUST also delete this user's
+            // pairing_tokens (and device_registry) rows so no orphans survive.
             $table->unsignedInteger('user_id');
             $table->string('token_hash')->unique();        // SHA-256(token) hex — never plaintext
             $table->string('initiator_device_id');

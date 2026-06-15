@@ -49,6 +49,10 @@ return new class extends Migration
     {
         $this->schema()->create('device_registry', static function (Blueprint $table): void {
             $table->id();
+            // No FK/cascade on user_id — consistent with op_log and the rest of
+            // the v1 schema (single-user). IN-05 forward-note: when multi-user
+            // account deletion lands, that sweep MUST also delete this user's
+            // device_registry (and pairing_tokens) rows so no orphans survive.
             $table->unsignedInteger('user_id');
             $table->string('device_id');                 // UUID v4
             $table->string('name');                       // Auto-detected, user-renamable
