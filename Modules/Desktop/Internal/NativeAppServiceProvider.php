@@ -9,6 +9,7 @@ use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Native\Desktop\Contracts\ProvidesPhpIni;
 use Native\Desktop\Contracts\WindowManager;
+use Native\Desktop\Facades\ChildProcess;
 use Native\Desktop\Facades\Menu;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -153,6 +154,16 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
         ];
     }
 
+    /**
+     * Default sync WebSocket listen port. Mirrors config/sync.php 'port' key.
+     *
+     * The config() global helper is not available in this provider (phpstan L10
+     * noGlobalLaravelFunction rule). The hardcoded constant matches the default
+     * value in config/sync.php and can be overridden by setting SYNC_PORT in the
+     * environment before the NativePHP app starts.
+     */
+    private const SYNC_PORT = 51337;
+
     public function boot(): void
     {
         // First-launch DB bootstrap (D-21 / D-22 / D-23). Runs the
@@ -163,6 +174,23 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
         // own `run()` is a no-op, so re-launches after a clean install
         // stay quiet.
         $this->bootstrap->runPendingMigrations();
+
+        // Start the Noise/WebSocket sync listener as a persistent child process (D-03).
+        //
+        // Primary host: NativePHP ChildProcess — the packaged desktop app auto-starts
+        // and auto-restarts the sync:serve daemon on every launch (D-03/D-04). The
+        // persistent: true flag tells NativePHP to restart the process when it exits
+        // (crash recovery, T-13-15). STDOUT routes to the application log; control
+        // is via SIGTERM (the command's \Amp\trapSignal handles clean shutdown).
+        //
+        // Headless-safe guard: when the NativePHP runtime is not available
+        // (artisan CLI, tests, plain web server) the ChildProcess facade is not
+        // bound in the container and the call silently no-ops. The class_exists
+        // guard prevents a fatal BindingResolutionException in non-NativePHP contexts.
+        //
+        // relay:serve is NOT started automatically — the relay is opt-in (D-01).
+        // Self-hosters run `php artisan relay:serve` manually or via a separate plist.
+        $this->startSyncListener();
 
         // Pre-compile every Blade view into the runtime view cache
         // before the embedded webserver accepts its first request.
@@ -209,6 +237,41 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
         // Help entries; `Menu::create()` installs them as the
         // application menu via Electron's `Menu.setApplicationMenu()`.
         Menu::create(...$this->appMenu->build());
+    }
+
+    /**
+     * Start the sync:serve artisan daemon as a persistent NativePHP ChildProcess.
+     *
+     * Guarded by a class_exists check on Native\Desktop\Facades\ChildProcess so
+     * the call is a no-op in headless/test contexts where the NativePHP runtime
+     * is not present (D-03 headless-safe invariant).
+     *
+     * The relay is intentionally NOT started here — relay:serve is opt-in (D-01).
+     */
+    private function startSyncListener(): void
+    {
+        if (! class_exists(ChildProcess::class)) {
+            // No NativePHP runtime — skip (headless, tests, plain web server).
+            return;
+        }
+
+        try {
+            // persistent: true = NativePHP auto-restarts the process on crash (T-13-15).
+            // The command handles SIGTERM/SIGINT via \Amp\trapSignal for clean shutdown.
+            ChildProcess::artisan(
+                'sync:serve --port='.self::SYNC_PORT,
+                'sync-listener',
+                null,
+                true, // persistent
+            );
+        } catch (Throwable $e) {
+            // Non-fatal: the sync listener failing to start does not prevent the
+            // main window from opening. Log and continue — the user can still use
+            // the app; sync will be unavailable until the next launch.
+            $this->logger->warning('NativePHP boot: failed to start sync:serve child process.', [
+                'exception' => $e,
+            ]);
+        }
     }
 
     /**
