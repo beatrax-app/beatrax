@@ -90,10 +90,7 @@
                             return m + ':' + s;
                         },
                     }"
-                    x-init="interval = setInterval(() => {
-                        if (remaining > 0) { remaining--; }
-                        else { clearInterval(interval); $wire.onCodeExpired(); }
-                    }, 1000)"
+                    x-init="interval = setInterval(() => remaining > 0 ? remaining-- : (clearInterval(interval), $wire.onCodeExpired()), 1000)"
                 >
                     Expires in <span x-text="label">{{ floor($expiresInSeconds / 60) }}:{{ str_pad((string) ($expiresInSeconds % 60), 2, '0', STR_PAD_LEFT) }}</span>
                 </p>

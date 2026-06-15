@@ -252,6 +252,11 @@ final class AppLockSettingsSection extends Component
         $this->newPin = '';
         $this->confirmPin = '';
         $this->accountPassword = '';
+
+        // Notify sibling sections (e.g. Devices & Sync, D-02) that an app-lock
+        // now exists so their app-lock-gated UI updates live without a reload.
+        // Plain browser-event name — no cross-module PHP dependency.
+        $this->dispatch('app-lock-configured');
     }
 
     // -------------------------------------------------------------------------

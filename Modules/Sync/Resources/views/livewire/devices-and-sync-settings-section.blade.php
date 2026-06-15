@@ -169,10 +169,12 @@
                 @endforeach
             </ul>
 
-            {{-- Pair a new device (D-11) --}}
+            {{-- Pair a new device (D-11) — dispatch a Livewire event the modal
+                 component listens for; it owns its own open state so the hosting
+                 <flux:modal> sees a real false→true transition. --}}
             <button
                 type="button"
-                wire:click="openPairingModal"
+                wire:click="$dispatch('open-pairing-modal')"
                 class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
                        hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
@@ -182,8 +184,9 @@
         </div>
     @endif
 
-    {{-- ===== Pairing-flow modal (D-11) — the component owns its own flux:modal ===== --}}
-    @if ($pairingModalOpen)
-        @livewire('sync.pairing-flow-modal', ['open' => true], key('pairing-flow-modal'))
-    @endif
+    {{-- ===== Pairing-flow modal (D-11) — the component owns its own flux:modal.
+         Rendered unconditionally so the modal's wire:model="open" sees a real
+         false→true transition when "Pair a new device" dispatches
+         open-pairing-modal (a fresh already-true mount never triggers Flux). ===== --}}
+    @livewire('sync.pairing-flow-modal', key('pairing-flow-modal'))
 </div>

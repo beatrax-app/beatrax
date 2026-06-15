@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
@@ -104,6 +105,30 @@ final class PairingFlowModal extends Component
     public function mount(bool $open = false): void
     {
         $this->open = $open;
+    }
+
+    /**
+     * Open the modal from the parent "Pair a new device" button.
+     *
+     * The component is rendered unconditionally (always in the DOM) so the
+     * hosting <flux:modal wire:model="open"> sees a real false→true transition
+     * — Flux only shows the dialog on that transition, never on a fresh mount
+     * that is already-true. Reset the flow to step 1 so a reopened modal never
+     * resumes a stale/cancelled handshake.
+     */
+    #[On('open-pairing-modal')]
+    public function openModal(): void
+    {
+        $this->step = 'choose_direction';
+        $this->pairingTokenId = '';
+        $this->wordCode = '';
+        $this->qrSvg = '';
+        $this->expiresInSeconds = 600;
+        $this->flashMessage = '';
+        $this->awaitingPeer = false;
+        $this->side = '';
+        $this->safetyWords = [];
+        $this->open = true;
     }
 
     // -------------------------------------------------------------------------
