@@ -370,8 +370,17 @@ final class PairingFlowModal extends Component
      * Surface the expired state when the countdown reaches zero (D-13). The
      * displayed code is no longer valid; the user taps "Generate new code".
      */
-    public function onCodeExpired(): void
-    {
+    public function onCodeExpired(
+        CurrentUser $currentUser,
+        PairingTokenService $tokenService,
+    ): void {
+        // Mark the abandoned/expired token so it is not left dangling as pending
+        // (WR-04). The next issue() prunes it; expiring it now keeps the row's
+        // state honest the moment the countdown hits zero.
+        if ($this->pairingTokenId !== '') {
+            $tokenService->expire((int) $this->pairingTokenId, $currentUser->user()->id);
+        }
+
         $this->flashMessage = 'Code expired.';
         $this->expiresInSeconds = 0;
     }

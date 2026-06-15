@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
 
@@ -61,9 +62,15 @@ final class PairingTokenService
         SafetyNumberDeriver::hexToRawKey($ed25519PubHex);
         SafetyNumberDeriver::hexToRawKey($x25519PubHex);
 
-        $token = bin2hex(random_bytes(16)); // 128-bit, 32-char hex.
-
         $now = $this->clock->now();
+
+        // Prune stale handshake rows for this user before minting a fresh one
+        // (WR-04). pairing_tokens is a transient scratch table — abandoned,
+        // expired, or terminal (confirmed/expired) rows are swept here so the
+        // table never accumulates stale initiator key material indefinitely.
+        $this->prune($userId, $now);
+
+        $token = bin2hex(random_bytes(16)); // 128-bit, 32-char hex.
 
         $this->db->connection()->table('pairing_tokens')->insert([
             'user_id' => $userId,
@@ -295,5 +302,26 @@ final class PairingTokenService
             ->where('id', $tokenId)
             ->where('user_id', $userId)
             ->update(['state' => PairingStateMachine::EXPIRED]);
+    }
+
+    /**
+     * Delete stale pairing_tokens rows for a user (WR-04): anything past its TTL
+     * or already in a terminal state (confirmed/expired). pairing_tokens is a
+     * transient scratch table — its permanent trust store is device_registry, so
+     * pruning never loses trust state. Called on issue() so a single-user, local
+     * app needs no separate scheduled sweep.
+     */
+    public function prune(int $userId, CarbonImmutable $now): void
+    {
+        $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->where(function (QueryBuilder $query) use ($now): void {
+                $query->where('expires_at', '<', $now->toIso8601String())
+                    ->orWhereIn('state', [
+                        PairingStateMachine::CONFIRMED,
+                        PairingStateMachine::EXPIRED,
+                    ]);
+            })
+            ->delete();
     }
 }
