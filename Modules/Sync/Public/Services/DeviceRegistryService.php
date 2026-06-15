@@ -61,6 +61,30 @@ final readonly class DeviceRegistryService
     }
 
     /**
+     * Confirmed-only device-id → hex X25519 public-key map for $userId.
+     *
+     * Used by the Noise handshake authenticator (Phase 13 XPORT-01): the
+     * Noise static key is the X25519 keypair, NOT the Ed25519 signing key.
+     * Only rows where confirmed_at IS NOT NULL are returned — the same trust
+     * anchor as deviceKeys() (T-13-01, D-01 of Phase 12). An unconfirmed
+     * device key can never reach the Noise handshake.
+     *
+     * @return array<string, string> device_id => hex X25519 public key (Noise handshake auth).
+     */
+    public function deviceX25519Keys(int $userId): array
+    {
+        /** @var array<string, string> $keys */
+        $keys = $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->whereNotNull('confirmed_at')
+            ->pluck('x25519_public_key_hex', 'device_id')
+            ->all();
+
+        return $keys;
+    }
+
+    /**
      * Compute the shared safety-number for two hex public keys (D-07/D-08).
      *
      * @return string 6 BIP39 words, space-separated.
