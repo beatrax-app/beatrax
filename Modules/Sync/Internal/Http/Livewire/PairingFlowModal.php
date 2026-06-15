@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -55,7 +56,12 @@ final class PairingFlowModal extends Component
 
     /**
      * The pairing_tokens row id for the in-flight handshake ('' when none).
+     *
+     * #[Locked] — the trust gate (D-07/CR-01) MUST NOT let the client retarget
+     * which token is being confirmed. Only server code (showMyCode/submitCode)
+     * may set this; Livewire rejects any client-side mutation.
      */
+    #[Locked]
     public string $pairingTokenId = '';
 
     /**
@@ -85,7 +91,13 @@ final class PairingFlowModal extends Component
 
     /**
      * Which side this device plays in the in-flight handshake.
+     *
+     * #[Locked] — a client must never be able to flip its side and confirm the
+     * peer's column (CR-01). The authoritative side is re-derived server-side in
+     * PairingTokenService::confirm() from the caller's own device id; this
+     * property is UI-only and locked against tampering as defense-in-depth.
      */
+    #[Locked]
     public string $side = '';
 
     /**
@@ -299,18 +311,30 @@ final class PairingFlowModal extends Component
      */
     public function confirmMatch(
         CurrentUser $currentUser,
+        DeviceIdentityLoader $identityLoader,
         PairingTokenService $tokenService,
         PairingStateMachine $stateMachine,
         DatabaseManager $db,
+        Session $session,
     ): void {
-        if ($this->pairingTokenId === '' || $this->side === '') {
+        if ($this->pairingTokenId === '') {
             return;
         }
 
         $userId = $currentUser->user()->id;
+
+        // Bind the confirming side to THIS device's real identity (CR-01) — the
+        // service derives the side from this device id, never from client state.
+        $identity = $identityLoader->load($userId, $session);
+        if ($identity === null) {
+            $this->flashMessage = 'Your device identity is locked. Unlock the app and try again.';
+
+            return;
+        }
+
         $tokenId = (int) $this->pairingTokenId;
 
-        $tokenService->confirm($tokenId, $userId, $this->side);
+        $tokenService->confirm($tokenId, $userId, $identity->deviceId);
 
         $row = $db->connection()->table('pairing_tokens')
             ->where('id', $tokenId)
