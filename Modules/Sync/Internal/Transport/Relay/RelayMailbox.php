@@ -52,10 +52,10 @@ final readonly class RelayMailbox
      */
     public function deliver(string $senderDid, string $recipientDid, string $blob): void
     {
-        $now = $this->clock->now()->toIso8601ZuluString();
-        $expiresAt = $this->clock->now()
-            ->addDays(self::UNDELIVERED_TTL_DAYS)
-            ->toIso8601ZuluString();
+        $now = $this->assertZulu($this->clock->now()->toIso8601ZuluString());
+        $expiresAt = $this->assertZulu(
+            $this->clock->now()->addDays(self::UNDELIVERED_TTL_DAYS)->toIso8601ZuluString()
+        );
 
         $this->db->connection()->table('relay_mailbox')->insert([
             'sender_did' => $senderDid,
@@ -121,10 +121,10 @@ final readonly class RelayMailbox
      */
     public function confirm(int $id): void
     {
-        $now = $this->clock->now()->toIso8601ZuluString();
-        $newExpiresAt = $this->clock->now()
-            ->addDays(self::DELIVERED_TTL_DAYS)
-            ->toIso8601ZuluString();
+        $now = $this->assertZulu($this->clock->now()->toIso8601ZuluString());
+        $newExpiresAt = $this->assertZulu(
+            $this->clock->now()->addDays(self::DELIVERED_TTL_DAYS)->toIso8601ZuluString()
+        );
 
         $this->db->connection()
             ->table('relay_mailbox')
@@ -146,11 +146,36 @@ final readonly class RelayMailbox
      */
     public function garbageCollect(): int
     {
-        $now = $this->clock->now()->toIso8601ZuluString();
+        $now = $this->assertZulu($this->clock->now()->toIso8601ZuluString());
 
         return $this->db->connection()
             ->table('relay_mailbox')
             ->where('expires_at', '<', $now)
             ->delete();
+    }
+
+    /**
+     * Assert a timestamp is in zero-padded UTC Zulu ISO8601 form (WR-03).
+     *
+     * The GC compares expires_at as a lexical string, which is only correct when
+     * every timestamp shares the same zero-padded `YYYY-MM-DDTHH:MM:SSZ` Zulu
+     * format. A timestamp written in an offset form (e.g. `+02:00`) would sort
+     * incorrectly and either GC live blobs early (data loss) or never (unbounded
+     * growth). This guard makes that invariant explicit at every write site, so a
+     * future refactor that drops toIso8601ZuluString() fails loudly instead of
+     * silently corrupting GC ordering.
+     *
+     * @throws \LogicException when $ts is not in Zulu ISO8601 form.
+     */
+    private function assertZulu(string $ts): string
+    {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $ts) !== 1) {
+            throw new \LogicException(
+                "RelayMailbox: timestamp '{$ts}' is not zero-padded UTC Zulu ISO8601. "
+                .'Lexical expires_at GC comparison requires the Zulu form (WR-03).'
+            );
+        }
+
+        return $ts;
     }
 }

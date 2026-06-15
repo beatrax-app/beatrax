@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 
 uses(RefreshDatabase::class);
 
@@ -127,4 +130,31 @@ it('RelayClient class exists (Wave 4 implementation landed)', function (): void 
     expect(class_exists('Modules\\Sync\\Internal\\Transport\\Relay\\RelayClient'))->toBeTrue(
         'Wave 4: RelayClient must exist — implemented in Plan 13-03.'
     );
+});
+
+it('RelayMailbox writers produce zero-padded UTC Zulu timestamps (WR-03 GC invariant)', function (): void {
+    // The GC compares expires_at lexically, which is only safe when every
+    // timestamp is the same zero-padded Zulu form. Exercise deliver() + confirm()
+    // and assert the stored timestamps match ^\d{4}-..TZ$ so a future change that
+    // drops the Zulu form is caught here.
+    $mailbox = new RelayMailbox(
+        app(DatabaseManager::class),
+        app(Clock::class),
+    );
+
+    $mailbox->deliver('device-a', 'device-b', random_bytes(32));
+
+    /** @var stdClass $row */
+    $row = DB::table('relay_mailbox')->where('recipient_did', 'device-b')->first();
+
+    $zulu = '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/';
+    expect($row->created_at)->toMatch($zulu, 'created_at must be Zulu form');
+    expect($row->expires_at)->toMatch($zulu, 'expires_at must be Zulu form');
+
+    $mailbox->confirm((int) $row->id);
+
+    /** @var stdClass $confirmed */
+    $confirmed = DB::table('relay_mailbox')->where('id', $row->id)->first();
+    expect($confirmed->delivered_at)->toMatch($zulu, 'delivered_at must be Zulu form');
+    expect($confirmed->expires_at)->toMatch($zulu, 'reset expires_at must be Zulu form');
 });
