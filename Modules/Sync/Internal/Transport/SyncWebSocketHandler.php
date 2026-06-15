@@ -151,6 +151,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             framer: $this->framer,
             db: $this->db,
             clock: $this->clock,
+            logger: $this->logger,
         );
 
         if (! $session->authenticate($noiseSession, $this->userId, $this->localDeviceId)) {

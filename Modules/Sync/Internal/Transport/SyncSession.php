@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Psr\Log\LoggerInterface;
 
 /**
  * Per-peer transport session: Noise auth gate + additive Ed25519 op verification.
@@ -77,6 +78,7 @@ final class SyncSession
         private readonly TransportFramer $framer,
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
+        private readonly ?LoggerInterface $logger = null,
     ) {}
 
     /**
@@ -211,8 +213,10 @@ final class SyncSession
      *   1. Noise-decrypt the ciphertext.
      *   2. TransportFramer::decode into OpLogEntry objects.
      *   3. For each entry, call DeviceKeySigner::verify() against deviceKeys().
-     *      Entries that fail verification are SILENTLY DROPPED (not replayed).
-     *      The replayer's own quarantine handles the audit trail for forged entries.
+     *      Entries with an unknown device key or a failing signature are dropped
+     *      (not replayed) and logged at warning with device_id + reason
+     *      (missing_device_key | signature_invalid) for an audit signal — WR-02.
+     *      No key material or signature bytes are logged.
      *   4. Verified entries go to OpLogReplayer::replay().
      *
      * @param  string  $ciphertext  Received Noise ciphertext from the wire.
@@ -242,12 +246,25 @@ final class SyncSession
             $pubKeyHex = $deviceKeys[$entry->deviceId] ?? null;
             if ($pubKeyHex === null) {
                 // Missing device key → not replayed (replayer would quarantine 'missing_device_key').
+                // WR-02: surface an audit signal for the dropped entry so a peer
+                // sending unknown-device ops is observable. No key material is logged.
+                $this->logger?->warning('SyncSession: dropped entry with unknown device key.', [
+                    'device_id' => $entry->deviceId,
+                    'reason' => 'missing_device_key',
+                ]);
+
                 continue;
             }
 
             $pubKeyBin = sodium_hex2bin($pubKeyHex);
             if (! $this->signer->verify($entry->signingPayload(), $entry->signature, $pubKeyBin)) {
                 // Forged or tampered signature → not replayed (T-13-09b).
+                // WR-02: log the drop (reason only — never the signature/key bytes).
+                $this->logger?->warning('SyncSession: dropped entry with invalid signature.', [
+                    'device_id' => $entry->deviceId,
+                    'reason' => 'signature_invalid',
+                ]);
+
                 continue;
             }
 
