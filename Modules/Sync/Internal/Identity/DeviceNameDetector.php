@@ -5,28 +5,23 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Identity;
 
 /**
- * Auto-detect a sensible default device name (D-09).
+ * Produce a neutral default device name (D-09).
  *
- * Reads the machine hostname, strips a trailing `.local`, humanises hyphens
- * into spaces, and appends a coarse OS-family tag ("Mac" / "PC" / "Linux") to
- * disambiguate two accounts on the same box. Falls back to "This device" when
- * the hostname is empty or unavailable.
+ * WR-06: this default is stored in device_registry.name and EXCHANGED with /
+ * displayed to paired peers. For a privacy-first, local-only product the auto
+ * name must not leak the OS hostname (often the user's real name, e.g.
+ * "Wessels-MacBook-Pro") to any device the user pairs with before they have a
+ * chance to rename it. We therefore default to a neutral OS-family label
+ * ("This device (Mac)") and never read php_uname('n').
  *
- * The detected name is only ever a default — the device list lets the user
- * rename it inline (the rename action ships in Plan 04).
+ * The default is only ever a default — the device list lets the user rename it
+ * inline (D-09) to anything they choose, including a hostname-derived name, as
+ * an explicit opt-in.
  */
 final class DeviceNameDetector
 {
     public function detect(): string
     {
-        $hostname = php_uname('n');
-
-        // Strip a trailing ".local" (Bonjour/mDNS hostname suffix on macOS).
-        $name = preg_replace('/\.local$/i', '', $hostname) ?? $hostname;
-
-        // Humanise: hyphens → spaces ("Wessels-MacBook-Pro" → "Wessels MacBook Pro").
-        $name = trim(str_replace('-', ' ', $name));
-
         $os = match (PHP_OS_FAMILY) {
             'Darwin' => 'Mac',
             'Windows' => 'PC',
@@ -34,10 +29,6 @@ final class DeviceNameDetector
             default => '',
         };
 
-        if ($name === '') {
-            return $os !== '' ? "This device ({$os})" : 'This device';
-        }
-
-        return $os !== '' ? "{$name} ({$os})" : $name;
+        return $os !== '' ? "This device ({$os})" : 'This device';
     }
 }
