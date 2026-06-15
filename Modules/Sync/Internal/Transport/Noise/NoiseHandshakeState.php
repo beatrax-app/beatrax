@@ -553,37 +553,10 @@ final class NoiseHandshakeState
     }
 
     /**
-     * Returns true if the SymmetricState currently has a cipher (after at least
-     * one mixKey call). Used to determine the encrypted byte-length of 's' tokens.
+     * Returns true once any mixKey has run; delegates to NoiseSymmetricState::isKeyed().
      *
-     * We use a heuristic: we know whether mixKey has been called based on the
-     * message index and pattern position relative to DH tokens.
-     *
-     * Simpler approach: expose a hasKey() method from NoiseSymmetricState by
-     * checking if the cipher field is non-null. Since we don't expose it directly,
-     * we track with a flag on the SymmetricState. We solve this differently:
-     * NoiseSymmetricState.encryptAndHash handles the unkeyed case by returning
-     * the plaintext as-is, so the decryptAndHash on the other side of an 's' token
-     * needs to know whether to expect 32 or 48 bytes.
-     *
-     * For the IK pattern: by the time 's' appears in msg1 (after e, es), the key
-     * is set (es does a mixKey). So for IK msg1 's': keyed → 48 bytes.
-     * For XX msg2: 's' comes after e, ee — so keyed → 48 bytes.
-     * For XX msg3: 's' comes after no prior keys in this message... but the key
-     * was already set from msg2, so: keyed → 48 bytes.
-     * For XX msg1: no 's' token.
-     *
-     * We track this by calling into the symmetric state's cipher presence.
-     * Since NoiseSymmetricState doesn't expose isKeyed(), we add a method for it.
-     *
-     * Actually, a cleaner solution: NoiseSymmetricState has the cipher field.
-     * Let's just expose isKeyed(). But we've already written the code, so let's
-     * use a slightly different approach: track whether any mixKey has happened
-     * at the token sequence level. All DH tokens before 's' in the same or prior
-     * messages determine this.
-     *
-     * The cleanest fix is to expose isKeyed() on NoiseSymmetricState via a public method.
-     * We need to add that method and call it here.
+     * Used to size the encrypted 's' token: an unkeyed 's' is the raw 32-byte
+     * public key, a keyed 's' is 32 bytes + the 16-byte AEAD tag = 48 bytes.
      */
     private function hasKey(): bool
     {

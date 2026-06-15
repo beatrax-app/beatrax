@@ -41,6 +41,8 @@ use Symfony\Component\Process\Process;
  */
 final class MdnsAdvertiser
 {
+    use LocatesSystemBinary;
+
     /**
      * mDNS service type for Beatrax sync (Bonjour / Avahi naming convention).
      */
@@ -65,6 +67,15 @@ final class MdnsAdvertiser
     public function advertise(string $deviceId, int $port): void
     {
         $this->stop();
+
+        // IN-05: defense-in-depth. Symfony Process uses argv (no shell-injection
+        // risk), but a deviceId with whitespace/control characters would produce a
+        // malformed mDNS instance name. In practice deviceId is a UUIDv4, so reject
+        // anything that is not — a bad id silently skips advertising rather than
+        // publishing a broken service name.
+        if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $deviceId) !== 1) {
+            return;
+        }
 
         $cmd = $this->buildCommand($deviceId, $port);
         if ($cmd === null) {
@@ -131,24 +142,6 @@ final class MdnsAdvertiser
         }
 
         // Neither available — caller falls through to manual host:port or relay (D-07).
-        return null;
-    }
-
-    /**
-     * Look up a binary in standard system paths.
-     *
-     * Returns the full path if found, null otherwise.
-     */
-    private function findBinary(string $name): ?string
-    {
-        $paths = ['/usr/bin', '/usr/local/bin', '/bin', '/usr/sbin'];
-        foreach ($paths as $dir) {
-            $full = $dir.DIRECTORY_SEPARATOR.$name;
-            if (is_file($full) && is_executable($full)) {
-                return $full;
-            }
-        }
-
         return null;
     }
 }

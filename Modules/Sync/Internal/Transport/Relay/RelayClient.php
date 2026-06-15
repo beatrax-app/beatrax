@@ -39,6 +39,15 @@ final readonly class RelayClient
     /** HTTP timeout for relay requests in seconds. */
     private const TIMEOUT_SECONDS = 10;
 
+    /**
+     * Client-side cap on a single relay blob (IN-02). TransportFramer caps the
+     * plaintext payload at 64 KB; a Noise-encrypted blob is that plus AEAD/Noise
+     * framing overhead. 64 KB + 1 KB headroom bounds the upload surface without
+     * rejecting any legitimate frame. The relay is opaque to blob content, so this
+     * is a sanity bound, not a correctness gate.
+     */
+    private const MAX_BLOB_BYTES = 65536 + 1024;
+
     public function __construct(
         private HttpFactory $http,
         private RelayConfig $config,
@@ -65,6 +74,17 @@ final readonly class RelayClient
     public function deliver(string $senderDid, string $recipientDid, string $blob): void
     {
         $endpoint = $this->resolvedEndpoint();
+
+        // IN-02: bound the upload surface. A legitimate Noise-encrypted op frame
+        // never exceeds the framer ceiling + overhead; a larger blob is rejected
+        // before hitting the network.
+        if (strlen($blob) > self::MAX_BLOB_BYTES) {
+            throw new RuntimeException(sprintf(
+                'RelayClient::deliver — blob too large (%d bytes). Maximum is %d bytes.',
+                strlen($blob),
+                self::MAX_BLOB_BYTES,
+            ));
+        }
 
         $response = $this->http
             ->createPendingRequest()

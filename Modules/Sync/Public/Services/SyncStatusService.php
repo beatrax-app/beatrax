@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Public\Services;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 
 /**
@@ -72,11 +73,13 @@ final readonly class SyncStatusService
         $hasError = false;
         $hasSyncing = false;
         $hasActive = false;
+        $hasClosedOrSynced = false;
 
         foreach ($rows as $row) {
             $vars = get_object_vars($row);
             $status = is_string($vars['status'] ?? null) ? $vars['status'] : '';
             $errorMsg = is_string($vars['error_message'] ?? null) ? $vars['error_message'] : '';
+            $lastSeen = is_string($vars['last_seen_at'] ?? null) ? $vars['last_seen_at'] : '';
 
             if ($status === 'failed' && $errorMsg !== '') {
                 $hasError = true;
@@ -88,6 +91,11 @@ final readonly class SyncStatusService
 
             if ($status === 'active') {
                 $hasActive = true;
+            }
+
+            // IN-04: track this in the single pass instead of re-looping below.
+            if ($status === 'closed' || ($status === 'failed' && $lastSeen !== '')) {
+                $hasClosedOrSynced = true;
             }
         }
 
@@ -101,20 +109,8 @@ final readonly class SyncStatusService
 
         if (! $hasActive) {
             // All peers are closed/failed-without-message — last sync happened but peers are now offline.
-            // If any row had status='closed' it means sync completed but peer is now disconnected.
-            $hasClosedOrSynced = false;
-            foreach ($rows as $row) {
-                $vars = get_object_vars($row);
-                $status = is_string($vars['status'] ?? null) ? $vars['status'] : '';
-                $lastSeen = is_string($vars['last_seen_at'] ?? null) ? $vars['last_seen_at'] : '';
-
-                if ($status === 'closed' || ($status === 'failed' && $lastSeen !== '')) {
-                    $hasClosedOrSynced = true;
-
-                    break;
-                }
-            }
-
+            // A status='closed' row (or failed-with-last-seen) means sync completed
+            // but the peer is now disconnected. Computed in the single pass above (IN-04).
             if ($hasClosedOrSynced) {
                 return 'all_synced';
             }
@@ -134,9 +130,9 @@ final readonly class SyncStatusService
      * The component passes the Clock-derived $now to this method to avoid any
      * use of the global now() helper (larastanStrictRules.noGlobalLaravelFunction).
      *
-     * @param \Carbon\CarbonImmutable $now The reference point for the relative diff.
+     * @param  CarbonImmutable  $now  The reference point for the relative diff.
      */
-    public function lastSyncedHuman(\Carbon\CarbonImmutable $now, int $userId): ?string
+    public function lastSyncedHuman(CarbonImmutable $now, int $userId): ?string
     {
         $rows = $this->peerStatuses($userId);
 
@@ -158,7 +154,7 @@ final readonly class SyncStatusService
         }
 
         try {
-            $past = \Carbon\CarbonImmutable::parse($latestTs);
+            $past = CarbonImmutable::parse($latestTs);
         } catch (\Throwable) {
             return null;
         }
