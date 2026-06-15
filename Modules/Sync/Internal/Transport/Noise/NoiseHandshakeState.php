@@ -247,11 +247,30 @@ final class NoiseHandshakeState
      * generate an ephemeral key. In production, never call this — let writeMessage()
      * generate fresh ephemerals via sodium_crypto_kx_keypair().
      *
+     * Forward-secrecy guard (WR-01): a static/injected ephemeral destroys the
+     * handshake's forward secrecy. To make this impossible to reach outside the
+     * test harness, this method throws unless APP_ENV is `testing` or `local`. It
+     * reads APP_ENV via getenv() (not the banned Laravel env() helper) so it stays
+     * usable inside this pure-crypto class that has no container access.
+     *
      * @param  string  $ephemeralSecret  32-byte X25519 secret key.
      * @param  string  $ephemeralPublic  32-byte X25519 public key.
+     *
+     * @throws \LogicException when called outside a testing/local environment.
+     *
+     * @internal Test-only seam — never call from production code paths.
      */
     public function setEphemeralKeypair(string $ephemeralSecret, string $ephemeralPublic): void
     {
+        $appEnv = getenv('APP_ENV');
+        if ($appEnv !== 'testing' && $appEnv !== 'local') {
+            throw new \LogicException(
+                'NoiseHandshakeState::setEphemeralKeypair() is a test-only seam and must '
+                .'never be called outside a testing/local environment — a fixed ephemeral '
+                .'destroys the handshake forward secrecy (WR-01).'
+            );
+        }
+
         $this->localEphemeralSecret = $ephemeralSecret;
         $this->localEphemeralPublic = $ephemeralPublic;
     }
