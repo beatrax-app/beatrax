@@ -114,6 +114,11 @@ final class PairingTokenService
         $tokenHash = hash('sha256', $submittedToken);
         $now = $this->clock->now();
 
+        // IN-01: expires_at is a TEXT column compared LEXICALLY here. This is
+        // correct ONLY because every expires_at is written via toIso8601String()
+        // in UTC — identical fixed-width offset, so lexical order == chronological
+        // order. Any code that writes a mixed-offset (e.g. +02:00) value here
+        // would break this comparison; keep all writes UTC.
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('token_hash', $tokenHash)
             ->where('user_id', $userId)
