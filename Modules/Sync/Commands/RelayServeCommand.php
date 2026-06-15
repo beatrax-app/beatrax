@@ -32,12 +32,20 @@ use Psr\Log\LoggerInterface;
  *   session); the relay operator learns only: sender_did, recipient_did, blob size,
  *   and delivery timestamp.
  *
- * ## Drain authorization (T-13-13)
+ * ## Drain authorization (T-13-13 / CR-04)
  *
  *   GET /relay/drain and DELETE /relay/drain/{id} require the caller to present
- *   a bearer token in the Authorization header matching the token stored in
- *   RelayConfig::authToken(). This token is a pre-shared per-device secret;
- *   the relay never has access to device key material (ZK invariant preserved).
+ *   a bearer token in the Authorization header that matches the PER-DEVICE token
+ *   derived for the mailbox being accessed:
+ *       expected = HMAC-SHA256(RelayConfig::authToken(), recipient_did)
+ *   (RelayConfig::deriveDeviceToken()). A single relay-wide token is NOT
+ *   accepted — a token scoped to device A cannot drain or confirm-delete device
+ *   B's mailbox. This closes the metadata-isolation hole where any holder of the
+ *   shared token could pull or delete an arbitrary recipient's blobs.
+ *
+ *   ZK is preserved: the relay only HMACs the device_id (routing metadata it
+ *   already sees) with the secret it already holds — it never reads blobs, never
+ *   learns a user_id, and never has device key material.
  *
  *   Authorization is enforced HERE (at the endpoint), NOT inside RelayMailbox
  *   (which is a pure ZK store). This separation keeps RelayMailbox testable
@@ -45,8 +53,8 @@ use Psr\Log\LoggerInterface;
  *   auditable in this one file.
  *
  *   Deliver (POST /relay/deliver) is open — anyone can drop a ciphertext blob
- *   into any mailbox. The recipient's drain token is the only thing that gates
- *   retrieval.
+ *   into any mailbox. The recipient's per-device drain token is the only thing
+ *   that gates retrieval.
  *
  * ## Opt-in deployment (D-01)
  *
@@ -220,17 +228,19 @@ final class RelayServeCommand extends Command
      */
     private function handleDrain(Request $request): Response
     {
-        if (! $this->isAuthorized($request)) {
-            return $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized');
-        }
-
-        // Extract the recipient device_id from the query string.
+        // Extract the recipient device_id from the query string. Authorization is
+        // bound to this $did (CR-04), so it must be resolved before the auth check.
         $query = $request->getUri()->getQuery();
+        $params = [];
         parse_str($query, $params);
         $did = isset($params['did']) && is_string($params['did']) ? $params['did'] : '';
 
         if ($did === '') {
             return $this->jsonError(HttpStatus::BAD_REQUEST, 'missing_did');
+        }
+
+        if (! $this->isAuthorized($request, $did)) {
+            return $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized');
         }
 
         try {
@@ -273,7 +283,18 @@ final class RelayServeCommand extends Command
      */
     private function handleConfirm(Request $request, int $id): Response
     {
-        if (! $this->isAuthorized($request)) {
+        // Bind authorization to the mailbox owner of this row (CR-04): only the
+        // recipient device that owns the row may confirm-delete it. Resolve the
+        // recipient_did (routing metadata only — never the blob) and require a
+        // per-device token scoped to that device.
+        $recipientDid = $this->mailbox->recipientDidFor($id);
+        if ($recipientDid === null) {
+            // Unknown row id. Return 401 (not 404) so a caller cannot probe which
+            // ids exist without already holding the owning device's token.
+            return $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized');
+        }
+
+        if (! $this->isAuthorized($request, $recipientDid)) {
             return $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized');
         }
 
@@ -292,25 +313,35 @@ final class RelayServeCommand extends Command
     }
 
     /**
-     * Check whether the incoming request presents a valid bearer token.
+     * Check whether the incoming request is authorized to drain/confirm the
+     * mailbox belonging to $did (CR-04).
      *
-     * The token is read from RelayConfig::authToken() (stored at secretsPath()
-     * with chmod 600 — never .env). Timing-safe comparison via hash_equals()
-     * prevents timing oracle attacks.
+     * Authorization is BOUND to the specific device whose mailbox is being
+     * accessed: the presented bearer token must equal the per-device token
+     * derived via RelayConfig::deriveDeviceToken($did)
+     * (= HMAC-SHA256(authToken, did)). A single relay-wide token is NOT accepted;
+     * a token scoped to device A cannot drain or confirm device B's mailbox.
+     * This preserves the ZK threat model (T-13-13): the relay only HMACs the
+     * device_id (routing metadata it already sees) with the secret it already
+     * holds — it never reads blobs or learns a user_id.
+     *
+     * Timing-safe comparison via hash_equals() prevents timing oracle attacks.
      *
      * Returns false when:
      *   - No token is configured in RelayConfig (relay was set up without a token)
+     *   - $did is empty (no mailbox to bind the token to)
      *   - The Authorization header is absent or malformed
-     *   - The token does not match
+     *   - The presented token does not match the per-device derived token
      *
      * Authorization enforcement lives HERE (at the endpoint), NOT inside
      * RelayMailbox. RelayMailbox is a pure ZK store (T-13-13).
      */
-    private function isAuthorized(Request $request): bool
+    private function isAuthorized(Request $request, string $did): bool
     {
-        $configuredToken = $this->config->authToken();
-        if ($configuredToken === null || $configuredToken === '') {
-            // No token configured — deny all drain/confirm requests.
+        // Per-device token derived from the relay secret + the requested mailbox.
+        $expectedToken = $this->config->deriveDeviceToken($did);
+        if ($expectedToken === null) {
+            // No token configured, or empty $did — deny.
             return false;
         }
 
@@ -326,7 +357,7 @@ final class RelayServeCommand extends Command
 
         $presentedToken = substr($authHeader, strlen('Bearer '));
 
-        return hash_equals($configuredToken, $presentedToken);
+        return hash_equals($expectedToken, $presentedToken);
     }
 
     /**

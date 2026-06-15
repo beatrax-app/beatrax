@@ -92,6 +92,26 @@ final readonly class RelayMailbox
     }
 
     /**
+     * Return the recipient_did (routing metadata) for a mailbox row, or null
+     * when the row does not exist.
+     *
+     * Used by the relay endpoint to bind a confirm() authorization to the
+     * mailbox owner (CR-04). ZK: reads only the recipient_did routing column —
+     * never the blob, never a user_id.
+     *
+     * @param  int  $id  The relay_mailbox.id to look up.
+     */
+    public function recipientDidFor(int $id): ?string
+    {
+        $value = $this->db->connection()
+            ->table('relay_mailbox')
+            ->where('id', $id)
+            ->value('recipient_did');
+
+        return is_string($value) ? $value : null;
+    }
+
+    /**
      * Mark a blob as delivered and reset its TTL to the shorter delivered TTL.
      *
      * Sets delivered_at = now() and resets expires_at to now + 7 days so
