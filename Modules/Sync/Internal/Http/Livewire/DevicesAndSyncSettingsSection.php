@@ -216,6 +216,17 @@ final class DevicesAndSyncSettingsSection extends Component
     }
 
     /**
+     * A peer was just confirmed in the pairing modal (the success step, WR-02):
+     * refresh the device list live so the newly-trusted device appears without
+     * waiting for the user to click "Done".
+     */
+    #[On('pairing-confirmed')]
+    public function onPairingConfirmed(CurrentUser $currentUser, DeviceRegistryService $registry): void
+    {
+        $this->devices = $this->loadDevices($registry, $currentUser->user()->id);
+    }
+
+    /**
      * The app-lock was just configured in the sibling AppLockSettingsSection
      * (D-02). Re-evaluate the enable-sync gate live so the "Set an app lock
      * first" notice clears and the toggle enables without a full page reload.
