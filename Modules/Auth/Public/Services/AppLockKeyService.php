@@ -23,8 +23,13 @@ use Modules\Auth\Internal\Lock\LockStateManager;
  *
  * Design for zero rework (D-19): the signature here matches exactly what
  * Phase 14 will consume. Do not change it without coordinating with Phase 14.
+ *
+ * NOTE: intentionally NOT `final` — the Sync device-identity tests
+ * (Phase 12) substitute a release()-returns-null subclass to exercise the
+ * D-02 weak-key-window guard. The class has no invariants that subclassing
+ * could violate; it is a thin session-key accessor.
  */
-final class AppLockKeyService
+class AppLockKeyService
 {
     public function __construct(
         private readonly LockStateManager $lockState,
