@@ -46,6 +46,13 @@ final class WordCodeEncoder
         $normalized = strtoupper(str_replace(['-', ' '], '', trim($wordCode)));
         $bytes = $this->base32Decode($normalized);
 
+        // IN-02: the token is exactly 16 bytes (128-bit). Reject an over-/under-
+        // long paste with a clear "invalid code" error rather than letting a
+        // wrong-length hex silently miss the DB lookup.
+        if (strlen($bytes) !== 16) {
+            throw new InvalidArgumentException('WordCodeEncoder: decoded token is not 16 bytes.');
+        }
+
         return bin2hex($bytes);
     }
 
