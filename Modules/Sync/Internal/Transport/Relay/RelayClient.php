@@ -47,15 +47,22 @@ final readonly class RelayClient
     /**
      * POST an opaque ciphertext blob to the relay for the given recipient device.
      *
-     * ZK: $blob is forwarded verbatim — no inspection, no decryption.
+     * ZK: $blob is forwarded verbatim — no inspection, no decryption. The blob is
+     * base64-encoded inside a JSON envelope so it survives JSON transport; the
+     * relay base64-decodes it back to raw bytes for storage and never inspects it.
      *
+     * Wire contract (must match RelayServeCommand::handleDeliver):
+     *   POST {endpoint}/relay/deliver
+     *   JSON body: { "sender_did": string, "recipient_did": string, "blob": base64 }
+     *
+     * @param  string  $senderDid  Sending device_id (routing metadata only)
      * @param  string  $recipientDid  Recipient device_id (relay routing key)
      * @param  string  $blob  Opaque Noise ciphertext
      *
      * @throws RuntimeException when no endpoint is configured, the endpoint is
      *                          insecure (http://), or the HTTP request fails.
      */
-    public function deliver(string $recipientDid, string $blob): void
+    public function deliver(string $senderDid, string $recipientDid, string $blob): void
     {
         $endpoint = $this->resolvedEndpoint();
 
@@ -63,8 +70,11 @@ final readonly class RelayClient
             ->createPendingRequest()
             ->withHeaders($this->authHeaders())
             ->timeout(self::TIMEOUT_SECONDS)
-            ->withBody($blob, 'application/octet-stream')
-            ->post("{$endpoint}/relay/deliver", ['recipient_did' => $recipientDid]);
+            ->post("{$endpoint}/relay/deliver", [
+                'sender_did' => $senderDid,
+                'recipient_did' => $recipientDid,
+                'blob' => base64_encode($blob),
+            ]);
 
         if (! $response->successful()) {
             throw new RuntimeException(
@@ -97,7 +107,7 @@ final readonly class RelayClient
             ->createPendingRequest()
             ->withToken($authToken)
             ->timeout(self::TIMEOUT_SECONDS)
-            ->get("{$endpoint}/relay/drain", ['device_id' => $deviceId]);
+            ->get("{$endpoint}/relay/drain", ['did' => $deviceId]);
 
         if (! $response->successful()) {
             throw new RuntimeException(
@@ -105,8 +115,14 @@ final readonly class RelayClient
             );
         }
 
+        // The server wraps the rows in a {"blobs": [...]} envelope
+        // (RelayServeCommand::handleDrain). Unwrap it to the documented
+        // list<array<string,mixed>> return shape.
+        $decoded = $response->json();
         /** @var list<array<string, mixed>> $rows */
-        $rows = $response->json() ?? [];
+        $rows = is_array($decoded) && isset($decoded['blobs']) && is_array($decoded['blobs'])
+            ? array_values($decoded['blobs'])
+            : [];
 
         return $rows;
     }
