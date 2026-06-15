@@ -185,7 +185,14 @@ final class PairingTokenService
      * the single point where an unconfirmed device becomes trusted, so it is
      * guarded by bothConfirmed() rather than performed on the first confirm.
      */
-    public function confirm(int $tokenId, int $userId, string $confirmingDeviceId): void
+    /**
+     * Returns the resulting pairing state so the caller never re-reads the row
+     * and re-derives bothConfirmed() — the service is the single source of truth
+     * for the trust decision (IN-04). Returns null when the caller is not a
+     * participant of this token (token missing, or the device owns neither
+     * side); in that case nothing is confirmed.
+     */
+    public function confirm(int $tokenId, int $userId, string $confirmingDeviceId): ?string
     {
         $token = $this->db->connection()->table('pairing_tokens')
             ->where('id', $tokenId)
@@ -193,7 +200,7 @@ final class PairingTokenService
             ->first(['initiator_device_id', 'responder_device_id']);
 
         if ($token === null) {
-            return;
+            return null;
         }
 
         $initiatorDeviceId = is_string($token->initiator_device_id) ? $token->initiator_device_id : null;
@@ -208,7 +215,7 @@ final class PairingTokenService
             $column = 'responder_confirmed_at';
         } else {
             // The caller owns neither side of this token — never confirm.
-            return;
+            return null;
         }
 
         $now = $this->clock->now()->toIso8601String();
@@ -224,14 +231,16 @@ final class PairingTokenService
             ->first();
 
         if ($row === null) {
-            return;
+            return null;
         }
 
         $initiatorConfirmedAt = is_string($row->initiator_confirmed_at) ? $row->initiator_confirmed_at : null;
         $responderConfirmedAt = is_string($row->responder_confirmed_at) ? $row->responder_confirmed_at : null;
 
         if (! $this->stateMachine->bothConfirmed($initiatorConfirmedAt, $responderConfirmedAt)) {
-            return;
+            // This side confirmed; the peer has not yet. Return the unchanged
+            // intermediate state (awaiting_confirm) — not yet trusted.
+            return is_string($row->state) ? $row->state : PairingStateMachine::AWAITING_CONFIRM;
         }
 
         $this->db->connection()->table('pairing_tokens')
@@ -240,6 +249,8 @@ final class PairingTokenService
             ->update(['state' => PairingStateMachine::CONFIRMED]);
 
         $this->admitResponderDevice($row, $userId);
+
+        return PairingStateMachine::CONFIRMED;
     }
 
     /**

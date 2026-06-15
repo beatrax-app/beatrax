@@ -314,8 +314,6 @@ final class PairingFlowModal extends Component
         CurrentUser $currentUser,
         DeviceIdentityLoader $identityLoader,
         PairingTokenService $tokenService,
-        PairingStateMachine $stateMachine,
-        DatabaseManager $db,
         Session $session,
     ): void {
         if ($this->pairingTokenId === '') {
@@ -333,23 +331,12 @@ final class PairingFlowModal extends Component
             return;
         }
 
-        $tokenId = (int) $this->pairingTokenId;
+        // The service is the single source of truth for the trust decision: it
+        // returns the resulting state, so we never re-read the row and re-derive
+        // bothConfirmed() here (IN-04).
+        $state = $tokenService->confirm((int) $this->pairingTokenId, $userId, $identity->deviceId);
 
-        $tokenService->confirm($tokenId, $userId, $identity->deviceId);
-
-        $row = $db->connection()->table('pairing_tokens')
-            ->where('id', $tokenId)
-            ->where('user_id', $userId)
-            ->first(['state', 'initiator_confirmed_at', 'responder_confirmed_at']);
-
-        if ($row === null) {
-            return;
-        }
-
-        $initiatorConfirmedAt = is_string($row->initiator_confirmed_at) ? $row->initiator_confirmed_at : null;
-        $responderConfirmedAt = is_string($row->responder_confirmed_at) ? $row->responder_confirmed_at : null;
-
-        if ($stateMachine->bothConfirmed($initiatorConfirmedAt, $responderConfirmedAt)) {
+        if ($state === PairingStateMachine::CONFIRMED) {
             $this->awaitingPeer = false;
             $this->step = 'success';
 
