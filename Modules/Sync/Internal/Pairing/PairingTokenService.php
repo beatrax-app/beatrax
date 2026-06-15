@@ -253,20 +253,37 @@ final class PairingTokenService
             return;
         }
 
+        // WR-05: never admit a responder whose device_id collides with this
+        // user's own self device. A crafted responder_device_id equal to the
+        // self-row id would otherwise overwrite the local identity's public keys.
+        $selfDeviceId = $this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 1)
+            ->value('device_id');
+
+        if (is_string($selfDeviceId) && hash_equals($selfDeviceId, $deviceId)) {
+            return;
+        }
+
         $safetyWords = implode(' ', $this->safetyNumberDeriver->deriveWords($initiatorEd, $responderEd));
         $now = $this->clock->now()->toIso8601String();
 
         $registry = $this->db->connection()->table('device_registry');
 
+        // Scope the lookup/update to NON-self rows (WR-05) — defense-in-depth so
+        // an admit can never mutate the local self-row even if the collision
+        // guard above is ever bypassed.
         $existing = $registry
             ->where('user_id', $userId)
             ->where('device_id', $deviceId)
+            ->where('is_self', 0)
             ->first();
 
         if ($existing !== null) {
             $this->db->connection()->table('device_registry')
                 ->where('user_id', $userId)
                 ->where('device_id', $deviceId)
+                ->where('is_self', 0)
                 ->update([
                     'ed25519_public_key_hex' => $responderEd,
                     'x25519_public_key_hex' => $responderKx,
