@@ -46,7 +46,9 @@ it('user with no lock can enable it by setting a valid PIN with matching confirm
         ->set('confirmPin', '123456')
         ->set('accountPassword', 'settings-pass')
         ->call('setPin')
-        ->assertHasNoErrors();
+        ->assertHasNoErrors()
+        // Sibling app-lock-gated sections (Devices & Sync, D-02) refresh on this.
+        ->assertDispatched('app-lock-configured');
 
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 });

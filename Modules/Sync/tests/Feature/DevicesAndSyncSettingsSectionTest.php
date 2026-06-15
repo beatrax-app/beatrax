@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Http\Livewire\DevicesAndSyncSettingsSection;
+use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 
 uses(RefreshDatabase::class);
 
@@ -78,4 +79,50 @@ it('it_can_rename_a_device', function (): void {
         ->value('name');
 
     expect($name)->toBe('New Name');
+});
+
+it('refreshes the enable-sync gate live when an app-lock-configured event arrives (D-02)', function (): void {
+    // Regression: setting an app-lock in the sibling AppLockSettingsSection must
+    // clear the "Set an app lock first" gate without a full page reload. mount()
+    // computes appLockConfigured once; the #[On('app-lock-configured')] listener
+    // re-evaluates it. Previously the gate stayed stale until a manual refresh.
+    $user = settingsUser('devices-gate-refresh');
+    $this->actingAs($user);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $component = Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->call('enableSync')
+        ->assertSet('appLockConfigured', false)
+        ->assertSet('flashMessage', 'Set an app lock first to enable sync.');
+
+    // Configure an app-lock out of band (as AppLockSettingsSection::setPin would).
+    $db->connection()->table('user_app_lock_configs')->insert([
+        'user_id' => $user->id,
+        'lock_enabled' => 1,
+        'idle_timeout_minutes' => 5,
+        'failed_attempts' => 0,
+        'created_at' => '2026-06-15T10:00:00Z',
+        'updated_at' => '2026-06-15T10:00:00Z',
+    ]);
+
+    $component->dispatch('app-lock-configured')
+        ->assertSet('appLockConfigured', true)
+        ->assertSet('flashMessage', '');
+});
+
+it('opens the hosted pairing modal when the open-pairing-modal event is dispatched (D-11)', function (): void {
+    // Regression: the modal component is rendered unconditionally and opened by
+    // an event so <flux:modal wire:model="open"> sees a real false→true
+    // transition. Previously it mounted already-open behind @if, so Flux never
+    // fired and "Pair a new device" appeared to do nothing.
+    $user = settingsUser('devices-modal-open');
+    $this->actingAs($user);
+
+    Livewire::test(PairingFlowModal::class)
+        ->assertSet('open', false)
+        ->dispatch('open-pairing-modal')
+        ->assertSet('open', true)
+        ->assertSet('step', 'choose_direction');
 });

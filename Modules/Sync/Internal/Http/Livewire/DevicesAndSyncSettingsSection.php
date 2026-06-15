@@ -65,11 +65,6 @@ final class DevicesAndSyncSettingsSection extends Component
     public string $flashMessage = '';
 
     /**
-     * Whether the pairing-flow modal is open.
-     */
-    public bool $pairingModalOpen = false;
-
-    /**
      * Confirmed device rows for the list (name, safety-number, paired-at).
      *
      * @var list<array<string, mixed>>
@@ -153,15 +148,6 @@ final class DevicesAndSyncSettingsSection extends Component
     }
 
     // -------------------------------------------------------------------------
-    // Action: open the pairing modal (D-11)
-    // -------------------------------------------------------------------------
-
-    public function openPairingModal(): void
-    {
-        $this->pairingModalOpen = true;
-    }
-
-    // -------------------------------------------------------------------------
     // Action: inline device rename (D-09)
     // -------------------------------------------------------------------------
 
@@ -220,14 +206,28 @@ final class DevicesAndSyncSettingsSection extends Component
     // -------------------------------------------------------------------------
 
     /**
-     * The pairing modal closed (cancel / done): clear the open flag and refresh
-     * the device list so a newly-confirmed peer appears.
+     * The pairing modal closed (cancel / done): refresh the device list so a
+     * newly-confirmed peer appears. The modal component owns its own open state.
      */
     #[On('pairing-closed')]
     public function onPairingClosed(CurrentUser $currentUser, DeviceRegistryService $registry): void
     {
-        $this->pairingModalOpen = false;
         $this->devices = $this->loadDevices($registry, $currentUser->user()->id);
+    }
+
+    /**
+     * The app-lock was just configured in the sibling AppLockSettingsSection
+     * (D-02). Re-evaluate the enable-sync gate live so the "Set an app lock
+     * first" notice clears and the toggle enables without a full page reload.
+     */
+    #[On('app-lock-configured')]
+    public function onAppLockConfigured(CurrentUser $currentUser, AppLockClientConfig $lockConfig): void
+    {
+        $this->appLockConfigured = $lockConfig->idleTimeoutMs($currentUser->user()->id) !== null;
+
+        if ($this->appLockConfigured) {
+            $this->flashMessage = '';
+        }
     }
 
     // -------------------------------------------------------------------------
