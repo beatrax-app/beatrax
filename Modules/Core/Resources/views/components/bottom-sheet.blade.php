@@ -24,7 +24,7 @@
 --}}
 <div
     x-data="{ open: false }"
-    x-on:open-sheet.window="if ($event.detail && $event.detail.name === {{ Js::from($name) }}) { open = true; }"
+    x-on:open-sheet.window="($event.detail && $event.detail.name === {{ Js::from($name) }}) && (open = true)"
 >
     {{-- Scrim: only rendered/shown at phone width (CSS .bottom-sheet-scrim display:none at desktop) --}}
     <div
