@@ -218,6 +218,13 @@ final class RelayConfig
         }
 
         // chmod 600: owner read/write only — mirrors DeviceIdentityService posture.
-        @chmod($path, 0600);
+        // WR-05: a silently-swallowed chmod failure would leave the secret token
+        // file world-readable with no signal. Verify the result and throw so the
+        // caller never assumes the on-disk token is protected when it is not.
+        if (! @chmod($path, 0600)) {
+            throw new RuntimeException(
+                "Cannot chmod relay token file to 0600 (secret would be left readable): {$path}"
+            );
+        }
     }
 }
