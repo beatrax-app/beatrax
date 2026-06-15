@@ -129,8 +129,15 @@ final class PairingTokenService
     }
 
     /**
-     * Record a per-side safety-number confirmation (D-07). `$side` is
-     * 'initiator' or 'responder'.
+     * Record a per-side safety-number confirmation (D-07).
+     *
+     * The confirming side is NOT trusted from a client-supplied string — it is
+     * derived from the caller's OWN device id ($confirmingDeviceId, read from the
+     * unlocked local key-file) by matching it against the token's
+     * initiator_device_id / responder_device_id. A device can therefore only
+     * ever confirm the side it actually owns; a single device cannot drive both
+     * columns and self-admit (CR-01). When the device id matches neither side,
+     * the confirmation is rejected (no column is written).
      *
      * Once BOTH sides have confirmed, the token transitions to CONFIRMED and the
      * responder device is admitted to the trusted device_registry with
@@ -139,11 +146,31 @@ final class PairingTokenService
      * the single point where an unconfirmed device becomes trusted, so it is
      * guarded by bothConfirmed() rather than performed on the first confirm.
      */
-    public function confirm(int $tokenId, int $userId, string $side): void
+    public function confirm(int $tokenId, int $userId, string $confirmingDeviceId): void
     {
-        $column = $side === 'initiator'
-            ? 'initiator_confirmed_at'
-            : 'responder_confirmed_at';
+        $token = $this->db->connection()->table('pairing_tokens')
+            ->where('id', $tokenId)
+            ->where('user_id', $userId)
+            ->first(['initiator_device_id', 'responder_device_id']);
+
+        if ($token === null) {
+            return;
+        }
+
+        $initiatorDeviceId = is_string($token->initiator_device_id) ? $token->initiator_device_id : null;
+        $responderDeviceId = is_string($token->responder_device_id) ? $token->responder_device_id : null;
+
+        // Derive the side from the caller's actual device identity (CR-01).
+        // hash_equals keeps the comparison timing-safe and resistant to a
+        // crafted device id that merely shares a prefix.
+        if ($initiatorDeviceId !== null && hash_equals($initiatorDeviceId, $confirmingDeviceId)) {
+            $column = 'initiator_confirmed_at';
+        } elseif ($responderDeviceId !== null && hash_equals($responderDeviceId, $confirmingDeviceId)) {
+            $column = 'responder_confirmed_at';
+        } else {
+            // The caller owns neither side of this token — never confirm.
+            return;
+        }
 
         $now = $this->clock->now()->toIso8601String();
 

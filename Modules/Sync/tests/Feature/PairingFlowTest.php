@@ -59,9 +59,10 @@ it('completes issue -> accept -> both-confirm: state becomes confirmed and a con
     $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
     expect($row->state)->toBe('awaiting_confirm');
 
-    // 3. Both sides confirm the safety-number.
-    $service->confirm((int) $row->id, (int) $user->id, 'initiator');
-    $service->confirm((int) $row->id, (int) $user->id, 'responder');
+    // 3. Both sides confirm the safety-number. The confirming side is derived
+    //    from the caller's OWN device id (CR-01) — pass each device's real id.
+    $service->confirm((int) $row->id, (int) $user->id, 'device-init');
+    $service->confirm((int) $row->id, (int) $user->id, 'device-resp');
 
     $confirmed = $db->connection()->table('pairing_tokens')->where('id', $row->id)->first();
     expect($confirmed->state)->toBe('confirmed');
