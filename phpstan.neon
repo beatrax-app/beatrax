@@ -76,7 +76,7 @@ parameters:
         # used.` — a single regex covers all four facades the carve-out
         # admits (Menu, Window, System, Notification, App).
         -
-            message: '#Native\\Desktop\\Facades\\(Menu|Window|System|Notification|App) facade should not be used\.#'
+            message: '#Native\\Desktop\\Facades\\(Menu|Window|System|Notification|App|ChildProcess) facade should not be used\.#'
             paths:
                 - Modules/Desktop/Internal/NativeAppServiceProvider.php
                 - Modules/Desktop/Internal/Native/AppMenuBuilder.php
