@@ -8,8 +8,11 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
+use Modules\Sync\Commands\RelayServeCommand;
+use Modules\Sync\Commands\SyncServeCommand;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
@@ -25,8 +28,15 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
+use Modules\Sync\Internal\Transport\Frame\TransportFramer;
+use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
+use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Psr\Log\LoggerInterface;
 
 /**
  * Single-owner provider for the Sync module.
@@ -43,6 +53,8 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
  *   Plan 03: OpLogWriter (class_exists-guarded stub injection point)
  *   Plan 04: SyncCaptureListener (class_exists-guarded event wire)
  *   Plan 05: SyncHealthPage Livewire component (class_exists-guarded)
+ *   Phase 13 Plan 05: SyncServeCommand, RelayServeCommand, SyncWebSocketHandler
+ *            factory binding, MdnsAdvertiser/RelayMailbox/RelayConfig singletons
  *
  * ## HybridLogicalClock is TRANSIENT (bind, not singleton)
  *
@@ -168,11 +180,55 @@ final class SyncServiceProvider extends ServiceProvider
         $this->singletonIfExists($relayNamespace.'RelayConfig');
 
         // Phase 13 Wave 5 (mDNS discovery, D-07):
-        // MdnsAdvertiser and MdnsBrowser wrap a long-lived dns-sd/avahi process.
-        // NOT singletons in the DI container — the WS server owns the process lifecycle.
-        // Guards here ensure class_exists checks remain in one canonical place.
-        $this->singletonIfExists($discoveryNamespace.'MdnsAdvertiser');
+        // MdnsBrowser wraps a long-lived dns-sd/avahi process.
+        // Guard ensures class_exists check remains in one canonical place.
         $this->singletonIfExists($discoveryNamespace.'MdnsBrowser');
+
+        // Plan 05: SyncWebSocketHandler — bound as a factory so the container can
+        // resolve it from SyncServeCommand's constructor without requiring runtime
+        // device credentials at bind time. The factory provides empty placeholder
+        // credentials (empty string); the handler's auth gate (SyncSession::authenticate)
+        // will reject all peers when userId=0 (no confirmed devices for userId 0).
+        // In production, the NativePHP ChildProcess host resolves real credentials via
+        // DeviceIdentityLoader before starting sync:serve. The headless daemon exits
+        // self::FAILURE if credentials are unavailable, and NativePHP auto-restarts it.
+        if (class_exists(SyncWebSocketHandler::class)) {
+            $this->app->bind(
+                SyncWebSocketHandler::class,
+                fn () => new SyncWebSocketHandler(
+                    registryService: $this->app->make(DeviceRegistryService::class),
+                    signer: $this->app->make(DeviceKeySigner::class),
+                    framer: new TransportFramer,
+                    catchUp: $this->app->make(PeerCatchUpExchanger::class),
+                    db: $this->app->make(DatabaseManager::class),
+                    clock: $this->app->make(Clock::class),
+                    logger: $this->app->make(LoggerInterface::class),
+                    localStaticSecret: '', // Placeholder — real credentials injected at daemon start
+                    localStaticPublic: '',  // by NativePHP ChildProcess or DeviceIdentityLoader.
+                    localDeviceId: '',
+                    userId: 0,
+                ),
+            );
+        }
+
+        // Plan 05: relay commands — singletons (stateless long-running processes).
+        if (class_exists(RelayServeCommand::class)) {
+            $this->app->singleton(RelayServeCommand::class);
+        }
+
+        if (class_exists(SyncServeCommand::class)) {
+            $this->app->singleton(SyncServeCommand::class);
+        }
+
+        // Plan 05: relay mailbox + mDNS advertiser singletons.
+        // RelayConfig is already registered above via singletonIfExists($relayNamespace.'RelayConfig').
+        if (class_exists(RelayMailbox::class)) {
+            $this->app->singleton(RelayMailbox::class);
+        }
+
+        if (class_exists(MdnsAdvertiser::class)) {
+            $this->app->singleton(MdnsAdvertiser::class);
+        }
     }
 
     public function boot(Dispatcher $events): void
@@ -202,6 +258,18 @@ final class SyncServiceProvider extends ServiceProvider
                 'sync.sync-health-page',
                 SyncHealthPage::class,
             );
+        }
+
+        // Plan 05: Register sync:serve and relay:serve artisan daemons.
+        // Both are class_exists-guarded so the provider stays clean before Plan 05 ships them.
+        // Registered in boot() (not app/Console/Kernel.php) — per the module boundary rule
+        // (PATTERNS.md BackupDatabaseCommand analog).
+        if (class_exists(SyncServeCommand::class)) {
+            $this->commands([SyncServeCommand::class]);
+        }
+
+        if (class_exists(RelayServeCommand::class)) {
+            $this->commands([RelayServeCommand::class]);
         }
 
         // Plan 04: Devices & Sync settings section + pairing-flow modal.
