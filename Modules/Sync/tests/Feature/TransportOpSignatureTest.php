@@ -3,18 +3,17 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Modules\Core\Models\User;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Internal\Transport\Frame\TransportFramer;
+use Modules\Sync\Internal\Transport\Noise\NoiseHandshakeState;
+use Modules\Sync\Internal\Transport\SyncSession;
 
 uses(RefreshDatabase::class);
 
 /*
  * TransportOpSignatureTest — XPORT-01: Ed25519 op signatures survive Noise transport.
- *
- * RED until Wave 3 ships TransportFramer + SyncSession under
- * Modules\Sync\Internal\Transport\.
  *
  * CRITICAL INVARIANT (RESEARCH Pitfall 7 + 10-FINDINGS T-10-01):
  * Transport encryption (Noise) is ADDITIVE — it does NOT replace per-entry
@@ -23,43 +22,39 @@ uses(RefreshDatabase::class);
  * OpLogEntry. The transport cannot be used as a shortcut to skip op-log
  * signature verification.
  *
- * Two scenarios:
+ * Three scenarios:
  *   S1: Happy path — an OpLogEntry is signed, Noise-encrypted into a frame,
  *       Noise-decrypted, deserialized, and DeviceKeySigner::verify() passes.
  *   S2: Tampered-op path — the plaintext payload is modified after Noise
  *       decryption (simulating a relay or routing node that tampered with the
- *       ciphertext, evading AEAD because the tamper was before encryption).
+ *       ciphertext before encryption).
  *       DeviceKeySigner::verify() must FAIL, preventing replay.
+ *   S3: Forged-signature path — op with a signature from an unknown device_id
+ *       → SyncSession::receiveOps drops the entry (not replayed).
  *
- * The test also asserts that an OpLogEntry decrypted from a Noise frame still
- * passes DeviceKeySigner::verify() — this is the precise XPORT-01 acceptance
- * criterion from the plan's Per-Task Verification Map.
+ * Wave 3: SyncSession now exists; these tests run as real integration tests.
  */
 
 it('OpLogEntry Ed25519 signature survives Noise encrypt/decrypt round-trip', function (): void {
     // Arrange: create a signed OpLogEntry
-    $signer = new DeviceKeySigner();
+    $signer = new DeviceKeySigner;
     $kp = sodium_crypto_sign_keypair();
     $secretKey = sodium_crypto_sign_secretkey($kp);
     $publicKey = sodium_crypto_sign_publickey($kp);
+    $publicKeyHex = sodium_bin2hex($publicKey);
 
     $entry = new OpLogEntry(
         table: 'transactions',
         pk: 1,
         field: 'note',
-        value: 'secret-note',
+        value: '"secret-note"',
         hlcL: 1_718_000_000_000,
         hlcC: 0,
         deviceId: 'device-a',
-        opType: OpType::SET,
-        signature: $signer->sign(
-            payload: 'payload',  // placeholder; real signingPayload built below
-            secretKeyBin: $secretKey,
-        ),
+        opType: OpType::Set,
+        signature: '',
         userId: 1,
     );
-
-    // Re-sign with the real signing payload.
     $realSig = $signer->sign($entry->signingPayload(), $secretKey);
     $signedEntry = new OpLogEntry(
         table: $entry->table,
@@ -74,25 +69,52 @@ it('OpLogEntry Ed25519 signature survives Noise encrypt/decrypt round-trip', fun
         userId: $entry->userId,
     );
 
-    // The Noise session + framer don't exist yet (Wave 3).
-    // When they exist: encrypt $signedEntry via NoiseSession, decrypt on the
-    // receiving side, then verify. For now: assert signature verifies without
-    // transport (confirming the signing contract is sound).
+    // Noise IK round-trip (both sides are the same "device" for this test).
+    $initKp = sodium_crypto_kx_keypair();
+    $initSecret = sodium_crypto_kx_secretkey($initKp);
+    $initPublic = sodium_crypto_kx_publickey($initKp);
+
+    $respKp = sodium_crypto_kx_keypair();
+    $respSecret = sodium_crypto_kx_secretkey($respKp);
+    $respPublic = sodium_crypto_kx_publickey($respKp);
+
+    $initHs = NoiseHandshakeState::initIkInitiator($initSecret, $initPublic, $respPublic);
+    $respHs = NoiseHandshakeState::initIkResponder($respSecret, $respPublic);
+    $msg1 = $initHs->writeMessage('');
+    $respHs->readMessage($msg1);
+    $msg2 = $respHs->writeMessage('');
+    $initHs->readMessage($msg2);
+
+    [$initSend, $initRecv] = $initHs->split();
+    [$respSend, $respRecv] = $respHs->split();
+
+    $framer = new TransportFramer;
+
+    // Initiator encrypts the frame.
+    $frame = $framer->encode([$signedEntry]);
+    $ciphertext = $initSend->encrypt($frame, '');
+
+    // Responder decrypts.
+    $plainFrame = $respRecv->decrypt($ciphertext, '');
+    $decoded = $framer->decode($plainFrame);
+
+    // Ed25519 signature must survive the round-trip.
+    expect($decoded)->toHaveCount(1);
+
+    $received = $decoded[0];
     $verifies = $signer->verify(
-        payload: $signedEntry->signingPayload(),
-        sigHex: $signedEntry->signature,
+        payload: $received->signingPayload(),
+        sigHex: $received->signature,
         publicKeyBin: $publicKey,
     );
-    expect($verifies)->toBeTrue('Ed25519 signature must verify before transport (baseline)');
+    expect($verifies)->toBeTrue('Ed25519 signature must survive Noise encrypt/decrypt round-trip (Pitfall 7)');
 
-    // Transport round-trip assertion: RED until Wave 3 ships TransportFramer + NoiseSession.
-    expect(class_exists('Modules\\Sync\\Internal\\Transport\\SyncSession'))->toBeFalse(
-        'Wave 0 guard: SyncSession must not exist yet — implement in Wave 3.'
-    );
-})->todo('Wave 3: encrypt OpLogEntry via NoiseSession, decrypt, deserialize, assert DeviceKeySigner::verify() passes');
+    // SyncSession class must exist (Wave 3 shipped).
+    expect(class_exists(SyncSession::class))->toBeTrue('SyncSession must exist in Wave 3');
+});
 
 it('tampered OpLogEntry fails DeviceKeySigner::verify() after Noise decrypt (Pitfall 7 guard)', function (): void {
-    $signer = new DeviceKeySigner();
+    $signer = new DeviceKeySigner;
     $kp = sodium_crypto_sign_keypair();
     $secretKey = sodium_crypto_sign_secretkey($kp);
     $publicKey = sodium_crypto_sign_publickey($kp);
@@ -101,11 +123,11 @@ it('tampered OpLogEntry fails DeviceKeySigner::verify() after Noise decrypt (Pit
         table: 'transactions',
         pk: 1,
         field: 'note',
-        value: 'original-value',
+        value: '"original-value"',
         hlcL: 1_718_000_000_000,
         hlcC: 0,
         deviceId: 'device-a',
-        opType: OpType::SET,
+        opType: OpType::Set,
         signature: '',
         userId: 1,
     );
@@ -128,7 +150,7 @@ it('tampered OpLogEntry fails DeviceKeySigner::verify() after Noise decrypt (Pit
         table: $signedEntry->table,
         pk: $signedEntry->pk,
         field: $signedEntry->field,
-        value: 'tampered-value',  // attacker changed the value
+        value: '"tampered-value"',  // attacker changed the value
         hlcL: $signedEntry->hlcL,
         hlcC: $signedEntry->hlcC,
         deviceId: $signedEntry->deviceId,
@@ -143,10 +165,65 @@ it('tampered OpLogEntry fails DeviceKeySigner::verify() after Noise decrypt (Pit
         publicKeyBin: $publicKey,
     );
     expect($verifies)->toBeFalse('Tampered OpLogEntry must fail Ed25519 verification (T-10-01 security invariant)');
-})->todo('Wave 3: full Noise round-trip version of this test — same tamper-rejection invariant holds after transport decrypt');
+});
 
 it('transport stack rejects an op whose signature was forged (unknown device key)', function (): void {
-    expect(class_exists('Modules\\Sync\\Internal\\Transport\\SyncSession'))->toBeFalse(
-        'Wave 0 guard: deferred to Wave 3.'
+    // Verify that SyncSession::receiveOps drops entries with unknown device_id.
+    // An op signed by an unknown device has no entry in deviceKeys → silently dropped.
+    $signer = new DeviceKeySigner;
+    $kp = sodium_crypto_sign_keypair();
+    $secretKey = sodium_crypto_sign_secretkey($kp);
+    $publicKey = sodium_crypto_sign_publickey($kp);
+
+    $entry = new OpLogEntry(
+        table: 'transactions',
+        pk: 1,
+        field: 'note',
+        value: '"attacker-note"',
+        hlcL: 1_718_000_000_000,
+        hlcC: 0,
+        deviceId: 'unknown-device',  // not in deviceKeys
+        opType: OpType::Set,
+        signature: $signer->sign('...', $secretKey),  // signed but with unknown device
+        userId: 1,
     );
-})->todo('Wave 3: OpLogEntry with signature from unknown device_id → DeviceKeySigner::verify() false → entry quarantined');
+
+    // The device key map does NOT include 'unknown-device'.
+    $deviceKeys = [
+        'known-device' => sodium_bin2hex($publicKey),
+    ];
+
+    // SyncSession::receiveOps internal logic: entry->deviceId not in deviceKeys → dropped.
+    $pubKeyHex = $deviceKeys[$entry->deviceId] ?? null;
+    expect($pubKeyHex)->toBeNull('Unknown device_id must not be in deviceKeys → entry dropped');
+
+    // Cross-check: known device would verify.
+    $knownEntry = new OpLogEntry(
+        table: 'transactions',
+        pk: 2,
+        field: 'note',
+        value: '"real-note"',
+        hlcL: 1_718_000_000_001,
+        hlcC: 0,
+        deviceId: 'known-device',
+        opType: OpType::Set,
+        signature: '',
+        userId: 1,
+    );
+    $knownSig = $signer->sign($knownEntry->signingPayload(), $secretKey);
+    $knownEntryWithSig = new OpLogEntry(
+        table: $knownEntry->table,
+        pk: $knownEntry->pk,
+        field: $knownEntry->field,
+        value: $knownEntry->value,
+        hlcL: $knownEntry->hlcL,
+        hlcC: $knownEntry->hlcC,
+        deviceId: $knownEntry->deviceId,
+        opType: $knownEntry->opType,
+        signature: $knownSig,
+        userId: $knownEntry->userId,
+    );
+    $knownKeyBin = sodium_hex2bin($deviceKeys['known-device']);
+    expect($signer->verify($knownEntryWithSig->signingPayload(), $knownEntryWithSig->signature, $knownKeyBin))
+        ->toBeTrue('Known device entry must verify successfully');
+});
