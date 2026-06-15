@@ -153,6 +153,39 @@ final class SyncSession
     }
 
     /**
+     * Noise-encrypt an arbitrary binary or JSON string.
+     *
+     * Used by SyncWebSocketHandler to encrypt catch-up control messages
+     * (CATCH_UP_REQUEST / CATCH_UP_RESPONSE / CATCH_UP_COMPLETE JSON).
+     *
+     * @throws \RuntimeException if session not authenticated yet or on AEAD failure.
+     */
+    public function encrypt(string $plaintext): string
+    {
+        if ($this->noiseSession === null) {
+            throw new \RuntimeException('SyncSession::encrypt — session not authenticated yet.');
+        }
+
+        return $this->noiseSession->encrypt($plaintext);
+    }
+
+    /**
+     * Noise-decrypt a binary ciphertext to a plaintext string.
+     *
+     * Used by SyncWebSocketHandler to decrypt catch-up control messages.
+     *
+     * @throws \RuntimeException if session not authenticated or AEAD fails.
+     */
+    public function decrypt(string $ciphertext): string
+    {
+        if ($this->noiseSession === null) {
+            throw new \RuntimeException('SyncSession::decrypt — session not authenticated yet.');
+        }
+
+        return $this->noiseSession->decrypt($ciphertext);
+    }
+
+    /**
      * Encrypt and frame a list of OpLogEntry objects for sending over the wire.
      *
      * Frames are encoded via TransportFramer then Noise-encrypted.
