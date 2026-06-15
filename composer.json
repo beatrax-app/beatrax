@@ -45,7 +45,7 @@
         "spatie/laravel-activitylog": "^5.0",
         "spatie/laravel-data": "^4.0",
         "spatie/pdf-to-text": "^1.0",
-        "symfony/process": "^7.0",
+        "symfony/process": "^8.1",
         "symfony/yaml": "^8.0",
         "thenetworg/oauth2-azure": "^2.2",
         "zbateson/mail-mime-parser": "^4.0"
