@@ -13,6 +13,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
 use Modules\Sync\Internal\Pairing\PairingStateMachine;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
@@ -462,6 +463,13 @@ final class PairingFlowModal extends Component
             return [];
         }
 
-        return $safetyDeriver->deriveWords($initiatorEd, $responderEd);
+        // The stored hex is validated at the accept/issue trust boundary, but
+        // guard the decode anyway (WR-01): a malformed key yields the generic
+        // invalid-code flash instead of an uncaught SodiumException 500.
+        try {
+            return $safetyDeriver->deriveWords($initiatorEd, $responderEd);
+        } catch (InvalidPublicKeyException) {
+            return [];
+        }
     }
 }

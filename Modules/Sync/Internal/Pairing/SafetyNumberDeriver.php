@@ -34,6 +34,13 @@ final class SafetyNumberDeriver
      */
     public function derive(string $pubKeyA, string $pubKeyB): array
     {
+        // A safety-number derived from a short/over-long key is meaningless
+        // (WR-01): assert the raw 32-byte Ed25519 length up front rather than
+        // silently hashing junk.
+        if (strlen($pubKeyA) !== 32 || strlen($pubKeyB) !== 32) {
+            throw new InvalidPublicKeyException('SafetyNumberDeriver: public keys must be exactly 32 raw bytes.');
+        }
+
         $keys = [$pubKeyA, $pubKeyB];
         sort($keys); // Binary sort → identical order regardless of argument order.
         $hash = hash('sha256', implode('', $keys), true); // 32 raw bytes.
@@ -60,9 +67,28 @@ final class SafetyNumberDeriver
      */
     public function deriveWords(string $pubKeyAHex, string $pubKeyBHex): array
     {
-        $a = sodium_hex2bin($pubKeyAHex);
-        $b = sodium_hex2bin($pubKeyBHex);
+        return $this->derive(
+            self::hexToRawKey($pubKeyAHex),
+            self::hexToRawKey($pubKeyBHex),
+        );
+    }
 
-        return $this->derive($a, $b);
+    /**
+     * Validate a public key is exactly 64 lowercase hex chars and decode it to
+     * its raw 32 bytes, throwing a typed domain exception (NOT a raw
+     * SodiumException) on malformed input so the Livewire layer can handle it as
+     * the generic "invalid code" flash rather than a 500 (WR-01).
+     */
+    public static function hexToRawKey(string $hex): string
+    {
+        if (strlen($hex) !== 64 || ! ctype_xdigit($hex) || strtolower($hex) !== $hex) {
+            throw new InvalidPublicKeyException('Public key must be exactly 64 lowercase hex characters.');
+        }
+
+        try {
+            return sodium_hex2bin($hex);
+        } catch (\SodiumException $e) {
+            throw new InvalidPublicKeyException('Public key is not valid hex.', 0, $e);
+        }
     }
 }
