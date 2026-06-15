@@ -132,6 +132,47 @@ final class SyncServiceProvider extends ServiceProvider
             // via app(OpLogWriter::class, [...]) or a factory closure added in Plan 03.
             $this->app->singleton(OpLogWriter::class);
         }
+
+        // Phase 13 transport services (class_exists-guarded — Waves 2-4 create these).
+        // Referenced by runtime-built FQCN strings so PHPStan stays clean before
+        // the classes exist. The provider is the single owner; Waves 2/3/4 create the
+        // classes and this guard picks them up without re-editing the provider.
+        // Plan 05 / Wave 5 is the ONLY other plan permitted to touch this provider
+        // (for sync:serve / relay:serve command host-wiring).
+        $transportNamespace = 'Modules\Sync\Internal\Transport\\';
+        $noiseNamespace = $transportNamespace.'Noise\\';
+        $discoveryNamespace = $transportNamespace.'Discovery\\';
+        $relayNamespace = $transportNamespace.'Relay\\';
+
+        // Phase 13 Wave 2: Noise state machine classes.
+        // NOT singletons — these hold mutable crypto state and must be constructed fresh.
+        // The guards exist so the provider knows about them; actual wiring is per-call.
+        // No singleton registration: callers instantiate directly (NoiseHandshakeState
+        // does not need DI container resolution; it's a pure crypto state machine).
+
+        // Phase 13 Wave 3: transport session + peer exchanger + status service.
+        // SyncStatusService: stateless DB reader, safe as singleton (mirrors DeviceRegistryService).
+        $syncStatusService = 'Modules\Sync\Public\Services\SyncStatusService';
+        $this->singletonIfExists($syncStatusService);
+
+        // SyncSession: per-peer session (mutable, not singleton — each connection
+        // gets its own SyncSession). The guard ensures the container can resolve it
+        // if directly requested, but in practice constructed by the WS handler.
+        $this->singletonIfExists($transportNamespace.'SyncSession');
+
+        // PeerCatchUpExchanger: stateless request-response helper, safe as singleton.
+        $this->singletonIfExists($transportNamespace.'PeerCatchUpExchanger');
+
+        // Phase 13 Wave 4: relay client + config.
+        $this->singletonIfExists($relayNamespace.'RelayClient');
+        $this->singletonIfExists($relayNamespace.'RelayConfig');
+
+        // Phase 13 Wave 5 (mDNS discovery, D-07):
+        // MdnsAdvertiser and MdnsBrowser wrap a long-lived dns-sd/avahi process.
+        // NOT singletons in the DI container — the WS server owns the process lifecycle.
+        // Guards here ensure class_exists checks remain in one canonical place.
+        $this->singletonIfExists($discoveryNamespace.'MdnsAdvertiser');
+        $this->singletonIfExists($discoveryNamespace.'MdnsBrowser');
     }
 
     public function boot(Dispatcher $events): void
@@ -180,6 +221,15 @@ final class SyncServiceProvider extends ServiceProvider
             $pairingModal = $livewireNamespace.'PairingFlowModal';
             if (class_exists($pairingModal)) {
                 $livewire->component('sync.pairing-flow-modal', $pairingModal);
+            }
+
+            // Phase 13 Wave 3: sync-status Livewire surface (D-06).
+            // SyncStatusSection shows per-peer online/offline status + last-sync time.
+            // Registered by runtime FQCN so PHPStan stays clean before Wave 3 ships it.
+            // sync:serve and relay:serve command registration is Plan 05 scope — NOT here.
+            $syncStatus = $livewireNamespace.'SyncStatusSection';
+            if (class_exists($syncStatus)) {
+                $livewire->component('sync.sync-status-section', $syncStatus);
             }
         }
     }
