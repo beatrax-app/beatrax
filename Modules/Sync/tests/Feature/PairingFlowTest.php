@@ -77,3 +77,54 @@ it('completes issue -> accept -> both-confirm: state becomes confirmed and a con
     expect($device->confirmed_at)->not->toBeNull();
     expect($device->ed25519_public_key_hex)->toBe($responderEd);
 });
+
+it('refuses to admit a responder whose device_id collides with the local self-row, leaving self keys intact (WR-05)', function (): void {
+    $user = flowUser('flow-collision');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    // A local self device row.
+    $now = CarbonImmutable::now()->toIso8601String();
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => (int) $user->id,
+        'device_id' => 'self-device',
+        'name' => 'This device (Mac)',
+        'ed25519_public_key_hex' => str_repeat('1', 64),
+        'x25519_public_key_hex' => str_repeat('2', 64),
+        'safety_number_words' => 'self words',
+        'is_self' => 1,
+        'paired_at' => $now,
+        'confirmed_at' => $now,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    // A responder presents the SAME device_id as the self-row.
+    $token = $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
+    $service->accept($token, (int) $user->id, 'self-device', str_repeat('c', 64), str_repeat('d', 64));
+
+    $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+    $service->confirm((int) $row->id, (int) $user->id, 'device-init');
+    $service->confirm((int) $row->id, (int) $user->id, 'self-device');
+
+    // The self-row's keys must be untouched — the collision was refused.
+    $self = $db->connection()->table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('is_self', 1)
+        ->first();
+
+    expect($self->ed25519_public_key_hex)->toBe(str_repeat('1', 64));
+    expect($self->x25519_public_key_hex)->toBe(str_repeat('2', 64));
+
+    // No second (non-self) row was created for the colliding device_id.
+    $nonSelf = $db->connection()->table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('is_self', 0)
+        ->count();
+
+    expect($nonSelf)->toBe(0);
+});
