@@ -2990,10 +2990,21 @@ td.date,
  * At >=768px all order classes are reset and the existing space-y-12 block
  * layout is preserved exactly.
  */
+/* Desktop (default): flex column carrying the 3rem vertical rhythm the
+ * dashboard sections previously got from `space-y-12`. The `.dashboard-main`
+ * wrapper lost that utility when the phone-order wrapper was introduced
+ * (922da85, feat 04-06), so on desktop — where the phone media query below
+ * does NOT apply — the top sections collapsed flush against each other.
+ * Using flex+gap here (instead of re-adding space-y-12 on the element) avoids
+ * the phone layout double-spacing (flex `gap` + space-y `margin-top`). */
+.dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6, 24px);
+}
+
 @media (max-width: 767px) {
     .dashboard-main {
-        display: flex;
-        flex-direction: column;
         gap: var(--space-8, 2rem);
     }
     .dashboard-phone-order-1  { order: 1; }
