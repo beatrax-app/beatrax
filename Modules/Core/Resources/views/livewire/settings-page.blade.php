@@ -278,6 +278,13 @@
         </section>
     </div>
 
+    {{-- ===== Devices & Sync (device identity + pairing, Phase 12) ===== --}}
+    <div class="{{ $card }}">
+        <section id="devices-sync">
+            @livewire('sync.devices-and-sync-settings-section')
+        </section>
+    </div>
+
     {{-- ===== Importing (auto-import + aliases) ===== --}}
     <div class="{{ $card }} space-y-8">
         <section class="space-y-2">
