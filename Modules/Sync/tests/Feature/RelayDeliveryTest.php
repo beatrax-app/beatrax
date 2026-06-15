@@ -40,7 +40,7 @@ it('relay mailbox accepts a ciphertext blob and marks it pending (delivered_at I
         'expires_at' => '2026-07-15T10:00:00Z',
     ]);
 
-    /** @var \stdClass $row */
+    /** @var stdClass $row */
     $row = DB::table('relay_mailbox')
         ->where('recipient_did', 'device-recipient')
         ->first();
@@ -67,7 +67,7 @@ it('drain marks a pending blob as delivered (sets delivered_at)', function (): v
         ->where('id', $id)
         ->update(['delivered_at' => '2026-06-15T10:01:00Z']);
 
-    /** @var \stdClass $row */
+    /** @var stdClass $row */
     $row = DB::table('relay_mailbox')->where('id', $id)->first();
 
     expect($row->delivered_at)->not->toBeNull('After drain, delivered_at must be set');
@@ -123,8 +123,8 @@ it('addressing is isolated: recipient A cannot drain recipient B mailbox', funct
     expect($wrongRecipientBlobs)->toBe(0, 'device-attacker must not see device-target\'s pending blobs');
 });
 
-it('RelayClient class does not exist yet (Wave 4 guard)', function (): void {
-    expect(class_exists('Modules\\Sync\\Internal\\Transport\\Relay\\RelayClient'))->toBeFalse(
-        'Wave 0 guard: RelayClient must not exist yet — implement in Wave 4.'
+it('RelayClient class exists (Wave 4 implementation landed)', function (): void {
+    expect(class_exists('Modules\\Sync\\Internal\\Transport\\Relay\\RelayClient'))->toBeTrue(
+        'Wave 4: RelayClient must exist — implemented in Plan 13-03.'
     );
-})->todo('Wave 4: RelayClient::deliver() POSTs ciphertext to relay endpoint; ::drain() retrieves pending blobs');
+});
