@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -219,10 +220,13 @@ final class DevicesAndSyncSettingsSection extends Component
     // -------------------------------------------------------------------------
 
     /**
-     * Refresh the device list after the pairing modal admits a new device.
+     * The pairing modal closed (cancel / done): clear the open flag and refresh
+     * the device list so a newly-confirmed peer appears.
      */
-    public function refreshDevices(CurrentUser $currentUser, DeviceRegistryService $registry): void
+    #[On('pairing-closed')]
+    public function onPairingClosed(CurrentUser $currentUser, DeviceRegistryService $registry): void
     {
+        $this->pairingModalOpen = false;
         $this->devices = $this->loadDevices($registry, $currentUser->user()->id);
     }
 

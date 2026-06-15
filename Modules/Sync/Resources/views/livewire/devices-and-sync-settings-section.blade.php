@@ -182,12 +182,8 @@
         </div>
     @endif
 
-    {{-- ===== Pairing-flow modal (D-11) ===== --}}
+    {{-- ===== Pairing-flow modal (D-11) — the component owns its own flux:modal ===== --}}
     @if ($pairingModalOpen)
-        <flux:modal wire:model="pairingModalOpen" class="md:max-w-md">
-            <div class="space-y-4 p-6">
-                @livewire('sync.pairing-flow-modal')
-            </div>
-        </flux:modal>
+        @livewire('sync.pairing-flow-modal', ['open' => true], key('pairing-flow-modal'))
     @endif
 </div>
