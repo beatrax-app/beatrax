@@ -189,7 +189,10 @@ final class MdnsBrowser
             }
 
             $peer = $this->parseLine($line, $confirmedDeviceIds);
-            if ($peer !== null) {
+            // WR-09: drop unresolved peers (host='' / port=0). dns-sd -B browse
+            // yields these without a -L resolve step; handing them to a caller
+            // would produce a non-connectable ws://:0/sync URL.
+            if ($peer !== null && $peer->isConnectable()) {
                 $peers[] = $peer;
             }
         }
