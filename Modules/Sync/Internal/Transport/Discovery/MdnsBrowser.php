@@ -51,6 +51,8 @@ use Symfony\Component\Process\Process;
  */
 final class MdnsBrowser
 {
+    use LocatesSystemBinary;
+
     /**
      * mDNS service type to browse (must match MdnsAdvertiser::SERVICE_TYPE).
      */
@@ -358,22 +360,6 @@ final class MdnsBrowser
         $avahiBrowse = $this->findBinary('avahi-browse');
         if ($avahiBrowse !== null) {
             return [$avahiBrowse, '-p', '-r', '-t', self::SERVICE_TYPE];
-        }
-
-        return null;
-    }
-
-    /**
-     * Look up a binary in standard system paths.
-     */
-    private function findBinary(string $name): ?string
-    {
-        $paths = ['/usr/bin', '/usr/local/bin', '/bin', '/usr/sbin'];
-        foreach ($paths as $dir) {
-            $full = $dir.DIRECTORY_SEPARATOR.$name;
-            if (is_file($full) && is_executable($full)) {
-                return $full;
-            }
         }
 
         return null;
