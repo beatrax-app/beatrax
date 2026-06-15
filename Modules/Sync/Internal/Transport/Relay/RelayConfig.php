@@ -161,6 +161,35 @@ final class RelayConfig
     }
 
     /**
+     * Derive a per-device drain token bound to a specific device_id (CR-04).
+     *
+     * The relay's stored auth token is a shared secret. A single shared bearer
+     * token is incompatible with the multi-device ZK posture: any token-holder
+     * could otherwise drain (and delete) an arbitrary recipient's mailbox by
+     * passing any `did`. To bind authorization to the requested mailbox we derive
+     * a token = HMAC-SHA256(authToken, device_id). The relay verifies the
+     * presented token against the value derived for the `$did` it is about to
+     * drain, so a token scoped to device A cannot drain device B's mailbox.
+     *
+     * ZK is preserved: the relay only ever HMACs the device_id (already routing
+     * metadata it can see) with a secret it already holds. It learns no plaintext,
+     * no user_id, and never touches blob content.
+     *
+     * Returns null when no relay auth token is configured (token-less relay).
+     *
+     * @param  string  $deviceId  The device_id whose mailbox the token authorizes.
+     */
+    public function deriveDeviceToken(string $deviceId): ?string
+    {
+        $secret = $this->authToken();
+        if ($secret === null || $secret === '' || $deviceId === '') {
+            return null;
+        }
+
+        return hash_hmac('sha256', $deviceId, $secret);
+    }
+
+    /**
      * Persist the relay auth token to `secretsPath()/sync-relay-token.json` with chmod 600.
      *
      * Mirrors the DeviceIdentityService key-file write pattern:

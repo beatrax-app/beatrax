@@ -94,7 +94,9 @@ final readonly class RelayClient
      * ZK: blobs are returned opaque — never decoded here.
      *
      * @param  string  $deviceId  Authenticated device draining its mailbox
-     * @param  string  $authToken  Bearer token for relay authentication
+     * @param  string  $authToken  Per-device bearer token bound to $deviceId
+     *                             (RelayConfig::deriveDeviceToken($deviceId)); a
+     *                             relay-wide token is rejected by the server (CR-04).
      * @return list<array<string, mixed>>
      *
      * @throws RuntimeException when the request fails.
@@ -135,7 +137,10 @@ final readonly class RelayClient
      * GC'd after the delivered TTL.
      *
      * @param  int  $id  relay_mailbox.id from a drain() response row
-     * @param  string  $authToken  Bearer token for relay authentication
+     * @param  string  $authToken  Per-device bearer token bound to the recipient
+     *                             device that owns the row
+     *                             (RelayConfig::deriveDeviceToken($recipientDid)); a
+     *                             relay-wide token is rejected by the server (CR-04).
      *
      * @throws RuntimeException when the request fails.
      */
