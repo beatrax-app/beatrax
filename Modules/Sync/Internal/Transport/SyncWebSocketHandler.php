@@ -287,8 +287,11 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         $decryptedReq = $session->decrypt($reqMsg->buffer());
         $req = $this->catchUp->parseControlMessage($decryptedReq);
 
-        $peerHlcL = isset($req['hlc_l']) && is_int($req['hlc_l']) ? $req['hlc_l'] : 0;
-        $peerHlcC = isset($req['hlc_c']) && is_int($req['hlc_c']) ? $req['hlc_c'] : 0;
+        // WR-06: clamp watermark fields to non-negative. A negative hlc_l/hlc_c
+        // would make opsAfterWatermark()'s `> $peerHlcL` predicate match the
+        // entire op_log — a full-history dump (amplification) on every reconnect.
+        $peerHlcL = isset($req['hlc_l']) && is_int($req['hlc_l']) ? max(0, $req['hlc_l']) : 0;
+        $peerHlcC = isset($req['hlc_c']) && is_int($req['hlc_c']) ? max(0, $req['hlc_c']) : 0;
 
         // 2. Send our CATCH_UP_RESPONSE: control msg + op frames.
         $frames = $this->catchUp->opsAfterWatermark($this->userId, $peerHlcL, $peerHlcC);
