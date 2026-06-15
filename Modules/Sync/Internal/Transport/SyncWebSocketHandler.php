@@ -139,9 +139,20 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         }
 
         // Step 2: Build a SyncSession and run the auth gate.
+        //
+        // WR-04: the confirmed-device key map is read ONCE here and reused as a
+        // connect-time SNAPSHOT for the whole session (replayer, catch-up, live
+        // loop). Revocation/un-pairing therefore only takes effect on the peer's
+        // NEXT reconnect — the live loop is bounded by READ_TIMEOUT_SECONDS so a
+        // stale trust set cannot outlive a long idle gap. This is an explicit,
+        // documented trade-off: re-reading the map per frame would add a DB query
+        // to the hot path. Callers needing immediate revocation must drop the
+        // connection (which forces a re-read on reconnect).
+        $deviceKeys = $this->registryService->deviceKeys($this->userId);
+
         $replayer = new OpLogReplayer(
             db: $this->db,
-            deviceKeys: $this->registryService->deviceKeys($this->userId),
+            deviceKeys: $deviceKeys,
         );
 
         $session = new SyncSession(
@@ -169,8 +180,9 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         ]);
 
         // Step 3: Bilateral catch-up exchange (RESEARCH Pattern 6).
+        // Reuses the connect-time $deviceKeys snapshot (WR-04).
         try {
-            $this->runCatchUp($client, $session);
+            $this->runCatchUp($client, $session, $deviceKeys);
         } catch (\Throwable $e) {
             $this->logger->warning('SyncWebSocketHandler: catch-up exchange failed.', [
                 'error' => $e->getMessage(),
@@ -181,9 +193,8 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             return;
         }
 
-        // Step 4: Live streaming loop.
-        $deviceKeys = $this->registryService->deviceKeys($this->userId);
-
+        // Step 4: Live streaming loop. Reuses the connect-time $deviceKeys
+        // snapshot (WR-04) — same trust set as catch-up and the replayer.
         try {
             // Each live read is bounded by an idle timeout (CR-06): a peer that
             // authenticates then stalls is dropped rather than pinning this fiber.
@@ -260,11 +271,13 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
      *   3. Send our CATCH_UP_REQUEST (encrypted JSON).
      *   4. Receive initiator's CATCH_UP_RESPONSE (encrypted JSON) + encrypted op frames.
      *   5. Exchange CATCH_UP_COMPLETE (encrypted JSON).
+     *
+     * @param  array<string, string>  $deviceKeys  Connect-time confirmed-device key
+     *                                             snapshot (WR-04), shared with the
+     *                                             replayer and the live loop.
      */
-    private function runCatchUp(WebsocketClient $client, SyncSession $session): void
+    private function runCatchUp(WebsocketClient $client, SyncSession $session, array $deviceKeys): void
     {
-        $deviceKeys = $this->registryService->deviceKeys($this->userId);
-
         // 1. Receive peer's CATCH_UP_REQUEST (timeout-bounded — CR-06).
         $reqMsg = $this->receiveWithTimeout($client, self::READ_TIMEOUT_SECONDS, 'catch-up request');
         if ($reqMsg === null) {
