@@ -136,6 +136,29 @@ it('rejects an accept whose responder public key is not valid 64-char hex (WR-01
     expect($result)->toBeFalse();
 });
 
+it('prunes expired and terminal token rows on the next issue (WR-04)', function (): void {
+    $user = tokenUser('token-prune');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    // An abandoned token from an earlier attempt.
+    $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
+    expect($db->connection()->table('pairing_tokens')->where('user_id', $user->id)->count())->toBe(1);
+
+    // Time passes well past the first token's TTL, then the user re-issues.
+    CarbonImmutable::setTestNow('2026-06-15 10:20:00');
+    $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
+
+    // The stale row was pruned; only the fresh pending token remains.
+    $rows = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->get();
+    expect($rows)->toHaveCount(1);
+    expect($rows->first()->state)->toBe('pending');
+});
+
 it('it_rejects_expired_token', function (): void {
     $user = tokenUser('token-expired');
 
