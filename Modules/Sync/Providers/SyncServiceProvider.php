@@ -8,17 +8,25 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
+use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\Identity\DeviceNameDetector;
 use Modules\Sync\Internal\Listeners\SyncCaptureListener;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Merge\Strategies\GCounterStrategy;
 use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Internal\Pairing\Bip39WordList;
+use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Modules\Sync\Public\Services\DeviceRegistryService;
 
 /**
  * Single-owner provider for the Sync module.
@@ -59,16 +67,61 @@ final class SyncServiceProvider extends ServiceProvider
         // DeviceKeySigner singleton (stateless verifier, safe to share).
         $this->app->singleton(DeviceKeySigner::class);
 
-        // Production OpLogReplayer with empty device-key map by default.
+        // Production OpLogReplayer fed the confirmed-only device-key map
+        // (Phase 12: turns the empty Phase 11 stub into the real registry map).
         // Tests inject their own throwaway map by constructing OpLogReplayer directly.
         $this->app->bind(
             OpLogReplayer::class,
-            fn () => new OpLogReplayer(
-                $this->app->make(DatabaseManager::class),
-                [],
-                $this->app->make(MergeRulesRegistry::class),
-            ),
+            function () {
+                $deviceKeys = class_exists(DeviceRegistryService::class)
+                    ? $this->app->make(DeviceRegistryService::class)->deviceKeys($this->currentUserId())
+                    : [];
+
+                return new OpLogReplayer(
+                    $this->app->make(DatabaseManager::class),
+                    $deviceKeys,
+                    $this->app->make(MergeRulesRegistry::class),
+                );
+            },
         );
+
+        // Phase 12: device-identity services (class_exists-guarded so plans wire
+        // independently). Each is stateless / DI-resolved, safe to share.
+        if (class_exists(DeviceIdentityService::class)) {
+            $this->app->singleton(DeviceIdentityService::class);
+        }
+        if (class_exists(DeviceIdentityLoader::class)) {
+            $this->app->singleton(DeviceIdentityLoader::class);
+        }
+        if (class_exists(DeviceNameDetector::class)) {
+            $this->app->singleton(DeviceNameDetector::class);
+        }
+        if (class_exists(DeviceRegistryService::class)) {
+            $this->app->singleton(DeviceRegistryService::class);
+        }
+
+        // Phase 12 pairing services. SafetyNumberDeriver needs the BIP39 word
+        // list as its sole constructor arg; bind it explicitly so callers can
+        // resolve it without re-passing the list.
+        if (class_exists(SafetyNumberDeriver::class) && class_exists(Bip39WordList::class)) {
+            $this->app->singleton(
+                SafetyNumberDeriver::class,
+                fn () => new SafetyNumberDeriver(Bip39WordList::WORDS),
+            );
+        }
+
+        // The Plan 03 pairing classes auto-wire the moment they exist. They are
+        // referenced by runtime-built FQCN (not `use` imports / `::class`) so
+        // this provider stays PHPStan-clean before Plan 03 ships them.
+        $pairingNamespace = 'Modules\Sync\Internal\Pairing\\';
+        foreach ([
+            'PairingTokenService',
+            'PairingStateMachine',
+            'WordCodeEncoder',
+            'QrPayloadBuilder',
+        ] as $pairingClass) {
+            $this->singletonIfExists($pairingNamespace.$pairingClass);
+        }
 
         // Plan 03 injection point: OpLogWriter requires device credentials resolved
         // at runtime. This guard lets Plan 03 wire the real singleton without modifying
@@ -108,6 +161,56 @@ final class SyncServiceProvider extends ServiceProvider
                 'sync.sync-health-page',
                 SyncHealthPage::class,
             );
+        }
+
+        // Plan 04: Devices & Sync settings section + pairing-flow modal.
+        // Referenced by runtime-built FQCN (not `use` imports / `::class`) so
+        // this provider stays PHPStan-clean before Plan 04 ships them; they
+        // register the moment they exist on disk.
+        if (class_exists(LivewireManager::class)) {
+            /** @var LivewireManager $livewire */
+            $livewire = $this->app->make(LivewireManager::class);
+
+            $livewireNamespace = 'Modules\Sync\Internal\Http\Livewire\\';
+            $devicesSection = $livewireNamespace.'DevicesAndSyncSettingsSection';
+            if (class_exists($devicesSection)) {
+                $livewire->component('sync.devices-and-sync-settings-section', $devicesSection);
+            }
+
+            $pairingModal = $livewireNamespace.'PairingFlowModal';
+            if (class_exists($pairingModal)) {
+                $livewire->component('sync.pairing-flow-modal', $pairingModal);
+            }
+        }
+    }
+
+    /**
+     * Register a singleton for a class that may not exist yet (forward-looking
+     * Plan 03/04 wiring). The class name arrives as a runtime-built string so
+     * PHPStan does not fold the class_exists() guard to an impossible type.
+     */
+    private function singletonIfExists(string $class): void
+    {
+        if (class_exists($class)) {
+            $this->app->singleton($class);
+        }
+    }
+
+    /**
+     * Resolve the authenticated user id for the OpLogReplayer device-key map,
+     * falling back to 0 in console / unauthenticated contexts so the bind
+     * never throws during boot.
+     */
+    private function currentUserId(): int
+    {
+        if (! $this->app->bound(CurrentUser::class)) {
+            return 0;
+        }
+
+        try {
+            return $this->app->make(CurrentUser::class)->user()->id;
+        } catch (NotAuthenticatedException) {
+            return 0;
         }
     }
 }
