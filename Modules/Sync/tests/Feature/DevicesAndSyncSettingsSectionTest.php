@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Http\Livewire\DevicesAndSyncSettingsSection;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 
@@ -125,4 +126,59 @@ it('opens the hosted pairing modal when the open-pairing-modal event is dispatch
         ->dispatch('open-pairing-modal')
         ->assertSet('open', true)
         ->assertSet('step', 'choose_direction');
+});
+
+it('flags an http:// relay endpoint as insecure and renders the warning, https:// as secure (T-13-08)', function (): void {
+    // UAT item 4: entering a non-HTTPS relay URL must surface the amber
+    // insecure-connection warning banner; an https:// URL must not.
+    $user = settingsUser('devices-relay-insecure');
+    $this->actingAs($user);
+
+    $relayPath = UserDataPathService::appPath('sync/relay.json');
+
+    try {
+        // http:// → insecure flag set + warning banner rendered
+        // (the relay field + warning render only once sync is enabled)
+        Livewire::test(DevicesAndSyncSettingsSection::class)
+            ->set('appLockConfigured', true)
+            ->set('syncEnabled', true)
+            ->set('relayEndpointUrl', 'http://relay.example.com')
+            ->call('saveRelayEndpoint')
+            ->assertSet('relayIsInsecure', true)
+            ->assertSet('relayFlashMessage', 'Relay endpoint saved.')
+            ->assertSee('relay-insecure-warning', escape: false)
+            ->assertSee('uses plain HTTP');
+
+        // https:// → no warning
+        Livewire::test(DevicesAndSyncSettingsSection::class)
+            ->set('appLockConfigured', true)
+            ->set('syncEnabled', true)
+            ->set('relayEndpointUrl', 'https://relay.example.com')
+            ->call('saveRelayEndpoint')
+            ->assertSet('relayIsInsecure', false)
+            ->assertSet('relayFlashMessage', 'Relay endpoint saved.')
+            ->assertDontSee('relay-insecure-warning', escape: false);
+
+        // clear → reverts to not-configured, no warning
+        Livewire::test(DevicesAndSyncSettingsSection::class)
+            ->set('appLockConfigured', true)
+            ->set('relayEndpointUrl', '')
+            ->call('saveRelayEndpoint')
+            ->assertSet('relayIsInsecure', false)
+            ->assertSet('relayFlashMessage', 'Relay endpoint cleared.');
+    } finally {
+        @unlink($relayPath);
+    }
+});
+
+it('blocks a relay-endpoint save behind the app-lock gate (T-13-18)', function (): void {
+    $user = settingsUser('devices-relay-gate');
+    $this->actingAs($user);
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('appLockConfigured', false)
+        ->set('relayEndpointUrl', 'http://relay.example.com')
+        ->call('saveRelayEndpoint')
+        ->assertSet('relayFlashMessage', 'Set an app lock first to change sync settings.')
+        ->assertSet('relayIsInsecure', false);
 });
