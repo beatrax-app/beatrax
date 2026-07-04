@@ -14,10 +14,16 @@ use Livewire\Component;
 use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Events\CategorizationDiverged;
+use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
+use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Modules\Tax\Public\Actions\TagTransaction;
+use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -60,6 +66,18 @@ final class TransactionDetail extends Component
 {
     use HandlesTaxTagging;
 
+    /**
+     * Transaction types the split editor is offered for (Req 6, D-07/D-08).
+     * `transfer_in`/`transfer_out` are excluded — they own the paired
+     * equal-and-opposite invariant via `pair_transaction_id`. Mirrors
+     * `SaveTransactionSplit::SPLITTABLE_TYPES` (duplicated intentionally,
+     * same convention as the `parseAmount()` duplication below — the
+     * action re-validates independently, this is a UI-layer gate only).
+     *
+     * @var list<string>
+     */
+    private const SPLITTABLE_TYPES = ['expense', 'income', 'fee', 'refund', 'adjustment'];
+
     public int $transactionId = 0;
 
     /**
@@ -77,9 +95,67 @@ final class TransactionDetail extends Component
     /** Flash indicator set to true after a successful note save. */
     public bool $noteSaved = false;
 
-    public function mount(int $transactionId, CurrentUser $currentUser, DatabaseManager $db): void
+    // ── Split editor state (Phase 13.1 Plan 05) ──────────────────────────
+
+    /**
+     * Whether the inline split editor is currently expanded — true either
+     * because the transaction already carries persisted legs, or because
+     * the user just clicked "Split into categories" for a fresh split.
+     */
+    public bool $editingSplit = false;
+
+    /**
+     * Whether the transaction currently owns PERSISTED `transaction_splits`
+     * rows. Distinct from `$editingSplit`: a freshly-opened, never-saved
+     * split editor has `editingSplit = true` but `hasPersistedSplit =
+     * false` (D-03a — nothing persists until "Save split"). Gates the
+     * whole-transaction tax section suppression (D-06) and the "Tax tags
+     * are set per category below." note (UI-SPEC §7.1).
+     */
+    public bool $hasPersistedSplit = false;
+
+    /**
+     * In-memory leg rows. Session-local until `saveSplit()` persists them
+     * (D-03a) — opening the editor or editing a field never touches
+     * `transaction_splits`. `categoryId` is typed `int|string|null` because
+     * Livewire's `wire:model` on a `<select>` always arrives as a string
+     * (or `''` for the empty option); every read normalises via
+     * `legCategoryId()` before use.
+     *
+     * @var list<array{id: ?int, categoryId: int|string|null, amount: string, note: string, tax: bool}>
+     */
+    public array $legs = [];
+
+    /**
+     * Server-truthful "remaining to assign", computed via the Money VO
+     * (UI-SPEC §12 — no client math). Positive = still to assign, negative
+     * = over-allocated by |value|, zero = exact (save-enabled).
+     */
+    public int $remainingMinor = 0;
+
+    /**
+     * Page-level error banner (UI-SPEC §9.5) — set when the server rejects
+     * a save (SplitSumMismatchException, invalid leg, etc). Rendered via
+     * `.wiz-error`.
+     */
+    public ?string $splitError = null;
+
+    /** True while the "Unsplit transaction" two-step confirm is showing (§8.1). */
+    public bool $confirmUnsplit = false;
+
+    /** Index into `$legs` of the radio-selected unsplit survivor (§8.1). */
+    public ?int $unsplitSurvivorIndex = null;
+
+    /** True while the remove-to-one-leg two-step confirm is showing (§8.2). */
+    public bool $confirmRemoveToOne = false;
+
+    /** Index into `$legs` the user attempted to remove while only 2 remained (§8.2). */
+    public ?int $pendingRemoveIndex = null;
+
+    public function mount(int $transactionId, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery): void
     {
         $this->transactionId = $transactionId;
+        $userId = $currentUser->user()->id;
 
         // The raw Query Builder `exists()` call is used here instead of
         // Eloquent's `Transaction::query()->exists()` to clear PHPStan
@@ -91,7 +167,7 @@ final class TransactionDetail extends Component
         $row = $db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
-            ->where('user_id', $currentUser->user()->id)
+            ->where('user_id', $userId)
             ->first(['id', 'note']);
 
         if ($row === null) {
@@ -103,6 +179,8 @@ final class TransactionDetail extends Component
 
         // Load the existing note into the Livewire wire:model property.
         $this->note = is_string($row->note) ? $row->note : '';
+
+        $this->loadSplitState($currentUser, $db, $taxTagQuery);
     }
 
     /**
@@ -380,24 +458,509 @@ final class TransactionDetail extends Component
         $this->redirect($urls->route('transactions.index'), navigate: true);
     }
 
+    // ── Split editor actions (Phase 13.1 Plan 05) ────────────────────────
+
+    /**
+     * Open the split editor for a not-yet-split transaction. Seeds exactly
+     * 2 in-memory legs — leg 0 = current category + full parent amount,
+     * leg 1 = blank/€0,00 — and persists NOTHING (D-03a). No-op if the
+     * transaction is already split (its legs are already loaded by
+     * `loadSplitState()` at mount time).
+     */
+    public function openSplitEditor(CurrentUser $currentUser, DatabaseManager $db): void
+    {
+        if ($this->hasPersistedSplit) {
+            return;
+        }
+
+        $userId = $currentUser->user()->id;
+        $parent = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)
+            ->first(['category_id', 'settled_amount_minor']);
+
+        if ($parent === null) {
+            return;
+        }
+
+        $categoryId = is_numeric($parent->category_id) ? (int) $parent->category_id : null;
+        $absMinor = abs(is_numeric($parent->settled_amount_minor) ? (int) $parent->settled_amount_minor : 0);
+
+        $this->legs = [
+            ['id' => null, 'categoryId' => $categoryId, 'amount' => self::formatAbsAmount($absMinor), 'note' => '', 'tax' => false],
+            ['id' => null, 'categoryId' => null, 'amount' => self::formatAbsAmount(0), 'note' => '', 'tax' => false],
+        ];
+        $this->editingSplit = true;
+        $this->splitError = null;
+
+        $this->recomputeRemaining($currentUser, $db);
+    }
+
+    /** Appends a blank leg (amount €0,00, no category) — in-memory only. */
+    public function addLeg(): void
+    {
+        $this->legs[] = ['id' => null, 'categoryId' => null, 'amount' => self::formatAbsAmount(0), 'note' => '', 'tax' => false];
+    }
+
+    /**
+     * Removes a leg. At ≥3 legs this removes instantly and re-validates
+     * remaining. At exactly 2 legs, removing would drop the count to 1 —
+     * instead of silently collapsing, this routes to the same two-step
+     * confirm as "Unsplit transaction" (§8.2), scoped to the leg that
+     * would become the sole survivor.
+     */
+    public function removeLeg(int $index, CurrentUser $currentUser, DatabaseManager $db): void
+    {
+        if (! array_key_exists($index, $this->legs)) {
+            return;
+        }
+
+        if (count($this->legs) <= 2) {
+            $this->pendingRemoveIndex = $index;
+            $this->confirmRemoveToOne = true;
+
+            return;
+        }
+
+        $legs = $this->legs;
+        array_splice($legs, $index, 1);
+        $this->legs = $legs;
+        $this->recomputeRemaining($currentUser, $db);
+    }
+
+    /** Dismisses the remove-to-one-leg confirm without changes ("Keep this category"). */
+    public function cancelRemoveToOne(): void
+    {
+        $this->confirmRemoveToOne = false;
+        $this->pendingRemoveIndex = null;
+    }
+
+    /**
+     * Confirms the remove-to-one-leg collapse: the OTHER leg (not the one
+     * the user clicked remove on) becomes the surviving category via
+     * `SavesTransactionSplit::unsplit()` (§8.2, Req 8).
+     */
+    public function confirmRemoveToOneAction(SavesTransactionSplit $splitter, CurrentUser $currentUser): void
+    {
+        if ($this->pendingRemoveIndex === null || count($this->legs) !== 2) {
+            return;
+        }
+
+        $survivorIndex = $this->pendingRemoveIndex === 0 ? 1 : 0;
+        $survivorCategoryId = self::legCategoryId($this->legs[$survivorIndex]);
+
+        if ($survivorCategoryId === null) {
+            $this->splitError = 'Choose a category before removing.';
+
+            return;
+        }
+
+        try {
+            $splitter->unsplit($currentUser->user(), $this->transactionId, $survivorCategoryId);
+        } catch (InvalidArgumentException $e) {
+            $this->splitError = $e->getMessage();
+
+            return;
+        }
+
+        $this->resetSplitEditor();
+        $this->confirmRemoveToOne = false;
+        $this->pendingRemoveIndex = null;
+        $this->dispatch('toast', message: 'Removed — one category remains');
+    }
+
+    /**
+     * Opens the "Unsplit transaction" two-step confirm (§8.1). Defaults the
+     * survivor radio to the larger-magnitude leg — a Claude's-discretion
+     * default flagged as revisable in the UI-SPEC, surfaced here as a
+     * pre-selected (not locked) radio choice.
+     */
+    public function unsplit(): void
+    {
+        if ($this->legs === []) {
+            return;
+        }
+
+        $this->unsplitSurvivorIndex = $this->largestMagnitudeLegIndex();
+        $this->confirmUnsplit = true;
+    }
+
+    /** Flips the radio-selected survivor before confirming (§8.1). */
+    public function selectUnsplitSurvivor(int $index): void
+    {
+        if (array_key_exists($index, $this->legs)) {
+            $this->unsplitSurvivorIndex = $index;
+        }
+    }
+
+    /** Dismisses the unsplit confirm without changes ("Keep split"). */
+    public function cancelUnsplit(): void
+    {
+        $this->confirmUnsplit = false;
+        $this->unsplitSurvivorIndex = null;
+    }
+
+    /** Confirms "Yes, unsplit" — collapses to the radio-selected survivor category. */
+    public function confirmUnsplitAction(SavesTransactionSplit $splitter, CurrentUser $currentUser): void
+    {
+        if ($this->unsplitSurvivorIndex === null || ! array_key_exists($this->unsplitSurvivorIndex, $this->legs)) {
+            return;
+        }
+
+        $survivorCategoryId = self::legCategoryId($this->legs[$this->unsplitSurvivorIndex]);
+
+        if ($survivorCategoryId === null) {
+            $this->splitError = 'Choose a category before unsplitting.';
+
+            return;
+        }
+
+        try {
+            $splitter->unsplit($currentUser->user(), $this->transactionId, $survivorCategoryId);
+        } catch (InvalidArgumentException $e) {
+            $this->splitError = $e->getMessage();
+
+            return;
+        }
+
+        $this->resetSplitEditor();
+        $this->confirmUnsplit = false;
+        $this->unsplitSurvivorIndex = null;
+        $this->dispatch('toast', message: 'Unsplit — restored to a single category');
+    }
+
+    /**
+     * Saves the split. Re-validates server-side (T-13.1-12 — the disabled
+     * Save button is a UX gate only, never authoritative): recomputes
+     * `remainingMinor` fresh, rejects any leg that fails to parse (covers
+     * both a literal €0,00 entry and a non-numeric/negative one — the
+     * absolute-amount-only input can never itself produce an opposite-sign
+     * value, so Req 7's sign guard is enforced structurally here and
+     * defensively inside `SaveTransactionSplit`, Plan 01) or carries no
+     * category, then delegates to the sole mutator.
+     */
+    public function saveSplit(SavesTransactionSplit $splitter, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery): void
+    {
+        $this->splitError = null;
+        $userId = $currentUser->user()->id;
+
+        $this->recomputeRemaining($currentUser, $db);
+
+        if ($this->remainingMinor !== 0) {
+            $this->splitError = "Couldn't save — leg totals must match the transaction total exactly.";
+
+            return;
+        }
+
+        $parent = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)
+            ->first(['settled_amount_minor']);
+
+        if ($parent === null) {
+            $this->splitError = 'Transaction not found.';
+
+            return;
+        }
+
+        $parentMinor = is_numeric($parent->settled_amount_minor) ? (int) $parent->settled_amount_minor : 0;
+
+        /** @var list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}> $legsPayload */
+        $legsPayload = [];
+
+        foreach ($this->legs as $leg) {
+            $abs = self::parseAmount($leg['amount']);
+            if ($abs === null) {
+                $this->splitError = "Amount can't be €0,00";
+
+                return;
+            }
+
+            $categoryId = self::legCategoryId($leg);
+            if ($categoryId === null) {
+                $this->splitError = 'Choose a category.';
+
+                return;
+            }
+
+            $trimmedNote = trim($leg['note']);
+
+            $legsPayload[] = [
+                'id' => $leg['id'],
+                'category_id' => $categoryId,
+                'settled_amount_minor' => $parentMinor < 0 ? -$abs : $abs,
+                'note' => $trimmedNote !== '' ? $trimmedNote : null,
+            ];
+        }
+
+        try {
+            $splitter->save($currentUser->user(), $this->transactionId, $legsPayload);
+        } catch (SplitSumMismatchException) {
+            $this->splitError = "Couldn't save — leg totals must match the transaction total exactly.";
+
+            return;
+        } catch (InvalidArgumentException $e) {
+            $this->splitError = $e->getMessage();
+
+            return;
+        }
+
+        // Reload persisted legs (real DB ids) + tax state so subsequent
+        // edits/removals correctly diff against the now-saved rows.
+        $this->loadSplitState($currentUser, $db, $taxTagQuery);
+        $this->dispatch('toast', message: 'Split saved');
+    }
+
+    /**
+     * Toggles the tax-deductible state of one leg via the leg-aware
+     * TagTransaction/UntagTransaction (Req 5, D-06a). A no-op for a leg
+     * that has not yet been persisted (no `id`) — leg-scoped tax tagging
+     * requires an existing `transaction_splits` row (T-13.1-09's
+     * leg-ownership check).
+     */
+    public function toggleLegTax(int $index, TagTransaction $tag, UntagTransaction $untag, CurrentUser $currentUser): void
+    {
+        if (! array_key_exists($index, $this->legs)) {
+            return;
+        }
+
+        $legId = $this->legs[$index]['id'];
+        if ($legId === null) {
+            return;
+        }
+
+        $userId = $currentUser->user()->id;
+        $newState = ! $this->legs[$index]['tax'];
+
+        if ($newState) {
+            $tag->execute($userId, $this->transactionId, null, null, null, $legId);
+        } else {
+            $untag->execute($userId, $this->transactionId, $legId);
+        }
+
+        $this->legs[$index]['tax'] = $newState;
+    }
+
+    /**
+     * Livewire lifecycle hook: recomputes the server-truthful remaining
+     * figure whenever a leg amount changes (UI-SPEC §12 — no client math).
+     * Fires for any `legs.{index}.amount` mutation regardless of the
+     * `wire:model.live.debounce.300ms` binding path.
+     */
+    public function updated(string $name, mixed $value, CurrentUser $currentUser, DatabaseManager $db): void
+    {
+        if (str_starts_with($name, 'legs.') && str_ends_with($name, '.amount')) {
+            $this->recomputeRemaining($currentUser, $db);
+        }
+    }
+
+    /**
+     * Loads existing `transaction_splits` rows (if any) into `$this->legs`
+     * and sets `hasPersistedSplit`/`editingSplit` accordingly. Called at
+     * mount and after every successful `saveSplit()` so leg ids stay in
+     * sync with the DB for subsequent edit diffs.
+     */
+    private function loadSplitState(CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery): void
+    {
+        $userId = $currentUser->user()->id;
+
+        $rows = $db->connection()
+            ->table('transaction_splits')
+            ->where('transaction_id', $this->transactionId)
+            ->where('user_id', $userId)
+            ->orderBy('sort_order')
+            ->get(['id', 'category_id', 'settled_amount_minor', 'note']);
+
+        if ($rows->isEmpty()) {
+            $this->hasPersistedSplit = false;
+            $this->editingSplit = false;
+            $this->legs = [];
+
+            return;
+        }
+
+        $taxStates = $taxTagQuery->forTransactionIdsWithLegs($userId, [$this->transactionId]);
+
+        $legs = [];
+        foreach ($rows as $row) {
+            $legId = is_numeric($row->id) ? (int) $row->id : 0;
+            $key = $this->transactionId.':'.$legId;
+
+            $legs[] = [
+                'id' => $legId,
+                'categoryId' => is_numeric($row->category_id) ? (int) $row->category_id : null,
+                'amount' => self::formatAbsAmount(is_numeric($row->settled_amount_minor) ? abs((int) $row->settled_amount_minor) : 0),
+                'note' => is_string($row->note) ? $row->note : '',
+                'tax' => isset($taxStates[$key]),
+            ];
+        }
+
+        $this->legs = $legs;
+        $this->hasPersistedSplit = true;
+        $this->editingSplit = true;
+
+        $this->recomputeRemaining($currentUser, $db);
+    }
+
+    /**
+     * Server-truthful "remaining to assign" (UI-SPEC §12): re-reads the
+     * parent's settled amount and re-sums every leg's parsed absolute
+     * amount, both via the Money VO — never client-supplied math. Sets
+     * `abs(parent) - sum(abs(legs))`: positive = still to assign, negative
+     * = over-allocated, zero = exact.
+     */
+    private function recomputeRemaining(CurrentUser $currentUser, DatabaseManager $db): void
+    {
+        $userId = $currentUser->user()->id;
+
+        $parent = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)
+            ->first(['settled_amount_minor', 'settled_currency']);
+
+        if ($parent === null) {
+            $this->remainingMinor = 0;
+
+            return;
+        }
+
+        $parentMinor = is_numeric($parent->settled_amount_minor) ? (int) $parent->settled_amount_minor : 0;
+        $currency = is_string($parent->settled_currency) ? $parent->settled_currency : 'EUR';
+
+        $parentAbs = Money::ofMinor(abs($parentMinor), $currency);
+        $sumAbs = Money::ofMinor(0, $currency);
+
+        foreach ($this->legs as $leg) {
+            $abs = self::parseAmount($leg['amount']) ?? 0;
+            $sumAbs = $sumAbs->plus(Money::ofMinor($abs, $currency));
+        }
+
+        $this->remainingMinor = $parentAbs->minus($sumAbs)->toMinor();
+    }
+
+    /** Resets the editor back to the not-yet-split empty state (§7.2). */
+    private function resetSplitEditor(): void
+    {
+        $this->editingSplit = false;
+        $this->hasPersistedSplit = false;
+        $this->legs = [];
+        $this->remainingMinor = 0;
+        $this->splitError = null;
+    }
+
+    /** Index of the leg with the largest absolute (parsed) amount — ties keep the first. */
+    private function largestMagnitudeLegIndex(): int
+    {
+        $bestIndex = 0;
+        $bestAbs = -1;
+
+        foreach ($this->legs as $index => $leg) {
+            $abs = self::parseAmount($leg['amount']) ?? 0;
+            if ($abs > $bestAbs) {
+                $bestAbs = $abs;
+                $bestIndex = $index;
+            }
+        }
+
+        return $bestIndex;
+    }
+
+    /**
+     * Normalises a leg's `categoryId` (which may arrive as a string or `''`
+     * from a Livewire `<select>` binding) to `?int`.
+     *
+     * @param  array{id: ?int, categoryId: int|string|null, amount: string, note: string, tax: bool}  $leg
+     */
+    private static function legCategoryId(array $leg): ?int
+    {
+        $raw = $leg['categoryId'];
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        return is_numeric($raw) ? (int) $raw : null;
+    }
+
+    /**
+     * Parse a user-entered absolute amount into positive integer minor
+     * units, or null if invalid/zero/negative. Handles the Dutch grouped
+     * form "1.234,56" and the plain forms "1234.56" / "50,00" / "50".
+     *
+     * COPIED (adapted) from `Modules\Pots\Public\Services\PotWriter::parseAmount()`
+     * (itself copied verbatim from GoalWriter) — same duplication
+     * convention, not re-implemented differently. Do not hand-roll a new
+     * regex; keep in sync if the canonical copy ever changes.
+     */
+    private static function parseAmount(string $value): ?int
+    {
+        $normalised = str_replace([' ', "\u{00A0}"], '', trim($value));
+        if ($normalised === '') {
+            return null;
+        }
+
+        $lastDot = strrpos($normalised, '.');
+        $lastComma = strrpos($normalised, ',');
+        if ($lastDot !== false && $lastComma !== false) {
+            $normalised = $lastComma > $lastDot
+                ? str_replace(['.', ','], ['', '.'], $normalised)
+                : str_replace(',', '', $normalised);
+        } elseif ($lastComma !== false) {
+            $normalised = str_replace(',', '.', $normalised);
+        }
+
+        if (preg_match('/^\d{1,12}(\.\d{1,2})?$/', $normalised) !== 1) {
+            return null;
+        }
+
+        [$whole, $frac] = array_pad(explode('.', $normalised, 2), 2, '');
+        $minor = (int) $whole * 100 + (int) str_pad($frac, 2, '0');
+
+        return $minor > 0 ? $minor : null;
+    }
+
+    /**
+     * Formats an absolute minor-unit amount as a Dutch-decimal display
+     * string ("1234,56") for pre-filling a leg's amount input — integer-only
+     * arithmetic (intdiv/modulo), never float division, per the project's
+     * no-float-money rule.
+     */
+    private static function formatAbsAmount(int $absMinor): string
+    {
+        $whole = intdiv($absMinor, 100);
+        $frac = $absMinor % 100;
+
+        return number_format($whole, 0, '', '.').','.str_pad((string) $frac, 2, '0', STR_PAD_LEFT);
+    }
+
     public function render(
         CurrentUser $currentUser,
         ViewFactory $views,
         ChainLinkQuery $chainQuery,
         TaxTagQuery $taxTagQuery,
         DatabaseManager $db,
+        CategoryOptionsQuery $categoryOptions,
     ): View {
-        // Eager-load the resolved counterparty so the Blade can
-        // render the click-through anchor to counterparties.profile
-        // without paying a second query. The relation is NULL when
-        // the row carries no counterparty_id (pre-resolver history,
-        // pathological rows the resolver couldn't materialise) — the
-        // Blade falls back to plain-text rendering in that case.
+        // Eager-load the resolved counterparty + category so the Blade can
+        // render both the click-through anchor to counterparties.profile
+        // and the split section's empty-state category name without a
+        // second query. The counterparty relation is NULL when the row
+        // carries no counterparty_id (pre-resolver history, pathological
+        // rows the resolver couldn't materialise) — the Blade falls back
+        // to plain-text rendering in that case.
         $transaction = Transaction::query()
-            ->with('counterparty')
+            ->with(['counterparty', 'category'])
             ->where('id', $this->transactionId)
             ->where('user_id', $currentUser->user()->id)
             ->firstOrFail();
+
+        // Split editor gate (Req 6, D-07/D-08): offered for any non-transfer
+        // type. The category options list is only loaded when needed —
+        // transfer detail pages never render the Split section at all.
+        $isSplittable = in_array($transaction->type, self::SPLITTABLE_TYPES, true);
+        $splitCategories = $isSplittable ? $categoryOptions->for($currentUser->user()) : [];
 
         // Chain drill-down drawer: gate the "View chain" button on
         // whether this transaction actually participates in any
@@ -433,6 +996,8 @@ final class TransactionDetail extends Component
             'chainAvailable' => $chainAvailable,
             'txTaxRow' => $txTaxRow,
             'counterparties' => $counterparties,
+            'isSplittable' => $isSplittable,
+            'splitCategories' => $splitCategories,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

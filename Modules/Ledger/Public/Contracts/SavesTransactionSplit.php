@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Contracts;
 
+use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 
@@ -40,13 +41,20 @@ interface SavesTransactionSplit
      *
      * @param  list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>  $legs
      *
-     * @throws SplitSumMismatchException
+     * @throws SplitSumMismatchException leg totals do not sum to the parent exactly
+     * @throws InvalidArgumentException transaction not found/not owned, non-splittable type,
+     *                                  fewer than 2 legs, a zero/opposite-sign leg, or a leg
+     *                                  category not visible to $user
      */
     public function save(User $user, int $transactionId, array $legs): void;
 
     /**
      * Reverse a split: delete all leg rows for the transaction and set
      * transactions.category_id to $survivingCategoryId (Req 8, D-09).
+     *
+     * @throws InvalidArgumentException transaction not found/not owned, the surviving category
+     *                                  is not visible to $user, or (when legs still exist) is
+     *                                  not one of the split's current leg categories
      */
     public function unsplit(User $user, int $transactionId, int $survivingCategoryId): void;
 }
