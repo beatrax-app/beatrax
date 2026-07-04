@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Database\Seeders\Demo\DemoRecoveryCodesSeeder;
+use Modules\Budgets\Database\Seeders\Demo\DemoEnvelopeBudgetsSeeder;
 use Modules\Categorization\Database\Seeders\DefaultCategoryTreeSeeder;
 use Modules\Categorization\Database\Seeders\Demo\DemoMerchantMemorySeeder;
 use Modules\Chains\Database\Seeders\Demo\DemoChainsSeeder;
@@ -72,6 +73,7 @@ final class DemoSeedCommand extends Command
         private readonly DemoAccountsSeeder $accounts,
         private readonly DemoUserPreferencesSeeder $userPreferences,
         private readonly DemoTransactionsSeeder $transactions,
+        private readonly DemoEnvelopeBudgetsSeeder $envelopeBudgets,
         private readonly DemoCounterpartiesSeeder $counterparties,
         private readonly DemoChainsSeeder $chains,
         private readonly DemoRecurringSeeder $recurring,
@@ -126,6 +128,10 @@ final class DemoSeedCommand extends Command
         $this->line('Seeding demo transactions (~165 rows across 90 days)…');
         $txCount = $this->transactions->run($userMap, $accountMap);
         $this->info(sprintf('  %d demo transactions present', $txCount));
+
+        $this->line('Activating envelope budgeting + seeding current-period assignments…');
+        $assignmentCount = $this->envelopeBudgets->run($userMap);
+        $this->info(sprintf('  %d demo envelope assignments present (demo users activated)', $assignmentCount));
 
         $this->line('Resolving counterparties for demo transactions…');
         $cpCount = $this->counterparties->run($userMap);
@@ -259,6 +265,17 @@ final class DemoSeedCommand extends Command
             // forecast_shortfall_windows → forecast_scenarios.
             // SQLite's cascade DDL handles them automatically, but we
             // explicitly mirror the parent-first order for readability.
+            // Envelope budgeting tables (Phase 13.2). All cascade from users,
+            // but wipe explicitly so a partial reset still finishes the job.
+            $connection->table('envelope_moves')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
+            $connection->table('envelope_assignments')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
+            $connection->table('envelope_settings')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
             $connection->table('drift_alert_transitions')
                 ->whereIn('user_id', $demoUserIds)
                 ->delete();
