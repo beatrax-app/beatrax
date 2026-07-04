@@ -145,6 +145,10 @@ function demoSeedSnapshot(): array
             ->where('source_format', 'demo')
             ->whereNotNull('pair_transaction_id')
             ->count(),
+        'envelope_assignments' => test()->db->connection()
+            ->table('envelope_assignments')
+            ->whereIn('user_id', $userIds)
+            ->count(),
     ];
 }
 
@@ -343,6 +347,16 @@ it('produces the documented dataset shape after a single seed run', function ():
 
     // UserPreferences: one row per demo user.
     expect($snap['user_preferences'])->toBe(2);
+
+    // Envelope budgeting (Phase 13.2): both demo users are activated (genesis
+    // anchor stamped) and carry a current-period assignment slate, so /budgets
+    // renders a populated grid instead of the D-12b empty result.
+    $activatedDemoUsers = User::query()
+        ->where('username', 'like', 'demo-%@beatrax.local')
+        ->whereNotNull('envelope_activated_at')
+        ->count();
+    expect($activatedDemoUsers)->toBe(2);
+    expect($snap['envelope_assignments'])->toBeGreaterThanOrEqual(11);
 
     // ImportRun lifecycle — every demo transaction must belong to an
     // ImportRun stamped `source_format = 'demo'`.
