@@ -14,6 +14,7 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Psr\Log\LoggerInterface;
 
 /**
  * The genesis-to-target iterative fold — the one genuinely new algorithm in
@@ -76,6 +77,7 @@ final class CarryoverQuery
         private readonly ThisPeriodAtAGlanceQuery $glance,
         private readonly BudgetProgressQuery $budgetProgress,
         private readonly Clock $clock,
+        private readonly LoggerInterface $log,
     ) {}
 
     /**
@@ -223,7 +225,23 @@ final class CarryoverQuery
             }
         }
 
-        return $result ?? ['toBudgetMinor' => 0, 'overspentCount' => 0, 'rows' => []];
+        if ($result === null) {
+            // IN-02: the walk ended before reaching targetBounded — only
+            // possible if MAX_WALK_PERIODS tripped first (the target is bounded
+            // to current+12, so this is unreachable in practice). Log the
+            // anomaly rather than silently returning a wrong all-zero answer;
+            // do not throw — a degraded read is safer than a fatal budgets page.
+            $this->log->warning('CarryoverQuery fold hit the walk cap before reaching the target period; returning all-zero.', [
+                'user_id' => $user->id,
+                'genesis' => $genesisPeriod->start->toDateString(),
+                'target' => $targetBounded->start->toDateString(),
+                'max_walk_periods' => self::MAX_WALK_PERIODS,
+            ]);
+
+            return ['toBudgetMinor' => 0, 'overspentCount' => 0, 'rows' => []];
+        }
+
+        return $result;
     }
 
     /**
