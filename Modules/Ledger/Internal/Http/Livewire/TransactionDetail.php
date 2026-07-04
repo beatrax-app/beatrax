@@ -21,6 +21,7 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
+use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\SplittableTypes;
 use Modules\Sync\Public\Events\TransactionMutated;
@@ -213,6 +214,14 @@ final class TransactionDetail extends Component
             ->where('user_id', $user->id)
             ->firstOrFail();
 
+        // D-08 reconciled lock: warn-first, no write (T-13.3-13). Reads the
+        // already user-scoped $tx just loaded above — no extra query needed.
+        if ($tx->status === 'reconciled') {
+            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+
+            return;
+        }
+
         // CR-01: reclassifying a SPLIT transaction to a non-splittable type
         // would strand its legs — the read-side union (SpendByCategoryQuery)
         // has no type filter, so the orphaned legs keep counting as category
@@ -368,6 +377,22 @@ final class TransactionDetail extends Component
         Dispatcher $events,
     ): void {
         $userId = $currentUser->user()->id;
+
+        // D-08 reconciled lock: warn-first, no write (T-13.3-13/T-13.3-14).
+        // Status read is scoped by user_id so a cross-user id no-ops rather
+        // than leaking.
+        $status = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)
+            ->value('status');
+
+        if ($status === 'reconciled') {
+            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+
+            return;
+        }
+
         $trimmed = trim($this->note);
         $value = $trimmed === '' ? null : $trimmed;
 
@@ -408,6 +433,27 @@ final class TransactionDetail extends Component
     }
 
     /**
+     * The escape hatch every reconciled-lock warn toast on this page points
+     * to (D-08, SC-2). Delegates entirely to
+     * `ReconciliationWriter::unreconcile()` — the sole mutator that reverts
+     * a `reconciled` row back to `cleared` — so the guard clauses added
+     * above (reclassify/saveNote/reassignCounterparty/deleteTransaction)
+     * have a real path back to an editable state.
+     *
+     * A foreign, missing, or already non-reconciled transaction id is a
+     * silent no-op (mirrors `ReconciliationWriter::unreconcile()`'s own
+     * cross-user handling — I2 guard).
+     */
+    public function unreconcile(
+        ReconciliationWriter $writer,
+        CurrentUser $currentUser,
+    ): void {
+        $writer->unreconcile($currentUser->user(), $this->transactionId);
+
+        $this->dispatch('toast', message: 'Un-reconciled — you can edit this transaction again.');
+    }
+
+    /**
      * Reassign this transaction's counterparty_id to a different user-owned
      * counterparty (OQ-C).
      *
@@ -423,15 +469,24 @@ final class TransactionDetail extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
-        // Ownership-check the transaction (same as reclassify() pattern).
-        $exists = $db->connection()
+        // Ownership-check the transaction (same as reclassify() pattern) and
+        // read its status in the same scoped query for the D-08 lock check
+        // below (T-13.3-13/T-13.3-14).
+        $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
             ->where('user_id', $userId)
-            ->exists();
+            ->value('status');
 
-        if (! $exists) {
+        if ($status === null) {
             throw new NotFoundHttpException;
+        }
+
+        // D-08 reconciled lock: warn-first, no write.
+        if ($status === 'reconciled') {
+            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+
+            return;
         }
 
         // Verify the target counterparty belongs to the same user.
@@ -477,15 +532,23 @@ final class TransactionDetail extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
-        // Ownership check before delete.
-        $exists = $db->connection()
+        // Ownership check before delete — reads status in the same scoped
+        // query for the D-08 lock check below (T-13.3-13/T-13.3-14).
+        $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
             ->where('user_id', $userId)
-            ->exists();
+            ->value('status');
 
-        if (! $exists) {
+        if ($status === null) {
             throw new NotFoundHttpException;
+        }
+
+        // D-08 reconciled lock: warn-first, no write.
+        if ($status === 'reconciled') {
+            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+
+            return;
         }
 
         // WR-01: read the leg ids BEFORE deleting the parent (the DB cascade
