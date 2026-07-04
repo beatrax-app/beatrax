@@ -86,28 +86,48 @@ final class EnvelopeActivationService
             return;
         }
 
-        /** @var User|null $user */
-        $user = User::query()->where('id', $userId)->first();
-        if ($user === null) {
-            return;
-        }
-
-        $potIds = $this->db->connection()
-            ->table('pots')
-            ->where('user_id', $userId)
-            ->where('status', 'active')
-            ->whereNotNull('category_id')
-            ->pluck('id');
-
-        foreach ($potIds as $potId) {
-            $potIdInt = is_numeric($potId) ? (int) $potId : 0;
-            if ($potIdInt <= 0) {
-                continue;
+        // WR-02: the claim + pot-archive walk is deliberately NOT wrapped in a
+        // spanning DB transaction. `PotWriter::archive()` opens its OWN inner
+        // transaction and dispatches its events AFTER that inner commit
+        // (emit-after-commit contract) — an outer transaction would defer those
+        // events until the outer commit and break that contract. Instead we use
+        // unclaim-on-failure: if the walk throws part-way, reset this user's
+        // claim back to NULL so a subsequent activate() re-runs the FULL cutover
+        // rather than skipping a stamped-but-partially-archived user forever.
+        // Re-running is safe: PotWriter::archive already skips non-active pots,
+        // so pots archived before the failure are never double-archived.
+        try {
+            /** @var User|null $user */
+            $user = User::query()->where('id', $userId)->first();
+            if ($user === null) {
+                return;
             }
 
-            // Per-user, per-pot archive via the existing release-to-
-            // unallocated path (T-13.2-06-01) — never a bulk unscoped UPDATE.
-            $this->potWriter->archive($user, $potIdInt);
+            $potIds = $this->db->connection()
+                ->table('pots')
+                ->where('user_id', $userId)
+                ->where('status', 'active')
+                ->whereNotNull('category_id')
+                ->pluck('id');
+
+            foreach ($potIds as $potId) {
+                $potIdInt = is_numeric($potId) ? (int) $potId : 0;
+                if ($potIdInt <= 0) {
+                    continue;
+                }
+
+                // Per-user, per-pot archive via the existing release-to-
+                // unallocated path (T-13.2-06-01) — never a bulk unscoped UPDATE.
+                $this->potWriter->archive($user, $potIdInt);
+            }
+        } catch (\Throwable $e) {
+            // Release the claim so the cutover is retryable end-to-end.
+            $this->db->connection()
+                ->table('users')
+                ->where('id', $userId)
+                ->update(['envelope_activated_at' => null]);
+
+            throw $e;
         }
     }
 }
