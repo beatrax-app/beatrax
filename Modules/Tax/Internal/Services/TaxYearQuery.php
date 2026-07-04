@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Tax\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Tax\Public\Dto\TaxYearData;
 
 /**
@@ -19,6 +20,26 @@ use Modules\Tax\Public\Dto\TaxYearData;
  *
  * Amounts are always summed from settled_amount_minor (settled EUR). No
  * floating-point arithmetic is performed on money values in this class.
+ *
+ * Leg-aware (Phase 13.1 D-06a): a tag scoped to one leg of a split
+ * transaction (`tag.transaction_split_id` NOT NULL) reports the LEG's own
+ * `settled_amount_minor` via `LEFT JOIN transaction_splits AS ts ON ts.id =
+ * tag.transaction_split_id` + `COALESCE(ts.settled_amount_minor,
+ * t.settled_amount_minor)` — never the whole parent's amount. This is a
+ * tax-correctness requirement: a €80 transaction split €60 Groceries
+ * (tagged deductible) / €20 Household (not tagged) must export €60, not
+ * €80 and not €0.
+ *
+ * SUPERSESSION POLICY (locked default): once a transaction has ANY
+ * leg-scoped tag, its whole-transaction tag row (transaction_split_id IS
+ * NULL) is excluded from these results — it is not deleted anywhere, just
+ * no longer surfaced/exported, so a stale pre-split tag can never
+ * double-report alongside its legs.
+ *
+ * The category name shown for a leg-scoped tag resolves from
+ * `tag.deduction_category_id` (the TAX deduction category) — never from the
+ * leg's own `category_id` (the SPEND category on `transaction_splits`).
+ * These are distinct concepts and must not be conflated.
  */
 final class TaxYearQuery
 {
@@ -48,6 +69,10 @@ final class TaxYearQuery
         $rawRows = $connection
             ->table('tax_transaction_tags AS tag')
             ->join('transactions AS t', 't.id', '=', 'tag.transaction_id')
+            // Leg-aware amount resolution (D-06a): a leg-scoped tag joins to
+            // its own transaction_splits row; a whole-tx tag's ts.* columns
+            // are NULL and the COALESCE below falls back to the parent.
+            ->leftJoin('transaction_splits AS ts', 'ts.id', '=', 'tag.transaction_split_id')
             ->leftJoin('tax_deduction_categories AS cat', 'cat.id', '=', 'tag.deduction_category_id')
             ->leftJoin('accounts AS a', 'a.id', '=', 't.account_id')
             ->leftJoin('counterparties AS cp', 'cp.id', '=', 't.counterparty_id')
@@ -58,13 +83,28 @@ final class TaxYearQuery
                 'COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) = ?',
                 [$year],
             )
+            // SUPERSESSION POLICY: exclude a whole-tx tag row
+            // (transaction_split_id IS NULL) when the SAME transaction also
+            // has at least one leg-scoped tag row. Leg-scoped rows are
+            // always included.
+            ->where(function (QueryBuilder $q) use ($connection): void {
+                $q->whereNotNull('tag.transaction_split_id')
+                    ->orWhereNotExists(function (QueryBuilder $sub) use ($connection): void {
+                        $sub->select($connection->raw(1))
+                            ->from('tax_transaction_tags AS tag2')
+                            ->whereColumn('tag2.transaction_id', 'tag.transaction_id')
+                            ->whereColumn('tag2.user_id', 'tag.user_id')
+                            ->whereNotNull('tag2.transaction_split_id');
+                    });
+            })
             ->orderBy('cat.sort_order')
             ->orderBy('t.booked_at')
             ->select([
                 'tag.id AS tag_id',
+                'tag.transaction_split_id',
                 't.id AS transaction_id',
                 't.booked_at',
-                't.settled_amount_minor',
+                $connection->raw('COALESCE(ts.settled_amount_minor, t.settled_amount_minor) AS settled_amount_minor'),
                 't.settled_currency',
                 't.amount_minor',
                 't.currency',
@@ -117,6 +157,7 @@ final class TaxYearQuery
 
             $rowData = [
                 'transactionId' => self::toInt($row->transaction_id),
+                'transactionSplitId' => $row->transaction_split_id !== null ? self::toInt($row->transaction_split_id) : null,
                 'bookedAt' => self::toStrOrNull($row->booked_at),
                 'accountName' => self::toStrOrNull($row->account_name),
                 'counterpartyName' => self::toStrOrNull($row->counterparty_name),
