@@ -10,7 +10,6 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Ledger\Models\Transaction;
 use Modules\Sync\Public\Events\TransactionMutated;
 
 /**
@@ -69,14 +68,14 @@ final class ReconciliationWriter
                 ->where('status', 'cleared')
                 ->where('posted_at', '<=', $statementDateString)
                 ->update([
-                    'status' => Transaction::STATUSES[2],
+                    'status' => 'reconciled',
                     'updated_at' => $reconciledAt,
                 ]);
 
             $transactionIds = $connection->table('transactions')
                 ->where('account_id', $accountId)
                 ->where('user_id', $user->id)
-                ->where('status', Transaction::STATUSES[2])
+                ->where('status', 'reconciled')
                 ->where('updated_at', $reconciledAt)
                 ->where('posted_at', '<=', $statementDateString)
                 ->pluck('id')
@@ -120,7 +119,7 @@ final class ReconciliationWriter
                 ->where('id', $transactionId)
                 ->where('user_id', $user->id)
                 ->update([
-                    'status' => Transaction::STATUSES[1],
+                    'status' => 'cleared',
                     'updated_at' => $this->clock->now(),
                 ]);
         });
