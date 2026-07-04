@@ -6,6 +6,7 @@ namespace Modules\Tax\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
@@ -21,10 +22,19 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * and year override intact; created_at is never rewritten on update.
  * Dispatches TransactionTagged after every successful write.
  *
+ * Leg-aware (Phase 13.1 D-06a): an optional trailing `$transactionSplitId`
+ * scopes the tag to one leg of a split transaction instead of the whole
+ * transaction. Defaults to null (whole-transaction tagging), so every
+ * existing unsplit caller is unaffected. When non-null, the leg is verified
+ * to belong to the same `$transactionId` AND `$userId` (T-13.1-09 — a
+ * forged leg id targeting another user's leg or a leg on another transaction
+ * must never be accepted).
+ *
  * Security guarantees:
  *   - Transaction must belong to $userId → 404 on miss (T-07-01)
  *   - Category (if non-null) must belong to $userId → 404 on miss (T-07-02)
  *   - tax_year_override must be within now±10 years → InvalidArgumentException (T-07-03)
+ *   - transactionSplitId (if non-null) must belong to $transactionId AND $userId → 404 on miss (T-13.1-09)
  *   - Raw DatabaseManager only — no Eloquent statics (PHPStan level 10)
  */
 final class TagTransaction
@@ -42,6 +52,7 @@ final class TagTransaction
         ?int $deductionCategoryId,
         ?string $note,
         ?int $taxYearOverride,
+        ?int $transactionSplitId = null,
     ): void {
         // (1) Verify transaction ownership — 404-not-403 to avoid existence leakage.
         $txExists = $this->db->connection()
@@ -52,6 +63,24 @@ final class TagTransaction
 
         if (! $txExists) {
             throw new NotFoundHttpException('Transaction not found.');
+        }
+
+        // (1b) Leg-ownership guard (T-13.1-09): a forged transactionSplitId
+        // could otherwise target another user's leg or a leg belonging to a
+        // different transaction. Reject before any write.
+        if ($transactionSplitId !== null) {
+            $legExists = $this->db->connection()
+                ->table('transaction_splits')
+                ->where('id', $transactionSplitId)
+                ->where('transaction_id', $transactionId)
+                ->where(static function (QueryBuilder $q) use ($userId): void {
+                    $q->whereNull('user_id')->orWhere('user_id', $userId);
+                })
+                ->exists();
+
+            if (! $legExists) {
+                throw new NotFoundHttpException('Transaction split not found.');
+            }
         }
 
         // (2) Verify category ownership — cross-user category is a 404 (T-07-02).
@@ -79,7 +108,9 @@ final class TagTransaction
             }
         }
 
-        // (4) Idempotent upsert — unique(user_id, transaction_id).
+        // (4) Idempotent upsert — unique(user_id, transaction_id, transaction_split_id).
+        // A bare equality-to-null where() clause does not reliably compile to
+        // IS NULL, so whereNull()/whereNotNull() are used explicitly below.
         $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
 
@@ -87,10 +118,15 @@ final class TagTransaction
             ->table('tax_transaction_tags')
             ->where('user_id', $userId)
             ->where('transaction_id', $transactionId)
+            ->when(
+                $transactionSplitId === null,
+                static fn (QueryBuilder $q) => $q->whereNull('transaction_split_id'),
+                static fn (QueryBuilder $q) => $q->where('transaction_split_id', $transactionSplitId),
+            )
             ->exists();
 
         if ($exists) {
-            $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now);
+            $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now, $transactionSplitId);
         } else {
             try {
                 $connection
@@ -98,6 +134,7 @@ final class TagTransaction
                     ->insert([
                         'user_id' => $userId,
                         'transaction_id' => $transactionId,
+                        'transaction_split_id' => $transactionSplitId,
                         'deduction_category_id' => $deductionCategoryId,
                         'note' => $note,
                         'tax_year_override' => $taxYearOverride,
@@ -108,7 +145,7 @@ final class TagTransaction
                 // Lost the select-then-insert race against a concurrent
                 // request — the row exists now; retry as the guarded
                 // update instead of surfacing a 500 (IN-06).
-                $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now);
+                $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now, $transactionSplitId);
             }
         }
 
@@ -142,6 +179,7 @@ final class TagTransaction
         ?string $note,
         ?int $taxYearOverride,
         string $now,
+        ?int $transactionSplitId = null,
     ): void {
         $values = ['updated_at' => $now];
         if ($deductionCategoryId !== null || $note !== null || $taxYearOverride !== null) {
@@ -154,6 +192,11 @@ final class TagTransaction
             ->table('tax_transaction_tags')
             ->where('user_id', $userId)
             ->where('transaction_id', $transactionId)
+            ->when(
+                $transactionSplitId === null,
+                static fn (QueryBuilder $q) => $q->whereNull('transaction_split_id'),
+                static fn (QueryBuilder $q) => $q->where('transaction_split_id', $transactionSplitId),
+            )
             ->update($values);
     }
 }
