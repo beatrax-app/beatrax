@@ -163,7 +163,13 @@ final class TransactionsList extends Component
      * stored here (Pitfall-4 — snapshot bloat). They are re-computed from
      * SearchQuery on each render in search mode.
      *
-     * @var list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string}>
+     * Phase 13.1 Plan 06 adds `splitLegs`: the batch-loaded list of split
+     * legs for this row (empty for an unsplit row, >= 2 entries for a split
+     * parent — split detection is leg-row presence, never category_id
+     * nullity, per D-11). Populated after accumulation, mirroring the
+     * taxTagged/taxCategoryShortName merge below.
+     *
+     * @var list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>}>
      */
     public array $accumulatedRows = [];
 
@@ -358,11 +364,13 @@ final class TransactionsList extends Component
             $accIds = array_map(static fn (array $r): int => $r['id'], $this->accumulatedRows);
             $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
             $taxState = $this->taxTagStateFor($stateIds, $taxTagQuery, $currentUser);
+            $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $user->id);
 
             foreach ($this->accumulatedRows as &$accRow) {
                 $accRowId = $accRow['id'];
                 $accRow['taxTagged'] = $taxState[$accRowId]['taxTagged'] ?? false;
                 $accRow['taxCategoryShortName'] = $taxState[$accRowId]['taxCategoryShortName'] ?? null;
+                $accRow['splitLegs'] = $splitLegs[$accRowId] ?? [];
             }
             unset($accRow);
 
@@ -380,6 +388,7 @@ final class TransactionsList extends Component
                 'currency' => $this->currency,
                 'chainTxIds' => [],
                 'taxState' => $taxState,
+                'splitLegs' => $splitLegs,
                 'isSearchMode' => true,
                 'searchQuery' => $this->searchQuery,
                 'searchTotalCount' => $searchPage->totalCount,
@@ -451,10 +460,12 @@ final class TransactionsList extends Component
         $accIds = array_map(static fn (array $r): int => $r['id'], $this->accumulatedRows);
         $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
         $taxState = $this->taxTagStateFor($stateIds, $taxTagQuery, $currentUser);
+        $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $user->id);
         foreach ($this->accumulatedRows as &$accRow) {
             $accRowId = $accRow['id'];
             $accRow['taxTagged'] = $taxState[$accRowId]['taxTagged'] ?? false;
             $accRow['taxCategoryShortName'] = $taxState[$accRowId]['taxCategoryShortName'] ?? null;
+            $accRow['splitLegs'] = $splitLegs[$accRowId] ?? [];
         }
         unset($accRow);
 
@@ -465,6 +476,7 @@ final class TransactionsList extends Component
             'currency' => $this->currency,
             'chainTxIds' => $chainTxIds,
             'taxState' => $taxState,
+            'splitLegs' => $splitLegs,
             'isSearchMode' => false,
             'searchQuery' => $this->searchQuery,
             'searchTotalCount' => 0,
@@ -560,7 +572,7 @@ final class TransactionsList extends Component
      * taxTagged + taxCategoryShortName default to false/null here; they are
      * overwritten after batch-load in render() so the values are always fresh.
      *
-     * @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string}
+     * @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>}
      */
     private static function rowToArray(TransactionRowDto $row): array
     {
@@ -576,6 +588,7 @@ final class TransactionsList extends Component
             'secondaryCurrency' => $row->secondaryAmount?->currency(),
             'taxTagged' => false,
             'taxCategoryShortName' => null,
+            'splitLegs' => [],
         ];
     }
 
@@ -584,7 +597,7 @@ final class TransactionsList extends Component
      * highlightedCounterparty and snippet are intentionally excluded to
      * avoid Livewire snapshot bloat (Pitfall-4).
      *
-     * @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string}
+     * @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>}
      */
     private static function searchRowToArray(SearchRowDto $row): array
     {
@@ -600,6 +613,69 @@ final class TransactionsList extends Component
             'secondaryCurrency' => $row->secondaryCurrency,
             'taxTagged' => false,
             'taxCategoryShortName' => null,
+            'splitLegs' => [],
         ];
+    }
+
+    /**
+     * Batch-load split legs (Phase 13.1) for the given transaction ids — a
+     * single query for the whole page batch (Pitfall 1 / N+1 guard), keyed
+     * by transaction_id. Downstream split detection is by LEG-ROW PRESENCE
+     * ONLY (count >= 2 legs), never `category_id` nullity (Pitfall 1 / D-11)
+     * — a split parent may carry a vestigial non-null `category_id`.
+     *
+     * Every id in $transactionIds is already user-scoped by the list query
+     * that produced it (`transactions.user_id = $userId`), so joining on
+     * `transaction_id` alone cannot leak another user's legs (T-13.1-14) —
+     * a `transaction_splits` row can only exist for a `transaction_id`, and
+     * every id passed here already belongs to the requesting user.
+     *
+     * @param  array<int>  $transactionIds
+     * @return array<int, list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>>
+     */
+    private function legsFor(array $transactionIds, DatabaseManager $db, TaxTagQuery $taxTagQuery, int $userId): array
+    {
+        if ($transactionIds === []) {
+            return [];
+        }
+
+        $rows = $db->connection()
+            ->table('transaction_splits')
+            ->leftJoin('categories', 'transaction_splits.category_id', '=', 'categories.id')
+            ->whereIn('transaction_splits.transaction_id', $transactionIds)
+            ->orderBy('transaction_splits.transaction_id')
+            ->orderBy('transaction_splits.sort_order')
+            ->get([
+                'transaction_splits.id',
+                'transaction_splits.transaction_id',
+                'transaction_splits.settled_amount_minor',
+                'transaction_splits.settled_currency',
+                'transaction_splits.note',
+                'categories.name as category_name',
+            ]);
+
+        // Leg-scoped tax state — one batched query, keyed by "{txId}:{legId}"
+        // (D-06a). Not merged into $taxState (whole-transaction only).
+        $legTaxState = $taxTagQuery->forTransactionIdsWithLegs($userId, $transactionIds);
+
+        $map = [];
+        foreach ($rows as $row) {
+            $txId = is_numeric($row->transaction_id) ? (int) $row->transaction_id : 0;
+            $legId = is_numeric($row->id) ? (int) $row->id : 0;
+            $legTag = $legTaxState[$txId.':'.$legId] ?? null;
+
+            $map[$txId] ??= [];
+            $map[$txId][] = [
+                'id' => $legId,
+                'categoryName' => is_string($row->category_name) ? $row->category_name : '—',
+                'amountMinor' => is_numeric($row->settled_amount_minor) ? (int) $row->settled_amount_minor : 0,
+                'amountCurrency' => is_string($row->settled_currency) ? $row->settled_currency : 'EUR',
+                'note' => is_string($row->note) ? $row->note : null,
+                'taxTagged' => $legTag !== null,
+                'taxCategoryShortName' => $legTag->deductionCategoryShortName ?? null,
+            ];
+        }
+
+        return $map;
     }
 }
