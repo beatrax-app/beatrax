@@ -99,7 +99,31 @@ final class NavCountsService
             'imports' => $count('import_runs'),
             // Phase 07: total tagged transactions for the sidebar badge (no year filter —
             // the badge shows lifetime tagged count, not a per-year slice).
-            'tax_tagged' => $count('tax_transaction_tags'),
+            //
+            // Phase 13.3 Finding C: a raw row count double-counts once a
+            // transaction has BOTH a stale whole-tx tag row (transaction_split_id
+            // IS NULL) and leg-scoped tag rows for its splits — the whole-tx row
+            // is "superseded" and no longer surfaced by TaxYearQuery/TaxTagQuery
+            // (Phase 13.1 D-06a), so the sidebar count must exclude it too or the
+            // badge reads one higher than every other tax surface. This mirrors
+            // TaxYearQuery's whereNotNull/orWhereNotExists supersession shape
+            // (Modules/Tax/Internal/Services/TaxYearQuery.php) directly against
+            // the raw table rather than going through the Tax module's Public
+            // TaxTagQuery service — matching every other count in this method,
+            // which reads canonical tables directly to keep the sidebar's hot
+            // path to a single cached read (see class docblock).
+            'tax_tagged' => $count('tax_transaction_tags', static function (Builder $query) use ($connection): void {
+                $query->where(static function (Builder $q) use ($connection): void {
+                    $q->whereNotNull('transaction_split_id')
+                        ->orWhereNotExists(static function (Builder $sub) use ($connection): void {
+                            $sub->select($connection->raw(1))
+                                ->from('tax_transaction_tags AS tag2')
+                                ->whereColumn('tag2.transaction_id', 'tax_transaction_tags.transaction_id')
+                                ->whereColumn('tag2.user_id', 'tax_transaction_tags.user_id')
+                                ->whereNotNull('tag2.transaction_split_id');
+                        });
+                });
+            }),
         ];
     }
 
