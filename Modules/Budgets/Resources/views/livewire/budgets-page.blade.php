@@ -139,7 +139,8 @@
                         </td>
                         <td class="px-4 py-2">
                             <select
-                                x-on:change="$wire.setOverspendMode({{ $row->categoryId }}, $event.target.value)"
+                                x-data="{ mode: @js($row->overspendMode) }"
+                                x-on:change="if ($event.target.value !== mode) { mode = $event.target.value; $wire.setOverspendMode({{ $row->categoryId }}, mode) }"
                                 aria-label="If {{ $row->categoryName }} is overspent"
                                 class="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300"
                             >
