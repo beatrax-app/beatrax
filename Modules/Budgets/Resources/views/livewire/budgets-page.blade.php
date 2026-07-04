@@ -98,11 +98,12 @@
                     <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">Spent</th>
                     <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">Available</th>
                     <th class="px-4 py-2 text-left text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">If overspent</th>
+                    <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400"><span class="sr-only">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($rows as $row)
-                    <tr class="border-b border-slate-100 dark:border-slate-800" wire:key="envelope-row-{{ $row->categoryId }}">
+                    <tr class="group border-b border-slate-100 dark:border-slate-800" wire:key="envelope-row-{{ $row->categoryId }}">
                         <td class="px-4 py-2">
                             <span class="truncate text-slate-900 dark:text-slate-100">{{ $row->categoryName }}</span>
                             @if ($row->overspendMode === 'carry_negative')
@@ -138,7 +139,53 @@
                                 <option value="carry_negative" @selected($row->overspendMode === 'carry_negative')>Carry the negative in this envelope</option>
                             </select>
                         </td>
+                        <td class="px-4 py-2 text-right">
+                            <button
+                                type="button"
+                                wire:click="openMove({{ $row->categoryId }})"
+                                x-on:click="$flux.modal('envelope-move').show()"
+                                class="hidden text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 group-hover:inline dark:hover:text-slate-100"
+                            >Move money</button>
+                        </td>
                     </tr>
+                    @if (count($recentMoves[$row->categoryId] ?? []) > 0)
+                        <tr class="border-b border-slate-100 dark:border-slate-800" x-data="{ open: false }">
+                            <td colspan="6" class="px-4 pb-3">
+                                <button
+                                    type="button"
+                                    x-on:click="open = !open"
+                                    :aria-expanded="open.toString()"
+                                    aria-controls="envelope-history-{{ $row->categoryId }}"
+                                    class="text-xs text-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-300"
+                                >
+                                    <span x-show="!open">Show history ↓</span>
+                                    <span x-show="open" x-cloak>Hide history ↑</span>
+                                </button>
+                                <div id="envelope-history-{{ $row->categoryId }}" x-show="open" x-collapse class="mt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <ul>
+                                        @foreach ($recentMoves[$row->categoryId] as $move)
+                                            <li class="flex items-center justify-between gap-4 py-2 text-sm">
+                                                <div class="min-w-0">
+                                                    <span class="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{{ substr($move->createdAt, 0, 10) }}</span>
+                                                    <span class="ml-2 text-sm text-slate-500 dark:text-slate-400">{{ $move->direction === 'in' ? 'Moved from '.$move->counterpartCategoryName : 'Moved to '.$move->counterpartCategoryName }}</span>
+                                                </div>
+                                                <div class="flex shrink-0 items-center gap-3">
+                                                    <span class="text-sm tabular-nums {{ $move->direction === 'in' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}">
+                                                        {{ $move->direction === 'in' ? '+' : '' }}{{ $fmt(abs($move->amountMinor), $row->currency) }}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        wire:click="undoMove({{ $move->id }})"
+                                                        class="text-xs text-slate-400 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-rose-400"
+                                                    >Undo</button>
+                                                </div>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    @endif
                 @endforeach
             </tbody>
         </table>
@@ -170,8 +217,114 @@
                         class="amount w-20 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         style="font-variant-numeric: tabular-nums;"
                     >
+                    <button
+                        type="button"
+                        wire:click="openMove({{ $row->categoryId }})"
+                        x-on:click="$dispatch('open-sheet', { name: 'envelope-move' })"
+                        class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                    >Move</button>
                 </div>
             @endforeach
         </div>
     @endif
+
+    {{-- ------------------------------------------------------------------- --}}
+    {{-- Move-money modal (Req 5, D-19) — structural clone of Pots' pot-move --}}
+    {{-- ------------------------------------------------------------------- --}}
+    <flux:modal name="envelope-move" dismissible>
+        <div class="pt-[44px]" style="max-width: 480px;">
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+                Move from {{ $moveFromCategory?->categoryName ?? 'envelope' }}
+            </h2>
+            <form wire:submit="moveMoney" class="mt-6 space-y-4">
+                <div>
+                    <label for="envelope-move-to" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Move to</label>
+                    <select
+                        id="envelope-move-to"
+                        wire:model="moveToCategoryId"
+                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                    >
+                        <option value="">{{ count($moveDestinations) === 0 ? 'No other envelopes' : 'Select an envelope' }}</option>
+                        @foreach ($moveDestinations as $dest)
+                            <option value="{{ $dest->categoryId }}">{{ $dest->categoryName }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="envelope-move-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</label>
+                    <input
+                        type="text"
+                        id="envelope-move-amount"
+                        wire:model="moveAmount"
+                        inputmode="decimal"
+                        placeholder="0.00"
+                        @if ($moveError !== '') aria-invalid="true" aria-describedby="envelope-move-amount-error" @endif
+                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                        style="font-variant-numeric: tabular-nums;"
+                    >
+                    @if ($moveFromCategory !== null)
+                        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">
+                            Available in {{ $moveFromCategory->categoryName }}: {{ $fmt($moveFromCategory->availableMinor, $moveFromCategory->currency) }}
+                        </p>
+                    @endif
+                    @if ($moveError !== '')
+                        <p id="envelope-move-amount-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $moveError }}</p>
+                    @endif
+                </div>
+                <div>
+                    <label for="envelope-move-memo" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Note (optional)</label>
+                    <input
+                        type="text"
+                        id="envelope-move-memo"
+                        wire:model="moveMemo"
+                        placeholder="e.g. Covering dining overspend"
+                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                    >
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" wire:click="$dispatch('modal-close', { name: 'envelope-move' })" class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400">Cancel</button>
+                    <button type="submit" @disabled(count($moveDestinations) === 0) class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed">Move funds</button>
+                </div>
+            </form>
+        </div>
+    </flux:modal>
+
+    {{-- Phone bottom sheet: Move envelope money --}}
+    <x-core::bottom-sheet name="envelope-move" title="Move funds">
+        <form wire:submit="moveMoney" class="space-y-4">
+            <div>
+                <label for="envelope-move-to-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Move to</label>
+                <select
+                    id="envelope-move-to-sheet"
+                    wire:model="moveToCategoryId"
+                    style="font-size: 16px;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                >
+                    <option value="">{{ count($moveDestinations) === 0 ? 'No other envelopes' : 'Select an envelope' }}</option>
+                    @foreach ($moveDestinations as $dest)
+                        <option value="{{ $dest->categoryId }}">{{ $dest->categoryName }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="envelope-move-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</label>
+                <input
+                    type="text"
+                    id="envelope-move-amount-sheet"
+                    wire:model="moveAmount"
+                    inputmode="decimal"
+                    placeholder="0.00"
+                    style="font-size: 16px; font-variant-numeric: tabular-nums;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                >
+                @if ($moveError !== '')
+                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $moveError }}</p>
+                @endif
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" @disabled(count($moveDestinations) === 0) class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">Move funds</button>
+                <button type="button" wire:click="$dispatch('modal-close', { name: 'envelope-move' })" class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 focus:outline-none dark:border-slate-700">Cancel</button>
+            </div>
+        </form>
+    </x-core::bottom-sheet>
 </div>
