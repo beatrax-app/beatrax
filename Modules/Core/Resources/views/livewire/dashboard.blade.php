@@ -174,6 +174,13 @@
         @livewire('tax.summary-card')
     </div>
 
+    {{-- Budgets glance card (Req 12, D-21) — "Ready to assign" figure sourced
+         from the envelope model, plus an amber over-budget pill. Renders
+         nothing when the user has zero expense categories. --}}
+    <div>
+        @livewire('budgets.envelope-glance-card')
+    </div>
+
     {{-- Upcoming content (order 5 on phone): fixed payments, spending trend, savings insights --}}
     <div class="dashboard-phone-order-5 space-y-12">
         {{-- Inline "Fixed monthly payments" card — top six approved
