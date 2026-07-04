@@ -48,6 +48,7 @@ final class MergeRulesRegistry
                 'note' => ['strategy' => 'lww', 'nullable' => true],
                 'counterparty_id' => ['strategy' => 'lww', 'nullable' => true],
                 'type' => ['strategy' => 'lww', 'nullable' => false],
+                'status' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => true,
                 // NOT NULL columns without defaults in transactions (status has default 'cleared',
                 // payment_type has default 'unknown' — omitted from required list).
