@@ -239,6 +239,22 @@ final readonly class OpLogReplayer
                 continue;
             }
 
+            // Table allow-list gate: only tables registered in
+            // MergeRulesRegistry may be written via op-log replay. Without
+            // this gate, a compromised-but-signature-valid peer device could
+            // send a SET/DELETE/CreateRow op against ANY wire-supplied table
+            // name (e.g. 'device_registry', field 'ed25519_public_key_hex')
+            // and strategyFor()'s unknown-table default of 'lww' would let it
+            // apply — a full trust-store takeover. This MUST run before the
+            // Ed25519 signature gate and persistVerifiedEntry() so an
+            // unregistered-table op is never authenticated into the durable
+            // log, and before any strategy resolution or DB write.
+            if (! $this->rules->isRegistered($entry->table)) {
+                $this->quarantine($entry, 'unknown_table', $now);
+
+                continue;
+            }
+
             // CR-03: system cascade ops are deterministically re-derived by the
             // replayer itself (never network-received), so they carry no device
             // key and no signature. Allow-list them past the Ed25519 gate
@@ -399,6 +415,38 @@ final readonly class OpLogReplayer
                                 continue 2;  // skip this entire row
                             }
                         }
+
+                        // SEC finding: a CreateRow op may legitimately carry a
+                        // 'user_id' field (envelope_assignments/_settings
+                        // _create_required lists include it), but the
+                        // field-assembly loop above lets an op-supplied
+                        // 'user_id' overwrite the seeded, authoritative
+                        // $payload['user_id'] = $userId. A malicious device
+                        // of user A can craft an entry with
+                        // entry->userId = A (passing the I1 cross_user gate)
+                        // but dirtyFields['user_id'] = B, and insertOrIgnore
+                        // would then insert a row into user B's data — I2's
+                        // WHERE user_id = $userId guard does not protect
+                        // INSERTs (they have no WHERE clause). Reject the
+                        // whole row when the supplied value disagrees with
+                        // $userId, using the same 'cross_user' reason as the
+                        // I1 gate.
+                        if (isset($fields['user_id'])) {
+                            $suppliedUserIdValue = $payload['user_id'] ?? null;
+                            $suppliedUserId = is_numeric($suppliedUserIdValue) ? (int) $suppliedUserIdValue : null;
+
+                            if ($suppliedUserId !== $userId) {
+                                $this->quarantine($fields['user_id'][0], 'cross_user', $now);
+
+                                continue;
+                            }
+                        }
+
+                        // Defense-in-depth: force the authoritative user_id
+                        // even when the op-supplied value matched (or none
+                        // was supplied) — never trust a wire-derived value
+                        // for this column.
+                        $payload['user_id'] = $userId;
 
                         // insertOrIgnore makes re-applying the same CREATE idempotent.
                         $this->db->connection()
