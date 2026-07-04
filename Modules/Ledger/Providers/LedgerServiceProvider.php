@@ -11,9 +11,11 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Internal\Services\FingerprintRederiveService;
 use Modules\Ledger\Public\Actions\RecordTransactions;
+use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Ledger\Public\Actions\UpdateTransactionCategory;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 use Modules\Ledger\Public\Services\CategorySpendTrendQuery;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -44,6 +46,11 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(RecordsTransactions::class, RecordTransactions::class);
         $this->app->bind(UpdatesTransactionCategory::class, UpdateTransactionCategory::class);
         $this->app->bind(RecordsStatementSummary::class, StatementSummaryWriter::class);
+        // Phase 13.1 Plan 05: the sole mutator of transaction_splits was never
+        // bound after Plan 01 introduced it — TransactionDetail's split-editor
+        // actions type-hint the interface, so without this binding every
+        // saveSplit()/unsplit() call would fail to resolve (Rule 3 fix).
+        $this->app->bind(SavesTransactionSplit::class, SaveTransactionSplit::class);
         $this->app->singleton(FingerprintComposer::class);
         $this->app->bind(PeriodQuery::class);
         // Transient (not singleton): depends on the per-request PeriodQuery.
