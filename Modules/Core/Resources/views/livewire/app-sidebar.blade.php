@@ -191,6 +191,12 @@
         <span class="ic" aria-hidden="true">◫</span>
         Pots
     </a>
+    {{-- Reconcile — standalone SC-2 statement-balance confirmation surface
+         (D-05, no account-detail page exists in the app). --}}
+    <a href="{{ route('reconcile.index') }}" class="side-item {{ $isActive('/reconcile') }}">
+        <span class="ic" aria-hidden="true">✓</span>
+        Reconcile
+    </a>
     <a href="{{ route('drift.watch') }}" class="side-item {{ $isActive('/drift/watch') }}">
         <span class="ic" aria-hidden="true">↗</span>
         Subscriptions
