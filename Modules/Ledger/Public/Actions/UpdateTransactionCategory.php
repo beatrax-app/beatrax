@@ -23,6 +23,13 @@ use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
  * category id would render as "uncategorized" in the picker (the Category
  * global scope hides it) but the raw column would still hold a
  * cross-tenant reference visible to any consumer that reads it directly.
+ *
+ * D-08 reconciled lock: this is the single writer behind every category-edit
+ * entry point (AssignCategory, InlineCategoryPicker, TransactionDetail's
+ * reclassifyCategory), so the warn-first "un-reconcile first" guard lives
+ * here rather than being duplicated per caller — a reconciled row's category
+ * can never change regardless of which surface drives the write. Mirrors
+ * the same status check TransactionDetail's guarded mutators use (WR-01).
  */
 final class UpdateTransactionCategory implements UpdatesTransactionCategory
 {
@@ -30,6 +37,16 @@ final class UpdateTransactionCategory implements UpdatesTransactionCategory
 
     public function __invoke(int $transactionId, ?int $categoryId, User $user): int
     {
+        $status = $this->db->connection()
+            ->table('transactions')
+            ->where('id', $transactionId)
+            ->where('user_id', $user->id)
+            ->value('status');
+
+        if ($status === 'reconciled') {
+            return 0;
+        }
+
         if ($categoryId !== null) {
             $categoryVisible = $this->db->connection()
                 ->table('categories')
