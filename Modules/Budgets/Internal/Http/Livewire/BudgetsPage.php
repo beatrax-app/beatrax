@@ -12,6 +12,7 @@ use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Budgets\Public\Dto\EnvelopeRow;
 use Modules\Budgets\Public\Services\CarryoverQuery;
+use Modules\Budgets\Public\Services\EnvelopeBalanceQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -65,7 +66,7 @@ final class BudgetsPage extends Component
     /** @var array<int, string> decimal strings keyed by category id */
     public array $assignedInputs = [];
 
-    // Move-money modal state (Req 5, wired in full once the modal exists).
+    // Move-money modal state (Req 5, D-19)
     public int $moveFromCategoryId = 0;
 
     public string $moveToCategoryId = '';
@@ -195,12 +196,97 @@ final class BudgetsPage extends Component
     }
 
     // -------------------------------------------------------------------
+    // Move money between envelopes (Req 5, D-19)
+    // -------------------------------------------------------------------
+
+    /**
+     * Opens the move-money modal for `$fromCategoryId`, resetting the rest
+     * of the form state (mirrors `PotsPage::movePot`'s operation-modal reset
+     * shape). The from-envelope is resolved for display in render() rather
+     * than trusted from any client-controlled value.
+     */
+    public function openMove(int $fromCategoryId): void
+    {
+        $this->moveFromCategoryId = $fromCategoryId;
+        $this->moveToCategoryId = '';
+        $this->moveAmount = '';
+        $this->moveMemo = '';
+        $this->moveError = '';
+        $this->dispatch('modal-show', name: 'envelope-move');
+    }
+
+    /**
+     * Submits the move-money modal. Maps `EnvelopeWriter::move()`'s
+     * `InvalidArgumentException` to the two inline field errors the
+     * UI-SPEC's copywriting contract defines — there is deliberately NO
+     * "insufficient balance" catch (Req 8 / Pitfall 1): a move that takes
+     * the source envelope negative always succeeds.
+     */
+    public function moveMoney(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods): void
+    {
+        $this->moveError = '';
+
+        if (! $currentUser->isAuthenticated()) {
+            return;
+        }
+
+        $toCategoryId = $this->moveToCategoryId !== '' ? (int) $this->moveToCategoryId : 0;
+        if ($toCategoryId <= 0) {
+            $this->moveError = 'Choose an envelope to move money to.';
+
+            return;
+        }
+
+        $minor = $writer->parseAmount($this->moveAmount);
+        if ($minor === null) {
+            $this->moveError = 'Enter an amount greater than zero.';
+
+            return;
+        }
+
+        $period = $this->resolvePeriod($periods);
+        $memo = trim($this->moveMemo) !== '' ? $this->moveMemo : null;
+
+        try {
+            $writer->move($currentUser->user(), $this->moveFromCategoryId, $toCategoryId, $period->start, $minor, $memo);
+        } catch (InvalidArgumentException $e) {
+            $this->moveError = $e->getMessage();
+
+            return;
+        }
+
+        $this->moveFromCategoryId = 0;
+        $this->moveToCategoryId = '';
+        $this->moveAmount = '';
+        $this->moveMemo = '';
+        $this->dispatch('modal-close', name: 'envelope-move');
+        $this->toast('Money moved.');
+    }
+
+    /**
+     * Reverses a move via the per-envelope recent-moves list (D-07/D-19):
+     * `EnvelopeWriter::undoMove()` hard-deletes both paired rows. A foreign
+     * or missing move id is a silent no-op (mirrors `PotWriter::archive`'s
+     * cross-user handling).
+     */
+    public function undoMove(CurrentUser $currentUser, EnvelopeWriter $writer, int $moveId): void
+    {
+        if (! $currentUser->isAuthenticated()) {
+            return;
+        }
+
+        $writer->undoMove($currentUser->user(), $moveId);
+        $this->toast('Move undone.');
+    }
+
+    // -------------------------------------------------------------------
     // Render
     // -------------------------------------------------------------------
 
     public function render(
         CurrentUser $currentUser,
         CarryoverQuery $carryover,
+        EnvelopeBalanceQuery $balances,
         PeriodQuery $periods,
         DatabaseManager $db,
         ViewFactory $views,
@@ -214,6 +300,9 @@ final class BudgetsPage extends Component
                 'canGoPrevious' => false,
                 'canGoNext' => false,
                 'showCopyBanner' => false,
+                'moveFromCategory' => null,
+                'moveDestinations' => [],
+                'recentMoves' => [],
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -251,6 +340,27 @@ final class BudgetsPage extends Component
         $priorHasAssignments = $priorIsWithinGenesis && $this->periodHasAssignments($db, $user->id, $previousPeriod);
         $showCopyBanner = ! $hasAssignmentsSelected && $priorHasAssignments;
 
+        // Move-money modal data (Req 5, D-19): from-envelope is resolved
+        // server-side from the already-validated fold rows, never trusted
+        // from the client-controlled moveFromCategoryId directly.
+        $moveFromCategory = null;
+        $moveDestinations = [];
+        if ($this->moveFromCategoryId !== 0 && array_key_exists($this->moveFromCategoryId, $rows)) {
+            $moveFromCategory = $rows[$this->moveFromCategoryId];
+            $moveDestinations = array_filter(
+                $rows,
+                fn (int $categoryId): bool => $categoryId !== $this->moveFromCategoryId,
+                ARRAY_FILTER_USE_KEY,
+            );
+        }
+
+        // Per-envelope recent-moves + undo (D-19), one query per envelope —
+        // the same shape as PotBalanceQuery's per-pot recentMovements loader.
+        $recentMoves = [];
+        foreach (array_keys($rows) as $categoryId) {
+            $recentMoves[$categoryId] = $balances->recentMovesFor($user->id, $categoryId, $selected);
+        }
+
         $view = $views->make('budgets::livewire.budgets-page', [
             'rows' => $rows,
             'toBudgetMinor' => $toBudgetMinor,
@@ -259,6 +369,9 @@ final class BudgetsPage extends Component
             'canGoPrevious' => $canGoPrevious,
             'canGoNext' => $canGoNext,
             'showCopyBanner' => $showCopyBanner,
+            'moveFromCategory' => $moveFromCategory,
+            'moveDestinations' => $moveDestinations,
+            'recentMoves' => $recentMoves,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
