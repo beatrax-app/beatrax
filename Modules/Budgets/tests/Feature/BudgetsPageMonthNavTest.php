@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
@@ -51,6 +53,18 @@ beforeEach(function (): void {
     ]);
 
     $this->groceries = Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'monthnav-groceries-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 1]);
+
+    // Rule 1 fix (mirrors the identical EnvelopeMoveTest/CarryoverQueryTest
+    // gap already fixed in 13.2-04-SUMMARY.md): CarryoverQuery returns an
+    // all-zero result for a null `envelope_activated_at` (D-12b, pre-cutover
+    // user), so the Wave-0 fixture's missing genesis stamp would make every
+    // assertion below fail regardless of BudgetsPage's own correctness.
+    // Stamped 3 periods back (not just "this month") so the previous-period
+    // walk this file's first test depends on is never clamped back to
+    // genesis.
+    DB::table('users')->where('id', $this->user->id)->update([
+        'envelope_activated_at' => CarbonImmutable::now()->subMonths(3)->startOfMonth(),
+    ]);
 });
 
 it('shows the previous periods own assignment after navigating back, distinct from the current period (Req 7)', function (): void {
@@ -63,8 +77,8 @@ it('shows the previous periods own assignment after navigating back, distinct fr
     Livewire::test(BudgetsPage::class)
         ->assertViewHas('toBudgetMinor')
         ->call('prevPeriod')
-        ->assertSee('15,00')
-        ->assertDontSee('40,00');
+        ->assertSee('150,00')
+        ->assertDontSee('400,00');
 });
 
 it('shows income zero for a future period unless a real income transaction exists there (Req 7)', function (): void {

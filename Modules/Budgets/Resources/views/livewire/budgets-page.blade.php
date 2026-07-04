@@ -1,145 +1,177 @@
 {{--
-    /budgets page — set a monthly ceiling per expense category and track the
-    current period's spend against it.
+    /budgets — the rebuilt zero-based envelope grid (Req 3/5/6/7/8/12).
 
-    Each row shows spent / budget (tabular numerics), a status-coloured
-    progress bar (emerald under 80%, amber 80–100%, rose over budget), the
-    amount remaining, an inline budget editor, and a remove control. Blade
-    default `{{ }}` escaping throughout; no raw HTML output.
+    Assign-every-euro grid sourced from CarryoverQuery's genesis-to-target
+    fold: per-envelope assigned (inline-editable) / spent / available, a
+    sticky "Ready to assign" header (emerald ≥ 0 / rose < 0, never blocking),
+    month navigation, a "Copy last month" auto-fill banner, and a per-row
+    overspend-mode toggle. Calm-slate room per 13.2-UI-SPEC.md — same
+    max-w-5xl / rounded-lg border chrome family as the rest of the app, no
+    new palette. Money figures are tabular-nums throughout.
 --}}
 
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
+    $fmt = static fn (int $minor, string $currency = 'EUR'): string => Money::ofMinor($minor, $currency)
         ->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
-
-    $barColour = [
-        'under' => 'bg-emerald-500 dark:bg-emerald-400',
-        'near' => 'bg-amber-500 dark:bg-amber-400',
-        'over' => 'bg-rose-500 dark:bg-rose-400',
-    ];
-
-    $remainingMinor = $totalBudgetMinor - $totalSpentMinor;
 @endphp
 
-<div class="mx-auto max-w-3xl px-4 py-12">
-    <header class="mb-8">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Budgets</h1>
-        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Monthly spending ceilings per category — {{ $period->label }}.
-        </p>
-
-        @if (count($rows) > 0)
-            <div class="mt-6 flex flex-wrap items-baseline gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300">
-                <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totalSpentMinor, 'EUR') }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">spent of</span>
-                <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totalBudgetMinor, 'EUR') }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">budgeted</span>
-                <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
-                <span class="font-medium {{ $remainingMinor < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">{{ $fmt(abs($remainingMinor), 'EUR') }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ $remainingMinor < 0 ? 'over' : 'left' }}</span>
-            </div>
-        @endif
-    </header>
-
-    {{-- Add a budget --}}
-    @if (count($available) > 0)
-        <section class="mb-8 rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="mb-3 text-sm font-medium text-slate-900 dark:text-slate-100">Add a budget</h2>
-            <div class="flex flex-wrap items-end gap-3">
-                <label class="flex-1 min-w-[12rem]">
-                    <span class="mb-1 block text-xs text-slate-500 dark:text-slate-400">Category</span>
-                    <select
-                        wire:model="newCategoryId"
-                        class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                    >
-                        <option value="">Choose a category…</option>
-                        @foreach ($available as $id => $name)
-                            <option value="{{ $id }}">{{ $name }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <label class="w-32">
-                    <span class="mb-1 block text-xs text-slate-500 dark:text-slate-400">Monthly (€)</span>
-                    <input
-                        type="text"
-                        inputmode="decimal"
-                        wire:model="newAmount"
-                        wire:keydown.enter="setBudget"
-                        placeholder="0.00"
-                        class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                        style="font-variant-numeric: tabular-nums;"
-                    >
-                </label>
-                <button
-                    type="button"
-                    wire:click="setBudget"
-                    class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                >Add</button>
-            </div>
-        </section>
-    @endif
-
-    {{-- Budget rows --}}
-    @if (count($rows) === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No budgets yet</h2>
+<div class="mx-auto max-w-5xl px-4 py-12">
+    {{-- Header row: title + subtitle, month nav on the right (D-20) --}}
+    <header class="mb-6 flex items-start justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Budgets</h1>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Pick an expense category above and set a monthly amount to start tracking it here.
+                Assign every euro — {{ $period->label }}.
             </p>
         </div>
+        <div class="flex shrink-0 items-center gap-1">
+            <button
+                type="button"
+                wire:click="prevPeriod"
+                @disabled(! $canGoPrevious)
+                aria-label="Previous period"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:text-slate-400"
+            >&lsaquo;</button>
+            <span class="px-2 text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $period->label }}</span>
+            <button
+                type="button"
+                wire:click="nextPeriod"
+                @disabled(! $canGoNext)
+                aria-label="Next period"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:text-slate-400"
+            >&rsaquo;</button>
+        </div>
+    </header>
+
+    {{-- Sticky to-budget header (D-23) --}}
+    @php
+        $toBudgetColour = $toBudgetMinor >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+    @endphp
+    <div class="sticky top-0 z-10 mb-6 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Ready to assign</p>
+        <p class="mt-1 text-3xl font-semibold {{ $toBudgetColour }}" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
+            {{ $fmt($toBudgetMinor) }}
+        </p>
+        @if ($toBudgetMinor < 0)
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                You've assigned more than you have — reduce an envelope or wait for more income.
+            </p>
+        @endif
+    </div>
+
+    {{-- Empty-state / copy-last-month banner (Req 6) --}}
+    @if (! ($rows !== [] && collect($rows)->contains(static fn ($row): bool => $row->assignedMinor > 0 || $row->spentMinor > 0)))
+        <div class="mb-6 rounded-lg border p-4 {{ $showCopyBanner ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20' : 'border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700' }}">
+            <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Nothing assigned yet</h2>
+            <p class="mt-1 text-sm {{ $showCopyBanner ? 'text-amber-700 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400' }}">
+                @if ($showCopyBanner)
+                    Copy last month's plan, or click into a cell below to start assigning.
+                @else
+                    Click into a cell below to start assigning your first month.
+                @endif
+            </p>
+            @if ($showCopyBanner)
+                <button
+                    type="button"
+                    wire:click="copyLastMonth"
+                    class="mt-3 inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                >Copy last month</button>
+            @endif
+        </div>
+    @endif
+
+    {{-- Envelope grid --}}
+    @if (count($rows) === 0)
+        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No expense categories yet</h2>
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Add an expense category to start assigning money to it.</p>
+        </div>
     @else
-        <ul class="space-y-3">
-            @foreach ($rows as $row)
-                @php
-                    $barWidth = $row->fractionUsed <= 0 ? 0 : max(2, min(100, (int) round($row->fractionUsed * 100)));
-                    $pct = (int) round($row->fractionUsed * 100);
-                @endphp
-                <li class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
-                    <div class="flex items-baseline justify-between gap-4">
-                        <p class="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{{ $row->name }}</p>
-                        <p class="shrink-0 text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                            <span class="{{ $row->status === 'over' ? 'text-rose-600 dark:text-rose-400 font-medium' : 'text-slate-900 dark:text-slate-100' }}">{{ $fmt($row->spentMinor, $row->currency) }}</span>
-                            <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">/</span>
-                            {{ $fmt($row->budgetMinor, $row->currency) }}
-                        </p>
-                    </div>
-
-                    <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                        <div class="h-2 rounded-full {{ $barColour[$row->status] }}" style="width: {{ $barWidth }}%;"></div>
-                    </div>
-
-                    <div class="mt-3 flex items-center justify-between gap-4">
-                        <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                            {{ $pct }}% used
-                            @if ($row->remainingMinor() >= 0)
-                                · {{ $fmt($row->remainingMinor(), $row->currency) }} left
-                            @else
-                                · <span class="text-rose-600 dark:text-rose-400">{{ $fmt(abs($row->remainingMinor()), $row->currency) }} over</span>
+        {{-- Desktop grid (>=768px) --}}
+        <table class="hidden w-full text-left text-sm md:table">
+            <thead class="border-b border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-700">
+                <tr>
+                    <th class="px-4 py-2 text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">Category</th>
+                    <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">Assigned</th>
+                    <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">Spent</th>
+                    <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">Available</th>
+                    <th class="px-4 py-2 text-left text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">If overspent</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($rows as $row)
+                    <tr class="border-b border-slate-100 dark:border-slate-800" wire:key="envelope-row-{{ $row->categoryId }}">
+                        <td class="px-4 py-2">
+                            <span class="truncate text-slate-900 dark:text-slate-100">{{ $row->categoryName }}</span>
+                            @if ($row->overspendMode === 'carry_negative')
+                                <span class="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-[2px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Carries negative</span>
                             @endif
-                        </p>
-                        <div class="flex items-center gap-2">
+                        </td>
+                        <td class="px-4 py-2 text-right">
                             <input
                                 type="text"
                                 inputmode="decimal"
-                                wire:model="amounts.{{ $row->categoryId }}"
-                                wire:keydown.enter="updateBudget({{ $row->categoryId }})"
-                                wire:blur="updateBudget({{ $row->categoryId }})"
-                                aria-label="Monthly budget for {{ $row->name }}"
-                                class="w-24 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-xs text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                wire:model="assignedInputs.{{ $row->categoryId }}"
+                                wire:keydown.enter="setAssigned({{ $row->categoryId }})"
+                                wire:blur="setAssigned({{ $row->categoryId }})"
+                                aria-label="Assigned for {{ $row->categoryName }}"
+                                placeholder="0.00"
+                                class="w-24 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                 style="font-variant-numeric: tabular-nums;"
                             >
-                            <button
-                                type="button"
-                                wire:click="removeBudget({{ $row->categoryId }})"
-                                class="rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:bg-slate-900 dark:hover:text-rose-400"
-                                aria-label="Remove budget for {{ $row->name }}"
-                            >Remove</button>
-                        </div>
+                        </td>
+                        <td class="px-4 py-2 text-right text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
+                            {{ $fmt($row->spentMinor, $row->currency) }}
+                        </td>
+                        <td class="px-4 py-2 text-right font-medium {{ $row->availableMinor < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">
+                            {{ $fmt($row->availableMinor, $row->currency) }}
+                        </td>
+                        <td class="px-4 py-2">
+                            <select
+                                x-on:change="$wire.setOverspendMode({{ $row->categoryId }}, $event.target.value)"
+                                aria-label="If {{ $row->categoryName }} is overspent"
+                                class="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300"
+                            >
+                                <option value="reduce_to_budget" @selected($row->overspendMode === 'reduce_to_budget')>Reduce next month's ready-to-assign</option>
+                                <option value="carry_negative" @selected($row->overspendMode === 'carry_negative')>Carry the negative in this envelope</option>
+                            </select>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        {{-- Phone stacked list (<768px) --}}
+        <div class="rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden md:hidden">
+            @foreach ($rows as $row)
+                <div class="card-list-item" wire:key="envelope-phone-{{ $row->categoryId }}">
+                    <div class="flex-1 min-w-0">
+                        <p class="primary truncate">
+                            {{ $row->categoryName }}
+                            @if ($row->overspendMode === 'carry_negative')
+                                <span class="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-[2px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Carries negative</span>
+                            @endif
+                        </p>
+                        <p class="secondary" style="font-variant-numeric: tabular-nums;">
+                            Spent {{ $fmt($row->spentMinor, $row->currency) }}
+                            · <span class="{{ $row->availableMinor < 0 ? 'text-rose-600 dark:text-rose-400' : '' }}">Available {{ $fmt($row->availableMinor, $row->currency) }}</span>
+                        </p>
                     </div>
-                </li>
+                    <input
+                        type="text"
+                        inputmode="decimal"
+                        wire:model="assignedInputs.{{ $row->categoryId }}"
+                        wire:keydown.enter="setAssigned({{ $row->categoryId }})"
+                        wire:blur="setAssigned({{ $row->categoryId }})"
+                        aria-label="Assigned for {{ $row->categoryName }}"
+                        placeholder="0.00"
+                        class="amount w-20 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                        style="font-variant-numeric: tabular-nums;"
+                    >
+                </div>
             @endforeach
-        </ul>
+        </div>
     @endif
 </div>
