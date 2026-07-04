@@ -59,10 +59,19 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             ->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $user->id)
-            ->first(['id', 'type', 'settled_amount_minor', 'settled_currency']);
+            ->first(['id', 'type', 'status', 'settled_amount_minor', 'settled_currency']);
 
         if ($parent === null) {
             throw new InvalidArgumentException('Transaction not found or not owned by user.');
+        }
+
+        // D-08 reconciled lock (T-13.3-15, RESEARCH.md Pitfall 4): reuses the
+        // already user-scoped parent load above — no extra query. The
+        // catch(InvalidArgumentException) blocks in TransactionDetail's
+        // saveSplit()/confirmUnsplitAction()/confirmRemoveToOneAction()
+        // convert this into a warn toast, staying warn-first end-to-end.
+        if (self::toStr($parent->status) === 'reconciled') {
+            throw new InvalidArgumentException('This transaction is reconciled. Un-reconcile it to change its split.');
         }
 
         $parentType = self::toStr($parent->type);
@@ -285,14 +294,20 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         $removedIds = [];
 
         $this->db->connection()->transaction(function () use ($user, $transactionId, $survivingCategoryId, &$removedIds): void {
-            $parentExists = $this->db->connection()
+            $parent = $this->db->connection()
                 ->table('transactions')
                 ->where('id', $transactionId)
                 ->where('user_id', $user->id)
-                ->exists();
+                ->first(['id', 'status']);
 
-            if (! $parentExists) {
+            if ($parent === null) {
                 throw new InvalidArgumentException('Transaction not found or not owned by user.');
+            }
+
+            // D-08 reconciled lock (T-13.3-15, RESEARCH.md Pitfall 4): reuses
+            // the already user-scoped parent load above — no extra query.
+            if (self::toStr($parent->status) === 'reconciled') {
+                throw new InvalidArgumentException('This transaction is reconciled. Un-reconcile it to change its split.');
             }
 
             $legRows = $this->db->connection()

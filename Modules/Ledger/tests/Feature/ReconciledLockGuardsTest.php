@@ -116,7 +116,7 @@ it('SaveTransactionSplit::save refuses to edit legs of a reconciled transaction'
     )->toThrow(InvalidArgumentException::class);
 
     $legsAfter = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('id')->pluck('settled_amount_minor', 'id')->all();
-    expect($legsAfter->all())->toBe($legsBefore);
+    expect($legsAfter)->toBe($legsBefore);
 });
 
 it('SaveTransactionSplit::unsplit refuses to collapse a reconciled transaction\'s legs', function (): void {
