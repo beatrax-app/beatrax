@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Contracts;
 
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 
 /**
  * Public contract for the sole mutator of `transaction_splits`. Enforces the
@@ -39,7 +40,7 @@ interface SavesTransactionSplit
      *
      * @param  list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>  $legs
      *
-     * @throws \Modules\Ledger\Public\Exceptions\SplitSumMismatchException
+     * @throws SplitSumMismatchException
      */
     public function save(User $user, int $transactionId, array $legs): void;
 
