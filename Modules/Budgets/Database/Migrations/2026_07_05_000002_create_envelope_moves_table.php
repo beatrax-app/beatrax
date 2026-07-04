@@ -66,6 +66,14 @@ return new class extends Migration
             $table->string('currency', 3);
             $table->string('kind', 32); // 'move_in' | 'move_out'
             $table->string('memo')->nullable();
+            // WR-04: shared correlation id for the two paired rows of one move,
+            // so undoMove() can match the counterpart deterministically instead
+            // of by second-precision created_at (ambiguous when two moves land
+            // in the same wall-clock second). NULLABLE by design: legacy rows
+            // predate it and fall back to the created_at match, and keeping it
+            // nullable-without-DB-default keeps it OUT of the Sync
+            // EnvelopeMovesRegistryColumnsTest `_create_required` NOT-NULL set.
+            $table->string('move_group_id', 36)->nullable()->index();
             $table->timestamps();
 
             $table->index(['user_id', 'category_id', 'period_start']);
