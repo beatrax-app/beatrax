@@ -95,6 +95,11 @@
         <span class="ic" aria-hidden="true">◫</span>
         Pots
     </a>
+    
+    <a href="https://beatrax.test/reconcile" class="side-item ">
+        <span class="ic" aria-hidden="true">✓</span>
+        Reconcile
+    </a>
     <a href="https://beatrax.test/drift/watch" class="side-item ">
         <span class="ic" aria-hidden="true">↗</span>
         Subscriptions
