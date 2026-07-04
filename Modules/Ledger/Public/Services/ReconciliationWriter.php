@@ -55,33 +55,62 @@ final class ReconciliationWriter
         $statementDateString = $statementDate->toDateString();
         $reconciledAt = $this->clock->now();
 
-        // WR-02: capture the transitioned id set from POST-UPDATE membership,
-        // not a pre-transaction snapshot. The UPDATE is guarded by
-        // `status = 'cleared'`, so a row a concurrent toggle flipped to
-        // `uncleared` between read and write is (correctly) skipped; re-selecting
-        // the rows this write actually stamped (`status = reconciled` AND
-        // `updated_at = $reconciledAt`) guarantees the dispatch loop emits an
-        // event ONLY for rows that genuinely transitioned — never a spurious
-        // `status => reconciled` op for a row the DB left `uncleared`.
+        // WR-02: capture the transitioned id set as an explicit SELECT taken
+        // BEFORE the UPDATE, inside the same DB transaction — never re-select
+        // by matching `updated_at = $reconciledAt` afterwards. Two
+        // completeReconcile() calls landing in the same wall-clock second
+        // (or sharing a frozen Clock) stamp the same `updated_at` value, so a
+        // post-update re-select on that timestamp cannot distinguish rows
+        // THIS call transitioned from rows a prior call already locked —
+        // that produced an inflated "N rows locked" count (WR-04) and
+        // duplicate `TransactionMutated('status' => 'reconciled')` dispatches
+        // for already-reconciled rows. Capturing the id set up front and
+        // driving both the UPDATE (via `whereIn`) and the dispatch loop from
+        // that exact list makes the transitioned set unambiguous regardless
+        // of timestamp collisions. The UPDATE re-asserts `status = 'cleared'`
+        // because a deferred SQLite transaction takes its write lock at the
+        // UPDATE, not the SELECT — a concurrent writer could flip a candidate
+        // between the two. If that happens the affected count disagrees with
+        // the candidate list, and the transitioned set is re-derived from the
+        // candidates the UPDATE actually stamped (safe to match on
+        // `updated_at = $reconciledAt` here: the whereIn confines it to rows
+        // that were `cleared` at SELECT time, so no prior reconcile's rows
+        // can be swept in).
         $transactionIds = [];
 
         $connection->transaction(function () use ($connection, $accountId, $user, $statementDateString, $reconciledAt, &$transactionIds): void {
-            $connection->table('transactions')
+            $candidateIds = $connection->table('transactions')
                 ->where('account_id', $accountId)
                 ->where('user_id', $user->id)
                 ->where('status', 'cleared')
                 ->where('posted_at', '<=', $statementDateString)
+                ->pluck('id')
+                ->map(static fn (mixed $id): int => self::toInt($id))
+                ->all();
+
+            if ($candidateIds === []) {
+                return;
+            }
+
+            $affected = $connection->table('transactions')
+                ->whereIn('id', $candidateIds)
+                ->where('user_id', $user->id)
+                ->where('status', 'cleared')
                 ->update([
                     'status' => 'reconciled',
                     'updated_at' => $reconciledAt,
                 ]);
 
+            if ($affected === count($candidateIds)) {
+                $transactionIds = $candidateIds;
+
+                return;
+            }
+
             $transactionIds = $connection->table('transactions')
-                ->where('account_id', $accountId)
-                ->where('user_id', $user->id)
+                ->whereIn('id', $candidateIds)
                 ->where('status', 'reconciled')
                 ->where('updated_at', $reconciledAt)
-                ->where('posted_at', '<=', $statementDateString)
                 ->pluck('id')
                 ->map(static fn (mixed $id): int => self::toInt($id))
                 ->all();
@@ -120,15 +149,29 @@ final class ReconciliationWriter
             return;
         }
 
-        $connection->transaction(function () use ($connection, $transactionId, $user): void {
-            $connection->table('transactions')
+        // The `first()` above is a pre-read, not a lock — a row could flip
+        // away from `reconciled` between that read and the UPDATE below
+        // (TOCTOU). Re-asserting `status = 'reconciled'` on the UPDATE
+        // itself (not just the pre-read) closes that window: if the row no
+        // longer qualifies by the time the UPDATE runs, it matches zero
+        // rows, and the event dispatch below is gated on that affected-row
+        // count so a lost race never fires a spurious `cleared` event.
+        $affected = 0;
+
+        $connection->transaction(function () use ($connection, $transactionId, $user, &$affected): void {
+            $affected = $connection->table('transactions')
                 ->where('id', $transactionId)
                 ->where('user_id', $user->id)
+                ->where('status', 'reconciled')
                 ->update([
                     'status' => 'cleared',
                     'updated_at' => $this->clock->now(),
                 ]);
         });
+
+        if ($affected === 0) {
+            return;
+        }
 
         $this->events->dispatch(new TransactionMutated(
             transactionId: $transactionId,

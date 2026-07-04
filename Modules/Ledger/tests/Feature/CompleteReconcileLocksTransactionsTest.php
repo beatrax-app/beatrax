@@ -90,3 +90,50 @@ it('dispatches a reconciled event only for rows the update actually transitioned
         fn (TransactionMutated $e): bool => in_array($e->transactionId, [$uncleared->id, $afterWindow->id], true),
     );
 });
+
+it('a second reconcile under a frozen clock counts and dispatches only the newly transitioned rows, never rows a prior reconcile already locked', function (): void {
+    // Regression for the WR-04/WR-02 timestamp re-select bug: when two
+    // completeReconcile() calls land in the same wall-clock second (or the
+    // clock is frozen, as under a Clock double), re-selecting "status =
+    // reconciled AND updated_at = $reconciledAt" cannot tell this call's
+    // rows apart from a prior call's rows sharing the same stamp. Freezing
+    // CarbonImmutable::setTestNow() reproduces exactly that same-timestamp
+    // collision deterministically.
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-20 09:00:00'));
+
+    Event::fake([TransactionMutated::class]);
+
+    $r1 = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-10']);
+
+    $writer = app(ReconciliationWriter::class);
+
+    $firstCount = $writer->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'));
+    expect($firstCount)->toBe(1);
+    expect(DB::table('transactions')->where('id', $r1->id)->value('status'))->toBe('reconciled');
+
+    // A new cleared row appears (e.g. cleared between statements) and gets
+    // reconciled by a second call — still under the same frozen instant.
+    $r2 = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-16']);
+
+    $secondCount = $writer->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-20'));
+
+    expect($secondCount)->toBe(1);
+    expect(DB::table('transactions')->where('id', $r2->id)->value('status'))->toBe('reconciled');
+
+    Event::assertDispatchedTimes(TransactionMutated::class, 2);
+
+    /** @var array<int, int> $dispatchedIds */
+    $dispatchedIds = collect(Event::dispatched(TransactionMutated::class))
+        ->map(static fn (array $args): int => $args[0]->transactionId)
+        ->all();
+
+    // Exactly one event per row, ever — the bug this guards against is the
+    // second call re-selecting R1 (same `updated_at` stamp as R2) and
+    // dispatching a spurious second `reconciled` event for it.
+    expect(array_count_values($dispatchedIds))->toBe([
+        $r1->id => 1,
+        $r2->id => 1,
+    ]);
+
+    CarbonImmutable::setTestNow();
+});
