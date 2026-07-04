@@ -6,10 +6,12 @@ namespace Modules\Categorization\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 
 /**
  * Drops into each row of the `/transactions` list (and any other surface
@@ -33,10 +35,35 @@ final class InlineCategoryPicker extends Component
         $this->categoryId = $categoryId;
     }
 
-    public function updatedCategoryId(CurrentUser $currentUser, AssignsCategory $assign): void
-    {
+    public function updatedCategoryId(
+        CurrentUser $currentUser,
+        AssignsCategory $assign,
+        TransactionStatusQuery $status,
+        DatabaseManager $db,
+    ): void {
+        $user = $currentUser->user();
+
+        // D-08 reconciled lock: warn-first, no write — mirrors
+        // TransactionDetail::reclassifyCategory (WR-01). The <select> is
+        // wire:model.live-bound, so Livewire has already flipped $categoryId
+        // to the new value before this hook runs; revert it to the
+        // persisted value so the row doesn't show a phantom selection that
+        // was never saved.
+        if ($status->isReconciled($user->id, $this->transactionId)) {
+            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+
+            $persisted = $db->connection()
+                ->table('transactions')
+                ->where('id', $this->transactionId)
+                ->where('user_id', $user->id)
+                ->value('category_id');
+            $this->categoryId = is_numeric($persisted) ? (int) $persisted : null;
+
+            return;
+        }
+
         $value = $this->categoryId === 0 ? null : $this->categoryId;
-        $assign($this->transactionId, $value, $currentUser->user());
+        $assign($this->transactionId, $value, $user);
     }
 
     public function render(CurrentUser $currentUser, CategoryOptionsQuery $options, ViewFactory $views): View
