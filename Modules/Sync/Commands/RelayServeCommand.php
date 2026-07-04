@@ -11,6 +11,7 @@ use Amp\Http\Server\RequestHandler\ClosureRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
 use Illuminate\Console\Command;
+use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Psr\Log\LoggerInterface;
@@ -56,6 +57,22 @@ use Psr\Log\LoggerInterface;
  *   into any mailbox. The recipient's per-device drain token is the only thing
  *   that gates retrieval.
  *
+ * ## Resource-exhaustion guards on the open deliver path
+ *
+ *   Because delivery is intentionally unauthenticated, handleDeliver() bounds
+ *   the abuse surface instead of gating it:
+ *     - Blob size is capped server-side at RelayClient::MAX_BLOB_BYTES (mirrors
+ *       the client-side cap so a caller that skips RelayClient entirely cannot
+ *       smuggle an oversized blob past it) → 413 when exceeded.
+ *     - sender_did / recipient_did must match a bounded, safe character set
+ *       (self::DID_PATTERN) → 422 when malformed or oversized.
+ *     - Each recipient mailbox is capped at self::MAX_PENDING_PER_RECIPIENT
+ *       undelivered rows → 429 when full, preventing unbounded SQLite growth
+ *       for the 30-day undelivered TTL.
+ *   GET /relay/drain additionally caps the page size at self::DRAIN_PAGE_SIZE
+ *   so a single drain response cannot force the draining device to buffer an
+ *   unbounded backlog in memory.
+ *
  * ## Opt-in deployment (D-01)
  *
  *   The relay is NOT started automatically by the application. Self-hosters run
@@ -79,6 +96,41 @@ final class RelayServeCommand extends Command
 
     /** @var string */
     protected $description = 'Start the ZK relay HTTP endpoint daemon (POST /relay/deliver, GET /relay/drain, DELETE /relay/drain/{id}).';
+
+    /**
+     * Maximum pending (undelivered) rows allowed per recipient mailbox.
+     *
+     * Resource-exhaustion guard: deliver is open-submission by design, so
+     * without a per-mailbox cap a flood of deliveries into one recipient_did
+     * would grow the SQLite file without bound for the full 30-day
+     * undelivered TTL. 1000 is generous headroom above any realistic personal
+     * multi-device backlog while still bounding worst-case disk growth.
+     */
+    private const MAX_PENDING_PER_RECIPIENT = 1000;
+
+    /**
+     * Maximum rows returned per GET /relay/drain call.
+     *
+     * Resource-exhaustion guard: an unbounded drain would let a caller force
+     * the server to serialize (and the draining device to buffer) an entire
+     * mailbox backlog in one JSON response. Callers loop drain → confirm each
+     * row → drain again until fewer than this many rows come back.
+     */
+    private const DRAIN_PAGE_SIZE = 100;
+
+    /**
+     * Allowed character set + length bound for sender_did / recipient_did.
+     *
+     * Device ids in this codebase are UUID v4 strings (DeviceIdentityService),
+     * but the relay wire contract only ever treats them as opaque routing
+     * keys, so this pattern is deliberately format-agnostic beyond a safe,
+     * bounded character class: letters, digits, `-`, `_`, `:`, and `.`, capped
+     * at 128 bytes (well above a 36-char UUID, with headroom for a future
+     * did:key:-style identifier). This rejects control characters, whitespace,
+     * and unbounded-length strings without coupling the open deliver endpoint
+     * to one specific id scheme.
+     */
+    private const DID_PATTERN = '/^[A-Za-z0-9_:.-]{1,128}$/';
 
     public function __construct(
         private readonly LoggerInterface $logger,
@@ -173,7 +225,11 @@ final class RelayServeCommand extends Command
      *
      * Authorization: OPEN — any caller may POST a blob into any mailbox. The
      * recipient's drain token gates retrieval; delivery is always accepted (like
-     * an email relay accepting inbound SMTP from anyone).
+     * an email relay accepting inbound SMTP from anyone). Because this path is
+     * intentionally unauthenticated, it is instead bounded: blob size
+     * (RelayClient::MAX_BLOB_BYTES), did format/length (self::DID_PATTERN), and
+     * a per-recipient pending-row quota (self::MAX_PENDING_PER_RECIPIENT) —
+     * see the class docblock.
      *
      * ZK: the blob is stored verbatim — no decryption, no sodium calls, no
      * json_decode of the blob content itself.
@@ -195,18 +251,38 @@ final class RelayServeCommand extends Command
             return $this->jsonError(HttpStatus::BAD_REQUEST, 'missing_fields');
         }
 
+        if (! $this->isValidDid($senderDid) || ! $this->isValidDid($recipientDid)) {
+            return $this->jsonError(HttpStatus::UNPROCESSABLE_ENTITY, 'invalid_did');
+        }
+
         // Decode base64 blob to raw binary for ZK storage.
         $blob = base64_decode($blobB64, strict: true);
         if ($blob === false || $blob === '') {
             return $this->jsonError(HttpStatus::BAD_REQUEST, 'invalid_blob_encoding');
         }
 
+        // Mirror RelayClient's own cap server-side (IN-02): a caller that hits
+        // this open endpoint directly (bypassing RelayClient) must not be able
+        // to smuggle a larger-than-intended blob past the client-only check.
+        if (strlen($blob) > RelayClient::MAX_BLOB_BYTES) {
+            return $this->jsonError(HttpStatus::PAYLOAD_TOO_LARGE, 'blob_too_large');
+        }
+
         try {
-            $this->mailbox->deliver($senderDid, $recipientDid, $blob);
+            $stored = $this->mailbox->deliverIfUnderQuota(
+                $senderDid,
+                $recipientDid,
+                $blob,
+                self::MAX_PENDING_PER_RECIPIENT,
+            );
         } catch (\Throwable $e) {
             $this->logger->error('relay:serve: deliver failed.', ['error' => $e->getMessage()]);
 
             return $this->jsonError(HttpStatus::INTERNAL_SERVER_ERROR, 'deliver_failed');
+        }
+
+        if (! $stored) {
+            return $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'mailbox_full');
         }
 
         return new Response(HttpStatus::ACCEPTED, ['content-type' => 'application/json'], '{"status":"accepted"}');
@@ -223,6 +299,12 @@ final class RelayServeCommand extends Command
      *
      * Response: JSON array of pending blobs, each with:
      *   { "id": int, "sender_did": string, "blob": string (base64), "created_at": string }
+     *
+     * Bounded (resource-exhaustion guard): returns at most
+     * self::DRAIN_PAGE_SIZE rows, oldest first. A caller draining a backlog
+     * larger than the page size must confirm() the returned rows and call
+     * drain again to fetch the remainder — repeat until fewer than the page
+     * size comes back.
      *
      * ZK: blobs are base64-encoded and returned verbatim — no decryption.
      */
@@ -248,7 +330,7 @@ final class RelayServeCommand extends Command
         }
 
         try {
-            $rows = $this->mailbox->drain($did);
+            $rows = $this->mailbox->drain($did, self::DRAIN_PAGE_SIZE);
         } catch (\Throwable $e) {
             $this->logger->error('relay:serve: drain failed.', ['error' => $e->getMessage()]);
 
@@ -362,6 +444,18 @@ final class RelayServeCommand extends Command
         $presentedToken = substr($authHeader, strlen('Bearer '));
 
         return hash_equals($expectedToken, $presentedToken);
+    }
+
+    /**
+     * Whether $did is a safe, bounded routing key (self::DID_PATTERN).
+     *
+     * Resource-exhaustion / injection guard on the open deliver path: rejects
+     * empty, oversized, or control-character-laden sender_did/recipient_did
+     * values before they ever reach RelayMailbox.
+     */
+    private function isValidDid(string $did): bool
+    {
+        return preg_match(self::DID_PATTERN, $did) === 1;
     }
 
     /**
