@@ -20,6 +20,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
+use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\SplittableTypes;
 use Modules\Sync\Public\Events\TransactionMutated;
@@ -66,6 +67,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class TransactionDetail extends Component
 {
+    use HandlesClearedStatus;
     use HandlesTaxTagging;
 
     public int $transactionId = 0;
@@ -385,6 +387,24 @@ final class TransactionDetail extends Component
 
         $this->noteSaved = true;
         $this->dispatch('toast', message: 'Note saved');
+    }
+
+    /**
+     * Toggle this transaction's cleared/uncleared status (SC-1, D-08/D-11).
+     *
+     * Delegates to `HandlesClearedStatus::toggleClearedStatus()` — the
+     * trait owns the warn-first-on-reconciled guard, the cleared<->
+     * uncleared flip, the `Transaction::STATUSES` validation, and the
+     * dispatch-after-commit `TransactionMutated` event. This method exists
+     * so the detail page's own transactionId never has to be threaded
+     * through the generic `#[On('cleared-toggle')]` event path.
+     */
+    public function toggleCleared(
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        Dispatcher $events,
+    ): void {
+        $this->toggleClearedStatus($this->transactionId, $currentUser, $db, $events);
     }
 
     /**
