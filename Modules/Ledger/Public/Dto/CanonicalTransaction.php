@@ -307,7 +307,7 @@ final class CanonicalTransaction extends Data
             'source_ref' => $this->sourceRef,
             'raw_payload' => $this->rawPayload === null ? null : json_encode($this->rawPayload),
             'payment_type' => ($this->paymentType ?? PaymentType::Unknown)->value,
-            'status' => 'cleared',
+            'status' => $this->sourceFormat === 'manual' ? 'uncleared' : 'cleared',
         ];
     }
 }
