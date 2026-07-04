@@ -116,7 +116,12 @@ final class ReconcilePage extends Component
         }
 
         $user = $currentUser->user();
-        $cleared = $balances->clearedBalance($this->accountId, $user);
+        // CR-01: bound the cleared balance by the statement date so the
+        // matched-check here uses the SAME window completeReconcile() locks
+        // (`posted_at <= $date`). Using the un-bounded balance would flag a
+        // spurious discrepancy for a past statement date whenever a cleared
+        // row is posted after it.
+        $cleared = $balances->clearedBalanceAsOf($this->accountId, $user, $date);
 
         if ($target - $cleared !== 0) {
             // D-07: a discrepancy is flag-only — never auto-balanced, never
@@ -149,13 +154,19 @@ final class ReconcilePage extends Component
 
         $ownedAccountId = $this->ownedAccountId($connection, $user->id);
 
-        $clearedBalanceMinor = $ownedAccountId !== null
-            ? $balances->clearedBalance($ownedAccountId, $user)
+        // CR-01: the on-screen difference, the @disabled(! $isMatched) gate,
+        // and confirmReconcile() must all agree on `posted_at <= statementDate`
+        // — the window completeReconcile() actually locks. Compute the cleared
+        // balance as of the parsed statement date, not the un-bounded total.
+        $statementDate = self::parseDate($this->statementDate);
+
+        $clearedBalanceMinor = ($ownedAccountId !== null && $statementDate !== null)
+            ? $balances->clearedBalanceAsOf($ownedAccountId, $user, $statementDate)
             : 0;
 
         $hasTarget = trim($this->statementBalance) !== '';
         $statementTargetMinor = self::parseAmount($this->statementBalance);
-        $differenceMinor = ($ownedAccountId !== null && $hasTarget && $statementTargetMinor !== null)
+        $differenceMinor = ($ownedAccountId !== null && $statementDate !== null && $hasTarget && $statementTargetMinor !== null)
             ? $statementTargetMinor - $clearedBalanceMinor
             : null;
         $isMatched = $differenceMinor === 0;
