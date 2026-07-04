@@ -109,6 +109,14 @@
                             @if ($row->overspendMode === 'carry_negative')
                                 <span class="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-[2px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Carries negative</span>
                             @endif
+                            @if ($row->nonEurSpentMinor != 0)
+                                <span
+                                    class="ml-2 inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 align-middle dark:bg-amber-500"
+                                    role="img"
+                                    aria-label="Non-EUR spend in this category is not shown here — see the dashboard"
+                                    title="Non-EUR spend not shown here — see the dashboard"
+                                ></span>
+                            @endif
                         </td>
                         <td class="px-4 py-2 text-right">
                             <input
@@ -199,6 +207,14 @@
                             {{ $row->categoryName }}
                             @if ($row->overspendMode === 'carry_negative')
                                 <span class="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-[2px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Carries negative</span>
+                            @endif
+                            @if ($row->nonEurSpentMinor != 0)
+                                <span
+                                    class="ml-1 inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 align-middle dark:bg-amber-500"
+                                    role="img"
+                                    aria-label="Non-EUR spend in this category is not shown here — see the dashboard"
+                                    title="Non-EUR spend not shown here — see the dashboard"
+                                ></span>
                             @endif
                         </p>
                         <p class="secondary" style="font-variant-numeric: tabular-nums;">

@@ -16,6 +16,16 @@ use Spatie\LaravelData\Data;
  * float. `overspendMode` is 'reduce_to_budget' | 'carry_negative' (D-03),
  * resolved from `envelope_settings` or the D-12a implicit default when no
  * settings row exists for this (user, category).
+ *
+ * `nonEurSpentMinor` (CR-01) is the sum of this category's settled spend in
+ * every currency OTHER than `currency` (EUR), in that currency's own minor
+ * units. Envelopes are EUR-only (D-25), so this figure is NOT folded into
+ * `spentMinor`/`availableMinor` — collapsing cross-currency spend into a EUR
+ * total would violate the "multi-currency tracking required from v1"
+ * constraint. It exists solely so the grid can SURFACE (not silently drop)
+ * the fact that non-EUR spend hit this envelope; 0 means none. Because it may
+ * mix multiple non-EUR currencies it is only ever a "there is spend not shown
+ * here" signal, never an authoritative amount.
  */
 final class EnvelopeRow extends Data
 {
@@ -29,5 +39,6 @@ final class EnvelopeRow extends Data
         public readonly int $availableMinor,
         public readonly string $overspendMode,
         public readonly string $currency,
+        public readonly int $nonEurSpentMinor = 0,
     ) {}
 }
