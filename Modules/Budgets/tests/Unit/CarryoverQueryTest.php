@@ -205,6 +205,55 @@ it('starts the genesis period with zero pool carry and zero carried-in (D-12b)',
     expect($row->availableMinor)->toBe(60000 - 50000);
 });
 
+it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availableMinor or overspentCount (CR-01)', function (): void {
+    $period = app(PeriodQuery::class)->current();
+
+    // A $9.99 Google Play charge settled in USD, categorized to Groceries.
+    // SpendByCategoryQuery keys spend by settled_currency, so this lands under
+    // "{categoryId}|USD" and must NEVER be read into the EUR envelope's spent.
+    Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'expense',
+        'posted_at' => $period->start->toDateString(),
+        'booked_at' => $period->start->toDateString().' 12:00:00',
+        'value_date' => $period->start->toDateString(),
+        'amount_minor' => -999,
+        'currency' => 'USD',
+        'settled_amount_minor' => -999,
+        'settled_currency' => 'USD',
+        'counterparty_name' => 'Google Play USD',
+        'counterparty_normalized' => 'google play usd',
+        'normalization_version' => 1,
+        'category_id' => $this->groceries->id,
+        'source_format' => 'camt053',
+        'import_run_id' => $this->run->id,
+        'source_row_index' => 987654,
+        'fingerprint' => str_pad('nonEur', 64, '0', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+
+    // €200 assigned, no EUR spend at all -> envelope looks fully funded in EUR.
+    EnvelopeAssignment::create([
+        'user_id' => $this->user->id,
+        'category_id' => $this->groceries->id,
+        'period_start' => $period->start->toDateString(),
+        'assigned_minor' => 20000,
+        'currency' => 'EUR',
+    ]);
+
+    $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
+    $row = $result['rows'][$this->groceries->id];
+
+    // EUR figures are untouched by the USD spend (no currency collapse).
+    expect($row->spentMinor)->toBe(0);
+    expect($row->availableMinor)->toBe(20000);
+    expect($result['overspentCount'])->toBe(0);
+
+    // ...but the dropped spend is now observable, in its own currency's minor.
+    expect($row->nonEurSpentMinor)->toBe(999);
+});
+
 it('shows income zero for a future period unless real income transactions exist there (Req 7/Req 9 edge)', function (): void {
     $current = app(PeriodQuery::class)->current();
     $future = $current;

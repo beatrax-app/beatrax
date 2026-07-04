@@ -156,6 +156,23 @@ final class CarryoverQuery
                 $spent = $spentByKey["{$categoryId}|".self::CURRENCY] ?? 0;
                 $carriedInForCategory = $carriedIn[$categoryId] ?? 0;
 
+                // CR-01: envelopes are EUR-only (D-25), but the ledger can
+                // hold settled spend in other currencies (USD Google Play, a
+                // non-EUR ICS merchant charge). Sum that dropped remainder so
+                // the grid can SURFACE it rather than vanish it. It is
+                // deliberately NOT added to $spent/$available and NOT counted
+                // as an overspend — that would be a currency collapse, which
+                // the multi-currency-from-v1 constraint forbids. This is a
+                // "there is spend not shown here" flag, not a EUR figure.
+                $nonEurSpent = 0;
+                $prefix = "{$categoryId}|";
+                foreach ($spentByKey as $key => $minor) {
+                    $keyStr = self::toStr($key);
+                    if (str_starts_with($keyStr, $prefix) && ! str_ends_with($keyStr, '|'.self::CURRENCY)) {
+                        $nonEurSpent += self::toInt($minor);
+                    }
+                }
+
                 $availableMoney = Money::ofMinor($assigned, self::CURRENCY)
                     ->plus(Money::ofMinor($carriedInForCategory, self::CURRENCY))
                     ->plus(Money::ofMinor($moved, self::CURRENCY))
@@ -189,6 +206,7 @@ final class CarryoverQuery
                     availableMinor: $available,
                     overspendMode: $mode,
                     currency: self::CURRENCY,
+                    nonEurSpentMinor: $nonEurSpent,
                 );
             }
 
