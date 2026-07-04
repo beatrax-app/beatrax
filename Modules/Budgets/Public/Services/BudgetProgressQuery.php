@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Budgets\Public\Dto\BudgetProgressRow;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Ledger\Public\Services\SpendByCategoryQuery;
 
 /**
  * Read model for the Budgets page. Joins each (user, category) budget against
@@ -29,6 +30,7 @@ final class BudgetProgressQuery
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly PeriodQuery $periods,
+        private readonly SpendByCategoryQuery $spendByCategory,
     ) {}
 
     /**
@@ -55,19 +57,11 @@ final class BudgetProgressQuery
             return [];
         }
 
-        $spendByKey = [];
-        $spendRows = $connection->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('settled_amount_minor', '<', 0)
-            ->where('posted_at', '>=', $period->start->toDateString())
-            ->where('posted_at', '<', $period->endExclusive->toDateString())
-            ->whereNotNull('category_id')
-            ->groupBy('category_id', 'settled_currency')
-            ->get(['category_id', 'settled_currency', $connection->raw('SUM(-settled_amount_minor) AS spent_minor')]);
-
-        foreach ($spendRows as $row) {
-            $spendByKey[self::toInt($row->category_id).'|'.self::toStr($row->settled_currency)] = self::toInt($row->spent_minor);
-        }
+        // Delegates to the shared legs ∪ unsplit-parents read model so a
+        // split transaction's legs — not its parent row — count toward
+        // budget spend (Req 4 / D-02). Already keyed "categoryId|currency",
+        // matching what the loop below expects.
+        $spendByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
 
         $rows = [];
         foreach ($budgets as $budget) {

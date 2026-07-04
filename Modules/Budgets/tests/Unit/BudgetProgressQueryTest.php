@@ -11,6 +11,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Models\TransactionSplit;
 
 uses(RefreshDatabase::class);
 
@@ -127,6 +128,50 @@ it('returns an empty list when the user has no budgets', function (): void {
     budgetTx($this->user->id, $this->account->id, $this->run->id, -10000, $this->groceries->id);
 
     expect(app(BudgetProgressQuery::class)->forCurrentPeriod($this->user))->toBe([]);
+});
+
+it('counts a split transaction\'s legs against their own budgets, never the parent (Req 4)', function (): void {
+    $household = Category::create(['user_id' => null, 'name' => 'Household', 'slug' => 'household', 'kind' => 'expense', 'display_order' => 2]);
+
+    CategoryBudget::create(['user_id' => $this->user->id, 'category_id' => $this->groceries->id, 'budget_minor' => 40000, 'currency' => 'EUR', 'period_type' => 'monthly']);
+    CategoryBudget::create(['user_id' => $this->user->id, 'category_id' => $household->id, 'budget_minor' => 10000, 'currency' => 'EUR', 'period_type' => 'monthly']);
+
+    // €80 split €60 Groceries / €20 Household. The parent keeps a vestigial
+    // category_id (Groceries) — it must NOT contribute on top of its legs.
+    $today = CarbonImmutable::now()->toDateString();
+    $tx = Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'expense',
+        'posted_at' => $today,
+        'booked_at' => $today.' 12:00:00',
+        'value_date' => $today,
+        'amount_minor' => -8000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -8000,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'Split Merchant',
+        'counterparty_normalized' => 'split merchant',
+        'normalization_version' => 1,
+        'category_id' => $this->groceries->id,
+        'source_format' => 'camt053',
+        'import_run_id' => $this->run->id,
+        'source_row_index' => 999,
+        'fingerprint' => str_pad('split', 64, '0', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+    TransactionSplit::create(['user_id' => $this->user->id, 'transaction_id' => $tx->id, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'settled_currency' => 'EUR', 'note' => null, 'sort_order' => 0]);
+    TransactionSplit::create(['user_id' => $this->user->id, 'transaction_id' => $tx->id, 'category_id' => $household->id, 'settled_amount_minor' => -2000, 'settled_currency' => 'EUR', 'note' => null, 'sort_order' => 1]);
+
+    $rows = app(BudgetProgressQuery::class)->forCurrentPeriod($this->user);
+    $byId = [];
+    foreach ($rows as $row) {
+        $byId[$row->categoryId] = $row;
+    }
+
+    expect($byId[$this->groceries->id]->spentMinor)->toBe(6000);
+    expect($byId[$household->id]->spentMinor)->toBe(2000);
+    expect($byId[$this->groceries->id]->spentMinor + $byId[$household->id]->spentMinor)->toBe(8000); // not 16000
 });
 
 it('lists expense categories available to budget', function (): void {

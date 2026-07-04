@@ -15,12 +15,16 @@ use stdClass;
 /**
  * Top-N spending categories for a given user + period window.
  *
- * Performs the aggregation as a single `GROUP BY category_id` with an
- * integer `SUM(-settled_amount_minor)` so the database returns money totals
- * as integers — Money is composed at the DTO boundary (no float arithmetic
- * anywhere on the hot path). The aggregation is scoped to a single
- * `settled_currency` so multi-currency users see a single-currency panel
- * rather than a silently-summed mix.
+ * Delegates the aggregation to `SpendByCategoryQuery::forUserAndPeriod()`
+ * (Phase 13.1 / Req 4), the shared legs ∪ unsplit-parents read model — a
+ * split transaction's legs count individually and its parent row is
+ * excluded, so this panel (and, by delegation, the dashboard) never
+ * double-counts a split. Money totals stay integer end-to-end; Money is
+ * composed at the DTO boundary (no float arithmetic anywhere on the hot
+ * path). The aggregation is scoped to a single `settled_currency` so
+ * multi-currency users see a single-currency panel rather than a
+ * silently-summed mix. The shared service returns an unordered map, so the
+ * DESC-by-spend ordering + limit are re-applied here in PHP.
  *
  * The `percentageOfTotal` field is each row's share of the panel's total
  * (not the user's overall outflow). It always sums to ~1.0 for non-empty
@@ -39,59 +43,48 @@ final class TopCategoriesByPeriodQuery
 
     private const MAX_PARENT_DEPTH = 16;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly SpendByCategoryQuery $spendByCategory,
+    ) {}
 
     /**
      * @return array<TopCategoryRow>
      */
     public function for(User $user, Period $period, string $displayCurrency = self::DEFAULT_DISPLAY_CURRENCY, int $limit = 5): array
     {
-        $connection = $this->db->connection();
+        // Delegates to the shared legs ∪ unsplit-parents read model (Req 4 /
+        // D-02) — split transactions count their legs, never the parent row.
+        // The service returns an unordered map, so the DESC-by-spend +
+        // limit ordering the old single query did in SQL is re-applied here
+        // in PHP.
+        $spendByCategoryId = $this->spendByCategory->forUserAndPeriod($user->id, $period, $displayCurrency);
 
-        $rows = $connection
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('settled_currency', $displayCurrency)
-            ->where('settled_amount_minor', '<', 0)
-            ->where('posted_at', '>=', $period->start->toDateString())
-            ->where('posted_at', '<', $period->endExclusive->toDateString())
-            ->whereNotNull('category_id')
-            ->groupBy('category_id')
-            ->orderByRaw('SUM(-settled_amount_minor) DESC')
-            ->limit($limit)
-            ->get([
-                'category_id',
-                $connection->raw('SUM(-settled_amount_minor) AS spend_minor'),
-            ]);
-
-        if ($rows->isEmpty()) {
+        if ($spendByCategoryId === []) {
             return [];
         }
 
+        arsort($spendByCategoryId);
+        $spendByCategoryId = array_slice($spendByCategoryId, 0, $limit, preserve_keys: true);
+
         $total = 0;
-        foreach ($rows as $row) {
-            $total += self::toInt($row->spend_minor);
+        foreach ($spendByCategoryId as $spendMinor) {
+            $total += $spendMinor;
         }
 
         if ($total <= 0) {
             return [];
         }
 
-        $categoryIds = [];
-        foreach ($rows as $row) {
-            $categoryIds[] = self::toInt($row->category_id);
-        }
-
+        $categoryIds = array_keys($spendByCategoryId);
         $categoriesById = $this->loadCategories($categoryIds, $user->id);
 
         $result = [];
-        foreach ($rows as $row) {
-            $categoryId = self::toInt($row->category_id);
+        foreach ($spendByCategoryId as $categoryId => $spendMinor) {
             if (! isset($categoriesById[$categoryId])) {
                 continue;
             }
 
-            $spendMinor = self::toInt($row->spend_minor);
             $result[] = new TopCategoryRow(
                 categoryId: $categoryId,
                 name: $this->fullPath($categoryId, $categoriesById),
