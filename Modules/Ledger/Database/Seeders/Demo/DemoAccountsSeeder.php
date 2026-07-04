@@ -57,7 +57,11 @@ final class DemoAccountsSeeder
             [
                 'name' => 'ICS Card',
                 'slug' => 'ics-demo-1',
-                'kind' => 'ics',
+                // U-2: production code (ReconcilePage, ThisPeriodAtAGlanceQuery,
+                // IcsSettlementResolver, Chains backpopulate) keys ICS behaviour
+                // on 'ics_card'. 'ics' left the demo's ICS reconcile pre-fill /
+                // this-period / chains features dormant. Align to 'ics_card'.
+                'kind' => 'ics_card',
                 'iban' => 'ICS-DEMO-1-CARD',
                 'default_currency' => 'EUR',
                 'starting_balance_minor' => -15000,
