@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Budgets\Public\Services\CarryoverQuery;
@@ -32,6 +33,16 @@ beforeEach(function (): void {
     $this->dining = Category::create(['user_id' => null, 'name' => 'Dining', 'slug' => 'move-dining-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 2]);
 
     $this->period = app(PeriodQuery::class)->current();
+
+    // Genesis anchor (D-12b, mirrors CarryoverQueryTest's fixture): this
+    // test exercises CarryoverQuery::forUserAndPeriod() to observe
+    // before/after available balances, which returns an all-zero result for
+    // a pre-cutover user (null envelope_activated_at). Stamping the current
+    // period as the activation month keeps this test's own moves inside the
+    // fold without depending on the separate Plan 06 cutover migration.
+    DB::table('users')->where('id', $this->user->id)->update([
+        'envelope_activated_at' => CarbonImmutable::now()->startOfMonth(),
+    ]);
 });
 
 it('moves €20 A→B: A available drops €20, B available rises €20, to-budget is unchanged (Req 5)', function (): void {

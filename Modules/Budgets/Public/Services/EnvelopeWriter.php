@@ -14,6 +14,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
+use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 
 /**
@@ -248,6 +249,168 @@ final class EnvelopeWriter
             if ($minor > 0) {
                 $this->setAssigned($user, $categoryId, $toPeriod->start, $minor);
             }
+        }
+    }
+
+    /**
+     * Move money between two envelopes in the same period: writes a debit
+     * row on the source (`kind: 'move_out'`) and a credit row on the target
+     * (`kind: 'move_in'`) in ONE DB transaction, sharing one timestamp
+     * (D-02). Moves never touch Σassigned / the pool — to-budget is
+     * unchanged (D-05).
+     *
+     * Deliberately carries NO balance guard (Req 8 / RESEARCH.md Pitfall 1):
+     * a move that takes the source envelope negative SUCCEEDS. No
+     * over-allocation-style exception exists anywhere in this method.
+     *
+     * @return int the stable `envelope_moves.id` of the source (debit) row —
+     *             pass this to `undoMove()` to reverse the whole pair
+     *
+     * @throws InvalidArgumentException same source/target, non-positive
+     *                                  amount, or a category not owned/global (IDOR)
+     */
+    public function move(User $user, int $fromCategoryId, int $toCategoryId, CarbonImmutable $periodStart, int $minor, ?string $memo = null): int
+    {
+        if ($fromCategoryId === $toCategoryId) {
+            throw new InvalidArgumentException('Source and destination envelope must be different.');
+        }
+
+        if ($minor <= 0) {
+            throw new InvalidArgumentException('Invalid or non-positive amount.');
+        }
+
+        $this->assertCategoryAccessible($user, $fromCategoryId);
+        $this->assertCategoryAccessible($user, $toCategoryId);
+
+        $periodDate = $periodStart->toDateString();
+
+        /** @var array{debitId: int, creditId: int}|null $ids */
+        $ids = null;
+
+        $this->db->connection()->transaction(function () use ($user, $fromCategoryId, $toCategoryId, $periodDate, $minor, $memo, &$ids): void {
+            $connection = $this->db->connection();
+            $now = $this->clock->now();
+
+            $debitId = self::toInt($connection->table('envelope_moves')->insertGetId([
+                'user_id' => $user->id,
+                'category_id' => $fromCategoryId,
+                'counterpart_category_id' => $toCategoryId,
+                'period_start' => $periodDate,
+                'amount_minor' => -$minor,
+                'currency' => self::CURRENCY,
+                'kind' => 'move_out',
+                'memo' => $memo,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]));
+
+            $creditId = self::toInt($connection->table('envelope_moves')->insertGetId([
+                'user_id' => $user->id,
+                'category_id' => $toCategoryId,
+                'counterpart_category_id' => $fromCategoryId,
+                'period_start' => $periodDate,
+                'amount_minor' => $minor,
+                'currency' => self::CURRENCY,
+                'kind' => 'move_in',
+                'memo' => $memo,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]));
+
+            $ids = ['debitId' => $debitId, 'creditId' => $creditId];
+        });
+
+        if ($ids === null) {
+            throw new \RuntimeException('Move failed to write both paired rows.');
+        }
+
+        $this->events->dispatch(new EnvelopeMoveMutated(
+            moveId: $ids['debitId'],
+            userId: $user->id,
+            mutationType: 'create',
+            dirtyFields: [
+                'user_id' => $user->id,
+                'category_id' => $fromCategoryId,
+                'counterpart_category_id' => $toCategoryId,
+                'period_start' => $periodDate,
+                'amount_minor' => -$minor,
+                'currency' => self::CURRENCY,
+                'kind' => 'move_out',
+            ],
+        ));
+
+        $this->events->dispatch(new EnvelopeMoveMutated(
+            moveId: $ids['creditId'],
+            userId: $user->id,
+            mutationType: 'create',
+            dirtyFields: [
+                'user_id' => $user->id,
+                'category_id' => $toCategoryId,
+                'counterpart_category_id' => $fromCategoryId,
+                'period_start' => $periodDate,
+                'amount_minor' => $minor,
+                'currency' => self::CURRENCY,
+                'kind' => 'move_in',
+            ],
+        ));
+
+        return $ids['debitId'];
+    }
+
+    /**
+     * Undo a move: hard-deletes BOTH paired `envelope_moves` rows (the row
+     * identified by `$moveId` plus its counterpart, matched by the shared
+     * timestamp + swapped category/counterpart + opposite-signed amount) and
+     * dispatches `EnvelopeMoveMutated('delete')` for EACH row's own pk
+     * (mirrors the tombstone-undo precedent in
+     * `TransactionDetail::reclassify`).
+     *
+     * A foreign or missing move id is a silent no-op (mirrors
+     * `PotWriter::archive`'s cross-user handling).
+     */
+    public function undoMove(User $user, int $moveId): void
+    {
+        $connection = $this->db->connection();
+
+        /** @var \stdClass|null $row */
+        $row = $connection->table('envelope_moves')
+            ->where('id', $moveId)
+            ->where('user_id', $user->id)
+            ->first(['id', 'category_id', 'counterpart_category_id', 'period_start', 'amount_minor', 'created_at']);
+
+        if ($row === null) {
+            return;
+        }
+
+        $categoryId = self::toInt($row->category_id);
+        $counterpartId = self::toInt($row->counterpart_category_id);
+        $periodStartRaw = $row->period_start;
+        $amountMinor = self::toInt($row->amount_minor);
+        $createdAtRaw = $row->created_at;
+
+        /** @var \stdClass|null $pairRow */
+        $pairRow = $connection->table('envelope_moves')
+            ->where('user_id', $user->id)
+            ->where('id', '!=', $moveId)
+            ->where('category_id', $counterpartId)
+            ->where('counterpart_category_id', $categoryId)
+            ->where('period_start', $periodStartRaw)
+            ->where('amount_minor', -$amountMinor)
+            ->where('created_at', $createdAtRaw)
+            ->first(['id']);
+
+        $pairId = $pairRow !== null ? self::toInt($pairRow->id) : null;
+
+        $connection->transaction(function () use ($connection, $moveId, $pairId): void {
+            $connection->table('envelope_moves')->where('id', $moveId)->delete();
+            if ($pairId !== null) {
+                $connection->table('envelope_moves')->where('id', $pairId)->delete();
+            }
+        });
+
+        $this->events->dispatch(new EnvelopeMoveMutated(moveId: $moveId, userId: $user->id, mutationType: 'delete'));
+        if ($pairId !== null) {
+            $this->events->dispatch(new EnvelopeMoveMutated(moveId: $pairId, userId: $user->id, mutationType: 'delete'));
         }
     }
 
