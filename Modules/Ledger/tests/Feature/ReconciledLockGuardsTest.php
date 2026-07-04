@@ -55,6 +55,41 @@ it('reclassify refuses to change the type of a reconciled transaction', function
     expect(Transaction::query()->find($tx->id)->type)->toBe('expense');
 });
 
+it('reclassifyCategory refuses to change the category of a reconciled transaction', function (): void {
+    $tx = $this->makeTransaction($this->user, $this->account, $this->run, [
+        'status' => 'reconciled',
+        'category_id' => $this->groceries->id,
+    ]);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('reclassifyCategory', $this->household->id)
+        ->assertDispatched('toast');
+
+    expect(DB::table('transactions')->where('id', $tx->id)->value('category_id'))->toBe($this->groceries->id);
+});
+
+it('toggleLegTax refuses to change a reconciled transaction\'s leg tax state', function (): void {
+    $tx = $this->makeTransaction($this->user, $this->account, $this->run, [
+        'status' => 'cleared',
+        'amount_minor' => -8000,
+        'settled_amount_minor' => -8000,
+    ]);
+
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => null, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
+        ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
+    ]);
+
+    DB::table('transactions')->where('id', $tx->id)->update(['status' => 'reconciled']);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('toggleLegTax', 0)
+        ->assertDispatched('toast');
+
+    // No tax tag was written for any leg of the reconciled transaction.
+    expect(DB::table('tax_transaction_tags')->where('transaction_id', $tx->id)->count())->toBe(0);
+});
+
 it('saveNote refuses to change the note of a reconciled transaction', function (): void {
     $tx = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'reconciled']);
     DB::table('transactions')->where('id', $tx->id)->update(['note' => 'original']);

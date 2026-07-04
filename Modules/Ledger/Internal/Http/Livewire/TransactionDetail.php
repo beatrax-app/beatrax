@@ -331,6 +331,23 @@ final class TransactionDetail extends Component
     ): void {
         $user = $currentUser->user();
 
+        // D-08 reconciled lock: warn-first, no write (WR-01). reclassifyCategory
+        // is a public Livewire method — directly invokable from the browser —
+        // so it must enforce the same "un-reconcile first" contract as the
+        // sibling mutators. Status read is scoped by user_id so a cross-user id
+        // no-ops rather than leaking.
+        $status = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $user->id)
+            ->value('status');
+
+        if ($status === 'reconciled') {
+            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+
+            return;
+        }
+
         // Single canonical divergence detector lives on
         // CategorizationDiverged::fromProvenance; both this Livewire
         // dispatch and AssignCategory's framework-event dispatch route
@@ -878,7 +895,7 @@ final class TransactionDetail extends Component
      * requires an existing `transaction_splits` row (T-13.1-09's
      * leg-ownership check).
      */
-    public function toggleLegTax(int $index, TagTransaction $tag, UntagTransaction $untag, CurrentUser $currentUser): void
+    public function toggleLegTax(int $index, TagTransaction $tag, UntagTransaction $untag, CurrentUser $currentUser, DatabaseManager $db): void
     {
         if (! array_key_exists($index, $this->legs)) {
             return;
@@ -890,6 +907,22 @@ final class TransactionDetail extends Component
         }
 
         $userId = $currentUser->user()->id;
+
+        // D-08 reconciled lock: warn-first, no write (WR-01). Tax tags on a
+        // reconciled transaction's legs are exactly the classification a
+        // reconcile is meant to freeze. Status read is scoped by user_id.
+        $status = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)
+            ->value('status');
+
+        if ($status === 'reconciled') {
+            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+
+            return;
+        }
+
         $newState = ! $this->legs[$index]['tax'];
 
         if ($newState) {
