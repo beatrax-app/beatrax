@@ -1,0 +1,90 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Budgets\Models\EnvelopeAssignment;
+use Modules\Budgets\Public\Services\EnvelopeWriter;
+use Modules\Core\Models\User;
+use Modules\Ledger\Models\Category;
+use Modules\Ledger\Public\Services\PeriodQuery;
+
+uses(RefreshDatabase::class);
+
+/*
+ * Wave 0 RED stub for Req 1 (13.2-VALIDATION.md): month-keyed assignment
+ * lifecycle (upsert / tombstone-on-zero / cross-user IDOR). EnvelopeWriter
+ * (Plan 04) and EnvelopeAssignment (Plan 02) do not exist yet -- expected to
+ * fail on the missing class, never a parse error.
+ */
+
+beforeEach(function (): void {
+    $this->user = User::create([
+        'username' => 'assignment-'.bin2hex(random_bytes(4)),
+        'password' => 'fixture',
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($this->user);
+
+    $this->groceries = Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'assign-groceries-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 1]);
+
+    $this->periodA = app(PeriodQuery::class)->current();
+    $this->periodB = app(PeriodQuery::class)->next($this->periodA);
+});
+
+it('stores a different assigned amount for the same category in two different months (Req 1)', function (): void {
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 20000);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodB->start, 30000);
+
+    $this->assertDatabaseHas('envelope_assignments', [
+        'user_id' => $this->user->id,
+        'category_id' => $this->groceries->id,
+        'period_start' => $this->periodA->start->toDateString(),
+        'assigned_minor' => 20000,
+    ]);
+    $this->assertDatabaseHas('envelope_assignments', [
+        'user_id' => $this->user->id,
+        'category_id' => $this->groceries->id,
+        'period_start' => $this->periodB->start->toDateString(),
+        'assigned_minor' => 30000,
+    ]);
+    expect(EnvelopeAssignment::query()->where('category_id', $this->groceries->id)->count())->toBe(2);
+});
+
+it('upserts rather than duplicating when the same (category, period) is set twice, preserving the row id', function (): void {
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 20000);
+    $firstId = EnvelopeAssignment::query()->where('category_id', $this->groceries->id)->sole()->id;
+
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 25000);
+    $secondId = EnvelopeAssignment::query()->where('category_id', $this->groceries->id)->sole()->id;
+
+    // PK preservation (STATE.md 13.1 lesson) -- editing must never delete-and-reinsert,
+    // or per-(table,pk,field) LWW convergence breaks.
+    expect($secondId)->toBe($firstId);
+    $this->assertDatabaseHas('envelope_assignments', ['id' => $firstId, 'assigned_minor' => 25000]);
+});
+
+it('tombstones the row when assigned is set back to zero (D-06 absence == 0), not a stored zero row', function (): void {
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 20000);
+    $this->assertDatabaseHas('envelope_assignments', ['category_id' => $this->groceries->id]);
+
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 0);
+
+    $this->assertDatabaseMissing('envelope_assignments', ['category_id' => $this->groceries->id]);
+});
+
+it('rejects a category the user does not own and that is not global (IDOR)', function (): void {
+    $mallory = User::create(['username' => 'mallory-assign', 'password' => 'x', 'period_start_day' => 1]);
+    $foreign = Category::create(['user_id' => $mallory->id, 'name' => 'Therapy', 'slug' => 'assign-therapy-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 2]);
+
+    expect(fn () => app(EnvelopeWriter::class)->setAssigned($this->user, $foreign->id, $this->periodA->start, 20000))
+        ->toThrow(InvalidArgumentException::class);
+
+    $this->assertDatabaseMissing('envelope_assignments', ['category_id' => $foreign->id]);
+});
+
+it('never treats category_budgets as an authoritative write target for envelope assignment (Req 1)', function (): void {
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 20000);
+
+    $this->assertDatabaseMissing('category_budgets', ['category_id' => $this->groceries->id]);
+});
