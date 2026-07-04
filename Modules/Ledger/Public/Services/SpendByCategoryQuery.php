@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Query\Builder;
 use Modules\Ledger\Public\Dto\Period;
 
 /**
@@ -42,14 +41,20 @@ final class SpendByCategoryQuery
         $connection = $this->db->connection();
         $map = [];
 
-        // 1. Unsplit parents: excluded from the roll-up the moment a leg
-        // row exists for them (whereNotExists — never category_id nullity).
+        // 1. Unsplit parents AND "broken split" parents (WR-03 fail-safe):
+        // a parent rolls up via its OWN category_id whenever its legs do NOT
+        // sum to its settled_amount_minor. One predicate covers all cases:
+        //   - no legs      → SUM(legs)=NULL→0, never equals a non-zero parent
+        //                    → parent counted (unchanged unsplit behaviour);
+        //   - valid split  → SUM(legs)=parent → parent excluded, legs count;
+        //   - broken split → SUM(legs)≠parent (e.g. a per-leg LWW replay left
+        //                    one surviving leg, or legs that no longer sum) →
+        //                    fall back to the parent's own category rather
+        //                    than silently attributing partial legs.
+        // "Split?" is still answered by leg presence, never by category_id
+        // nullity. Correlated single-query subquery — no N+1.
         $unsplitQuery = $connection->table('transactions as t')
-            ->whereNotExists(function (Builder $sub): void {
-                $sub->select($sub->raw(1))
-                    ->from('transaction_splits as ts')
-                    ->whereColumn('ts.transaction_id', 't.id');
-            })
+            ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
             ->where('t.settled_currency', $currency)
             ->where('t.settled_amount_minor', '<', 0)
@@ -80,6 +85,11 @@ final class SpendByCategoryQuery
             ->where('ts.settled_amount_minor', '<', 0)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
+            // WR-03: only attribute legs when the split is internally
+            // consistent (legs sum to the parent). Broken splits fall back to
+            // the parent category above; their legs are ignored here so the
+            // two branches never double-count nor drop spend.
+            ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
             ->groupBy('ts.category_id')
             ->get(['ts.category_id', $connection->raw('SUM(-ts.settled_amount_minor) AS spend_minor')]);
 
@@ -105,12 +115,10 @@ final class SpendByCategoryQuery
         $connection = $this->db->connection();
         $map = [];
 
+        // WR-03 fail-safe (see forUserAndPeriod): unsplit + broken-split
+        // parents roll up via their own category_id whenever legs don't sum.
         $unsplit = $connection->table('transactions as t')
-            ->whereNotExists(function (Builder $sub): void {
-                $sub->select($sub->raw(1))
-                    ->from('transaction_splits as ts')
-                    ->whereColumn('ts.transaction_id', 't.id');
-            })
+            ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
             ->where('t.settled_amount_minor', '<', 0)
             ->where('t.posted_at', '>=', $period->start->toDateString())
@@ -130,6 +138,8 @@ final class SpendByCategoryQuery
             ->where('ts.settled_amount_minor', '<', 0)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
+            // WR-03: consistent splits only; broken splits fall back to parent.
+            ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
             ->groupBy('ts.category_id', 'ts.settled_currency')
             ->get(['ts.category_id', 'ts.settled_currency', $connection->raw('SUM(-ts.settled_amount_minor) AS spend_minor')]);
 
