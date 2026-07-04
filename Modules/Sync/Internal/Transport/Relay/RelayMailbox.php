@@ -68,7 +68,48 @@ final readonly class RelayMailbox
     }
 
     /**
-     * Return all pending (undelivered) blobs for $recipientDid, ordered by created_at.
+     * Store a blob only if $recipientDid's pending row count is below $maxPending
+     * (resource-exhaustion guard: the relay is open-submission by design, so an
+     * unbounded flood of deliveries into one mailbox would otherwise grow the
+     * SQLite file without limit for the full 30-day undelivered TTL).
+     *
+     * The count check and insert run inside one DB transaction so a burst of
+     * concurrent deliveries cannot race past the cap between the check and the
+     * write.
+     *
+     * ZK: identical storage semantics to deliver() — $blob is never inspected.
+     *
+     * @return bool true if the blob was stored, false if the quota was full (nothing written)
+     */
+    public function deliverIfUnderQuota(string $senderDid, string $recipientDid, string $blob, int $maxPending): bool
+    {
+        return $this->db->connection()->transaction(function () use ($senderDid, $recipientDid, $blob, $maxPending): bool {
+            $pending = $this->db->connection()
+                ->table('relay_mailbox')
+                ->where('recipient_did', $recipientDid)
+                ->whereNull('delivered_at')
+                ->count();
+
+            if ($pending >= $maxPending) {
+                return false;
+            }
+
+            $this->deliver($senderDid, $recipientDid, $blob);
+
+            return true;
+        });
+    }
+
+    /**
+     * Return up to $limit pending (undelivered) blobs for $recipientDid, ordered
+     * by created_at (oldest first).
+     *
+     * Bounded (resource-exhaustion guard): an unbounded drain would let the
+     * draining device request the server's entire pending backlog for a mailbox
+     * in one response, risking memory exhaustion on the client. Callers that
+     * need the full backlog must loop: drain a page, confirm() each returned
+     * row (which clears delivered_at so it drops out of the next drain), then
+     * drain again — repeating until fewer than $limit rows come back.
      *
      * Uses the partial index relay_mailbox_pending_idx (recipient_did, delivered_at
      * WHERE delivered_at IS NULL) for efficient drain queries.
@@ -77,7 +118,7 @@ final readonly class RelayMailbox
      *
      * @return list<\stdClass> Pending mailbox rows (id, sender_did, recipient_did, blob, created_at, expires_at)
      */
-    public function drain(string $recipientDid): array
+    public function drain(string $recipientDid, int $limit): array
     {
         /** @var list<\stdClass> $rows */
         $rows = $this->db->connection()
@@ -85,6 +126,7 @@ final readonly class RelayMailbox
             ->where('recipient_did', $recipientDid)
             ->whereNull('delivered_at')
             ->orderBy('created_at')
+            ->limit($limit)
             ->get()
             ->all();
 

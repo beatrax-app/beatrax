@@ -40,13 +40,19 @@ final readonly class RelayClient
     private const TIMEOUT_SECONDS = 10;
 
     /**
-     * Client-side cap on a single relay blob (IN-02). TransportFramer caps the
+     * Cap on a single relay blob (IN-02). TransportFramer caps the
      * plaintext payload at 64 KB; a Noise-encrypted blob is that plus AEAD/Noise
      * framing overhead. 64 KB + 1 KB headroom bounds the upload surface without
      * rejecting any legitimate frame. The relay is opaque to blob content, so this
      * is a sanity bound, not a correctness gate.
+     *
+     * Public: POST /relay/deliver is intentionally unauthenticated (any caller
+     * may deliver into any mailbox — see RelayServeCommand::handleDeliver doc).
+     * RelayServeCommand mirrors this exact constant server-side so a caller that
+     * bypasses this client (hitting the socket directly) cannot smuggle a
+     * larger-than-intended blob past the client-only check.
      */
-    private const MAX_BLOB_BYTES = 65536 + 1024;
+    public const MAX_BLOB_BYTES = 65536 + 1024;
 
     public function __construct(
         private HttpFactory $http,
