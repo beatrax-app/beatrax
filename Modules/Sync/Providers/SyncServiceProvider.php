@@ -36,6 +36,7 @@ use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 
@@ -254,6 +255,16 @@ final class SyncServiceProvider extends ServiceProvider
             $events->listen(
                 TransactionMutated::class,
                 [SyncCaptureListener::class, 'handle'],
+            );
+        }
+
+        // 13.1-03: split-leg capture listener (Req 10 / D-12). Same
+        // class_exists-guarded pattern as the TransactionMutated wiring above.
+        if (class_exists(SyncCaptureListener::class) &&
+            class_exists(TransactionSplitMutated::class)) {
+            $events->listen(
+                TransactionSplitMutated::class,
+                [SyncCaptureListener::class, 'handleSplit'],
             );
         }
 
