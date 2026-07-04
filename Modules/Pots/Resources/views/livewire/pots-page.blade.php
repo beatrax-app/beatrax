@@ -600,17 +600,13 @@
                     </div>
                 @endif
 
-                {{-- Link to (D-13): Goal | Category | None --}}
+                {{-- Link to (D-15): Goal | None — category-linking is retired --}}
                 <div>
                     <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Link to (optional)</label>
                     <div class="flex gap-2">
                         <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === 'goal' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
                             <input type="radio" wire:model.live="linkType" value="goal" class="sr-only" />
                             Goal
-                        </label>
-                        <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === 'category' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
-                            <input type="radio" wire:model.live="linkType" value="category" class="sr-only" />
-                            Category
                         </label>
                         <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === 'none' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
                             <input type="radio" wire:model.live="linkType" value="none" class="sr-only" />
@@ -625,16 +621,6 @@
                             <option value="">Select a goal</option>
                             @foreach ($goalsForPicker as $goal)
                                 <option value="{{ $goal->id }}">{{ $goal->name }}</option>
-                            @endforeach
-                        </select>
-                    @elseif ($linkType === 'category')
-                        <select
-                            wire:model="categoryId"
-                            class="mt-2 block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                        >
-                            <option value="">Select a category</option>
-                            @foreach ($categoriesForPicker as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                             @endforeach
                         </select>
                     @endif
