@@ -157,7 +157,7 @@
                         </td>
                     </tr>
                     @if (count($recentMoves[$row->categoryId] ?? []) > 0)
-                        <tr class="border-b border-slate-100 dark:border-slate-800" x-data="{ open: false }">
+                        <tr class="border-b border-slate-100 dark:border-slate-800" x-data="{ open: false }" wire:key="envelope-history-row-{{ $row->categoryId }}">
                             <td colspan="6" class="px-4 pb-3">
                                 <button
                                     type="button"
