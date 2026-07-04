@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
+use Modules\Sync\Public\Events\TransactionMutated;
 
 /*
  * Wave 0 RED stub (D-08, GREEN in 13.3-04).
@@ -59,4 +61,32 @@ it('is scoped by user_id — never transitions another user\'s transactions', fu
     app(ReconciliationWriter::class)->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'));
 
     expect(DB::table('transactions')->where('id', $otherTx->id)->value('status'))->toBe('cleared');
+});
+
+it('dispatches a reconciled event only for rows the update actually transitioned (WR-02)', function (): void {
+    Event::fake([TransactionMutated::class]);
+
+    $inWindowA = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-10']);
+    $inWindowB = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-12']);
+    // An uncleared in-window row and a cleared row posted after the window:
+    // neither is transitioned, so neither may receive a reconciled event.
+    $uncleared = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'uncleared', 'posted_at' => '2026-06-11']);
+    $afterWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-20']);
+
+    app(ReconciliationWriter::class)->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'));
+
+    Event::assertDispatchedTimes(TransactionMutated::class, 2);
+
+    foreach ([$inWindowA->id, $inWindowB->id] as $id) {
+        Event::assertDispatched(
+            TransactionMutated::class,
+            fn (TransactionMutated $e): bool => $e->transactionId === $id
+                && ($e->dirtyFields['status'] ?? null) === 'reconciled',
+        );
+    }
+
+    Event::assertNotDispatched(
+        TransactionMutated::class,
+        fn (TransactionMutated $e): bool => in_array($e->transactionId, [$uncleared->id, $afterWindow->id], true),
+    );
 });

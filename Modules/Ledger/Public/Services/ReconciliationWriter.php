@@ -50,24 +50,19 @@ final class ReconciliationWriter
 
         $connection = $this->db->connection();
         $statementDateString = $statementDate->toDateString();
+        $reconciledAt = $this->clock->now();
 
-        // Read the target row ids BEFORE the transaction so the post-commit
-        // dispatch loop has a stable set to iterate, independent of what the
-        // bulk UPDATE itself reports.
-        $transactionIds = $connection->table('transactions')
-            ->where('account_id', $accountId)
-            ->where('user_id', $user->id)
-            ->where('status', 'cleared')
-            ->where('posted_at', '<=', $statementDateString)
-            ->pluck('id')
-            ->map(static fn (mixed $id): int => self::toInt($id))
-            ->all();
+        // WR-02: capture the transitioned id set from POST-UPDATE membership,
+        // not a pre-transaction snapshot. The UPDATE is guarded by
+        // `status = 'cleared'`, so a row a concurrent toggle flipped to
+        // `uncleared` between read and write is (correctly) skipped; re-selecting
+        // the rows this write actually stamped (`status = reconciled` AND
+        // `updated_at = $reconciledAt`) guarantees the dispatch loop emits an
+        // event ONLY for rows that genuinely transitioned — never a spurious
+        // `status => reconciled` op for a row the DB left `uncleared`.
+        $transactionIds = [];
 
-        if ($transactionIds === []) {
-            return;
-        }
-
-        $connection->transaction(function () use ($connection, $accountId, $user, $statementDateString): void {
+        $connection->transaction(function () use ($connection, $accountId, $user, $statementDateString, $reconciledAt, &$transactionIds): void {
             $connection->table('transactions')
                 ->where('account_id', $accountId)
                 ->where('user_id', $user->id)
@@ -75,10 +70,22 @@ final class ReconciliationWriter
                 ->where('posted_at', '<=', $statementDateString)
                 ->update([
                     'status' => Transaction::STATUSES[2],
-                    'updated_at' => $this->clock->now(),
+                    'updated_at' => $reconciledAt,
                 ]);
+
+            $transactionIds = $connection->table('transactions')
+                ->where('account_id', $accountId)
+                ->where('user_id', $user->id)
+                ->where('status', Transaction::STATUSES[2])
+                ->where('updated_at', $reconciledAt)
+                ->where('posted_at', '<=', $statementDateString)
+                ->pluck('id')
+                ->map(static fn (mixed $id): int => self::toInt($id))
+                ->all();
         });
 
+        // Events dispatched AFTER commit (D-08) — one per actually-transitioned
+        // row (SC-3: never a single synthetic bulk event).
         foreach ($transactionIds as $transactionId) {
             $this->events->dispatch(new TransactionMutated(
                 transactionId: $transactionId,
