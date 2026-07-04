@@ -110,6 +110,13 @@ final class ThisPeriodAtAGlanceQuery
         // but stays out of the expense tile. Refunds, fees, and
         // adjustments are likewise excluded — only the two canonical
         // "money truly flowing in / out" types feed the tiles.
+        //
+        // The income half is delegated to incomeForPeriod() — the one
+        // canonical "subtractive income, transfers excluded" definition
+        // (Phase 13.2 D-12 / Pitfall 3) — so this method no longer carries
+        // its own copy of the `type = 'income'` CASE-WHEN.
+        $inflowMinor = $this->incomeForPeriod($user, $period, $displayCurrency);
+
         $row = $connection
             ->table('transactions')
             ->where('user_id', $user->id)
@@ -117,13 +124,11 @@ final class ThisPeriodAtAGlanceQuery
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->selectRaw(
-                "COALESCE(SUM(CASE WHEN type = 'income' THEN settled_amount_minor ELSE 0 END), 0) AS inflow_minor,
-                 COALESCE(SUM(CASE WHEN type = 'expense' THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
+                "COALESCE(SUM(CASE WHEN type = 'expense' THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
                  COALESCE(SUM(CASE WHEN type IN ('income', 'expense') THEN settled_amount_minor ELSE 0 END), 0) AS net_minor"
             )
             ->first();
 
-        $inflowMinor = self::toInt($row?->inflow_minor);
         $outflowMinor = self::toInt($row?->outflow_minor);
         $netMinor = self::toInt($row?->net_minor);
 
@@ -148,6 +153,36 @@ final class ThisPeriodAtAGlanceQuery
             uncategorizedCount: $uncategorized,
             isFirstRun: false,
         );
+    }
+
+    /**
+     * The ONE canonical "subtractive income" sum for a (user, period,
+     * currency): `SUM(settled_amount_minor)` over rows whose `type =
+     * 'income'`, scoped to the period window and settled currency. A
+     * `transfer_in` row (positive amount, but an internal move between own
+     * accounts) contributes 0 — it is never `type = 'income'`. A period with
+     * no income rows returns 0 (Laravel's query builder `sum()` returns 0,
+     * never null, when no rows match).
+     *
+     * Extracted from `for()`'s inline CASE-WHEN (Phase 13.2 D-12 / Pitfall 3)
+     * so exactly one definition of "income, transfers excluded" exists in
+     * the codebase — `for()` calls this method internally, and
+     * `CarryoverQuery` (Modules\Budgets) reuses it as its income source. Do
+     * NOT add a second `WHERE type = 'income'` anywhere else; extend this
+     * method if the rule ever needs to change.
+     */
+    public function incomeForPeriod(User $user, Period $period, string $currency = self::DEFAULT_DISPLAY_CURRENCY): int
+    {
+        $value = $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('settled_currency', $currency)
+            ->where('type', 'income')
+            ->where('posted_at', '>=', $period->start->toDateString())
+            ->where('posted_at', '<', $period->endExclusive->toDateString())
+            ->sum('settled_amount_minor');
+
+        return self::toInt($value);
     }
 
     /**
