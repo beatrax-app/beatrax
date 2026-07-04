@@ -35,6 +35,9 @@ use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
+use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
+use Modules\Sync\Public\Events\EnvelopeMoveMutated;
+use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -265,6 +268,33 @@ final class SyncServiceProvider extends ServiceProvider
             $events->listen(
                 TransactionSplitMutated::class,
                 [SyncCaptureListener::class, 'handleSplit'],
+            );
+        }
+
+        // 13.2-05 (Req 11 / D-25): envelope-table capture listeners. Same
+        // class_exists-guarded pattern as the TransactionMutated/
+        // TransactionSplitMutated wiring above.
+        if (class_exists(SyncCaptureListener::class) &&
+            class_exists(EnvelopeAssignmentMutated::class)) {
+            $events->listen(
+                EnvelopeAssignmentMutated::class,
+                [SyncCaptureListener::class, 'handleEnvelopeAssignment'],
+            );
+        }
+
+        if (class_exists(SyncCaptureListener::class) &&
+            class_exists(EnvelopeMoveMutated::class)) {
+            $events->listen(
+                EnvelopeMoveMutated::class,
+                [SyncCaptureListener::class, 'handleEnvelopeMove'],
+            );
+        }
+
+        if (class_exists(SyncCaptureListener::class) &&
+            class_exists(EnvelopeSettingMutated::class)) {
+            $events->listen(
+                EnvelopeSettingMutated::class,
+                [SyncCaptureListener::class, 'handleEnvelopeSetting'],
             );
         }
 
