@@ -132,10 +132,22 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['category_id', 'monthly_limit_minor', 'currency'],
             ],
+            // IN-01 (Phase 13.1): corrected the phantom `tag` column (no such
+            // column exists) to the real editable columns, and added
+            // `transaction_split_id` so a leg-scoped tax tag replays on a peer
+            // WITH its leg scope — without it, a per-leg deduction would
+            // collapse into a whole-transaction tag and corrupt exported tax
+            // amounts. Columns cross-checked against
+            // Modules/Tax/Database/Migrations/2026_06_12_000002_create_tax_transaction_tags_table.php
+            // and 2026_07_04_000002_add_transaction_split_id_to_tax_transaction_tags.php.
+            // `transaction_id` is the only NOT-NULL-without-default column.
             'tax_transaction_tags' => [
-                'tag' => ['strategy' => 'lww', 'nullable' => false],
+                'transaction_split_id' => ['strategy' => 'lww', 'nullable' => true],
+                'deduction_category_id' => ['strategy' => 'lww', 'nullable' => true],
+                'tax_year_override' => ['strategy' => 'lww', 'nullable' => true],
+                'note' => ['strategy' => 'lww', 'nullable' => true],
                 '_delete_wins' => true,
-                '_create_required' => ['transaction_id', 'tag'],
+                '_create_required' => ['transaction_id'],
             ],
             // 13.1-03 (Req 10 / D-12): leg table for split transactions.
             // Every string below is cross-checked against
