@@ -60,6 +60,19 @@ it('flips an uncleared transaction to cleared', function (): void {
     expect(Transaction::query()->find($tx->id)->status)->toBe('cleared');
 });
 
+it('bumps updated_at when it flips the status (IN-02)', function (): void {
+    $tx = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared']);
+
+    // Force a stale updated_at that the raw QB toggle must overwrite.
+    DB::table('transactions')->where('id', $tx->id)->update(['updated_at' => '2000-01-01 00:00:00']);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('toggleCleared');
+
+    expect(DB::table('transactions')->where('id', $tx->id)->value('updated_at'))
+        ->not->toBe('2000-01-01 00:00:00');
+});
+
 it('a cross-user transaction id never seats the component, so nothing is toggled', function (): void {
     $tx = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared']);
 
