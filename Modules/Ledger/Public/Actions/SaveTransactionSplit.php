@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
@@ -15,6 +16,7 @@ use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
+use stdClass;
 
 /**
  * The sole mutator of `transaction_splits` (Req 1, 5, 6, 7, 8, 10 / D-04,
@@ -130,14 +132,27 @@ final class SaveTransactionSplit implements SavesTransactionSplit
 
             // Reconcile the leg set with a targeted, PK-PRESERVING diff —
             // NOT delete-all+reinsert (D-09, D-12, Req 10, Req 4).
-            /** @var list<int> $existingIds */
-            $existingIds = $this->db->connection()
+            //
+            // Full rows (not just ids) are re-read here so the edit branch
+            // below can compute a genuine per-field dirty diff (T-13.1-09):
+            // per-(table,pk,field) LWW sync merge only converges correctly
+            // under two independent offline edits of the SAME leg if each
+            // device's op-log SET carries ONLY the fields it actually
+            // changed. Re-dispatching every field unconditionally would let
+            // one device's unchanged echo of a field (e.g. an amount it
+            // never touched) silently clobber the other device's real edit
+            // to that same field once HLC-ordered — a whole-row-wins bug
+            // masquerading as field-level LWW.
+            /** @var Collection<int, stdClass> $existingRows */
+            $existingRows = $this->db->connection()
                 ->table('transaction_splits')
                 ->where('transaction_id', $transactionId)
                 ->where('user_id', $user->id)
-                ->pluck('id')
-                ->map(static fn (mixed $id): int => self::toInt($id))
-                ->all();
+                ->get(['id', 'category_id', 'settled_amount_minor', 'note', 'sort_order'])
+                ->keyBy(static fn (object $row): int => self::toInt($row->id));
+
+            /** @var list<int> $existingIds */
+            $existingIds = $existingRows->keys()->all();
 
             /** @var list<int> $incomingIds */
             $incomingIds = [];
@@ -168,13 +183,33 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                         ->where('user_id', $user->id)
                         ->update($fields);
 
-                    $dispatchAfterCommit[] = new TransactionSplitMutated(
-                        splitId: $legId,
-                        transactionId: $transactionId,
-                        userId: $user->id,
-                        mutationType: 'edit',
-                        dirtyFields: $fields,
-                    );
+                    // Dirty-field diff (T-13.1-09 / D-12): only fields whose
+                    // value actually changed relative to the pre-write row
+                    // are captured. See the comment above existingRows.
+                    $old = $existingRows->get($legId);
+                    $oldFields = $old !== null ? [
+                        'category_id' => $old->category_id ?? null,
+                        'settled_amount_minor' => $old->settled_amount_minor ?? null,
+                        'note' => $old->note ?? null,
+                        'sort_order' => $old->sort_order ?? null,
+                    ] : [];
+
+                    $dirty = [];
+                    foreach ($fields as $field => $value) {
+                        if (self::legFieldChanged($oldFields[$field] ?? null, $value)) {
+                            $dirty[$field] = $value;
+                        }
+                    }
+
+                    if ($dirty !== []) {
+                        $dispatchAfterCommit[] = new TransactionSplitMutated(
+                            splitId: $legId,
+                            transactionId: $transactionId,
+                            userId: $user->id,
+                            mutationType: 'edit',
+                            dirtyFields: $dirty,
+                        );
+                    }
                 } else {
                     // No matching incoming id → INSERT a new row.
                     $fields = [
@@ -309,5 +344,24 @@ final class SaveTransactionSplit implements SavesTransactionSplit
     private static function toStr(mixed $value): string
     {
         return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
+    }
+
+    /**
+     * Whether a leg field's incoming value differs from its pre-write DB
+     * value (T-13.1-09). $newValue's PHP type (int for category_id /
+     * settled_amount_minor / sort_order, string|null for note) determines
+     * which normalization is applied to the raw DB value before comparing.
+     */
+    private static function legFieldChanged(mixed $oldValue, mixed $newValue): bool
+    {
+        if ($newValue === null) {
+            return $oldValue !== null;
+        }
+
+        if (is_int($newValue)) {
+            return self::toInt($oldValue) !== $newValue;
+        }
+
+        return self::toStr($oldValue) !== $newValue;
     }
 }
