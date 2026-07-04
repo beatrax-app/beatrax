@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **Category-linked pots retired** — envelope budgeting (zero-based
+  budgeting over your expense categories) replaces category-linked savings
+  pots. On upgrade, every category-linked pot is archived and its balance
+  released to the account's unallocated pool — re-assign that money into
+  the appropriate envelope manually. Goal-linked pots are unaffected and
+  keep working exactly as before. Pots can no longer be created or edited
+  with a category link; only a goal link (or no link) is available going
+  forward.
+
 ## [1.3.0] - 2026-06-14
 
 **"Local & in sync"** — the largest release to date. Three tracks shipped:

@@ -7,7 +7,6 @@ namespace Modules\Pots\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -27,8 +26,10 @@ use Modules\Pots\Public\Services\PotWriter;
  * (same pattern as GoalsPage and BudgetsPage).
  *
  * State:
- *   - `name`, `amount`, `accountId`, `linkType`, `goalId`, `categoryId`,
- *     `editPotId` — form fields for the create/edit modal.
+ *   - `name`, `amount`, `accountId`, `linkType`, `goalId`, `editPotId` — form
+ *     fields for the create/edit modal. Category-linking is retired (D-15);
+ *     `linkType` is now 'goal' | 'none' only — `PotWriter` always receives a
+ *     null `$categoryId`.
  *   - `operationPotId`, `operationAmount`, `operationMemo`, `operationKind`,
  *     `transferTargetPotId` — fund/move/withdraw operation modal state.
  *   - `archivingPotId` — non-zero triggers the in-card micro-confirm strip.
@@ -44,12 +45,10 @@ final class PotsPage extends Component
 
     public string $accountId = '';
 
-    /** 'goal' | 'category' | 'none' */
+    /** 'goal' | 'none' — category-linking retired (D-15) */
     public string $linkType = 'none';
 
     public string $goalId = '';
-
-    public string $categoryId = '';
 
     public int $editPotId = 0;
 
@@ -117,13 +116,11 @@ final class PotsPage extends Component
             return;
         }
 
-        // Resolve linkType into XOR: goal_id or category_id, never both
+        // D-15: category-linking retired — linkType is 'goal' | 'none' only,
+        // so PotWriter always receives a null categoryId here.
         $goalId = null;
-        $categoryId = null;
         if ($this->linkType === 'goal' && $this->goalId !== '') {
             $goalId = (int) $this->goalId;
-        } elseif ($this->linkType === 'category' && $this->categoryId !== '') {
-            $categoryId = (int) $this->categoryId;
         }
 
         $rawAmount = trim($this->amount) !== '' ? $this->amount : null;
@@ -135,7 +132,7 @@ final class PotsPage extends Component
                 $rawAmount,
                 $accountId,
                 $goalId,
-                $categoryId,
+                null,
             );
         } catch (InsufficientUnallocatedException) {
             $this->errorAmount = 'Amount exceeds unallocated balance.';
@@ -175,15 +172,13 @@ final class PotsPage extends Component
                 if ($pot->goalId !== null) {
                     $this->linkType = 'goal';
                     $this->goalId = (string) $pot->goalId;
-                    $this->categoryId = '';
-                } elseif ($pot->categoryId !== null) {
-                    $this->linkType = 'category';
-                    $this->categoryId = (string) $pot->categoryId;
-                    $this->goalId = '';
                 } else {
+                    // D-15: category-linking retired. Any pre-cutover active
+                    // pot with a lingering category_id (should not exist post-
+                    // cutover) falls back to 'none' rather than surfacing a
+                    // picker that no longer exists.
                     $this->linkType = 'none';
                     $this->goalId = '';
-                    $this->categoryId = '';
                 }
                 $this->clearErrors();
                 $this->dispatch('modal-show', name: 'pot-form');
@@ -211,13 +206,11 @@ final class PotsPage extends Component
             return;
         }
 
-        // Resolve linkType into XOR
+        // D-15: category-linking retired — linkType is 'goal' | 'none' only,
+        // so PotWriter always receives a null categoryId here.
         $goalId = null;
-        $categoryId = null;
         if ($this->linkType === 'goal' && $this->goalId !== '') {
             $goalId = (int) $this->goalId;
-        } elseif ($this->linkType === 'category' && $this->categoryId !== '') {
-            $categoryId = (int) $this->categoryId;
         }
 
         try {
@@ -226,7 +219,7 @@ final class PotsPage extends Component
                 $this->editPotId,
                 $this->name,
                 $goalId,
-                $categoryId,
+                null,
             );
         } catch (PotNotFoundException) {
             // Cross-user / missing pot — silently ignore
@@ -514,7 +507,6 @@ final class PotsPage extends Component
                 'archived' => [],
                 'accounts' => [],
                 'goalsForPicker' => [],
-                'categoriesForPicker' => [],
                 'potsForMove' => [],
             ]);
 
@@ -588,23 +580,12 @@ final class PotsPage extends Component
 
         $goalsForPicker = $goalsForPickerQuery->get(['id', 'name'])->toArray();
 
-        // Budget categories accessible to this user (global OR user-owned)
-        $categoriesForPicker = $db->connection()
-            ->table('categories')
-            ->where(static function (QueryBuilder $q) use ($user): void {
-                $q->whereNull('user_id')->orWhere('user_id', $user->id);
-            })
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->toArray();
-
         $view = $views->make('pots::livewire.pots-page', [
             'groups' => $groups,
             'reconciliations' => $reconciliations,
             'archived' => $archived,
             'accounts' => $accounts,
             'goalsForPicker' => $goalsForPicker,
-            'categoriesForPicker' => $categoriesForPicker,
             // The move-modal destination picker consumes the same
             // account-grouped active pots as the card list — one structure,
             // two view variables (IN-04).
@@ -634,7 +615,6 @@ final class PotsPage extends Component
         $this->accountId = '';
         $this->linkType = 'none';
         $this->goalId = '';
-        $this->categoryId = '';
         $this->editPotId = 0;
         $this->clearErrors();
     }

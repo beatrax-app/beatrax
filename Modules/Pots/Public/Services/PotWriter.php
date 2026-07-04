@@ -6,7 +6,6 @@ namespace Modules\Pots\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Pots\Models\Pot;
@@ -19,7 +18,10 @@ use Modules\Pots\Public\Exceptions\PotNotFoundException;
  * Responsibilities:
  *  - Parse user-entered amounts via `parseAmount()` (verbatim from GoalWriter).
  *  - Assert that account_id belongs to the user before writing (IDOR — T-03-03).
- *  - Enforce goal XOR category (D-13): assertXorLink throws when both are set.
+ *  - Enforce goal-only linking (D-15): category-linked pots are retired by
+ *    the envelope-budgeting cutover (Plan 13.2-06) — assertXorLink now
+ *    rejects any non-null categoryId outright rather than allowing a
+ *    goal-XOR-category choice.
  *  - Enforce one-pot-per-goal (D-11): save/update reject linking a goal that
  *    already has an active linked pot.
  *  - Create and update pots with status hard-coded 'active' (never from caller).
@@ -66,10 +68,6 @@ final class PotWriter
 
         if ($goalId !== null) {
             $this->assertGoalOwnedAndFree($user, $goalId);
-        }
-
-        if ($categoryId !== null) {
-            $this->assertCategoryAccessible($user, $categoryId);
         }
 
         $currency = $this->accountCurrency($accountId, $user);
@@ -155,10 +153,6 @@ final class PotWriter
 
         if ($goalId !== null && $goalId !== $pot->goal_id) {
             $this->assertGoalOwnedAndFree($user, $goalId);
-        }
-
-        if ($categoryId !== null) {
-            $this->assertCategoryAccessible($user, $categoryId);
         }
 
         $pot->name = $name;
@@ -519,15 +513,19 @@ final class PotWriter
     }
 
     /**
-     * Assert that goal_id and category_id are not BOTH non-null (D-13).
+     * D-15: category-linked pots are retired by the envelope-budgeting
+     * cutover (Plan 06). A pot may only be linked to a goal (or left
+     * unlinked) — any non-null `$categoryId` is rejected outright so a stale
+     * caller fails loudly instead of silently creating a category link the
+     * rest of the system no longer expects (D-13/D-17).
      *
-     * @throws \InvalidArgumentException when both are set
+     * @throws \InvalidArgumentException when a category link is attempted
      */
     private function assertXorLink(?int $goalId, ?int $categoryId): void
     {
-        if ($goalId !== null && $categoryId !== null) {
+        if ($categoryId !== null) {
             throw new \InvalidArgumentException(
-                'A pot can be linked to a goal OR a category, not both.'
+                'Pots can no longer be linked to a category — link to a goal instead.'
             );
         }
     }
@@ -561,27 +559,6 @@ final class PotWriter
             throw new \InvalidArgumentException(
                 'This goal already has an active linked pot. Archive it first.'
             );
-        }
-    }
-
-    /**
-     * Assert that $categoryId is accessible for $user — i.e. it is a global
-     * category or one belonging to the user.
-     *
-     * @throws \InvalidArgumentException when category is not accessible
-     */
-    private function assertCategoryAccessible(User $user, int $categoryId): void
-    {
-        $exists = $this->db->connection()
-            ->table('categories')
-            ->where('id', $categoryId)
-            ->where(static function (QueryBuilder $query) use ($user): void {
-                $query->whereNull('user_id')->orWhere('user_id', $user->id);
-            })
-            ->exists();
-
-        if (! $exists) {
-            throw new \InvalidArgumentException('Category not found or not accessible by user.');
         }
     }
 }
