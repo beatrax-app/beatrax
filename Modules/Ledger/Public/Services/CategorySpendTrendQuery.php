@@ -27,6 +27,7 @@ final class CategorySpendTrendQuery
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly PeriodQuery $periods,
+        private readonly SpendByCategoryQuery $spendByCategoryQuery,
     ) {}
 
     public function forUser(User $user, int $moverLimit = 6): SpendTrend
@@ -74,25 +75,14 @@ final class CategorySpendTrendQuery
      */
     private function spendByCategory(int $userId, Period $period): array
     {
-        // No whereNotNull(category_id): uncategorised outflow is kept (grouped
-        // under id 0 → "Uncategorized") so the period total is the FULL
-        // EUR-settled outflow, not just the categorised slice. Non-EUR-settled
-        // spend is out of scope by design (this card is EUR-denominated).
-        $rows = $this->db->connection()->table('transactions')
-            ->where('user_id', $userId)
-            ->where('settled_currency', self::DISPLAY_CURRENCY)
-            ->where('settled_amount_minor', '<', 0)
-            ->where('posted_at', '>=', $period->start->toDateString())
-            ->where('posted_at', '<', $period->endExclusive->toDateString())
-            ->groupBy('category_id')
-            ->get(['category_id', $this->db->connection()->raw('SUM(-settled_amount_minor) AS spend_minor')]);
-
-        $map = [];
-        foreach ($rows as $row) {
-            $map[self::toInt($row->category_id)] = self::toInt($row->spend_minor);
-        }
-
-        return $map;
+        // Delegates to the shared legs ∪ unsplit-parents read model
+        // (Req 4 / D-02) — a split transaction's legs count individually,
+        // never the parent row. includeUncategorized: true keeps
+        // uncategorised outflow under id 0 → "Uncategorized" so the period
+        // total is the FULL EUR-settled outflow, not just the categorised
+        // slice — the same behaviour this method had before delegation.
+        // Non-EUR-settled spend is out of scope by design (EUR-denominated).
+        return $this->spendByCategoryQuery->forUserAndPeriod($userId, $period, self::DISPLAY_CURRENCY, includeUncategorized: true);
     }
 
     /**
