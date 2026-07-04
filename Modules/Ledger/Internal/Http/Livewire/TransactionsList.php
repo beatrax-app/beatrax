@@ -12,6 +12,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
+use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\TransactionListQuery;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Dto\SearchRowDto;
@@ -59,6 +60,7 @@ use Modules\Tax\Public\Services\TaxTagQuery;
  */
 final class TransactionsList extends Component
 {
+    use HandlesClearedStatus;
     use HandlesTaxTagging;
 
     /**
@@ -169,7 +171,11 @@ final class TransactionsList extends Component
      * nullity, per D-11). Populated after accumulation, mirroring the
      * taxTagged/taxCategoryShortName merge below.
      *
-     * @var list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>}>
+     * Phase 13.3 Plan 03 adds `status`: the batch-loaded cleared/uncleared/
+     * reconciled value for this row (SC-1, D-11), merged in both render
+     * branches alongside taxTagged/splitLegs — never per-row (Pitfall 1).
+     *
+     * @var list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}>
      */
     public array $accumulatedRows = [];
 
@@ -365,12 +371,14 @@ final class TransactionsList extends Component
             $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
             $taxState = $this->taxTagStateFor($stateIds, $taxTagQuery, $currentUser);
             $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $user->id);
+            $clearedState = $this->clearedStatusFor($stateIds, $db, $currentUser);
 
             foreach ($this->accumulatedRows as &$accRow) {
                 $accRowId = $accRow['id'];
                 $accRow['taxTagged'] = $taxState[$accRowId]['taxTagged'] ?? false;
                 $accRow['taxCategoryShortName'] = $taxState[$accRowId]['taxCategoryShortName'] ?? null;
                 $accRow['splitLegs'] = $splitLegs[$accRowId] ?? [];
+                $accRow['status'] = $clearedState[$accRowId] ?? 'cleared';
             }
             unset($accRow);
 
@@ -389,6 +397,7 @@ final class TransactionsList extends Component
                 'chainTxIds' => [],
                 'taxState' => $taxState,
                 'splitLegs' => $splitLegs,
+                'clearedState' => $clearedState,
                 'isSearchMode' => true,
                 'searchQuery' => $this->searchQuery,
                 'searchTotalCount' => $searchPage->totalCount,
@@ -461,11 +470,13 @@ final class TransactionsList extends Component
         $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
         $taxState = $this->taxTagStateFor($stateIds, $taxTagQuery, $currentUser);
         $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $user->id);
+        $clearedState = $this->clearedStatusFor($stateIds, $db, $currentUser);
         foreach ($this->accumulatedRows as &$accRow) {
             $accRowId = $accRow['id'];
             $accRow['taxTagged'] = $taxState[$accRowId]['taxTagged'] ?? false;
             $accRow['taxCategoryShortName'] = $taxState[$accRowId]['taxCategoryShortName'] ?? null;
             $accRow['splitLegs'] = $splitLegs[$accRowId] ?? [];
+            $accRow['status'] = $clearedState[$accRowId] ?? 'cleared';
         }
         unset($accRow);
 
@@ -477,6 +488,7 @@ final class TransactionsList extends Component
             'chainTxIds' => $chainTxIds,
             'taxState' => $taxState,
             'splitLegs' => $splitLegs,
+            'clearedState' => $clearedState,
             'isSearchMode' => false,
             'searchQuery' => $this->searchQuery,
             'searchTotalCount' => 0,

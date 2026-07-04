@@ -1078,6 +1078,10 @@ final class TransactionDetail extends Component
             'taxCategoryShortName' => $taxState[$this->transactionId]['taxCategoryShortName'] ?? null,
         ];
 
+        // Batch-load cleared status for this single transaction (SC-1, Pitfall 1 — same path).
+        $clearedState = $this->clearedStatusFor([$this->transactionId], $db, $currentUser);
+        $clearedStatus = $clearedState[$this->transactionId] ?? 'cleared';
+
         // Load the user's counterparties for the reassignment picker.
         // Only user-owned rows — WHERE user_id is mandatory (Pitfall 4).
         $counterparties = $db->connection()
@@ -1090,6 +1094,7 @@ final class TransactionDetail extends Component
             'transaction' => $transaction,
             'chainAvailable' => $chainAvailable,
             'txTaxRow' => $txTaxRow,
+            'clearedStatus' => $clearedStatus,
             'counterparties' => $counterparties,
             'isSplittable' => $isSplittable,
             'splitCategories' => $splitCategories,
