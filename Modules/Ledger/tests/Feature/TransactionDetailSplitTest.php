@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
@@ -14,6 +15,10 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Models\TransactionSplit;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
+use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Services\SpendByCategoryQuery;
+use Modules\Sync\Public\Events\TransactionMutated;
+use Modules\Sync\Public\Events\TransactionSplitMutated;
 
 /*
  * Feature tests for the inline split editor on TransactionDetail (Phase
@@ -361,4 +366,102 @@ it('rendersTheNotYetSplitEmptyStateOnAnExpenseDetailPage', function (): void {
     $response->assertSee('data-testid="split-section"', false);
     $response->assertSee('Split into categories', false);
     $response->assertSee('Groceries', false);
+})->group('phase-13.1');
+
+it('autoUnsplitsWhenReclassifyingASplitToANonSplittableType', function (): void {
+    // CR-01: reclassifying a SPLIT expense to a non-splittable type
+    // (transfer_out) must collapse the split first — otherwise the legs are
+    // orphaned into phantom category spend with no UI path to recover.
+    $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => null, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
+        ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
+    ]);
+
+    expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(2);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->assertSet('hasPersistedSplit', true)
+        ->call('reclassify', 'transfer_out')
+        ->assertSet('hasPersistedSplit', false); // dead-UI guard cleared
+
+    // Legs are gone — the sole mutator emitted their delete tombstones.
+    expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
+
+    $tx->refresh();
+    expect($tx->type)->toBe('transfer_out');
+    expect($tx->category_id)->toBe($this->groceries->id); // collapsed to the first leg's category
+
+    // SpendByCategoryQuery no longer attributes the (now-deleted) legs: the
+    // Household −2000 leg contributes nothing to any category total.
+    $period = new Period(
+        start: CarbonImmutable::parse('2026-07-01'),
+        endExclusive: CarbonImmutable::parse('2026-08-01'),
+        label: 'July 2026',
+    );
+    $spend = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $period, 'EUR');
+    expect($spend)->not->toHaveKey($this->household->id);
+})->group('phase-13.1');
+
+it('emitsAPerLegDeleteTombstoneWhenDeletingASplitParent', function (): void {
+    // WR-01: parent delete must emit an explicit per-leg delete tombstone so
+    // peers converge without relying on FK cascade at replay time.
+    $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => null, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
+        ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
+    ]);
+
+    $legIds = array_map('intval', TransactionSplit::query()
+        ->where('transaction_id', $tx->id)
+        ->orderBy('id')
+        ->pluck('id')
+        ->all());
+    expect($legIds)->toHaveCount(2);
+
+    Event::fake([TransactionMutated::class, TransactionSplitMutated::class]);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('deleteTransaction');
+
+    // Parent delete tombstone…
+    Event::assertDispatched(
+        TransactionMutated::class,
+        fn (TransactionMutated $e): bool => $e->transactionId === $tx->id && $e->mutationType === 'delete',
+    );
+
+    // …plus one explicit leg-delete tombstone per leg (WR-01), mirroring unsplit().
+    Event::assertDispatchedTimes(TransactionSplitMutated::class, 2);
+    foreach ($legIds as $legId) {
+        Event::assertDispatched(
+            TransactionSplitMutated::class,
+            fn (TransactionSplitMutated $e): bool => $e->splitId === $legId
+                && $e->transactionId === $tx->id
+                && $e->mutationType === 'delete',
+        );
+    }
+})->group('phase-13.1');
+
+it('doesNotWriteACategoryOrOpWhenBackingOutOfANeverPersistedSplitEditor', function (): void {
+    // WR-02: removing to one leg in a never-persisted editor is a pure
+    // in-memory back-out — it must NOT call the mutator, write a category, or
+    // emit an op-log entry.
+    $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
+
+    Event::fake([TransactionMutated::class]);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('openSplitEditor')
+        ->assertSet('hasPersistedSplit', false)
+        ->call('removeLeg', 1)
+        ->assertSet('confirmRemoveToOne', true)
+        ->call('confirmRemoveToOneAction')
+        ->assertSet('editingSplit', false)
+        ->assertDispatched('toast');
+
+    Event::assertNotDispatched(TransactionMutated::class);
+    expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
+
+    $tx->refresh();
+    expect($tx->category_id)->toBe($this->groceries->id); // untouched
 })->group('phase-13.1');
