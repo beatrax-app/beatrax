@@ -7,6 +7,7 @@ namespace Modules\Tax\Public\Http\Livewire\Concerns;
 use Livewire\Attributes\On;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Services\TaxCategoryWriter;
@@ -35,6 +36,14 @@ use Modules\Tax\Public\Services\TaxTagQuery;
  */
 trait HandlesTaxTagging
 {
+    /**
+     * Warn-first toast shown when a write is refused because the target
+     * transaction is reconciled (D-08 lock, UAT U-1). Copied verbatim from
+     * the Ledger-side guarded mutators (TransactionDetail) so the two
+     * cross-module lock surfaces speak with one voice.
+     */
+    private const RECONCILED_LOCK_TOAST = 'This transaction is reconciled. Un-reconcile it to make changes.';
+
     // ── Picker state ────────────────────────────────────────────────────────
 
     /** Transaction id currently open in the picker, or null (closed). */
@@ -111,8 +120,19 @@ trait HandlesTaxTagging
         TaxTagQuery $q,
         Clock $c,
         TaxCategoryWriter $writer,
+        TransactionStatusQuery $status,
     ): void {
         $user = $u->user();
+
+        // D-08 reconciled lock: warn-first, no write (U-1). The whole-transaction
+        // tax-tag path must honour the same lock the Ledger-side leg toggle does
+        // (WR-01); tax classification is exactly what a reconcile freezes. Guard
+        // BEFORE writing or opening the picker so a locked row stays untouched.
+        if ($status->isReconciled($user->id, $id)) {
+            $this->dispatch('toast', message: self::RECONCILED_LOCK_TOAST);
+
+            return;
+        }
 
         // (1) Immediate tag with no category — one tap is enough.
         $tag->execute($user->id, $id, null, null, null);
@@ -178,8 +198,16 @@ trait HandlesTaxTagging
     public function saveTaxCategory(
         TagTransaction $tag,
         CurrentUser $u,
+        TransactionStatusQuery $status,
     ): void {
         if ($this->taxPickerTxId === null) {
+            return;
+        }
+
+        // D-08 reconciled lock: warn-first, no write (U-1).
+        if ($status->isReconciled($u->user()->id, $this->taxPickerTxId)) {
+            $this->dispatch('toast', message: self::RECONCILED_LOCK_TOAST);
+
             return;
         }
 
@@ -234,8 +262,17 @@ trait HandlesTaxTagging
     public function untag(
         UntagTransaction $untag,
         CurrentUser $u,
+        TransactionStatusQuery $status,
     ): void {
         if ($this->taxPickerTxId === null) {
+            return;
+        }
+
+        // D-08 reconciled lock: warn-first, no delete (U-1). Removing a tax
+        // tag mutates the classification a reconcile is meant to freeze.
+        if ($status->isReconciled($u->user()->id, $this->taxPickerTxId)) {
+            $this->dispatch('toast', message: self::RECONCILED_LOCK_TOAST);
+
             return;
         }
 
@@ -254,6 +291,7 @@ trait HandlesTaxTagging
         CurrentUser $u,
         TaxTagQuery $q,
         Clock $c,
+        TransactionStatusQuery $status,
     ): void {
         if ($this->batchSuggestion === null) {
             return;
@@ -268,6 +306,15 @@ trait HandlesTaxTagging
 
         // Fetch the untagged transaction ids for this counterparty/year.
         $ids = $q->untaggedIdsForCounterparty($user->id, $cpId, $taxYear);
+
+        // D-08 reconciled lock: never mutate locked rows via the batch path
+        // (U-1). Filter reconciled ids out in one query BEFORE tagging so the
+        // banner can only ever tag editable rows; the success count below then
+        // honestly reflects only the rows actually written (mirrors WR-04).
+        $reconciledIds = $status->reconciledIdsAmong($user->id, $ids);
+        if ($reconciledIds !== []) {
+            $ids = array_values(array_diff($ids, $reconciledIds));
+        }
 
         // Prefer the snapshot taken at trigger-tag save time; fall back to the
         // live picker state ONLY when no snapshot was taken (picker-still-open
@@ -294,6 +341,15 @@ trait HandlesTaxTagging
         $count = count($ids);
         $this->batchSuggestion = null;
         $this->batchSuggestionDismissed = true; // Pitfall-7 guard.
+
+        // If every candidate was reconciled, nothing was tagged — say so
+        // rather than claiming "Tagged 0 more transactions." (U-1).
+        if ($count === 0) {
+            $this->dispatch('toast', message: 'Nothing tagged — those transactions are reconciled. Un-reconcile them to make changes.');
+
+            return;
+        }
+
         $this->dispatch('toast', message: "Tagged {$count} more transactions.");
     }
 
