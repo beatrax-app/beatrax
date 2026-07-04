@@ -67,6 +67,31 @@ it('leaves an envelope with no prior assignment unassigned after copy', function
     ]);
 });
 
+it('never overwrites an existing target assignment when copying into a partially-assigned month (IN-04)', function (): void {
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->prior->start, 40000);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->prior->start, 15000);
+
+    // The target month already has a DIFFERENT Groceries figure the user set.
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->selected->start, 99900);
+
+    app(EnvelopeWriter::class)->copyFromPeriod($this->user, $this->prior, $this->selected);
+
+    // Groceries in the target is untouched (not clobbered by the €400 prior).
+    $this->assertDatabaseHas('envelope_assignments', [
+        'user_id' => $this->user->id,
+        'category_id' => $this->groceries->id,
+        'period_start' => $this->selected->start->toDateString(),
+        'assigned_minor' => 99900,
+    ]);
+    // Dining, which had no target assignment, is copied in.
+    $this->assertDatabaseHas('envelope_assignments', [
+        'user_id' => $this->user->id,
+        'category_id' => $this->dining->id,
+        'period_start' => $this->selected->start->toDateString(),
+        'assigned_minor' => 15000,
+    ]);
+});
+
 it('applying copy to an already-empty prior period leaves the selected month empty too', function (): void {
     app(EnvelopeWriter::class)->copyFromPeriod($this->user, $this->prior, $this->selected);
 
