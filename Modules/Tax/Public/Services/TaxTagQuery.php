@@ -33,6 +33,15 @@ final class TaxTagQuery
      * Only TAGGED ids appear in the result. Callers treat absence as "untagged".
      * Single `whereIn` query regardless of batch size — N+1 prevention.
      *
+     * WHOLE-TRANSACTION ONLY (Phase 13.3 Finding A): filters to
+     * `transaction_split_id IS NULL`. Leg rows carry the PARENT
+     * transaction_id (Phase 13.1 D-06a), so without this filter a tag on
+     * ONE leg of a split would light up the whole-transaction badge for
+     * the parent row — and the whole-tx untag path (which also scopes to
+     * `whereNull('transaction_split_id')`, see UntagTransaction) would then
+     * match zero rows on click, a silent no-op. Callers that need
+     * leg-aware state use `forTransactionIdsWithLegs()` instead.
+     *
      * @param  array<int>  $transactionIds
      * @return array<int, TaxTagData>
      */
@@ -47,6 +56,7 @@ final class TaxTagQuery
             ->leftJoin('tax_deduction_categories AS cat', 'cat.id', '=', 'tag.deduction_category_id')
             ->where('tag.user_id', $userId)
             ->whereIn('tag.transaction_id', $transactionIds)
+            ->whereNull('tag.transaction_split_id')
             ->get([
                 'tag.transaction_id',
                 'tag.deduction_category_id',
