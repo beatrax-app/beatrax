@@ -4015,3 +4015,82 @@ mark {
         color: var(--color-emerald);
     }
 }
+
+/*
+ * Cleared/uncleared/reconciled status pill (Phase 13.3 Plan 03, SC-1, D-11).
+ * `.status-pill` is the shared calm-slate state primitive documented in
+ * component-library.md (dev-console health rows, palette source chip); this
+ * is its first consumer outside DevMode. No new @theme tokens — ok/warn/
+ * fail/muted all resolve from tokens already declared at the top of this
+ * file. Consumed by `x-ledger::cleared-badge` on the transactions list
+ * (phone card + desktop table) and the transaction detail page.
+ */
+@layer components {
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 8px;
+        border-radius: var(--radius-full);
+        font-size: var(--text-xs);
+        font-weight: 500;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .status-pill .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+
+    .status-pill.ok {
+        background: var(--color-emerald-bg);
+        color: var(--color-emerald);
+    }
+
+    .status-pill.warn {
+        background: var(--color-amber-bg);
+        color: var(--color-amber);
+    }
+
+    .status-pill.fail {
+        background: var(--color-rose-bg);
+        color: var(--color-rose);
+    }
+
+    .status-pill.muted {
+        background: var(--color-surface-2);
+        color: var(--color-text-muted);
+    }
+
+    .status-pill.ok .dot {
+        background: var(--color-emerald);
+    }
+
+    .status-pill.warn .dot {
+        background: var(--color-amber);
+    }
+
+    .status-pill.fail .dot {
+        background: var(--color-rose);
+    }
+
+    .status-pill.muted .dot {
+        background: var(--color-text-faint);
+    }
+
+    /* Interactive variant (list/detail toggle) — plain <button> reset plus
+       a pointer cursor; the reconciled state renders as a non-interactive
+       <span> instead (see cleared-badge.blade.php), so this class only
+       ever decorates a real toggle target. */
+    .cleared-badge-toggle {
+        cursor: pointer;
+        border: 0;
+        transition: var(--tx-quick);
+    }
+
+    .cleared-badge-toggle:hover {
+        filter: brightness(0.97);
+    }
+}

@@ -36,7 +36,11 @@
     <main class="min-h-screen bg-white dark:bg-slate-950">
         <div class="mx-auto max-w-3xl px-8 py-12 space-y-6" data-testid="transaction-detail">
             <header class="space-y-1">
-                <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Transaction</h1>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Transaction</h1>
+                    {{-- Cleared/uncleared/reconciled badge + toggle (SC-1, D-11). --}}
+                    <x-ledger::cleared-badge :transaction="['id' => $transaction->id, 'status' => $clearedStatus ?? 'cleared']" />
+                </div>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ CarbonImmutable::parse($transaction->posted_at)->format('j M Y') }}
                 </p>

@@ -23,6 +23,10 @@
     // Batch-loaded once per render — no N+1 (Pitfall 1).
     $taxState ??= [];
 
+    // Cleared status map: array<int, string> (SC-1, D-11). Batch-loaded once
+    // per render via HandlesClearedStatus::clearedStatusFor() — no N+1.
+    $clearedState ??= [];
+
     // Search mode flags (passed by TransactionsList::render() in both branches)
     $isSearchMode ??= false;
     $searchQuery ??= '';
@@ -164,6 +168,9 @@
                                  badge unaffected by split state (UI-SPEC discretion — see the
                                  per-leg read-only badges in the expanded list below). --}}
                             <x-tax::tax-badge :transaction="$row" :showAlways="true" />
+                            {{-- Cleared/uncleared/reconciled badge (SC-1, D-11). Always visible
+                                 at phone width, same as the tax badge. --}}
+                            <x-ledger::cleared-badge :transaction="['id' => $row['id'], 'status' => $row['status'] ?? 'cleared']" />
                             {{-- Amount: tabular, right-aligned; positive = emerald. Always the
                                  parent total — never a client-recomputed sum (UI-SPEC §5.1). --}}
                             <span class="amount {{ $isPositive($rowAmt) ? 'positive' : '' }}">
@@ -257,6 +264,7 @@
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Counterparty</th>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Category</th>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Tax</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Status</th>
                             <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
                         </tr>
                     </thead>
@@ -358,6 +366,11 @@
                                 <td class="px-4 py-2">
                                     <x-tax::tax-badge :transaction="$rowArr" :showAlways="false" />
                                 </td>
+                                {{-- Cleared/uncleared/reconciled badge (SC-1, D-11). Batch-loaded
+                                     via $clearedState — no N+1 (Pitfall 1). --}}
+                                <td class="px-4 py-2">
+                                    <x-ledger::cleared-badge :transaction="['id' => $row->id, 'status' => $clearedState[$row->id] ?? 'cleared']" />
+                                </td>
                                 <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
                                     @if ($isSearchMode)
                                         <span class="block text-sm text-slate-900 dark:text-slate-100">
@@ -398,6 +411,7 @@
                                                 />
                                             @endif
                                         </td>
+                                        <td class="px-4 py-2"></td>
                                         <td class="px-4 py-2 text-right text-xs text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                             {{ $fmt(Money::ofMinor($leg['amountMinor'], $leg['amountCurrency'])) }}
                                         </td>
