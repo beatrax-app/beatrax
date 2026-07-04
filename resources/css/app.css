@@ -3925,3 +3925,93 @@ mark {
         display: none;
     }
 }
+
+/*
+ * Split-transaction primitives (Phase 13.1 Plan 05, UI-SPEC §11). No new
+ * @theme tokens — every value below resolves from tokens already declared
+ * at the top of this file. `.split-badge`/`.split-leg-subrow` are consumed
+ * by the list-surface expand/collapse row (Plan 06); `.split-leg-row` and
+ * `.split-remaining-bar` are consumed by the TransactionDetail split editor
+ * (this plan).
+ */
+@layer components {
+    /* Neutral pill on list rows — never emerald/amber/rose (color restraint
+       rule, UI-SPEC §4): a split badge is calm metadata, not a state signal. */
+    .split-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        height: 20px;
+        padding: 0 var(--space-2);
+        border-radius: var(--radius-full);
+        background: var(--color-surface-2);
+        color: var(--color-text-muted);
+        border: 1px solid var(--color-border);
+        font-size: var(--text-xs);
+        font-weight: 500;
+    }
+
+    .split-badge__chevron {
+        transition: var(--tx-quick);
+    }
+
+    .split-badge[aria-expanded='true'] .split-badge__chevron {
+        transform: rotate(90deg);
+    }
+
+    /* Editor leg row (TransactionDetail split editor, §7.3). */
+    .split-leg-row {
+        display: flex;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        min-height: 44px;
+        padding: var(--space-3) 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .split-leg-row:last-child {
+        border-bottom: 0;
+    }
+
+    /* Read-only expanded leg row on list surfaces (§6, Plan 06). */
+    .split-leg-subrow {
+        background: var(--color-bg-subtle);
+        border-left: 2px solid var(--color-border-strong);
+        padding-left: var(--space-6);
+    }
+
+    @media (max-width: 767px) {
+        .split-leg-subrow {
+            padding-left: var(--space-4);
+        }
+    }
+
+    /* The "remaining to assign" gate — the phase's single focal element
+       while the editor is open (§7.4). */
+    .split-remaining-bar {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-md);
+        font-size: var(--text-lg);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .split-remaining-bar--positive {
+        background: var(--color-amber-bg);
+        color: var(--color-amber);
+    }
+
+    .split-remaining-bar--over {
+        background: var(--color-rose-bg);
+        color: var(--color-rose);
+    }
+
+    .split-remaining-bar--zero {
+        background: var(--color-emerald-bg);
+        color: var(--color-emerald);
+    }
+}

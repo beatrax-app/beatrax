@@ -84,8 +84,264 @@
                 @endif
             </dl>
 
-            {{-- Tax badge: sits next to the reclassify section per D-01 --}}
-            @if (isset($txTaxRow))
+            {{-- Split editor (Phase 13.1 Plan 05, UI-SPEC §7): inline, gated to
+                 non-transfer types (Req 6, D-07/D-08). Placed between the
+                 money dl and Reclassify per §7.1 — category is the most
+                 fundamental fact about a transaction after its amount. --}}
+            @if ($isSplittable ?? false)
+                <section
+                    aria-labelledby="split-heading"
+                    class="border-t border-slate-200 pt-6 space-y-3 dark:border-slate-700"
+                    data-testid="split-section"
+                >
+                    @if (! $editingSplit)
+                        {{-- §7.2 Not-yet-split empty state. --}}
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="space-y-1">
+                                <h2 id="split-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
+                                    Category
+                                </h2>
+                                <p class="text-sm text-slate-900 dark:text-slate-100" data-testid="split-current-category">
+                                    {{ $transaction->category?->name ?? '—' }}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                wire:click="openSplitEditor"
+                                class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                                data-testid="split-open-button"
+                            >
+                                Split into categories
+                            </button>
+                        </div>
+                    @else
+                        {{-- §7.3 Editor — open state. --}}
+                        <div class="space-y-1">
+                            <h2 id="split-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
+                                Split across categories
+                            </h2>
+                            <p class="text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
+                                Total {{ $fmt(Money::ofMinor($transaction->settled_amount_minor, $transaction->settled_currency)) }}
+                            </p>
+                            @if ($hasPersistedSplit)
+                                {{-- D-06: tax ownership moves to legs once a split is persisted. --}}
+                                <p class="text-xs text-slate-400 dark:text-slate-500" data-testid="split-tax-ownership-note">
+                                    Tax tags are set per category below.
+                                </p>
+                            @endif
+                        </div>
+
+                        @if ($splitError)
+                            <div class="wiz-error" role="alert" data-testid="split-error-banner">
+                                {{ $splitError }}
+                            </div>
+                        @endif
+
+                        <div data-testid="split-legs">
+                            @foreach ($legs as $index => $leg)
+                                <div class="split-leg-row" data-testid="split-leg-row-{{ $index }}">
+                                    <div>
+                                        <label class="sr-only" for="split-leg-category-{{ $index }}">Category</label>
+                                        <select
+                                            wire:model.live="legs.{{ $index }}.categoryId"
+                                            id="split-leg-category-{{ $index }}"
+                                            class="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                            data-testid="split-leg-category-{{ $index }}"
+                                        >
+                                            <option value="">Choose a category</option>
+                                            @foreach ($splitCategories as $cat)
+                                                <option value="{{ $cat->id }}" @selected(($leg['categoryId'] ?? null) !== null && (int) $leg['categoryId'] === $cat->id)>{{ $cat->path }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <span class="budget-step-amount">
+                                        <span aria-hidden="true">€</span>
+                                        <label class="sr-only" for="split-leg-amount-{{ $index }}">Amount</label>
+                                        <input
+                                            type="text"
+                                            inputmode="decimal"
+                                            id="split-leg-amount-{{ $index }}"
+                                            placeholder="0,00"
+                                            wire:model.live.debounce.300ms="legs.{{ $index }}.amount"
+                                            data-testid="split-leg-amount-{{ $index }}"
+                                        >
+                                    </span>
+
+                                    <div class="flex flex-1 min-w-[10rem] flex-col gap-1">
+                                        <label class="sr-only" for="split-leg-note-{{ $index }}">Note</label>
+                                        <input
+                                            type="text"
+                                            id="split-leg-note-{{ $index }}"
+                                            placeholder="Note (optional)"
+                                            wire:model="legs.{{ $index }}.note"
+                                            class="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                            data-testid="split-leg-note-{{ $index }}"
+                                        >
+
+                                        <label class="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                            <button
+                                                type="button"
+                                                wire:click="toggleLegTax({{ $index }})"
+                                                @disabled($leg['id'] === null)
+                                                role="switch"
+                                                aria-checked="{{ ($leg['tax'] ?? false) ? 'true' : 'false' }}"
+                                                aria-label="Tax-deductible"
+                                                class="switch {{ ($leg['tax'] ?? false) ? 'switch--on' : '' }}"
+                                                data-testid="split-leg-tax-toggle-{{ $index }}"
+                                            >
+                                                <span class="switch__thumb"></span>
+                                            </button>
+                                            Tax-deductible
+                                        </label>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        wire:click="removeLeg({{ $index }})"
+                                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                                        aria-label="Remove this category"
+                                        data-testid="split-leg-remove-{{ $index }}"
+                                    >
+                                        &times;
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3">
+                            <button
+                                type="button"
+                                wire:click="addLeg"
+                                class="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                                data-testid="split-add-leg"
+                            >
+                                + Add category
+                            </button>
+
+                            @if (count($legs) >= 18)
+                                <span class="text-xs text-slate-400 dark:text-slate-500" data-testid="split-soft-cap-advisory">
+                                    {{ count($legs) }} of ~20 categories — consider grouping small amounts.
+                                </span>
+                            @endif
+                        </div>
+
+                        @php
+                            $remainingAbsDisplay = $fmt(Money::ofMinor(abs($remainingMinor), $transaction->settled_currency));
+                        @endphp
+                        <div
+                            class="split-remaining-bar {{ $remainingMinor === 0 ? 'split-remaining-bar--zero' : ($remainingMinor > 0 ? 'split-remaining-bar--positive' : 'split-remaining-bar--over') }}"
+                            role="status"
+                            aria-live="polite"
+                            data-testid="split-remaining-bar"
+                        >
+                            @if ($remainingMinor === 0)
+                                Remaining {{ $remainingAbsDisplay }} ✓
+                            @elseif ($remainingMinor > 0)
+                                Remaining to assign: {{ $remainingAbsDisplay }}
+                            @else
+                                Over-allocated by {{ $remainingAbsDisplay }} — reduce a leg.
+                            @endif
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3">
+                            <button
+                                type="button"
+                                wire:click="saveSplit"
+                                wire:loading.attr="disabled"
+                                wire:target="saveSplit"
+                                @disabled($remainingMinor !== 0 || count($legs) < 2)
+                                class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
+                                data-testid="split-save-button"
+                            >
+                                <span wire:loading.remove wire:target="saveSplit">Save split</span>
+                                <span wire:loading wire:target="saveSplit">Saving…</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                wire:click="unsplit"
+                                class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"
+                                data-testid="split-unsplit-link"
+                            >
+                                Unsplit transaction
+                            </button>
+                        </div>
+
+                        @if ($confirmRemoveToOne && $pendingRemoveIndex !== null && array_key_exists($pendingRemoveIndex === 0 ? 1 : 0, $legs))
+                            @php
+                                $survivorIdx = $pendingRemoveIndex === 0 ? 1 : 0;
+                                $survivorCat = collect($splitCategories)->firstWhere('id', (int) ($legs[$survivorIdx]['categoryId'] ?? 0));
+                                $survivorName = $survivorCat->path ?? 'this category';
+                            @endphp
+                            <div class="flex flex-wrap items-center gap-3" role="status" data-testid="split-remove-to-one-confirm">
+                                <span class="text-sm text-slate-700 dark:text-slate-300">
+                                    Removing this leaves one category — the transaction becomes {{ $survivorName }}.
+                                </span>
+                                <button
+                                    type="button"
+                                    wire:click="confirmRemoveToOneAction"
+                                    class="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm hover:bg-rose-50 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-400"
+                                    data-testid="split-remove-to-one-confirm-button"
+                                >
+                                    Remove category
+                                </button>
+                                <button
+                                    type="button"
+                                    wire:click="cancelRemoveToOne"
+                                    class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                                >
+                                    Keep this category
+                                </button>
+                            </div>
+                        @endif
+
+                        @if ($confirmUnsplit)
+                            <div class="space-y-2" role="status" data-testid="split-unsplit-confirm">
+                                <p class="text-sm text-slate-700 dark:text-slate-300">Restore as a single category?</p>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    @foreach ($legs as $index => $leg)
+                                        @php
+                                            $radioCat = collect($splitCategories)->firstWhere('id', (int) ($leg['categoryId'] ?? 0));
+                                        @endphp
+                                        <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                            <input
+                                                type="radio"
+                                                name="unsplit-survivor"
+                                                wire:click="selectUnsplitSurvivor({{ $index }})"
+                                                @checked($unsplitSurvivorIndex === $index)
+                                            >
+                                            {{ $radioCat->path ?? '—' }} €{{ $leg['amount'] }}
+                                        </label>
+                                    @endforeach
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        wire:click="confirmUnsplitAction"
+                                        class="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm hover:bg-rose-50 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-400"
+                                        data-testid="split-unsplit-confirm-button"
+                                    >
+                                        Yes, unsplit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        wire:click="cancelUnsplit"
+                                        class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                                    >
+                                        Keep split
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+                    @endif
+                </section>
+            @endif
+
+            {{-- Tax badge: sits next to the reclassify section per D-01.
+                 Suppressed once the transaction is split (D-06) — tax
+                 ownership moves to the legs (see the Split section above). --}}
+            @if (isset($txTaxRow) && ! ($hasPersistedSplit ?? false))
                 <section
                     aria-label="Tax tag"
                     class="border-t border-slate-200 pt-6 dark:border-slate-700"
