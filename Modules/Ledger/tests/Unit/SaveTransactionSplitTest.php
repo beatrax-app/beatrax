@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -12,6 +14,7 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Models\TransactionSplit;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
+use Modules\Sync\Public\Events\TransactionSplitMutated;
 
 uses(RefreshDatabase::class);
 
@@ -160,6 +163,47 @@ it('rejects a leg whose category is not visible to the user', function (): void 
     ]))->toThrow(InvalidArgumentException::class);
 
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
+});
+
+it('canonicalises an empty-string note to null on write (WR-04)', function (): void {
+    $tx = splitTx($this->user->id, $this->account->id, $this->run->id, -8000);
+
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => null, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => ''],
+        ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => ''],
+    ]);
+
+    $legs = TransactionSplit::query()->where('transaction_id', $tx->id)->get();
+    foreach ($legs as $leg) {
+        expect($leg->note)->toBeNull();
+    }
+});
+
+it('does not churn a note op when the stored value is empty string and the incoming value is null (WR-04)', function (): void {
+    $tx = splitTx($this->user->id, $this->account->id, $this->run->id, -8000);
+
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => null, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
+        ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
+    ]);
+
+    $legs = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('sort_order')->get();
+    $groceriesLegId = (int) $legs[0]->id;
+    $householdLegId = (int) $legs[1]->id;
+
+    // Simulate a sync replay that stored an empty-string note on one leg.
+    DB::connection()->table('transaction_splits')->where('id', $groceriesLegId)->update(['note' => '']);
+
+    Event::fake([TransactionSplitMutated::class]);
+
+    // Re-save the identical legs (notes null). '' (stored) vs null (incoming)
+    // must NOT be treated as a change — no op churn, no LWW ping-pong.
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => $groceriesLegId, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
+        ['id' => $householdLegId, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
+    ]);
+
+    Event::assertNotDispatched(TransactionSplitMutated::class);
 });
 
 it('preserves leg primary keys on edit: unchanged/edited legs keep their id, added legs INSERT, removed legs DELETE', function (): void {
