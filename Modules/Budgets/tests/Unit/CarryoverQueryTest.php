@@ -181,7 +181,13 @@ it('carries a positive leftover pool forward into the next period (D-10 sticky m
 it('starts the genesis period with zero pool carry and zero carried-in (D-12b)', function (): void {
     $period = app(PeriodQuery::class)->current();
 
-    carryoverTx($this->user->id, $this->account->id, $this->run->id, 50000, $this->groceries->id, $period->start);
+    // NEGATIVE settled minor: carryoverTx() infers type from sign ($settledMinor
+    // < 0 => 'expense'); SpendByCategoryQuery counts spend by amount sign, not
+    // type, so a positive value here would silently land as untracked income
+    // and never contribute to `spent` (Rule 1 fixture bug fix — the original
+    // Wave 0 fixture passed +50000, which cannot produce the expense this
+    // test's own comment/assertion require).
+    carryoverTx($this->user->id, $this->account->id, $this->run->id, -50000, $this->groceries->id, $period->start);
 
     EnvelopeAssignment::create([
         'user_id' => $this->user->id,
