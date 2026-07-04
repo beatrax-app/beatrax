@@ -7,6 +7,7 @@ namespace Modules\Budgets\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Modules\Budgets\Models\EnvelopeSetting;
 use Modules\Core\Models\User;
@@ -287,7 +288,12 @@ final class EnvelopeWriter
         /** @var array{debitId: int, creditId: int}|null $ids */
         $ids = null;
 
-        $this->db->connection()->transaction(function () use ($user, $fromCategoryId, $toCategoryId, $periodDate, $minor, $memo, &$ids): void {
+        // WR-04: one shared correlation id for both paired rows, so undoMove()
+        // matches the counterpart deterministically rather than by
+        // second-precision created_at.
+        $groupId = (string) Str::uuid();
+
+        $this->db->connection()->transaction(function () use ($user, $fromCategoryId, $toCategoryId, $periodDate, $minor, $memo, $groupId, &$ids): void {
             $connection = $this->db->connection();
             $now = $this->clock->now();
 
@@ -300,6 +306,7 @@ final class EnvelopeWriter
                 'currency' => self::CURRENCY,
                 'kind' => 'move_out',
                 'memo' => $memo,
+                'move_group_id' => $groupId,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]));
@@ -313,6 +320,7 @@ final class EnvelopeWriter
                 'currency' => self::CURRENCY,
                 'kind' => 'move_in',
                 'memo' => $memo,
+                'move_group_id' => $groupId,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]));
@@ -336,6 +344,7 @@ final class EnvelopeWriter
                 'amount_minor' => -$minor,
                 'currency' => self::CURRENCY,
                 'kind' => 'move_out',
+                'move_group_id' => $groupId,
             ],
         ));
 
@@ -351,6 +360,7 @@ final class EnvelopeWriter
                 'amount_minor' => $minor,
                 'currency' => self::CURRENCY,
                 'kind' => 'move_in',
+                'move_group_id' => $groupId,
             ],
         ));
 
@@ -376,7 +386,7 @@ final class EnvelopeWriter
         $row = $connection->table('envelope_moves')
             ->where('id', $moveId)
             ->where('user_id', $user->id)
-            ->first(['id', 'category_id', 'counterpart_category_id', 'period_start', 'amount_minor', 'created_at']);
+            ->first(['id', 'category_id', 'counterpart_category_id', 'period_start', 'amount_minor', 'created_at', 'move_group_id']);
 
         if ($row === null) {
             return;
@@ -387,17 +397,29 @@ final class EnvelopeWriter
         $periodStartRaw = $row->period_start;
         $amountMinor = self::toInt($row->amount_minor);
         $createdAtRaw = $row->created_at;
+        $groupId = is_string($row->move_group_id) && $row->move_group_id !== '' ? $row->move_group_id : null;
+
+        // WR-04: match the paired counterpart by its shared move_group_id when
+        // present — deterministic even when two moves between the same pair,
+        // amount, and period share a wall-clock second. Legacy rows written
+        // before move_group_id existed have a null group id and fall back to
+        // the original created_at-based match.
+        $pairQuery = $connection->table('envelope_moves')
+            ->where('user_id', $user->id)
+            ->where('id', '!=', $moveId);
+
+        if ($groupId !== null) {
+            $pairQuery->where('move_group_id', $groupId);
+        } else {
+            $pairQuery->where('category_id', $counterpartId)
+                ->where('counterpart_category_id', $categoryId)
+                ->where('period_start', $periodStartRaw)
+                ->where('amount_minor', -$amountMinor)
+                ->where('created_at', $createdAtRaw);
+        }
 
         /** @var \stdClass|null $pairRow */
-        $pairRow = $connection->table('envelope_moves')
-            ->where('user_id', $user->id)
-            ->where('id', '!=', $moveId)
-            ->where('category_id', $counterpartId)
-            ->where('counterpart_category_id', $categoryId)
-            ->where('period_start', $periodStartRaw)
-            ->where('amount_minor', -$amountMinor)
-            ->where('created_at', $createdAtRaw)
-            ->first(['id']);
+        $pairRow = $pairQuery->first(['id']);
 
         $pairId = $pairRow !== null ? self::toInt($pairRow->id) : null;
 

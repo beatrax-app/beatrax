@@ -95,6 +95,36 @@ it('permits a move that leaves the source envelope negative -- never balance-blo
     expect($after['rows'][$this->groceries->id]->availableMinor)->toBe(-2000);
 });
 
+it('undoes the exact paired rows via move_group_id when two identical moves share a wall-clock second (WR-04)', function (): void {
+    // Freeze the clock so both moves get an identical second-precision
+    // created_at — the ambiguity that previously let undoMove() delete the
+    // wrong counterpart.
+    CarbonImmutable::setTestNow('2026-07-04 10:00:00');
+
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 50000);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->period->start, 10000);
+
+    $firstMoveId = app(EnvelopeWriter::class)->move($this->user, $this->groceries->id, $this->dining->id, $this->period->start, 2000);
+    $secondMoveId = app(EnvelopeWriter::class)->move($this->user, $this->groceries->id, $this->dining->id, $this->period->start, 2000);
+
+    // Both debit rows share the same created_at but distinct group ids.
+    $firstGroup = DB::table('envelope_moves')->where('id', $firstMoveId)->value('move_group_id');
+    $secondGroup = DB::table('envelope_moves')->where('id', $secondMoveId)->value('move_group_id');
+    expect($firstGroup)->not->toBeNull();
+    expect($secondGroup)->not->toBeNull();
+    expect($firstGroup)->not->toBe($secondGroup);
+
+    app(EnvelopeWriter::class)->undoMove($this->user, $firstMoveId);
+
+    // Exactly the first move's two rows are gone; the second move's pair
+    // (both its rows) survives intact — no orphaned half.
+    expect(DB::table('envelope_moves')->where('move_group_id', $firstGroup)->count())->toBe(0);
+    expect(DB::table('envelope_moves')->where('move_group_id', $secondGroup)->count())->toBe(2);
+    expect(DB::table('envelope_moves')->count())->toBe(2);
+
+    CarbonImmutable::setTestNow();
+});
+
 it('rejects a move to the same source and destination envelope', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 50000);
 
