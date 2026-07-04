@@ -162,6 +162,35 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['transaction_id', 'category_id', 'settled_amount_minor', 'settled_currency'],
             ],
+            // 13.2-05 (Req 11 / D-25): one mutable snapshot row per
+            // (user_id, category_id, period_start). Every string below is
+            // cross-checked against
+            // Modules/Budgets/Database/Migrations/2026_07_05_000001_create_envelope_assignments_table.php
+            // — do NOT replicate the category_budgets monthly_limit_minor/
+            // budget_minor typo above; EnvelopeAssignmentsRegistryColumnsTest
+            // asserts this stays a subset of the migration's actual
+            // NOT-NULL-without-default columns.
+            'envelope_assignments' => [
+                'assigned_minor' => ['strategy' => 'lww', 'nullable' => false],
+                '_delete_wins' => true,
+                '_create_required' => ['user_id', 'category_id', 'period_start', 'assigned_minor', 'currency'],
+            ],
+            // 13.2-05 (Req 11 / D-25): append-only paired-row ledger (mirrors
+            // pot_movements) — no LWW-mutable field, only create + delete
+            // (undo hard-deletes both paired rows). Cross-checked against
+            // Modules/Budgets/Database/Migrations/2026_07_05_000002_create_envelope_moves_table.php.
+            'envelope_moves' => [
+                '_delete_wins' => true,
+                '_create_required' => ['category_id', 'counterpart_category_id', 'period_start', 'amount_minor', 'currency', 'kind'],
+            ],
+            // 13.2-05 (Req 11 / D-25): one row per (user_id, category_id)
+            // holding the overspend-mode toggle. Cross-checked against
+            // Modules/Budgets/Database/Migrations/2026_07_05_000003_create_envelope_settings_table.php.
+            'envelope_settings' => [
+                'overspend_mode' => ['strategy' => 'lww', 'nullable' => false],
+                '_delete_wins' => true,
+                '_create_required' => ['user_id', 'category_id', 'overspend_mode'],
+            ],
         ];
     }
 
