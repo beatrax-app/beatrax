@@ -16,6 +16,7 @@ use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Events\CategorizationDiverged;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
@@ -445,8 +446,9 @@ final class TransactionDetail extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         Dispatcher $events,
+        Clock $clock,
     ): void {
-        $this->toggleClearedStatus($this->transactionId, $currentUser, $db, $events);
+        $this->toggleClearedStatus($this->transactionId, $currentUser, $db, $events, $clock);
     }
 
     /**

@@ -7,6 +7,7 @@ namespace Modules\Ledger\Public\Http\Livewire\Concerns;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\On;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
 use Modules\Sync\Public\Events\TransactionMutated;
@@ -92,8 +93,9 @@ trait HandlesClearedStatus
         CurrentUser $currentUser,
         DatabaseManager $db,
         Dispatcher $events,
+        Clock $clock,
     ): void {
-        $this->toggleClearedStatus($id, $currentUser, $db, $events);
+        $this->toggleClearedStatus($id, $currentUser, $db, $events, $clock);
     }
 
     /**
@@ -116,6 +118,7 @@ trait HandlesClearedStatus
         CurrentUser $currentUser,
         DatabaseManager $db,
         Dispatcher $events,
+        Clock $clock,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -146,7 +149,13 @@ trait HandlesClearedStatus
             ->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $userId)   // I2 guard
-            ->update(['status' => $next]);
+            ->update([
+                'status' => $next,
+                // IN-02: raw QB updates don't auto-touch timestamps; bump
+                // updated_at from the same injected Clock ReconciliationWriter
+                // uses so any updated_at-based ordering/cache sees a fresh row.
+                'updated_at' => $clock->now(),
+            ]);
 
         $events->dispatch(new TransactionMutated(
             transactionId: $transactionId,
