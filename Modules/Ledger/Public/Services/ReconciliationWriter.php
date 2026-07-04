@@ -41,9 +41,13 @@ final class ReconciliationWriter
      * before `$statementDate` to `reconciled`, scoped to `$user`. `uncleared`
      * rows and rows posted after the statement date are left untouched.
      *
+     * @return int the number of rows actually transitioned to `reconciled`
+     *             (WR-04) — 0 when nothing fell in the statement-date window,
+     *             so callers can report the truthful outcome.
+     *
      * @throws InvalidArgumentException when `$accountId` is not owned by `$user` (IDOR).
      */
-    public function completeReconcile(User $user, int $accountId, CarbonImmutable $statementDate): void
+    public function completeReconcile(User $user, int $accountId, CarbonImmutable $statementDate): int
     {
         $this->assertOwnedAccount($user, $accountId);
 
@@ -93,6 +97,8 @@ final class ReconciliationWriter
                 dirtyFields: ['status' => 'reconciled'],
             ));
         }
+
+        return count($transactionIds);
     }
 
     /**

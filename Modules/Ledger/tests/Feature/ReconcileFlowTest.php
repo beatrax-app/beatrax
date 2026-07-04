@@ -84,3 +84,19 @@ it('computes the difference on the in-window cleared balance only, so a statemen
     expect(DB::table('transactions')->where('id', $afterWindow->id)->value('status'))->toBe('cleared');
     expect(DB::table('transactions')->where('user_id', $this->user->id)->count())->toBe(2);
 });
+
+it('reports an honest toast when a matched statement locks zero in-window rows (WR-04)', function (): void {
+    // Only a post-date cleared row exists, so the in-window cleared balance is
+    // 0 and a 0,00 target matches — but there is nothing to lock.
+    $afterWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'amount_minor' => -3000, 'posted_at' => '2026-06-20']);
+
+    Livewire::actingAs($this->user)
+        ->test(ReconcilePage::class, ['accountId' => $this->account->id])
+        ->set('statementDate', '2026-06-15')
+        ->set('statementBalance', '0,00')
+        ->assertViewHas('isMatched', true)
+        ->call('confirmReconcile')
+        ->assertDispatched('toast', message: 'Nothing to lock for this statement date.');
+
+    expect(DB::table('transactions')->where('id', $afterWindow->id)->value('status'))->toBe('cleared');
+});

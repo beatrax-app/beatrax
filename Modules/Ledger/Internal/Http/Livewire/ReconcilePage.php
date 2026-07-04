@@ -132,14 +132,20 @@ final class ReconcilePage extends Component
         }
 
         try {
-            $writer->completeReconcile($user, $this->accountId, $date);
+            $lockedCount = $writer->completeReconcile($user, $this->accountId, $date);
         } catch (InvalidArgumentException) {
             // Foreign/missing accountId (IDOR) — silent no-op, mirrors the
             // cross-user convention used by PotWriter::archive et al.
             return;
         }
 
-        $this->dispatch('toast', message: 'Reconcile complete — rows locked.');
+        // WR-04: report the truthful outcome. A matched target with no cleared
+        // rows in the statement-date window locks nothing — don't claim it did.
+        $message = $lockedCount === 0
+            ? 'Nothing to lock for this statement date.'
+            : sprintf('Reconcile complete — %d rows locked.', $lockedCount);
+
+        $this->dispatch('toast', message: $message);
     }
 
     public function render(CurrentUser $currentUser, DatabaseManager $db, ViewFactory $views, AccountBalanceQuery $balances): View
