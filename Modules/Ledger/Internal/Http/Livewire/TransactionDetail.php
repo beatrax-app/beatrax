@@ -21,7 +21,9 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\SplittableTypes;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
@@ -65,18 +67,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final class TransactionDetail extends Component
 {
     use HandlesTaxTagging;
-
-    /**
-     * Transaction types the split editor is offered for (Req 6, D-07/D-08).
-     * `transfer_in`/`transfer_out` are excluded — they own the paired
-     * equal-and-opposite invariant via `pair_transaction_id`. Mirrors
-     * `SaveTransactionSplit::SPLITTABLE_TYPES` (duplicated intentionally,
-     * same convention as the `parseAmount()` duplication below — the
-     * action re-validates independently, this is a UI-layer gate only).
-     *
-     * @var list<string>
-     */
-    private const SPLITTABLE_TYPES = ['expense', 'income', 'fee', 'refund', 'adjustment'];
 
     public int $transactionId = 0;
 
@@ -204,6 +194,7 @@ final class TransactionDetail extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         Dispatcher $events,
+        SavesTransactionSplit $splitter,
     ): void {
         if (! in_array($newType, Transaction::TYPES, true)) {
             throw new InvalidArgumentException(sprintf(
@@ -219,6 +210,33 @@ final class TransactionDetail extends Component
             ->where('id', $this->transactionId)
             ->where('user_id', $user->id)
             ->firstOrFail();
+
+        // CR-01: reclassifying a SPLIT transaction to a non-splittable type
+        // would strand its legs — the read-side union (SpendByCategoryQuery)
+        // has no type filter, so the orphaned legs keep counting as category
+        // spend while the parent is dropped from the unsplit roll-up, and the
+        // type-gated UI offers no path to unsplit or re-tag. Collapse the
+        // split FIRST, through the sole mutator, so leg-delete tombstones are
+        // emitted (WR-01) before the type leaves the splittable set. The first
+        // leg's category (user-scoped) becomes the surviving category —
+        // guaranteed to satisfy unsplit()'s "survivor must be a current leg
+        // category" check.
+        $didUnsplit = false;
+        if (! SplittableTypes::contains($newType)) {
+            $firstLeg = $db->connection()
+                ->table('transaction_splits')
+                ->where('transaction_id', $this->transactionId)
+                ->where('user_id', $user->id)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->first(['category_id']);
+
+            if ($firstLeg !== null) {
+                $survivingCategoryId = is_numeric($firstLeg->category_id) ? (int) $firstLeg->category_id : 0;
+                $splitter->unsplit($user, $this->transactionId, $survivingCategoryId);
+                $didUnsplit = true;
+            }
+        }
 
         $partnerId = $tx->pair_transaction_id;
         $breaksPair = $partnerId !== null
@@ -260,6 +278,15 @@ final class TransactionDetail extends Component
         $this->dispatch('toast', message: $message);
 
         $this->reclassifyType = '';
+
+        // CR-01: if the reclassify collapsed a split, drop the now-stale
+        // in-memory leg state so the component no longer reports
+        // hasPersistedSplit (which would otherwise keep suppressing the
+        // whole-transaction tax section for a transaction that no longer
+        // has legs).
+        if ($didUnsplit) {
+            $this->resetSplitEditor();
+        }
     }
 
     /**
@@ -441,6 +468,18 @@ final class TransactionDetail extends Component
             throw new NotFoundHttpException;
         }
 
+        // WR-01: read the leg ids BEFORE deleting the parent (the DB cascade
+        // removes the leg rows locally). Convergence must not rely on the
+        // peer's replay connection having FK cascade active — emit an
+        // explicit delete tombstone per leg, mirroring unsplit(), so the leg
+        // deletions are first-class ops in the log rather than an implicit
+        // FK side-effect.
+        $legRows = $db->connection()
+            ->table('transaction_splits')
+            ->where('transaction_id', $this->transactionId)
+            ->where('user_id', $userId)
+            ->get(['id']);
+
         $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
@@ -454,6 +493,18 @@ final class TransactionDetail extends Component
             mutationType: 'delete',
             dirtyFields: [],
         ));
+
+        // Per-leg delete tombstones (WR-01) — after the parent commit, per the
+        // WR-06 dispatch-after-commit contract.
+        foreach ($legRows as $legRow) {
+            $legId = is_numeric($legRow->id) ? (int) $legRow->id : 0;
+            $events->dispatch(new TransactionSplitMutated(
+                splitId: $legId,
+                transactionId: $this->transactionId,
+                userId: $userId,
+                mutationType: 'delete',
+            ));
+        }
 
         $this->redirect($urls->route('transactions.index'), navigate: true);
     }
@@ -547,6 +598,19 @@ final class TransactionDetail extends Component
             return;
         }
 
+        // WR-02: a never-persisted editor (opened via openSplitEditor, nothing
+        // saved) has no split to reverse — backing out must be a pure
+        // in-memory collapse, NOT a durable category write + op-log entry.
+        // Only call the mutator when a persisted split actually exists.
+        if (! $this->hasPersistedSplit) {
+            $this->resetSplitEditor();
+            $this->confirmRemoveToOne = false;
+            $this->pendingRemoveIndex = null;
+            $this->dispatch('toast', message: 'Removed — one category remains');
+
+            return;
+        }
+
         $survivorIndex = $this->pendingRemoveIndex === 0 ? 1 : 0;
         $survivorCategoryId = self::legCategoryId($this->legs[$survivorIndex]);
 
@@ -605,6 +669,17 @@ final class TransactionDetail extends Component
     public function confirmUnsplitAction(SavesTransactionSplit $splitter, CurrentUser $currentUser): void
     {
         if ($this->unsplitSurvivorIndex === null || ! array_key_exists($this->unsplitSurvivorIndex, $this->legs)) {
+            return;
+        }
+
+        // WR-02: never-persisted editor — collapse purely in memory, no
+        // mutator call, no category write, no op-log entry.
+        if (! $this->hasPersistedSplit) {
+            $this->resetSplitEditor();
+            $this->confirmUnsplit = false;
+            $this->unsplitSurvivorIndex = null;
+            $this->dispatch('toast', message: 'Unsplit — restored to a single category');
+
             return;
         }
 
@@ -959,7 +1034,7 @@ final class TransactionDetail extends Component
         // Split editor gate (Req 6, D-07/D-08): offered for any non-transfer
         // type. The category options list is only loaded when needed —
         // transfer detail pages never render the Split section at all.
-        $isSplittable = in_array($transaction->type, self::SPLITTABLE_TYPES, true);
+        $isSplittable = SplittableTypes::contains($transaction->type);
         $splitCategories = $isSplittable ? $categoryOptions->for($currentUser->user()) : [];
 
         // Chain drill-down drawer: gate the "View chain" button on
