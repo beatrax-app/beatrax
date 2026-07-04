@@ -361,12 +361,10 @@ final class BudgetsPage extends Component
             );
         }
 
-        // Per-envelope recent-moves + undo (D-19), one query per envelope —
-        // the same shape as PotBalanceQuery's per-pot recentMovements loader.
-        $recentMoves = [];
-        foreach (array_keys($rows) as $categoryId) {
-            $recentMoves[$categoryId] = $balances->recentMovesFor($user->id, $categoryId, $selected);
-        }
+        // Per-envelope recent-moves + undo (D-19). Batched into ONE query for
+        // all fold categories (IN-01) rather than one query per envelope on
+        // every render.
+        $recentMoves = $balances->recentMovesForCategories($user->id, array_keys($rows), $selected);
 
         $view = $views->make('budgets::livewire.budgets-page', [
             'rows' => $rows,
