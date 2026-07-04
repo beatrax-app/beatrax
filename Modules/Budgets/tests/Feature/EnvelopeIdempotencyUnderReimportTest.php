@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
@@ -29,6 +31,15 @@ beforeEach(function (): void {
         'period_start_day' => 1,
     ]);
     $this->actingAs($this->user);
+
+    // Req 9 exercises CarryoverQuery's genesis→target fold, which returns an
+    // all-zero result for a pre-cutover user (null envelope_activated_at).
+    // Stamp the current period as the activation month so this test's own data
+    // stays inside the fold without depending on the Plan 06 cutover migration
+    // — mirrors CarryoverQueryTest / EnvelopeMoveTest.
+    DB::table('users')->where('id', $this->user->id)->update([
+        'envelope_activated_at' => CarbonImmutable::now()->startOfMonth(),
+    ]);
 
     $this->account = Account::create([
         'user_id' => $this->user->id,
