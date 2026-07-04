@@ -234,9 +234,25 @@ final class EnvelopeWriter
      * (Req 6) — an envelope that was never assigned in `$fromPeriod` stays
      * unassigned in `$toPeriod`. Delegates to `setAssigned()` per envelope so
      * IDOR-guarding, PK-preservation, and event dispatch stay in one place.
+     *
+     * IN-04 precondition: this NEVER overwrites an assignment that already
+     * exists in `$toPeriod`. Any category already assigned in the target
+     * period is skipped, so calling this on a partially-assigned target is
+     * safe (the sole caller `copyLastMonth` only offers it on an empty target,
+     * but the public method no longer trusts that).
      */
     public function copyFromPeriod(User $user, Period $fromPeriod, Period $toPeriod): void
     {
+        // Batch-load the target period's already-assigned categories once so
+        // the copy never clobbers an existing target assignment.
+        $existingTargetCategoryIds = $this->db->connection()
+            ->table('envelope_assignments')
+            ->where('user_id', $user->id)
+            ->where('period_start', $toPeriod->start->toDateString())
+            ->pluck('category_id')
+            ->mapWithKeys(static fn (mixed $id): array => [self::toInt($id) => true])
+            ->all();
+
         $rows = $this->db->connection()
             ->table('envelope_assignments')
             ->where('user_id', $user->id)
@@ -246,6 +262,10 @@ final class EnvelopeWriter
         foreach ($rows as $row) {
             $categoryId = self::toInt($row->category_id);
             $minor = self::toInt($row->assigned_minor);
+
+            if (isset($existingTargetCategoryIds[$categoryId])) {
+                continue;
+            }
 
             if ($minor > 0) {
                 $this->setAssigned($user, $categoryId, $toPeriod->start, $minor);
