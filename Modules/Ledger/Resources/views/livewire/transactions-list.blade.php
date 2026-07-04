@@ -35,6 +35,12 @@
     $availableAccounts ??= [];
     $availableCategories ??= [];
 
+    // Split legs (Phase 13.1 Plan 06): array<int, list<array{...}>> keyed by
+    // transaction id, batch-loaded once per render (no N+1 — Pitfall 1).
+    // A row is a split parent when it has >= 2 legs (leg-row presence, NEVER
+    // category_id nullity — Pitfall 1 / D-11).
+    $splitLegs ??= [];
+
     // Format minor-unit amount (settled EUR, nl_NL) for the summary strip
     $fmtMinor = static fn (int $minor): string => Money::ofMinor(abs($minor), 'EUR')->format('nl_NL');
 @endphp
@@ -98,42 +104,109 @@
         <div class="md:hidden">
             <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
                 @foreach ($accumulatedRows as $row)
-                    @php $rowAmt = $rowMoney($row); @endphp
-                    <div
-                        class="card-list-item group {{ $isSearchMode ? 'srch-row' : '' }}"
-                        data-testid="tx-card-{{ $row['id'] }}"
-                        style="display: flex; align-items: center;"
-                    >
-                        <a
-                            href="{{ route('transactions.show', ['transactionId' => $row['id']]) }}"
-                            wire:navigate
-                            class="block min-w-0 flex-1"
+                    @php
+                        $rowAmt = $rowMoney($row);
+                        $rowLegs = $row['splitLegs'] ?? [];
+                        $isSplitRow = count($rowLegs) >= 2;
+                    @endphp
+                    <div x-data="{ open: false }">
+                        <div
+                            class="card-list-item group {{ $isSearchMode ? 'srch-row' : '' }}"
+                            data-testid="tx-card-{{ $row['id'] }}"
+                            style="display: flex; align-items: center;"
                         >
-                            <div class="min-w-0 flex-1">
-                                {{-- Primary: counterparty name (2-line truncate) --}}
-                                <p class="primary line-clamp-2">{{ $row['counterpartyName'] ?? '—' }}</p>
-                                {{-- Search snippet second line (D-30 — phone two-line snippet rows) --}}
-                                @if ($isSearchMode && isset($searchRows[$row['id']]))
-                                    @php $sRow = $searchRows[$row['id']]; @endphp
-                                    @if ($sRow->snippet !== null)
-                                        <p class="srch-snippet">{!! $sRow->snippet !!}</p>
+                            <a
+                                href="{{ route('transactions.show', ['transactionId' => $row['id']]) }}"
+                                wire:navigate
+                                class="block min-w-0 flex-1"
+                            >
+                                <div class="min-w-0 flex-1">
+                                    {{-- Primary: counterparty name (2-line truncate) --}}
+                                    <p class="primary line-clamp-2">{{ $row['counterpartyName'] ?? '—' }}</p>
+                                    {{-- Search snippet second line (D-30 — phone two-line snippet rows) --}}
+                                    @if ($isSearchMode && isset($searchRows[$row['id']]))
+                                        @php $sRow = $searchRows[$row['id']]; @endphp
+                                        @if ($sRow->snippet !== null)
+                                            <p class="srch-snippet">{!! $sRow->snippet !!}</p>
+                                        @endif
                                     @endif
-                                @endif
-                                {{-- Secondary: category chip + posted date --}}
-                                <p class="secondary mt-0.5 truncate">
-                                    @if ($row['categoryId'] !== null)
-                                        <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">cat</span>
-                                    @endif
-                                    {{ $row['bookedAt'] }}
-                                </p>
+                                    {{-- Secondary: category chip + posted date. The mini "cat"
+                                         chip is suppressed for split parents — the split badge
+                                         (outside this <a>, below) replaces it (UI-SPEC §5.1). --}}
+                                    <p class="secondary mt-0.5 truncate">
+                                        @if (! $isSplitRow && $row['categoryId'] !== null)
+                                            <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">cat</span>
+                                        @endif
+                                        {{ $row['bookedAt'] }}
+                                    </p>
+                                </div>
+                            </a>
+                            {{-- Split badge: OUTSIDE the <a> (flex sibling) so toggling the
+                                 legs never triggers navigation (UI-SPEC §5.1). No Livewire
+                                 round trip — legs are already server-rendered below. --}}
+                            @if ($isSplitRow)
+                                <button
+                                    type="button"
+                                    class="split-badge"
+                                    @click="open = !open"
+                                    :aria-expanded="open"
+                                    aria-controls="split-legs-phone-{{ $row['id'] }}"
+                                    aria-label="Split across {{ count($rowLegs) }} categories — expand to view"
+                                    data-testid="split-badge-phone-{{ $row['id'] }}"
+                                >
+                                    Split · {{ count($rowLegs) }}
+                                    <svg class="split-badge__chevron h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </button>
+                            @endif
+                            {{-- Tax badge: always-visible at phone width (D-21). Parent-row
+                                 badge unaffected by split state (UI-SPEC discretion — see the
+                                 per-leg read-only badges in the expanded list below). --}}
+                            <x-tax::tax-badge :transaction="$row" :showAlways="true" />
+                            {{-- Amount: tabular, right-aligned; positive = emerald. Always the
+                                 parent total — never a client-recomputed sum (UI-SPEC §5.1). --}}
+                            <span class="amount {{ $isPositive($rowAmt) ? 'positive' : '' }}">
+                                {{ $fmt($rowAmt) }}
+                            </span>
+                        </div>
+                        {{-- Expanded legs: inset stacked rows below the card (UI-SPEC §5.2/§6/§14).
+                             Server-rendered always; visibility is a pure Alpine toggle — no
+                             Livewire round trip. Read-only: editing only happens on
+                             TransactionDetail. --}}
+                        @if ($isSplitRow)
+                            <div id="split-legs-phone-{{ $row['id'] }}" x-show="open">
+                                @foreach ($rowLegs as $leg)
+                                    @php $legAmt = Money::ofMinor($leg['amountMinor'], $leg['amountCurrency']); @endphp
+                                    <div
+                                        class="split-leg-subrow"
+                                        style="min-height: 40px; padding: var(--space-2) var(--space-4);"
+                                        data-testid="split-leg-phone-{{ $row['id'] }}-{{ $leg['id'] }}"
+                                    >
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-xs text-slate-900 dark:text-slate-100">{{ $leg['categoryName'] }}</span>
+                                            <span class="text-xs {{ $isPositive($legAmt) ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">
+                                                {{ $fmt($legAmt) }}
+                                            </span>
+                                        </div>
+                                        <div class="mt-0.5 flex items-center justify-between gap-2">
+                                            @if ($leg['note'] !== null && $leg['note'] !== '')
+                                                <span class="text-xs italic text-slate-500 dark:text-slate-400">{{ $leg['note'] }}</span>
+                                            @else
+                                                <span></span>
+                                            @endif
+                                            @if ($leg['taxTagged'])
+                                                <x-tax::tax-badge
+                                                    :transaction="['id' => $row['id'], 'taxTagged' => true, 'taxCategoryShortName' => $leg['taxCategoryShortName']]"
+                                                    :showAlways="true"
+                                                    :readonly="true"
+                                                />
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
-                        </a>
-                        {{-- Tax badge: always-visible at phone width (D-21). --}}
-                        <x-tax::tax-badge :transaction="$row" :showAlways="true" />
-                        {{-- Amount: tabular, right-aligned; positive = emerald --}}
-                        <span class="amount {{ $isPositive($rowAmt) ? 'positive' : '' }}">
-                            {{ $fmt($rowAmt) }}
-                        </span>
+                        @endif
                     </div>
                 @endforeach
             </div>
@@ -187,13 +260,18 @@
                             <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
+                    <tbody
+                        class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700"
+                        x-data="{ splitOpen: {} }"
+                    >
                         @foreach ($page->rows as $row)
                             @php
                                 $rowTaxState = $taxState[$row->id] ?? ['taxTagged' => false, 'taxCategoryShortName' => null];
                                 $rowArr = ['id' => $row->id, 'taxTagged' => $rowTaxState['taxTagged'], 'taxCategoryShortName' => $rowTaxState['taxCategoryShortName']];
                                 $isSearchRow = $isSearchMode && isset($searchRows[$row->id]);
                                 $sRow = $isSearchRow ? $searchRows[$row->id] : null;
+                                $rowLegs = $splitLegs[$row->id] ?? [];
+                                $isSplitRow = count($rowLegs) >= 2;
                             @endphp
                             <tr class="group {{ $isSearchMode ? 'srch-row' : '' }}">
                                 <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
@@ -247,13 +325,36 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-2 text-slate-500 dark:text-slate-400">
-                                    @livewire(
-                                        'categorization.inline-category-picker',
-                                        ['transactionId' => $row->id, 'categoryId' => $row->categoryId],
-                                        key('cat-picker-' . $row->id)
-                                    )
+                                    @if ($isSplitRow)
+                                        {{-- Split badge REPLACES the InlineCategoryPicker for split
+                                             parents (D-01/D-11, UI-SPEC §5.1). No Livewire round
+                                             trip — legs are already server-rendered below;
+                                             visibility is a pure Alpine toggle. --}}
+                                        <button
+                                            type="button"
+                                            class="split-badge"
+                                            @click="splitOpen[{{ $row->id }}] = !splitOpen[{{ $row->id }}]"
+                                            :aria-expanded="!!splitOpen[{{ $row->id }}]"
+                                            aria-controls="split-legs-{{ $row->id }}"
+                                            aria-label="Split across {{ count($rowLegs) }} categories — expand to view"
+                                            data-testid="split-badge-{{ $row->id }}"
+                                        >
+                                            Split · {{ count($rowLegs) }}
+                                            <svg class="split-badge__chevron h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                                            </svg>
+                                        </button>
+                                    @else
+                                        @livewire(
+                                            'categorization.inline-category-picker',
+                                            ['transactionId' => $row->id, 'categoryId' => $row->categoryId],
+                                            key('cat-picker-' . $row->id)
+                                        )
+                                    @endif
                                 </td>
-                                {{-- Tax badge: hover-reveal on desktop (D-19/D-20). Unchanged on search rows. --}}
+                                {{-- Tax badge: hover-reveal on desktop (D-19/D-20). Unchanged on
+                                     search rows AND on split parents (UI-SPEC discretion — see
+                                     the per-leg read-only badges in the expanded sub-rows). --}}
                                 <td class="px-4 py-2">
                                     <x-tax::tax-badge :transaction="$rowArr" :showAlways="false" />
                                 </td>
@@ -263,6 +364,8 @@
                                             {{ Money::ofMinor($row->amountMinor, $row->amountCurrency)->format($row->amountCurrency === 'EUR' ? 'nl_NL' : 'en_US') }}
                                         </span>
                                     @else
+                                        {{-- Always the parent total — never a client-recomputed
+                                             leg sum (UI-SPEC §5.1). --}}
                                         <span class="block text-sm text-slate-900 dark:text-slate-100">{{ $fmt($row->amount) }}</span>
                                         @if ($currency === 'original' && $row->secondaryAmount !== null)
                                             <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">{{ $fmt($row->secondaryAmount) }}</span>
@@ -270,6 +373,37 @@
                                     @endif
                                 </td>
                             </tr>
+                            {{-- Expanded legs (UI-SPEC §5.2/§6): always server-rendered;
+                                 visibility toggled client-side only via the shared
+                                 $data.splitOpen map on the <tbody> host — no Livewire round
+                                 trip. Legs render in creation order (sort_order). Read-only:
+                                 editing only happens on TransactionDetail. --}}
+                            @if ($isSplitRow)
+                                @foreach ($rowLegs as $leg)
+                                    <tr
+                                        class="split-leg-subrow"
+                                        @if ($loop->first) id="split-legs-{{ $row->id }}" @endif
+                                        x-show="!!splitOpen[{{ $row->id }}]"
+                                        data-testid="split-leg-{{ $row->id }}-{{ $leg['id'] }}"
+                                    >
+                                        <td class="px-4 py-2"></td>
+                                        <td class="px-4 py-2 text-xs italic text-slate-500 dark:text-slate-400">{{ $leg['note'] ?? '' }}</td>
+                                        <td class="px-4 py-2 text-xs text-slate-900 dark:text-slate-100">{{ $leg['categoryName'] }}</td>
+                                        <td class="px-4 py-2">
+                                            @if ($leg['taxTagged'])
+                                                <x-tax::tax-badge
+                                                    :transaction="['id' => $row->id, 'taxTagged' => true, 'taxCategoryShortName' => $leg['taxCategoryShortName']]"
+                                                    :showAlways="false"
+                                                    :readonly="true"
+                                                />
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-2 text-right text-xs text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
+                                            {{ $fmt(Money::ofMinor($leg['amountMinor'], $leg['amountCurrency'])) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @endif
                         @endforeach
                     </tbody>
                 </table>
