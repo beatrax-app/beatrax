@@ -253,6 +253,13 @@ final class BudgetsPage extends Component
             $this->moveError = $e->getMessage();
 
             return;
+        } catch (\RuntimeException) {
+            // WR-06: a non-validation writer failure (e.g. the paired-row write
+            // guard in EnvelopeWriter::move()) must surface as a calm inline
+            // error, never escape as an unhandled 500.
+            $this->moveError = 'Could not complete the move — please try again.';
+
+            return;
         }
 
         $this->moveFromCategoryId = 0;
