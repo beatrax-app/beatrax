@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Budgets\Models\EnvelopeAssignment;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
@@ -81,6 +83,34 @@ it('rejects a category the user does not own and that is not global (IDOR)', fun
         ->toThrow(InvalidArgumentException::class);
 
     $this->assertDatabaseMissing('envelope_assignments', ['category_id' => $foreign->id]);
+});
+
+it('stores period_start as a bare Y-m-d (no 00:00:00 trap) even when written through the model (WR-05)', function (): void {
+    // Writing through the Eloquent model (a factory, a future call site) must
+    // agree with EnvelopeWriter's raw storage format, or the fold's exact
+    // string match silently zeroes the envelope.
+    $assignment = EnvelopeAssignment::create([
+        'user_id' => $this->user->id,
+        'category_id' => $this->groceries->id,
+        'period_start' => $this->periodA->start->toDateString(),
+        'assigned_minor' => 20000,
+        'currency' => 'EUR',
+    ]);
+
+    // Stored value is a plain date string — the raw DB read carries no time.
+    $raw = DB::table('envelope_assignments')
+        ->where('id', $assignment->id)
+        ->value('period_start');
+    expect($raw)->toBe($this->periodA->start->toDateString());
+
+    // The fold's exact-equality predicate matches it.
+    $this->assertDatabaseHas('envelope_assignments', [
+        'id' => $assignment->id,
+        'period_start' => $this->periodA->start->toDateString(),
+    ]);
+
+    // ...and it still reads back as a CarbonImmutable date accessor.
+    expect($assignment->fresh()?->period_start)->toBeInstanceOf(CarbonImmutable::class);
 });
 
 it('never treats category_budgets as an authoritative write target for envelope assignment (Req 1)', function (): void {
