@@ -8,6 +8,7 @@ use Illuminate\Routing\Router;
 use Livewire\Livewire;
 use Modules\Categorization\Models\CategorizationRule;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -835,14 +836,20 @@ it('does not bleed the owner quarantine rows into a second developer\'s sync-hea
     // /dev/sync-health is user-scoped: op_log_quarantine has no
     // BelongsToUser global scope, so the component hand-filters by the
     // acting user_id. Two developers must each see only their own rows.
-    $seedQuarantine = function (int $userId, string $deviceId, string $reason): void {
+    // SyncHealthPage only surfaces quarantine rows from the last 7 days
+    // (created_at >= Clock::now()->subDays(7)). Seed relative to the same
+    // Clock the page reads so the fixture never ages out of the window as
+    // real wall-clock time advances (previously hardcoded 2026-06-14, which
+    // silently rotted past the window and turned this into a time-bomb).
+    $seededAt = app(Clock::class)->now()->subDay()->toDateTimeString();
+    $seedQuarantine = function (int $userId, string $deviceId, string $reason) use ($seededAt): void {
         $this->db->connection()->table('op_log_quarantine')->insert([
             'user_id' => $userId,
             'table_name' => 'transactions',
             'pk' => '1',
             'device_id' => $deviceId,
             'reason' => $reason,
-            'created_at' => '2026-06-14 10:00:00',
+            'created_at' => $seededAt,
         ]);
     };
 

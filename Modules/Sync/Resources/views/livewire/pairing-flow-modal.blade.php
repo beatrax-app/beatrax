@@ -71,7 +71,7 @@
                      the QR payload is built ENTIRELY from server-side identity + a CSPRNG
                      token (QrPayloadBuilder) — NO user input ever reaches it. Do not feed
                      any user-controlled string into the QR payload or this becomes XSS. --}}
-                <div class="mx-auto w-fit rounded-xl bg-white p-4">
+                <div class="mx-auto w-fit rounded-xl bg-white dark:bg-white p-4">
                     <div class="h-[240px] w-[240px]">{!! $qrSvg !!}</div>
                 </div>
 
@@ -102,7 +102,7 @@
                 {{-- Expired state --}}
                 {{-- IN-03: see note above — $qrSvg is server-generated from CSPRNG +
                      identity only, never from user input. --}}
-                <div class="mx-auto w-fit rounded-xl bg-white p-4 opacity-30">
+                <div class="mx-auto w-fit rounded-xl bg-white dark:bg-white p-4 opacity-30">
                     <div class="h-[240px] w-[240px]">{!! $qrSvg !!}</div>
                 </div>
                 <p class="mt-4 text-center text-sm text-amber-700 dark:text-amber-400" role="alert" aria-live="polite">

@@ -70,9 +70,17 @@ arch('Modules\\Counterparties\\Internal is only used inside Modules\\Counterpart
     ->expect('Modules\\Counterparties\\Internal')
     ->toOnlyBeUsedIn('Modules\\Counterparties');
 
+// The Sync device-identity tests (Phase 12) must prime the Auth session
+// lock state to exercise real crypto — Modules/Sync/tests/TestCase.php calls
+// LockStateManager->unlock() in setUp(). There is deliberately no Public
+// unlock seam (AppLockKeyService exposes only release()/withhold() by design,
+// LOCK-04), so this single test-infrastructure base class is an explicit,
+// reviewed exemption. Scoped to the one class so any PRODUCTION Sync code
+// reaching into Auth\Internal still fails this rule.
 arch('Modules\\Auth\\Internal is only used inside Modules\\Auth')
     ->expect('Modules\\Auth\\Internal')
-    ->toOnlyBeUsedIn('Modules\\Auth');
+    ->toOnlyBeUsedIn('Modules\\Auth')
+    ->ignoring('Modules\\Sync\\Tests\\TestCase');
 
 arch('Modules\\DevMode\\Internal is only used inside Modules\\DevMode')
     ->expect('Modules\\DevMode\\Internal')
@@ -1756,6 +1764,13 @@ it('keeps PaymentType-unique string literals inside the PaymentType enum (noPaym
             continue;
         }
         if (str_contains($path, '/Database/Migrations/')) {
+            continue;
+        }
+        // The canonical BIP39 mnemonic word list (used to render the
+        // device-pairing safety-number words) legitimately contains the
+        // English dictionary word "online" as fixed list data — it is not a
+        // PaymentType value or usage. Carve out this single data file.
+        if (str_ends_with($path, 'Modules/Sync/Internal/Pairing/Bip39WordList.php')) {
             continue;
         }
 
