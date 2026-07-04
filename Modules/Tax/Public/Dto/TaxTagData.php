@@ -12,6 +12,10 @@ use Spatie\LaravelData\Data;
  * Produced by TaxTagQuery (Plan 02) and written by TagTransaction.
  * Downstream consumers must use this DTO shape — the fields and
  * nullability are the contract.
+ *
+ * `transactionSplitId` (Phase 13.1 D-06a): null for a whole-transaction tag
+ * (every existing forTransactionIds() caller); set to the leg's id for a
+ * leg-scoped tag returned by TaxTagQuery::forTransactionIdsWithLegs().
  */
 final class TaxTagData extends Data
 {
@@ -21,5 +25,6 @@ final class TaxTagData extends Data
         public readonly ?string $deductionCategoryShortName,
         public readonly ?string $note,
         public readonly ?int $taxYearOverride,
+        public readonly ?int $transactionSplitId = null,
     ) {}
 }

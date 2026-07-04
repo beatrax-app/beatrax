@@ -71,6 +71,64 @@ final class TaxTagQuery
     }
 
     /**
+     * Batch-load per-LEG tax tag state for the given transaction ids
+     * (Phase 13.1 D-06a).
+     *
+     * Returns a map keyed by "{transactionId}:{transactionSplitId}" for a
+     * leg-scoped tag, or "{transactionId}:whole" for a whole-transaction
+     * tag, so the split editor can render each leg's tax badge
+     * independently by (transactionId, transactionSplitId). Only TAGGED
+     * pairs appear — callers treat absence as "untagged", mirroring
+     * forTransactionIds()'s existing absence convention.
+     *
+     * Single `whereIn` query regardless of batch size — N+1 prevention,
+     * matching forTransactionIds()'s D-03 Pitfall 1 guard. This method does
+     * NOT replace forTransactionIds() — unsplit callers keep using that
+     * whole-transaction-only method unchanged.
+     *
+     * @param  array<int>  $transactionIds
+     * @return array<string, TaxTagData>
+     */
+    public function forTransactionIdsWithLegs(int $userId, array $transactionIds): array
+    {
+        if ($transactionIds === []) {
+            return [];
+        }
+
+        $rows = $this->db->connection()
+            ->table('tax_transaction_tags AS tag')
+            ->leftJoin('tax_deduction_categories AS cat', 'cat.id', '=', 'tag.deduction_category_id')
+            ->where('tag.user_id', $userId)
+            ->whereIn('tag.transaction_id', $transactionIds)
+            ->get([
+                'tag.transaction_id',
+                'tag.transaction_split_id',
+                'tag.deduction_category_id',
+                'cat.short_name AS category_short_name',
+                'tag.note',
+                'tag.tax_year_override',
+            ]);
+
+        $map = [];
+        foreach ($rows as $row) {
+            $txId = self::toInt($row->transaction_id);
+            $splitId = $row->transaction_split_id !== null ? self::toInt($row->transaction_split_id) : null;
+            $key = $txId.':'.($splitId !== null ? (string) $splitId : 'whole');
+
+            $map[$key] = new TaxTagData(
+                transactionId: $txId,
+                deductionCategoryId: $row->deduction_category_id !== null ? self::toInt($row->deduction_category_id) : null,
+                deductionCategoryShortName: self::toStrOrNull($row->category_short_name),
+                note: self::toStrOrNull($row->note),
+                taxYearOverride: $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
+                transactionSplitId: $splitId,
+            );
+        }
+
+        return $map;
+    }
+
+    /**
      * Booked (calendar) year of a transaction, or null when the transaction
      * does not exist or belongs to another user.
      *
