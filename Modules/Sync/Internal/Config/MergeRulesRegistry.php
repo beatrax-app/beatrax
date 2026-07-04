@@ -137,6 +137,19 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['transaction_id', 'tag'],
             ],
+            // 13.1-03 (Req 10 / D-12): leg table for split transactions.
+            // Every string below is cross-checked against
+            // Modules/Ledger/Database/Migrations/2026_07_04_000001_create_transaction_splits_table.php
+            // — do NOT replicate the category_budgets monthly_limit_minor/budget_minor
+            // typo above; TransactionSplitsRegistryColumnsTest asserts this stays a
+            // subset of the migration's actual NOT-NULL-without-default columns.
+            'transaction_splits' => [
+                'category_id' => ['strategy' => 'lww', 'nullable' => false],
+                'settled_amount_minor' => ['strategy' => 'lww', 'nullable' => false],
+                'note' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                '_create_required' => ['transaction_id', 'category_id', 'settled_amount_minor', 'settled_currency'],
+            ],
         ];
     }
 

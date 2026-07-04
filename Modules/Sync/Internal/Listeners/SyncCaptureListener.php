@@ -8,6 +8,7 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -87,6 +88,42 @@ final class SyncCaptureListener
         }
     }
 
+    /**
+     * Routes TransactionSplitMutated events to the OpLogWriter with
+     * table: 'transaction_splits' (13.1-03 / Req 10).
+     *
+     * Mirrors handle() exactly: same never-throw try/catch wrapper (D-07),
+     * same lazy Container::make(OpLogWriter::class) resolution. The leg's
+     * STABLE splitId (transaction_splits.id) is the pk — SaveTransactionSplit's
+     * PK-preserving edit diff never regenerates it, so ops are keyed on a
+     * stable per-(table,pk,field) identity across edits.
+     */
+    public function handleSplit(TransactionSplitMutated $event): void
+    {
+        try {
+            $writer = $this->container->make(OpLogWriter::class);
+
+            match ($event->mutationType) {
+                'edit' => $this->handleSplitEdit($event, $writer),
+                'delete' => $this->handleSplitDelete($event, $writer),
+                'create' => $this->handleSplitCreate($event, $writer),
+                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                    'mutationType' => $event->mutationType,
+                    'splitId' => $event->splitId,
+                ]),
+            };
+        } catch (\Throwable $e) {
+            // Swallow — a capture failure must NEVER break the originating save (D-07).
+            $this->log->error('SyncCaptureListener: split capture failed', [
+                'exception' => $e->getMessage(),
+                'mutationType' => $event->mutationType,
+                'splitId' => $event->splitId,
+                'transactionId' => $event->transactionId,
+                'userId' => $event->userId,
+            ]);
+        }
+    }
+
     private function handleEdit(TransactionMutated $event, OpLogWriter $writer): void
     {
         foreach ($event->dirtyFields as $field => $value) {
@@ -114,6 +151,35 @@ final class SyncCaptureListener
         $writer->writeCreateRow(
             table: 'transactions',
             pk: $event->transactionId,
+            fields: $event->dirtyFields,
+        );
+    }
+
+    private function handleSplitEdit(TransactionSplitMutated $event, OpLogWriter $writer): void
+    {
+        foreach ($event->dirtyFields as $field => $value) {
+            $writer->writeSet(
+                table: 'transaction_splits',
+                pk: $event->splitId,
+                field: $field,
+                value: $value,
+            );
+        }
+    }
+
+    private function handleSplitDelete(TransactionSplitMutated $event, OpLogWriter $writer): void
+    {
+        $writer->writeDelete(
+            table: 'transaction_splits',
+            pk: $event->splitId,
+        );
+    }
+
+    private function handleSplitCreate(TransactionSplitMutated $event, OpLogWriter $writer): void
+    {
+        $writer->writeCreateRow(
+            table: 'transaction_splits',
+            pk: $event->splitId,
             fields: $event->dirtyFields,
         );
     }
