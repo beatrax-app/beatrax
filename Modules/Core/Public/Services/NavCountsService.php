@@ -74,6 +74,16 @@ final class NavCountsService
             return $query->count();
         };
 
+        // Distinct user-scoped count for a column (e.g. how many categories the
+        // user budgets, counting a category once across all its period rows).
+        $countDistinct = function (string $table, string $column) use ($connection, $schema, $userId): int {
+            if (! $schema->hasTable($table)) {
+                return 0;
+            }
+
+            return $connection->table($table)->where('user_id', $userId)->distinct()->count($column);
+        };
+
         $active = static fn (Builder $query): Builder => $query->whereIn('state', self::ACTIVE_STATES);
 
         return [
@@ -81,7 +91,10 @@ final class NavCountsService
             'recurring' => $count('recurring_series', $active),
             'counterparties' => $count('counterparties'),
             'drift' => $count('drift_alerts', static fn (Builder $query): Builder => $query->where('state', 'open')),
-            'budgets' => $count('category_budgets'),
+            // Phase 13.2: the flat category_budgets table is write-dead after the
+            // envelope cutover (D-13). The "Budgets" badge now reflects how many
+            // distinct categories the user budgets via envelope_assignments.
+            'budgets' => $countDistinct('envelope_assignments', 'category_id'),
             'subscriptions' => $count('recurring_series', static fn (Builder $query): Builder => $query->where('direction', 'expense')->whereIn('state', self::ACTIVE_STATES)),
             'imports' => $count('import_runs'),
             // Phase 07: total tagged transactions for the sidebar badge (no year filter —
