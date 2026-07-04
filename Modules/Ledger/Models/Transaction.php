@@ -66,6 +66,20 @@ final class Transaction extends Model
      */
     public const TYPES = ['expense', 'income', 'transfer_out', 'transfer_in', 'fee', 'refund', 'adjustment'];
 
+    /**
+     * Allowed reconciliation-status values (D-01/D-02, Phase 13.3). The
+     * three-state lifecycle `uncleared -> cleared -> reconciled` is the
+     * single app-level allow-list every Phase 13.3 write path (the D-03
+     * import default, the per-row toggle, `ReconciliationWriter`)
+     * validates against. Unlike `TYPES`, `status` carries no DB-layer
+     * BEFORE INSERT/UPDATE trigger — `status string(16) default 'cleared'`
+     * is otherwise unconstrained — so this constant is the sole source of
+     * truth for the enum.
+     *
+     * @var list<string>
+     */
+    public const STATUSES = ['uncleared', 'cleared', 'reconciled'];
+
     /** @var list<string> */
     protected $fillable = [
         'user_id', 'account_id', 'type',
