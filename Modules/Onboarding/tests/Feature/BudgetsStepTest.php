@@ -29,7 +29,7 @@ beforeEach(function (): void {
 it('renders the optional budgets step with the expense categories', function (): void {
     Livewire::test(BudgetsStep::class)
         ->assertOk()
-        ->assertSee("Assign this month's money")
+        ->assertSee("Assign this month's money", false)
         ->assertSee('Groceries');
 });
 
