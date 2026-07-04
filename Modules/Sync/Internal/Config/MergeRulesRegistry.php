@@ -196,6 +196,30 @@ final class MergeRulesRegistry
     }
 
     /**
+     * Whether the given table is a registered sync surface (i.e. has an
+     * entry in rules()). The replayer's table allow-list gate uses this to
+     * quarantine ('unknown_table') any op whose table is not one this
+     * registry explicitly knows how to merge — a compromised peer must not
+     * be able to direct a SET/DELETE/CREATE op at an arbitrary wire-supplied
+     * table name (e.g. device_registry) that was never meant to be
+     * op-log-replayable.
+     */
+    public function isRegistered(string $table): bool
+    {
+        return array_key_exists($table, $this->rules());
+    }
+
+    /**
+     * All table names registered for op-log replay.
+     *
+     * @return list<string>
+     */
+    public function registeredTables(): array
+    {
+        return array_keys($this->rules());
+    }
+
+    /**
      * Returns the strategy key for a given (table, field) pair.
      * Defaults to 'lww' for unknown tables or fields.
      */
