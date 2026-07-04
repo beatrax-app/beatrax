@@ -204,6 +204,9 @@ const ISOLATION_ROUTE_COVERED = [
     // scope (Pitfall 4), so the user-id filter is hand-applied in the
     // component and must be probed, not allow-listed. Two-developer probe below.
     'dev.sync-health',
+    // 13.3-06 — Reconcile surface (T-13.3-16/T-13.3-17). The account picker
+    // and every statement pre-fill are user-scoped reads; probed below.
+    'reconcile.index',
 ];
 
 function xuiUser(string $username, bool $developer = false): User
@@ -873,6 +876,17 @@ it('does not bleed the owner quarantine rows into a second developer\'s sync-hea
     $this->actingAs($this->partner)
         ->get('/dev/sync-health')
         ->assertNotFound();
+});
+
+it('does not bleed the owner account into the partner reconcile account picker', function (): void {
+    xuiAccount($this->db, $this->owner->id, 'Owner Secret Reconcile Account');
+    xuiAccount($this->db, $this->partner->id, 'Partner Visible Reconcile Account');
+
+    $this->actingAs($this->partner)
+        ->get('/reconcile')
+        ->assertOk()
+        ->assertSee('Partner Visible Reconcile Account')
+        ->assertDontSee('Owner Secret Reconcile Account');
 });
 
 it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {
