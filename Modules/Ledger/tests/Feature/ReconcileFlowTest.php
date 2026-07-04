@@ -58,3 +58,29 @@ it('completing a reconcile with zero discrepancy locks the cleared rows and crea
     expect(DB::table('transactions')->where('user_id', $this->user->id)->count())->toBe(1);
     expect(DB::table('transactions')->where('id', $tx->id)->value('status'))->toBe('reconciled');
 });
+
+it('computes the difference on the in-window cleared balance only, so a statement that balances for its window is reconcilable without a fabricated number (CR-01)', function (): void {
+    // A cleared row inside the statement window and another cleared row
+    // posted AFTER the (past) statement date. The un-bounded balance would
+    // be -80,00; the in-window balance is -50,00, which is what the
+    // statement's closing balance actually reflects.
+    $inWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'amount_minor' => -5000, 'posted_at' => '2026-06-10']);
+    $afterWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'amount_minor' => -3000, 'posted_at' => '2026-06-20']);
+
+    Livewire::actingAs($this->user)
+        ->test(ReconcilePage::class, ['accountId' => $this->account->id])
+        ->set('statementDate', '2026-06-15')
+        ->set('statementBalance', '-50,00')
+        // The difference/isMatched gate is computed on the in-window balance,
+        // NOT the un-bounded -80,00 total — so the true statement value matches.
+        ->assertViewHas('differenceMinor', 0)
+        ->assertViewHas('isMatched', true)
+        ->call('confirmReconcile')
+        ->assertDispatched('toast');
+
+    // The in-window row is locked; the post-date row stays cleared; no
+    // fabricated balancing row is created.
+    expect(DB::table('transactions')->where('id', $inWindow->id)->value('status'))->toBe('reconciled');
+    expect(DB::table('transactions')->where('id', $afterWindow->id)->value('status'))->toBe('cleared');
+    expect(DB::table('transactions')->where('user_id', $this->user->id)->count())->toBe(2);
+});

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Services;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 
@@ -86,6 +87,34 @@ final class AccountBalanceQuery
             ->where('account_id', $accountId)
             ->where('user_id', $user->id)
             ->whereIn('status', ['cleared', 'reconciled'])
+            ->sum('amount_minor');
+    }
+
+    /**
+     * Date-bounded sibling of `clearedBalance()`: the signed sum of
+     * `amount_minor` for `$accountId` scoped to `$user`, restricted to
+     * `cleared`/`reconciled` rows posted on or before `$asOf`.
+     *
+     * This exists so the `/reconcile` surface computes its "matched" check
+     * over the SAME window `ReconciliationWriter::completeReconcile()` locks
+     * (`posted_at <= $statementDate`, CR-01). Using the un-bounded
+     * `clearedBalance()` there would count rows posted after the statement
+     * date that the write correctly leaves untouched, producing a spurious
+     * discrepancy (or forcing a fabricated target) for any statement dated
+     * in the past — the D-06 ASN pre-fill is exactly such a past date.
+     *
+     * Mirrors `clearedBalance()` column-for-column (`amount_minor`, NOT
+     * `settled_amount_minor`) and inherits the same T-03-01 (Information
+     * Disclosure) and IN-07 (single-currency) caveats unchanged.
+     */
+    public function clearedBalanceAsOf(int $accountId, User $user, CarbonImmutable $asOf): int
+    {
+        return (int) $this->db->connection()
+            ->table('transactions')
+            ->where('account_id', $accountId)
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['cleared', 'reconciled'])
+            ->where('posted_at', '<=', $asOf->toDateString())
             ->sum('amount_minor');
     }
 }
