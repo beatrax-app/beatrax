@@ -6,6 +6,7 @@ use Livewire\Livewire;
 use Modules\Budgets\Models\CategoryBudget;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
+use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\BudgetsStep;
 
 beforeEach(function (): void {
@@ -28,21 +29,25 @@ beforeEach(function (): void {
 it('renders the optional budgets step with the expense categories', function (): void {
     Livewire::test(BudgetsStep::class)
         ->assertOk()
-        ->assertSee('Set monthly budgets')
+        ->assertSee("Assign this month's money")
         ->assertSee('Groceries');
 });
 
-it('saves entered budgets and advances the wizard on continue', function (): void {
+it('saves entered amounts as month-1 envelope assignments and advances the wizard on continue', function (): void {
     Livewire::test(BudgetsStep::class)
         ->set("amounts.{$this->groceries->id}", '50,00')
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 
-    $this->assertDatabaseHas('category_budgets', [
+    $period = app(PeriodQuery::class)->current();
+
+    $this->assertDatabaseHas('envelope_assignments', [
         'user_id' => $this->user->id,
         'category_id' => $this->groceries->id,
-        'budget_minor' => 5000,
+        'assigned_minor' => 5000,
+        'period_start' => $period->start->toDateString(),
     ]);
+    $this->assertDatabaseMissing('category_budgets', ['category_id' => $this->groceries->id]);
 });
 
 it('advances without saving anything on skip', function (): void {
@@ -51,7 +56,7 @@ it('advances without saving anything on skip', function (): void {
         ->call('skip')
         ->assertDispatched('wizard.step.skipped');
 
-    $this->assertDatabaseMissing('category_budgets', ['category_id' => $this->groceries->id]);
+    $this->assertDatabaseMissing('envelope_assignments', ['category_id' => $this->groceries->id]);
 });
 
 it('advances on continue even when no amounts were entered', function (): void {
@@ -71,5 +76,5 @@ it('ignores a foreign / non-budgetable category id on continue', function (): vo
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 
-    $this->assertDatabaseMissing('category_budgets', ['category_id' => $foreign->id]);
+    $this->assertDatabaseMissing('envelope_assignments', ['category_id' => $foreign->id]);
 });
