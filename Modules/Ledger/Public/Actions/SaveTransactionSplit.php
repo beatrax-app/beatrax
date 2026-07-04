@@ -14,6 +14,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\SplittableTypes;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use stdClass;
@@ -40,9 +41,6 @@ use stdClass;
  */
 final class SaveTransactionSplit implements SavesTransactionSplit
 {
-    /** @var list<string> */
-    private const SPLITTABLE_TYPES = ['expense', 'income', 'fee', 'refund', 'adjustment'];
-
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Dispatcher $events,
@@ -68,7 +66,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         }
 
         $parentType = self::toStr($parent->type);
-        if (! in_array($parentType, self::SPLITTABLE_TYPES, true)) {
+        if (! SplittableTypes::contains($parentType)) {
             throw new InvalidArgumentException("Transaction type '{$parentType}' is not splittable.");
         }
 
@@ -173,7 +171,9 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                     $fields = [
                         'category_id' => $leg['category_id'],
                         'settled_amount_minor' => $leg['settled_amount_minor'],
-                        'note' => $leg['note'],
+                        // WR-04: canonicalise empty note to NULL on write so
+                        // '' and null are never distinct stored values.
+                        'note' => self::normalizeNote($leg['note']),
                         'sort_order' => $index,
                     ];
 
@@ -218,10 +218,15 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                         'category_id' => $leg['category_id'],
                         'settled_amount_minor' => $leg['settled_amount_minor'],
                         'settled_currency' => $currency,
-                        'note' => $leg['note'],
+                        // WR-04: canonicalise empty note to NULL on write.
+                        'note' => self::normalizeNote($leg['note']),
                         'sort_order' => $index,
-                        'created_at' => $now,
-                        'updated_at' => $now,
+                        // IN-02: pass pre-formatted datetime strings into the
+                        // op-log dirtyFields rather than CarbonImmutable
+                        // objects — decouples the capture payload from Carbon
+                        // and the op-log serialiser's implicit coercion.
+                        'created_at' => $now->toDateTimeString(),
+                        'updated_at' => $now->toDateTimeString(),
                     ];
 
                     $newId = self::toInt($this->db->connection()->table('transaction_splits')->insertGetId($fields));
@@ -351,17 +356,32 @@ final class SaveTransactionSplit implements SavesTransactionSplit
      * value (T-13.1-09). $newValue's PHP type (int for category_id /
      * settled_amount_minor / sort_order, string|null for note) determines
      * which normalization is applied to the raw DB value before comparing.
+     *
+     * WR-04: string|null fields (note) are canonicalised so `''` and `null`
+     * compare EQUAL — a stored empty string vs an incoming null (either
+     * direction, e.g. from a sync replay of a Set op carrying `''`) must
+     * never be reported as a change, or leg notes ping-pong between `''` and
+     * `null` across devices under LWW.
      */
     private static function legFieldChanged(mixed $oldValue, mixed $newValue): bool
     {
-        if ($newValue === null) {
-            return $oldValue !== null;
-        }
-
         if (is_int($newValue)) {
             return self::toInt($oldValue) !== $newValue;
         }
 
-        return self::toStr($oldValue) !== $newValue;
+        // note (string|null): compare canonical empty representations.
+        $old = $oldValue === null ? null : self::toStr($oldValue);
+        $new = $newValue === null ? null : self::toStr($newValue);
+
+        return self::normalizeNote($old) !== self::normalizeNote($new);
+    }
+
+    /**
+     * Canonicalise a note value to a single empty representation (null): both
+     * `null` and the empty string collapse to `null` (WR-04).
+     */
+    private static function normalizeNote(?string $note): ?string
+    {
+        return ($note === null || $note === '') ? null : $note;
     }
 }
