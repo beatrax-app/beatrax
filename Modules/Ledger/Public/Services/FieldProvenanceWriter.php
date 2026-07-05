@@ -9,14 +9,19 @@ use JsonException;
 
 /**
  * Shared, race-safe writer/reader for `transactions.field_provenance`
- * (D-04) — a generic per-field manual-vs-rule-vs-import provenance map
- * consumed by the re-apply-rules manual-edit guard (Req 6/Req 4): a field
- * the user has hand-edited must never be silently overwritten by a rule
+ * (D-04) — a generic per-field manual-vs-rule provenance map consumed
+ * by the re-apply-rules manual-edit guard (Req 6/Req 4): a field the
+ * user has hand-edited must never be silently overwritten by a rule
  * re-application.
  *
- * Payload shape: `{ "<logical field>": "manual" | "rule" | "import" }` —
- * e.g. `{"category_id": "manual", "note": "rule"}`. Canonical logical
- * field keys are `category_id`, `note`, `counterparty_id`, `tax_tag`.
+ * Payload shape: `{ "<logical field>": "manual" | "rule" }` — e.g.
+ * `{"category_id": "manual", "note": "rule"}`. Canonical logical field
+ * keys are `category_id`, `note`, `counterparty_id`, `tax_tag`. IN-02:
+ * a third `"import"` state was originally documented but is never
+ * stamped by any writer — an absent key already means "not manually
+ * set" to every guard that reads this map, which is what `"import"`
+ * would have meant too, so the two-state contract above is the actual
+ * one.
  *
  * Race safety (T-13.4-12): every stamp is a single DB-side `json_set`
  * UPDATE — never a PHP read-modify-write. Two concurrent stamps to
