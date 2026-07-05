@@ -22,6 +22,7 @@ use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Psr\Log\LoggerInterface;
 
 /*
  * 13.1-03 Task 2 (Req 10 / D-11): documentary proof that auto-categorization
@@ -313,6 +314,7 @@ it('a full ReapplyRulesJob pass leaves a split transaction\'s legs byte-identica
         app(DatabaseManager::class),
         app(CacheRepository::class),
         app(Clock::class),
+        app(LoggerInterface::class),
     );
 
     // Never even walked — no TransactionMutated for this split parent.
