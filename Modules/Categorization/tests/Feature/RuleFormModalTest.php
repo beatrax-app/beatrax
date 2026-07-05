@@ -70,7 +70,24 @@ it('opens in create mode when rule-form:open fires without a ruleId', function (
         ->assertSet('editingRuleId', null)
         ->assertSet('combinator', 'all')
         ->assertCount('conditions', 1)
-        ->assertCount('actions', 1);
+        ->assertCount('actions', 1)
+        // Regression (UAT): open() must surface the Flux modal, not just
+        // hydrate state — without this the rule-builder is unreachable from
+        // the "New rule" / "Create your first rule" buttons.
+        ->assertDispatched('modal-show', name: 'rule-form');
+});
+
+it('surfaces the Flux modal on open in edit mode too', function (): void {
+    $ruleId = seedFormRule($this->user, 10, 'all', [
+        ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
+    ], [
+        ['type' => 'category', 'payload' => ['category_id' => $this->streaming->id]],
+    ]);
+
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: $ruleId)
+        ->assertSet('editingRuleId', $ruleId)
+        ->assertDispatched('modal-show', name: 'rule-form');
 });
 
 it('defaults priority to (max existing priority) + 10 on create', function (): void {

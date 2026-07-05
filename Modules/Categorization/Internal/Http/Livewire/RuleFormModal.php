@@ -136,6 +136,13 @@ final class RuleFormModal extends Component
     ): void {
         $this->resetErrors();
 
+        // Surface the Flux modal. Symmetric with the `modal-close` dispatches
+        // in save()/cancel(); every sibling page (GoalsPage, PotsPage,
+        // BudgetsPage) opens its modal the same way. Dispatched before the
+        // hydration branches below so all paths (create, foreign-fallback,
+        // edit) reliably show the dialog.
+        $this->dispatch('modal-show', name: 'rule-form');
+
         if ($ruleId === null) {
             $this->resetToCreateDefaults($currentUser, $db);
 
