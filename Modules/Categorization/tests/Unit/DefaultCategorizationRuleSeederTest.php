@@ -27,6 +27,21 @@ function fixtureRuleCount(): int
     return count($fixture);
 }
 
+/**
+ * Finds a seeded parent rule for the given user by joining through its
+ * rule_conditions row (13.4-01 — field/match/value moved off the
+ * parent onto the child table).
+ */
+function findSeededRule(int $userId, string $field, string $match, string $value): ?CategorizationRule
+{
+    return CategorizationRule::withoutGlobalScopes()
+        ->where('user_id', $userId)
+        ->whereHas('conditions', function ($query) use ($field, $match, $value): void {
+            $query->where('field', $field)->where('op', $match)->where('value', $value);
+        })
+        ->first();
+}
+
 beforeEach(function (): void {
     // The rule seeder resolves category_id by slug from the global
     // category tree, so the tree seeder must run first in every test.
@@ -52,18 +67,23 @@ it('seeds at least the fixture-defined rule count scoped to the user', function 
         ->and($expectedCount)->toBeGreaterThanOrEqual(80);
 });
 
-it('resolves every fixture row to a real category_id', function (): void {
+it('gives every seeded rule exactly one condition and one category action', function (): void {
     $this->app->make(DefaultCategorizationRuleSeeder::class)->run($this->user);
 
-    $rulesWithoutCategory = CategorizationRule::withoutGlobalScopes()
-        ->where('user_id', $this->user->id)
-        ->whereNull('category_id')
-        ->count();
+    $rules = CategorizationRule::withoutGlobalScopes()->where('user_id', $this->user->id)->get();
 
-    expect($rulesWithoutCategory)->toBe(0);
+    foreach ($rules as $rule) {
+        expect($rule->conditions()->count())->toBe(1);
+        expect($rule->actions()->count())->toBe(1);
+
+        $action = $rule->actions()->firstOrFail();
+        expect($action->type)->toBe('category');
+        expect($action->payload)->toHaveKey('category_id');
+        expect($action->payload['category_id'])->not->toBeNull();
+    }
 });
 
-it('locks firstOrCreate semantics — re-running preserves hits_count and active', function (): void {
+it('locks the create-only semantics — re-running preserves hits_count and active', function (): void {
     $seeder = $this->app->make(DefaultCategorizationRuleSeeder::class);
     $seeder->run($this->user);
 
@@ -71,22 +91,17 @@ it('locks firstOrCreate semantics — re-running preserves hits_count and active
         ->where('user_id', $this->user->id)
         ->count();
 
-    // Mutate one row to the sentinel state that updateOrCreate would
-    // overwrite: hits_count=42, active=false.
-    /** @var CategorizationRule $sampleRule */
-    $sampleRule = CategorizationRule::withoutGlobalScopes()
-        ->where('user_id', $this->user->id)
-        ->where('field', 'counterparty')
-        ->where('match', 'contains')
-        ->where('value', 'Netflix')
-        ->firstOrFail();
+    // Mutate one row to the sentinel state a naive re-seed would overwrite:
+    // hits_count=42, active=false.
+    $sampleRule = findSeededRule($this->user->id, 'counterparty', 'contains', 'Netflix');
+    expect($sampleRule)->not->toBeNull();
 
     $sampleRule->update([
         'hits_count' => 42,
         'active' => false,
     ]);
 
-    // Re-run — must NOT touch the mutated row.
+    // Re-run — must NOT touch the mutated row, nor create a duplicate.
     $seeder->run($this->user);
 
     $countAfterSecondRun = CategorizationRule::withoutGlobalScopes()
@@ -101,7 +116,6 @@ it('locks firstOrCreate semantics — re-running preserves hits_count and active
 });
 
 it('produces a per-user rule set scoped to the second user when re-run', function (): void {
-    /** @var User $secondUser */
     $secondUser = User::query()->create([
         'username' => 'second-user',
         'password' => 'fixture-password',
@@ -123,19 +137,14 @@ it('produces a per-user rule set scoped to the second user when re-run', functio
         ->and($secondUserCount)->toBe($firstUserCount);
 });
 
-it('seeds the Netflix → subscriptions-streaming anchor rule', function (): void {
+it('seeds the Netflix -> subscriptions-streaming anchor rule', function (): void {
     $this->app->make(DefaultCategorizationRuleSeeder::class)->run($this->user);
 
-    $rule = CategorizationRule::withoutGlobalScopes()
-        ->where('user_id', $this->user->id)
-        ->where('field', 'counterparty')
-        ->where('match', 'contains')
-        ->where('value', 'Netflix')
-        ->firstOrFail();
+    $rule = findSeededRule($this->user->id, 'counterparty', 'contains', 'Netflix');
+    expect($rule)->not->toBeNull();
 
-    $categorySlug = Category::withoutGlobalScopes()
-        ->where('id', $rule->category_id)
-        ->value('slug');
+    $categoryId = $rule->actions()->firstOrFail()->payload['category_id'];
+    $categorySlug = Category::withoutGlobalScopes()->where('id', $categoryId)->value('slug');
 
     expect($categorySlug)->toBe('subscriptions-streaming');
 });
@@ -143,16 +152,11 @@ it('seeds the Netflix → subscriptions-streaming anchor rule', function (): voi
 it('seeds the cash-withdrawal anchor rule with the starts_with operator', function (): void {
     $this->app->make(DefaultCategorizationRuleSeeder::class)->run($this->user);
 
-    $rule = CategorizationRule::withoutGlobalScopes()
-        ->where('user_id', $this->user->id)
-        ->where('field', 'counterparty')
-        ->where('match', 'starts_with')
-        ->where('value', 'KOSTEN KASOPNAME')
-        ->firstOrFail();
+    $rule = findSeededRule($this->user->id, 'counterparty', 'starts_with', 'KOSTEN KASOPNAME');
+    expect($rule)->not->toBeNull();
 
-    $categorySlug = Category::withoutGlobalScopes()
-        ->where('id', $rule->category_id)
-        ->value('slug');
+    $categoryId = $rule->actions()->firstOrFail()->payload['category_id'];
+    $categorySlug = Category::withoutGlobalScopes()->where('id', $categoryId)->value('slug');
 
     expect($categorySlug)->toBe('cash-withdrawal');
 });
@@ -160,16 +164,11 @@ it('seeds the cash-withdrawal anchor rule with the starts_with operator', functi
 it('seeds the transfers-internal anchor rule against the description field', function (): void {
     $this->app->make(DefaultCategorizationRuleSeeder::class)->run($this->user);
 
-    $rule = CategorizationRule::withoutGlobalScopes()
-        ->where('user_id', $this->user->id)
-        ->where('field', 'description')
-        ->where('match', 'contains')
-        ->where('value', 'IDEAL BETALING, DANK U')
-        ->firstOrFail();
+    $rule = findSeededRule($this->user->id, 'description', 'contains', 'IDEAL BETALING, DANK U');
+    expect($rule)->not->toBeNull();
 
-    $categorySlug = Category::withoutGlobalScopes()
-        ->where('id', $rule->category_id)
-        ->value('slug');
+    $categoryId = $rule->actions()->firstOrFail()->payload['category_id'];
+    $categorySlug = Category::withoutGlobalScopes()->where('id', $categoryId)->value('slug');
 
     expect($categorySlug)->toBe('transfers-internal');
 });
