@@ -186,6 +186,31 @@ it('saves a 2-condition/2-action rule with a priority', function (): void {
     expect($betweenCondition->value2)->toBe('-100');
 });
 
+it('saves when a category action id arrives as a string, as Livewire binds a <select> (UAT)', function (): void {
+    // Browser regression: <select> wire:model delivers the option value as a
+    // STRING ("20"), not an int. The action payload contract is ?int, so the
+    // raw string previously blew up actionRowError()->isEmptyId(?int) with a
+    // 500 TypeError — no rule could be saved with a category/counterparty/
+    // tax-tag action through the real UI. Note the string casts below.
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.op', 'contains')
+        ->set('conditions.0.value', 'SPOTIFY')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', (string) $this->streaming->id)
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertDispatched('rule-form:saved')
+        ->assertDispatched('modal-close');
+
+    $ruleId = DB::table('categorization_rules')->where('user_id', $this->user->id)->value('id');
+    expect($ruleId)->not->toBeNull();
+    $action = DB::table('rule_actions')->where('rule_id', $ruleId)->where('type', 'category')->first();
+    expect($action)->not->toBeNull();
+    expect(json_decode((string) $action->payload, true))->toBe(['category_id' => $this->streaming->id]);
+});
+
 it('scales a human-entered Dutch-decimal amount condition to minor units and matches only the correct transaction (CR-01)', function (): void {
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: null)

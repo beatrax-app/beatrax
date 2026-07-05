@@ -197,7 +197,35 @@ final class RuleFormModal extends Component
             if ($this->conditions[$index]['op'] !== 'between') {
                 $this->conditions[$index]['value2'] = null;
             }
+
+            return;
         }
+
+        // Livewire binds <select> values as strings, but every action payload
+        // id is declared ?int throughout this component. Re-coerce the id
+        // fields to int (or null when blank/non-numeric) after each update so
+        // validation (isEmptyId), payload building, and persistence all see
+        // the ?int contract they expect — otherwise a picked category id
+        // arrives as the string "20" and blows up actionRowError().
+        if (preg_match('/^actions\.(\d+)\./', $name, $matches) === 1) {
+            $index = (int) $matches[1];
+            if (! isset($this->actions[$index])) {
+                return;
+            }
+            $this->actions[$index]['category_id'] = self::intIdOrNull($this->actions[$index]['category_id']);
+            $this->actions[$index]['counterparty_id'] = self::intIdOrNull($this->actions[$index]['counterparty_id']);
+            $this->actions[$index]['deduction_category_id'] = self::intIdOrNull($this->actions[$index]['deduction_category_id']);
+            $this->actions[$index]['year_override'] = self::intIdOrNull($this->actions[$index]['year_override']);
+        }
+    }
+
+    /**
+     * Normalise a form-bound id (Livewire delivers <select> values as
+     * strings) back to the ?int the action payload contract expects.
+     */
+    private static function intIdOrNull(mixed $value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
     }
 
     public function addCondition(): void
