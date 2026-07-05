@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Container\Container;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
+use Modules\Categorization\Internal\Services\RuleEngine;
+use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Core\Models\User;
@@ -102,7 +105,9 @@ it('hydrates the nested conditions/actions arrays in edit mode', function (): vo
     expect($component->get('conditions')[0]['field'])->toBe('merchant');
     expect($component->get('conditions')[0]['value'])->toBe('SPOTIFY');
     expect($component->get('conditions')[1]['field'])->toBe('amount');
-    expect($component->get('conditions')[1]['value'])->toBe('-5000');
+    // Stored minor units (-5000 = -50.00 EUR) round-trip to the Dutch-decimal
+    // display convention (CR-01) rather than the raw minor-unit string.
+    expect($component->get('conditions')[1]['value'])->toBe('-50,00');
 
     expect($component->get('actions')[0]['type'])->toBe('category');
     expect($component->get('actions')[0]['category_id'])->toBe($this->streaming->id);
@@ -139,8 +144,8 @@ it('saves a 2-condition/2-action rule with a priority', function (): void {
         ->call('addCondition')
         ->set('conditions.1.field', 'amount')
         ->set('conditions.1.op', 'between')
-        ->set('conditions.1.value', '-5000')
-        ->set('conditions.1.value2', '-100')
+        ->set('conditions.1.value', '-50,00')
+        ->set('conditions.1.value2', '-1,00')
         ->set('actions.0.type', 'category')
         ->set('actions.0.category_id', $this->streaming->id)
         ->call('addAction')
@@ -156,9 +161,106 @@ it('saves a 2-condition/2-action rule with a priority', function (): void {
     expect(DB::table('rule_conditions')->where('rule_id', $ruleId)->count())->toBe(2);
     expect(DB::table('rule_actions')->where('rule_id', $ruleId)->count())->toBe(2);
 
+    // Human-entered Euro decimals scale into signed integer minor units
+    // (CR-01): "-50,00" -> -5000, "-1,00" -> -100.
     $betweenCondition = DB::table('rule_conditions')->where('rule_id', $ruleId)->where('op', 'between')->first();
     expect($betweenCondition)->not->toBeNull();
+    expect($betweenCondition->value)->toBe('-5000');
     expect($betweenCondition->value2)->toBe('-100');
+});
+
+it('scales a human-entered Dutch-decimal amount condition to minor units and matches only the correct transaction (CR-01)', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'amount')
+        ->set('conditions.0.op', 'equals')
+        ->set('conditions.0.value', '12,50')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', $this->streaming->id)
+        ->call('save')
+        ->assertDispatched('rule-form:saved');
+
+    $ruleId = DB::table('categorization_rules')->where('user_id', $this->user->id)->value('id');
+    expect($ruleId)->not->toBeNull();
+
+    $condition = DB::table('rule_conditions')->where('rule_id', $ruleId)->first();
+    // "12,50" (Dutch comma-decimal Euro input) MUST scale to 1250 minor
+    // units, not silently stay a non-numeric string (evaluating to 0) and
+    // not truncate to 12.
+    expect($condition->value)->toBe('1250');
+
+    /** @var RuleEngine $engine */
+    $engine = app(RuleEngine::class);
+
+    $matchingInput = new RuleMatchInput(
+        counterpartyName: 'Spotify',
+        description: null,
+        settledAmountMinor: 1250,
+        postedAt: CarbonImmutable::parse('2026-01-01'),
+    );
+    $wrongAmountInput = new RuleMatchInput(
+        counterpartyName: 'Spotify',
+        description: null,
+        settledAmountMinor: 1200,
+        postedAt: CarbonImmutable::parse('2026-01-01'),
+    );
+
+    expect($engine->match($matchingInput, $this->user))->toHaveCount(1);
+    expect($engine->match($wrongAmountInput, $this->user))->toHaveCount(0);
+});
+
+it('scales a human-entered dot-decimal amount condition to minor units and matches only the correct transaction (CR-01)', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'amount')
+        ->set('conditions.0.op', 'equals')
+        ->set('conditions.0.value', '12.50')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', $this->streaming->id)
+        ->call('save')
+        ->assertDispatched('rule-form:saved');
+
+    $ruleId = DB::table('categorization_rules')->where('user_id', $this->user->id)->value('id');
+    expect($ruleId)->not->toBeNull();
+
+    $condition = DB::table('rule_conditions')->where('rule_id', $ruleId)->first();
+    // "12.50" (dot-decimal Euro input) MUST scale to 1250 minor units, not
+    // truncate to 12 via a bare (int) cast.
+    expect($condition->value)->toBe('1250');
+
+    /** @var RuleEngine $engine */
+    $engine = app(RuleEngine::class);
+
+    $matchingInput = new RuleMatchInput(
+        counterpartyName: 'Spotify',
+        description: null,
+        settledAmountMinor: 1250,
+        postedAt: CarbonImmutable::parse('2026-01-01'),
+    );
+    $wrongAmountInput = new RuleMatchInput(
+        counterpartyName: 'Spotify',
+        description: null,
+        settledAmountMinor: 1200,
+        postedAt: CarbonImmutable::parse('2026-01-01'),
+    );
+
+    expect($engine->match($matchingInput, $this->user))->toHaveCount(1);
+    expect($engine->match($wrongAmountInput, $this->user))->toHaveCount(0);
+});
+
+it('rejects saving an unparsable amount condition value instead of silently matching zero (CR-01)', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'amount')
+        ->set('conditions.0.op', 'equals')
+        ->set('conditions.0.value', 'not-a-number')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', $this->streaming->id)
+        ->call('save')
+        ->assertSet('conditionErrors.0', 'Enter a valid amount for condition 1.')
+        ->assertNotDispatched('rule-form:saved');
+
+    expect(DB::table('categorization_rules')->where('user_id', $this->user->id)->exists())->toBeFalse();
 });
 
 it('the operator select options are gated by the selected field value_type', function (): void {
