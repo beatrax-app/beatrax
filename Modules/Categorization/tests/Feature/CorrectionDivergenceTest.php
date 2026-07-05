@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Modules\Categorization\Internal\Http\Livewire\CorrectionDivergenceToast;
+use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Events\CategorizationDiverged;
 use Modules\Core\Models\User;
@@ -59,22 +60,32 @@ beforeEach(function (): void {
     ]);
 });
 
-function seedDivergenceRule(int $userId, int $categoryId, string $value = 'SPOTIFY'): int
+function seedDivergenceRule(User $user, int $categoryId, string $value = 'SPOTIFY'): int
 {
-    $id = DB::table('categorization_rules')->insertGetId([
-        'user_id' => $userId,
-        'field' => 'merchant',
-        'match' => 'contains',
-        'value' => $value,
-        'category_id' => $categoryId,
-        'hits_count' => 0,
-        'active' => true,
-        'notes' => null,
-        'created_at' => CarbonImmutable::now()->toDateTimeString(),
-        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
-    ]);
+    /** @var CreateCategorizationRule $create */
+    $create = Container::getInstance()->make(CreateCategorizationRule::class);
 
-    return (int) $id;
+    return ($create)(
+        $user,
+        10,
+        'all',
+        true,
+        null,
+        [['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => $value]],
+        [['type' => 'category', 'payload' => ['category_id' => $categoryId]]],
+    );
+}
+
+function divergenceRuleCategoryId(int $ruleId): int
+{
+    $action = DB::table('rule_actions')->where('rule_id', $ruleId)->where('type', 'category')->first();
+    if ($action === null) {
+        return 0;
+    }
+    /** @var array<string, mixed> $payload */
+    $payload = json_decode((string) $action->payload, true);
+
+    return isset($payload['category_id']) && is_numeric($payload['category_id']) ? (int) $payload['category_id'] : 0;
 }
 
 function seedTransactionWithProvenance(int $userId, int $accountId, int $importRunId, int $categoryId, array $provenance): int
@@ -116,7 +127,7 @@ function resolveAssign(): AssignsCategory
 it('dispatches CategorizationDiverged when reclassifying a rule-provenance transaction to a different category', function (): void {
     Event::fake([CategorizationDiverged::class]);
 
-    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedDivergenceRule($this->user, $this->streaming->id);
     $txId = seedTransactionWithProvenance(
         $this->user->id,
         $this->account->id,
@@ -188,7 +199,7 @@ it('does NOT dispatch CategorizationDiverged when there is no prior provenance (
 it('does NOT dispatch CategorizationDiverged when the new category equals the rule category', function (): void {
     Event::fake([CategorizationDiverged::class]);
 
-    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedDivergenceRule($this->user, $this->streaming->id);
     $txId = seedTransactionWithProvenance(
         $this->user->id,
         $this->account->id,
@@ -204,7 +215,7 @@ it('does NOT dispatch CategorizationDiverged when the new category equals the ru
 });
 
 it('CorrectionDivergenceToast renders Update the rule? when handleDiverged fires for the current user', function (): void {
-    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedDivergenceRule($this->user, $this->streaming->id);
 
     Livewire::test(CorrectionDivergenceToast::class)
         ->call(
@@ -222,7 +233,7 @@ it('CorrectionDivergenceToast renders Update the rule? when handleDiverged fires
 });
 
 it('CorrectionDivergenceToast guards against cross-user events (T-07-09)', function (): void {
-    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedDivergenceRule($this->user, $this->streaming->id);
     $foreignUserId = 9999;
 
     Livewire::test(CorrectionDivergenceToast::class)
@@ -239,7 +250,7 @@ it('CorrectionDivergenceToast guards against cross-user events (T-07-09)', funct
 });
 
 it('CorrectionDivergenceToast.update() calls UpdateCategorizationRule with the new category', function (): void {
-    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedDivergenceRule($this->user, $this->streaming->id);
 
     Livewire::test(CorrectionDivergenceToast::class)
         ->call(
@@ -254,12 +265,11 @@ it('CorrectionDivergenceToast.update() calls UpdateCategorizationRule with the n
         ->assertSet('visible', false)
         ->assertSet('flashMessage', 'Rule updated.');
 
-    $row = DB::table('categorization_rules')->where('id', $ruleId)->first();
-    expect($row->category_id)->toBe($this->music->id);
+    expect(divergenceRuleCategoryId($ruleId))->toBe($this->music->id);
 });
 
 it('CorrectionDivergenceToast.dismiss() hides the toast without changing the rule', function (): void {
-    $ruleId = seedDivergenceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedDivergenceRule($this->user, $this->streaming->id);
 
     Livewire::test(CorrectionDivergenceToast::class)
         ->call(
@@ -273,8 +283,7 @@ it('CorrectionDivergenceToast.dismiss() hides the toast without changing the rul
         ->call('dismiss')
         ->assertSet('visible', false);
 
-    $row = DB::table('categorization_rules')->where('id', $ruleId)->first();
-    expect($row->category_id)->toBe($this->streaming->id);
+    expect(divergenceRuleCategoryId($ruleId))->toBe($this->streaming->id);
 });
 
 it('the toast Blade carries an 8-second auto-dismiss timer per UI-SPEC', function (): void {
@@ -320,7 +329,7 @@ it('CorrectionDivergenceToast.update() catches NotFoundHttpException for a tampe
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
-    $foreignRuleId = seedDivergenceRule($other->id, $this->streaming->id, 'OTHER-VAL');
+    $foreignRuleId = seedDivergenceRule($other, $this->streaming->id, 'OTHER-VAL');
 
     Livewire::test(CorrectionDivergenceToast::class)
         ->set('ruleId', $foreignRuleId)
@@ -331,8 +340,7 @@ it('CorrectionDivergenceToast.update() catches NotFoundHttpException for a tampe
         ->assertSet('flashMessage', 'Rule no longer exists.');
 
     // The foreign rule's category_id MUST remain unchanged.
-    $row = DB::table('categorization_rules')->where('id', $foreignRuleId)->first();
-    expect($row->category_id)->toBe($this->streaming->id);
+    expect(divergenceRuleCategoryId($foreignRuleId))->toBe($this->streaming->id);
 });
 
 it('CorrectionDivergenceToast.update() catches InvalidArgumentException for a foreign-category newCategoryId and surfaces a calm flash', function (): void {
@@ -355,7 +363,7 @@ it('CorrectionDivergenceToast.update() catches InvalidArgumentException for a fo
         'display_order' => 999,
     ])->id;
 
-    $ownRuleId = seedDivergenceRule($this->user->id, $this->streaming->id, 'OWN-VAL');
+    $ownRuleId = seedDivergenceRule($this->user, $this->streaming->id, 'OWN-VAL');
 
     Livewire::test(CorrectionDivergenceToast::class)
         ->set('ruleId', $ownRuleId)
@@ -365,6 +373,5 @@ it('CorrectionDivergenceToast.update() catches InvalidArgumentException for a fo
         ->assertSet('flashMessage', 'Invalid category — please refresh the page.');
 
     // The user's own rule must NOT have been retargeted at the foreign category.
-    $row = DB::table('categorization_rules')->where('id', $ownRuleId)->first();
-    expect($row->category_id)->toBe($this->streaming->id);
+    expect(divergenceRuleCategoryId($ownRuleId))->toBe($this->streaming->id);
 });

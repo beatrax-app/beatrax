@@ -27,7 +27,7 @@
                 Rule that fired
             </h3>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {{ $field }} {{ $match }} <span class="font-mono">"{{ $value }}"</span> → {{ $categoryPath }}
+                {{ $conditionSummary }} → {{ $categoryPath }}
             </p>
             @if ($confirmingRemove)
                 <div class="mt-3 flex items-center gap-2">
