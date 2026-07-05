@@ -10,6 +10,21 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
+/*
+ * Plan 13.4-06 rewrite (Rule 1 — direct consequence of this plan's own
+ * demotion of RuleEvaluator to a memory-only fallback lookup, D-06).
+ *
+ * Every rule-matching/specificity-scoring test case that used to live
+ * here was deleted: `RuleEngine` + `RuleApplier` now own ALL
+ * `categorization_rules` matching/application (see
+ * `RuleEngineConditionMatchingTest`/`RuleEngineOrderingTest`, Plan 02,
+ * for that coverage). What remains is RuleEvaluator's sole surviving
+ * responsibility — the `merchant_memories` fallback lookup — exercised
+ * both via `evaluate()` (the `RuleEvaluationOutcome` wrapper) and
+ * `lookupMemory()` directly (the shape `ApplyAutoCategoryStage` now
+ * calls).
+ */
+
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'rules-test',
@@ -71,24 +86,6 @@ function makeRuleEvalCanonical(int $userId, int $accountId, ?string $counterpart
     );
 }
 
-function seedRule(int $userId, string $field, string $match, string $value, int $categoryId): int
-{
-    $id = DB::table('categorization_rules')->insertGetId([
-        'user_id' => $userId,
-        'field' => $field,
-        'match' => $match,
-        'value' => $value,
-        'category_id' => $categoryId,
-        'hits_count' => 0,
-        'active' => true,
-        'notes' => null,
-        'created_at' => CarbonImmutable::now()->toDateTimeString(),
-        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
-    ]);
-
-    return (int) $id;
-}
-
 function seedMerchantAndMemory(int $userId, string $normalizedName, int $categoryId, int $occurrenceCount = 1): array
 {
     $merchantId = (int) DB::table('merchants')->insertGetId([
@@ -124,21 +121,7 @@ it('returns no candidate when nothing matches', function (): void {
     expect($outcome->memoryId)->toBeNull();
 });
 
-it('returns the category from an equals rule when one matches', function (): void {
-    $ruleId = seedRule($this->user->id, 'merchant', 'equals', 'Spotify Premium', $this->streaming->id);
-
-    $evaluator = $this->app->make(RuleEvaluator::class);
-    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
-
-    $outcome = $evaluator->evaluate($tx, $this->user);
-
-    expect($outcome->categoryId)->toBe($this->streaming->id);
-    expect($outcome->source)->toBe('rule');
-    expect($outcome->ruleId)->toBe($ruleId);
-    expect($outcome->score)->toBe(100);
-});
-
-it('falls back to memory at score 90 when only memory matches', function (): void {
+it('falls back to memory at score 90 when a memory exists', function (): void {
     $seeded = seedMerchantAndMemory($this->user->id, 'spotify premium', $this->streaming->id, occurrenceCount: 4);
 
     $evaluator = $this->app->make(RuleEvaluator::class);
@@ -150,104 +133,6 @@ it('falls back to memory at score 90 when only memory matches', function (): voi
     expect($outcome->source)->toBe('memory');
     expect($outcome->memoryId)->toBe($seeded['memory_id']);
     expect($outcome->score)->toBe(90);
-});
-
-it('rule equals (score 100) beats memory (score 90) for the same merchant', function (): void {
-    seedMerchantAndMemory($this->user->id, 'spotify premium', $this->groceries->id);
-    $ruleId = seedRule($this->user->id, 'merchant', 'equals', 'Spotify Premium', $this->streaming->id);
-
-    $evaluator = $this->app->make(RuleEvaluator::class);
-    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
-
-    $outcome = $evaluator->evaluate($tx, $this->user);
-
-    expect($outcome->source)->toBe('rule');
-    expect($outcome->categoryId)->toBe($this->streaming->id);
-    expect($outcome->ruleId)->toBe($ruleId);
-});
-
-it('equals beats starts_with beats contains beats memory', function (): void {
-    // contains is shortest -> lowest score among rules
-    seedRule($this->user->id, 'merchant', 'contains', 'Spotify', $this->groceries->id);
-    seedMerchantAndMemory($this->user->id, 'spotify premium', $this->groceries->id);
-    $equalsId = seedRule($this->user->id, 'merchant', 'equals', 'Spotify Premium', $this->streaming->id);
-
-    $evaluator = $this->app->make(RuleEvaluator::class);
-    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
-
-    $outcome = $evaluator->evaluate($tx, $this->user);
-
-    expect($outcome->source)->toBe('rule');
-    expect($outcome->categoryId)->toBe($this->streaming->id);
-    expect($outcome->ruleId)->toBe($equalsId);
-    expect($outcome->score)->toBe(100);
-});
-
-it('longer contains literal beats shorter contains literal', function (): void {
-    seedRule($this->user->id, 'merchant', 'contains', 'spo', $this->groceries->id);
-    $longerId = seedRule($this->user->id, 'merchant', 'contains', 'spotify', $this->streaming->id);
-
-    $evaluator = $this->app->make(RuleEvaluator::class);
-    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
-
-    $outcome = $evaluator->evaluate($tx, $this->user);
-
-    expect($outcome->source)->toBe('rule');
-    expect($outcome->ruleId)->toBe($longerId);
-    expect($outcome->categoryId)->toBe($this->streaming->id);
-});
-
-it('case-insensitive — rule value SPOTIFY matches counterparty Spotify Premium', function (): void {
-    $ruleId = seedRule($this->user->id, 'merchant', 'contains', 'SPOTIFY', $this->streaming->id);
-
-    $evaluator = $this->app->make(RuleEvaluator::class);
-    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
-
-    $outcome = $evaluator->evaluate($tx, $this->user);
-
-    expect($outcome->ruleId)->toBe($ruleId);
-    expect($outcome->source)->toBe('rule');
-});
-
-it('SQL-injection-shaped rule value is matched as literal substring (T-07-05)', function (): void {
-    $needle = "Robert'; DROP TABLE transactions--";
-    seedRule($this->user->id, 'merchant', 'contains', $needle, $this->streaming->id);
-
-    $evaluator = $this->app->make(RuleEvaluator::class);
-    $matching = makeRuleEvalCanonical(
-        $this->user->id,
-        $this->account->id,
-        'Little Bobby '.$needle.' store',
-        'little bobby store',
-    );
-    $unrelated = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Random Merchant', 'random merchant');
-
-    $hit = $evaluator->evaluate($matching, $this->user);
-    expect($hit->categoryId)->toBe($this->streaming->id);
-
-    $miss = $evaluator->evaluate($unrelated, $this->user);
-    expect($miss->categoryId)->toBeNull();
-
-    // transactions table still exists post-test
-    expect(DB::getSchemaBuilder()->hasTable('transactions'))->toBeTrue();
-});
-
-it('does NOT fire a foreign-user rule for the current user (T-07-09)', function (): void {
-    $other = User::create([
-        'username' => 'other-rules',
-        'password' => 'opensesame',
-        'period_start_day' => 1,
-    ]);
-
-    seedRule($other->id, 'merchant', 'equals', 'Spotify Premium', $this->streaming->id);
-
-    $evaluator = $this->app->make(RuleEvaluator::class);
-    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
-
-    $outcome = $evaluator->evaluate($tx, $this->user);
-
-    expect($outcome->categoryId)->toBeNull();
-    expect($outcome->source)->toBeNull();
 });
 
 it('does NOT fire a foreign-user memory for the current user', function (): void {
@@ -265,58 +150,6 @@ it('does NOT fire a foreign-user memory for the current user', function (): void
     $outcome = $evaluator->evaluate($tx, $this->user);
 
     expect($outcome->categoryId)->toBeNull();
-});
-
-it('skips inactive rules even when they would otherwise match', function (): void {
-    $id = (int) DB::table('categorization_rules')->insertGetId([
-        'user_id' => $this->user->id,
-        'field' => 'merchant',
-        'match' => 'equals',
-        'value' => 'Spotify Premium',
-        'category_id' => $this->streaming->id,
-        'hits_count' => 0,
-        'active' => false,
-        'notes' => null,
-        'created_at' => CarbonImmutable::now()->toDateTimeString(),
-        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
-    ]);
-
-    expect($id)->toBeGreaterThan(0);
-
-    $evaluator = $this->app->make(RuleEvaluator::class);
-    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
-
-    $outcome = $evaluator->evaluate($tx, $this->user);
-
-    expect($outcome->categoryId)->toBeNull();
-});
-
-it('description field rule targets canonical.description', function (): void {
-    $ruleId = seedRule($this->user->id, 'description', 'contains', 'invoice', $this->streaming->id);
-
-    $evaluator = $this->app->make(RuleEvaluator::class);
-    $tx = makeRuleEvalCanonical(
-        $this->user->id,
-        $this->account->id,
-        'ACME',
-        'acme',
-        description: 'Monthly invoice INV-12345',
-    );
-
-    $outcome = $evaluator->evaluate($tx, $this->user);
-
-    expect($outcome->ruleId)->toBe($ruleId);
-});
-
-it('counterparty field is an alias for the merchant target (counterparty_name)', function (): void {
-    $ruleId = seedRule($this->user->id, 'counterparty', 'equals', 'Spotify Premium', $this->streaming->id);
-
-    $evaluator = $this->app->make(RuleEvaluator::class);
-    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
-
-    $outcome = $evaluator->evaluate($tx, $this->user);
-
-    expect($outcome->ruleId)->toBe($ruleId);
 });
 
 it('skips the memory lookup when counterparty_normalized is the empty sentinel', function (): void {
@@ -366,4 +199,17 @@ it('memory uses highest occurrence_count when multiple memories exist for the sa
 
     expect($outcome->source)->toBe('memory');
     expect($outcome->categoryId)->toBe($this->groceries->id);
+});
+
+it('lookupMemory() is public and returns the raw memory row directly', function (): void {
+    $seeded = seedMerchantAndMemory($this->user->id, 'spotify premium', $this->streaming->id, occurrenceCount: 4);
+
+    $evaluator = $this->app->make(RuleEvaluator::class);
+    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
+
+    $row = $evaluator->lookupMemory($tx, $this->user->id);
+
+    expect($row)->not->toBeNull();
+    expect((int) $row->id)->toBe($seeded['memory_id']);
+    expect((int) $row->category_id)->toBe($this->streaming->id);
 });
