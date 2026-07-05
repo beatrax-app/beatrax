@@ -2,15 +2,23 @@
 
 declare(strict_types=1);
 
-use Carbon\CarbonImmutable;
+use Illuminate\Container\Container;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Core\Models\User;
+use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Category;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+/*
+ * 13.4-08 Task 1: RuleFormModal grown from a single-condition sentence
+ * form into a multi-condition/multi-action builder per
+ * 13.4-UI-SPEC.md's Component Contract. Saves through the Plan 03
+ * Create/UpdateCategorizationRule actions (priority/combinator/
+ * conditions[]/actions[]).
+ */
 
 beforeEach(function (): void {
     $this->user = User::create([
@@ -35,46 +43,71 @@ beforeEach(function (): void {
         'kind' => 'expense',
         'display_order' => 110,
     ]);
+
+    $this->counterparty = Counterparty::create([
+        'user_id' => $this->user->id,
+        'type' => 'merchant',
+        'slug' => 'rule-form-spotify',
+        'display_name' => 'Spotify',
+        'merchant_name' => 'SPOTIFY',
+    ]);
 });
 
-function seedFormRule(int $userId, string $field, string $match, string $value, int $categoryId): int
+function seedFormRule(User $user, int $priority, string $combinator, array $conditions, array $actions): int
 {
-    $id = DB::table('categorization_rules')->insertGetId([
-        'user_id' => $userId,
-        'field' => $field,
-        'match' => $match,
-        'value' => $value,
-        'category_id' => $categoryId,
-        'hits_count' => 0,
-        'active' => true,
-        'notes' => null,
-        'created_at' => CarbonImmutable::now()->toDateTimeString(),
-        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
-    ]);
+    /** @var CreateCategorizationRule $create */
+    $create = Container::getInstance()->make(CreateCategorizationRule::class);
 
-    return (int) $id;
+    return ($create)($user, $priority, $combinator, true, null, $conditions, $actions);
 }
 
 it('opens in create mode when rule-form:open fires without a ruleId', function (): void {
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: null)
         ->assertSet('editingRuleId', null)
-        ->assertSet('field', '')
-        ->assertSet('match', '')
-        ->assertSet('value', '')
-        ->assertSet('categoryId', null);
+        ->assertSet('combinator', 'all')
+        ->assertCount('conditions', 1)
+        ->assertCount('actions', 1);
 });
 
-it('hydrates fields in edit mode when rule-form:open carries a ruleId', function (): void {
-    $ruleId = seedFormRule($this->user->id, 'merchant', 'contains', 'SPOTIFY', $this->streaming->id);
+it('defaults priority to (max existing priority) + 10 on create', function (): void {
+    seedFormRule($this->user, 30, 'all', [
+        ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'EXISTING'],
+    ], [
+        ['type' => 'category', 'payload' => ['category_id' => $this->streaming->id]],
+    ]);
 
     Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->assertSet('priorityInput', '40');
+});
+
+it('hydrates the nested conditions/actions arrays in edit mode', function (): void {
+    $ruleId = seedFormRule($this->user, 10, 'all', [
+        ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
+        ['op' => '>', 'value_type' => 'amount', 'value' => '-5000'],
+    ], [
+        ['type' => 'category', 'payload' => ['category_id' => $this->streaming->id]],
+        ['type' => 'counterparty', 'payload' => ['counterparty_id' => $this->counterparty->id]],
+    ]);
+
+    $component = Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: $ruleId)
         ->assertSet('editingRuleId', $ruleId)
-        ->assertSet('field', 'merchant')
-        ->assertSet('match', 'contains')
-        ->assertSet('value', 'SPOTIFY')
-        ->assertSet('categoryId', $this->streaming->id);
+        ->assertSet('combinator', 'all')
+        ->assertSet('priorityInput', '10')
+        ->assertCount('conditions', 2)
+        ->assertCount('actions', 2);
+
+    expect($component->get('conditions')[0]['field'])->toBe('merchant');
+    expect($component->get('conditions')[0]['value'])->toBe('SPOTIFY');
+    expect($component->get('conditions')[1]['field'])->toBe('amount');
+    expect($component->get('conditions')[1]['value'])->toBe('-5000');
+
+    expect($component->get('actions')[0]['type'])->toBe('category');
+    expect($component->get('actions')[0]['category_id'])->toBe($this->streaming->id);
+    expect($component->get('actions')[1]['type'])->toBe('counterparty');
+    expect($component->get('actions')[1]['counterparty_id'])->toBe($this->counterparty->id);
 });
 
 it('falls back to create mode when rule-form:open carries a foreign ruleId', function (): void {
@@ -83,116 +116,233 @@ it('falls back to create mode when rule-form:open carries a foreign ruleId', fun
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
-    $foreignRuleId = seedFormRule($other->id, 'merchant', 'contains', 'NETFLIX', $this->streaming->id);
+    $foreignRuleId = seedFormRule($other, 10, 'all', [
+        ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'NETFLIX'],
+    ], [
+        ['type' => 'category', 'payload' => ['category_id' => $this->streaming->id]],
+    ]);
 
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: $foreignRuleId)
         ->assertSet('editingRuleId', null)
-        ->assertSet('value', '');
+        ->assertCount('conditions', 1)
+        ->assertCount('actions', 1);
 });
 
-it('rejects an empty value with the locked UI-SPEC error copy', function (): void {
+it('saves a 2-condition/2-action rule with a priority', function (): void {
     Livewire::test(RuleFormModal::class)
-        ->set('field', 'merchant')
-        ->set('match', 'contains')
-        ->set('value', '')
-        ->set('categoryId', $this->streaming->id)
-        ->call('save')
-        ->assertSet('errorValue', 'Value is required.');
-});
-
-it('rejects a missing category with the locked UI-SPEC error copy', function (): void {
-    Livewire::test(RuleFormModal::class)
-        ->set('field', 'merchant')
-        ->set('match', 'contains')
-        ->set('value', 'SPOTIFY')
-        ->set('categoryId', null)
-        ->call('save')
-        ->assertSet('errorCategory', 'Pick a category to assign.');
-});
-
-it('creates a new rule on save and dispatches rule-form:saved + modal-hide', function (): void {
-    Livewire::test(RuleFormModal::class)
-        ->set('field', 'merchant')
-        ->set('match', 'contains')
-        ->set('value', 'SPOTIFY')
-        ->set('categoryId', $this->streaming->id)
+        ->call('open', ruleId: null)
+        ->set('priorityInput', '15')
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.op', 'contains')
+        ->set('conditions.0.value', 'SPOTIFY')
+        ->call('addCondition')
+        ->set('conditions.1.field', 'amount')
+        ->set('conditions.1.op', 'between')
+        ->set('conditions.1.value', '-5000')
+        ->set('conditions.1.value2', '-100')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', $this->streaming->id)
+        ->call('addAction')
+        ->set('actions.1.type', 'note')
+        ->set('actions.1.note_text', 'Recurring subscription')
         ->call('save')
         ->assertDispatched('rule-form:saved')
         ->assertDispatched('modal-close');
 
-    expect(
-        DB::table('categorization_rules')
-            ->where('user_id', $this->user->id)
-            ->where('value', 'SPOTIFY')
-            ->exists()
-    )->toBeTrue();
+    $ruleId = DB::table('categorization_rules')->where('user_id', $this->user->id)->value('id');
+    expect($ruleId)->not->toBeNull();
+    expect((int) DB::table('categorization_rules')->where('id', $ruleId)->value('priority'))->toBe(15);
+    expect(DB::table('rule_conditions')->where('rule_id', $ruleId)->count())->toBe(2);
+    expect(DB::table('rule_actions')->where('rule_id', $ruleId)->count())->toBe(2);
+
+    $betweenCondition = DB::table('rule_conditions')->where('rule_id', $ruleId)->where('op', 'between')->first();
+    expect($betweenCondition)->not->toBeNull();
+    expect($betweenCondition->value2)->toBe('-100');
+});
+
+it('the operator select options are gated by the selected field value_type', function (): void {
+    expect(RuleFormModal::operatorOptionsFor('merchant'))->toHaveKeys(['contains', 'equals', 'starts_with']);
+    expect(RuleFormModal::operatorOptionsFor('amount'))->toHaveKeys(['>', '<', 'between', 'equals']);
+    expect(RuleFormModal::operatorOptionsFor('date'))->toHaveKeys(['before', 'after', 'between']);
+});
+
+it('rejects saving with zero conditions', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions', [])
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', $this->streaming->id)
+        ->call('save')
+        ->assertSet('errorConditions', 'Add at least one condition.')
+        ->assertNotDispatched('rule-form:saved');
+});
+
+it('rejects saving with an empty condition value', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.value', '')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', $this->streaming->id)
+        ->call('save')
+        ->assertSet('conditionErrors.0', 'Enter a value for condition 1.')
+        ->assertNotDispatched('rule-form:saved');
+});
+
+it('rejects saving a between condition missing the upper bound', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'amount')
+        ->set('conditions.0.op', 'between')
+        ->set('conditions.0.value', '-5000')
+        ->set('conditions.0.value2', '')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', $this->streaming->id)
+        ->call('save')
+        ->assertSet('conditionErrors.0', 'Pick a lower and upper bound for condition 1.')
+        ->assertNotDispatched('rule-form:saved');
+});
+
+it('rejects saving with zero actions', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.value', 'SPOTIFY')
+        ->set('actions', [])
+        ->call('save')
+        ->assertSet('errorActions', 'Add at least one action.')
+        ->assertNotDispatched('rule-form:saved');
+});
+
+it('rejects saving a category action with no category picked', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.value', 'SPOTIFY')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', null)
+        ->call('save')
+        ->assertSet('actionErrors.0', 'Pick a category for this action.')
+        ->assertNotDispatched('rule-form:saved');
+});
+
+it('rejects saving a counterparty action with no counterparty picked', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.value', 'SPOTIFY')
+        ->set('actions.0.type', 'counterparty')
+        ->set('actions.0.counterparty_id', null)
+        ->call('save')
+        ->assertSet('actionErrors.0', 'Pick a counterparty to reassign to.')
+        ->assertNotDispatched('rule-form:saved');
+});
+
+it('rejects saving a note action with empty text', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.value', 'SPOTIFY')
+        ->set('actions.0.type', 'note')
+        ->set('actions.0.note_text', '')
+        ->call('save')
+        ->assertSet('actionErrors.0', 'Enter note text.')
+        ->assertNotDispatched('rule-form:saved');
+});
+
+it('rejects saving a tax_tag action with no deduction category picked', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.value', 'SPOTIFY')
+        ->set('actions.0.type', 'tax_tag')
+        ->set('actions.0.deduction_category_id', null)
+        ->call('save')
+        ->assertSet('actionErrors.0', 'Pick a deduction category for the tax tag.')
+        ->assertNotDispatched('rule-form:saved');
+});
+
+it('rejects a non-numeric priority with the locked copy', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->set('priorityInput', 'abc')
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.value', 'SPOTIFY')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', $this->streaming->id)
+        ->call('save')
+        ->assertSet('errorPriority', 'Priority must be a whole number.')
+        ->assertNotDispatched('rule-form:saved');
 });
 
 it('updates an existing rule on save in edit mode', function (): void {
-    $ruleId = seedFormRule($this->user->id, 'merchant', 'contains', 'SPOTIFY', $this->streaming->id);
+    $ruleId = seedFormRule($this->user, 10, 'all', [
+        ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
+    ], [
+        ['type' => 'category', 'payload' => ['category_id' => $this->streaming->id]],
+    ]);
 
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: $ruleId)
-        ->set('categoryId', $this->music->id)
+        ->set('actions.0.category_id', $this->music->id)
         ->call('save')
         ->assertDispatched('rule-form:saved')
         ->assertDispatched('modal-close');
 
-    $row = DB::table('categorization_rules')->where('id', $ruleId)->first();
-    expect($row->category_id)->toBe($this->music->id);
+    $action = DB::table('rule_actions')->where('rule_id', $ruleId)->where('type', 'category')->first();
+    $payload = json_decode((string) $action->payload, true);
+    expect((int) $payload['category_id'])->toBe($this->music->id);
 });
 
-it('translates a duplicate-rule UNIQUE violation into the locked error copy', function (): void {
-    seedFormRule($this->user->id, 'merchant', 'contains', 'SPOTIFY', $this->streaming->id);
-
+it('disables (never removes) the last remaining condition/action row', function (): void {
     Livewire::test(RuleFormModal::class)
-        ->set('field', 'merchant')
-        ->set('match', 'contains')
-        ->set('value', 'SPOTIFY')
-        ->set('categoryId', $this->music->id)
-        ->call('save')
-        ->assertSet('errorValue', 'A rule with this field, match, and value already exists. Edit the existing rule instead.');
+        ->call('open', ruleId: null)
+        ->call('removeCondition', 0)
+        ->assertCount('conditions', 1)
+        ->call('removeAction', 0)
+        ->assertCount('actions', 1);
 });
 
-it('refuses to update a foreign user rule', function (): void {
+it('addCondition/addAction grow the repeaters', function (): void {
+    Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null)
+        ->call('addCondition')
+        ->assertCount('conditions', 2)
+        ->call('addAction')
+        ->assertCount('actions', 2);
+});
+
+it('save() catches NotFoundHttpException from a foreign editingRuleId and hides the modal calmly', function (): void {
     $other = User::create([
-        'username' => 'cross-user-update',
+        'username' => 'tamper-foreign-rule',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
-    $foreignRuleId = seedFormRule($other->id, 'merchant', 'contains', 'NETFLIX', $this->streaming->id);
-
-    // Manually invoke the action — the modal would have refused to hydrate.
-    /** @var UpdateCategorizationRule $update */
-    $update = $this->app->make(UpdateCategorizationRule::class);
-
-    expect(fn () => $update($this->user, $foreignRuleId, ['value' => 'HACKED']))
-        ->toThrow(NotFoundHttpException::class);
-});
-
-it('escapes HTML payloads in rendered value field (T-07-06)', function (): void {
-    seedFormRule($this->user->id, 'merchant', 'contains', '<script>alert(1)</script>', $this->streaming->id);
+    $foreignRuleId = seedFormRule($other, 10, 'all', [
+        ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'NETFLIX'],
+    ], [
+        ['type' => 'category', 'payload' => ['category_id' => $this->streaming->id]],
+    ]);
 
     Livewire::test(RuleFormModal::class)
-        ->call('open', ruleId: DB::table('categorization_rules')->where('user_id', $this->user->id)->value('id'))
-        ->assertDontSee('<script>alert(1)</script>', escape: false);
+        ->set('editingRuleId', $foreignRuleId) // bypass open() which would have masked it
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.value', 'NEW')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', $this->streaming->id)
+        ->call('save')
+        ->assertSet('errorGeneral', 'That rule is no longer available.')
+        ->assertDispatched('modal-close');
+
+    // The foreign rule MUST remain untouched.
+    $condition = DB::table('rule_conditions')
+        ->where('rule_id', $foreignRuleId)
+        ->first();
+    expect($condition->value)->toBe('NETFLIX');
 });
 
-it('throws InvalidArgumentException via CreateCategorizationRule for an invalid field', function (): void {
-    /** @var CreateCategorizationRule $create */
-    $create = $this->app->make(CreateCategorizationRule::class);
-
-    expect(fn () => $create($this->user, 'bogus', 'contains', 'SPOTIFY', $this->streaming->id))
-        ->toThrow(InvalidArgumentException::class);
-});
-
-it('refuses to CREATE a rule with a foreign-user category id (cross-user authorization)', function (): void {
-    // Seed another user + a category they own. The category exists
-    // (FK accepts the id) but is NOT visible to $this->user, so the
-    // create-action MUST reject the request — even though the UI
-    // picker funnel would never surface this id, a Livewire-DevTools
-    // payload tamper or a direct Tinker call could.
+it('refuses to save a category action with a foreign-user category id (cross-user authorization)', function (): void {
     $other = User::create([
         'username' => 'foreign-category-owner',
         'password' => 'opensesame',
@@ -206,122 +356,39 @@ it('refuses to CREATE a rule with a foreign-user category id (cross-user authori
         'display_order' => 999,
     ])->id;
 
-    /** @var CreateCategorizationRule $create */
-    $create = $this->app->make(CreateCategorizationRule::class);
-
-    expect(fn () => $create($this->user, 'merchant', 'contains', 'TARGET', $foreignCategoryId))
-        ->toThrow(InvalidArgumentException::class);
-
-    // And the rule MUST NOT exist after the rejection.
-    expect(
-        DB::table('categorization_rules')
-            ->where('user_id', $this->user->id)
-            ->where('category_id', $foreignCategoryId)
-            ->exists()
-    )->toBeFalse();
-});
-
-it('refuses to UPDATE a rule to point at a foreign-user category id', function (): void {
-    $ruleId = seedFormRule($this->user->id, 'merchant', 'contains', 'SPOTIFY', $this->streaming->id);
-
-    $other = User::create([
-        'username' => 'foreign-category-owner-2',
-        'password' => 'opensesame',
-        'period_start_day' => 1,
-    ]);
-    $foreignCategoryId = Category::create([
-        'user_id' => $other->id,
-        'name' => 'Private 2',
-        'slug' => 'private-foreign-2',
-        'kind' => 'expense',
-        'display_order' => 999,
-    ])->id;
-
-    /** @var UpdateCategorizationRule $update */
-    $update = $this->app->make(UpdateCategorizationRule::class);
-
-    expect(fn () => $update($this->user, $ruleId, ['category_id' => $foreignCategoryId]))
-        ->toThrow(InvalidArgumentException::class);
-
-    // The original category_id MUST remain unchanged after the
-    // rejection — the action must not partially apply.
-    $row = DB::table('categorization_rules')->where('id', $ruleId)->first();
-    expect($row->category_id)->toBe($this->streaming->id);
-});
-
-it('accepts a GLOBAL (user_id=NULL) category id for both Create and Update', function (): void {
-    // Sanity-check the visibility predicate: global-default categories
-    // (categories.user_id IS NULL) must still pass the new guard so
-    // the seeded chart-of-accounts continues to work for every user.
-    /** @var CreateCategorizationRule $create */
-    $create = $this->app->make(CreateCategorizationRule::class);
-    $ruleId = $create($this->user, 'merchant', 'contains', 'GLOBAL-OK', $this->streaming->id);
-    expect($ruleId)->toBeGreaterThan(0);
-
-    /** @var UpdateCategorizationRule $update */
-    $update = $this->app->make(UpdateCategorizationRule::class);
-    $affected = $update($this->user, $ruleId, ['category_id' => $this->music->id]);
-    expect($affected)->toBe(1);
-});
-
-it('save() catches InvalidArgumentException from a tampered foreign category id and surfaces a calm error', function (): void {
-    // WR-02: a Livewire request that smuggles a foreign-category id
-    // past the picker funnel will hit the WR-01 ownership guard,
-    // which throws InvalidArgumentException. The component must
-    // catch it and render a calm errorValue instead of a 500.
-    $other = User::create([
-        'username' => 'tamper-foreign-cat',
-        'password' => 'opensesame',
-        'period_start_day' => 1,
-    ]);
-    $foreignCategoryId = Category::create([
-        'user_id' => $other->id,
-        'name' => 'Secret',
-        'slug' => 'secret-foreign-cat',
-        'kind' => 'expense',
-        'display_order' => 999,
-    ])->id;
-
     Livewire::test(RuleFormModal::class)
-        ->set('field', 'merchant')
-        ->set('match', 'contains')
-        ->set('value', 'TARGET')
-        ->set('categoryId', $foreignCategoryId)
+        ->call('open', ruleId: null)
+        ->set('conditions.0.field', 'merchant')
+        ->set('conditions.0.value', 'TARGET')
+        ->set('actions.0.type', 'category')
+        ->set('actions.0.category_id', $foreignCategoryId)
         ->call('save')
-        ->assertSet('errorValue', 'Invalid field, match, or category — pick from the dropdowns and try again.')
+        ->assertSet('errorGeneral', 'Invalid rule data — pick from the dropdowns and try again.')
         ->assertNotDispatched('rule-form:saved');
 
     expect(
         DB::table('categorization_rules')
             ->where('user_id', $this->user->id)
-            ->where('value', 'TARGET')
             ->exists()
     )->toBeFalse();
 });
 
-it('save() catches NotFoundHttpException from a foreign editingRuleId and hides the modal calmly', function (): void {
-    // WR-02: a tampered editingRuleId that points to another user's
-    // rule is rejected by UpdateCategorizationRule with
-    // NotFoundHttpException. The component must catch it, surface a
-    // calm message, and dispatch modal-hide instead of a 500.
-    $other = User::create([
-        'username' => 'tamper-foreign-rule',
-        'password' => 'opensesame',
-        'period_start_day' => 1,
+it('grep guard: RuleFormModal never references ReapplyRulesJob', function (): void {
+    $contents = (string) file_get_contents(base_path('Modules/Categorization/Internal/Http/Livewire/RuleFormModal.php'));
+
+    expect($contents)->not->toContain('ReapplyRulesJob');
+    expect(mb_strtolower($contents))->not->toContain('reapply');
+});
+
+it('escapes HTML payloads in rendered condition value (T-07-06)', function (): void {
+    seedFormRule($this->user, 10, 'all', [
+        ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => '<script>alert(1)</script>'],
+    ], [
+        ['type' => 'category', 'payload' => ['category_id' => $this->streaming->id]],
     ]);
-    $foreignRuleId = seedFormRule($other->id, 'merchant', 'contains', 'NETFLIX', $this->streaming->id);
+    $ruleId = DB::table('categorization_rules')->where('user_id', $this->user->id)->value('id');
 
     Livewire::test(RuleFormModal::class)
-        ->set('editingRuleId', $foreignRuleId) // bypass open() which would have masked it
-        ->set('field', 'merchant')
-        ->set('match', 'contains')
-        ->set('value', 'NEW')
-        ->set('categoryId', $this->streaming->id)
-        ->call('save')
-        ->assertSet('errorValue', 'That rule is no longer available.')
-        ->assertDispatched('modal-close');
-
-    // The foreign rule MUST remain untouched.
-    $row = DB::table('categorization_rules')->where('id', $foreignRuleId)->first();
-    expect($row->value)->toBe('NETFLIX');
+        ->call('open', ruleId: $ruleId)
+        ->assertDontSee('<script>alert(1)</script>', escape: false);
 });
