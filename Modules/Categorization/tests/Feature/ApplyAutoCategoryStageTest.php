@@ -278,3 +278,46 @@ it('increments the matched rule hits_count on every rule-fire (Wave 4 deferral c
     $hits = (int) DB::table('categorization_rules')->where('id', $ruleId)->value('hits_count');
     expect($hits)->toBe(3);
 });
+
+it('rolls back an earlier rule\'s hits_count bump when a later matched rule fails mid-loop (WR-01)', function (): void {
+    $firstRuleId = seedAutoRule($this->user->id, $this->streamingId);
+    // A second rule matching the SAME transaction (same merchant), so both
+    // fire in the same apply() call and both attempt a hits_count bump.
+    $secondRuleId = seedAutoRule($this->user->id, $this->streamingId);
+
+    // A transient SQLite trigger that aborts ONLY the second rule's
+    // hits_count UPDATE — simulates a mid-loop failure (e.g. rule 3 of 4
+    // in the review's own scenario) without needing to mock the query
+    // builder. Laravel's DatabaseManager::transaction() catches the
+    // resulting QueryException, ROLLBACKs the WHOLE transaction (undoing
+    // the first rule's already-applied increment too), then rethrows —
+    // which ApplyAutoCategoryStage's outer try/catch swallows into a
+    // manual() outcome.
+    DB::statement(sprintf(
+        "CREATE TRIGGER wr01_boom BEFORE UPDATE OF hits_count ON categorization_rules
+         WHEN NEW.id = %d
+         BEGIN SELECT RAISE(ABORT, 'WR-01 simulated mid-loop failure'); END",
+        $secondRuleId,
+    ));
+
+    try {
+        /** @var ApplyAutoCategoryStage $stage */
+        $stage = $this->app->make(ApplyAutoCategoryStage::class);
+        $canonical = makeAutoCanonical($this->user->id, $this->account->id);
+
+        $outcome = $stage->apply($canonical, $this->user);
+
+        // The stage is side-effect-free on failure (fail-open, T-13.4-18):
+        // the whole categorization folds back to manual...
+        expect($outcome->provenance)->toBe('manual');
+
+        // ...and the first rule's hits_count bump — which happened BEFORE
+        // the second rule's UPDATE aborted, inside the SAME transaction —
+        // must be rolled back too, not permanently stuck at 1 while the
+        // outcome claims no rule was applied.
+        $firstHits = (int) DB::table('categorization_rules')->where('id', $firstRuleId)->value('hits_count');
+        expect($firstHits)->toBe(0);
+    } finally {
+        DB::statement('DROP TRIGGER IF EXISTS wr01_boom');
+    }
+});

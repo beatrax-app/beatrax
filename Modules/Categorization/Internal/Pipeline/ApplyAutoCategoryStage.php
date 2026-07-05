@@ -67,23 +67,31 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
             $matched = $this->ruleEngine->match(RuleMatchInput::fromCanonical($tx), $user);
             $folded = $this->ruleApplier->applyAtImport($matched, $tx);
 
+            // WR-01: wrap the hits_count bump loop in a single DB
+            // transaction so a mid-loop exception (e.g. on the 3rd of 4
+            // matched rules) rolls back every increment for this row,
+            // instead of leaving rules 1-2 permanently bumped even though
+            // the outer catch below discards the folded categorization
+            // entirely and falls back to AutoCategorizationOutcomeDto::manual().
             $categoryRuleId = null;
-            foreach ($matched as $rule) {
-                $this->db->connection()
-                    ->table('categorization_rules')
-                    ->where('id', $rule->ruleId)
-                    ->where('user_id', $user->id)
-                    ->update(['hits_count' => new Expression('hits_count + 1')]);
+            $this->db->connection()->transaction(function () use ($matched, $user, &$categoryRuleId): void {
+                foreach ($matched as $rule) {
+                    $this->db->connection()
+                        ->table('categorization_rules')
+                        ->where('id', $rule->ruleId)
+                        ->where('user_id', $user->id)
+                        ->update(['hits_count' => new Expression('hits_count + 1')]);
 
-                foreach ($rule->actions as $action) {
-                    if ($action->type === 'category') {
-                        // Last-writer-wins: a later firing rule's category
-                        // action overwrites an earlier one, mirroring
-                        // RuleApplier::applyAtImport's own fold order.
-                        $categoryRuleId = $rule->ruleId;
+                    foreach ($rule->actions as $action) {
+                        if ($action->type === 'category') {
+                            // Last-writer-wins: a later firing rule's category
+                            // action overwrites an earlier one, mirroring
+                            // RuleApplier::applyAtImport's own fold order.
+                            $categoryRuleId = $rule->ruleId;
+                        }
                     }
                 }
-            }
+            });
 
             if ($categoryRuleId !== null) {
                 $provenance = [
