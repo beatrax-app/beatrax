@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Tax\Public\Events\TransactionTagged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -43,9 +44,17 @@ final class TagTransaction
         private readonly DatabaseManager $db,
         private readonly Dispatcher $events,
         private readonly Clock $clock,
+        private readonly FieldProvenanceWriter $provenance,
         private readonly ?SearchIndexWriterContract $searchIndex = null,
     ) {}
 
+    /**
+     * @param  string  $provenanceSource  D-04 field_provenance source stamped onto
+     *                                    `tax_tag` after a successful write. Defaults to
+     *                                    `'manual'` (every existing caller); the Plan 05
+     *                                    rule engine passes `'rule'` so a rule-applied tax
+     *                                    tag is distinguishable from a user-set one.
+     */
     public function execute(
         int $userId,
         int $transactionId,
@@ -53,6 +62,7 @@ final class TagTransaction
         ?string $note,
         ?int $taxYearOverride,
         ?int $transactionSplitId = null,
+        string $provenanceSource = 'manual',
     ): void {
         // (1) Verify transaction ownership — 404-not-403 to avoid existence leakage.
         $txExists = $this->db->connection()
@@ -149,14 +159,21 @@ final class TagTransaction
             }
         }
 
-        // (5) Notify listeners.
+        // (5) D-04 (Req 4 — manual-preservation): stamp field_provenance.tax_tag
+        // on the PARENT transaction — field_provenance lives only on
+        // `transactions`, so leg-scoped tags stamp the same whole-transaction
+        // key as whole-transaction tags. Defaults to 'manual' for every
+        // existing caller; the Plan 05 rule engine passes 'rule'.
+        $this->provenance->stamp($userId, $transactionId, ['tax_tag' => $provenanceSource]);
+
+        // (6) Notify listeners.
         $this->events->dispatch(new TransactionTagged(
             userId: $userId,
             transactionId: $transactionId,
             deductionCategoryId: $deductionCategoryId,
         ));
 
-        // (6) Re-index the transaction so the tax note is searchable.
+        // (7) Re-index the transaction so the tax note is searchable.
         // Optional nullable injection — no-op when Search module is absent (RESEARCH A4).
         // Pass the authenticated actor (CR-02): the writer verifies ownership
         // so a forged transaction id can never reach another user's index doc.

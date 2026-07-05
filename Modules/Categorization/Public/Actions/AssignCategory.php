@@ -12,6 +12,7 @@ use Modules\Categorization\Public\Events\CategorizationDiverged;
 use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
+use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
 
 /**
@@ -41,6 +42,7 @@ final class AssignCategory implements AssignsCategory
         private readonly UpdatesTransactionCategory $updater,
         private readonly Dispatcher $events,
         private readonly DatabaseManager $db,
+        private readonly FieldProvenanceWriter $provenance,
     ) {}
 
     public function __invoke(int $transactionId, ?int $categoryId, User $user): int
@@ -64,6 +66,15 @@ final class AssignCategory implements AssignsCategory
                 mutationType: 'edit',
                 dirtyFields: ['category_id' => $categoryId],
             ));
+
+            // D-04 (Req 4 — manual-preservation): this action is the
+            // sole manual entry point for user-driven category
+            // assignment (reclassifyCategory + every InlineCategoryPicker
+            // caller route through AssignsCategory), so every successful
+            // write here is a 'manual' stamp — never invoked by the
+            // Plan 05 rule engine, which writes categories through
+            // UpdatesTransactionCategory directly.
+            $this->provenance->stamp($user->id, $transactionId, ['category_id' => 'manual']);
 
             if ($categoryId !== null) {
                 $divergence = CategorizationDiverged::fromProvenance(

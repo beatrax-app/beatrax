@@ -24,6 +24,7 @@ use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
+use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\SplittableTypes;
@@ -400,6 +401,7 @@ final class TransactionDetail extends Component
         DatabaseManager $db,
         Dispatcher $events,
         SetsTransactionNote $setNote,
+        FieldProvenanceWriter $provenance,
     ): void {
         $user = $currentUser->user();
 
@@ -433,6 +435,10 @@ final class TransactionDetail extends Component
                 mutationType: 'edit',
                 dirtyFields: ['note' => $value],
             ));
+
+            // D-04 (Req 4 — manual-preservation): this is the SOLE
+            // user-driven note write path (T-13.4-13).
+            $provenance->stamp($user->id, $this->transactionId, ['note' => 'manual']);
         }
 
         $this->noteSaved = true;
@@ -498,6 +504,7 @@ final class TransactionDetail extends Component
         DatabaseManager $db,
         Dispatcher $events,
         ReassignsCounterparty $reassign,
+        FieldProvenanceWriter $provenance,
     ): void {
         $user = $currentUser->user();
 
@@ -538,6 +545,10 @@ final class TransactionDetail extends Component
             mutationType: 'edit',
             dirtyFields: ['counterparty_id' => $newCounterpartyId],
         ));
+
+        // D-04 (Req 4 — manual-preservation): this is the SOLE
+        // user-driven counterparty_id write path (T-13.4-13).
+        $provenance->stamp($user->id, $this->transactionId, ['counterparty_id' => 'manual']);
 
         $this->dispatch('toast', message: 'Counterparty updated');
     }
