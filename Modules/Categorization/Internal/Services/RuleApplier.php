@@ -298,7 +298,7 @@ final class RuleApplier
             ->where('user_id', $userId)
             ->where('transaction_id', $transactionId)
             ->whereNull('transaction_split_id')
-            ->first(['deduction_category_id', 'tax_year_override']);
+            ->first(['deduction_category_id', 'tax_year_override', 'note']);
 
         $currentDeductionCategoryId = $current !== null && is_numeric($current->deduction_category_id)
             ? (int) $current->deduction_category_id
@@ -306,13 +306,20 @@ final class RuleApplier
         $currentYear = $current !== null && is_numeric($current->tax_year_override)
             ? (int) $current->tax_year_override
             : null;
+        // CR-02: TagTransaction::updateExisting() rewrites note/category/year
+        // TOGETHER the instant any one of the three is non-null — since
+        // $deductionCategoryId is always non-null here, passing a literal
+        // `null` note would silently wipe a user-authored tax note on every
+        // rule-driven category/year change. Read the existing note and pass
+        // it through unchanged so a rule re-apply never touches it.
+        $currentNote = $current !== null && is_string($current->note) ? $current->note : null;
 
         if ($currentDeductionCategoryId === $deductionCategoryId && $currentYear === $year) {
             return null;
         }
 
         try {
-            $this->tagTransaction->execute($userId, $transactionId, $deductionCategoryId, null, $year, null, 'rule');
+            $this->tagTransaction->execute($userId, $transactionId, $deductionCategoryId, $currentNote, $year, null, 'rule');
         } catch (Throwable $e) {
             $this->logger->warning('RuleApplier skipped a tax_tag action.', [
                 'rule_id' => $ruleId,
