@@ -73,6 +73,18 @@ final class CreateCategorizationRule
 
     private const DUPLICATE_MESSAGE = 'A rule with this field, match, and value already exists. Edit the existing rule instead.';
 
+    /**
+     * An `amount`-value_type condition's `value`/`value2` MUST already
+     * be a signed integer minor-unit string (the same units as
+     * `settledAmountMinor`/`RuleEngine::toIntValue()`) by the time it
+     * reaches this action — `RuleFormModal::conditionPayload()` performs
+     * the Euro-decimal -> minor-unit scaling before calling here (CR-01).
+     * This pattern rejects a caller (direct-action/DevTools call) that
+     * skips that conversion and passes a raw decimal Euro string instead
+     * of silently truncating it at match time.
+     */
+    private const AMOUNT_VALUE_PATTERN = '/^-?\d+$/';
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -212,6 +224,19 @@ final class CreateCategorizationRule
             throw new InvalidArgumentException(
                 "CreateCategorizationRule: op 'between' requires a non-null value2."
             );
+        }
+
+        if ($valueType === 'amount') {
+            if (preg_match(self::AMOUNT_VALUE_PATTERN, $value) !== 1) {
+                throw new InvalidArgumentException(
+                    "CreateCategorizationRule: amount condition value '{$value}' must be an integer minor-unit string."
+                );
+            }
+            if ($value2 !== null && preg_match(self::AMOUNT_VALUE_PATTERN, $value2) !== 1) {
+                throw new InvalidArgumentException(
+                    "CreateCategorizationRule: amount condition value2 '{$value2}' must be an integer minor-unit string."
+                );
+            }
         }
 
         $field = isset($condition['field']) && is_string($condition['field']) ? $condition['field'] : 'merchant';

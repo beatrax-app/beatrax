@@ -424,12 +424,24 @@ final class RuleFormModal extends Component
     {
         $field = $dto->valueType === 'string' ? $dto->field : $dto->valueType;
 
+        if ($dto->valueType === 'amount') {
+            // The DB stores signed integer minor units (CR-01); the form
+            // input displays the project's Dutch-decimal Euro convention,
+            // so round-trip through formatAmount() rather than showing
+            // the raw minor-unit string back to the user.
+            $value = is_numeric($dto->value) ? self::formatAmount((int) $dto->value) : $dto->value;
+            $value2 = $dto->value2 !== null && is_numeric($dto->value2) ? self::formatAmount((int) $dto->value2) : $dto->value2;
+        } else {
+            $value = $dto->value;
+            $value2 = $dto->value2;
+        }
+
         return [
             'id' => $dto->id,
             'field' => $field,
             'op' => $dto->op,
-            'value' => $dto->value,
-            'value2' => $dto->value2,
+            'value' => $value,
+            'value2' => $value2,
         ];
     }
 
@@ -472,8 +484,20 @@ final class RuleFormModal extends Component
             return 'Enter a value for condition '.($index + 1).'.';
         }
 
-        if ($condition['op'] === 'between' && trim($condition['value2'] ?? '') === '') {
-            return 'Pick a lower and upper bound for condition '.($index + 1).'.';
+        $valueType = self::valueTypeFor($condition['field']);
+
+        if ($condition['op'] === 'between') {
+            $value2 = trim($condition['value2'] ?? '');
+            if ($value2 === '') {
+                return 'Pick a lower and upper bound for condition '.($index + 1).'.';
+            }
+            if ($valueType === 'amount' && self::parseAmount($value2) === null) {
+                return 'Enter a valid amount for condition '.($index + 1).'.';
+            }
+        }
+
+        if ($valueType === 'amount' && self::parseAmount($value) === null) {
+            return 'Enter a valid amount for condition '.($index + 1).'.';
         }
 
         return null;
@@ -525,14 +549,93 @@ final class RuleFormModal extends Component
         $valueType = self::valueTypeFor($condition['field']);
         $dbField = $valueType === 'string' ? $condition['field'] : 'merchant';
 
+        if ($valueType === 'amount') {
+            // Convert the human-entered Dutch/plain-decimal Euro string
+            // (placeholder "0,00", the project's established money-input
+            // convention — see TransactionDetail::parseAmount()) into
+            // signed integer minor units BEFORE it is persisted, so it
+            // agrees with `settledAmountMinor`/RuleEngine::toIntValue()'s
+            // units (CR-01). conditionRowError() has already rejected an
+            // unparsable value by the time save() reaches this method, so
+            // the `?? 0` fallback below is unreachable defence-in-depth,
+            // never the normal path.
+            $value = (string) (self::parseAmount($condition['value']) ?? 0);
+            $value2 = $condition['op'] === 'between'
+                ? (string) (self::parseAmount($condition['value2'] ?? '') ?? 0)
+                : null;
+        } else {
+            $value = trim($condition['value']);
+            $value2 = $condition['op'] === 'between' ? trim($condition['value2'] ?? '') : null;
+        }
+
         return [
             'id' => $condition['id'],
             'field' => $dbField,
             'op' => $condition['op'],
             'value_type' => $valueType,
-            'value' => trim($condition['value']),
-            'value2' => $condition['op'] === 'between' ? trim($condition['value2'] ?? '') : null,
+            'value' => $value,
+            'value2' => $value2,
         ];
+    }
+
+    /**
+     * Parses a signed money string to minor units, or null if unparsable.
+     * COPIED (adapted) from `Modules\Ledger\Internal\Http\Livewire\
+     * ReconcilePage::parseAmount()` — same duplication convention as
+     * every other Livewire money input in this codebase (see
+     * `TransactionDetail::parseAmount()`'s docblock). Signed (allows a
+     * leading `-`, zero, and negative results) because an amount
+     * condition compares against `settledAmountMinor`, which is a signed
+     * BIGINT (negative for expenses). Accepts plain ("12.50"), Dutch
+     * grouped ("1.234,56"), and comma-decimal ("12,50") forms; the
+     * rightmost of '.' or ',' is the decimal separator. Do not hand-roll
+     * a new regex; keep in sync if the canonical copy ever changes.
+     */
+    private static function parseAmount(string $value): ?int
+    {
+        $trimmed = str_replace([' ', "\u{00A0}"], '', trim($value));
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $negative = str_starts_with($trimmed, '-');
+        $unsigned = $negative ? substr($trimmed, 1) : $trimmed;
+
+        $lastDot = strrpos($unsigned, '.');
+        $lastComma = strrpos($unsigned, ',');
+        if ($lastDot !== false && $lastComma !== false) {
+            $unsigned = $lastComma > $lastDot
+                ? str_replace(['.', ','], ['', '.'], $unsigned)
+                : str_replace(',', '', $unsigned);
+        } elseif ($lastComma !== false) {
+            $unsigned = str_replace(',', '.', $unsigned);
+        }
+
+        if (preg_match('/^\d{1,12}(\.\d{1,2})?$/', $unsigned) !== 1) {
+            return null;
+        }
+
+        [$whole, $frac] = array_pad(explode('.', $unsigned, 2), 2, '');
+        $minor = (int) $whole * 100 + (int) str_pad($frac, 2, '0');
+
+        return $negative ? -$minor : $minor;
+    }
+
+    /**
+     * Formats signed minor units back into an editable Dutch-decimal
+     * string (e.g. `-5000` -> `"-50,00"`) so an amount condition loaded
+     * via `conditionFromDto()` round-trips through `parseAmount()`
+     * unchanged if the user submits it untouched (mirrors
+     * `ReconcilePage::formatMinorForInput()`).
+     */
+    private static function formatAmount(int $minor): string
+    {
+        $negative = $minor < 0;
+        $abs = abs($minor);
+        $whole = intdiv($abs, 100);
+        $cents = $abs % 100;
+
+        return ($negative ? '-' : '').$whole.','.str_pad((string) $cents, 2, '0', STR_PAD_LEFT);
     }
 
     /**
