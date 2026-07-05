@@ -12,29 +12,22 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use stdClass;
 
 /**
- * Evaluates the user's CategorizationRule rows + merchant_memories
- * against an incoming CanonicalTransaction and returns the highest-
- * scoring candidate per the specificity scoring algorithm:
+ * Memory-only fallback lookup (demoted from its original rule-scoring
+ * role by Plan 06 — `RuleEngine` + `RuleApplier` now own ALL rule
+ * matching/application against the categorization-rules parent +
+ * child tables; see those classes' docblocks). `lookupMemory()` is
+ * the sole surviving responsibility:
+ * it pulls the highest-`occurrence_count` `merchant_memories` row for
+ * the canonical row's merchant, for `ApplyAutoCategoryStage` to apply
+ * ONLY when none of the fired rules carried a `category` action
+ * (RESEARCH Pattern 4).
  *
- *   equals       = 100
- *   memory       =  90
- *   starts_with  =  50 + length(value)
- *   contains     =  10 + length(value)
+ * `evaluate()` is kept as a thin memory-only wrapper around
+ * `lookupMemory()` for callers that want the `RuleEvaluationOutcome`
+ * shape rather than the raw `stdClass` row.
  *
- * Tiebreaker: rule beats memory at equal score. Practical equality
- * happens only between a rule and a memory at the same score — the
- * loop evaluates rule candidates before the memory candidate so a
- * rule with score 90 wins over a memory at score 90.
- *
- * Reads are scoped by `where('user_id', $user->id)` on every query
- * so a foreign user's rule or memory never fires for the current
- * user.
- *
- * Case-insensitive string comparisons use the `mb_*` family so
- * Unicode characters (German umlauts, Spanish accents) compare
- * correctly. The match operators are evaluated in PHP rather than
- * via SQL LIKE so the rule.value never reaches the SQL string —
- * the SQL-injection mitigation for user-authored rule values.
+ * Reads are scoped by `where('user_id', $user->id)` on every query so
+ * a foreign user's memory never fires for the current user.
  *
  * Merchant memory lookup derives `merchant_id` by JOINing the
  * merchants table on (user_id, normalized_name = counterpartyNormalized).
@@ -45,125 +38,22 @@ use stdClass;
  * normalized_name. When the transaction's counterpartyNormalized is
  * the empty-counterparty sentinel (see NormalizeStage::NO_COUNTERPARTY)
  * the memory lookup is skipped.
- *
- * The rule pull rides the (user_id, active) composite index on
- * categorization_rules. The pull selects every active rule for the
- * user with no pre-filter on `field` or `value` — acceptable at
- * single-user scale (<50 active rules typical), but a per-field
- * lookup index would help once a future bulk-import capability lets
- * users author hundreds of rules.
  */
 final class RuleEvaluator
 {
-    /**
-     * Allowed `field` enum values — must mirror the DB trigger
-     * allow-list on categorization_rules.field. The mapping to
-     * canonical-transaction properties happens inside evaluate().
-     */
-    private const VALID_FIELDS = ['merchant', 'description', 'counterparty'];
-
-    /** Allowed `match` enum values — must mirror the DB trigger allow-list. */
-    private const VALID_MATCHES = ['equals', 'starts_with', 'contains'];
-
     public function __construct(private readonly DatabaseManager $db) {}
 
     public function evaluate(CanonicalTransaction $tx, User $user): RuleEvaluationOutcome
     {
-        $userId = $user->id;
-
-        $connection = $this->db->connection();
-
-        // Pull every active rule for this user — scoped by user_id +
-        // active. The (user_id, active) composite index on
-        // categorization_rules makes this an indexed read.
-        /** @var iterable<stdClass> $rules */
-        $rules = $connection
-            ->table('categorization_rules')
-            ->where('user_id', $userId)
-            ->where('active', true)
-            ->get();
-
-        $best = RuleEvaluationOutcome::none();
-
-        foreach ($rules as $rule) {
-            $field = is_string($rule->field) ? $rule->field : '';
-            $match = is_string($rule->match) ? $rule->match : '';
-            $value = is_string($rule->value) ? $rule->value : '';
-            $categoryId = self::toInt($rule->category_id);
-            $ruleId = self::toInt($rule->id);
-
-            if (! in_array($field, self::VALID_FIELDS, true) || ! in_array($match, self::VALID_MATCHES, true)) {
-                continue;
-            }
-
-            $target = self::targetFieldValue($tx, $field);
-            if ($target === null || $value === '') {
-                continue;
-            }
-
-            $score = self::scoreMatch($match, $target, $value);
-            if ($score === 0) {
-                continue;
-            }
-
-            if ($score > $best->score) {
-                $best = RuleEvaluationOutcome::rule($categoryId, $ruleId, $score);
-            }
+        $memory = $this->lookupMemory($tx, $user->id);
+        if ($memory === null) {
+            return RuleEvaluationOutcome::none();
         }
 
-        // Memory candidate — at score 90. Rule beats memory at equal
-        // score, so the strict `>` comparison below ensures a rule at
-        // score 90 (which can happen for a memory-bordering match)
-        // wins over the memory.
-        $memory = $this->lookupMemory($tx, $userId);
-        if ($memory !== null) {
-            $memoryScore = 90;
-            if ($memoryScore > $best->score) {
-                $categoryId = self::toInt($memory->category_id);
-                $memoryId = self::toInt($memory->id);
-                $best = RuleEvaluationOutcome::memory($categoryId, $memoryId, $memoryScore);
-            }
-        }
+        $categoryId = self::toInt($memory->category_id);
+        $memoryId = self::toInt($memory->id);
 
-        return $best;
-    }
-
-    /**
-     * Maps the configurable `field` enum to the canonical-transaction
-     * property carrying the matchable value. `merchant` and
-     * `counterparty` both target counterparty_name — they are user-
-     * facing synonyms exposed in the rule-form modal.
-     */
-    private static function targetFieldValue(CanonicalTransaction $tx, string $field): ?string
-    {
-        return match ($field) {
-            'merchant', 'counterparty' => $tx->counterpartyName,
-            'description' => $tx->description,
-            default => null,
-        };
-    }
-
-    /**
-     * Returns the specificity score for the given match operator
-     * against the target field value, or 0 when the operator does not
-     * match. All comparisons use mb_strtolower for Unicode-safe
-     * case-insensitivity.
-     */
-    private static function scoreMatch(string $match, string $target, string $value): int
-    {
-        $targetLower = mb_strtolower($target);
-        $valueLower = mb_strtolower($value);
-
-        return match ($match) {
-            'equals' => $targetLower === $valueLower ? 100 : 0,
-            'starts_with' => mb_strpos($targetLower, $valueLower) === 0
-                ? 50 + mb_strlen($value)
-                : 0,
-            'contains' => mb_strpos($targetLower, $valueLower) !== false
-                ? 10 + mb_strlen($value)
-                : 0,
-            default => 0,
-        };
+        return RuleEvaluationOutcome::memory($categoryId, $memoryId, 90);
     }
 
     /**
@@ -179,7 +69,7 @@ final class RuleEvaluator
      * usually one row per (user, merchant, category) tuple) the highest
      * occurrence_count wins.
      */
-    private function lookupMemory(CanonicalTransaction $tx, int $userId): ?stdClass
+    public function lookupMemory(CanonicalTransaction $tx, int $userId): ?stdClass
     {
         $normalized = $tx->counterpartyNormalized;
         if ($normalized === '' || $normalized === NormalizeStage::NO_COUNTERPARTY) {

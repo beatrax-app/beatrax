@@ -66,20 +66,46 @@ function makeAutoCanonical(int $userId, int $accountId): CanonicalTransaction
     );
 }
 
+/**
+ * Seeds a single-condition/single-action rule on the new normalized
+ * schema (`categorization_rules` parent + one `rule_conditions` row +
+ * one `rule_actions` row) — the flat `field`/`match`/`value`/
+ * `category_id` columns were dropped by 13.4-01 (D-01/D-02/D-03).
+ */
 function seedAutoRule(int $userId, int $categoryId): int
 {
-    return (int) DB::table('categorization_rules')->insertGetId([
+    $ruleId = (int) DB::table('categorization_rules')->insertGetId([
         'user_id' => $userId,
-        'field' => 'merchant',
-        'match' => 'equals',
-        'value' => 'Spotify Premium',
-        'category_id' => $categoryId,
+        'priority' => 0,
+        'combinator' => 'all',
         'hits_count' => 0,
         'active' => true,
         'notes' => null,
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
     ]);
+
+    DB::table('rule_conditions')->insert([
+        'rule_id' => $ruleId,
+        'field' => 'merchant',
+        'op' => 'equals',
+        'value_type' => 'string',
+        'value' => 'Spotify Premium',
+        'value2' => null,
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    DB::table('rule_actions')->insert([
+        'rule_id' => $ruleId,
+        'position' => 0,
+        'type' => 'category',
+        'payload' => json_encode(['category_id' => $categoryId], JSON_THROW_ON_ERROR),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    return $ruleId;
 }
 
 it('returns manual outcome when no rule or memory matches', function (): void {

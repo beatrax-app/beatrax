@@ -10,9 +10,13 @@ namespace Modules\Categorization\Internal\Services;
  * Categorization module's Public surface is AutoCategorizationOutcomeDto,
  * which ApplyAutoCategoryStage builds from this internal value.
  *
- * `source` is one of `'rule'`, `'memory'`, or `null` (no candidate).
- * Exactly one of `ruleId` / `memoryId` is non-null when `source` is
- * non-null; both are null when no candidate fired.
+ * Memory-only since Plan 06 (D-06): `RuleEngine` + `RuleApplier` now
+ * own every `categorization_rules` match/apply decision, so `source`
+ * is one of `'memory'` or `null` (no candidate) — the former
+ * `rule()` static factory / `source === 'rule'` branch is dead code
+ * post-migration and has been removed. `ruleId` stays on the shape
+ * (always null now) so callers that pattern-match on both
+ * `ruleId`/`memoryId` do not need a signature change.
  */
 final readonly class RuleEvaluationOutcome
 {
@@ -32,17 +36,6 @@ final readonly class RuleEvaluationOutcome
             ruleId: null,
             memoryId: null,
             score: 0,
-        );
-    }
-
-    public static function rule(int $categoryId, int $ruleId, int $score): self
-    {
-        return new self(
-            categoryId: $categoryId,
-            source: 'rule',
-            ruleId: $ruleId,
-            memoryId: null,
-            score: $score,
         );
     }
 
