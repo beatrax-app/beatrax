@@ -362,6 +362,49 @@ it('skips a dangling category id but still applies the other action', function (
     expect($tx->counterparty_id)->toBe($counterparty->id);
 });
 
+it('preserves an existing user-typed tax note when a rule-driven re-apply changes the deduction category (CR-02)', function (): void {
+    Event::fake([TransactionMutated::class]);
+
+    ['user' => $user, 'account' => $account, 'run' => $run] = seedRuleApplierFixtures();
+    $tx = makeRuleApplierTransaction($user, $account, $run, 7);
+    $originalDeductionCategoryId = makeRuleApplierDeductionCategory(app(DatabaseManager::class), $user, 'Original');
+    $newDeductionCategoryId = makeRuleApplierDeductionCategory(app(DatabaseManager::class), $user, 'Changed');
+
+    // Seed a pre-existing tax tag carrying a user-typed note WITHOUT
+    // stamping field_provenance.tax_tag as 'manual' — mirrors any tag row
+    // RuleApplier's manual-provenance guard does not exclude (e.g. a
+    // legacy tag predating field_provenance, or a prior rule-applied tag).
+    // This is exactly the row applyTaxTag() reads-before-writing.
+    DB::table('tax_transaction_tags')->insert([
+        'user_id' => $user->id,
+        'transaction_id' => $tx->id,
+        'transaction_split_id' => null,
+        'deduction_category_id' => $originalDeductionCategoryId,
+        'note' => 'matched to invoice #1234',
+        'tax_year_override' => null,
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    $matched = [
+        new MatchedRule(ruleId: 1, priority: 0, actions: [
+            ruleActionFor('tax_tag', ['deduction_category_id' => $newDeductionCategoryId], 0),
+        ]),
+    ];
+
+    $changed = ruleApplierForTest()->applyAtReapply($matched, $tx->id, $user->id);
+
+    // The category genuinely changed, so the action fires...
+    expect($changed['tax_tag'])->toBe($newDeductionCategoryId);
+
+    $tagRow = DB::table('tax_transaction_tags')->where('transaction_id', $tx->id)->first();
+    expect((int) $tagRow->deduction_category_id)->toBe($newDeductionCategoryId);
+    // ...but the user-typed note MUST survive the category change (CR-02) —
+    // before the fix, TagTransaction::updateExisting() wiped it to null the
+    // instant a non-null deduction_category_id triggered the rewrite branch.
+    expect($tagRow->note)->toBe('matched to invoice #1234');
+});
+
 it('skips a tax_tag action when field_provenance.tax_tag is manual', function (): void {
     Event::fake([TransactionMutated::class]);
 
