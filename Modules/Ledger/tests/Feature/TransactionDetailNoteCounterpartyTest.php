@@ -73,6 +73,13 @@ it('saveNote — blank note stores NULL and dispatches {note: null}', function (
         'booked_at' => '2026-06-14 12:00:00',
     ]);
 
+    // Plan 13.4-04 (SetTransactionNote's write-only-on-change guard):
+    // blanking an ALREADY-null note is a genuine no-op — seed a real
+    // note first so this test exercises an actual null-clearing change.
+    DB::table('transactions')
+        ->where('id', $tx->id)
+        ->update(['note' => 'Existing note']);
+
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
         ->set('note', '   ')  // whitespace-only
         ->call('saveNote');

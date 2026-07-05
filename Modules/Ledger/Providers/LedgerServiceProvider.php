@@ -10,12 +10,16 @@ use Modules\Ledger\Internal\Console\RederiveFingerprintsCommand;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Internal\Services\FingerprintRederiveService;
+use Modules\Ledger\Public\Actions\ReassignCounterparty;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
+use Modules\Ledger\Public\Actions\SetTransactionNote;
 use Modules\Ledger\Public\Actions\UpdateTransactionCategory;
+use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
+use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 use Modules\Ledger\Public\Services\CategorySpendTrendQuery;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -51,6 +55,12 @@ final class LedgerServiceProvider extends ServiceProvider
         // actions type-hint the interface, so without this binding every
         // saveSplit()/unsplit() call would fail to resolve (Rule 3 fix).
         $this->app->bind(SavesTransactionSplit::class, SaveTransactionSplit::class);
+        // Plan 13.4-04 (T-13.4-13b — module boundary fix): counterparty-
+        // reassign and set/append-note promoted to Ledger Public guarded
+        // actions so both TransactionDetail and the Plan 05 rule engine
+        // write these fields through one seam, never raw SQL.
+        $this->app->bind(ReassignsCounterparty::class, ReassignCounterparty::class);
+        $this->app->bind(SetsTransactionNote::class, SetTransactionNote::class);
         $this->app->singleton(FingerprintComposer::class);
         $this->app->bind(PeriodQuery::class);
         // Transient (not singleton): depends on the per-request PeriodQuery.
