@@ -43,6 +43,12 @@ use Spatie\LaravelData\Data;
  * column via `toAttributes()`; intentionally NOT part of the
  * fingerprint tuple so re-resolving a row against an updated
  * counterparty model never invalidates a historical fingerprint.
+ *
+ * `note` mirrors `transactions.note` (nullable free-text). Stamped by
+ * `RuleApplier::applyAtImport()` (Plan 05) when a firing rule carries a
+ * `note` action — there is no prior stored note at import time, so
+ * both `set` and `append` note modes resolve to the payload text
+ * outright. Null for every other ingestion path.
  */
 final class CanonicalTransaction extends Data
 {
@@ -76,6 +82,7 @@ final class CanonicalTransaction extends Data
         public readonly ?array $autoCategoryProvenance = null,
         public readonly ?PaymentType $paymentType = null,
         public readonly ?int $counterpartyId = null,
+        public readonly ?string $note = null,
     ) {}
 
     /**
@@ -113,6 +120,7 @@ final class CanonicalTransaction extends Data
             autoCategoryProvenance: $this->autoCategoryProvenance,
             paymentType: $this->paymentType,
             counterpartyId: $this->counterpartyId,
+            note: $this->note,
         );
     }
 
@@ -150,6 +158,7 @@ final class CanonicalTransaction extends Data
             autoCategoryProvenance: $this->autoCategoryProvenance,
             paymentType: $this->paymentType,
             counterpartyId: $this->counterpartyId,
+            note: $this->note,
         );
     }
 
@@ -188,6 +197,7 @@ final class CanonicalTransaction extends Data
             autoCategoryProvenance: $provenance,
             paymentType: $this->paymentType,
             counterpartyId: $this->counterpartyId,
+            note: $this->note,
         );
     }
 
@@ -265,6 +275,45 @@ final class CanonicalTransaction extends Data
             autoCategoryProvenance: $this->autoCategoryProvenance,
             paymentType: $this->paymentType,
             counterpartyId: $counterpartyId,
+            note: $this->note,
+        );
+    }
+
+    /**
+     * Immutable clone-with-override for `note`. `RuleApplier::applyAtImport()`
+     * (Plan 05) uses this to fold a firing rule's `note` action onto the
+     * canonical row before persistence — the sole import-time writer of
+     * this field. Pass `null` to explicitly clear the note.
+     */
+    public function withNote(?string $note): self
+    {
+        return new self(
+            userId: $this->userId,
+            accountId: $this->accountId,
+            type: $this->type,
+            postedAt: $this->postedAt,
+            bookedAt: $this->bookedAt,
+            valueDate: $this->valueDate,
+            amountMinor: $this->amountMinor,
+            currency: $this->currency,
+            settledAmountMinor: $this->settledAmountMinor,
+            settledCurrency: $this->settledCurrency,
+            fxRateUsed: $this->fxRateUsed,
+            counterpartyName: $this->counterpartyName,
+            counterpartyIban: $this->counterpartyIban,
+            counterpartyNormalized: $this->counterpartyNormalized,
+            normalizationVersion: $this->normalizationVersion,
+            description: $this->description,
+            categoryId: $this->categoryId,
+            sourceFormat: $this->sourceFormat,
+            importRunId: $this->importRunId,
+            sourceRowIndex: $this->sourceRowIndex,
+            sourceRef: $this->sourceRef,
+            rawPayload: $this->rawPayload,
+            autoCategoryProvenance: $this->autoCategoryProvenance,
+            paymentType: $this->paymentType,
+            counterpartyId: $this->counterpartyId,
+            note: $note,
         );
     }
 
@@ -298,6 +347,7 @@ final class CanonicalTransaction extends Data
             'description' => $this->description,
             'category_id' => $this->categoryId,
             'counterparty_id' => $this->counterpartyId,
+            'note' => $this->note,
             'auto_category_provenance' => $this->autoCategoryProvenance === null
                 ? null
                 : json_encode($this->autoCategoryProvenance, JSON_THROW_ON_ERROR),
