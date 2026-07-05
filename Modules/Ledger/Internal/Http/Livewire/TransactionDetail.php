@@ -19,7 +19,9 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
+use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
@@ -386,23 +388,30 @@ final class TransactionDetail extends Component
      * Save the user-edited note on this transaction (OQ-A).
      *
      * Empty/blank input is normalised to NULL in the DB (IS NULL semantics).
-     * Every write is scoped by user_id (I2 guard). A TransactionMutated(edit)
-     * event is dispatched so the Sync capture listener records the change (D-02).
+     * Delegates the actual write to Ledger's `SetsTransactionNote` Public
+     * action (T-13.4-13b — module boundary fix; the same pure guarded
+     * writer the Plan 05 rule engine reuses) — this method no longer runs
+     * an inline `transactions` UPDATE. A TransactionMutated(edit) event is
+     * dispatched, scoped to a genuine change, so the Sync capture listener
+     * records it (D-02).
      */
     public function saveNote(
         CurrentUser $currentUser,
         DatabaseManager $db,
         Dispatcher $events,
+        SetsTransactionNote $setNote,
     ): void {
-        $userId = $currentUser->user()->id;
+        $user = $currentUser->user();
 
         // D-08 reconciled lock: warn-first, no write (T-13.3-13/T-13.3-14).
         // Status read is scoped by user_id so a cross-user id no-ops rather
-        // than leaking.
+        // than leaking. Pre-checked here (rather than only inside the
+        // action) so this method can show the specific "un-reconcile
+        // first" toast instead of a generic no-op.
         $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
-            ->where('user_id', $userId)
+            ->where('user_id', $user->id)
             ->value('status');
 
         if ($status === 'reconciled') {
@@ -414,19 +423,17 @@ final class TransactionDetail extends Component
         $trimmed = trim($this->note);
         $value = $trimmed === '' ? null : $trimmed;
 
-        $db->connection()
-            ->table('transactions')
-            ->where('id', $this->transactionId)
-            ->where('user_id', $userId)   // I2 guard
-            ->update(['note' => $value]);
+        $affected = ($setNote)($this->transactionId, $value, 'set', $user);
 
-        // Hand-wired capture emission (D-02).
-        $events->dispatch(new TransactionMutated(
-            transactionId: $this->transactionId,
-            userId: $userId,
-            mutationType: 'edit',
-            dirtyFields: ['note' => $value],
-        ));
+        if ($affected > 0) {
+            // Hand-wired capture emission (D-02).
+            $events->dispatch(new TransactionMutated(
+                transactionId: $this->transactionId,
+                userId: $user->id,
+                mutationType: 'edit',
+                dirtyFields: ['note' => $value],
+            ));
+        }
 
         $this->noteSaved = true;
         $this->dispatch('toast', message: 'Note saved');
@@ -476,25 +483,33 @@ final class TransactionDetail extends Component
      * Reassign this transaction's counterparty_id to a different user-owned
      * counterparty (OQ-C).
      *
-     * Cross-user counterparty: silent no-op (neither the transaction nor the
-     * op-log is mutated). This is the SOLE user-driven counterparty_id write path —
-     * import-pipeline (ResolveCounterpartyStage) and GC writes stay immutable.
+     * Delegates the actual write to Ledger's `ReassignsCounterparty` Public
+     * action (T-13.4-13b — module boundary fix; the same pure guarded
+     * writer the Plan 05 rule engine reuses) — this method no longer runs
+     * an inline `transactions` UPDATE. Cross-user counterparty, an
+     * unchanged value, or a reconciled row all resolve to a silent no-op
+     * (neither the transaction nor the op-log is mutated). This is the
+     * SOLE user-driven counterparty_id write path — import-pipeline
+     * (ResolveCounterpartyStage) and GC writes stay immutable.
      */
     public function reassignCounterparty(
         int $newCounterpartyId,
         CurrentUser $currentUser,
         DatabaseManager $db,
         Dispatcher $events,
+        ReassignsCounterparty $reassign,
     ): void {
-        $userId = $currentUser->user()->id;
+        $user = $currentUser->user();
 
         // Ownership-check the transaction (same as reclassify() pattern) and
         // read its status in the same scoped query for the D-08 lock check
-        // below (T-13.3-13/T-13.3-14).
+        // below (T-13.3-13/T-13.3-14). Pre-checked here (rather than only
+        // inside the action) so this method can show the specific
+        // "un-reconcile first" toast instead of a generic no-op.
         $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
-            ->where('user_id', $userId)
+            ->where('user_id', $user->id)
             ->value('status');
 
         if ($status === null) {
@@ -508,28 +523,18 @@ final class TransactionDetail extends Component
             return;
         }
 
-        // Verify the target counterparty belongs to the same user.
-        $cpExists = $db->connection()
-            ->table('counterparties')
-            ->where('id', $newCounterpartyId)
-            ->where('user_id', $userId)
-            ->exists();
+        $affected = ($reassign)($this->transactionId, $newCounterpartyId, $user);
 
-        if (! $cpExists) {
-            // Cross-user or unknown counterparty — silent no-op (T-11-11).
+        if ($affected === 0) {
+            // Cross-user/unknown counterparty or unchanged value —
+            // silent no-op (T-11-11).
             return;
         }
-
-        $db->connection()
-            ->table('transactions')
-            ->where('id', $this->transactionId)
-            ->where('user_id', $userId)   // I2 guard
-            ->update(['counterparty_id' => $newCounterpartyId]);
 
         // Hand-wired capture emission (D-02): user-driven reassignment only.
         $events->dispatch(new TransactionMutated(
             transactionId: $this->transactionId,
-            userId: $userId,
+            userId: $user->id,
             mutationType: 'edit',
             dirtyFields: ['counterparty_id' => $newCounterpartyId],
         ));
