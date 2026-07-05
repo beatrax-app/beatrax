@@ -14,6 +14,7 @@ use Modules\Categorization\Internal\Http\Livewire\InlineCategoryPicker;
 use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
 use Modules\Categorization\Internal\Http\Livewire\RulesPage;
 use Modules\Categorization\Internal\Http\Livewire\TriageInbox;
+use Modules\Categorization\Internal\Listeners\DeactivateRulesOnReferentDelete;
 use Modules\Categorization\Internal\Listeners\MerchantMemoryWriter;
 use Modules\Categorization\Internal\Listeners\SeedDefaultCategorizationRules;
 use Modules\Categorization\Internal\Listeners\SeedDefaultCategoryTree;
@@ -47,6 +48,12 @@ use Modules\Core\Public\Events\UserInstalled;
  *   rule's category slug resolves at insert time.
  * - registers the two Livewire components rendered on `/uncategorized`
  *   and inside the `/transactions` rows.
+ * - listens on the Ledger `Category` and Counterparties `Counterparty`
+ *   models' `eloquent.deleting` wildcard events and deactivates any
+ *   rule whose `rule_actions.payload` references the deleted row
+ *   (D-03's app-level referential-integrity replacement for the FK
+ *   cascade a JSON payload cannot carry — see
+ *   `DeactivateRulesOnReferentDelete`).
  * - loads migrations, routes, and views.
  */
 final class CategorizationServiceProvider extends ServiceProvider
@@ -69,6 +76,7 @@ final class CategorizationServiceProvider extends ServiceProvider
         // dispatch and matches the binding pattern other listeners use.
         $this->app->singleton(MerchantMemoryWriter::class);
         $this->app->singleton(DefaultCategorizationRuleSeeder::class);
+        $this->app->singleton(DeactivateRulesOnReferentDelete::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
@@ -81,6 +89,17 @@ final class CategorizationServiceProvider extends ServiceProvider
         $events->listen(UserInstalled::class, SeedDefaultCategoryTree::class);
         $events->listen(UserInstalled::class, SeedDefaultCategorizationRules::class);
         $events->listen(TransactionCategorized::class, [MerchantMemoryWriter::class, 'handle']);
+
+        // D-03 referential-integrity guard (RESEARCH.md Pitfall 2 /
+        // T-13.4-09): rule_actions.payload embeds category_id/
+        // counterparty_id as opaque JSON with no FK. Neither the Ledger
+        // nor the Counterparties module exposes a Public delete action or
+        // delete event today, so this listens on the framework's own
+        // `eloquent.deleting: {FQCN}` wildcard event name (a plain
+        // string — no Ledger/Counterparties model class is imported here)
+        // rather than reaching into either module's internals.
+        $events->listen('eloquent.deleting: Modules\Ledger\Models\Category', [DeactivateRulesOnReferentDelete::class, 'handleCategoryDeleting']);
+        $events->listen('eloquent.deleting: Modules\Counterparties\Models\Counterparty', [DeactivateRulesOnReferentDelete::class, 'handleCounterpartyDeleting']);
 
         $livewire->component('categorization.triage-inbox', TriageInbox::class);
         $livewire->component('categorization.inline-category-picker', InlineCategoryPicker::class);
