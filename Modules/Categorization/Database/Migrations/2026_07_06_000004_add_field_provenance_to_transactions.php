@@ -10,13 +10,21 @@ use Illuminate\Database\Schema\Builder;
 
 /**
  * Adds a nullable JSON `field_provenance` column to `transactions`
- * (D-04) — a generic per-field manual-vs-rule-vs-import provenance map
- * consumed by the re-apply-rules manual-edit guard (Req 6): a field the
- * user has hand-edited must never be silently overwritten by a rule
+ * (D-04) — a generic per-field manual-vs-rule provenance map consumed
+ * by the re-apply-rules manual-edit guard (Req 6): a field the user
+ * has hand-edited must never be silently overwritten by a rule
  * re-application.
  *
- * Payload shape: `{ "<logical field>": "manual" | "rule" | "import" }`
- * — e.g. `{"category": "manual", "note": "rule"}`.
+ * Payload shape: `{ "<logical field>": "manual" | "rule" }` — e.g.
+ * `{"category": "manual", "note": "rule"}`. IN-02: every writer found
+ * across the codebase (`FieldProvenanceWriter`, `RuleApplier`,
+ * `TagTransaction`, `AssignCategory`, `TransactionDetail::saveNote`/
+ * `reassignCounterparty`) only ever stamps `"manual"` or `"rule"` — a
+ * third `"import"` state was originally documented here but never
+ * implemented; an absent key is treated identically to `"import"`
+ * would have been by every guard that reads this map (both mean
+ * "not manually set, safe to overwrite"), so the two-state contract
+ * above is the actual, implemented one.
  *
  * COEXIST, not replace (RESEARCH.md Assumption A1, corrected recommendation):
  * this column is entirely separate from the existing
