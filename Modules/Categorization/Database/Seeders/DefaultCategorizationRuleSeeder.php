@@ -21,13 +21,24 @@ use Psr\Log\LoggerInterface;
  * this seeder maps each rule's category slug to the corresponding
  * `categories.id` row in the global default tree
  * (`categories.user_id IS NULL`, seeded by `DefaultCategoryTreeSeeder`)
- * and inserts the rule via `firstOrCreate` keyed on
- * `(user_id, field, match, value)` — the UNIQUE database constraint
- * guarantees re-running the seeder produces zero duplicate rows AND
- * preserves any existing row's `hits_count` and `active` columns.
- * `firstOrCreate` is used deliberately and never the update-on-conflict
- * variant: a future refactor that reset `hits_count` would erase real
- * usage data, and the unit-test suite locks that semantic.
+ * and creates each rule as one `CategorizationRule` parent
+ * (`combinator = 'all'`, gap-numbered `priority`, `active = true`) plus
+ * one `rule_conditions` row (`field`/`op`/`value_type = 'string'`/
+ * `value`) and one `rule_actions` row (`type = 'category'`,
+ * `payload = {category_id}`) — the new normalized shape (13.4-01,
+ * D-01/D-02/D-03).
+ *
+ * Idempotency: re-running the seeder must not create duplicate rules.
+ * Since the UNIQUE(user_id, field, match, value) constraint that
+ * enforced this at the DB layer moved off the parent table with the
+ * flat columns, idempotency is now checked explicitly — a rule
+ * "already exists" when this user owns a CategorizationRule with a
+ * matching rule_conditions row (field/op/value_type/value). When found,
+ * the row is skipped entirely, preserving that existing rule's
+ * `hits_count`/`active`/`priority` exactly as
+ * `firstOrCreate` did before: a future refactor that reset those
+ * columns would erase real usage data, and the test suite locks that
+ * semantic.
  *
  * Defensive slug lookup: if the fixture references a category slug that
  * does not resolve at seed time (a stale fixture row whose slug was
@@ -52,7 +63,11 @@ final class DefaultCategorizationRuleSeeder
         $fixture = require __DIR__.'/default-categorization-rules.php';
 
         $this->db->connection()->transaction(function () use ($user, $fixture): void {
+            $priority = 0;
+
             foreach ($fixture as $row) {
+                $priority += 10;
+
                 $slug = $row['category'];
                 $categoryId = Category::withoutGlobalScopes()
                     ->whereNull('user_id')
@@ -74,18 +89,41 @@ final class DefaultCategorizationRuleSeeder
                     continue;
                 }
 
-                CategorizationRule::withoutGlobalScopes()->firstOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'field' => $row['field'],
-                        'match' => $row['match'],
-                        'value' => $row['value'],
-                    ],
-                    [
-                        'category_id' => (int) $categoryId,
-                        'active' => true,
-                    ],
-                );
+                $alreadyExists = CategorizationRule::withoutGlobalScopes()
+                    ->where('user_id', $user->id)
+                    ->whereHas('conditions', function ($query) use ($row): void {
+                        $query->where('field', $row['field'])
+                            ->where('op', $row['match'])
+                            ->where('value_type', 'string')
+                            ->where('value', $row['value']);
+                    })
+                    ->exists();
+
+                if ($alreadyExists) {
+                    continue;
+                }
+
+                $rule = CategorizationRule::withoutGlobalScopes()->create([
+                    'user_id' => $user->id,
+                    'priority' => $priority,
+                    'combinator' => 'all',
+                    'active' => true,
+                    'hits_count' => 0,
+                ]);
+
+                $rule->conditions()->create([
+                    'field' => $row['field'],
+                    'op' => $row['match'],
+                    'value_type' => 'string',
+                    'value' => $row['value'],
+                    'value2' => null,
+                ]);
+
+                $rule->actions()->create([
+                    'position' => 0,
+                    'type' => 'category',
+                    'payload' => ['category_id' => (int) $categoryId],
+                ]);
             }
         });
     }

@@ -81,15 +81,43 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['counterparty_normalized'],
             ],
+            // 13.4-01 (Req 5/D-01): categorization_rules is now the PARENT of
+            // the multi-condition/multi-action rules engine; field/match/
+            // value/category_id moved to the new rule_conditions/rule_actions
+            // child tables below. NOTE: rule-authoring sync stays
+            // intentionally out of scope for 13.4 — Create/Update/
+            // DeleteCategorizationRule dispatch no TransactionMutated-style
+            // event today, so this config is forward-prepared, not yet
+            // an active sync surface (RESEARCH.md Pitfall 5 / Assumption A3).
             'categorization_rules' => [
-                'field' => ['strategy' => 'lww', 'nullable' => false],
-                'match' => ['strategy' => 'lww', 'nullable' => false],
-                'value' => ['strategy' => 'lww', 'nullable' => false],
-                'category_id' => ['strategy' => 'lww', 'nullable' => false],
-                'hits_count' => ['strategy' => 'lww', 'nullable' => false],
+                'priority' => ['strategy' => 'lww', 'nullable' => false],
+                'combinator' => ['strategy' => 'lww', 'nullable' => false],
                 'active' => ['strategy' => 'lww', 'nullable' => false],
+                'notes' => ['strategy' => 'lww', 'nullable' => true],
+                'hits_count' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => true,
-                '_create_required' => ['field', 'match', 'value', 'category_id', 'hits_count', 'active'],
+                '_create_required' => ['priority', 'combinator', 'active', 'hits_count'],
+            ],
+            // 13.4-01 (Req 5/D-02): condition child table. Cross-checked
+            // against
+            // Modules/Categorization/Database/Migrations/2026_07_06_000002_create_rule_conditions_table.php.
+            'rule_conditions' => [
+                'field' => ['strategy' => 'lww', 'nullable' => false],
+                'op' => ['strategy' => 'lww', 'nullable' => false],
+                'value_type' => ['strategy' => 'lww', 'nullable' => false],
+                'value' => ['strategy' => 'lww', 'nullable' => false],
+                'value2' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                '_create_required' => ['rule_id', 'field', 'op', 'value_type', 'value'],
+            ],
+            // 13.4-01 (Req 5/D-03): action child table. Cross-checked against
+            // Modules/Categorization/Database/Migrations/2026_07_06_000003_create_rule_actions_table.php.
+            'rule_actions' => [
+                'position' => ['strategy' => 'lww', 'nullable' => false],
+                'type' => ['strategy' => 'lww', 'nullable' => false],
+                'payload' => ['strategy' => 'lww', 'nullable' => false],
+                '_delete_wins' => true,
+                '_create_required' => ['rule_id', 'position', 'type', 'payload'],
             ],
             'counterparties' => [
                 'display_name' => ['strategy' => 'lww', 'nullable' => true],
