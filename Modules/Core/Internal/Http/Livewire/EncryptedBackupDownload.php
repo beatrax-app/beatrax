@@ -12,6 +12,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\BackupEncryptor;
+use Modules\Core\Public\Services\UserDataPathService;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
@@ -65,7 +66,19 @@ final class EncryptedBackupDownload extends Component
         }
 
         $stamp = $clock->now()->format('Y-m-d-His');
-        $plainPath = sys_get_temp_dir().'/beatrax-backup-'.$stamp.'-'.bin2hex(random_bytes(4)).'.sqlite';
+        // Stage the plaintext snapshot inside a private 0700 directory under
+        // the app storage root — NEVER sys_get_temp_dir(), which is world-
+        // traversable (e.g. /tmp at mode 1777). VACUUM INTO bypasses PHP's
+        // umask and creates the file at 0644, so during the (potentially
+        // long) snapshot the entire plaintext database would otherwise be
+        // readable by any other local user; a 0700 parent dir closes that
+        // window regardless of the file's own transient mode. Mirrors the
+        // db:backup command, which likewise stages under app storage rather
+        // than /tmp.
+        $stagingDir = UserDataPathService::appPath('tmp-backups');
+        @mkdir($stagingDir, 0700, true);
+        @chmod($stagingDir, 0700);
+        $plainPath = $stagingDir.DIRECTORY_SEPARATOR.'beatrax-backup-'.$stamp.'-'.bin2hex(random_bytes(4)).'.sqlite';
         $encPath = $plainPath.'.enc';
 
         try {
@@ -76,8 +89,9 @@ final class EncryptedBackupDownload extends Component
             if (! is_file($plainPath)) {
                 throw new RuntimeException('The database snapshot was not produced.');
             }
-            // The snapshot is briefly plaintext on disk — lock it down before
-            // the (cheap) encryption step, mirroring db:backup's chmod 0600.
+            // The snapshot is briefly plaintext on disk — lock the file itself
+            // down too (defense in depth on top of the 0700 dir), mirroring
+            // db:backup's chmod 0600.
             @chmod($plainPath, 0600);
 
             $encryptor->encrypt($plainPath, $encPath, $this->passphrase);
