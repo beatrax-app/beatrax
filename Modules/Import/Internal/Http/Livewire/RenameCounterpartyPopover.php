@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
@@ -118,6 +119,20 @@ final class RenameCounterpartyPopover extends Component
                 // the alias has already persisted and an equivalent
                 // rule was already contributing to the categorization
                 // outcome. Swallow it so the popover closes calmly.
+            } catch (InvalidArgumentException) {
+                // WR-04: CreateCategorizationRule throws
+                // InvalidArgumentException when the embedded category_id
+                // fails assertCategoryVisible() — reachable if
+                // $categoryHint (a public Livewire property re-serialized
+                // with every request payload) is stale, foreign, or a
+                // tampered wire snapshot. Without this catch, the alias
+                // (already durably persisted above) would leave the user
+                // with a half-completed action and an uncaught 500,
+                // unlike every other rule-authoring call site in this
+                // phase (RuleFormModal::save(), CorrectionDivergenceToast::
+                // update()). Swallow it so the popover still closes calmly
+                // — the alias succeeded even though the opportunistic rule
+                // did not.
             }
         }
 
