@@ -80,6 +80,51 @@ it('persists a device_registry self-row for the generated identity', function ()
     expect($self->ed25519_public_key_hex)->toBe($dto->ed25519PublicKeyHex);
 });
 
+it('never stages the plaintext key-file in sys_get_temp_dir(), and cleans it up after the call', function (): void {
+    $user = identityUser('identity-no-systmp');
+
+    $before = (array) glob(sys_get_temp_dir().'/beatrax_identity_*');
+
+    /** @var DeviceIdentityService $service */
+    $service = $this->app->make(DeviceIdentityService::class);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    $service->generateAndPersist((int) $user->id, $session);
+
+    // Security fix (plaintext-key-in-sys_get_temp_dir finding): the staged
+    // key-file must never appear under the system temp directory, before or
+    // after the call — it is staged and cleaned up entirely inside the
+    // sanctioned identity directory.
+    $after = (array) glob(sys_get_temp_dir().'/beatrax_identity_*');
+    expect($after)->toBe($before, 'No beatrax_identity_* files should ever appear in sys_get_temp_dir().');
+
+    // The identity directory itself carries no leftover .tmp staging files —
+    // the finally-unlink ran.
+    $encPath = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    $identityDir = dirname($encPath);
+    $leftoverTmp = (array) glob($identityDir.'/*.tmp');
+    expect($leftoverTmp)->toBe([], 'The identity directory must not retain any staged .tmp file after generateAndPersist().');
+});
+
+it('creates the identity directory at 0700 (not world-traversable)', function (): void {
+    $user = identityUser('identity-dir-perms');
+
+    /** @var DeviceIdentityService $service */
+    $service = $this->app->make(DeviceIdentityService::class);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    $service->generateAndPersist((int) $user->id, $session);
+
+    $encPath = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    $identityDir = dirname($encPath);
+
+    expect(fileperms($identityDir) & 0o777)->toBe(0o700, 'The sync/identity directory must be mode 0700.');
+});
+
 it('it_throws_without_app_lock_kek', function (): void {
     $user = identityUser('identity-nokek');
 

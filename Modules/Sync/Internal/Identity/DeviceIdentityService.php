@@ -88,12 +88,17 @@ final class DeviceIdentityService
             $payload = json_encode($dto->toArray(), JSON_THROW_ON_ERROR);
 
             $encPath = UserDataPathService::appPath("sync/identity/{$userId}.enc");
-            @mkdir(dirname($encPath), 0700, true);
+            $identityDir = dirname($encPath);
+            @mkdir($identityDir, 0700, true);
 
-            $tmpPath = sys_get_temp_dir().'/beatrax_identity_'.bin2hex(random_bytes(8)).'.tmp';
-            if (file_put_contents($tmpPath, $payload, LOCK_EX) === false) {
-                throw new RuntimeException('Failed to stage the device identity key-file.');
-            }
+            // Stage the plaintext key-file inside the 0700 identity directory
+            // created above — NEVER sys_get_temp_dir(), which is world-
+            // traversable (e.g. /tmp at mode 1777) — and lock it to 0600
+            // immediately (SecureTempFile::write throws if the chmod fails),
+            // so a crash between staging and the finally-unlink below can
+            // never leave the secret keys world-readable.
+            $tmpPath = $identityDir.DIRECTORY_SEPARATOR.'beatrax_identity_'.bin2hex(random_bytes(8)).'.tmp';
+            SecureTempFile::write($tmpPath, $payload);
 
             try {
                 $this->backupEncryptor->encrypt($tmpPath, $encPath, $kek);
