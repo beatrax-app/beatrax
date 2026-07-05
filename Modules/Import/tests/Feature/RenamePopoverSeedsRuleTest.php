@@ -11,13 +11,16 @@ use Modules\Ledger\Models\Category;
 /*
  * RENAME-03 coverage: when the user picks an optional category hint
  * inside the rename popover, saving the popover both writes the
- * merchant_aliases row AND seeds a categorization_rules row via the
+ * merchant_aliases row AND seeds a categorization_rules row (+ its
+ * rule_conditions/rule_actions children, D-01/D-02/D-03) via the
  * existing CreateCategorizationRule action. Leaving the category
  * hint blank persists only the alias.
  *
- * The seeded rule keys on `field='description'`, `match='contains'`,
- * `value=$generalized_pattern` so future imports of the same merchant
- * code auto-categorize without the user touching the rules surface.
+ * The seeded rule keys on a single `field='description'`,
+ * `op='contains'`, `value_type='string'`, `value=$generalized_pattern`
+ * condition plus a single `category` action so future imports of the
+ * same merchant code auto-categorize without the user touching the
+ * rules surface.
  */
 
 beforeEach(function (): void {
@@ -51,12 +54,22 @@ it('seeds a categorization rule when the optional category hint is set', functio
         ->first();
     expect($alias)->not->toBeNull();
 
-    $rule = DB::table('categorization_rules')
+    $ruleId = DB::table('categorization_rules')
         ->where('user_id', $this->user->id)
-        ->where('category_id', $this->category->id)
-        ->first();
-    expect($rule)->not->toBeNull();
-    expect(mb_strtolower((string) $rule->value))->toContain('shell');
+        ->value('id');
+    expect($ruleId)->not->toBeNull();
+
+    $condition = DB::table('rule_conditions')->where('rule_id', $ruleId)->first();
+    expect($condition)->not->toBeNull();
+    expect($condition->field)->toBe('description');
+    expect($condition->op)->toBe('contains');
+    expect(mb_strtolower((string) $condition->value))->toContain('shell');
+
+    $action = DB::table('rule_actions')->where('rule_id', $ruleId)->where('type', 'category')->first();
+    expect($action)->not->toBeNull();
+    /** @var array<string, mixed> $payload */
+    $payload = json_decode((string) $action->payload, true);
+    expect((int) $payload['category_id'])->toBe($this->category->id);
 });
 
 it('does not seed a categorization rule when the category hint is null', function (): void {
