@@ -106,6 +106,13 @@ final class RuleEngine
      * then hydrated into a real `RuleAction` model so its `payload`
      * JSON cast applies for callers.
      *
+     * WR-02: `->orderBy('id')` is a deliberate tiebreak after
+     * `->orderBy('position')` — `position` has no uniqueness enforcement
+     * at the write layer, so two `rule_actions` rows sharing the same
+     * position (reachable via any non-UI caller) would otherwise fold in
+     * a DB-incidental order, undermining the same determinism guarantee
+     * `match()`'s own docblock requires for rule ordering.
+     *
      * @return list<RuleAction>
      */
     private function actionsFor(int $ruleId): array
@@ -115,6 +122,7 @@ final class RuleEngine
             ->table('rule_actions')
             ->where('rule_id', $ruleId)
             ->orderBy('position')
+            ->orderBy('id')
             ->get();
 
         $actions = [];

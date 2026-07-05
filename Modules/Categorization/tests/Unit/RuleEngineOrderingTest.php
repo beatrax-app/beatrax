@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Categorization\Models\CategorizationRule;
@@ -87,6 +88,45 @@ it('tiebreaks equal-priority matching rules by id ascending', function (): void 
 
     expect(array_map(fn ($m) => $m->ruleId, $result))
         ->toBe([$first->id, $second->id]);
+});
+
+it('tiebreaks same-position rule_actions by id ascending (WR-02)', function (): void {
+    $rule = makeOrderingRule($this->user->id, 10, 'spotify');
+    // makeOrderingRule() already seeds one position=0 category action —
+    // capture its id before adding two more rows at the SAME position.
+    $seededActionId = (int) $rule->actions()->firstOrFail()->id;
+
+    // rule_actions.position carries no uniqueness enforcement at the write
+    // layer (only RuleFormModal's own UI always assigns unique sequential
+    // positions) — insert two more actions sharing position=0 directly,
+    // exactly as a non-UI caller (direct-action/DevTools call) could reach.
+    $secondActionId = (int) DB::table('rule_actions')->insertGetId([
+        'rule_id' => $rule->id,
+        'position' => 0,
+        'type' => 'note',
+        'payload' => json_encode(['text' => 'second', 'mode' => 'set']),
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+    $thirdActionId = (int) DB::table('rule_actions')->insertGetId([
+        'rule_id' => $rule->id,
+        'position' => 0,
+        'type' => 'note',
+        'payload' => json_encode(['text' => 'third', 'mode' => 'set']),
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+    expect($seededActionId)->toBeLessThan($secondActionId)
+        ->and($secondActionId)->toBeLessThan($thirdActionId);
+
+    $result = $this->engine->match(orderingMatchInput(), $this->user);
+
+    expect($result)->toHaveCount(1);
+    // All three actions share position=0, so the id tiebreak alone
+    // determines the order — without it, a DB-incidental order would be
+    // free to return them in any sequence.
+    expect(array_map(fn ($a) => $a->id, $result[0]->actions))
+        ->toBe([$seededActionId, $secondActionId, $thirdActionId]);
 });
 
 it('returns a byte-identical ordered ruleId list on repeat calls', function (): void {
