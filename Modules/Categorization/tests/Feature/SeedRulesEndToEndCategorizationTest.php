@@ -231,6 +231,107 @@ it('keeps anonymised personal-identifier rows uncategorised', function (): void 
     }
 });
 
+it('a migrated single-condition rule assigns the exact category the old engine would have (Req 5 parity)', function (): void {
+    // Netflix is one of the default-categorization-rules.php fixture
+    // rows, forward-migrated by 13.4-01 from a flat (field/match/value)
+    // row into one categorization_rules parent + one rule_conditions
+    // row + one rule_actions row. Driving it through the real
+    // ApplyAutoCategoryStage (RuleEngine::match + RuleApplier::applyAtImport)
+    // proves the migrated rule still lands the exact pre-existing
+    // expected category — the regression-parity proof Req 5 demands.
+    $stage = $this->app->make(ApplyAutoCategoryStage::class);
+    $canonical = buildCanonical(
+        userId: $this->user->id,
+        accountId: $this->account->id,
+        importRunId: $this->importRun->id,
+        rowIndex: 5000,
+        counterparty: 'Netflix International B.V.',
+        description: '',
+    );
+
+    $outcome = $stage->apply($canonical, $this->user);
+
+    expect($outcome->provenance)->toBe('rule');
+    expect($outcome->ruleId)->not->toBeNull();
+    expect($outcome->canonical->categoryId)->not->toBeNull();
+
+    $resolvedSlug = Category::withoutGlobalScopes()
+        ->where('id', $outcome->canonical->categoryId)
+        ->value('slug');
+    expect($resolvedSlug)->toBe('subscriptions-streaming');
+});
+
+it('falls back to the merchant_memories category when no seed rule matches (memory fallback parity)', function (): void {
+    // "Boerderij Winkel De Groene Erf" matches none of the
+    // universal-merchant seed rules — this is exactly the RESEARCH
+    // Pattern 4 scenario: RuleEngine::match() returns zero rules with
+    // a category action, so ApplyAutoCategoryStage must fall through
+    // to merchant_memories, not leave the row uncategorised.
+    $counterparty = 'Boerderij Winkel De Groene Erf';
+    $normalized = mb_strtolower($counterparty);
+    $groceriesId = (int) Category::withoutGlobalScopes()->whereNull('user_id')->where('slug', 'groceries')->value('id');
+
+    $merchantId = (int) DB::table('merchants')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => $normalized,
+        'normalized_name' => $normalized,
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+    $memoryId = (int) DB::table('merchant_memories')->insertGetId([
+        'user_id' => $this->user->id,
+        'merchant_id' => $merchantId,
+        'category_id' => $groceriesId,
+        'occurrence_count' => 3,
+        'last_seen_at' => CarbonImmutable::now()->toDateTimeString(),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    $stage = $this->app->make(ApplyAutoCategoryStage::class);
+    $canonical = buildCanonical(
+        userId: $this->user->id,
+        accountId: $this->account->id,
+        importRunId: $this->importRun->id,
+        rowIndex: 5001,
+        counterparty: $counterparty,
+        description: '',
+    );
+
+    $outcome = $stage->apply($canonical, $this->user);
+
+    expect($outcome->provenance)->toBe('memory');
+    expect($outcome->memoryId)->toBe($memoryId);
+    expect($outcome->ruleId)->toBeNull();
+    expect($outcome->canonical->categoryId)->toBe($groceriesId);
+    expect($outcome->canonical->autoCategoryProvenance)->toBe([
+        'source' => 'memory',
+        'rule_id' => null,
+        'memory_id' => $memoryId,
+        'category_id' => $groceriesId,
+    ]);
+});
+
+it('leaves a transaction with neither a matching rule nor a memory uncategorised (manual)', function (): void {
+    $stage = $this->app->make(ApplyAutoCategoryStage::class);
+    $canonical = buildCanonical(
+        userId: $this->user->id,
+        accountId: $this->account->id,
+        importRunId: $this->importRun->id,
+        rowIndex: 5002,
+        counterparty: 'Totally Unmatched Merchant XYZ',
+        description: '',
+    );
+
+    $outcome = $stage->apply($canonical, $this->user);
+
+    expect($outcome->provenance)->toBe('manual');
+    expect($outcome->ruleId)->toBeNull();
+    expect($outcome->memoryId)->toBeNull();
+    expect($outcome->canonical->categoryId)->toBeNull();
+    expect($outcome->canonical->autoCategoryProvenance)->toBeNull();
+});
+
 it('every personal-identifier-prefix fixture row stays uncategorised under the seed rules (fixture-vs-rules consistency)', function (): void {
     // Regression for WR-06. The 40% ratio gate alone cannot detect a
     // contributor adding a categorisable rule whose value collides
