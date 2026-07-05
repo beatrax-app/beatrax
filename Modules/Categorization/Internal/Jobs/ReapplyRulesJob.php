@@ -1,0 +1,231 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Categorization\Internal\Jobs;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\LazyCollection;
+use Modules\Categorization\Internal\Services\RuleApplier;
+use Modules\Categorization\Internal\Services\RuleEngine;
+use Modules\Categorization\Internal\Services\RuleMatchInput;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
+use stdClass;
+
+/**
+ * User-triggered re-apply-to-history job (Req 4, D-05) — walks a
+ * user's NON-split transactions in chunks and re-runs
+ * `RuleEngine::match()` + `RuleApplier::applyAtReapply()` against every
+ * eligible row. `RuleApplier::applyAtReapply()` already guarantees
+ * per-field manual-provenance preservation (D-04), write-only-on-change
+ * idempotency, and dispatches one `TransactionMutated` per genuinely
+ * changed field — this job's own job is purely the chunked walk plus
+ * the two guards RuleApplier cannot apply on its own: reconciled/locked
+ * rows and split transactions.
+ *
+ * **Split guard (T-13.4-23):** `whereNotExists(transaction_splits)`
+ * excludes every split transaction from the walk entirely — a split
+ * transaction's category/tax semantics are leg-owned (13.1 D-02/D-06a),
+ * so re-apply never even reads a split parent, let alone its legs. This
+ * mirrors `RuleEngineIgnoresSplitLegsTest`'s "never touch
+ * transaction_splits" invariant.
+ *
+ * **Reconciled guard (T-13.4-22):** `TransactionStatusQuery::
+ * reconciledIdsAmong()` is called ONCE per chunk (never per-row) so a
+ * reconciled/locked transaction is skipped before `RuleEngine`/
+ * `RuleApplier` ever see it.
+ *
+ * **hits_count is NOT touched here** (Pitfall 3) — that counter is
+ * bumped only by `ApplyAutoCategoryStage` at import time; re-apply
+ * counts matches via the cache progress payload instead.
+ *
+ * **Concurrency contract:** unlike `BackfillAnomaliesJob`'s
+ * first-activation-only shape (`ShouldBeUniqueUntilProcessing` +
+ * a persistent `whereNull(...)->update(...)` claim), this job is
+ * re-triggerable on every user click — a plain `ShouldBeUnique`
+ * collapses a double-click into a single queued run without any
+ * persistent claim column; a fresh dispatch after a prior run
+ * completes is a legitimate new pass, not a duplicate.
+ *
+ * **Progress (Plan 08):** a pollable payload is written to the cache
+ * under `rule-reapply:{userId}` (no new synced table) after every
+ * chunk, so the UI can show a live "N of M" readout and a completion
+ * summary. The cache entry TTLs out on its own — no cleanup job
+ * needed.
+ *
+ * **Module boundary:** this job reads `transactions` for the chunk
+ * walk (an allowed cross-module read, mirroring
+ * `BackfillAnomaliesJob`/`SafetyNetAnomalySweepJob`) but performs NO
+ * `transactions` WRITE itself — every mutation is delegated to
+ * `RuleApplier`, which in turn delegates to the Ledger Public actions
+ * (Plan 04/05).
+ */
+final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
+{
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
+    /** Chunk size for the history walk AND the reconciled-batch filter. */
+    private const CHUNK = 500;
+
+    /**
+     * Progress cache TTL in seconds — long enough to outlive the whole
+     * run (including retries) plus a reasonable UI poll gap after
+     * completion.
+     */
+    private const PROGRESS_TTL_SECONDS = 3600;
+
+    public int $tries = 3;
+
+    /** @var array<int, int> */
+    public array $backoff = [60, 300, 900];
+
+    public function __construct(
+        public readonly int $userId,
+    ) {}
+
+    public function uniqueId(): string
+    {
+        return (string) $this->userId;
+    }
+
+    public function uniqueFor(): int
+    {
+        return 600;
+    }
+
+    /** Cache key Plan 08's polling UI reads the progress payload from. */
+    public static function progressCacheKey(int $userId): string
+    {
+        return "rule-reapply:{$userId}";
+    }
+
+    public function handle(
+        RuleEngine $engine,
+        RuleApplier $applier,
+        TransactionStatusQuery $statusQuery,
+        DatabaseManager $db,
+        Repository $cache,
+        Clock $clock,
+    ): void {
+        /** @var User|null $user */
+        $user = User::query()->where('id', $this->userId)->first();
+        if ($user === null) {
+            return;
+        }
+
+        $connection = $db->connection();
+        $userId = $this->userId;
+
+        $nonSplitQuery = static fn (): Builder => $connection->table('transactions')
+            ->where('transactions.user_id', $userId)
+            ->whereNotExists(static function (Builder $sub): void {
+                $sub->select($sub->raw(1))
+                    ->from('transaction_splits')
+                    ->whereColumn('transaction_splits.transaction_id', 'transactions.id');
+            });
+
+        $total = $nonSplitQuery()->count();
+
+        $cacheKey = self::progressCacheKey($userId);
+
+        $progress = [
+            'status' => 'running',
+            'checked' => 0,
+            'total' => $total,
+            'fields_updated' => 0,
+            'transactions_updated' => 0,
+            'reconciled_skipped' => 0,
+            'started_at' => $clock->now()->toIso8601String(),
+            'finished_at' => null,
+        ];
+        $cache->put($cacheKey, $progress, self::PROGRESS_TTL_SECONDS);
+
+        /** @var LazyCollection<int, stdClass> $rows */
+        $rows = $nonSplitQuery()
+            ->select(['transactions.id', 'counterparty_name', 'description', 'settled_amount_minor', 'posted_at'])
+            ->orderBy('transactions.id')
+            ->lazyById(self::CHUNK, 'transactions.id', 'id');
+
+        $rows->chunk(self::CHUNK)->each(
+            /** @param  LazyCollection<int, stdClass>  $chunk */
+            function (LazyCollection $chunk) use (
+                $engine,
+                $applier,
+                $statusQuery,
+                $user,
+                $userId,
+                $cache,
+                $cacheKey,
+                &$progress,
+            ): void {
+                $ids = [];
+                foreach ($chunk as $row) {
+                    if (is_numeric($row->id)) {
+                        $ids[] = (int) $row->id;
+                    }
+                }
+
+                $reconciledIds = $statusQuery->reconciledIdsAmong($userId, $ids);
+
+                foreach ($chunk as $row) {
+                    $transactionId = is_numeric($row->id) ? (int) $row->id : 0;
+                    if ($transactionId <= 0) {
+                        continue;
+                    }
+
+                    $progress['checked'] = $progress['checked'] + 1;
+
+                    if (in_array($transactionId, $reconciledIds, true)) {
+                        $progress['reconciled_skipped'] = $progress['reconciled_skipped'] + 1;
+
+                        continue;
+                    }
+
+                    $input = self::matchInputFromRow($row);
+                    $matched = $engine->match($input, $user);
+                    $changed = $applier->applyAtReapply($matched, $transactionId, $userId);
+
+                    if ($changed !== []) {
+                        $progress['transactions_updated'] = $progress['transactions_updated'] + 1;
+                        $progress['fields_updated'] = $progress['fields_updated'] + count($changed);
+                    }
+                }
+
+                $cache->put($cacheKey, $progress, self::PROGRESS_TTL_SECONDS);
+            }
+        );
+
+        $progress['status'] = 'done';
+        $progress['finished_at'] = $clock->now()->toIso8601String();
+        $cache->put($cacheKey, $progress, self::PROGRESS_TTL_SECONDS);
+    }
+
+    private static function matchInputFromRow(stdClass $row): RuleMatchInput
+    {
+        $counterpartyName = is_string($row->counterparty_name) ? $row->counterparty_name : null;
+        $description = is_string($row->description) ? $row->description : null;
+        $settledAmountMinor = is_numeric($row->settled_amount_minor) ? (int) $row->settled_amount_minor : 0;
+        $postedAt = is_string($row->posted_at) ? CarbonImmutable::parse($row->posted_at) : CarbonImmutable::now();
+
+        return new RuleMatchInput(
+            counterpartyName: $counterpartyName,
+            description: $description,
+            settledAmountMinor: $settledAmountMinor,
+            postedAt: $postedAt,
+        );
+    }
+}
