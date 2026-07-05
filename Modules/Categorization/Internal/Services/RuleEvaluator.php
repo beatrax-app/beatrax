@@ -6,7 +6,6 @@ namespace Modules\Categorization\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
-use Modules\Core\Models\User;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use stdClass;
@@ -21,10 +20,6 @@ use stdClass;
  * the canonical row's merchant, for `ApplyAutoCategoryStage` to apply
  * ONLY when none of the fired rules carried a `category` action
  * (RESEARCH Pattern 4).
- *
- * `evaluate()` is kept as a thin memory-only wrapper around
- * `lookupMemory()` for callers that want the `RuleEvaluationOutcome`
- * shape rather than the raw `stdClass` row.
  *
  * Reads are scoped by `where('user_id', $user->id)` on every query so
  * a foreign user's memory never fires for the current user.
@@ -42,19 +37,6 @@ use stdClass;
 final class RuleEvaluator
 {
     public function __construct(private readonly DatabaseManager $db) {}
-
-    public function evaluate(CanonicalTransaction $tx, User $user): RuleEvaluationOutcome
-    {
-        $memory = $this->lookupMemory($tx, $user->id);
-        if ($memory === null) {
-            return RuleEvaluationOutcome::none();
-        }
-
-        $categoryId = self::toInt($memory->category_id);
-        $memoryId = self::toInt($memory->id);
-
-        return RuleEvaluationOutcome::memory($categoryId, $memoryId, 90);
-    }
 
     /**
      * Pulls the merchant_memories row for the canonical row's merchant
@@ -89,10 +71,5 @@ final class RuleEvaluator
             ->first(['mm.id', 'mm.category_id', 'mm.occurrence_count']);
 
         return $row;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

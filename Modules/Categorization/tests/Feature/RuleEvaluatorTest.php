@@ -19,10 +19,11 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  * `categorization_rules` matching/application (see
  * `RuleEngineConditionMatchingTest`/`RuleEngineOrderingTest`, Plan 02,
  * for that coverage). What remains is RuleEvaluator's sole surviving
- * responsibility — the `merchant_memories` fallback lookup — exercised
- * both via `evaluate()` (the `RuleEvaluationOutcome` wrapper) and
- * `lookupMemory()` directly (the shape `ApplyAutoCategoryStage` now
- * calls).
+ * responsibility — the `merchant_memories` fallback lookup, exercised
+ * directly via `lookupMemory()` (the shape `ApplyAutoCategoryStage`
+ * actually calls in production — the `evaluate()`/`RuleEvaluationOutcome`
+ * wrapper this file used to also cover had no production caller and was
+ * removed as dead code, IN-01).
  */
 
 beforeEach(function (): void {
@@ -113,26 +114,22 @@ it('returns no candidate when nothing matches', function (): void {
     $evaluator = $this->app->make(RuleEvaluator::class);
     $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Random Merchant', 'random merchant');
 
-    $outcome = $evaluator->evaluate($tx, $this->user);
+    $row = $evaluator->lookupMemory($tx, $this->user->id);
 
-    expect($outcome->categoryId)->toBeNull();
-    expect($outcome->source)->toBeNull();
-    expect($outcome->ruleId)->toBeNull();
-    expect($outcome->memoryId)->toBeNull();
+    expect($row)->toBeNull();
 });
 
-it('falls back to memory at score 90 when a memory exists', function (): void {
+it('falls back to memory when a memory exists', function (): void {
     $seeded = seedMerchantAndMemory($this->user->id, 'spotify premium', $this->streaming->id, occurrenceCount: 4);
 
     $evaluator = $this->app->make(RuleEvaluator::class);
     $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
 
-    $outcome = $evaluator->evaluate($tx, $this->user);
+    $row = $evaluator->lookupMemory($tx, $this->user->id);
 
-    expect($outcome->categoryId)->toBe($this->streaming->id);
-    expect($outcome->source)->toBe('memory');
-    expect($outcome->memoryId)->toBe($seeded['memory_id']);
-    expect($outcome->score)->toBe(90);
+    expect($row)->not->toBeNull();
+    expect((int) $row->category_id)->toBe($this->streaming->id);
+    expect((int) $row->id)->toBe($seeded['memory_id']);
 });
 
 it('does NOT fire a foreign-user memory for the current user', function (): void {
@@ -147,9 +144,9 @@ it('does NOT fire a foreign-user memory for the current user', function (): void
     $evaluator = $this->app->make(RuleEvaluator::class);
     $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
 
-    $outcome = $evaluator->evaluate($tx, $this->user);
+    $row = $evaluator->lookupMemory($tx, $this->user->id);
 
-    expect($outcome->categoryId)->toBeNull();
+    expect($row)->toBeNull();
 });
 
 it('skips the memory lookup when counterparty_normalized is the empty sentinel', function (): void {
@@ -158,9 +155,9 @@ it('skips the memory lookup when counterparty_normalized is the empty sentinel',
     $evaluator = $this->app->make(RuleEvaluator::class);
     $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, null, '_no_counterparty');
 
-    $outcome = $evaluator->evaluate($tx, $this->user);
+    $row = $evaluator->lookupMemory($tx, $this->user->id);
 
-    expect($outcome->categoryId)->toBeNull();
+    expect($row)->toBeNull();
 });
 
 it('memory uses highest occurrence_count when multiple memories exist for the same merchant', function (): void {
@@ -195,10 +192,10 @@ it('memory uses highest occurrence_count when multiple memories exist for the sa
     $evaluator = $this->app->make(RuleEvaluator::class);
     $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
 
-    $outcome = $evaluator->evaluate($tx, $this->user);
+    $row = $evaluator->lookupMemory($tx, $this->user->id);
 
-    expect($outcome->source)->toBe('memory');
-    expect($outcome->categoryId)->toBe($this->groceries->id);
+    expect($row)->not->toBeNull();
+    expect((int) $row->category_id)->toBe($this->groceries->id);
 });
 
 it('lookupMemory() is public and returns the raw memory row directly', function (): void {
