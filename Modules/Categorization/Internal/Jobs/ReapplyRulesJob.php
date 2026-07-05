@@ -21,7 +21,9 @@ use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
+use Psr\Log\LoggerInterface;
 use stdClass;
+use Throwable;
 
 /**
  * User-triggered re-apply-to-history job (Req 4, D-05) — walks a
@@ -120,6 +122,7 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
         DatabaseManager $db,
         Repository $cache,
         Clock $clock,
+        LoggerInterface $logger,
     ): void {
         /** @var User|null $user */
         $user = User::query()->where('id', $this->userId)->first();
@@ -149,6 +152,13 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
             'fields_updated' => 0,
             'transactions_updated' => 0,
             'reconciled_skipped' => 0,
+            // WR-03: rows skipped because match()/applyAtReapply() threw
+            // (e.g. a malformed date condition value CreateCategorizationRule/
+            // UpdateCategorizationRule's normalizeCondition() didn't
+            // reject) — surfaced so a run that silently skipped rows is
+            // still visible in the polled progress payload, not just
+            // logged.
+            'rows_errored' => 0,
             'started_at' => $clock->now()->toIso8601String(),
             'finished_at' => null,
         ];
@@ -170,6 +180,7 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
                 $userId,
                 $cache,
                 $cacheKey,
+                $logger,
                 &$progress,
             ): void {
                 $ids = [];
@@ -195,9 +206,30 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
                         continue;
                     }
 
-                    $input = self::matchInputFromRow($row);
-                    $matched = $engine->match($input, $user);
-                    $changed = $applier->applyAtReapply($matched, $transactionId, $userId);
+                    // WR-03: fail-open per row, mirroring
+                    // ApplyAutoCategoryStage/RuleApplier's own "a rule
+                    // error never blocks the whole pass" convention. A
+                    // malformed condition value (e.g. a non-date string
+                    // reaching RuleEngine::matchDate()'s
+                    // CarbonImmutable::parse() call) would otherwise throw
+                    // uncaught out of this chunk closure, failing the
+                    // ENTIRE queued job (all remaining chunks too) instead
+                    // of just skipping the one bad row.
+                    try {
+                        $input = self::matchInputFromRow($row);
+                        $matched = $engine->match($input, $user);
+                        $changed = $applier->applyAtReapply($matched, $transactionId, $userId);
+                    } catch (Throwable $e) {
+                        $progress['rows_errored'] = $progress['rows_errored'] + 1;
+                        $logger->warning('ReapplyRulesJob skipped a row after a match/apply failure.', [
+                            'user_id' => $userId,
+                            'transaction_id' => $transactionId,
+                            'exception' => $e::class,
+                            'message' => $e->getMessage(),
+                        ]);
+
+                        continue;
+                    }
 
                     if ($changed !== []) {
                         $progress['transactions_updated'] = $progress['transactions_updated'] + 1;

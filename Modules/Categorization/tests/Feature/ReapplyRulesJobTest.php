@@ -20,6 +20,7 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
+use Psr\Log\LoggerInterface;
 
 /*
  * 13.4-07 Task 2 (Req 4): ReapplyRulesJob idempotency + guards.
@@ -44,6 +45,7 @@ function reapplyRunJob(int $userId): void
         app(DatabaseManager::class),
         app(CacheRepository::class),
         app(Clock::class),
+        app(LoggerInterface::class),
     );
 }
 
@@ -286,4 +288,54 @@ it('a second identical re-apply pass writes zero fields (idempotent)', function 
     expect((int) $secondPassProgress['fields_updated'])->toBe(0);
     expect((int) $secondPassProgress['transactions_updated'])->toBe(0);
     expect($secondPassProgress['status'])->toBe('done');
+});
+
+it('completes the job instead of throwing when a rule\'s malformed date condition value crashes matching (WR-03)', function (): void {
+    $fixtures = seedReapplyFixtures();
+
+    // A date-type condition whose stored `value` is not a well-formed
+    // date string — neither CreateCategorizationRule's nor
+    // UpdateCategorizationRule's normalizeCondition() validates the
+    // date FORMAT of a date value_type (only non-empty), so this is
+    // reachable via any non-`<input type=date>` caller, or residual bad
+    // data. RuleEngine::matchDate() calls CarbonImmutable::parse() on
+    // it, which throws — and because RuleEngine::match() evaluates
+    // every active rule against every row with no per-condition
+    // short-circuit, this ONE broken rule poisons match() for every
+    // transaction in the walk, not just one row. Before the fix, that
+    // exception propagated uncaught out of the chunk closure, failing
+    // the whole queued job (tries exhausted, progress stuck at
+    // 'running' forever). After the fix, each row is caught and
+    // skipped individually and the job still reaches 'done'.
+    $brokenRule = CategorizationRule::query()->create([
+        'user_id' => $fixtures['user']->id,
+        'priority' => 0,
+        'active' => true,
+        'combinator' => 'all',
+        'notes' => null,
+        'hits_count' => 0,
+    ]);
+    $brokenRule->conditions()->create([
+        'field' => 'merchant',
+        'op' => 'after',
+        'value_type' => 'date',
+        'value' => 'not-a-real-date',
+        'value2' => null,
+    ]);
+    $brokenRule->actions()->create(['position' => 0, 'type' => 'category', 'payload' => ['category_id' => $fixtures['ruleCategory']->id]]);
+
+    $tx = makeReapplyTx($fixtures['user'], $fixtures['account'], $fixtures['run'], 6);
+
+    // The call itself must not throw — pre-fix, this line would raise
+    // an uncaught Carbon\Exceptions\InvalidFormatException, failing this
+    // test (and, in production, the whole queued job).
+    reapplyRunJob($fixtures['user']->id);
+
+    $progress = reapplyProgress($fixtures['user']->id);
+    expect($progress['status'])->toBe('done');
+    expect((int) $progress['rows_errored'])->toBeGreaterThanOrEqual(1);
+
+    // The row was skipped (fail-open), not silently mis-categorized.
+    $tx->refresh();
+    expect($tx->category_id)->toBeNull();
 });
