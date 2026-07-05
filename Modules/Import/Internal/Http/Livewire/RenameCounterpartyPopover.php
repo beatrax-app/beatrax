@@ -6,6 +6,7 @@ namespace Modules\Import\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -69,6 +70,7 @@ final class RenameCounterpartyPopover extends Component
         CreateMerchantAlias $createAlias,
         CreateCategorizationRule $createRule,
         CurrentUser $currentUser,
+        DatabaseManager $db,
     ): void {
         $this->validate([
             'friendly' => ['required', 'string', 'min:1', 'max:255'],
@@ -90,20 +92,32 @@ final class RenameCounterpartyPopover extends Component
         }
 
         if ($this->categoryHint !== null && $this->categoryHint > 0 && $generalizedTrimmed !== '') {
+            // Gap-numbered priority default (13.4-UI-SPEC.md § Priority
+            // field): appends after every existing rule for this user,
+            // mirroring RuleFormModal's create-mode default.
+            $maxPriority = $db->connection()
+                ->table('categorization_rules')
+                ->where('user_id', $user->id)
+                ->max('priority');
+            $priority = (is_numeric($maxPriority) ? (int) $maxPriority : 0) + 10;
+
             try {
                 ($createRule)(
                     $user,
-                    'description',
-                    'contains',
-                    $generalizedTrimmed,
-                    $this->categoryHint,
+                    $priority,
+                    'all',
+                    true,
+                    null,
+                    [['field' => 'description', 'op' => 'contains', 'value_type' => 'string', 'value' => $generalizedTrimmed]],
+                    [['type' => 'category', 'payload' => ['category_id' => $this->categoryHint]]],
                 );
             } catch (ValidationException) {
-                // A duplicate rule (same field/match/value combination
-                // already seeded for this user) is benign — the alias
-                // has already persisted and the rule was already
-                // contributing to the categorization outcome. Swallow
-                // the duplicate signal so the popover closes calmly.
+                // A zero-condition/zero-action rejection can't happen
+                // here (both are always supplied) — retained as
+                // defence-in-depth. A duplicate-rule signal is benign:
+                // the alias has already persisted and an equivalent
+                // rule was already contributing to the categorization
+                // outcome. Swallow it so the popover closes calmly.
             }
         }
 
