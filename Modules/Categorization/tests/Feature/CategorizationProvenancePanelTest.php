@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Container\Container;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Categorization\Internal\Http\Livewire\CategorizationProvenancePanel;
+use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -47,22 +49,20 @@ beforeEach(function (): void {
     ]);
 });
 
-function seedProvenanceRule(int $userId, int $categoryId, string $value = 'SPOTIFY'): int
+function seedProvenanceRule(User $user, int $categoryId, string $value = 'SPOTIFY'): int
 {
-    $id = DB::table('categorization_rules')->insertGetId([
-        'user_id' => $userId,
-        'field' => 'merchant',
-        'match' => 'contains',
-        'value' => $value,
-        'category_id' => $categoryId,
-        'hits_count' => 0,
-        'active' => true,
-        'notes' => null,
-        'created_at' => CarbonImmutable::now()->toDateTimeString(),
-        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
-    ]);
+    /** @var CreateCategorizationRule $create */
+    $create = Container::getInstance()->make(CreateCategorizationRule::class);
 
-    return (int) $id;
+    return ($create)(
+        $user,
+        10,
+        'all',
+        true,
+        null,
+        [['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => $value]],
+        [['type' => 'category', 'payload' => ['category_id' => $categoryId]]],
+    );
 }
 
 function seedProvTransaction(int $userId, int $accountId, int $importRunId, int $categoryId, ?array $provenance): int
@@ -97,7 +97,7 @@ function seedProvTransaction(int $userId, int $accountId, int $importRunId, int 
 }
 
 it('renders the rule variant when provenance.source === rule', function (): void {
-    $ruleId = seedProvenanceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedProvenanceRule($this->user, $this->streaming->id);
     $txId = seedProvTransaction(
         $this->user->id,
         $this->account->id,
@@ -147,7 +147,7 @@ it('renders nothing when provenance is null (manual categorization)', function (
 });
 
 it('toggles the two-step inline remove-confirmation flow on the rule variant', function (): void {
-    $ruleId = seedProvenanceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedProvenanceRule($this->user, $this->streaming->id);
     $txId = seedProvTransaction(
         $this->user->id,
         $this->account->id,
@@ -167,7 +167,7 @@ it('toggles the two-step inline remove-confirmation flow on the rule variant', f
 });
 
 it('removes the rule when removeRule is invoked and flips the panel to none variant', function (): void {
-    $ruleId = seedProvenanceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedProvenanceRule($this->user, $this->streaming->id);
     $txId = seedProvTransaction(
         $this->user->id,
         $this->account->id,
@@ -192,7 +192,7 @@ it('removeRule catches NotFoundHttpException when the rule was deleted in anothe
     // visible row and throws NotFoundHttpException. The component
     // must catch it, surface a calm flash, and re-hydrate the panel
     // — never a 500 / framework error page.
-    $ruleId = seedProvenanceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedProvenanceRule($this->user, $this->streaming->id);
     $txId = seedProvTransaction(
         $this->user->id,
         $this->account->id,
@@ -226,7 +226,7 @@ it('removeRule catches NotFoundHttpException when the panel carries a foreign-us
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
-    $foreignRuleId = seedProvenanceRule($other->id, $this->streaming->id, 'NETFLIX');
+    $foreignRuleId = seedProvenanceRule($other, $this->streaming->id, 'NETFLIX');
 
     $txId = seedProvTransaction(
         $this->user->id,
@@ -248,7 +248,7 @@ it('removeRule catches NotFoundHttpException when the panel carries a foreign-us
 });
 
 it('dispatches rule-form:open with the ruleId when updateRule is clicked', function (): void {
-    $ruleId = seedProvenanceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedProvenanceRule($this->user, $this->streaming->id);
     $txId = seedProvTransaction(
         $this->user->id,
         $this->account->id,
@@ -277,7 +277,7 @@ it('dispatches inline-category-picker:open from the memory variant overrideMemor
 });
 
 it('falls back to none variant when the referenced rule has been deleted', function (): void {
-    $ruleId = seedProvenanceRule($this->user->id, $this->streaming->id);
+    $ruleId = seedProvenanceRule($this->user, $this->streaming->id);
     $txId = seedProvTransaction(
         $this->user->id,
         $this->account->id,

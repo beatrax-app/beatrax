@@ -43,13 +43,8 @@ final class CategorizationProvenancePanel extends Component
 
     public ?int $ruleId = null;
 
-    public ?int $categoryId = null;
-
-    public string $field = '';
-
-    public string $match = '';
-
-    public string $value = '';
+    /** Natural-language fragment of the rule's first condition (mirrors RulesPage). */
+    public string $conditionSummary = '';
 
     public string $categoryPath = '';
 
@@ -137,9 +132,7 @@ final class CategorizationProvenancePanel extends Component
             'variant' => $this->variant,
             'transactionId' => $this->transactionId,
             'ruleId' => $this->ruleId,
-            'field' => $this->field,
-            'match' => $this->match,
-            'value' => $this->value,
+            'conditionSummary' => $this->conditionSummary,
             'categoryPath' => $this->categoryPath,
             'confirmingRemove' => $this->confirmingRemove,
             'flashMessage' => $this->flashMessage,
@@ -198,11 +191,19 @@ final class CategorizationProvenancePanel extends Component
                 if ($dto !== null) {
                     $this->variant = 'rule';
                     $this->ruleId = $dto->id;
-                    $this->categoryId = $dto->categoryId;
-                    $this->field = $dto->field;
-                    $this->match = $dto->match;
-                    $this->value = $dto->value;
-                    $this->categoryPath = $dto->categoryPath;
+                    $this->conditionSummary = $dto->conditions === []
+                        ? ''
+                        : RulesPage::conditionFragment($dto->conditions[0]);
+
+                    $categoryPath = '';
+                    foreach ($dto->actions as $action) {
+                        if ($action->type === 'category') {
+                            $categoryPath = $action->categoryPath ?? '';
+
+                            break;
+                        }
+                    }
+                    $this->categoryPath = $categoryPath;
 
                     return;
                 }

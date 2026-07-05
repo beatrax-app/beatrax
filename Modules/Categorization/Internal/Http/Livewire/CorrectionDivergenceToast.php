@@ -11,7 +11,9 @@ use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
+use Modules\Categorization\Public\Dto\RuleConditionDto;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
+use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -86,6 +88,7 @@ final class CorrectionDivergenceToast extends Component
         int $userId,
         CurrentUser $currentUser,
         CategorizationRuleQuery $rules,
+        CategoryOptionsQuery $categoryOptions,
     ): void {
         // Cross-user defence: the 5th positional parameter $userId is
         // the assertion subject (the event-carried owner of the rule +
@@ -104,23 +107,29 @@ final class CorrectionDivergenceToast extends Component
         $this->flashMessage = '';
 
         $rule = $rules->findForUser($currentUser->user(), $ruleId);
-        if ($rule !== null) {
-            $this->ruleSummary = sprintf(
-                '%s %s "%s"',
-                $rule->field,
-                $rule->match,
-                $rule->value,
-            );
-            $this->oldCategoryPath = $rule->categoryPath;
-        } else {
-            $this->ruleSummary = '';
-            $this->oldCategoryPath = '';
+        $this->ruleSummary = $rule !== null && $rule->conditions !== []
+            ? RulesPage::conditionFragment($rule->conditions[0])
+            : '';
+
+        // Resolve the OLD category's own path directly (rather than
+        // reading the rule's current category action) — a rule may
+        // carry zero, one, or several category actions, and by the
+        // time this fires the rule may already differ from what
+        // produced $oldCategoryId at import time.
+        $this->oldCategoryPath = '';
+        foreach ($categoryOptions->for($currentUser->user()) as $option) {
+            if ($option->id === $oldCategoryId) {
+                $this->oldCategoryPath = $option->path;
+
+                break;
+            }
         }
     }
 
     public function update(
         CurrentUser $currentUser,
         UpdateCategorizationRule $updateRule,
+        CategorizationRuleQuery $rules,
     ): void {
         if ($this->ruleId === null || $this->newCategoryId === null) {
             return;
@@ -129,10 +138,54 @@ final class CorrectionDivergenceToast extends Component
             return;
         }
 
+        $user = $currentUser->user();
+        $rule = $rules->findForUser($user, $this->ruleId);
+        if ($rule === null) {
+            $this->flashMessage = 'Rule no longer exists.';
+            $this->visible = false;
+            $this->resetPayload();
+
+            return;
+        }
+
+        $conditionsPayload = array_map(static fn (RuleConditionDto $c): array => [
+            'id' => $c->id,
+            'field' => $c->field,
+            'op' => $c->op,
+            'value_type' => $c->valueType,
+            'value' => $c->value,
+            'value2' => $c->value2,
+        ], $rule->conditions);
+
+        // Re-target every category-type action at the new category —
+        // the divergence event's whole premise is "the rule assigned
+        // the wrong category"; every other action/condition on the
+        // rule is preserved verbatim.
+        $actionsPayload = [];
+        foreach ($rule->actions as $index => $action) {
+            $payload = $action->type === 'category'
+                ? ['category_id' => $this->newCategoryId]
+                : $action->payload;
+
+            $actionsPayload[] = [
+                'id' => $action->id,
+                'position' => $index,
+                'type' => $action->type,
+                'payload' => $payload,
+            ];
+        }
+
         try {
-            ($updateRule)($currentUser->user(), $this->ruleId, [
-                'category_id' => $this->newCategoryId,
-            ]);
+            ($updateRule)(
+                $user,
+                $this->ruleId,
+                $rule->priority,
+                $rule->combinator,
+                $rule->active,
+                $rule->notes,
+                $conditionsPayload,
+                $actionsPayload,
+            );
         } catch (ValidationException) {
             // UpdateCategorizationRule raises ValidationException on
             // UNIQUE-violation. A category_id-only payload cannot trip
