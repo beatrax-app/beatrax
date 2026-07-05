@@ -230,6 +230,65 @@ it('losslessly backfills legacy flat rule rows into one condition + one action e
     }
 });
 
+// --- (b, continued) migration 000005's down() must be a safe no-op (CR-03) ---
+
+it('migration 000005 down() never deletes user-authored rule_conditions/rule_actions rows (CR-03)', function (): void {
+    $category = Category::create([
+        'user_id' => null,
+        'name' => 'Rent',
+        'slug' => 'rule-schema-rent',
+        'kind' => 'expense',
+    ]);
+    $user = User::create([
+        'username' => 'rule-schema-rollback-user',
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+    ]);
+
+    // A rule authored AFTER the 000005 backfill ran (e.g. through /rules)
+    // — indistinguishable, at the schema level, from a row 000005 itself
+    // backfilled. This is exactly the row a naive unscoped down() would
+    // have destroyed.
+    $rule = CategorizationRule::withoutGlobalScopes()->create([
+        'user_id' => $user->id,
+        'priority' => 10,
+        'combinator' => 'all',
+        'active' => true,
+        'notes' => null,
+        'hits_count' => 0,
+    ]);
+    $rule->conditions()->create([
+        'field' => 'merchant',
+        'op' => 'contains',
+        'value_type' => 'string',
+        'value' => 'LANDLORD',
+        'value2' => null,
+    ]);
+    $rule->actions()->create([
+        'position' => 0,
+        'type' => 'category',
+        'payload' => ['category_id' => $category->id],
+    ]);
+
+    // Simulate migrate:rollback reaching migration 000005 in the field
+    // (recovery from a later bad migration, a dev-environment reset, or
+    // future rollback tooling) — down() must be a safe no-op, not a
+    // destructive unscoped delete/reset.
+    migrateLegacyRulesMigration()->down();
+
+    $survivingRule = DB::table('categorization_rules')->where('id', $rule->id)->first();
+    expect($survivingRule)->not->toBeNull();
+    // priority/combinator must NOT have been reset to column defaults.
+    expect((int) $survivingRule->priority)->toBe(10);
+    expect($survivingRule->combinator)->toBe('all');
+
+    expect(DB::table('rule_conditions')->where('rule_id', $rule->id)->count())->toBe(1);
+    expect(DB::table('rule_actions')->where('rule_id', $rule->id)->count())->toBe(1);
+
+    $condition = DB::table('rule_conditions')->where('rule_id', $rule->id)->first();
+    expect($condition->value)->toBe('LANDLORD');
+});
+
 // --- (c) MergeRulesRegistry describes the new schema (Task 3) ---
 
 it('MergeRulesRegistry describes the new categorization_rules/rule_conditions/rule_actions schema, not the dropped flat columns', function (): void {

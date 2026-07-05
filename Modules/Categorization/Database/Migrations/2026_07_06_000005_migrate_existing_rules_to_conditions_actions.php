@@ -82,23 +82,36 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Best-effort reverse only: by the time this runs, the
-        // `_legacy_categorization_rules` stash (dropped by this
-        // migration's own up()) is gone, so the original flat
-        // field/match/value/category_id data cannot be losslessly
-        // restored here. This clears the normalized rows this
-        // migration created and resets the parent's priority/combinator
-        // back to their column defaults, so a subsequent re-run of
-        // up() (via migrate:rollback then migrate) is idempotent and
-        // does not leave duplicate condition/action rows behind.
-        $connection = $this->db()->connection($this->getConnection());
-
-        $connection->table('rule_conditions')->delete();
-        $connection->table('rule_actions')->delete();
-        $connection->table('categorization_rules')->update([
-            'priority' => 0,
-            'combinator' => 'all',
-        ]);
+        // CR-03 (safe no-op, deliberately NOT a data reversal): the
+        // previous implementation ran an UNSCOPED delete on
+        // `rule_conditions`/`rule_actions` plus an unscoped reset of every
+        // `categorization_rules` row's priority/combinator. Those
+        // statements have no way to distinguish the rows THIS migration's
+        // own up() backfilled from rows a real user has since created
+        // through `/rules`, `CreateCategorizationRule`, or
+        // `RenameCounterpartyPopover` — the schema carries no marker for
+        // "backfilled by migration 000005" vs "authored afterwards" (both
+        // live in the exact same tables). Once this migration has run in
+        // the field, any subsequent `migrate:rollback` that reaches this
+        // migration (recovery from a later bad migration, a dev-environment
+        // reset, or future rollback tooling) would otherwise silently and
+        // irreversibly delete every rule condition/action a user has ever
+        // created — a genuine data-loss vector in a financial-data
+        // application where "history is retained forever" is a stated
+        // constraint (CLAUDE.md).
+        //
+        // By the time down() would run, the `_legacy_categorization_rules`
+        // stash (dropped by this migration's own up()) is already gone, so
+        // the original flat field/match/value/category_id data cannot be
+        // losslessly restored here either way — a "real" reversal isn't
+        // achievable without a side table tracking exactly which rows this
+        // migration created, which is more machinery than a one-time data
+        // backfill migration warrants. A safe no-op (leave the normalized
+        // schema and its data exactly as-is) is preferable to a destructive
+        // guess. If a fresh empty database ever needs `migrate:rollback`
+        // through this migration, up() is idempotent enough that removing
+        // this migration's own file range and re-migrating from scratch is
+        // the supported recovery path — not this method.
     }
 
     private function schema(): Builder
