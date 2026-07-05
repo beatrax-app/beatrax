@@ -43,9 +43,20 @@ final class DeviceIdentityLoader
             return null; // App locked — no KEK to decrypt with.
         }
 
-        $tmpPath = sys_get_temp_dir().'/beatrax_identity_read_'.bin2hex(random_bytes(8)).'.tmp';
+        // Stage the decrypted plaintext inside the identity directory itself
+        // (0700, created by DeviceIdentityService::generateAndPersist()) —
+        // NEVER sys_get_temp_dir(), which is world-traversable (e.g. /tmp at
+        // mode 1777).
+        $identityDir = dirname($encPath);
+        $tmpPath = $identityDir.DIRECTORY_SEPARATOR.'beatrax_identity_read_'.bin2hex(random_bytes(8)).'.tmp';
         try {
             $this->backupEncryptor->decrypt($encPath, $tmpPath, $kek);
+            // BackupEncryptor renames its own internal staging file onto
+            // $tmpPath, which lands at the process umask default (it applies
+            // no chmod of its own) — lock it to 0600 before ever reading the
+            // plaintext back out (SecureTempFile::lockDown throws if the
+            // chmod fails).
+            SecureTempFile::lockDown($tmpPath);
             $json = file_get_contents($tmpPath);
             if ($json === false) {
                 throw new RuntimeException('Failed to read the decrypted device identity key-file.');
