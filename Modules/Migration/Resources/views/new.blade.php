@@ -1,0 +1,9 @@
+@extends('layouts.app', ['title' => 'Import from YNAB / Actual · beatrax'])
+
+@section('content')
+    <main class="min-h-screen bg-white dark:bg-slate-950">
+        <div class="mx-auto max-w-3xl px-6 py-16">
+            @livewire('migration.new-migration')
+        </div>
+    </main>
+@endsection
