@@ -207,6 +207,15 @@ const ISOLATION_ROUTE_COVERED = [
     // 13.3-06 — Reconcile surface (T-13.3-16/T-13.3-17). The account picker
     // and every statement pre-fill are user-scoped reads; probed below.
     'reconcile.index',
+    // 13.5-08 — Migration wizard (T-13.5-24). All four routes are user-scoped
+    // (`MigrationRun::query()->where('user_id', ...)->firstOrFail()` on every
+    // action + PreviewSummaryBuilder's own independent guard); probed below.
+    // `migrations.new` carries no per-entity id (same T-13.5-04 shape as
+    // `imports.new`) but is still explicitly probed for reachability.
+    'migrations.index',
+    'migrations.new',
+    'migrations.preview',
+    'migrations.results',
 ];
 
 function xuiUser(string $username, bool $developer = false): User
@@ -316,6 +325,36 @@ function xuiCounterparty(DatabaseManager $db, int $userId, string $type, string 
         'created_at' => '2026-05-19 00:00:00',
         'updated_at' => '2026-05-19 00:00:00',
     ]);
+}
+
+/**
+ * Seeds a `migration_runs` row plus one `migration_staging_categories` row
+ * (so `PreviewSummaryBuilder::forRun()` does not throw
+ * `MigrationRunNotParsedException`) for the given user, and returns the run
+ * id. Raw inserts — deliberately does NOT depend on the Migration module's
+ * own test fixtures/parsers, keeping this cross-module isolation test
+ * self-contained (matches every other `xui*` helper's raw-insert style).
+ */
+function xuiMigrationRun(DatabaseManager $db, int $userId, string $originalFilename): int
+{
+    $runId = $db->connection()->table('migration_runs')->insertGetId([
+        'user_id' => $userId,
+        'source_product' => 'ynab4',
+        'status' => 'parsed',
+        'original_filename' => $originalFilename,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $db->connection()->table('migration_staging_categories')->insert([
+        'user_id' => $userId,
+        'migration_run_id' => $runId,
+        'source_external_id' => 'cat-1',
+        'name' => 'Groceries',
+        'kind' => 'expense',
+    ]);
+
+    return $runId;
 }
 
 /**
@@ -887,6 +926,37 @@ it('does not bleed the owner account into the partner reconcile account picker',
         ->assertOk()
         ->assertSee('Partner Visible Reconcile Account')
         ->assertDontSee('Owner Secret Reconcile Account');
+});
+
+it('returns 404 (never 403) when the partner requests the owner migration preview (T-13.5-24)', function (): void {
+    $runId = xuiMigrationRun($this->db, $this->owner->id, 'Owner Migration Export.zip');
+
+    $response = $this->actingAs($this->partner)->get("/migrations/{$runId}/preview");
+
+    expect($response->status())->toBe(404);
+    expect($response->status())->not->toBe(403);
+});
+
+it('returns 404 (never 403) when the partner requests the owner migration results (T-13.5-24)', function (): void {
+    $runId = xuiMigrationRun($this->db, $this->owner->id, 'Owner Migration Export.zip');
+
+    $response = $this->actingAs($this->partner)->get("/migrations/{$runId}/results");
+
+    expect($response->status())->toBe(404);
+    expect($response->status())->not->toBe(403);
+});
+
+it('does not bleed the owner migration run into the partner migrations index', function (): void {
+    xuiMigrationRun($this->db, $this->owner->id, 'Owner Migration Export.zip');
+
+    $this->actingAs($this->partner)
+        ->get('/migrations')
+        ->assertOk()
+        ->assertDontSee('Owner Migration Export.zip', false);
+});
+
+it('renders /migrations/new for any authenticated user — no per-entity id, no data to leak (T-13.5-04 shape)', function (): void {
+    $this->actingAs($this->partner)->get('/migrations/new')->assertOk();
 });
 
 it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {
