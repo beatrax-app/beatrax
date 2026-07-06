@@ -109,7 +109,7 @@ final class ThreeWayMergeResolver
                 continue; // brand-new entity — normal promote() creates it.
             }
 
-            $baselineRaw = $this->baselineValue(self::toInt($map->id), 'budgeted_minor');
+            $baselineRaw = $this->baselineValue($user, self::toInt($map->id), 'budgeted_minor');
             if ($baselineRaw === null) {
                 continue; // no recorded baseline — cannot 3-way merge, leave to the unconditional promote() path.
             }
@@ -175,7 +175,7 @@ final class ThreeWayMergeResolver
                 continue;
             }
 
-            $baseline = $this->baselineValue(self::toInt($map->id), 'name');
+            $baseline = $this->baselineValue($user, self::toInt($map->id), 'name');
             if ($baseline === null) {
                 continue;
             }
@@ -232,7 +232,7 @@ final class ThreeWayMergeResolver
                 continue;
             }
 
-            $baseline = $this->baselineValue(self::toInt($map->id), 'name');
+            $baseline = $this->baselineValue($user, self::toInt($map->id), 'name');
             if ($baseline === null) {
                 continue;
             }
@@ -290,7 +290,7 @@ final class ThreeWayMergeResolver
                 continue;
             }
 
-            $baseline = $this->baselineValue(self::toInt($map->id), 'description');
+            $baseline = $this->baselineValue($user, self::toInt($map->id), 'description');
             if ($baseline === null) {
                 continue;
             }
@@ -345,11 +345,12 @@ final class ThreeWayMergeResolver
         return $map !== null ? self::toInt($map->beatrax_id) : null;
     }
 
-    private function baselineValue(int $mapId, string $field): ?string
+    private function baselineValue(User $user, int $mapId, string $field): ?string
     {
         $value = $this->db->connection()->table('migration_import_baseline')
             ->where('migration_source_map_id', $mapId)
             ->where('field_name', $field)
+            ->where('user_id', $user->id)
             ->value('baseline_value');
 
         return is_string($value) ? $value : null;
