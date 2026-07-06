@@ -206,3 +206,53 @@ it('MigrationConfirm: a re-run yields identical row counts across every promoted
 
     expect($countsAfterSecond)->toBe($countsAfterFirst);
 });
+
+it('CR-02: two genuinely distinct same-day same-amount same-account transactions both survive promotion', function (): void {
+    $run = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+
+    // Clone the fixture's "Employer" salary row (2000.00 inflow, 01/16/2026,
+    // Checking) into a second, genuinely distinct staged transaction: same
+    // account/date/amount/currency/payee — the exact shape that used to
+    // collide on FingerprintComposer's date-only dedup tuple (CR-02), since
+    // none of the three migration parsers ever carry a transaction
+    // time-of-day.
+    $employerRow = $this->db->connection()->table('migration_staging_transactions')
+        ->where('migration_run_id', $run->id)
+        ->where('payee_source_external_id', 'Employer')
+        ->firstOrFail();
+
+    $clone = (array) $employerRow;
+    unset($clone['id']);
+    $clone['source_external_id'] = 'row-dup-employer-2';
+    $this->db->connection()->table('migration_staging_transactions')->insert($clone);
+
+    app(ConfirmMigration::class)->__invoke($run->id, $this->user);
+
+    $employerTransactions = $this->db->connection()->table('transactions')
+        ->where('user_id', $this->user->id)
+        ->where('counterparty_name', 'Employer')
+        ->get();
+
+    // BOTH survive as two separate transaction rows — neither is silently
+    // dropped as a fingerprint duplicate of the other.
+    expect($employerTransactions)->toHaveCount(2);
+
+    $bookedAts = $employerTransactions->pluck('booked_at')->map(fn (mixed $v): string => (string) $v)->unique();
+    expect($bookedAts)->toHaveCount(2);
+
+    // No genuine collision was silently absorbed — the fingerprint-miss
+    // "extra" unmapped-item path (the CR-02 defense-in-depth surfacing) must
+    // NOT have fired for this pair, because both rows now get distinct
+    // fingerprints via the bookedAt fix.
+    $collisionItems = $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('migration_run_id', $run->id)
+        ->where('item_type', 'extra')
+        ->where('display_label', 'like', 'Transaction:%')
+        ->get();
+    expect($collisionItems)->toBeEmpty();
+});
