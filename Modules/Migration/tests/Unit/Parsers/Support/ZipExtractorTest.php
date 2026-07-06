@@ -81,3 +81,26 @@ it('ZipExtractor: throws when the archive cannot be opened at all', function ():
     expect(fn () => $extractor->extract(sys_get_temp_dir().'/does-not-exist-'.uniqid('', true).'.zip'))
         ->toThrow(UnrecognizedMigrationFileException::class);
 });
+
+it('ZipExtractor: rejects an archive containing a symlink entry (WR-04/T-13.5-06)', function (): void {
+    // A malicious export ZIP could plant a symlink named e.g. "db.sqlite"
+    // whose target string is attacker-controlled and unconstrained by the
+    // name-based zip-slip check above — ZipArchive::extractTo() can
+    // materialize it as an ACTUAL filesystem symlink, which a caller's
+    // later is_file()/fopen() on the extracted path would silently follow.
+    $zipPath = sys_get_temp_dir().'/zip-extractor-symlink-test-'.uniqid('', true).'.zip';
+    $zip = new ZipArchive;
+    $zip->open($zipPath, ZipArchive::CREATE);
+    $zip->addFromString('evil-link', '/etc/passwd');
+    // Unix external attributes: upper 16 bits carry the S_IFLNK (0120000)
+    // file-type bits + permission bits, mirroring what a real symlink entry
+    // (e.g. produced by `zip --symlinks`) carries.
+    $zip->setExternalAttributesName('evil-link', ZipArchive::OPSYS_UNIX, 0o120777 << 16);
+    $zip->close();
+
+    $extractor = new ZipExtractor;
+
+    expect(fn () => $extractor->extract($zipPath))->toThrow(UnrecognizedMigrationFileException::class);
+
+    @unlink($zipPath);
+});
