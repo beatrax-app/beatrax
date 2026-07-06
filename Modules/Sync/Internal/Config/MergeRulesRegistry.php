@@ -220,6 +220,27 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['user_id', 'category_id', 'overspend_mode'],
             ],
+            // 13.5-01 (Req 9/10, Open Question 5 resolved: register both
+            // persistent Migration tables so a second device cannot silently
+            // diverge and double-import; the six per-run scratch staging
+            // tables and their parent run table are deliberately NOT
+            // registered here). Cross-checked against
+            // Modules/Migration/Database/Migrations/2026_07_06_000003_create_migration_source_map_table.php.
+            'migration_source_map' => [
+                'beatrax_id' => ['strategy' => 'lww', 'nullable' => false],
+                'natural_key' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                '_create_required' => ['source_product', 'source_entity_type', 'beatrax_entity_type', 'beatrax_id'],
+            ],
+            // 13.5-01: sibling persistent table, the 3-way-merge baseline leg
+            // (D-11). Cross-checked against
+            // Modules/Migration/Database/Migrations/2026_07_06_000004_create_migration_import_baseline_table.php.
+            'migration_import_baseline' => [
+                'baseline_value' => ['strategy' => 'lww', 'nullable' => false],
+                'imported_at' => ['strategy' => 'lww', 'nullable' => false],
+                '_delete_wins' => true,
+                '_create_required' => ['migration_source_map_id', 'field_name', 'baseline_value', 'imported_at'],
+            ],
         ];
     }
 
