@@ -56,8 +56,17 @@ final class YnabTransferMatcher
                     continue;
                 }
 
+                // WR-05: a real transfer pair is one inflow leg + one outflow
+                // leg — same date/magnitude/cross-referenced account names is
+                // not sufficient on its own (corrupted/hand-edited source
+                // data could otherwise pair two erroneous same-sign
+                // "Transfer :" rows into a bogus transfer_in/transfer_out
+                // link downstream in PromoteStagingToDomain).
+                $oppositeSign = ($legA['amountMinor'] < 0) !== ($legB['amountMinor'] < 0);
+
                 $matches = $legA['date'] === $legB['date']
                     && abs($legA['amountMinor']) === abs($legB['amountMinor'])
+                    && $oppositeSign
                     && $legA['counterpartAccount'] === $legB['account']
                     && $legB['counterpartAccount'] === $legA['account'];
 
