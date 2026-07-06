@@ -411,6 +411,10 @@ final class PromoteStagingToDomain
                     return;
                 }
 
+                // RecordResult::$duplicates is inspected below (per-row, via
+                // the fingerprint-lookup miss) rather than trusted as a bare
+                // count — CR-02: a genuine collision must be traceable back
+                // to the exact staged row that lost, not merely tallied.
                 ($this->recordTransactions)($newCanonicals, $user);
 
                 $fingerprintsByIndex = [];
@@ -432,10 +436,24 @@ final class PromoteStagingToDomain
                         : null;
 
                     if ($transactionId === null) {
-                        // Defensive: RecordTransactions silently dropped this
-                        // row as a fingerprint-duplicate of an unrelated row
-                        // (a genuine cross-source coincidence) — nothing to
-                        // link or map.
+                        // CR-02: RecordTransactions silently dropped this row
+                        // as a fingerprint-duplicate of an unrelated row (a
+                        // genuine cross-source coincidence, now vanishingly
+                        // rare since buildCanonicalTransaction() seeds a
+                        // distinct bookedAt per staged row). Surface it as a
+                        // visible unmapped item instead of silently counting
+                        // it as a success — nothing (source-map, split legs,
+                        // payee resolution) is ever linked/attached for this
+                        // row.
+                        $this->db->connection()->table('migration_staging_unmapped_items')->insert([
+                            'user_id' => $user->id,
+                            'migration_run_id' => $runId,
+                            'item_type' => 'extra',
+                            'source_external_id' => self::toStr($row->source_external_id),
+                            'display_label' => 'Transaction: '.($row->description !== null ? self::toStr($row->description) : '(no description)'),
+                            'reason' => 'This transaction collided with another already-recorded transaction (identical fingerprint) and was not imported.',
+                        ]);
+
                         continue;
                     }
 
@@ -594,12 +612,28 @@ final class PromoteStagingToDomain
 
         $postedAt = CarbonImmutable::parse(self::toStr($row->posted_at));
 
+        // CR-02: none of the three migration source formats carry a
+        // transaction time-of-day, so postedAt/valueDate are always
+        // midnight. FingerprintComposer's dedup tuple relies on bookedAt's
+        // second-resolution to disambiguate two otherwise-identical same-day
+        // rows (its own docblock) — feeding it the same midnight value for
+        // every row defeats that entirely and causes RecordTransactions to
+        // silently drop the second of two genuinely distinct transactions.
+        // Seed bookedAt with a deterministic sub-day offset derived from the
+        // staged row's own stable primary key (self::CHUNK_SIZE-bounded
+        // chunks are still processed in ascending id order via chunkById),
+        // so two distinct staged rows get distinct bookedAt values and
+        // therefore distinct fingerprints. postedAt/valueDate stay exactly
+        // the user-facing date-only value — only bookedAt (an internal
+        // dedup/ordering signal, never displayed) gets the synthetic offset.
+        $bookedAt = $postedAt->addSeconds(self::toInt($row->id) % 86400);
+
         return new CanonicalTransaction(
             userId: $user->id,
             accountId: $accountId,
             type: $type,
             postedAt: $postedAt,
-            bookedAt: $postedAt,
+            bookedAt: $bookedAt,
             valueDate: $postedAt,
             amountMinor: $amountMinor,
             currency: self::toStr($row->currency),
