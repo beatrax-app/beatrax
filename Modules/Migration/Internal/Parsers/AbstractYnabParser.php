@@ -398,7 +398,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
                 continue;
             }
             $group = trim($row['Category Group'] ?? '');
-            $minor = $this->amounts->parse($row['Budgeted'] ?? '') ?? 0;
+            $minor = $this->parseBudgetedMinor($row['Budgeted'] ?? '');
 
             $assignments->push(new MigrationBudgetAssignmentDto(
                 sourceCategoryExternalId: $this->naturalCategoryKey($group !== '' ? $group : null, $name),
@@ -408,6 +408,33 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         }
 
         return $assignments;
+    }
+
+    /**
+     * WR-07: `AmountStringParser::parse()`'s shared contract (verbatim-
+     * copied from `EnvelopeWriter::parseAmount()`, per this class's own
+     * `$amounts` dependency — Outflow/Inflow-oriented, see IN-02) treats ANY
+     * non-positive result as "no amount" (`null`), which would silently
+     * coerce a genuine negative `Budgeted` value (a manual correction,
+     * however rare in practice for this column) to the SAME `0` a blank or
+     * malformed cell produces — a real, silent data-loss path for the one
+     * column this parser applies to signed money. The sign is detected here
+     * and re-applied to the magnitude-only parse, so a blank/malformed cell
+     * (still `0`, matching the prior contract) is no longer conflated with a
+     * genuine negative value (now preserved).
+     */
+    private function parseBudgetedMinor(string $raw): int
+    {
+        $trimmed = trim($raw);
+        $isNegative = str_starts_with($trimmed, '-');
+        $magnitude = $isNegative ? ltrim(substr($trimmed, 1)) : $trimmed;
+
+        $minor = $this->amounts->parse($magnitude);
+        if ($minor === null) {
+            return 0; // genuinely blank or malformed — matches the prior contract.
+        }
+
+        return $isNegative ? -$minor : $minor;
     }
 
     private function parseBudgetMonth(string $value): CarbonImmutable
