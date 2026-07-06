@@ -265,6 +265,18 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             return; // transfer / uncategorized row
         }
 
+        // WR-03: materialize the source's Category Group as a real parent
+        // Category (created once per distinct group, before any of its
+        // children — collectCategories() below relies on this ordering, and
+        // PromoteStagingToDomain::promoteCategories() processes staged rows
+        // in that same order) rather than discarding the group structure and
+        // leaving every migrated category flat/top-level.
+        $parentSourceExternalId = null;
+        if ($group !== null && trim($group) !== '') {
+            $parentSourceExternalId = $this->naturalGroupKey($group);
+            $this->addCategoryGroup($categories, $seen, $group, $parentSourceExternalId);
+        }
+
         $key = $this->naturalCategoryKey($group, $name);
         if (isset($seen[$key])) {
             return;
@@ -276,9 +288,42 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             sourceExternalId: $key,
             name: $name,
             sourceGroupName: $group,
+            parentSourceExternalId: $parentSourceExternalId,
+            kind: $kind,
+        ));
+    }
+
+    /**
+     * @param  Collection<int, MigrationCategoryDto>  $categories
+     * @param  array<string, bool>  $seen
+     */
+    private function addCategoryGroup(Collection $categories, array &$seen, string $group, string $groupKey): void
+    {
+        if (isset($seen[$groupKey])) {
+            return;
+        }
+        $seen[$groupKey] = true;
+
+        $groupName = trim($group);
+        $kind = mb_strtolower($groupName) === 'income' ? 'income' : 'expense';
+
+        $categories->push(new MigrationCategoryDto(
+            sourceExternalId: $groupKey,
+            name: $groupName,
+            sourceGroupName: null,
             parentSourceExternalId: null,
             kind: $kind,
         ));
+    }
+
+    /**
+     * Distinct namespace from `naturalCategoryKey()` (`"group/{name}"` vs
+     * `"{group}/{name}"`) so a group's synthetic parent row can never collide
+     * with a real category's own natural key.
+     */
+    private function naturalGroupKey(string $group): string
+    {
+        return 'group/'.mb_strtolower(trim($group));
     }
 
     /**

@@ -54,8 +54,10 @@ it('StagingWriter: lands the parsed batch into all six staging tables scoped by 
         ->where('user_id', $this->user->id)
         ->where('migration_run_id', $this->run->id);
 
-    // 3 categories (Groceries, Household, Salary).
-    expect($scoped('migration_staging_categories')->count())->toBe(3);
+    // 3 real categories (Groceries, Household, Salary) + 2 category-group
+    // parents (Frequent, Income) materialized as real parent categories
+    // (WR-03).
+    expect($scoped('migration_staging_categories')->count())->toBe(5);
 
     // 2 accounts (Checking, Savings).
     expect($scoped('migration_staging_accounts')->count())->toBe(2);

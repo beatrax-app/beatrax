@@ -108,13 +108,31 @@ final class ActualParser implements ParsesMigrationSource
         $categoryNames = [];
         /** @var Collection<int, MigrationCategoryDto> $categories */
         $categories = new Collection;
+
+        // WR-03: materialize each Category Group as a real parent Category
+        // BEFORE any of its member categories (PromoteStagingToDomain::
+        // promoteCategories() processes staged rows in insertion order, so
+        // every parent row must land before its children) — Actual's group
+        // id is a stable UUID, reused verbatim as the parent's
+        // sourceExternalId, so `parentSourceExternalId` below resolves it
+        // directly rather than discarding the group structure flat.
+        foreach ($reader->categoryGroups() as $group) {
+            $categories->push(new MigrationCategoryDto(
+                sourceExternalId: $group['id'],
+                name: $group['name'],
+                sourceGroupName: null,
+                parentSourceExternalId: null,
+                kind: $group['is_income'] ? 'income' : 'expense',
+            ));
+        }
+
         foreach ($reader->categories() as $row) {
             $categoryNames[$row['id']] = $row['name'];
             $categories->push(new MigrationCategoryDto(
                 sourceExternalId: $row['id'],
                 name: $row['name'],
                 sourceGroupName: $row['group'] !== null ? ($categoryGroupNames[$row['group']] ?? null) : null,
-                parentSourceExternalId: null,
+                parentSourceExternalId: $row['group'],
                 kind: $row['is_income'] ? 'income' : 'expense',
             ));
         }
