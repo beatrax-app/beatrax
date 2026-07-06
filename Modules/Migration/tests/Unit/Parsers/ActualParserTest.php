@@ -62,9 +62,11 @@ it('ActualParser: parses the golden fixture into a populated MigrationBatch — 
     expect($batch->budgetCurrency)->toBe(ActualFixtureBuilder::BUDGET_FILE_CURRENCY);
     expect($batch->budgetCurrency)->not->toBe('EUR');
 
-    // Req 2: 4 categories (Groceries, Household, Salary, Emergency Fund).
-    expect($batch->categories)->toHaveCount(4);
-    expect($batch->categories->pluck('name')->all())->toContain('Groceries', 'Household', 'Salary', 'Emergency Fund');
+    // Req 2/WR-03: 4 real categories (Groceries, Household, Salary, Emergency
+    // Fund) + 2 category-group parents (Frequent, Income) materialized as
+    // real parent Category rows.
+    expect($batch->categories)->toHaveCount(6);
+    expect($batch->categories->pluck('name')->all())->toContain('Groceries', 'Household', 'Salary', 'Emergency Fund', 'Frequent', 'Income');
 
     expect($batch->accounts)->toHaveCount(2);
     expect($batch->accounts->pluck('name')->all())->toContain('Checking', 'Savings');

@@ -42,7 +42,10 @@ it('PreviewSummaryBuilder: returns the 5 mapped counts for a staged ynab4 v1 run
     $summary = app(PreviewSummaryBuilder::class)->forRun($run->id, $this->user);
 
     expect($summary)->toBeInstanceOf(PreviewSummary::class);
-    expect($summary->categoriesCount)->toBe(3);
+    // 3 real categories (Groceries, Household, Salary) + 2 category-group
+    // parents (Frequent, Income) materialized as real parent categories
+    // (WR-03).
+    expect($summary->categoriesCount)->toBe(5);
     expect($summary->accountsCount)->toBe(2);
     expect($summary->counterpartiesCount)->toBe(3);
     // 6 logical transactions — a 2-leg split counts once, not 3 times.

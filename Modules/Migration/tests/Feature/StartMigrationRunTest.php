@@ -43,7 +43,10 @@ it('StartMigrationRun: stages the ynab4 v1 fixture and returns a parsed run — 
     expect($run->source_product)->toBe('ynab4');
     expect($run->user_id)->toBe($this->user->id);
 
-    expect($this->db->connection()->table('migration_staging_categories')->where('migration_run_id', $run->id)->count())->toBe(3);
+    // 3 real categories (Groceries, Household, Salary) + 2 category-group
+    // parents (Frequent, Income) materialized as real parent categories
+    // (WR-03).
+    expect($this->db->connection()->table('migration_staging_categories')->where('migration_run_id', $run->id)->count())->toBe(5);
     expect($this->db->connection()->table('migration_staging_transactions')->where('migration_run_id', $run->id)->whereNull('parent_source_external_id')->count())->toBe(6);
 
     // Zero domain writes — StartMigrationRun only ever populates staging.

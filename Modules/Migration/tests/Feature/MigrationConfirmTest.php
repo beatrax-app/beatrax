@@ -60,6 +60,22 @@ it('MigrationConfirm: category count/names land in Ledger — Req 2', function (
     expect($names)->toContain('Groceries', 'Household', 'Salary');
 });
 
+it('WR-03: a grouped source category is promoted with a non-null parent_id onto a real parent Category', function (): void {
+    confirmYnab4V1($this->user);
+
+    $frequent = Category::query()->where('user_id', $this->user->id)->where('name', 'Frequent')->firstOrFail();
+    $income = Category::query()->where('user_id', $this->user->id)->where('name', 'Income')->firstOrFail();
+    $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
+    $household = Category::query()->where('user_id', $this->user->id)->where('name', 'Household')->firstOrFail();
+    $salary = Category::query()->where('user_id', $this->user->id)->where('name', 'Salary')->firstOrFail();
+
+    expect($frequent->parent_id)->toBeNull();
+    expect($income->parent_id)->toBeNull();
+    expect($groceries->parent_id)->toBe($frequent->id);
+    expect($household->parent_id)->toBe($frequent->id);
+    expect($salary->parent_id)->toBe($income->id);
+});
+
 it('MigrationConfirm: envelope_assignments exact-to-cent per (category, month), compared to stored rows only — Req 3', function (): void {
     confirmYnab4V1($this->user);
 

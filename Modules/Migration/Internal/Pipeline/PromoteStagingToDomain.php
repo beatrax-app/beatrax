@@ -134,9 +134,15 @@ final class PromoteStagingToDomain
      */
     private function promoteCategories(int $runId, User $user, string $sourceProduct): array
     {
+        // WR-03: ordered by id (== staging-insert order) so a group's
+        // synthetic parent row — always staged before its children, see
+        // AbstractYnabParser::addCategoryGroup()/ActualParser::buildBatch()
+        // — is guaranteed to already be in $idMap by the time a child row
+        // resolves its parent_source_external_id below.
         $rows = $this->db->connection()->table('migration_staging_categories')
             ->where('user_id', $user->id)
             ->where('migration_run_id', $runId)
+            ->orderBy('id')
             ->get();
 
         /** @var array<string, int> $idMap */
