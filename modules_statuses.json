@@ -12,6 +12,7 @@
     "Import": true,
     "Ingestion": true,
     "Ledger": true,
+    "Migration": true,
     "Onboarding": true,
     "Search": true,
     "Sync": true,

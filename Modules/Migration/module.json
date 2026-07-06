@@ -1,0 +1,11 @@
+{
+    "name": "Migration",
+    "alias": "migration",
+    "description": "One-time migration wizard importing a full budget file (YNAB4, nYNAB, or Actual Budget) into beatrax's envelope model.",
+    "keywords": ["migration", "import", "ynab", "actual"],
+    "priority": 30,
+    "providers": [
+        "Modules\\Migration\\Providers\\MigrationServiceProvider"
+    ],
+    "files": []
+}

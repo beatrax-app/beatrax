@@ -121,6 +121,15 @@
             <directory suffix="Test.php">./Modules/Sync/tests/Feature</directory>
             <directory suffix="Test.php">./Modules/Sync/tests/Unit</directory>
         </testsuite>
+        <testsuite name="MigrationUnit">
+            <directory suffix="Test.php">./Modules/Migration/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="MigrationFeature">
+            <directory suffix="Test.php">./Modules/Migration/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="MigrationContracts">
+            <directory suffix="Test.php">./Modules/Migration/tests/Contracts</directory>
+        </testsuite>
     </testsuites>
     <php>
         <ini name="memory_limit" value="1G"/>
