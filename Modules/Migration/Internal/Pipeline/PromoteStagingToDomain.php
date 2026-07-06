@@ -83,14 +83,21 @@ final class PromoteStagingToDomain
         private readonly FingerprintComposer $fingerprints,
     ) {}
 
-    public function promote(int $runId, User $user): PromoteResult
+    /**
+     * @param  list<string>  $skipBudgetAssignmentKeys  `{categoryExternalId}|{period_start}` composite keys
+     *                                                  to leave byte-for-byte untouched (Plan 07 reconciliation
+     *                                                  conflicts — D-12/D-13). Empty for a normal first-time
+     *                                                  confirm; `ConfirmMigration`'s call site never supplies
+     *                                                  this, preserving its exact prior behavior.
+     */
+    public function promote(int $runId, User $user, array $skipBudgetAssignmentKeys = []): PromoteResult
     {
         /** @var MigrationRun $run */
         $run = MigrationRun::query()->where('id', $runId)->where('user_id', $user->id)->firstOrFail();
         $sourceProduct = $run->source_product;
 
         $categories = $this->promoteCategories($runId, $user, $sourceProduct);
-        $this->promoteBudgetAssignments($runId, $user, $sourceProduct, $categories['idMap']);
+        $this->promoteBudgetAssignments($runId, $user, $sourceProduct, $categories['idMap'], $skipBudgetAssignmentKeys);
 
         $accounts = $this->promoteAccounts($runId, $user, $sourceProduct);
 
@@ -194,8 +201,10 @@ final class PromoteStagingToDomain
 
     /**
      * @param  array<string, int>  $categoryIdMap
+     * @param  list<string>  $skipKeys  `{categoryExternalId}|{period_start}` composite keys to leave
+     *                                  untouched (Plan 07 reconciliation conflicts — D-12/D-13).
      */
-    private function promoteBudgetAssignments(int $runId, User $user, string $sourceProduct, array $categoryIdMap): void
+    private function promoteBudgetAssignments(int $runId, User $user, string $sourceProduct, array $categoryIdMap, array $skipKeys = []): void
     {
         $rows = $this->db->connection()->table('migration_staging_budget_assignments')
             ->where('user_id', $user->id)
@@ -211,6 +220,17 @@ final class PromoteStagingToDomain
             }
 
             $periodStart = CarbonImmutable::parse(self::toStr($row->period_start));
+
+            if (in_array($categoryExternalId.'|'.$periodStart->toDateString(), $skipKeys, true)) {
+                // Reconciliation conflict (Req 10/D-12): the local value ALSO
+                // diverged from the baseline, so this row's source change is
+                // applied to NOTHING — the beatrax value stays byte-for-byte
+                // untouched until the user resolves it (D-14 keep-local
+                // default is enforced by ThreeWayMergeResolver/CheckForUpdates,
+                // not here).
+                continue;
+            }
+
             $minor = self::toInt($row->budgeted_minor);
 
             // setAssigned() is idempotent by value (Req 3/D-06): re-setting
