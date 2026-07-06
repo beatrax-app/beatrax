@@ -48,7 +48,7 @@ it('Fixture: the ynab4 v1 Register.csv carries a plain expense, income, split pa
     $rows = array_map('str_getcsv', file($files[0]));
     array_shift($rows); // header
 
-    expect($rows)->toHaveCount(6);
+    expect($rows)->toHaveCount(7);
 
     $memos = array_column($rows, 8);
     expect(in_array('Split (1/2)', $memos, true))->toBeTrue();
