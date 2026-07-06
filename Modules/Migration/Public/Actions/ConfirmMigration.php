@@ -70,15 +70,61 @@ final class ConfirmMigration
             );
         }
 
+        // CR-01: a run left in 'needs_attention' by CheckForUpdates has
+        // already had its conflicted budget-assignment rows recorded as
+        // `migration_staging_unmapped_items` ('conflict') rows AND skipped
+        // once by CheckForUpdates's own promote() call. Re-deriving and
+        // re-supplying that SAME skip-list here (rather than promote()'s
+        // empty default) is what keeps the user's just-protected "keep
+        // local" decision from being silently overwritten the moment they
+        // click Confirm on such a run — without this, the second promote()
+        // call would unconditionally re-apply the conflicting source value
+        // over the local one (D-14's keep-local default defeated).
+        $skipBudgetAssignmentKeys = $this->conflictedBudgetAssignmentSkipKeys($migrationRunId, $user);
+
         // Promote WITHOUT an outer transaction — PromoteStagingToDomain's own
         // per-entity-type writes are already bounded/chunked; wrapping them
         // here would demote those independent commits to savepoints and
         // re-form the unbounded transaction this discipline exists to avoid.
-        $promoteResult = $this->promoter->promote($migrationRunId, $user);
+        $promoteResult = $this->promoter->promote($migrationRunId, $user, $skipBudgetAssignmentKeys);
 
         return $this->db->connection()->transaction(
             fn (): MigrationConfirmResult => $this->flipToConfirmed($run, $promoteResult),
         );
+    }
+
+    /**
+     * Re-derives the `{categoryExternalId}|{period_start}` composite skip
+     * keys for every budget-assignment conflict `CheckForUpdates` recorded
+     * against this run (`migration_staging_unmapped_items` rows with
+     * `item_type = 'conflict'`). `CheckForUpdates::recordConflict()` writes
+     * ONE such row per conflict of ANY entity kind (category/account/
+     * transaction/budget_assignment), all sharing `display_label = ucfirst
+     * ($entityType).' '.$fieldName`; only the `budget_assignment` ones are
+     * relevant here (the composite key shape `promoteBudgetAssignments()`
+     * compares against), so the query is scoped to that prefix rather than
+     * pulling every conflict's `source_external_id` indiscriminately.
+     *
+     * @return list<string>
+     */
+    private function conflictedBudgetAssignmentSkipKeys(int $migrationRunId, User $user): array
+    {
+        $rows = $this->db->connection()->table('migration_staging_unmapped_items')
+            ->where('user_id', $user->id)
+            ->where('migration_run_id', $migrationRunId)
+            ->where('item_type', 'conflict')
+            ->where('display_label', 'like', 'Budget_assignment %')
+            ->pluck('source_external_id');
+
+        /** @var list<string> $keys */
+        $keys = [];
+        foreach ($rows as $value) {
+            if (is_string($value) && $value !== '') {
+                $keys[] = $value;
+            }
+        }
+
+        return $keys;
     }
 
     private function flipToConfirmed(MigrationRun $run, PromoteResult $promoteResult): MigrationConfirmResult
