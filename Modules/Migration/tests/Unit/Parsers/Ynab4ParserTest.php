@@ -97,3 +97,32 @@ it('Ynab4Parser: rejects the corrupt fixture with UnrecognizedMigrationFileExcep
     expect(fn () => $parser->parse($extracted, $this->user, 1))
         ->toThrow(UnrecognizedMigrationFileException::class);
 });
+
+it('WR-07: a negative Budgeted value is preserved, NOT silently coerced to zero', function (): void {
+    $dir = sys_get_temp_dir().'/ynab4-negative-budgeted-'.uniqid('', true);
+    mkdir($dir, 0755, true);
+
+    file_put_contents(
+        $dir.'/Test Register.csv',
+        "Account,Flag,\"Check Number\",Date,Payee,\"Master Category\",\"Sub Category\",Memo,Outflow,Inflow,Cleared,\"Running Balance\"\n"
+        ."Checking,,,01/15/2026,\"Albert Heijn\",Frequent,Groceries,,45.00,0.00,C,955.00\n",
+    );
+    file_put_contents(
+        $dir.'/Test Budget.csv',
+        "Month,\"Category Group\",Category,Budgeted,Outflows,\"Category Balance\"\n"
+        ."2026-01,Frequent,Groceries,-50.00,45.00,-95.00\n",
+    );
+
+    $parser = app(Ynab4Parser::class);
+    $batch = $parser->parse($dir, $this->user, 1);
+
+    $assignment = $batch->budgetAssignments->first();
+    expect($assignment)->not->toBeNull();
+    // A blank/malformed cell would have coerced to 0 either way — the
+    // negative value must survive as -50.00 (-5000 minor), not 0.
+    expect($assignment->budgeted->toMinor())->toBe(-5000);
+
+    @unlink($dir.'/Test Register.csv');
+    @unlink($dir.'/Test Budget.csv');
+    @rmdir($dir);
+});
