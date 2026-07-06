@@ -98,6 +98,7 @@
             "Modules\\Desktop\\Tests\\": "Modules/Desktop/tests/",
             "Modules\\DevMode\\Tests\\": "Modules/DevMode/tests/",
             "Modules\\Ledger\\Tests\\": "Modules/Ledger/tests/",
+            "Modules\\Migration\\Tests\\": "Modules/Migration/tests/",
             "Modules\\Ingestion\\Tests\\": "Modules/Ingestion/tests/",
             "Modules\\Import\\Tests\\": "Modules/Import/tests/",
             "Modules\\Onboarding\\Tests\\": "Modules/Onboarding/tests/",
