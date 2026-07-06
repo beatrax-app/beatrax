@@ -1,5 +1,6 @@
 <div class="space-y-6">
     <header class="space-y-1">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400" data-testid="migration-eyebrow">Migrations</p>
         <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Import from YNAB / Actual</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">Bring your category tree, budget history, and transactions over from YNAB4, new YNAB, or Actual Budget. Nothing is written to your ledger until you review and confirm.</p>
         @if ($reconcileOf !== null)

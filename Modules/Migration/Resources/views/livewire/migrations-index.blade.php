@@ -30,7 +30,7 @@
                         <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                             {{ $this->formatLabel($run->source_product) }}
                         </span>
-                        <span class="text-sm text-slate-500 dark:text-slate-400">{{ $run->created_at?->format('Y-m-d') }}</span>
+                        <span class="text-sm text-slate-500 dark:text-slate-400">{{ substr((string) $run->created_at, 0, 10) }}</span>
                         @if ($run->status === 'confirmed')
                             <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:text-emerald-400">Confirmed</span>
                         @elseif ($run->status === 'needs_attention')

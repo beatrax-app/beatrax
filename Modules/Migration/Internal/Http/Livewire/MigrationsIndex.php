@@ -6,9 +6,9 @@ namespace Modules\Migration\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Migration\Models\MigrationRun;
 
 /**
  * `/migrations` — a plain list of the user's past migration runs (UI-SPEC
@@ -33,15 +33,19 @@ use Modules\Migration\Models\MigrationRun;
  */
 final class MigrationsIndex extends Component
 {
-    public function render(ViewFactory $views, CurrentUser $currentUser): View
+    public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db): View
     {
         $userId = $currentUser->user()->id;
 
-        $runs = MigrationRun::query()
+        // Raw DatabaseManager read (never a chained dynamic Eloquent
+        // ->orderByDesc() call) — mirrors PreviewSummaryBuilder/
+        // GoalProgressQuery's established discipline against
+        // phpstan-strict-rules' staticMethod.dynamicCall false positive.
+        $runs = $db->connection()->table('migration_runs')
             ->where('user_id', $userId)
             ->where('status', '!=', 'discarded')
             ->orderByDesc('id')
-            ->get();
+            ->get(['id', 'source_product', 'status', 'created_at']);
 
         return $views->make('migration::livewire.migrations-index', [
             'runs' => $runs,
