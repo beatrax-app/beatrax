@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
+use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Actions\CheckForUpdates;
 use Modules\Migration\Public\Actions\ConfirmMigration;
 use Modules\Migration\Public\Actions\StartMigrationRun;
@@ -116,4 +117,48 @@ it('ThreeWayMerge: the conflict is listed for the user, not silently swallowed �
         ->where('item_type', 'conflict')
         ->get();
     expect($unmappedConflicts)->not->toBeEmpty();
+});
+
+it('CR-01: confirming a needs_attention reconciliation run does NOT overwrite the kept-local budget-assignment conflict', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
+    $jan = CarbonImmutable::parse('2026-01-01');
+
+    // LOCAL edit that will collide with v2's Groceries change (200.00 ->
+    // 250.00), producing a conflict CheckForUpdates leaves unresolved.
+    app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
+
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+    expect($reconciliationRun->status)->toBe('needs_attention');
+
+    // The wizard's own docblock (PreviewMigration.php:52-58) documents
+    // clicking Confirm on a needs_attention run as expected/safe — this is
+    // the exact call CR-01 found silently defeating D-14's keep-local
+    // guarantee on its SECOND promote() pass.
+    app(ConfirmMigration::class)->__invoke($reconciliationRun->id, $this->user);
+
+    $groceriesAssigned = $this->db->connection()->table('envelope_assignments')
+        ->where('user_id', $this->user->id)
+        ->where('category_id', $groceries->id)
+        ->where('period_start', '2026-01-01')
+        ->value('assigned_minor');
+
+    // The local 300.00 value must survive Confirm untouched — NOT silently
+    // reset to the source's conflicting 250.00.
+    expect((int) $groceriesAssigned)->toBe(30000);
+
+    $confirmedRun = MigrationRun::query()->findOrFail($reconciliationRun->id);
+    expect($confirmedRun->status)->toBe('confirmed');
 });
