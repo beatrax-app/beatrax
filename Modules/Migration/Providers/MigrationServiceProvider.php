@@ -32,6 +32,10 @@ final class MigrationServiceProvider extends ServiceProvider
 {
     private const PREVIEW_SUMMARY_BUILDER_CLASS = 'Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder';
 
+    private const YNAB4_PARSER_CLASS = 'Modules\Migration\Internal\Parsers\Ynab4Parser';
+
+    private const NYNAB_PARSER_CLASS = 'Modules\Migration\Internal\Parsers\NynabParser';
+
     private const START_MIGRATION_RUN_CLASS = 'Modules\Migration\Public\Actions\StartMigrationRun';
 
     private const CONFIRM_MIGRATION_CLASS = 'Modules\Migration\Public\Actions\ConfirmMigration';
@@ -55,6 +59,10 @@ final class MigrationServiceProvider extends ServiceProvider
         // Plan 04 injection point: read-model query class, mirrors
         // BudgetProgressQuery/CarryoverQuery's singleton convention.
         $this->singletonIfExists(self::PREVIEW_SUMMARY_BUILDER_CLASS);
+
+        // Plan 03 injection point: stateless format parsers, singleton-safe.
+        $this->singletonIfExists(self::YNAB4_PARSER_CLASS);
+        $this->singletonIfExists(self::NYNAB_PARSER_CLASS);
 
         // Plans 03/05/06/07 injection points: plain autowired actions/services
         // need no explicit binding (constructor DI resolves them directly),
