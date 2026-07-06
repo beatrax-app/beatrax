@@ -162,3 +162,161 @@ it('CR-01: confirming a needs_attention reconciliation run does NOT overwrite th
     $confirmedRun = MigrationRun::query()->findOrFail($reconciliationRun->id);
     expect($confirmedRun->status)->toBe('confirmed');
 });
+
+/*
+ * Req 10 gap-fix (13.5-VERIFICATION.md): the SPEC's own Target language
+ * explicitly promises conflict-flagging "when a newer export changes a
+ * transaction or budget amount" — the tests above only ever pinned the
+ * budget-assignment half. These three pin the TRANSACTION-amount half
+ * against the SAME v1/v2 ynab4 fixture pair: v2's Register.csv changes two
+ * plain (non-split) transactions' Outflow amount —
+ * 'row-0' (Albert Heijn 01/15: 45.00 -> 50.00, left with no local edit) and
+ * 'row-1' (Albert Heijn 01/19: 15.00 -> 18.00, given a colliding local edit
+ * below) — while every other row (including the salary/split/transfer rows)
+ * is byte-for-byte identical between v1 and v2, so 'row-0'/'row-1' isolate
+ * the amount-reconciliation behavior without disturbing any other test.
+ *
+ * There is no public "edit a transaction amount" writer anywhere in this
+ * codebase yet (Req 10's own transaction-amount reconciliation is the first
+ * feature to even read/write that field post-import) — so a "local edit" is
+ * simulated the only way it can currently happen: a direct table update,
+ * exactly like a hypothetical future edit screen would eventually perform.
+ */
+
+it('ThreeWayMerge: a transaction amount changed only on source applies cleanly; an untouched transaction stays untouched — Req 10', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $groceryTxId = (int) $this->db->connection()->table('migration_source_map')
+        ->where('user_id', $this->user->id)
+        ->where('source_product', 'ynab4')
+        ->where('source_entity_type', 'transaction')
+        ->where('source_external_id', 'row-0')
+        ->value('beatrax_id');
+    expect($groceryTxId)->toBeGreaterThan(0);
+
+    $salaryTxId = (int) $this->db->connection()->table('migration_source_map')
+        ->where('user_id', $this->user->id)
+        ->where('source_product', 'ynab4')
+        ->where('source_entity_type', 'transaction')
+        ->where('source_external_id', 'row-2')
+        ->value('beatrax_id');
+    expect($salaryTxId)->toBeGreaterThan(0);
+
+    // No local edit to either transaction — re-import v2, which changes
+    // 'row-0' (45.00 -> 50.00) but leaves the salary row untouched.
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+
+    // Clean APPLY: no local edit existed, so the source's new amount lands.
+    $groceryAmount = (int) $this->db->connection()->table('transactions')->where('id', $groceryTxId)->value('amount_minor');
+    expect($groceryAmount)->toBe(-5000);
+
+    // Untouched entity: neither applied nor flagged.
+    $salaryAmount = (int) $this->db->connection()->table('transactions')->where('id', $salaryTxId)->value('amount_minor');
+    expect($salaryAmount)->toBe(200000);
+
+    $amountConflicts = $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('migration_run_id', $reconciliationRun->id)
+        ->where('item_type', 'conflict')
+        ->where('display_label', 'Transaction amount_minor')
+        ->get();
+    expect($amountConflicts)->toBeEmpty();
+});
+
+it('ThreeWayMerge: a transaction amount changed on BOTH source and local is a conflict (untouched + listed) — Req 10', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $txId = (int) $this->db->connection()->table('migration_source_map')
+        ->where('user_id', $this->user->id)
+        ->where('source_product', 'ynab4')
+        ->where('source_entity_type', 'transaction')
+        ->where('source_external_id', 'row-1')
+        ->value('beatrax_id');
+    expect($txId)->toBeGreaterThan(0);
+
+    // LOCAL edit: -1500 (15.00 outflow) -> -1600 (16.00 outflow), colliding
+    // with v2's source change to -1800 (18.00 outflow).
+    $this->db->connection()->table('transactions')->where('id', $txId)->update(['amount_minor' => -1600]);
+
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+
+    expect($reconciliationRun->status)->toBe('needs_attention');
+
+    // CONFLICT — the local value (-1600) survives untouched; the source's
+    // -1800 is NOT silently applied.
+    $amount = (int) $this->db->connection()->table('transactions')->where('id', $txId)->value('amount_minor');
+    expect($amount)->toBe(-1600);
+
+    $amountConflicts = $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('migration_run_id', $reconciliationRun->id)
+        ->where('item_type', 'conflict')
+        ->where('display_label', 'Transaction amount_minor')
+        ->get();
+    expect($amountConflicts)->not->toBeEmpty();
+});
+
+it('a kept-local transaction-amount conflict survives BOTH CheckForUpdates and a subsequent Confirm', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $txId = (int) $this->db->connection()->table('migration_source_map')
+        ->where('user_id', $this->user->id)
+        ->where('source_product', 'ynab4')
+        ->where('source_entity_type', 'transaction')
+        ->where('source_external_id', 'row-1')
+        ->value('beatrax_id');
+
+    $this->db->connection()->table('transactions')->where('id', $txId)->update(['amount_minor' => -1600]);
+
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+    expect($reconciliationRun->status)->toBe('needs_attention');
+
+    $amountAfterCheckForUpdates = (int) $this->db->connection()->table('transactions')->where('id', $txId)->value('amount_minor');
+    expect($amountAfterCheckForUpdates)->toBe(-1600);
+
+    // Clicking Confirm on the needs_attention run must NOT silently
+    // overwrite the kept-local transaction amount — unlike budget_assignment
+    // (CR-01), a transaction is never revisited a second time by
+    // PromoteStagingToDomain::promote() at all once it has a
+    // migration_source_map row, so no separate skip-list is required here;
+    // this test proves that protection holds for the transaction-amount
+    // field specifically.
+    app(ConfirmMigration::class)->__invoke($reconciliationRun->id, $this->user);
+
+    $amountAfterConfirm = (int) $this->db->connection()->table('transactions')->where('id', $txId)->value('amount_minor');
+    expect($amountAfterConfirm)->toBe(-1600);
+
+    $confirmedRun = MigrationRun::query()->findOrFail($reconciliationRun->id);
+    expect($confirmedRun->status)->toBe('confirmed');
+});

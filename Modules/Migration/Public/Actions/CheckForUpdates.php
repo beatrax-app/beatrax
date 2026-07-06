@@ -6,14 +6,18 @@ namespace Modules\Migration\Public\Actions;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\QueryException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Migration\Internal\Pipeline\MergeDecision;
 use Modules\Migration\Internal\Pipeline\PromoteStagingToDomain;
 use Modules\Migration\Internal\Pipeline\ThreeWayMergeResolver;
 use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Dto\ConflictDto;
+use stdClass;
 
 /**
  * Reconciliation entry point (Req 10, D-11/D-12/D-13/D-14 — the highest-value
@@ -48,6 +52,19 @@ use Modules\Migration\Public\Dto\ConflictDto;
  * outcome (foreign run, wrong status, wrong product) throws via
  * `firstOrFail()` (translated to a 404, never a 403, matching this
  * codebase's ASVS V4 convention).
+ *
+ * Req 10 gap-fix (13.5-VERIFICATION.md): a transaction's native
+ * `amount_minor` is now reconciled by the SAME apply-set/conflict-set flow
+ * as budget_assignment/category/account/description — a conflicted
+ * transaction amount is left byte-for-byte untouched (never overwritten by
+ * a LATER `ConfirmMigration` call either, since `PromoteStagingToDomain`'s
+ * transaction step already resolve-gates on `migration_source_map` and
+ * never revisits an already-mapped row — no separate skip-list was needed
+ * for transactions, unlike budget_assignment's CR-01 fix). A non-conflicting
+ * amount apply recomputes the transaction's stored `fingerprint` in the same
+ * update (see `applyTransactionAmount()`), since `amount_minor` — unlike
+ * `description` — is part of the fingerprint tuple and the
+ * `transactions_fingerprint_uq` composite unique index.
  */
 final class CheckForUpdates
 {
@@ -58,6 +75,7 @@ final class CheckForUpdates
         private readonly ThreeWayMergeResolver $resolver,
         private readonly PromoteStagingToDomain $promoter,
         private readonly SourceMapWriter $sourceMapWriter,
+        private readonly FingerprintComposer $fingerprints,
     ) {}
 
     public function __invoke(int $priorConfirmedRunId, User $user, string $sourceProduct, string $extractedPath): MigrationRun
@@ -90,7 +108,7 @@ final class CheckForUpdates
         // skip-list (D-12/D-13).
         $this->promoter->promote($newRun->id, $user, $decision->conflictedBudgetAssignmentKeys());
 
-        $this->applyNonBudgetAssignmentChanges($user, $sourceProduct, $decision);
+        $this->applyNonBudgetAssignmentChanges($newRun->id, $user, $sourceProduct, $decision);
 
         $hasConflicts = $decision->conflicts !== [];
 
@@ -159,8 +177,15 @@ final class CheckForUpdates
      * category/account/transaction row, so a non-conflicting rename/edit
      * needs this explicit path. Advances the baseline to the newly-applied
      * source value afterward.
+     *
+     * A transaction `amount_minor` change is routed through
+     * `applyTransactionAmount()` instead of a bare column update: unlike a
+     * description/name rename, `amount_minor` is part of the fingerprint
+     * tuple AND the `transactions_fingerprint_uq` composite unique index
+     * (Req 10 gap-fix — 13.5-VERIFICATION.md), so the stored `fingerprint`
+     * column must be recomputed in the SAME update or it goes stale.
      */
-    private function applyNonBudgetAssignmentChanges(User $user, string $sourceProduct, MergeDecision $decision): void
+    private function applyNonBudgetAssignmentChanges(int $runId, User $user, string $sourceProduct, MergeDecision $decision): void
     {
         $connection = $this->db->connection();
 
@@ -187,10 +212,28 @@ final class CheckForUpdates
                 continue;
             }
 
-            $connection->table($table)
-                ->where('id', $beatraxId)
-                ->where('user_id', $user->id)
-                ->update($apply['fields']);
+            if ($apply['entityType'] === 'transaction' && array_key_exists('amount_minor', $apply['fields'])) {
+                $newAmountMinor = $apply['fields']['amount_minor'];
+                $applied = is_int($newAmountMinor)
+                    && $this->applyTransactionAmount($user, $beatraxId, $newAmountMinor);
+
+                if (! $applied) {
+                    // Vanishingly rare: the new amount collides with another
+                    // row's fingerprint tuple (same account/date/currency/
+                    // counterparty). Left byte-for-byte untouched rather
+                    // than silently dropped or half-applied — surfaced as a
+                    // visible unmapped item (mirrors CR-02's own
+                    // fingerprint-collision-visibility precedent).
+                    $this->recordAmountApplyCollision($runId, $user, $apply['sourceExternalId']);
+
+                    continue;
+                }
+            } else {
+                $connection->table($table)
+                    ->where('id', $beatraxId)
+                    ->where('user_id', $user->id)
+                    ->update($apply['fields']);
+            }
 
             $this->sourceMapWriter->record(
                 $user,
@@ -203,6 +246,81 @@ final class CheckForUpdates
                 $apply['fields'],
             );
         }
+    }
+
+    /**
+     * Updates a transaction's `amount_minor` AND recomputes its stored
+     * `fingerprint` in the same statement, so the second-layer SHA-256
+     * idempotency guard (`FingerprintComposer`) never drifts from the row's
+     * actual content. Returns false (no write performed) on a genuine
+     * `transactions_fingerprint_uq` collision rather than letting the raw
+     * `QueryException` bubble out of the whole reconciliation.
+     */
+    private function applyTransactionAmount(User $user, int $transactionId, int $newAmountMinor): bool
+    {
+        $connection = $this->db->connection();
+
+        /** @var stdClass|null $row */
+        $row = $connection->table('transactions')
+            ->where('id', $transactionId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($row === null) {
+            return false;
+        }
+
+        $canonical = new CanonicalTransaction(
+            userId: $user->id,
+            accountId: self::toInt($row->account_id),
+            type: self::toStr($row->type),
+            postedAt: CarbonImmutable::parse(self::toStr($row->posted_at)),
+            bookedAt: CarbonImmutable::parse(self::toStr($row->booked_at)),
+            valueDate: CarbonImmutable::parse(self::toStr($row->value_date)),
+            amountMinor: $newAmountMinor,
+            currency: self::toStr($row->currency),
+            settledAmountMinor: self::toInt($row->settled_amount_minor),
+            settledCurrency: self::toStr($row->settled_currency),
+            fxRateUsed: $row->fx_rate_used !== null ? self::toStr($row->fx_rate_used) : null,
+            counterpartyName: $row->counterparty_name !== null ? self::toStr($row->counterparty_name) : null,
+            counterpartyIban: $row->counterparty_iban !== null ? self::toStr($row->counterparty_iban) : null,
+            counterpartyNormalized: self::toStr($row->counterparty_normalized),
+            normalizationVersion: self::toInt($row->normalization_version),
+            description: $row->description !== null ? self::toStr($row->description) : null,
+            categoryId: $row->category_id !== null ? self::toInt($row->category_id) : null,
+            sourceFormat: self::toStr($row->source_format),
+            importRunId: self::toInt($row->import_run_id),
+            sourceRowIndex: self::toInt($row->source_row_index),
+            sourceRef: $row->source_ref !== null ? self::toStr($row->source_ref) : null,
+        );
+
+        $fingerprint = $this->fingerprints->compose($canonical);
+
+        try {
+            $connection->table('transactions')
+                ->where('id', $transactionId)
+                ->where('user_id', $user->id)
+                ->update([
+                    'amount_minor' => $newAmountMinor,
+                    'fingerprint' => $fingerprint,
+                ]);
+        } catch (QueryException) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function recordAmountApplyCollision(int $runId, User $user, string $sourceExternalId): void
+    {
+        $this->db->connection()->table('migration_staging_unmapped_items')->insert([
+            'user_id' => $user->id,
+            'migration_run_id' => $runId,
+            'item_type' => 'extra',
+            'source_external_id' => $sourceExternalId,
+            'display_label' => 'Transaction amount update',
+            'reason' => "The source's new amount could not be applied — it collides with another transaction's fingerprint (same account, date, currency and counterparty). Left unchanged.",
+        ]);
     }
 
     private static function beatraxEntityType(string $entityType): string
@@ -226,5 +344,15 @@ final class CheckForUpdates
             is_scalar($value) => (string) $value,
             default => (string) json_encode($value),
         };
+    }
+
+    private static function toInt(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    private static function toStr(mixed $value): string
+    {
+        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }
