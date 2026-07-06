@@ -42,13 +42,29 @@ use stdClass;
  * transaction-description reconciliation follow the IDENTICAL algorithm
  * against a different entity kind and are implemented for completeness (the
  * plan's own "Per-entity apply()" contract), applied directly by
- * `CheckForUpdates` via a plain table update — but are not separately
- * re-proven by a dedicated test in this plan. Transaction amount/date/
- * category-assignment and payee/goal reconciliation are deliberately NOT
- * implemented here (DOCUMENTED ASSUMPTION): they carry higher blast radius
- * (fingerprint/category-assignment invariants, `GoalWriter` validation) than
- * this plan's test scope justifies; a source-side change to those fields on
- * an already-promoted entity currently falls through unreconciled until a
+ * `CheckForUpdates` via a plain table update.
+ *
+ * Transaction AMOUNT reconciliation (13.5-VERIFICATION.md Req 10 gap-fix)
+ * follows the identical algorithm against `transactions.amount_minor`,
+ * Money-aware exactly like budget_assignment. It is deliberately restricted
+ * to non-split, non-split-parent rows (`is_split_parent = false` AND
+ * `parent_source_external_id IS NULL`): a split parent's `amount_minor` is
+ * not the invariant `SaveTransactionSplit::save()` actually enforces (that
+ * compares leg `settled_amount_minor` against the parent's own
+ * `settled_amount_minor`), so reconciling a split parent's native amount
+ * independently of its legs would risk a silently inconsistent row — out of
+ * this gap-fix's tight scope, left for a future plan. `settled_amount_minor`
+ * (the cross-currency settled leg) and the transaction DATE are likewise
+ * NOT reconciled here (DOCUMENTED FOLLOW-UP): a date change also shifts the
+ * fingerprint tuple's `posted_at`/`booked_at` legs and the
+ * `transactions_fingerprint_uq` composite unique index simultaneously,
+ * which is materially higher blast radius than a single-column amount swap
+ * and was judged out of this gap-fix's tight scope. Transaction date/
+ * category-assignment and payee/goal reconciliation remain unimplemented
+ * (DOCUMENTED ASSUMPTION carried over from Plan 07): they carry higher blast
+ * radius (fingerprint invariants, `GoalWriter` validation) than this plan's
+ * test scope justifies; a source-side change to those fields on an
+ * already-promoted entity currently falls through unreconciled until a
  * future plan extends this resolver.
  *
  * Money comparisons for `budget_assignment` use `Brick\Money\Money` value
@@ -79,6 +95,7 @@ final class ThreeWayMergeResolver
         $this->reconcileCategories($newRunId, $user, $sourceProduct, $applies, $conflicts);
         $this->reconcileAccounts($newRunId, $user, $sourceProduct, $applies, $conflicts);
         $this->reconcileTransactionDescriptions($newRunId, $user, $sourceProduct, $applies, $conflicts);
+        $this->reconcileTransactionAmounts($newRunId, $user, $sourceProduct, $applies, $conflicts);
 
         return new MergeDecision($applies, $conflicts);
     }
@@ -322,6 +339,84 @@ final class ThreeWayMergeResolver
                 localValue: $current,
                 sourceValue: $sNew,
                 baselineValue: $baseline,
+            );
+        }
+    }
+
+    /**
+     * Req 10 gap-fix (13.5-VERIFICATION.md): reconciles a plain transaction's
+     * native `amount_minor` — Money-aware, exactly like `budget_assignment`
+     * above. Restricted to non-split rows (see class docblock) to avoid the
+     * split-leg-sum invariant `SaveTransactionSplit::save()` actually
+     * enforces against `settled_amount_minor`, a different column this
+     * method never touches.
+     *
+     * @param  list<array{entityType: string, sourceExternalId: string, fields: array<string, string|int|float|bool|null>}>  $applies
+     * @param  list<ConflictDto>  $conflicts
+     */
+    private function reconcileTransactionAmounts(int $newRunId, User $user, string $sourceProduct, array &$applies, array &$conflicts): void
+    {
+        $connection = $this->db->connection();
+
+        $rows = $connection->table('migration_staging_transactions')
+            ->where('user_id', $user->id)
+            ->where('migration_run_id', $newRunId)
+            ->whereNull('parent_source_external_id')
+            ->where('is_split_parent', false)
+            ->get();
+
+        /** @var stdClass $row */
+        foreach ($rows as $row) {
+            $externalId = self::toStr($row->source_external_id);
+            $map = $this->findMap($user, $sourceProduct, 'transaction', $externalId);
+            if ($map === null) {
+                continue;
+            }
+
+            $baselineRaw = $this->baselineValue($user, self::toInt($map->id), 'amount_minor');
+            if ($baselineRaw === null) {
+                continue; // no recorded baseline for this field — leave to the unconditional promote() path.
+            }
+            $baselineMinor = self::toInt($baselineRaw);
+
+            $transactionId = self::toInt($map->beatrax_id);
+            $sNewMinor = self::toInt($row->amount_minor);
+            $sourceCurrency = self::toStr($row->currency);
+
+            /** @var stdClass|null $currentRow */
+            $currentRow = $connection->table('transactions')
+                ->where('id', $transactionId)
+                ->where('user_id', $user->id)
+                ->first(['amount_minor', 'currency']);
+
+            if ($currentRow === null) {
+                continue;
+            }
+
+            $currentCurrency = self::toStr($currentRow->currency);
+            $currentMinor = self::toInt($currentRow->amount_minor);
+
+            if (self::moneyEquals($sNewMinor, $sourceCurrency, $baselineMinor, $sourceCurrency)) {
+                continue; // source unchanged since last import.
+            }
+
+            if (self::moneyEquals($currentMinor, $currentCurrency, $baselineMinor, $sourceCurrency)) {
+                $applies[] = [
+                    'entityType' => 'transaction',
+                    'sourceExternalId' => $externalId,
+                    'fields' => ['amount_minor' => $sNewMinor],
+                ];
+
+                continue;
+            }
+
+            $conflicts[] = new ConflictDto(
+                entityType: 'transaction',
+                sourceExternalId: $externalId,
+                fieldName: 'amount_minor',
+                localValue: $currentMinor,
+                sourceValue: $sNewMinor,
+                baselineValue: $baselineMinor,
             );
         }
     }
