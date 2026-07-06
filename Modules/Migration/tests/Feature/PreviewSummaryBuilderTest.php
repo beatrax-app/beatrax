@@ -76,7 +76,25 @@ it('PreviewSummaryBuilder: the unmapped summary lists >=1 unresolvable payee/ext
     @unlink($zipPath);
 });
 
-it('PreviewSummaryBuilder: throws MigrationRunNotParsedException for a run with zero staged rows', function (): void {
+it('WR-06: throws MigrationRunNotParsedException for a discarded run (staging deliberately truncated)', function (): void {
+    $run = MigrationRun::create([
+        'user_id' => $this->user->id,
+        'source_product' => 'ynab4',
+        'status' => 'discarded',
+        'original_filename' => 'discarded.zip',
+    ]);
+
+    expect(fn () => app(PreviewSummaryBuilder::class)->forRun($run->id, $this->user))
+        ->toThrow(MigrationRunNotParsedException::class);
+});
+
+it('WR-06: a genuinely-empty PARSED run (zero staged rows) does NOT throw — it is a legitimate empty preview', function (): void {
+    // A 'parsed' status is only ever set by StartMigrationRun AFTER
+    // parsing+staging has already succeeded — this simulates a brand-new,
+    // completely empty source budget file (zero categories/accounts/
+    // payees/transactions/budget-months), which is a valid preview outcome,
+    // NOT the same "nothing to preview" condition a discarded run's
+    // truncated staging represents.
     $run = MigrationRun::create([
         'user_id' => $this->user->id,
         'source_product' => 'ynab4',
@@ -84,8 +102,14 @@ it('PreviewSummaryBuilder: throws MigrationRunNotParsedException for a run with 
         'original_filename' => 'empty.zip',
     ]);
 
-    expect(fn () => app(PreviewSummaryBuilder::class)->forRun($run->id, $this->user))
-        ->toThrow(MigrationRunNotParsedException::class);
+    $summary = app(PreviewSummaryBuilder::class)->forRun($run->id, $this->user);
+
+    expect($summary)->toBeInstanceOf(PreviewSummary::class);
+    expect($summary->categoriesCount)->toBe(0);
+    expect($summary->accountsCount)->toBe(0);
+    expect($summary->counterpartiesCount)->toBe(0);
+    expect($summary->transactionsCount)->toBe(0);
+    expect($summary->budgetMonthsCount)->toBe(0);
 });
 
 it('PreviewSummaryBuilder: a run belonging to another user resolves to a not-found exception — IDOR (T-13.5-14)', function (): void {

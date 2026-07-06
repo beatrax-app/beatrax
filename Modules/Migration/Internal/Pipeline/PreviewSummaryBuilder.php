@@ -40,12 +40,12 @@ final class PreviewSummaryBuilder
     {
         $connection = $this->db->connection();
 
-        $ownedByUser = $connection->table('migration_runs')
+        $run = $connection->table('migration_runs')
             ->where('id', $migrationRunId)
             ->where('user_id', $user->id)
-            ->exists();
+            ->first(['status']);
 
-        if (! $ownedByUser) {
+        if ($run === null) {
             throw (new ModelNotFoundException)->setModel(MigrationRun::class, [$migrationRunId]);
         }
 
@@ -79,8 +79,17 @@ final class PreviewSummaryBuilder
             ->distinct()
             ->count('period_start');
 
-        if ($categoriesCount === 0 && $accountsCount === 0 && $counterpartiesCount === 0
-            && $transactionsCount === 0 && $budgetMonthsCount === 0) {
+        // WR-06: distinguish "never staged" from "staged but genuinely
+        // empty" via migration_runs.status rather than an all-zero-counts
+        // heuristic. `StartMigrationRun` only ever creates a row with
+        // status 'parsed' AFTER parsing+staging has already succeeded (D-06/
+        // D-07), so 'parsed'/'confirmed'/'needs_attention' all mean staging
+        // genuinely completed — a brand-new, completely empty source budget
+        // file legitimately produces all-zero counts there, which is a
+        // valid (if uneventful) preview, not an error. Only a 'discarded'
+        // run has had its staging deliberately truncated (DiscardMigrationRun),
+        // which IS "nothing to preview" for a real reason.
+        if (self::toStr($run->status) === 'discarded') {
             throw new MigrationRunNotParsedException($migrationRunId);
         }
 
