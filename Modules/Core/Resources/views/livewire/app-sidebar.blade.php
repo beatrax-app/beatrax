@@ -213,6 +213,12 @@
             <span class="side-badge muted" aria-label="{{ $navCounts['imports'] }} imports">{{ $navCount('imports') }}</span>
         @endif
     </a>
+    {{-- 13.5-08 UI-SPEC Copywriting Contract: locked nav-entry copy, placed
+         beside the existing Import entry (planner's call on exact placement). --}}
+    <a href="{{ route('migrations.index') }}" class="side-item {{ $isActive('/migrations') }}">
+        <span class="ic" aria-hidden="true">⇄</span>
+        Import from YNAB / Actual
+    </a>
     <a href="#" class="side-item">
         <span class="ic" aria-hidden="true">⌗</span>
         Receipts
