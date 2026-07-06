@@ -6,9 +6,11 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
+use Modules\Migration\Internal\Parsers\ActualParser;
 use Modules\Migration\Internal\Parsers\Ynab4Parser;
 use Modules\Migration\Internal\Pipeline\StagingWriter;
 use Modules\Migration\Models\MigrationRun;
+use Modules\Migration\Tests\Support\ActualFixtureBuilder;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
@@ -126,6 +128,36 @@ it('StagingWriter: writes ONLY staging tables — zero domain-table writes (Req 
     expect($this->db->connection()->table('accounts')->where('user_id', $this->user->id)->count())->toBe(0);
     expect($this->db->connection()->table('envelope_assignments')->where('user_id', $this->user->id)->count())->toBe(0);
     expect($this->db->connection()->table('counterparties')->where('user_id', $this->user->id)->count())->toBe(0);
+});
+
+it('StagingWriter: lands the ONE flat goal_def as a migration_staging_goals row (Plan 06 Rule 2 fix)', function (): void {
+    $zipPath = sys_get_temp_dir().'/staging-writer-actual-'.uniqid('', true).'.zip';
+    ActualFixtureBuilder::build($zipPath);
+    $extracted = MigrationFixturePaths::extractZip($zipPath);
+
+    $actualRun = MigrationRun::create([
+        'user_id' => $this->user->id,
+        'source_product' => 'actual',
+        'status' => 'parsed',
+        'original_filename' => 'actual-export.zip',
+    ]);
+
+    $batch = app(ActualParser::class)->parse($extracted, $this->user, $actualRun->id);
+    app(StagingWriter::class)->write($batch, $actualRun->id, $this->user);
+
+    $goals = $this->db->connection()->table('migration_staging_goals')
+        ->where('user_id', $this->user->id)
+        ->where('migration_run_id', $actualRun->id)
+        ->get();
+
+    // Only "Groceries" carries a FLAT goal_def; "Emergency Fund"'s non-flat
+    // template reduces to an unmapped item instead (Req 8), never a row here.
+    expect($goals)->toHaveCount(1);
+    expect($goals->first()->name)->toBe('Groceries');
+    expect((int) $goals->first()->target_minor)->toBe(20000);
+    expect($goals->first()->target_date)->toBeNull();
+
+    @unlink($zipPath);
 });
 
 it('StagingWriter: never materializes the transaction generator into a PHP array', function (): void {
