@@ -21,7 +21,13 @@ use ZipArchive;
  *    rejecting the archive the moment either cap is exceeded.
  *  - T-13.5-06 (zip-slip, Tampering): every entry name is checked for an
  *    absolute path or a `..` traversal segment before extraction; a single
- *    offending entry rejects the whole archive.
+ *    offending entry rejects the whole archive. Entries carrying a Unix
+ *    symlink mode bit (WR-04) are rejected the same way — a symlink's name
+ *    itself is not a "name" the traversal check inspects at all, but
+ *    `ZipArchive::extractTo()` can materialize it as an actual filesystem
+ *    symlink whose target string is attacker-controlled and unconstrained,
+ *    which a caller's subsequent `is_file()`/`fopen()` on the extracted path
+ *    would silently follow outside the scoped extraction directory.
  *
  * `$maxEntries`/`$maxTotalUncompressedBytes` are constructor-configurable
  * (sane production defaults below) so tests can exercise both caps
@@ -39,6 +45,12 @@ final class ZipExtractor
     private const DEFAULT_MAX_ENTRIES = 500;
 
     private const DEFAULT_MAX_TOTAL_UNCOMPRESSED_BYTES = 200 * 1024 * 1024;
+
+    /** POSIX `S_IFMT` mask applied to a Unix external-attribute mode. */
+    private const UNIX_MODE_FMT_MASK = 0o170000;
+
+    /** POSIX `S_IFLNK` — a symlink entry. */
+    private const UNIX_MODE_SYMLINK = 0o120000;
 
     private ?string $extractedDir = null;
 
@@ -98,6 +110,14 @@ final class ZipExtractor
                     "archive entry '{$name}' resolves outside the extraction directory (zip-slip guard, T-13.5-06)",
                 );
             }
+
+            if ($this->isSymlinkEntry($zip, $i)) {
+                $zip->close();
+
+                throw new UnrecognizedMigrationFileException(
+                    "archive entry '{$name}' is a symlink, which is not permitted (zip-slip guard, WR-04/T-13.5-06)",
+                );
+            }
         }
 
         $targetDir = UserDataPathService::appPath('migration-extracts/'.uniqid('run-', true));
@@ -150,6 +170,31 @@ final class ZipExtractor
         $segments = explode('/', $normalised);
 
         return in_array('..', $segments, true);
+    }
+
+    /**
+     * True when this entry's Unix external file-attribute bits mark it as a
+     * symlink (WR-04). Only `ZipArchive::OPSYS_UNIX`-tagged entries carry a
+     * meaningful Unix mode in the upper 16 bits of the external attributes —
+     * an archive built on another OS (e.g. Windows/FAT, `OPSYS_DOS`) never
+     * sets this bit, so this check is a no-op (never a false positive) for
+     * those archives.
+     */
+    private function isSymlinkEntry(ZipArchive $zip, int $index): bool
+    {
+        $opsys = 0;
+        $attr = 0;
+        if (! $zip->getExternalAttributesIndex($index, $opsys, $attr)) {
+            return false;
+        }
+
+        if ($opsys !== ZipArchive::OPSYS_UNIX) {
+            return false;
+        }
+
+        $mode = (is_int($attr) ? $attr : 0) >> 16 & self::UNIX_MODE_FMT_MASK;
+
+        return $mode === self::UNIX_MODE_SYMLINK;
     }
 
     private function removeRecursively(string $dir): void
