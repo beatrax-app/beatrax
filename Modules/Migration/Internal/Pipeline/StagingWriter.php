@@ -12,18 +12,23 @@ use Modules\Migration\Public\Dto\MigrationAccountDto;
 use Modules\Migration\Public\Dto\MigrationBatch;
 use Modules\Migration\Public\Dto\MigrationBudgetAssignmentDto;
 use Modules\Migration\Public\Dto\MigrationCategoryDto;
+use Modules\Migration\Public\Dto\MigrationGoalDto;
 use Modules\Migration\Public\Dto\MigrationPayeeDto;
 use Modules\Migration\Public\Dto\MigrationTransactionDto;
 use Modules\Migration\Public\Dto\UnmappedItemDto;
 
 /**
- * Lands a parsed `MigrationBatch` into the six `migration_staging_*` scratch
- * tables (D-06/D-07) — the ONLY write this class performs; no domain table
- * is ever touched here (Req 11's no-write-before-confirm invariant).
+ * Lands a parsed `MigrationBatch` into the seven `migration_staging_*`
+ * scratch tables (D-06/D-07) — the ONLY write this class performs; no domain
+ * table is ever touched here (Req 11's no-write-before-confirm invariant).
  *
- * The five bounded collections (categories, accounts, payees, budget
- * assignments, already-known-unmapped items) are small enough per format to
- * insert directly. `transactions` is the one deliberate exception (D-04/D-05):
+ * The six bounded collections (categories, accounts, payees, budget
+ * assignments, goals, already-known-unmapped items) are small enough per
+ * format to insert directly. `goals` (`migration_staging_goals`, Plan 06
+ * Rule 2 fix) is the persistence path `MigrationBatch::$goals` was missing
+ * entirely — without it, a parsed `MigrationGoalDto` had nowhere to land
+ * between parse and confirm, making Req 8's goal promotion structurally
+ * impossible. `transactions` is the one deliberate exception (D-04/D-05):
  * it streams the batch's lazy `Generator<MigrationTransactionDto>` directly
  * into `migration_staging_transactions` in chunks of `CHUNK_SIZE` rows,
  * mirroring `Modules\Ledger\Public\Actions\RecordTransactions::persistChunk()`'s
@@ -79,6 +84,7 @@ final class StagingWriter
         $this->writeAccounts($batch->accounts, $migrationRunId, $user);
         $this->writePayees($batch->payees, $migrationRunId, $user);
         $this->writeBudgetAssignments($batch->budgetAssignments, $migrationRunId, $user);
+        $this->writeGoals($batch->goals, $migrationRunId, $user);
         $this->writeUnmapped($batch->unmapped, $migrationRunId, $user);
         $this->writeTransactions($batch->transactions, $migrationRunId, $user);
     }
@@ -154,6 +160,24 @@ final class StagingWriter
         ])->all();
 
         $this->insertChunked('migration_staging_budget_assignments', $rows);
+    }
+
+    /**
+     * @param  Collection<int, MigrationGoalDto>  $goals
+     */
+    private function writeGoals(Collection $goals, int $migrationRunId, User $user): void
+    {
+        $rows = $goals->map(fn (MigrationGoalDto $g): array => [
+            'user_id' => $user->id,
+            'migration_run_id' => $migrationRunId,
+            'category_source_external_id' => $g->categorySourceExternalId,
+            'name' => $g->name,
+            'target_minor' => $g->targetAmount->toMinor(),
+            'target_currency' => $g->targetAmount->currency(),
+            'target_date' => $g->targetDate?->toDateString(),
+        ])->all();
+
+        $this->insertChunked('migration_staging_goals', $rows);
     }
 
     /**
