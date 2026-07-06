@@ -18,12 +18,15 @@ use Livewire\LivewireManager;
  * and PHPStan-clean before those classes exist. This file is written ONCE in
  * Wave 0 (this plan) and never re-edited by later plans.
  *
- * Service bind inventory (by implementing plan):
- *   Plan 02: parser contracts / Ynab4Parser / NynabParser / ActualParser
- *   Plan 03: StartMigrationRun, StagingWriter (bounded staging writer)
- *   Plan 04: PreviewSummaryBuilder (singleton read model)
- *   Plan 05: ThreeWayMergeResolver, SourceMapWriter
- *   Plan 06: PromoteStagingToDomain, ConfirmMigration, DiscardMigrationRun
+ * Service bind inventory (by implementing plan — corrected against the
+ * actual Wave execution order; the original Wave-0 guess above numbered
+ * these one plan too early for parsers/StartMigrationRun/PreviewSummaryBuilder):
+ *   Plan 03: Ynab4Parser / NynabParser (+ Support/ZipExtractor etc.)
+ *   Plan 04: ActualParser (+ ActualSqliteReader, not container-registered)
+ *   Plan 05: StartMigrationRun, StagingWriter (bounded staging writer),
+ *            PreviewSummaryBuilder (singleton read model)
+ *   Plan 06: ThreeWayMergeResolver, SourceMapWriter, PromoteStagingToDomain,
+ *            ConfirmMigration, DiscardMigrationRun
  *   Plan 07: CheckForUpdates (reconciliation entry point)
  *   Plan 08: NewMigration / PreviewMigration / MigrationResults / MigrationsIndex
  *            Livewire components + Routes/web.php real routes
@@ -58,7 +61,7 @@ final class MigrationServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        // Plan 04 injection point: read-model query class, mirrors
+        // Plan 05 injection point: read-model query class, mirrors
         // BudgetProgressQuery/CarryoverQuery's singleton convention.
         $this->singletonIfExists(self::PREVIEW_SUMMARY_BUILDER_CLASS);
 
@@ -73,9 +76,13 @@ final class MigrationServiceProvider extends ServiceProvider
         $this->singletonIfExists(self::NYNAB_PARSER_CLASS);
         $this->singletonIfExists(self::ACTUAL_PARSER_CLASS);
 
-        // Plans 03/05/06/07 injection points: plain autowired actions/services
+        // Plans 05/06/07 injection points: plain autowired actions/services
         // need no explicit binding (constructor DI resolves them directly),
         // but singletons are registered here where statelessness allows reuse.
+        // `Internal\Pipeline\StagingWriter` (Plan 05) is likewise NOT
+        // registered here — it has no state and no ctor args requiring a
+        // forward-looking guard, so plain container autowiring resolves it
+        // as a transient dependency of StartMigrationRun without any entry.
         $this->singletonIfExists(self::SOURCE_MAP_WRITER_CLASS);
         $this->singletonIfExists(self::START_MIGRATION_RUN_CLASS);
         $this->singletonIfExists(self::CONFIRM_MIGRATION_CLASS);
