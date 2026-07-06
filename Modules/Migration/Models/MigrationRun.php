@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Migration\Models;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
+use Modules\Core\Public\Concerns\BelongsToUser;
+
+/**
+ * One migration import attempt (YNAB4/nYNAB/Actual). Parent scope key every
+ * `migration_staging_*` row hangs off of; the source-of-truth for a run's
+ * lifecycle status (Req 1/11, D-06/D-07).
+ *
+ * @property int $id
+ * @property int|null $user_id
+ * @property string $source_product
+ * @property string $status
+ * @property string $original_filename
+ * @property CarbonImmutable|null $confirmed_at
+ * @property CarbonImmutable $created_at
+ * @property CarbonImmutable $updated_at
+ */
+final class MigrationRun extends Model
+{
+    use BelongsToUser;
+
+    /** @var list<string> */
+    protected $fillable = [
+        'user_id',
+        'source_product',
+        'status',
+        'original_filename',
+        'confirmed_at',
+    ];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'confirmed_at' => 'immutable_datetime',
+        ];
+    }
+}
