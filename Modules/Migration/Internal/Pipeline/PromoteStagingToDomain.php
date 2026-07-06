@@ -187,6 +187,7 @@ final class PromoteStagingToDomain
 
             $this->db->connection()->table('migration_staging_categories')
                 ->where('id', self::toInt($row->id))
+                ->where('user_id', $user->id)
                 ->update(['resolution_status' => 'mapped', 'resolved_category_id' => $resolved]);
 
             $idMap[$externalId] = $resolved;
@@ -324,6 +325,7 @@ final class PromoteStagingToDomain
 
             $this->db->connection()->table('migration_staging_accounts')
                 ->where('id', self::toInt($row->id))
+                ->where('user_id', $user->id)
                 ->update(['resolution_status' => 'mapped', 'resolved_account_id' => $resolved]);
 
             $idMap[$externalId] = $resolved;
@@ -463,6 +465,7 @@ final class PromoteStagingToDomain
                     // staged status is applied explicitly right after insert.
                     $this->db->connection()->table('transactions')
                         ->where('id', $transactionId)
+                        ->where('user_id', $user->id)
                         ->update(['status' => self::toStr($row->cleared_status)]);
 
                     $this->sourceMapWriter->record(
@@ -674,7 +677,10 @@ final class PromoteStagingToDomain
             return null;
         }
 
-        $iban = $this->db->connection()->table('accounts')->where('id', $partnerAccountId)->value('iban');
+        $iban = $this->db->connection()->table('accounts')
+            ->where('id', $partnerAccountId)
+            ->where('user_id', $user->id)
+            ->value('iban');
 
         return is_string($iban) ? $iban : null;
     }
