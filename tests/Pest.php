@@ -42,6 +42,7 @@ foreach (
         'Modules/Import' => Modules\Import\Tests\TestCase::class,
         'Modules/Ingestion' => Modules\Ingestion\Tests\TestCase::class,
         'Modules/Ledger' => Modules\Ledger\Tests\TestCase::class,
+        'Modules/Migration' => Modules\Migration\Tests\TestCase::class,
         'Modules/Onboarding' => Modules\Onboarding\Tests\TestCase::class,
         'Modules/Receipts' => Modules\Receipts\Tests\TestCase::class,
         'Modules/Recurring' => Modules\Recurring\Tests\TestCase::class,
