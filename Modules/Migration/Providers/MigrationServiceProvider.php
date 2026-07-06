@@ -36,6 +36,8 @@ final class MigrationServiceProvider extends ServiceProvider
 
     private const NYNAB_PARSER_CLASS = 'Modules\Migration\Internal\Parsers\NynabParser';
 
+    private const ACTUAL_PARSER_CLASS = 'Modules\Migration\Internal\Parsers\ActualParser';
+
     private const START_MIGRATION_RUN_CLASS = 'Modules\Migration\Public\Actions\StartMigrationRun';
 
     private const CONFIRM_MIGRATION_CLASS = 'Modules\Migration\Public\Actions\ConfirmMigration';
@@ -60,9 +62,16 @@ final class MigrationServiceProvider extends ServiceProvider
         // BudgetProgressQuery/CarryoverQuery's singleton convention.
         $this->singletonIfExists(self::PREVIEW_SUMMARY_BUILDER_CLASS);
 
-        // Plan 03 injection point: stateless format parsers, singleton-safe.
+        // Plans 03/04 injection point: stateless format parsers, singleton-safe.
+        // NOTE: `Internal\Services\ActualSqliteReader` is deliberately NOT
+        // registered here — it takes a required per-invocation `$dbPath`
+        // constructor argument (the extracted export's file path), which is
+        // incompatible with container auto-resolution/singleton reuse.
+        // `ActualParser` constructs it directly (`new ActualSqliteReader(...)`)
+        // once it knows the extracted path; it is never container-resolved.
         $this->singletonIfExists(self::YNAB4_PARSER_CLASS);
         $this->singletonIfExists(self::NYNAB_PARSER_CLASS);
+        $this->singletonIfExists(self::ACTUAL_PARSER_CLASS);
 
         // Plans 03/05/06/07 injection points: plain autowired actions/services
         // need no explicit binding (constructor DI resolves them directly),
