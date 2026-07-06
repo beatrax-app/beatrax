@@ -25,9 +25,12 @@ use Livewire\LivewireManager;
  *   Plan 04: ActualParser (+ ActualSqliteReader, not container-registered)
  *   Plan 05: StartMigrationRun, StagingWriter (bounded staging writer),
  *            PreviewSummaryBuilder (singleton read model)
- *   Plan 06: ThreeWayMergeResolver, SourceMapWriter, PromoteStagingToDomain,
- *            ConfirmMigration, DiscardMigrationRun
- *   Plan 07: CheckForUpdates (reconciliation entry point)
+ *   Plan 06: SourceMapWriter, PromoteStagingToDomain (not container-
+ *            registered — plain autowired dependency of ConfirmMigration,
+ *            mirrors StagingWriter's precedent), ConfirmMigration,
+ *            DiscardMigrationRun
+ *   Plan 07: CheckForUpdates (reconciliation entry point, incl. any
+ *            ThreeWayMergeResolver-shaped internals it needs)
  *   Plan 08: NewMigration / PreviewMigration / MigrationResults / MigrationsIndex
  *            Livewire components + Routes/web.php real routes
  */
