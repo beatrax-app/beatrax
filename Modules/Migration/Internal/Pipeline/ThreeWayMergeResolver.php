@@ -1,0 +1,376 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Migration\Internal\Pipeline;
+
+use Brick\Money\Exception\MoneyMismatchException;
+use Brick\Money\Money;
+use Illuminate\Database\DatabaseManager;
+use Modules\Core\Models\User;
+use Modules\Migration\Public\Dto\ConflictDto;
+use stdClass;
+
+/**
+ * The 3-way-merge comparator (Req 10, D-11/D-12/D-13 — RESEARCH.md § "3-way
+ * merge algorithm", THE authoritative spec; there is no codebase analog).
+ *
+ * For every entity already staged in a NEWLY-parsed re-import run (`$newRunId`)
+ * that ALSO has a persistent `migration_source_map` row from an earlier
+ * confirmed import, this reads the three legs of the merge:
+ *
+ *   S_new = the newly-parsed source value (from `migration_staging_*`)
+ *   B     = the baseline value stored at the entity's LAST import
+ *           (`migration_import_baseline`)
+ *   C     = the CURRENT beatrax value, read fresh from the real domain table
+ *
+ * and applies the rule verbatim:
+ *
+ *   S_new == B                 -> skip (source unchanged, neither set)
+ *   S_new != B AND C == B      -> apply-set (source changed, beatrax untouched)
+ *   S_new != B AND C != B      -> conflict-set (BOTH diverged from baseline)
+ *
+ * An entity with NO existing `migration_source_map` row is a brand-new source
+ * row this resolver does not touch at all — `PromoteStagingToDomain::promote()`
+ * 's own per-entity resolve-gate already creates it normally (Req 9
+ * idempotency holds unchanged for that path).
+ *
+ * Scope (mirrors `ThreeWayMergeReconciliationTest`'s own documented scope
+ * note): budget-assignment reconciliation is the fully-tested, concretely
+ * worked example from RESEARCH.md and is wired end-to-end into
+ * `PromoteStagingToDomain`'s skip-list. Category-name, account-name, and
+ * transaction-description reconciliation follow the IDENTICAL algorithm
+ * against a different entity kind and are implemented for completeness (the
+ * plan's own "Per-entity apply()" contract), applied directly by
+ * `CheckForUpdates` via a plain table update — but are not separately
+ * re-proven by a dedicated test in this plan. Transaction amount/date/
+ * category-assignment and payee/goal reconciliation are deliberately NOT
+ * implemented here (DOCUMENTED ASSUMPTION): they carry higher blast radius
+ * (fingerprint/category-assignment invariants, `GoalWriter` validation) than
+ * this plan's test scope justifies; a source-side change to those fields on
+ * an already-promoted entity currently falls through unreconciled until a
+ * future plan extends this resolver.
+ *
+ * Money comparisons for `budget_assignment` use `Brick\Money\Money` value
+ * equality (currency-aware), not raw int comparison, per this plan's own
+ * acceptance criteria — a `MoneyMismatchException` (genuinely different
+ * currency between the two legs) is treated as "not equal" rather than
+ * bubbling up, since a currency change is itself a value change.
+ *
+ * All reads are raw `DatabaseManager` query-builder calls, explicitly
+ * `user_id`-scoped (never a chained dynamic-Eloquent call — PHPStan L10
+ * strict `staticMethod.dynamicCall`), matching `SourceMapWriter`'s/
+ * `PreviewSummaryBuilder`'s established discipline.
+ */
+final class ThreeWayMergeResolver
+{
+    public function __construct(
+        private readonly DatabaseManager $db,
+    ) {}
+
+    public function resolve(int $newRunId, User $user, string $sourceProduct): MergeDecision
+    {
+        /** @var list<array{entityType: string, sourceExternalId: string, fields: array<string, string|int|float|bool|null>}> $applies */
+        $applies = [];
+        /** @var list<ConflictDto> $conflicts */
+        $conflicts = [];
+
+        $this->reconcileBudgetAssignments($newRunId, $user, $sourceProduct, $applies, $conflicts);
+        $this->reconcileCategories($newRunId, $user, $sourceProduct, $applies, $conflicts);
+        $this->reconcileAccounts($newRunId, $user, $sourceProduct, $applies, $conflicts);
+        $this->reconcileTransactionDescriptions($newRunId, $user, $sourceProduct, $applies, $conflicts);
+
+        return new MergeDecision($applies, $conflicts);
+    }
+
+    /**
+     * @param  list<array{entityType: string, sourceExternalId: string, fields: array<string, string|int|float|bool|null>}>  $applies
+     * @param  list<ConflictDto>  $conflicts
+     */
+    private function reconcileBudgetAssignments(int $newRunId, User $user, string $sourceProduct, array &$applies, array &$conflicts): void
+    {
+        $connection = $this->db->connection();
+
+        $rows = $connection->table('migration_staging_budget_assignments')
+            ->where('user_id', $user->id)
+            ->where('migration_run_id', $newRunId)
+            ->get();
+
+        /** @var stdClass $row */
+        foreach ($rows as $row) {
+            $categoryExternalId = self::toStr($row->source_category_external_id);
+            $periodStart = self::toStr($row->period_start);
+            $sourceExternalId = $categoryExternalId.'|'.$periodStart;
+            $currency = self::toStr($row->currency);
+            $sNewMinor = self::toInt($row->budgeted_minor);
+
+            $map = $this->findMap($user, $sourceProduct, 'budget_assignment', $sourceExternalId);
+            if ($map === null) {
+                continue; // brand-new entity — normal promote() creates it.
+            }
+
+            $baselineRaw = $this->baselineValue(self::toInt($map->id), 'budgeted_minor');
+            if ($baselineRaw === null) {
+                continue; // no recorded baseline — cannot 3-way merge, leave to the unconditional promote() path.
+            }
+            $baselineMinor = self::toInt($baselineRaw);
+
+            $categoryId = $this->beatraxId($user, $sourceProduct, 'category', $categoryExternalId);
+            if ($categoryId === null) {
+                continue;
+            }
+
+            // Fresh read of the CURRENT beatrax value (D-06 absence == 0,
+            // mirroring PromoteStagingToDomain's own zero-minor convention).
+            $currentValue = $connection->table('envelope_assignments')
+                ->where('user_id', $user->id)
+                ->where('category_id', $categoryId)
+                ->where('period_start', $periodStart)
+                ->value('assigned_minor');
+            $currentMinor = self::toInt($currentValue);
+
+            if (self::moneyEquals($sNewMinor, $currency, $baselineMinor, $currency)) {
+                continue; // source unchanged since last import.
+            }
+
+            if (self::moneyEquals($currentMinor, $currency, $baselineMinor, $currency)) {
+                $applies[] = [
+                    'entityType' => 'budget_assignment',
+                    'sourceExternalId' => $sourceExternalId,
+                    'fields' => ['budgeted_minor' => $sNewMinor],
+                ];
+
+                continue;
+            }
+
+            $conflicts[] = new ConflictDto(
+                entityType: 'budget_assignment',
+                sourceExternalId: $sourceExternalId,
+                fieldName: 'budgeted_minor',
+                localValue: $currentMinor,
+                sourceValue: $sNewMinor,
+                baselineValue: $baselineMinor,
+            );
+        }
+    }
+
+    /**
+     * @param  list<array{entityType: string, sourceExternalId: string, fields: array<string, string|int|float|bool|null>}>  $applies
+     * @param  list<ConflictDto>  $conflicts
+     */
+    private function reconcileCategories(int $newRunId, User $user, string $sourceProduct, array &$applies, array &$conflicts): void
+    {
+        $connection = $this->db->connection();
+
+        $rows = $connection->table('migration_staging_categories')
+            ->where('user_id', $user->id)
+            ->where('migration_run_id', $newRunId)
+            ->get();
+
+        /** @var stdClass $row */
+        foreach ($rows as $row) {
+            $externalId = self::toStr($row->source_external_id);
+            $map = $this->findMap($user, $sourceProduct, 'category', $externalId);
+            if ($map === null) {
+                continue;
+            }
+
+            $baseline = $this->baselineValue(self::toInt($map->id), 'name');
+            if ($baseline === null) {
+                continue;
+            }
+
+            $categoryId = self::toInt($map->beatrax_id);
+            $sNew = self::toStr($row->name);
+            $current = self::toStr(
+                $connection->table('categories')->where('id', $categoryId)->where('user_id', $user->id)->value('name')
+            );
+
+            if ($sNew === $baseline) {
+                continue;
+            }
+
+            if ($current === $baseline) {
+                $applies[] = [
+                    'entityType' => 'category',
+                    'sourceExternalId' => $externalId,
+                    'fields' => ['name' => $sNew],
+                ];
+
+                continue;
+            }
+
+            $conflicts[] = new ConflictDto(
+                entityType: 'category',
+                sourceExternalId: $externalId,
+                fieldName: 'name',
+                localValue: $current,
+                sourceValue: $sNew,
+                baselineValue: $baseline,
+            );
+        }
+    }
+
+    /**
+     * @param  list<array{entityType: string, sourceExternalId: string, fields: array<string, string|int|float|bool|null>}>  $applies
+     * @param  list<ConflictDto>  $conflicts
+     */
+    private function reconcileAccounts(int $newRunId, User $user, string $sourceProduct, array &$applies, array &$conflicts): void
+    {
+        $connection = $this->db->connection();
+
+        $rows = $connection->table('migration_staging_accounts')
+            ->where('user_id', $user->id)
+            ->where('migration_run_id', $newRunId)
+            ->get();
+
+        /** @var stdClass $row */
+        foreach ($rows as $row) {
+            $externalId = self::toStr($row->source_external_id);
+            $map = $this->findMap($user, $sourceProduct, 'account', $externalId);
+            if ($map === null) {
+                continue;
+            }
+
+            $baseline = $this->baselineValue(self::toInt($map->id), 'name');
+            if ($baseline === null) {
+                continue;
+            }
+
+            $accountId = self::toInt($map->beatrax_id);
+            $sNew = self::toStr($row->name);
+            $current = self::toStr(
+                $connection->table('accounts')->where('id', $accountId)->where('user_id', $user->id)->value('name')
+            );
+
+            if ($sNew === $baseline) {
+                continue;
+            }
+
+            if ($current === $baseline) {
+                $applies[] = [
+                    'entityType' => 'account',
+                    'sourceExternalId' => $externalId,
+                    'fields' => ['name' => $sNew],
+                ];
+
+                continue;
+            }
+
+            $conflicts[] = new ConflictDto(
+                entityType: 'account',
+                sourceExternalId: $externalId,
+                fieldName: 'name',
+                localValue: $current,
+                sourceValue: $sNew,
+                baselineValue: $baseline,
+            );
+        }
+    }
+
+    /**
+     * @param  list<array{entityType: string, sourceExternalId: string, fields: array<string, string|int|float|bool|null>}>  $applies
+     * @param  list<ConflictDto>  $conflicts
+     */
+    private function reconcileTransactionDescriptions(int $newRunId, User $user, string $sourceProduct, array &$applies, array &$conflicts): void
+    {
+        $connection = $this->db->connection();
+
+        $rows = $connection->table('migration_staging_transactions')
+            ->where('user_id', $user->id)
+            ->where('migration_run_id', $newRunId)
+            ->whereNull('parent_source_external_id')
+            ->get();
+
+        /** @var stdClass $row */
+        foreach ($rows as $row) {
+            $externalId = self::toStr($row->source_external_id);
+            $map = $this->findMap($user, $sourceProduct, 'transaction', $externalId);
+            if ($map === null) {
+                continue;
+            }
+
+            $baseline = $this->baselineValue(self::toInt($map->id), 'description');
+            if ($baseline === null) {
+                continue;
+            }
+
+            $transactionId = self::toInt($map->beatrax_id);
+            $sNew = $row->description !== null ? self::toStr($row->description) : '';
+            $current = self::toStr(
+                $connection->table('transactions')->where('id', $transactionId)->where('user_id', $user->id)->value('description')
+            );
+
+            if ($sNew === $baseline) {
+                continue;
+            }
+
+            if ($current === $baseline) {
+                $applies[] = [
+                    'entityType' => 'transaction',
+                    'sourceExternalId' => $externalId,
+                    'fields' => ['description' => $sNew],
+                ];
+
+                continue;
+            }
+
+            $conflicts[] = new ConflictDto(
+                entityType: 'transaction',
+                sourceExternalId: $externalId,
+                fieldName: 'description',
+                localValue: $current,
+                sourceValue: $sNew,
+                baselineValue: $baseline,
+            );
+        }
+    }
+
+    private function findMap(User $user, string $sourceProduct, string $entityType, string $sourceExternalId): ?stdClass
+    {
+        $row = $this->db->connection()->table('migration_source_map')
+            ->where('user_id', $user->id)
+            ->where('source_product', $sourceProduct)
+            ->where('source_entity_type', $entityType)
+            ->where('source_external_id', $sourceExternalId)
+            ->first(['id', 'beatrax_id']);
+
+        return $row instanceof stdClass ? $row : null;
+    }
+
+    private function beatraxId(User $user, string $sourceProduct, string $entityType, string $sourceExternalId): ?int
+    {
+        $map = $this->findMap($user, $sourceProduct, $entityType, $sourceExternalId);
+
+        return $map !== null ? self::toInt($map->beatrax_id) : null;
+    }
+
+    private function baselineValue(int $mapId, string $field): ?string
+    {
+        $value = $this->db->connection()->table('migration_import_baseline')
+            ->where('migration_source_map_id', $mapId)
+            ->where('field_name', $field)
+            ->value('baseline_value');
+
+        return is_string($value) ? $value : null;
+    }
+
+    private static function moneyEquals(int $aMinor, string $aCurrency, int $bMinor, string $bCurrency): bool
+    {
+        try {
+            return Money::ofMinor($aMinor, $aCurrency)->isEqualTo(Money::ofMinor($bMinor, $bCurrency));
+        } catch (MoneyMismatchException) {
+            return false;
+        }
+    }
+
+    private static function toInt(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    private static function toStr(mixed $value): string
+    {
+        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
+    }
+}
