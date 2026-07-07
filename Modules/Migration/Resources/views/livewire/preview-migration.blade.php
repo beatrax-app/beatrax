@@ -44,23 +44,22 @@
                         <span class="ml-1 inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950">{{ $summary->unmapped['conflict']['count'] }}</span>
                     </summary>
                     <div class="space-y-4 border-t border-slate-200 px-4 py-4 dark:border-slate-700">
-                        @foreach ($summary->unmapped['conflict']['items'] as $index => $item)
-                            @php($resolutionKey = 'c'.$index)
-                            <div class="space-y-2 rounded-md bg-slate-50 p-3 dark:bg-slate-900">
+                        @foreach ($summary->unmapped['conflict']['items'] as $item)
+                            <div class="space-y-2 rounded-md bg-slate-50 p-3 dark:bg-slate-900" data-testid="conflict-row-{{ $item['id'] }}">
                                 <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $item['label'] }}</p>
                                 <p class="whitespace-pre-line font-mono text-xs text-slate-500 dark:text-slate-400">{{ $item['reason'] }}</p>
                                 <div class="inline-flex overflow-hidden rounded-md border border-slate-200 text-xs font-medium dark:border-slate-700" role="group" aria-label="Keep local or take source for {{ $item['label'] }}">
                                     <button
                                         type="button"
-                                        wire:click="resolveConflict('{{ $resolutionKey }}', 'keep_local')"
-                                        class="px-3 py-1.5 {{ ($conflictResolutions[$resolutionKey] ?? 'keep_local') === 'keep_local' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-300' }}"
+                                        wire:click="resolveConflict({{ $item['id'] }}, 'keep_local')"
+                                        class="px-3 py-1.5 {{ $item['resolution'] === 'keep_local' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-300' }}"
                                     >
                                         Keep local
                                     </button>
                                     <button
                                         type="button"
-                                        wire:click="resolveConflict('{{ $resolutionKey }}', 'take_source')"
-                                        class="px-3 py-1.5 {{ ($conflictResolutions[$resolutionKey] ?? 'keep_local') === 'take_source' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-300' }}"
+                                        wire:click="resolveConflict({{ $item['id'] }}, 'take_source')"
+                                        class="px-3 py-1.5 {{ $item['resolution'] === 'take_source' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-300' }}"
                                     >
                                         Take source
                                     </button>

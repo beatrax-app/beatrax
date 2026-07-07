@@ -167,6 +167,7 @@ final class ThreeWayMergeResolver
                 localValue: $currentMinor,
                 sourceValue: $sNewMinor,
                 baselineValue: $baselineMinor,
+                currency: $currency,
             );
         }
     }
@@ -417,6 +418,7 @@ final class ThreeWayMergeResolver
                 localValue: $currentMinor,
                 sourceValue: $sNewMinor,
                 baselineValue: $baselineMinor,
+                currency: $currentCurrency,
             );
         }
     }

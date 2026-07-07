@@ -7,6 +7,7 @@ namespace Modules\Migration\Internal\Http\Livewire;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
@@ -32,22 +33,18 @@ use Modules\Migration\Public\Dto\PreviewSummary;
  * `PreviewWizard`/`ConfirmMigration`'s identical discipline). Either guard
  * alone is sufficient; both are present.
  *
- * Conflict rows (Req 10/D-14): `CheckForUpdates` (Plan 07) already applies
- * the keep-local default AND advances the baseline to the local value
- * SYNCHRONOUSLY, before this page is ever rendered — a reconciliation run
- * arrives here already in its final `needs_attention`/`confirmed` state
- * with every non-conflicting change written and every conflicted row
- * byte-for-byte untouched. `$conflictResolutions` renders the UI-SPEC's
- * keep-local/take-source segmented toggle (default keep-local) and is
- * fully interactive client-side, but — since Plan 07's backend contract
- * commits the keep-local decision unconditionally at `CheckForUpdates`
- * time, not deferred to a resolvable-before-confirm step — selecting
- * "Take source" has no live backend effect in this plan's scope. This is a
- * documented, inherited scope limitation (see 13.5-07-SUMMARY.md's "Next
- * Phase Readiness" note to Plan 08), not a bug: the plan's own acceptance
- * criteria only require conflicted rows to remain untouched after confirm,
- * which already holds regardless of toggle state. Flagged in this plan's
- * own Summary for a future backlog item.
+ * Conflict rows (Req 10/D-14, 13.5-HUMAN-UAT.md Test 3c gap-fix):
+ * `CheckForUpdates` records every conflict with its resolution left NULL
+ * (default keep-local) — it is deliberately NOT finalized at reconciliation
+ * time. `resolveConflict()` below persists the user's actual toggle choice
+ * directly onto that conflict's `migration_staging_unmapped_items` row,
+ * scoped to this run + the authenticated user; `render()` reads the
+ * CURRENT resolution back from `PreviewSummaryBuilder` on every render, so
+ * the toggle reflects the real, persisted state rather than a client-side-
+ * only copy. `ConfirmMigration` is the ONLY place a resolution is actually
+ * APPLIED (source value written to the domain, or left alone for
+ * keep-local) — see that class's docblock for the full apply/baseline-
+ * advance sequence.
  *
  * `confirm()` is safe to call uniformly for BOTH a first-time run
  * ('parsed' -> promotes + flips to 'confirmed') and a reconciliation run
@@ -67,33 +64,33 @@ final class PreviewMigration extends Component
 {
     public int $runId = 0;
 
-    /**
-     * Conflict-row resolution toggle state, keyed by the conflict's index
-     * within `$summary->unmapped['conflict']['items']`. Defaults to
-     * 'keep_local' for every row on first render (D-14). See class
-     * docblock for why this does not currently drive a backend action.
-     *
-     * @var array<string, string>
-     */
-    public array $conflictResolutions = [];
-
     public function mount(int $id): void
     {
         $this->runId = $id;
     }
 
     /**
-     * Client-side-only toggle (see class docblock's documented scope
-     * limitation) — kept as a real, wired Livewire action so the UI-SPEC's
-     * segmented control is genuinely interactive, not decorative markup.
+     * Persists the user's keep-local/take-source choice for ONE conflict
+     * row, scoped to this run + the authenticated user (IDOR-safe — a
+     * forged `$conflictId` belonging to another run/user matches zero
+     * rows, a silent no-op rather than a 404, mirroring this component's
+     * existing defense-in-depth style). `ConfirmMigration` reads this
+     * column later; nothing is applied to the domain here.
      */
-    public function resolveConflict(string $key, string $choice): void
+    public function resolveConflict(int $conflictId, string $choice, DatabaseManager $db, CurrentUser $currentUser): void
     {
         if (! in_array($choice, ['keep_local', 'take_source'], true)) {
             return;
         }
 
-        $this->conflictResolutions[$key] = $choice;
+        $user = $currentUser->user();
+
+        $db->connection()->table('migration_staging_unmapped_items')
+            ->where('id', $conflictId)
+            ->where('migration_run_id', $this->runId)
+            ->where('user_id', $user->id)
+            ->where('item_type', 'conflict')
+            ->update(['resolution' => $choice]);
     }
 
     public function confirm(
@@ -149,8 +146,6 @@ final class PreviewMigration extends Component
         // itself throws ModelNotFoundException for a foreign-owned run.
         $summary = $builder->forRun($this->runId, $user);
 
-        $this->seedConflictResolutionDefaults($summary);
-
         return $views->make('migration::livewire.preview-migration', [
             'run' => $run,
             'summary' => $summary,
@@ -172,25 +167,5 @@ final class PreviewMigration extends Component
             'payee' => $summary->unmapped['payee']['count'] === 0,
             default => false,
         };
-    }
-
-    /**
-     * Seeds a 'keep_local' default (D-14) for every conflict row not
-     * already present in `$conflictResolutions` — idempotent across
-     * repeated renders (e.g. after a resolveConflict() call already set a
-     * different value, that value survives).
-     */
-    private function seedConflictResolutionDefaults(PreviewSummary $summary): void
-    {
-        foreach (array_keys($summary->unmapped['conflict']['items']) as $index) {
-            // Prefixed so the key is never a "decimal-int-string" — a bare
-            // numeric string key silently casts back to an int array key at
-            // the PHP engine level, breaking the declared
-            // `array<string, string>` property type under PHPStan L10.
-            $key = 'c'.$index;
-            if (! isset($this->conflictResolutions[$key])) {
-                $this->conflictResolutions[$key] = 'keep_local';
-            }
-        }
     }
 }

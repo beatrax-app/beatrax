@@ -27,11 +27,19 @@ use Spatie\LaravelData\Data;
  * when every group's `count` is genuinely zero rather than a missing key.
  * `'conflict'` is always empty for a first-time parse (populated only by a
  * reconciliation re-run — Plan 07).
+ *
+ * Every item carries `id` (the underlying `migration_staging_unmapped_items`
+ * row id) so the wizard can act on a SPECIFIC row (13.5-HUMAN-UAT.md Test 3c
+ * gap-fix: `PreviewMigration::resolveConflict()` persists a resolution
+ * keyed by this id). `resolution` is only meaningful for the `'conflict'`
+ * group (`'keep_local'` | `'take_source'`, defaulted from a NULL DB value)
+ * — every other group carries `'keep_local'` as an unused filler so the
+ * array shape stays uniform.
  */
 final class PreviewSummary extends Data
 {
     /**
-     * @param  array<string, array{items: list<array{label: string, reason: string}>, count: int}>  $unmapped
+     * @param  array<string, array{items: list<array{id: int, label: string, reason: string, resolution: string}>, count: int}>  $unmapped
      */
     public function __construct(
         public readonly int $categoriesCount,
