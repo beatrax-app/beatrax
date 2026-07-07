@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Aggregation;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\FX\Public\Services\ExchangeRateService;
@@ -52,10 +53,21 @@ final class CurrencyModeApplier
      * @param  string  $metric  'spend' | 'income' | 'net'
      * @param  string  $currencyMode  'base' | 'original'
      * @param  callable(string $currency): list<ReportResultRow>  $queryForCurrency  Re-runs the caller's chosen dimension query, scoped to one settled_currency at a time.
+     * @param  list<int>  $accountIds  CR-02: the SAME accounts/categories/counterparties filters the dimension query itself applies — must be threaded into discoverCurrencies() too, so a filtered report only discovers currencies that can actually produce rows.
+     * @param  list<int>  $categoryIds
+     * @param  list<int>  $counterpartyIds
      */
-    public function apply(User $user, Period $period, string $metric, string $currencyMode, callable $queryForCurrency): ReportResultDto
-    {
-        $currencies = $this->discoverCurrencies($user, $period, $metric);
+    public function apply(
+        User $user,
+        Period $period,
+        string $metric,
+        string $currencyMode,
+        callable $queryForCurrency,
+        array $accountIds = [],
+        array $categoryIds = [],
+        array $counterpartyIds = [],
+    ): ReportResultDto {
+        $currencies = $this->discoverCurrencies($user, $period, $metric, $accountIds, $categoryIds, $counterpartyIds);
 
         return match ($currencyMode) {
             'base' => $this->applyBase($user, $currencies, $queryForCurrency),
@@ -65,9 +77,21 @@ final class CurrencyModeApplier
     }
 
     /**
+     * CR-02: applies the SAME accounts/categories/counterparties filters the
+     * caller's dimension query applies, so a filtered report (e.g.
+     * `accounts: [A]`) never discovers a currency that only exists on a
+     * FILTERED-OUT account/category/counterparty — which previously made
+     * `applyOriginal()` pick a "primary" currency that could produce zero
+     * rows for the filtered result. Ordered deterministically
+     * (`orderBy('settled_currency')`) rather than left to unordered
+     * `DISTINCT` output.
+     *
+     * @param  list<int>  $accountIds
+     * @param  list<int>  $categoryIds
+     * @param  list<int>  $counterpartyIds
      * @return list<string>
      */
-    private function discoverCurrencies(User $user, Period $period, string $metric): array
+    private function discoverCurrencies(User $user, Period $period, string $metric, array $accountIds = [], array $categoryIds = [], array $counterpartyIds = []): array
     {
         $values = $this->db->connection()
             ->table('transactions')
@@ -76,7 +100,11 @@ final class CurrencyModeApplier
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->whereNotNull('settled_currency')
+            ->when($accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('account_id', $accountIds))
+            ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('category_id', $categoryIds))
+            ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('counterparty_id', $counterpartyIds))
             ->distinct()
+            ->orderBy('settled_currency')
             ->pluck('settled_currency');
 
         $currencies = [];
@@ -153,11 +181,14 @@ final class CurrencyModeApplier
     /**
      * No conversion — every discovered currency's rows are returned
      * unconverted, concatenated across currencies. The DTO-level
-     * `currency`/`totalMinor` reflect the FIRST discovered currency's own
-     * total only (never summing raw minor units across different
-     * currencies, which would silently corrupt the figure) — every
-     * currency's true, unconverted total remains available per-row via
-     * `rows` regardless of how many currencies are present.
+     * `currency`/`totalMinor` are picked AFTER running every currency's
+     * query (CR-02): the currency with the largest absolute total among
+     * the ACTUAL result rows — never a "first discovered currency" guess
+     * made before the filtered dimension query has even run, which could
+     * pick a currency the filters reduce to zero rows (e.g. `$0.00`/wrong-
+     * currency total next to a non-empty table). Every currency's true,
+     * unconverted total remains available per-row via `rows` regardless of
+     * how many currencies are present or which one is "primary".
      *
      * @param  list<string>  $currencies
      * @param  callable(string $currency): list<ReportResultRow>  $queryForCurrency
@@ -165,17 +196,28 @@ final class CurrencyModeApplier
     private function applyOriginal(User $user, array $currencies, callable $queryForCurrency): ReportResultDto
     {
         $resultRows = [];
-        $primaryCurrency = $currencies[0] ?? $user->base_currency;
-        $total = 0;
+        /** @var array<string, int> $totalsByCurrency */
+        $totalsByCurrency = [];
 
         foreach ($currencies as $currency) {
             /** @var list<ReportResultRow> $rows */
             $rows = $queryForCurrency($currency);
+            $currencyTotal = 0;
             foreach ($rows as $row) {
                 $resultRows[] = $row;
-                if ($currency === $primaryCurrency) {
-                    $total += $row->amountMinor;
-                }
+                $currencyTotal += $row->amountMinor;
+            }
+            $totalsByCurrency[$currency] = ($totalsByCurrency[$currency] ?? 0) + $currencyTotal;
+        }
+
+        $primaryCurrency = $currencies[0] ?? $user->base_currency;
+        $total = 0;
+        $bestAbsTotal = -1;
+        foreach ($totalsByCurrency as $currency => $currencyTotal) {
+            if (abs($currencyTotal) > $bestAbsTotal) {
+                $bestAbsTotal = abs($currencyTotal);
+                $primaryCurrency = $currency;
+                $total = $currencyTotal;
             }
         }
 
