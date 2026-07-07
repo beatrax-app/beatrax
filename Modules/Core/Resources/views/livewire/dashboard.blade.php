@@ -181,6 +181,14 @@
         @livewire('budgets.envelope-glance-card')
     </div>
 
+    {{-- Pinned reports (Req 10) — up to 3 chart-only mini cards from saved
+         reports the user pinned via TogglePin (/reports/library). Renders
+         nothing when zero pins, same convention as goals.summary-card /
+         tax.summary-card / budgets.envelope-glance-card above. --}}
+    <div>
+        @livewire('reports.pinned-reports-row')
+    </div>
+
     {{-- Upcoming content (order 5 on phone): fixed payments, spending trend, savings insights --}}
     <div class="dashboard-phone-order-5 space-y-12">
         {{-- Inline "Fixed monthly payments" card — top six approved
