@@ -87,6 +87,18 @@ final class PeriodPresetResolver
      * control, but `Period.endExclusive` is half-open by contract — convert
      * by adding one day so the selected end date's own transactions are
      * never silently dropped from the report's totals.
+     *
+     * WR-02: `customTo < customFrom` is rejected outright — an inverted
+     * range would otherwise silently resolve to a zero/negative-length
+     * `Period`, which every downstream query matches nothing against and
+     * `TimeBucketGenerator` renders as an empty bucket list, instead of the
+     * user being told their date range is inverted.
+     *
+     * INFO-03: `customFrom`/`customTo` are parsed STRICTLY against `Y-m-d`
+     * (never `CarbonImmutable::parse()`'s lenient natural-language parser)
+     * — a malformed/unexpected string (e.g. from a replayed `saved_reports.
+     * definition` JSON blob) throws instead of silently resolving to an
+     * unintended date.
      */
     private function custom(?string $customFrom, ?string $customTo): Period
     {
@@ -94,8 +106,13 @@ final class PeriodPresetResolver
             throw new InvalidArgumentException('The "custom" period preset requires both customFrom and customTo dates.');
         }
 
-        $start = CarbonImmutable::parse($customFrom)->startOfDay();
-        $inclusiveEnd = CarbonImmutable::parse($customTo)->startOfDay();
+        $start = self::parseStrictDate($customFrom, 'customFrom');
+        $inclusiveEnd = self::parseStrictDate($customTo, 'customTo');
+
+        if ($inclusiveEnd->lessThan($start)) {
+            throw new InvalidArgumentException('The "custom" period preset requires customTo to be on or after customFrom.');
+        }
+
         $endExclusive = $inclusiveEnd->addDay();
 
         return new Period(
@@ -103,5 +120,27 @@ final class PeriodPresetResolver
             endExclusive: $endExclusive,
             label: $start->toDateString().' → '.$inclusiveEnd->toDateString(),
         );
+    }
+
+    /**
+     * Strict `Y-m-d` parse (INFO-03) — `createFromFormat()` alone is not
+     * enough: it silently NORMALIZES an out-of-range day-of-month (e.g.
+     * "2026-02-30" -> 2026-03-02) instead of rejecting it, so the
+     * round-tripped `format('Y-m-d')` is compared back against the raw
+     * input to catch that case too.
+     */
+    private static function parseStrictDate(string $value, string $field): CarbonImmutable
+    {
+        try {
+            $parsed = CarbonImmutable::createFromFormat('Y-m-d', $value);
+        } catch (InvalidArgumentException) {
+            $parsed = null;
+        }
+
+        if ($parsed === null || $parsed->format('Y-m-d') !== $value) {
+            throw new InvalidArgumentException("The \"{$field}\" date must be a valid \"Y-m-d\" date string, got: \"{$value}\".");
+        }
+
+        return $parsed->startOfDay();
     }
 }
