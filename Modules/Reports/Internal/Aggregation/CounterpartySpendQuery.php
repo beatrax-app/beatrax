@@ -48,6 +48,9 @@ final class CounterpartySpendQuery
      * @param  list<int>  $accountIds  T-999.6-06/14: restrict to these account ids (empty = no restriction). Applied ALONGSIDE the existing `where('user_id', ...)` guard below, so a foreign id can only ever narrow this user's own result to nothing — never widen it to another user's rows.
      * @param  list<int>  $categoryIds  restrict to these category ids (empty = no restriction)
      * @param  list<int>  $counterpartyIds  restrict to these counterparty ids (empty = no restriction)
+     * @param  ?int  $amountMinMinor  restrict to rows whose ABS(settled_amount_minor) >= this (empty = no restriction)
+     * @param  ?int  $amountMaxMinor  restrict to rows whose ABS(settled_amount_minor) <= this (empty = no restriction)
+     * @param  string  $amountDirection  'in' | 'out' | 'both' — restricts to settled_amount_minor > 0 / < 0 / no restriction
      * @return list<ReportResultRow>
      */
     public function forUserAndPeriod(
@@ -58,6 +61,9 @@ final class CounterpartySpendQuery
         array $accountIds = [],
         array $categoryIds = [],
         array $counterpartyIds = [],
+        ?int $amountMinMinor = null,
+        ?int $amountMaxMinor = null,
+        string $amountDirection = 'both',
     ): array {
         $rows = $this->db->connection()
             ->table('transactions')
@@ -69,24 +75,28 @@ final class CounterpartySpendQuery
             ->when($accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('account_id', $accountIds))
             ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('category_id', $categoryIds))
             ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('counterparty_id', $counterpartyIds))
+            ->when($amountMinMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(settled_amount_minor) >= ?', [$amountMinMinor]))
+            ->when($amountMaxMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(settled_amount_minor) <= ?', [$amountMaxMinor]))
+            ->when($amountDirection === 'in', static fn (QueryBuilder $q): QueryBuilder => $q->where('settled_amount_minor', '>', 0))
+            ->when($amountDirection === 'out', static fn (QueryBuilder $q): QueryBuilder => $q->where('settled_amount_minor', '<', 0))
             ->groupBy('counterparty_id')
             ->selectRaw('counterparty_id, '.self::amountExpr($metric).' AS amount_minor')
             ->get();
 
         /** @var array<int, int> $map */
         $map = [];
-        $counterpartyIds = [];
+        $resultCounterpartyIds = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */
             $counterpartyId = $row->counterparty_id === null ? null : self::toInt($row->counterparty_id);
             $key = $counterpartyId ?? self::NO_COUNTERPARTY_SENTINEL;
             $map[$key] = ($map[$key] ?? 0) + self::toInt($row->amount_minor);
             if ($counterpartyId !== null) {
-                $counterpartyIds[] = $counterpartyId;
+                $resultCounterpartyIds[] = $counterpartyId;
             }
         }
 
-        $identities = $counterpartyIds === [] ? [] : $this->counterpartyProfileQuery->identitiesForIds($user, $counterpartyIds);
+        $identities = $resultCounterpartyIds === [] ? [] : $this->counterpartyProfileQuery->identitiesForIds($user, $resultCounterpartyIds);
 
         $result = [];
         foreach ($map as $key => $amountMinor) {
