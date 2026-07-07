@@ -84,3 +84,22 @@ it('caps the point count for a multi-year monthly range so charts stay renderabl
     expect(count($buckets))->toBeLessThan(132);
     expect($buckets)->not->toBeEmpty();
 });
+
+it('WR-03: caps a multi-year weekly range to stay under MAX_BUCKET_POINTS by widening (never producing hundreds of raw weekly buckets)', function (): void {
+    $period = new Period(
+        start: CarbonImmutable::parse('2015-01-01'),
+        endExclusive: CarbonImmutable::parse('2026-01-01'),
+        label: '11 years',
+    );
+
+    // ~573 uncapped weekly points for an 11-year range — previously the
+    // 'weekly' branch called stepBuckets() directly with no cap check at
+    // all, unlike 'monthly'. Must widen (e.g. to monthly/quarterly)
+    // instead, while still fully covering the requested range.
+    $buckets = app(TimeBucketGenerator::class)->generate($period, 'weekly');
+
+    expect(count($buckets))->toBeLessThanOrEqual(TimeBucketGenerator::MAX_BUCKET_POINTS);
+    expect($buckets)->not->toBeEmpty();
+    expect($buckets[0]->start->toDateString())->toBe('2015-01-01');
+    expect($buckets[count($buckets) - 1]->endExclusive->toDateString())->toBe('2026-01-01');
+});
