@@ -65,6 +65,7 @@ function rceDefinition(string $dimension): ReportDefinition
 
 it('dimension=category header uses the literal Category label, not a generic group column', function (): void {
     $user = rceUser();
+    test()->actingAs($user);
     $csv = app(ReportCsvExporter::class)->export($user, rceDefinition('category'));
 
     $header = str_getcsv(explode("\n", trim($csv))[0]);
@@ -73,6 +74,7 @@ it('dimension=category header uses the literal Category label, not a generic gro
 
 it('dimension=counterparty header uses the literal Counterparty label', function (): void {
     $user = rceUser();
+    test()->actingAs($user);
     $csv = app(ReportCsvExporter::class)->export($user, rceDefinition('counterparty'));
 
     $header = str_getcsv(explode("\n", trim($csv))[0]);
@@ -81,6 +83,7 @@ it('dimension=counterparty header uses the literal Counterparty label', function
 
 it('dimension=account header uses the literal Account label', function (): void {
     $user = rceUser();
+    test()->actingAs($user);
     $csv = app(ReportCsvExporter::class)->export($user, rceDefinition('account'));
 
     $header = str_getcsv(explode("\n", trim($csv))[0]);
@@ -89,6 +92,7 @@ it('dimension=account header uses the literal Account label', function (): void 
 
 it('dimension=time_bucket header uses the literal Month label, not group or time_bucket', function (): void {
     $user = rceUser();
+    test()->actingAs($user);
     $csv = app(ReportCsvExporter::class)->export($user, rceDefinition('time_bucket'));
 
     $header = str_getcsv(explode("\n", trim($csv))[0]);
@@ -99,6 +103,7 @@ it('data rows match the aggregator totals for the same definition', function ():
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = rceUser();
+    test()->actingAs($user);
     $account = rceAccount($user);
 
     $runId = $db->connection()->table('import_runs')->insertGetId([
