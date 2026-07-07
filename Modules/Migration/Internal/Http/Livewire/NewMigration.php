@@ -111,7 +111,16 @@ final class NewMigration extends Component
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'max:'.self::MAX_UPLOAD_KB, 'extensions:zip'],
+            // IN-01: `extensions:zip` only checks the CLIENT-supplied
+            // filename extension; `mimes:zip` additionally sniffs the
+            // uploaded file's REAL content via `finfo` and checks it
+            // against zip's registered MIME types (application/zip,
+            // application/x-zip, application/x-zip-compressed) — a file
+            // renamed to `whatever.zip` that isn't actually a ZIP is now
+            // rejected here with a precise message, rather than only later
+            // via `ZipExtractor`'s `ZipArchive::open()` failure (still the
+            // authoritative check either way; this is defense-in-depth).
+            'file' => ['required', 'file', 'max:'.self::MAX_UPLOAD_KB, 'extensions:zip', 'mimes:zip'],
             'sourceProduct' => ['required', 'in:ynab4,nynab,actual'],
         ];
     }
@@ -124,6 +133,7 @@ final class NewMigration extends Component
         return [
             'file.max' => 'That file is too large for a migration export.',
             'file.extensions' => "This doesn't look like a YNAB4, nYNAB, or Actual export we can read. Check the file and try again.",
+            'file.mimes' => "This doesn't look like a YNAB4, nYNAB, or Actual export we can read. Check the file and try again.",
         ];
     }
 
@@ -167,16 +177,21 @@ final class NewMigration extends Component
         $originalFilename = $this->sanitiseFilename($this->file->getClientOriginalName());
 
         try {
-            $extractedPath = $extractor->extract($tmp);
-
             try {
+                $extractedPath = $extractor->extract($tmp);
+
                 $run = $this->reconcileOf !== null
                     ? $checkForUpdates($this->reconcileOf, $user, $this->sourceProduct, $extractedPath)
                     : $startMigrationRun($user, $this->sourceProduct, $extractedPath, $originalFilename);
             } finally {
-                // The extracted directory is scratch — parse-or-stage reads
-                // it synchronously inside this single call; nothing needs it
-                // afterward, on success or failure alike.
+                // WR-01: extract() itself can throw partway (disk full,
+                // permission error, a corrupt entry ZipArchive::open()
+                // didn't already reject) — this finally now wraps the
+                // extract() call too (not just the parse-or-stage call), so
+                // cleanup() still runs and removes whatever ZipExtractor
+                // already tracked, even when extract() is what threw.
+                // Safe to call when nothing was extracted (no-op) and safe
+                // to call twice.
                 $extractor->cleanup();
             }
         } catch (Throwable $e) {
