@@ -144,3 +144,21 @@ it('throws for an unknown preset', function (): void {
 
     expect(fn () => $resolver->resolve('decade'))->toThrow(InvalidArgumentException::class);
 });
+
+it('WR-02: throws when customTo is before customFrom instead of silently resolving a zero/negative-length window', function (): void {
+    $resolver = pprtResolver('2026-05-15T10:00:00Z');
+
+    expect(fn () => $resolver->resolve('custom', '2026-03-15', '2026-03-01'))->toThrow(InvalidArgumentException::class);
+});
+
+it('INFO-03: throws for a malformed/non-Y-m-d customFrom instead of lenient-parsing it', function (): void {
+    $resolver = pprtResolver('2026-05-15T10:00:00Z');
+
+    expect(fn () => $resolver->resolve('custom', 'next thursday', '2026-03-15'))->toThrow(InvalidArgumentException::class);
+});
+
+it('INFO-03: throws for an out-of-range calendar day instead of silently normalizing it (2026-02-30 -> 2026-03-02)', function (): void {
+    $resolver = pprtResolver('2026-05-15T10:00:00Z');
+
+    expect(fn () => $resolver->resolve('custom', '2026-02-01', '2026-02-30'))->toThrow(InvalidArgumentException::class);
+});
