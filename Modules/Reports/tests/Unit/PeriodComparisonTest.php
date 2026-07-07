@@ -12,6 +12,7 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\PeriodComparison;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Dto\ReportResultRow;
 
 uses(RefreshDatabase::class);
 
@@ -138,14 +139,43 @@ function pctMarchPeriod(): Period
     );
 }
 
-it('previousPeriod() is an equal-length span immediately before the current period start', function (): void {
+it('previousPeriod() steps back by calendar months for a month-aligned period, not a raw day-count shift (CR-01)', function (): void {
     $comparison = new PeriodComparison;
-    $current = pctMarchPeriod();
+    $current = pctMarchPeriod(); // March 2026: 2026-03-01 -> 2026-04-01 (31 days)
 
     $previous = $comparison->previousPeriod($current);
 
+    // The correct previous calendar month is February 2026 (28 days in
+    // 2026, a non-leap year) — NOT a 31-day day-count shift, which used to
+    // "borrow" 3 days from January (2026-01-29 -> 2026-03-01) instead of
+    // landing on the real previous month.
+    expect($previous->start->toDateString())->toBe('2026-02-01');
     expect($previous->endExclusive->toDateString())->toBe('2026-03-01');
-    expect($previous->start->diffInDays($previous->endExclusive))->toBe(31.0);
+});
+
+it('previousPeriod() Feb->Jan and Mar->Feb transitions land on the correct calendar month, never a day-count shift (CR-01)', function (): void {
+    $comparison = new PeriodComparison;
+
+    $feb = new Period(
+        start: CarbonImmutable::parse('2027-02-01'),
+        endExclusive: CarbonImmutable::parse('2027-03-01'),
+        label: 'February 2027',
+    );
+    $previousOfFeb = $comparison->previousPeriod($feb);
+    expect($previousOfFeb->start->toDateString())->toBe('2027-01-01');
+    expect($previousOfFeb->endExclusive->toDateString())->toBe('2027-02-01');
+
+    $mar = new Period(
+        start: CarbonImmutable::parse('2027-03-01'),
+        endExclusive: CarbonImmutable::parse('2027-04-01'),
+        label: 'March 2027',
+    );
+    $previousOfMar = $comparison->previousPeriod($mar);
+    // The exact CR-01 concrete-failure scenario from the review: March (31
+    // days) must step back to February (28 days) — a day-count shift would
+    // wrongly land on 2027-01-29 instead of 2027-02-01.
+    expect($previousOfMar->start->toDateString())->toBe('2027-02-01');
+    expect($previousOfMar->endExclusive->toDateString())->toBe('2027-03-01');
 });
 
 it('comparisonRows carries correct current/previous/signed-delta per group, sorted by abs(delta) desc', function (): void {
@@ -246,4 +276,88 @@ it('comparison honors currencyMode=base — a previous-period unconvertible-curr
     expect($row->amountMinor)->toBe(5_000);
     expect($row->previousAmountMinor)->toBe(3_000);
     expect($row->deltaMinor)->toBe(2_000);
+});
+
+it('CR-03: compare() keeps BOTH currencies for a group present in EUR and USD under currencyMode=original, never overwriting one with the other', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = pctUser();
+    $account = pctAccount($user);
+    $amazon = $db->connection()->table('counterparties')->insertGetId([
+        'user_id' => $user->id,
+        'type' => 'merchant',
+        'slug' => 'pct-amazon-'.bin2hex(random_bytes(3)),
+        'display_name' => 'Amazon',
+        'merchant_name' => 'AMAZON',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    pctTransaction($db, $user, $account, [
+        'settled_amount_minor' => -5_000, 'settled_currency' => 'EUR', 'counterparty_id' => $amazon,
+        'posted_at' => '2026-03-10', 'booked_at' => '2026-03-10 09:00:00', 'value_date' => '2026-03-10',
+    ]);
+    pctTransaction($db, $user, $account, [
+        'settled_amount_minor' => -3_000, 'settled_currency' => 'USD', 'counterparty_id' => $amazon,
+        'posted_at' => '2026-03-12', 'booked_at' => '2026-03-12 09:00:00', 'value_date' => '2026-03-12',
+    ]);
+
+    $definition = new ReportDefinition(
+        metric: 'spend',
+        dimension: 'counterparty',
+        periodPreset: 'custom',
+        granularity: 'monthly',
+        currencyMode: 'original',
+        viz: 'table',
+        customFrom: '2026-03-01',
+        customTo: '2026-03-31',
+        compare: true,
+    );
+
+    $result = app(ReportAggregator::class)->run($user, $definition);
+
+    /** @var list<ReportResultRow> $amazonRows */
+    $amazonRows = array_values(array_filter($result->comparisonRows, static fn ($r) => $r->groupLabel === 'Amazon'));
+    expect($amazonRows)->toHaveCount(2);
+
+    $byCurrency = [];
+    foreach ($amazonRows as $row) {
+        $byCurrency[$row->currency] = $row;
+    }
+    expect($byCurrency)->toHaveKeys(['EUR', 'USD']);
+    expect($byCurrency['EUR']->amountMinor)->toBe(5_000);
+    expect($byCurrency['USD']->amountMinor)->toBe(3_000);
+});
+
+it('WR-04: hasExcludedAccounts/accountsWithoutRate surface an unconvertible currency that ONLY existed in the previous period', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = pctUser();
+    $account = pctAccount($user);
+
+    $comparison = app(PeriodComparison::class);
+    $previousPeriod = $comparison->previousPeriod(pctMarchPeriod());
+    $previousDate = $previousPeriod->start->addDays(2)->toDateString();
+
+    // Current period: fully convertible EUR only — the CURRENT period's own
+    // result carries hasExcludedAccounts = false.
+    pctTransaction($db, $user, $account, [
+        'settled_amount_minor' => -5_000, 'settled_currency' => 'EUR',
+        'posted_at' => '2026-03-10', 'booked_at' => '2026-03-10 09:00:00', 'value_date' => '2026-03-10',
+    ]);
+
+    // Previous period: an unconvertible JPY row — no exchange_rates row
+    // seeded for JPY, so a base-mode conversion must exclude it.
+    pctTransaction($db, $user, $account, [
+        'settled_amount_minor' => -500_000, 'settled_currency' => 'JPY',
+        'posted_at' => $previousDate, 'booked_at' => $previousDate.' 09:00:00', 'value_date' => $previousDate,
+    ]);
+
+    $result = app(ReportAggregator::class)->run($user, pctDefinition(compare: true, currencyMode: 'base'));
+
+    // Without WR-04, only the CURRENT period's (false/0) flags would
+    // survive onto the final DTO and the previous period's JPY exclusion
+    // would be invisible to the user viewing the compare delta.
+    expect($result->hasExcludedAccounts)->toBeTrue();
+    expect($result->accountsWithoutRate)->toBeGreaterThanOrEqual(1);
 });
