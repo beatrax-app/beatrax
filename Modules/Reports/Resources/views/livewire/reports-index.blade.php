@@ -16,7 +16,7 @@
             Reports
         </h1>
         <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
-            {{ $rows->count() }} {{ $rows->count() === 1 ? 'saved report' : 'saved reports' }} · {{ $pinnedCount }}/3 pinned
+            <span style="font-variant-numeric: tabular-nums;">{{ $rows->count() }}</span> {{ $rows->count() === 1 ? 'saved report' : 'saved reports' }} · <span style="font-variant-numeric: tabular-nums;">{{ $pinnedCount }}/3</span> pinned
         </p>
     </header>
 
@@ -96,7 +96,7 @@
                         <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip" style="text-decoration: none;">Edit</a>
 
                         @if ($confirmingDeleteId === $row->id)
-                            <span style="font-size: var(--text-xs); color: var(--color-text-muted);">Delete?</span>
+                            <span style="font-size: var(--text-xs); color: var(--color-text-muted);">Delete "{{ $row->name }}"?</span>
                             <button
                                 type="button"
                                 wire:click="deleteReport({{ $row->id }})"
@@ -156,7 +156,7 @@
                                     <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip" style="text-decoration: none;">Edit</a>
 
                                     @if ($confirmingDeleteId === $row->id)
-                                        <span style="font-size: var(--text-xs); color: var(--color-text-muted);">Delete?</span>
+                                        <span style="font-size: var(--text-xs); color: var(--color-text-muted);">Delete "{{ $row->name }}"?</span>
                                         <button
                                             type="button"
                                             wire:click="deleteReport({{ $row->id }})"
