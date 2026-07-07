@@ -11,6 +11,16 @@ use Modules\Reports\Public\Dto\ReportDefinition;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /*
+ * 999.6-08: the `/reports` live single-page builder (D-01). Routes to a
+ * thin wrapper Blade view (`reports::report-builder`, mirrors
+ * `categorization::rules`'s `@extends('layouts.app', ...)` +
+ * `@livewire(...)` shape) rather than directly to the Livewire component
+ * class — this codebase's established full-page-component convention
+ * (Route::view + @livewire inside @section('content')), not the
+ * alternative "route straight to the component class" Livewire pattern.
+ */
+
+/*
  * Reports module web routes.
  *
  * Owned by 999.6-07 (this file is created here, not by Plan 01) — later
@@ -94,4 +104,14 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
             "beatrax-report-{$definition->slug()}.csv",
         );
     })->name('reports.export');
+
+    // 999.6-08: the live single-page builder. Optional ?report={id} query
+    // param loads a user-owned saved definition (ReportBuilder::mount()).
+    // Mirrors Modules/Import/Routes/web.php's preview route shape — a
+    // closure resolving the query/route param into a plain view variable,
+    // rather than reading the request() global helper inside the Blade
+    // view itself.
+    Route::get('/reports', static fn (Request $request) => view('reports::report-builder', [
+        'report' => $request->integer('report') ?: null,
+    ]))->name('reports.index');
 });
