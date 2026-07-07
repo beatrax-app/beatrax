@@ -115,6 +115,16 @@ final class TransactionsList extends Component
     #[Url(as: 'category', except: [])]
     public array $filterCategories = [];
 
+    /**
+     * Counterparty IDs to restrict results to. Bound to ?counterparty[]= in
+     * the URL. This is the real drill-down target for Reports' counterparty-
+     * grouped chart clicks (Req 12, 999.6-02).
+     *
+     * @var list<int>
+     */
+    #[Url(as: 'counterparty', except: [])]
+    public array $filterCounterparties = [];
+
     /** ISO date string for the lower bound of the date range filter. */
     #[Url(as: 'after', except: '')]
     public string $filterAfter = '';
@@ -224,6 +234,7 @@ final class TransactionsList extends Component
         return $this->searchQuery !== ''
             || $this->filterAccounts !== []
             || $this->filterCategories !== []
+            || $this->filterCounterparties !== []
             || $this->filterAfter !== ''
             || $this->filterBefore !== ''
             || $this->filterAmountMin !== ''
@@ -243,6 +254,7 @@ final class TransactionsList extends Component
         $this->searchQuery = '';
         $this->filterAccounts = [];
         $this->filterCategories = [];
+        $this->filterCounterparties = [];
         $this->filterAfter = '';
         $this->filterBefore = '';
         $this->filterAmountMin = '';
@@ -319,6 +331,10 @@ final class TransactionsList extends Component
                 )),
                 categories: array_values(array_filter(
                     $this->filterCategories,
+                    static fn (int $id): bool => $id > 0,
+                )),
+                counterparties: array_values(array_filter(
+                    $this->filterCounterparties,
                     static fn (int $id): bool => $id > 0,
                 )),
                 after: $this->filterAfter !== '' ? $this->filterAfter : null,
@@ -512,6 +528,9 @@ final class TransactionsList extends Component
             $count++;
         }
         if ($this->filterCategories !== []) {
+            $count++;
+        }
+        if ($this->filterCounterparties !== []) {
             $count++;
         }
         if ($this->filterAfter !== '' || $this->filterBefore !== '') {
