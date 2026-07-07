@@ -38,8 +38,10 @@ use Modules\Reports\Public\Dto\ReportResultRow;
  * result. No separate pre-validation query is needed; the ownership guard
  * is structural, mirroring the "foreign id -> empty result" convention
  * documented across this codebase's read models (999.6-PATTERNS.md "Cross-
- * user isolation guard"). `amountMin`/`amountMax`/`amountDirection` are NOT
- * yet wired into any query (deferred — see this plan's SUMMARY.md).
+ * user isolation guard"). `amountMin`/`amountMax`/`amountDirection` ARE
+ * wired into every dimension query's own row-level `ABS(settled_amount_minor)`
+ * predicate (closing the gap deferred by this plan's original SUMMARY.md) —
+ * see `dimensionRows()`.
  */
 final class ReportAggregator
 {
@@ -66,21 +68,26 @@ final class ReportAggregator
             return $result;
         }
 
-        $comparisonRows = $this->periodComparison->compare(
+        // WR-04: pass the FULL previous-period ReportResultDto (rows AND
+        // FX-exclusion metadata) through to PeriodComparison, not just
+        // ->rows — otherwise a previous period with an unconvertible
+        // currency would silently vanish from hasExcludedAccounts/
+        // accountsWithoutRate on the final compare DTO below.
+        $comparison = $this->periodComparison->compare(
             $period,
             $result->rows,
-            fn (Period $previousPeriod): array => $definition->metric === 'net_worth'
-                ? $this->netWorthRows($user, $previousPeriod, $definition)
-                : $this->transactionRows($user, $previousPeriod, $definition),
+            fn (Period $previousPeriod): ReportResultDto => $definition->metric === 'net_worth'
+                ? $this->buildNetWorthResult($user, $previousPeriod, $definition)
+                : $this->buildTransactionResult($user, $previousPeriod, $definition),
         );
 
         return new ReportResultDto(
             rows: $result->rows,
             totalMinor: $result->totalMinor,
             currency: $result->currency,
-            hasExcludedAccounts: $result->hasExcludedAccounts,
-            accountsWithoutRate: $result->accountsWithoutRate,
-            comparisonRows: $comparisonRows,
+            hasExcludedAccounts: $result->hasExcludedAccounts || $comparison['previousHasExcludedAccounts'],
+            accountsWithoutRate: $result->accountsWithoutRate + $comparison['previousAccountsWithoutRate'],
+            comparisonRows: $comparison['rows'],
         );
     }
 
@@ -92,15 +99,20 @@ final class ReportAggregator
     {
         $queryForCurrency = fn (string $currency): array => $this->dimensionRows($user, $period, $definition, $currency);
 
-        return $this->currencyModeApplier->apply($user, $period, $definition->metric, $definition->currencyMode, $queryForCurrency);
-    }
-
-    /**
-     * @return list<ReportResultRow>
-     */
-    private function transactionRows(User $user, Period $period, ReportDefinition $definition): array
-    {
-        return $this->buildTransactionResult($user, $period, $definition)->rows;
+        // CR-02: discoverCurrencies() must see the SAME accounts/
+        // categories/counterparties filters the dimension query itself
+        // applies, so a filtered report only ever discovers currencies
+        // that can actually produce rows.
+        return $this->currencyModeApplier->apply(
+            $user,
+            $period,
+            $definition->metric,
+            $definition->currencyMode,
+            $queryForCurrency,
+            accountIds: $definition->accounts,
+            categoryIds: $definition->categories,
+            counterpartyIds: $definition->counterparties,
+        );
     }
 
     /**
@@ -108,6 +120,14 @@ final class ReportAggregator
      */
     private function dimensionRows(User $user, Period $period, ReportDefinition $definition, string $currency): array
     {
+        // Cross-cutting amount filter (formerly deferred, see class
+        // docblock): a row-level ABS(settled_amount_minor) predicate
+        // honoring amountDirection in/out/both, threaded into every
+        // dimension query so totals/chart/table/CSV never silently ignore
+        // an active amount filter.
+        $amountMinMinor = self::amountToMinor($definition->amountMin);
+        $amountMaxMinor = self::amountToMinor($definition->amountMax);
+
         return match ($definition->dimension) {
             'category' => $this->categorySpendQuery->forUserAndPeriod(
                 $user,
@@ -117,6 +137,9 @@ final class ReportAggregator
                 accountIds: $definition->accounts,
                 categoryIds: $definition->categories,
                 counterpartyIds: $definition->counterparties,
+                amountMinMinor: $amountMinMinor,
+                amountMaxMinor: $amountMaxMinor,
+                amountDirection: $definition->amountDirection,
             ),
             'counterparty' => $this->counterpartySpendQuery->forUserAndPeriod(
                 $user,
@@ -126,6 +149,9 @@ final class ReportAggregator
                 accountIds: $definition->accounts,
                 categoryIds: $definition->categories,
                 counterpartyIds: $definition->counterparties,
+                amountMinMinor: $amountMinMinor,
+                amountMaxMinor: $amountMaxMinor,
+                amountDirection: $definition->amountDirection,
             ),
             'account' => $this->accountSpendQuery->forUserAndPeriod(
                 $user,
@@ -135,6 +161,9 @@ final class ReportAggregator
                 accountIds: $definition->accounts,
                 categoryIds: $definition->categories,
                 counterpartyIds: $definition->counterparties,
+                amountMinMinor: $amountMinMinor,
+                amountMaxMinor: $amountMaxMinor,
+                amountDirection: $definition->amountDirection,
             ),
             'time_bucket' => $this->timeBucketSpendQuery->forUserAndPeriod(
                 $user,
@@ -145,9 +174,30 @@ final class ReportAggregator
                 accountIds: $definition->accounts,
                 categoryIds: $definition->categories,
                 counterpartyIds: $definition->counterparties,
+                amountMinMinor: $amountMinMinor,
+                amountMaxMinor: $amountMaxMinor,
+                amountDirection: $definition->amountDirection,
             ),
             default => throw new InvalidArgumentException("Unknown report dimension: {$definition->dimension}"),
         };
+    }
+
+    /**
+     * Converts a `ReportDefinition->amountMin`/`amountMax` decimal string
+     * (e.g. "10.00") to a signed-free minor-unit int, mirroring
+     * `Modules\Search\Public\Services\SearchQuery::applyFilters()`'s own
+     * amountMin/amountMax-to-minor conversion (the only other place in this
+     * codebase that turns a user-facing decimal amount string into a
+     * `ABS(settled_amount_minor)` predicate) so the two filter UIs behave
+     * identically.
+     */
+    private static function amountToMinor(?string $amount): ?int
+    {
+        if ($amount === null || $amount === '') {
+            return null;
+        }
+
+        return (int) round(((float) $amount) * 100);
     }
 
     // -------------------------------------------------------------------
@@ -184,14 +234,6 @@ final class ReportAggregator
             hasExcludedAccounts: $hasExcluded,
             accountsWithoutRate: $excludedTotal,
         );
-    }
-
-    /**
-     * @return list<ReportResultRow>
-     */
-    private function netWorthRows(User $user, Period $period, ReportDefinition $definition): array
-    {
-        return self::pointsToRows($this->netWorthSeriesQuery->forUser($user, $period, $definition->granularity));
     }
 
     /**
