@@ -27,7 +27,9 @@ use stdClass;
  * Security (T-08-04, T-08-06, T-08-07):
  *   - Every FTS join and every transactions read is scoped by `user_id`.
  *   - User-supplied text is escaped per-word (double-quote wrap + double embedded quotes).
- *   - Account filter IDs are ownership-validated before applying whereIn.
+ *   - Account/category/counterparty filter IDs are ownership-validated before
+ *     applying whereIn (WR-04: categories additionally honor global,
+ *     null-user rows).
  *
  * Cursor pagination follows the (posted_at, id) row-value compare pattern from
  * TransactionListQuery — newest-first, sub-100ms target on multi-year data via FTS index.
@@ -514,9 +516,29 @@ final class SearchQuery
             }
         }
 
-        // Category filter
+        // Category filter — validate ownership before applying (WR-04, mirrors
+        // the account/counterparty blocks above). Categories may be global
+        // (seeded, null-user) rows, so ownership is "mine OR global", not a
+        // strict user_id match — same rule `resolveNamesToIds()` already
+        // applies for `category:` token resolution. A foreign (non-owned,
+        // non-global) id yields the caller's own empty result, never another
+        // user's rows.
         if ($filters->categories !== []) {
-            $query->whereIn('transactions.category_id', $filters->categories);
+            $validatedCategoryIds = $this->db->connection()
+                ->table('categories')
+                ->where(function (Builder $scope) use ($user): void {
+                    $scope->where('user_id', $user->id)->orWhereNull('user_id');
+                })
+                ->whereIn('id', $filters->categories)
+                ->pluck('id')
+                ->all();
+
+            if ($validatedCategoryIds !== []) {
+                $query->whereIn('transactions.category_id', $validatedCategoryIds);
+            } else {
+                // All supplied category IDs were foreign — return empty result set
+                $query->whereRaw('1 = 0');
+            }
         }
 
         // Counterparty filter — validate ownership before applying (mirrors
