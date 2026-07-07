@@ -42,10 +42,14 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  *     forecast balances are summed for the calendar balance line. Null =
  *     spendable default (checking + PayPal ON; savings + ICS OFF per D-03).
  *     Resolved at CalendarQuery read time.
+ *   - `reports_index_view` — `/reports/library` index view mode
+ *     (`cards` | `list`, 999.6-09). Default `cards` materialises at the
+ *     DB boundary, same convention as `counterparty_index_view`.
  *
  * @property int $id
  * @property int|null $user_id
  * @property string $counterparty_index_view
+ * @property string $reports_index_view
  * @property array<array-key, mixed>|null $skipped_update_versions
  * @property array<array-key, mixed>|null $calendar_entries_accounts
  * @property array<array-key, mixed>|null $calendar_balance_accounts
@@ -66,6 +70,7 @@ final class UserPreference extends Model
         'skipped_update_versions',
         'calendar_entries_accounts',
         'calendar_balance_accounts',
+        'reports_index_view',
     ];
 
     /** @return array<string, string> */

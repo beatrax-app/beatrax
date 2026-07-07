@@ -6,6 +6,7 @@ use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Reports\Internal\Http\Livewire\ReportsIndex;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -114,4 +115,10 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
     Route::get('/reports', static fn (Request $request) => view('reports::report-builder', [
         'report' => $request->integer('report') ?: null,
     ]))->name('reports.index');
+
+    // 999.6-09: the saved-report index (Req 9). Routes directly to the
+    // Livewire component class (mirrors CalendarPage/BudgetsPage — the
+    // component's own render() calls $view->extends('layouts.app', ...),
+    // so a wrapper Blade view is unnecessary here).
+    Route::get('/reports/library', ReportsIndex::class)->name('reports.library');
 });
