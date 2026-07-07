@@ -82,6 +82,48 @@ it('ZipExtractor: throws when the archive cannot be opened at all', function ():
         ->toThrow(UnrecognizedMigrationFileException::class);
 });
 
+it('WR-01: cleanup() removes the partially-extracted directory when extractTo() fails partway', function (): void {
+    // A "foo" file entry followed by a "foo/bar.txt" entry makes
+    // ZipArchive::extractTo() fail partway (it cannot create "foo/bar.txt"
+    // once "foo" already exists as a plain file, not a directory) — this
+    // reproduces the "extraction fails after some bytes are already
+    // written" scenario WR-01 describes, without needing to simulate a
+    // disk-full/permission error. In this harness the underlying PHP
+    // warning extractTo() emits is itself converted to a Throwable
+    // (ErrorException) by the framework's error handler — which is exactly
+    // the class of "extraction fails partway" WR-01 is guarding against;
+    // the exact Throwable subtype doesn't matter, only that ZipExtractor's
+    // $extractedDir is tracked (and thus cleanable) no matter how/where the
+    // failure surfaces.
+    $zipPath = migrationBuildZip(['foo' => 'file content', 'foo/bar.txt' => 'nested content']);
+    $extractor = new ZipExtractor;
+
+    $thrown = null;
+    $partialDir = null;
+
+    try {
+        $extractor->extract($zipPath);
+    } catch (Throwable $e) {
+        $thrown = $e;
+        // Recover the directory ZipExtractor tracked via its private
+        // $extractedDir property, to assert it existed on disk right
+        // before cleanup() runs (proving the leak would have occurred
+        // pre-fix) and is gone right after.
+        $ref = new ReflectionProperty(ZipExtractor::class, 'extractedDir');
+        $partialDir = $ref->getValue($extractor);
+    }
+
+    expect($thrown)->toBeInstanceOf(Throwable::class);
+    expect($partialDir)->not->toBeNull();
+    expect(is_dir($partialDir))->toBeTrue(); // partially written before cleanup()
+
+    $extractor->cleanup();
+
+    expect(is_dir($partialDir))->toBeFalse(); // WR-01: no longer leaked
+
+    @unlink($zipPath);
+});
+
 it('ZipExtractor: rejects an archive containing a symlink entry (WR-04/T-13.5-06)', function (): void {
     // A malicious export ZIP could plant a symlink named e.g. "db.sqlite"
     // whose target string is attacker-controlled and unconstrained by the

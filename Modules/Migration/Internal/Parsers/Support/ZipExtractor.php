@@ -127,14 +127,20 @@ final class ZipExtractor
             throw new RuntimeException("could not create scoped extraction directory '{$targetDir}'");
         }
 
+        // WR-01: track the directory for cleanup() BEFORE calling
+        // extractTo() — if extraction fails partway (disk full, permission
+        // error, a corrupt entry ZipArchive::open() didn't already reject),
+        // the throw below must still leave cleanup() able to find and
+        // remove whatever was partially written, instead of leaking
+        // $targetDir permanently under storage/app/migration-extracts/.
+        $this->extractedDir = $targetDir;
+
         $extracted = $zip->extractTo($targetDir);
         $zip->close();
 
         if ($extracted === false) {
             throw new UnrecognizedMigrationFileException('failed to extract archive contents');
         }
-
-        $this->extractedDir = $targetDir;
 
         return $targetDir;
     }

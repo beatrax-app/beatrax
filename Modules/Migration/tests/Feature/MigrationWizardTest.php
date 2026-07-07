@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Validator;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
@@ -151,4 +153,52 @@ it('MigrationWizard: GET /migrations/new is reachable by any authenticated user 
     $partner = User::create(['username' => 'migration-wizard-partner-4', 'password' => 'opensesame', 'period_start_day' => 1]);
 
     $this->actingAs($partner)->get('/migrations/new')->assertOk();
+});
+
+it('IN-01: NewMigration::rules() rejects a non-ZIP file renamed to a .zip extension via real content sniffing', function (): void {
+    // Livewire's `UploadedFile::fake()` test double (`Illuminate\Http\
+    // Testing\File`) deliberately reports a filename-DERIVED mime type
+    // (`MimeType::from($name)`), never sniffing real bytes — so it cannot
+    // exercise the actual finfo-based check this fix adds. A genuine
+    // `Illuminate\Http\UploadedFile` (not the Testing\File subclass) falls
+    // through to Symfony's real `File::getMimeType()`, which DOES sniff
+    // the real file on disk — the same code path a real HTTP upload hits
+    // in production. Validating `NewMigration::rules()` directly against
+    // one proves the `mimes:zip` rule genuinely rejects renamed non-ZIP
+    // content, not just the extension.
+    $tmpPath = tempnam(sys_get_temp_dir(), 'migration-in01-').'.txt';
+    file_put_contents($tmpPath, "this is just plain text\n");
+    $file = new UploadedFile($tmpPath, 'not-really-a-zip.zip', null, null, true);
+
+    $validator = Validator::make(['file' => $file], (new NewMigration)->rules());
+
+    expect($validator->fails())->toBeTrue();
+    expect($validator->errors()->has('file'))->toBeTrue();
+
+    @unlink($tmpPath);
+});
+
+it('IN-01: a genuine ZIP file passes the mimes:zip content-sniffing rule (defense-in-depth does not reject legitimate exports)', function (): void {
+    $zipPath = sys_get_temp_dir().'/migration-wizard-mimes-test-'.uniqid('', true).'.zip';
+    $zip = new ZipArchive;
+    $zip->open($zipPath, ZipArchive::CREATE);
+    $zip->addFromString('hello.txt', 'hello world');
+    $zip->close();
+
+    $contents = file_get_contents($zipPath);
+    @unlink($zipPath);
+    expect($contents)->not->toBeFalse();
+
+    $file = UploadedFile::fake()->createWithContent('genuine-export.zip', $contents !== false ? $contents : '');
+
+    Livewire::actingAs($this->user)
+        ->test(NewMigration::class)
+        ->set('sourceProduct', 'ynab4')
+        ->set('file', $file)
+        ->call('submit')
+        // The mimes:zip / extensions:zip rules themselves must not reject
+        // this upload — the file legitimately fails PARSING afterward
+        // (it's not a real YNAB4 export), which surfaces as $uploadError,
+        // not a validation error on the 'file' field.
+        ->assertHasNoErrors(['file']);
 });
