@@ -28,7 +28,15 @@
                         : "{$acctCount} accounts";
                 @endphp
                 {{ $acctLabel }}
-                <span wire:click.stop="$set('filterAccounts', [])" class="srch-chip-close" role="button" aria-label="Remove account filter">&times;</span>
+                <span
+                    wire:click.stop="$set('filterAccounts', [])"
+                    class="srch-chip-close"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Remove account filter"
+                    x-on:keydown.enter.stop="$wire.$set('filterAccounts', [])"
+                    x-on:keydown.space.prevent.stop="$wire.$set('filterAccounts', [])"
+                >&times;</span>
             @else
                 Account &#9662;
             @endif
@@ -64,7 +72,15 @@
                         : "{$catCount} categories";
                 @endphp
                 {{ $catLabel }}
-                <span wire:click.stop="$set('filterCategories', [])" class="srch-chip-close" role="button" aria-label="Remove category filter">&times;</span>
+                <span
+                    wire:click.stop="$set('filterCategories', [])"
+                    class="srch-chip-close"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Remove category filter"
+                    x-on:keydown.enter.stop="$wire.$set('filterCategories', [])"
+                    x-on:keydown.space.prevent.stop="$wire.$set('filterCategories', [])"
+                >&times;</span>
             @else
                 Category &#9662;
             @endif
@@ -99,7 +115,15 @@
                         : "{$cpCount} counterparties";
                 @endphp
                 {{ $cpLabel }}
-                <span wire:click.stop="$set('filterCounterparties', [])" class="srch-chip-close" role="button" aria-label="Remove counterparty filter">&times;</span>
+                <span
+                    wire:click.stop="$set('filterCounterparties', [])"
+                    class="srch-chip-close"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Remove counterparty filter"
+                    x-on:keydown.enter.stop="$wire.$set('filterCounterparties', [])"
+                    x-on:keydown.space.prevent.stop="$wire.$set('filterCounterparties', [])"
+                >&times;</span>
             @else
                 Counterparty &#9662;
             @endif
@@ -139,7 +163,15 @@
     <button type="button" x-on:click="open = !open" class="srch-chip {{ $amountActive ? 'srch-chip--active' : '' }}" :aria-expanded="open">
         {!! $amountLabel !!}
         @if ($amountActive)
-            <span wire:click.stop="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', 'both')" class="srch-chip-close" role="button" aria-label="Remove amount filter">&times;</span>
+            <span
+                wire:click.stop="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', 'both')"
+                class="srch-chip-close"
+                role="button"
+                tabindex="0"
+                aria-label="Remove amount filter"
+                x-on:keydown.enter.stop="$wire.$set('filterAmountMin', ''); $wire.$set('filterAmountMax', ''); $wire.$set('filterAmountDir', 'both')"
+                x-on:keydown.space.prevent.stop="$wire.$set('filterAmountMin', ''); $wire.$set('filterAmountMax', ''); $wire.$set('filterAmountDir', 'both')"
+            >&times;</span>
         @endif
     </button>
     <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="Amount filter">
@@ -153,9 +185,10 @@
                 @endforeach
             </div>
             <div class="srch-amount-range">
-                <input type="number" wire:model.live="filterAmountMin" min="0" step="0.01" placeholder="Min" class="srch-amount-input" aria-label="Minimum amount" />
+                {{-- WR-01: debounced so rapid typing doesn't fire an overlapping Livewire round trip per keystroke (Livewire's own textbook race condition for un-debounced live text/number inputs). --}}
+                <input type="number" wire:model.live.debounce.500ms="filterAmountMin" min="0" step="0.01" placeholder="Min" class="srch-amount-input" aria-label="Minimum amount" />
                 <span class="srch-date-sep">–</span>
-                <input type="number" wire:model.live="filterAmountMax" min="0" step="0.01" placeholder="Max" class="srch-amount-input" aria-label="Maximum amount" />
+                <input type="number" wire:model.live.debounce.500ms="filterAmountMax" min="0" step="0.01" placeholder="Max" class="srch-amount-input" aria-label="Maximum amount" />
             </div>
         </div>
     </div>
