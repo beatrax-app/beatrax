@@ -241,6 +241,20 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['migration_source_map_id', 'field_name', 'baseline_value', 'imported_at'],
             ],
+            // 999.6-01 (Req 9/10, D-02): user's saved report definitions + dashboard
+            // pin state. Cross-checked against
+            // Modules/Reports/Database/Migrations/2026_07_07_000001_create_saved_reports_table.php
+            // — `pinned` carries a DB-level default(false) so it is nullable:false in
+            // the strategy map below but MUST NOT appear in _create_required
+            // (Pitfall 5 — the same trap that bit envelope_settings.overspend_mode).
+            'saved_reports' => [
+                'name' => ['strategy' => 'lww', 'nullable' => false],
+                'definition' => ['strategy' => 'lww', 'nullable' => false],
+                'pinned' => ['strategy' => 'lww', 'nullable' => false],
+                'pin_order' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                '_create_required' => ['name', 'definition'],
+            ],
         ];
     }
 
