@@ -126,3 +126,63 @@ it('WR-07: a negative Budgeted value is preserved, NOT silently coerced to zero'
     @unlink($dir.'/Test Budget.csv');
     @rmdir($dir);
 });
+
+it('CR-01: a category group literally named "Group" does not collide with an unrelated group named "Rent" — 13.5-REVIEW-DEEP.md exact example', function (): void {
+    $dir = sys_get_temp_dir().'/ynab4-group-key-collision-'.uniqid('', true);
+    mkdir($dir, 0755, true);
+
+    file_put_contents(
+        $dir.'/Test Register.csv',
+        "Account,Flag,\"Check Number\",Date,Payee,\"Master Category\",\"Sub Category\",Memo,Outflow,Inflow,Cleared,\"Running Balance\"\n",
+    );
+    // Group 1: literally named "Group", containing a leaf category "Rent".
+    // Group 2: a genuinely different group named "Rent", containing a leaf
+    // category "Something". Before the CR-01 fix, naturalGroupKey('Rent')
+    // ('group/rent') collided with naturalCategoryKey('Group', 'Rent')
+    // ('group/rent'), so the "Rent" group's own parent row was silently
+    // skipped and "Something" resolved its parent to the "Rent" LEAF
+    // category (a child of "Group") instead of the "Rent" GROUP.
+    file_put_contents(
+        $dir.'/Test Budget.csv',
+        "Month,\"Category Group\",Category,Budgeted,Outflows,\"Category Balance\"\n"
+        ."2026-01,Group,Rent,10.00,0.00,0.00\n"
+        ."2026-01,Rent,Something,20.00,0.00,0.00\n",
+    );
+
+    $parser = app(Ynab4Parser::class);
+    $batch = $parser->parse($dir, $this->user, 1);
+
+    $categories = $batch->categories;
+
+    // Both group-parent rows must exist as distinct top-level categories
+    // (no sourceGroupName, no parentSourceExternalId).
+    $groupParents = $categories->filter(static fn ($c) => $c->parentSourceExternalId === null);
+    expect($groupParents->pluck('name')->all())->toContain('Group', 'Rent');
+    expect($groupParents)->toHaveCount(2);
+
+    $groupBucketParent = $categories->first(static fn ($c) => $c->name === 'Group' && $c->parentSourceExternalId === null);
+    $rentGroupParent = $categories->first(static fn ($c) => $c->name === 'Rent' && $c->parentSourceExternalId === null);
+    $rentLeaf = $categories->first(static fn ($c) => $c->name === 'Rent' && $c->parentSourceExternalId !== null);
+    $somethingLeaf = $categories->first(static fn ($c) => $c->name === 'Something');
+
+    expect($groupBucketParent)->not->toBeNull();
+    expect($rentGroupParent)->not->toBeNull();
+    expect($rentLeaf)->not->toBeNull();
+    expect($somethingLeaf)->not->toBeNull();
+
+    // The two group-parent keys must be genuinely distinct (the bug made
+    // them collide onto the same key).
+    expect($groupBucketParent->sourceExternalId)->not->toBe($rentGroupParent->sourceExternalId);
+
+    // The "Rent" LEAF (child of "Group") must resolve to the "Group" bucket.
+    expect($rentLeaf->parentSourceExternalId)->toBe($groupBucketParent->sourceExternalId);
+
+    // "Something" must resolve to the "Rent" GROUP parent, never to the
+    // "Rent" LEAF category (the silent misattribution CR-01 described).
+    expect($somethingLeaf->parentSourceExternalId)->toBe($rentGroupParent->sourceExternalId);
+    expect($somethingLeaf->parentSourceExternalId)->not->toBe($rentLeaf->sourceExternalId);
+
+    @unlink($dir.'/Test Register.csv');
+    @unlink($dir.'/Test Budget.csv');
+    @rmdir($dir);
+});
