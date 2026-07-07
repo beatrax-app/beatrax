@@ -171,7 +171,7 @@ it('produces the identical spend/income/net grand total across category/counterp
     $timeBucketQuery = app(TimeBucketSpendQuery::class);
 
     foreach (['spend', 'income', 'net'] as $metric) {
-        $categoryTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $categoryQuery->forUserAndPeriod($user->id, $period, $metric, 'EUR')));
+        $categoryTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $categoryQuery->forUserAndPeriod($user, $period, $metric, 'EUR')));
         $counterpartyTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $counterpartyQuery->forUserAndPeriod($user, $period, $metric, 'EUR')));
         $accountTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $accountQuery->forUserAndPeriod($user, $period, $metric, 'EUR')));
         $timeBucketTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $timeBucketQuery->forUserAndPeriod($user, $period, $metric, 'EUR', 'monthly')));
@@ -181,9 +181,9 @@ it('produces the identical spend/income/net grand total across category/counterp
         expect($timeBucketTotal)->toBe($categoryTotal, "time_bucket vs category mismatch for metric={$metric}");
     }
 
-    $spendTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $categoryQuery->forUserAndPeriod($user->id, $period, 'spend', 'EUR')));
-    $incomeTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $categoryQuery->forUserAndPeriod($user->id, $period, 'income', 'EUR')));
-    $netTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $categoryQuery->forUserAndPeriod($user->id, $period, 'net', 'EUR')));
+    $spendTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $categoryQuery->forUserAndPeriod($user, $period, 'spend', 'EUR')));
+    $incomeTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $categoryQuery->forUserAndPeriod($user, $period, 'income', 'EUR')));
+    $netTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $categoryQuery->forUserAndPeriod($user, $period, 'net', 'EUR')));
 
     expect($spendTotal)->toBe(24_000);
     expect($incomeTotal)->toBe(80_000);

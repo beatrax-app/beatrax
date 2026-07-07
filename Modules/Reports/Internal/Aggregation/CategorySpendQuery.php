@@ -7,6 +7,7 @@ namespace Modules\Reports\Internal\Aggregation;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
+use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Dto\ReportResultRow;
 use stdClass;
@@ -60,7 +61,7 @@ final class CategorySpendQuery
      * @param  string  $metric  'spend' | 'income' | 'net'
      * @return list<ReportResultRow>
      */
-    public function forUserAndPeriod(int $userId, Period $period, string $metric, string $currency): array
+    public function forUserAndPeriod(User $user, Period $period, string $metric, string $currency): array
     {
         $connection = $this->db->connection();
         $types = self::metricTypes($metric);
@@ -74,7 +75,7 @@ final class CategorySpendQuery
         // INCLUDED here (see class docblock) under the sentinel key.
         $unsplit = $connection->table('transactions as t')
             ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
-            ->where('t.user_id', $userId)
+            ->where('t.user_id', $user->id)
             ->where('t.settled_currency', $currency)
             ->whereIn('t.type', $types)
             ->where('t.posted_at', '>=', $period->start->toDateString())
@@ -94,7 +95,7 @@ final class CategorySpendQuery
         // 13.1-01) so legs never need the uncategorized sentinel.
         $legs = $connection->table('transaction_splits as ts')
             ->join('transactions as t', 't.id', '=', 'ts.transaction_id')
-            ->where('t.user_id', $userId)
+            ->where('t.user_id', $user->id)
             ->where('ts.settled_currency', $currency)
             ->whereIn('t.type', $types)
             ->where('t.posted_at', '>=', $period->start->toDateString())
@@ -118,7 +119,7 @@ final class CategorySpendQuery
         }
 
         $categoryIds = array_values(array_filter(array_keys($map), static fn (int $id): bool => $id !== self::UNCATEGORIZED_SENTINEL));
-        $categoriesById = $this->loadCategories($categoryIds, $userId);
+        $categoriesById = $this->loadCategories($categoryIds, $user->id);
 
         $result = [];
         foreach ($map as $key => $amountMinor) {
