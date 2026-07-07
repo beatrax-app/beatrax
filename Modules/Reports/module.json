@@ -1,0 +1,11 @@
+{
+    "name": "Reports",
+    "alias": "reports",
+    "description": "User-composable report builder (metric x dimension x period x filters x currency x viz) with saved/pinned reports.",
+    "keywords": ["reports", "analytics", "charts"],
+    "priority": 35,
+    "providers": [
+        "Modules\\Reports\\Providers\\ReportsServiceProvider"
+    ],
+    "files": []
+}
