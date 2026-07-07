@@ -11,6 +11,7 @@ use Modules\Migration\Public\Actions\ConfirmMigration;
 use Modules\Migration\Public\Actions\DiscardMigrationRun;
 use Modules\Migration\Public\Actions\StartMigrationRun;
 use Modules\Migration\Public\Exceptions\MigrationAlreadyConfirmedException;
+use Modules\Migration\Public\Exceptions\MigrationAlreadyDiscardedException;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
@@ -104,6 +105,25 @@ it('DiscardMigrationRun: refuses to discard an already-confirmed run', function 
         ->toThrow(MigrationAlreadyConfirmedException::class);
 
     expect($run->refresh()->status)->toBe('confirmed');
+});
+
+it('WR-02: ConfirmMigration refuses to confirm an already-discarded run', function (): void {
+    $run = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(DiscardMigrationRun::class)->__invoke($run->id, $this->user);
+
+    expect(fn () => app(ConfirmMigration::class)->__invoke($run->id, $this->user))
+        ->toThrow(MigrationAlreadyDiscardedException::class);
+
+    // The run must stay 'discarded' — never silently flipped back to
+    // 'confirmed' with phantom all-zero counts.
+    expect($run->refresh()->status)->toBe('discarded');
+    expect($this->db->connection()->table('categories')->where('user_id', $this->user->id)->count())->toBe(0);
+    expect($this->db->connection()->table('transactions')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
 it('DiscardMigrationRun: a foreign run id resolves to 404', function (): void {
