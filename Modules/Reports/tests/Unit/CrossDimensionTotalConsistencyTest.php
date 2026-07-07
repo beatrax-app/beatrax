@@ -189,3 +189,43 @@ it('produces the identical spend/income/net grand total across category/counterp
     expect($incomeTotal)->toBe(80_000);
     expect($netTotal)->toBe(56_000);
 });
+
+it('WR-01: a genuinely-unsplit $0.00 transaction is captured by CategorySpendQuery, matching the other three dimensions coverage', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = xdcUser();
+    $account = xdcAccount($user, 'ASN');
+    $auditCategory = xdcCategory('Audit Adjustment');
+
+    // No transaction_splits rows at all AND settled_amount_minor = 0 —
+    // COALESCE(NULL, 0) <> 0 is FALSE, so the old amount-comparison-only
+    // WHERE clause dropped this row from CategorySpendQuery entirely while
+    // it still surfaced fine on the other three dimensions.
+    xdcTransaction($db, $user, $account, [
+        'type' => 'expense', 'settled_amount_minor' => 0, 'amount_minor' => 0,
+        'category_id' => $auditCategory->id,
+        'posted_at' => '2026-03-15', 'booked_at' => '2026-03-15 09:00:00', 'value_date' => '2026-03-15',
+    ]);
+
+    $period = new Period(
+        start: CarbonImmutable::parse('2026-03-01'),
+        endExclusive: CarbonImmutable::parse('2026-04-01'),
+        label: 'March 2026',
+    );
+
+    $categoryRows = app(CategorySpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR');
+    $accountRows = app(AccountSpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR');
+    $counterpartyRows = app(CounterpartySpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR');
+    $timeBucketRows = app(TimeBucketSpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR', 'monthly');
+
+    expect($categoryRows)->toHaveCount(1);
+    expect($categoryRows[0]->groupLabel)->toBe('Audit Adjustment');
+    expect($categoryRows[0]->amountMinor)->toBe(0);
+
+    // Every dimension surfaces exactly one group for this single $0.00 row
+    // — the category dimension is no longer a strict subset of the other
+    // three's coverage.
+    expect($accountRows)->toHaveCount(1);
+    expect($counterpartyRows)->toHaveCount(1);
+    expect($timeBucketRows)->toHaveCount(1);
+});

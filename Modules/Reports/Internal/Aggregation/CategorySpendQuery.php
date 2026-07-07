@@ -62,6 +62,9 @@ final class CategorySpendQuery
      * @param  list<int>  $accountIds  T-999.6-06/14: restrict to these account ids (empty = no restriction). Applied ALONGSIDE the existing `where('user_id', ...)` guard below, so a foreign id can only ever narrow this user's own result to nothing — never widen it to another user's rows.
      * @param  list<int>  $categoryIds  restrict to these category ids (empty = no restriction)
      * @param  list<int>  $counterpartyIds  restrict to these counterparty ids (empty = no restriction)
+     * @param  ?int  $amountMinMinor  restrict to rows whose ABS(settled_amount_minor) >= this (empty = no restriction)
+     * @param  ?int  $amountMaxMinor  restrict to rows whose ABS(settled_amount_minor) <= this (empty = no restriction)
+     * @param  string  $amountDirection  'in' | 'out' | 'both' — restricts to settled_amount_minor > 0 / < 0 / no restriction
      * @return list<ReportResultRow>
      */
     public function forUserAndPeriod(
@@ -72,6 +75,9 @@ final class CategorySpendQuery
         array $accountIds = [],
         array $categoryIds = [],
         array $counterpartyIds = [],
+        ?int $amountMinMinor = null,
+        ?int $amountMaxMinor = null,
+        string $amountDirection = 'both',
     ): array {
         $connection = $this->db->connection();
         $types = self::metricTypes($metric);
@@ -80,11 +86,22 @@ final class CategorySpendQuery
 
         // 1. Unsplit parents AND "broken split" parents (WR-03 fail-safe,
         // mirrored from SpendByCategoryQuery): a parent rolls up via its OWN
-        // category_id whenever its legs do NOT sum to its
-        // settled_amount_minor. Uncategorized (category_id IS NULL) rows are
-        // INCLUDED here (see class docblock) under the sentinel key.
+        // category_id whenever it has NO split rows at all (WR-01: a
+        // genuinely unsplit $0.00 transaction has no legs, so it must be
+        // captured on the "no legs exist" branch alone — the amount
+        // comparison below it is false for that case, `0 <> 0`, which used
+        // to silently drop it from every bucket) OR its legs do NOT sum to
+        // its settled_amount_minor. Uncategorized (category_id IS NULL)
+        // rows are INCLUDED here (see class docblock) under the sentinel
+        // key.
         $unsplit = $connection->table('transactions as t')
-            ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
+            // Parenthesized as a single group (CR-01-adjacent SQL-precedence
+            // fix): a bare `A OR B` raw fragment AND-ed with the predicates
+            // below it would parse as `A OR (B AND ...)` — SQL's AND binds
+            // tighter than OR — letting the unscoped NOT EXISTS half match
+            // every unsplit transaction for EVERY user/period/type, not just
+            // this query's own scope. Must stay wrapped in parens.
+            ->whereRaw('(NOT EXISTS (SELECT 1 FROM transaction_splits AS ts WHERE ts.transaction_id = t.id) OR COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor)')
             ->where('t.user_id', $user->id)
             ->where('t.settled_currency', $currency)
             ->whereIn('t.type', $types)
@@ -93,6 +110,10 @@ final class CategorySpendQuery
             ->when($accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.account_id', $accountIds))
             ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.category_id', $categoryIds))
             ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.counterparty_id', $counterpartyIds))
+            ->when($amountMinMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(t.settled_amount_minor) >= ?', [$amountMinMinor]))
+            ->when($amountMaxMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(t.settled_amount_minor) <= ?', [$amountMaxMinor]))
+            ->when($amountDirection === 'in', static fn (QueryBuilder $q): QueryBuilder => $q->where('t.settled_amount_minor', '>', 0))
+            ->when($amountDirection === 'out', static fn (QueryBuilder $q): QueryBuilder => $q->where('t.settled_amount_minor', '<', 0))
             ->groupBy('t.category_id')
             ->get(['t.category_id', $connection->raw(self::unsplitAmountExpr($metric).' AS amount_minor')]);
 
@@ -121,6 +142,10 @@ final class CategorySpendQuery
             ->when($accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.account_id', $accountIds))
             ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('ts.category_id', $categoryIds))
             ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.counterparty_id', $counterpartyIds))
+            ->when($amountMinMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(ts.settled_amount_minor) >= ?', [$amountMinMinor]))
+            ->when($amountMaxMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(ts.settled_amount_minor) <= ?', [$amountMaxMinor]))
+            ->when($amountDirection === 'in', static fn (QueryBuilder $q): QueryBuilder => $q->where('ts.settled_amount_minor', '>', 0))
+            ->when($amountDirection === 'out', static fn (QueryBuilder $q): QueryBuilder => $q->where('ts.settled_amount_minor', '<', 0))
             ->groupBy('ts.category_id')
             ->get(['ts.category_id', $connection->raw(self::legAmountExpr($metric).' AS amount_minor')]);
 
@@ -134,8 +159,8 @@ final class CategorySpendQuery
             return [];
         }
 
-        $categoryIds = array_values(array_filter(array_keys($map), static fn (int $id): bool => $id !== self::UNCATEGORIZED_SENTINEL));
-        $categoriesById = $this->loadCategories($categoryIds, $user->id);
+        $resultCategoryIds = array_values(array_filter(array_keys($map), static fn (int $id): bool => $id !== self::UNCATEGORIZED_SENTINEL));
+        $categoriesById = $this->loadCategories($resultCategoryIds, $user->id);
 
         $result = [];
         foreach ($map as $key => $amountMinor) {
