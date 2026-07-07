@@ -250,6 +250,11 @@ final class SearchQuery
         return new SearchFilters(
             accounts: $accounts,
             categories: $categories,
+            // No `counterparty:` query token exists yet — pass the chip/URL
+            // value straight through so it survives the token-merge rebuild
+            // (this rebuild replaces $filters wholesale; omitting a field
+            // here would silently drop it, Rule 1).
+            counterparties: $filters->counterparties,
             after: $after,
             before: $before,
             amountMin: $amountMin,
@@ -512,6 +517,25 @@ final class SearchQuery
         // Category filter
         if ($filters->categories !== []) {
             $query->whereIn('transactions.category_id', $filters->categories);
+        }
+
+        // Counterparty filter — validate ownership before applying (mirrors
+        // the account block above, T-999.6-04 / Pitfall 4). A foreign id
+        // yields the caller's own empty result, never another user's rows.
+        if ($filters->counterparties !== []) {
+            $validatedCounterpartyIds = $this->db->connection()
+                ->table('counterparties')
+                ->where('user_id', $user->id)
+                ->whereIn('id', $filters->counterparties)
+                ->pluck('id')
+                ->all();
+
+            if ($validatedCounterpartyIds !== []) {
+                $query->whereIn('transactions.counterparty_id', $validatedCounterpartyIds);
+            } else {
+                // All supplied counterparty IDs were foreign — return empty result set
+                $query->whereRaw('1 = 0');
+            }
         }
 
         // Amount min/max filter (operates on ABS of settled_amount_minor)
