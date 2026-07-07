@@ -177,3 +177,40 @@ it('currencyMode=original never triggers exclusion — each currency reports its
     expect($spend->hasExcludedAccounts)->toBeFalse();
     expect($spend->accountsWithoutRate)->toBe(0);
 });
+
+it('CR-02: currencyMode=original with an account filter reports the correct currency/total, never $0.00 next to non-empty rows', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = cmeUser();
+    $usdAccount = cmeAccount($user, 'USD');
+    $eurAccount = cmeAccount($user, 'EUR');
+
+    // USD row on the EXCLUDED account, inserted FIRST so an unfiltered
+    // `DISTINCT settled_currency` scan would very plausibly surface it
+    // ahead of EUR — the exact "wrong primary currency" failure mode CR-02
+    // fixes. discoverCurrencies() must never even see this row once the
+    // report is filtered to $eurAccount only.
+    cmeTransaction($db, $user, $usdAccount, ['settled_amount_minor' => -50_000, 'settled_currency' => 'USD']);
+    cmeTransaction($db, $user, $eurAccount, ['settled_amount_minor' => -5_000, 'settled_currency' => 'EUR']);
+
+    $definition = new ReportDefinition(
+        metric: 'spend',
+        dimension: 'account',
+        periodPreset: 'custom',
+        granularity: 'monthly',
+        currencyMode: 'original',
+        viz: 'table',
+        customFrom: '2026-04-01',
+        customTo: '2026-04-30',
+        accounts: [$eurAccount->id],
+    );
+
+    $result = app(ReportAggregator::class)->run($user, $definition);
+
+    expect($result->currency)->toBe('EUR');
+    expect($result->totalMinor)->toBe(5_000);
+    expect($result->rows)->not->toBeEmpty();
+    foreach ($result->rows as $row) {
+        expect($row->currency)->toBe('EUR');
+    }
+});
