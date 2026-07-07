@@ -23,6 +23,12 @@ use Spatie\LaravelData\Data;
  * RESEARCH.md's 3-way-merge algorithm, resolving a conflict (even via this
  * default) advances the entity's baseline to the resolved value so the
  * identical conflict does not re-surface on the next reconciliation run.
+ *
+ * `currency` is set only for a money-shaped field (`budgeted_minor` /
+ * `amount_minor`) — an ISO 4217 code so the preview UI can format the three
+ * values as currency (13.5-HUMAN-UAT.md Test 3a) instead of raw minor-unit
+ * integers. NULL for a non-money field (category/account/transaction name
+ * or description conflicts).
  */
 final class ConflictDto extends Data
 {
@@ -33,6 +39,7 @@ final class ConflictDto extends Data
         public readonly mixed $localValue,
         public readonly mixed $sourceValue,
         public readonly mixed $baselineValue,
+        public readonly ?string $currency = null,
         public readonly string $resolution = 'keep_local',
     ) {}
 }

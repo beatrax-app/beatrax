@@ -6,19 +6,15 @@ namespace Modules\Migration\Public\Actions;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\QueryException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Ledger\Public\Dto\CanonicalTransaction;
-use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Migration\Internal\Pipeline\ConflictValueCodec;
+use Modules\Migration\Internal\Pipeline\EntityChangeApplier;
 use Modules\Migration\Internal\Pipeline\MergeDecision;
 use Modules\Migration\Internal\Pipeline\PromoteStagingToDomain;
 use Modules\Migration\Internal\Pipeline\ThreeWayMergeResolver;
-use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Dto\ConflictDto;
-use Psr\Log\LoggerInterface;
-use stdClass;
 
 /**
  * Reconciliation entry point (Req 10, D-11/D-12/D-13/D-14 — the highest-value
@@ -33,14 +29,13 @@ use stdClass;
  * per-entity resolve-gate already handles brand-new entities; a new
  * `$skipBudgetAssignmentKeys` list keeps conflicted budget-assignment rows
  * byte-for-byte untouched — the ONE entity kind `promote()` applies
- * unconditionally), (4) persists every conflict as a
+ * unconditionally), and (4) persists every conflict as a
  * `migration_staging_unmapped_items` row (`item_type = 'conflict'`) so
  * `PreviewSummaryBuilder`'s existing generic "Needs your decision" group
- * picks it up with zero further changes, and (5) advances the baseline to
- * the LOCAL value for every conflict (D-14's keep-local default — the
- * conflicting source value is discarded, not silently applied, and the
- * identical already-decided divergence will not re-flag on the next
- * reconciliation run).
+ * picks it up with zero further changes. The conflict is left UNRESOLVED
+ * here (see the Test 3c gap-fix note below) — baseline advancement now
+ * happens in `ConfirmMigration`, once the user's actual keep-local/
+ * take-source decision is known.
  *
  * The new run's final `status` is `'needs_attention'` while unresolved
  * conflicts exist, else `'confirmed'` (mirrors `ConfirmMigration`'s
@@ -63,9 +58,25 @@ use stdClass;
  * never revisits an already-mapped row — no separate skip-list was needed
  * for transactions, unlike budget_assignment's CR-01 fix). A non-conflicting
  * amount apply recomputes the transaction's stored `fingerprint` in the same
- * update (see `applyTransactionAmount()`), since `amount_minor` — unlike
- * `description` — is part of the fingerprint tuple and the
- * `transactions_fingerprint_uq` composite unique index.
+ * update (see `EntityChangeApplier::applyTransactionAmount()`), since
+ * `amount_minor` — unlike `description` — is part of the fingerprint tuple
+ * and the `transactions_fingerprint_uq` composite unique index.
+ *
+ * 13.5-HUMAN-UAT.md Test 3c gap-fix: a conflict is no longer FINALIZED here.
+ * Previously `recordConflict()` was immediately followed by
+ * `advanceBaselineToLocal()`, unconditionally committing D-14's keep-local
+ * default before the user ever saw the preview page — the wizard's "Take
+ * source" toggle had nothing left to change. Now `recordConflict()` persists
+ * the full local/source/baseline value triple (plus the entity identity and
+ * field name) onto the `migration_staging_unmapped_items` row and leaves
+ * `resolution` NULL; `PreviewMigration::resolveConflict()` writes the user's
+ * actual choice there, and `ConfirmMigration` is the ONLY place that now
+ * applies a resolution (source value or nothing) and advances the baseline
+ * — see that class's docblock. The entity-field write routing itself
+ * (`EntityChangeApplier::apply()`) is unchanged and shared between this
+ * class's own non-conflicting apply-set and `ConfirmMigration`'s
+ * take-source conflict apply, so there is exactly one writer per entity
+ * kind, not two.
  */
 final class CheckForUpdates
 {
@@ -75,9 +86,7 @@ final class CheckForUpdates
         private readonly StartMigrationRun $startMigrationRun,
         private readonly ThreeWayMergeResolver $resolver,
         private readonly PromoteStagingToDomain $promoter,
-        private readonly SourceMapWriter $sourceMapWriter,
-        private readonly FingerprintComposer $fingerprints,
-        private readonly LoggerInterface $logger,
+        private readonly EntityChangeApplier $applier,
     ) {}
 
     public function __invoke(int $priorConfirmedRunId, User $user, string $sourceProduct, string $extractedPath): MigrationRun
@@ -99,7 +108,6 @@ final class CheckForUpdates
 
         foreach ($decision->conflicts as $conflict) {
             $this->recordConflict($newRun->id, $user, $conflict);
-            $this->advanceBaselineToLocal($user, $sourceProduct, $conflict);
         }
 
         // Every OTHER entity kind (categories/accounts/transactions/
@@ -125,6 +133,19 @@ final class CheckForUpdates
         return $newRun->refresh();
     }
 
+    /**
+     * Persists the FULL local/source/baseline value triple (plus the entity
+     * identity and field name, and a currency code when the field is
+     * money-shaped) so `ConfirmMigration` can apply EITHER outcome later —
+     * `resolution` starts NULL (no decision made yet, D-14's keep-local
+     * default renders until the user touches the toggle). `display_label`/
+     * `reason` are still populated with the same plain-text shape prior
+     * versions of this class wrote (several tests query `display_label`
+     * directly) but the wizard's own rendering now recomputes a human label
+     * + resolution-aware copy from the structured columns instead
+     * (`PreviewSummaryBuilder`), so these two are effectively a legacy/
+     * debug-only mirror going forward, not the UI's source of truth.
+     */
     private function recordConflict(int $runId, User $user, ConflictDto $conflict): void
     {
         $this->db->connection()->table('migration_staging_unmapped_items')->insert([
@@ -132,9 +153,16 @@ final class CheckForUpdates
             'migration_run_id' => $runId,
             'item_type' => 'conflict',
             'source_external_id' => $conflict->sourceExternalId,
+            'entity_type' => $conflict->entityType,
+            'field_name' => $conflict->fieldName,
+            'local_value' => ConflictValueCodec::toStorage($conflict->localValue),
+            'source_value' => ConflictValueCodec::toStorage($conflict->sourceValue),
+            'baseline_value' => ConflictValueCodec::toStorage($conflict->baselineValue),
+            'currency' => $conflict->currency,
+            'resolution' => null,
             'display_label' => ucfirst($conflict->entityType).' '.$conflict->fieldName,
             'reason' => sprintf(
-                "Both the source file and beatrax changed this since the last import — local value kept.\nLocal: %s\nSource: %s\nLast imported: %s",
+                "Both the source file and beatrax changed this since the last import.\nLocal: %s\nSource: %s\nLast imported: %s",
                 self::scalarToDisplay($conflict->localValue),
                 self::scalarToDisplay($conflict->sourceValue),
                 self::scalarToDisplay($conflict->baselineValue),
@@ -143,54 +171,15 @@ final class CheckForUpdates
     }
 
     /**
-     * D-14: an unresolved conflict defaults to keep-local — the beatrax value
-     * is left untouched (never applied here) AND the baseline is advanced to
-     * that same local value, so the identical already-decided divergence
-     * does not re-flag on the next reconciliation run (RESEARCH.md's
-     * documented baseline-advance subtlety).
-     */
-    private function advanceBaselineToLocal(User $user, string $sourceProduct, ConflictDto $conflict): void
-    {
-        if ($conflict->sourceExternalId === null) {
-            return;
-        }
-
-        $beatraxId = $this->sourceMapWriter->resolve($user, $sourceProduct, $conflict->entityType, $conflict->sourceExternalId);
-        if ($beatraxId === null) {
-            return; // defensive: a conflict only ever exists for an already-mapped entity.
-        }
-
-        $this->sourceMapWriter->record(
-            $user,
-            $sourceProduct,
-            $conflict->entityType,
-            $conflict->sourceExternalId,
-            null,
-            self::beatraxEntityType($conflict->entityType),
-            $beatraxId,
-            [$conflict->fieldName => self::scalarOrNull($conflict->localValue)],
-        );
-    }
-
-    /**
-     * Applies every non-`budget_assignment` apply-set entry directly (a
-     * plain, user-scoped table update on the entity's field) — unlike
-     * budget assignments, `promote()` never re-visits an already-mapped
-     * category/account/transaction row, so a non-conflicting rename/edit
-     * needs this explicit path. Advances the baseline to the newly-applied
-     * source value afterward.
-     *
-     * A transaction `amount_minor` change is routed through
-     * `applyTransactionAmount()` instead of a bare column update: unlike a
-     * description/name rename, `amount_minor` is part of the fingerprint
-     * tuple AND the `transactions_fingerprint_uq` composite unique index
-     * (Req 10 gap-fix — 13.5-VERIFICATION.md), so the stored `fingerprint`
-     * column must be recomputed in the SAME update or it goes stale.
+     * Applies every non-`budget_assignment` apply-set entry via the shared
+     * `EntityChangeApplier` (a plain, user-scoped table update on the
+     * entity's field, or the fingerprint-safe transaction-amount path) —
+     * unlike budget assignments, `promote()` never re-visits an
+     * already-mapped category/account/transaction row, so a non-conflicting
+     * rename/edit needs this explicit path.
      */
     private function applyNonBudgetAssignmentChanges(int $runId, User $user, string $sourceProduct, MergeDecision $decision): void
     {
-        $connection = $this->db->connection();
-
         foreach ($decision->applies as $apply) {
             if ($apply['entityType'] === 'budget_assignment') {
                 // Already applied unconditionally inside promote()'s
@@ -198,180 +187,18 @@ final class CheckForUpdates
                 continue;
             }
 
-            $table = match ($apply['entityType']) {
-                'category' => 'categories',
-                'account' => 'accounts',
-                'transaction' => 'transactions',
-                default => null,
-            };
+            $applied = $this->applier->apply($user, $sourceProduct, $apply['entityType'], $apply['sourceExternalId'], $apply['fields']);
 
-            if ($table === null) {
-                continue;
+            if (! $applied && $apply['entityType'] === 'transaction' && array_key_exists('amount_minor', $apply['fields'])) {
+                // Vanishingly rare: the new amount collides with another
+                // row's fingerprint tuple (same account/date/currency/
+                // counterparty). Left byte-for-byte untouched rather than
+                // silently dropped or half-applied — surfaced as a visible
+                // unmapped item (mirrors CR-02's own fingerprint-collision-
+                // visibility precedent).
+                $this->recordAmountApplyCollision($runId, $user, $apply['sourceExternalId']);
             }
-
-            $beatraxId = $this->sourceMapWriter->resolve($user, $sourceProduct, $apply['entityType'], $apply['sourceExternalId']);
-            if ($beatraxId === null) {
-                continue;
-            }
-
-            if ($apply['entityType'] === 'transaction' && array_key_exists('amount_minor', $apply['fields'])) {
-                $newAmountMinor = $apply['fields']['amount_minor'];
-                $applied = is_int($newAmountMinor)
-                    && $this->applyTransactionAmount($user, $beatraxId, $newAmountMinor);
-
-                if (! $applied) {
-                    // Vanishingly rare: the new amount collides with another
-                    // row's fingerprint tuple (same account/date/currency/
-                    // counterparty). Left byte-for-byte untouched rather
-                    // than silently dropped or half-applied — surfaced as a
-                    // visible unmapped item (mirrors CR-02's own
-                    // fingerprint-collision-visibility precedent).
-                    $this->recordAmountApplyCollision($runId, $user, $apply['sourceExternalId']);
-
-                    continue;
-                }
-            } else {
-                $connection->table($table)
-                    ->where('id', $beatraxId)
-                    ->where('user_id', $user->id)
-                    ->update($apply['fields']);
-            }
-
-            $this->sourceMapWriter->record(
-                $user,
-                $sourceProduct,
-                $apply['entityType'],
-                $apply['sourceExternalId'],
-                null,
-                self::beatraxEntityType($apply['entityType']),
-                $beatraxId,
-                $apply['fields'],
-            );
         }
-    }
-
-    /**
-     * Updates a transaction's `amount_minor` AND recomputes its stored
-     * `fingerprint` in the same statement, so the second-layer SHA-256
-     * idempotency guard (`FingerprintComposer`) never drifts from the row's
-     * actual content. Returns false (no write performed) on a genuine
-     * `transactions_fingerprint_uq` collision rather than letting the raw
-     * `QueryException` bubble out of the whole reconciliation.
-     */
-    private function applyTransactionAmount(User $user, int $transactionId, int $newAmountMinor): bool
-    {
-        $connection = $this->db->connection();
-
-        /** @var stdClass|null $row */
-        $row = $connection->table('transactions')
-            ->where('id', $transactionId)
-            ->where('user_id', $user->id)
-            ->first();
-
-        if ($row === null) {
-            return false;
-        }
-
-        $canonical = new CanonicalTransaction(
-            userId: $user->id,
-            accountId: self::toInt($row->account_id),
-            type: self::toStr($row->type),
-            postedAt: CarbonImmutable::parse(self::toStr($row->posted_at)),
-            bookedAt: CarbonImmutable::parse(self::toStr($row->booked_at)),
-            valueDate: CarbonImmutable::parse(self::toStr($row->value_date)),
-            amountMinor: $newAmountMinor,
-            currency: self::toStr($row->currency),
-            settledAmountMinor: self::toInt($row->settled_amount_minor),
-            settledCurrency: self::toStr($row->settled_currency),
-            fxRateUsed: $row->fx_rate_used !== null ? self::toStr($row->fx_rate_used) : null,
-            counterpartyName: $row->counterparty_name !== null ? self::toStr($row->counterparty_name) : null,
-            counterpartyIban: $row->counterparty_iban !== null ? self::toStr($row->counterparty_iban) : null,
-            counterpartyNormalized: self::toStr($row->counterparty_normalized),
-            normalizationVersion: self::toInt($row->normalization_version),
-            description: $row->description !== null ? self::toStr($row->description) : null,
-            categoryId: $row->category_id !== null ? self::toInt($row->category_id) : null,
-            sourceFormat: self::toStr($row->source_format),
-            importRunId: self::toInt($row->import_run_id),
-            sourceRowIndex: self::toInt($row->source_row_index),
-            sourceRef: $row->source_ref !== null ? self::toStr($row->source_ref) : null,
-        );
-
-        $fingerprint = $this->fingerprints->compose($canonical);
-
-        try {
-            $connection->table('transactions')
-                ->where('id', $transactionId)
-                ->where('user_id', $user->id)
-                ->update([
-                    'amount_minor' => $newAmountMinor,
-                    'fingerprint' => $fingerprint,
-                ]);
-        } catch (QueryException $e) {
-            // WR-03: only a genuine fingerprint-uniqueness violation is a
-            // benign, expected collision — this update touches ONLY
-            // amount_minor/fingerprint on an already-existing row (scoped
-            // by id+user_id), so any OTHER QueryException (transient
-            // connection error, disk-full, a future schema change adding a
-            // NOT NULL/CHECK constraint on one of these columns) must NOT
-            // be silently reclassified as "it's just a collision" — that
-            // would mask the real failure from both the user and anyone
-            // debugging a bug report. The raw exception is always logged
-            // so a genuinely unexpected failure is never swallowed
-            // invisibly, even in the collision case.
-            $this->logger->warning('CheckForUpdates: applyTransactionAmount() query failed.', [
-                'transaction_id' => $transactionId,
-                'user_id' => $user->id,
-                'is_fingerprint_collision' => self::isFingerprintUniqueViolation($e),
-                'exception_message' => $e->getMessage(),
-            ]);
-
-            if (! self::isFingerprintUniqueViolation($e)) {
-                throw $e;
-            }
-
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * True only for a genuine unique-constraint violation against one of
-     * the two fingerprint-related indexes this UPDATE could hit —
-     * `transactions_fingerprint_uq` (the composite `user_id, account_id,
-     * posted_at, amount_minor, currency, counterparty_normalized,
-     * source_ref` index — `amount_minor` is part of this tuple) or
-     * `transactions_fingerprint_sha_uq` (`user_id, fingerprint`). Every
-     * driver surfaces SQLSTATE 23000 for a unique violation (mirrors
-     * `CreateCategorizationRule::isUniqueViolation()`'s identical
-     * cross-driver check) — that alone is NOT enough here, since a 23000
-     * could in principle come from an unrelated constraint. This project
-     * is SQLite-only (CLAUDE.md), and SQLite's own error message lists the
-     * conflicting COLUMN names, not the index name (verified empirically:
-     * "UNIQUE constraint failed: transactions.user_id,
-     * transactions.account_id, ..., transactions.amount_minor, ..." for
-     * the composite index, "UNIQUE constraint failed: transactions.user_id,
-     * transactions.fingerprint" for the SHA index) — so the message is
-     * additionally required to reference `transactions.fingerprint` or
-     * `transactions.amount_minor` (the two columns this specific UPDATE
-     * writes that could trip either index), OR — for forward-compatibility
-     * with a driver that names the constraint instead — one of the two
-     * index names themselves. An unrelated 23000 (e.g. a NOT NULL/CHECK
-     * violation on some other column) matches none of these and is
-     * re-thrown.
-     */
-    private static function isFingerprintUniqueViolation(QueryException $e): bool
-    {
-        if ((string) $e->getCode() !== '23000') {
-            return false;
-        }
-
-        $message = $e->getMessage();
-
-        return str_contains($message, 'transactions.fingerprint')
-            || str_contains($message, 'transactions.amount_minor')
-            || str_contains($message, 'transactions_fingerprint_uq')
-            || str_contains($message, 'transactions_fingerprint_sha_uq');
     }
 
     private function recordAmountApplyCollision(int $runId, User $user, string $sourceExternalId): void
@@ -386,19 +213,6 @@ final class CheckForUpdates
         ]);
     }
 
-    private static function beatraxEntityType(string $entityType): string
-    {
-        return match ($entityType) {
-            'budget_assignment' => 'envelope_assignment',
-            default => $entityType,
-        };
-    }
-
-    private static function scalarOrNull(mixed $value): string|int|float|bool|null
-    {
-        return is_scalar($value) || $value === null ? $value : (string) json_encode($value);
-    }
-
     private static function scalarToDisplay(mixed $value): string
     {
         return match (true) {
@@ -407,15 +221,5 @@ final class CheckForUpdates
             is_scalar($value) => (string) $value,
             default => (string) json_encode($value),
         };
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

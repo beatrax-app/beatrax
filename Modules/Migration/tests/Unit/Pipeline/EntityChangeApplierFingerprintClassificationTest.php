@@ -3,17 +3,25 @@
 declare(strict_types=1);
 
 use Illuminate\Database\QueryException;
-use Modules\Migration\Public\Actions\CheckForUpdates;
+use Modules\Migration\Internal\Pipeline\EntityChangeApplier;
 
 /**
- * WR-03 (13.5 deep review): `CheckForUpdates::applyTransactionAmount()`
- * previously treated ANY `QueryException` as a benign fingerprint
- * collision, masking unrelated DB failures behind the same "it's just a
- * collision, left unchanged" user-facing message. These tests exercise the
- * classification helper (`isFingerprintUniqueViolation()`) directly via
- * reflection — it is the exact boundary the fix narrows, and constructing
- * synthetic `QueryException`s lets every branch be pinned deterministically
- * without needing to engineer a real DB failure of each specific kind.
+ * WR-03 (13.5 deep review): `applyTransactionAmount()` previously treated ANY
+ * `QueryException` as a benign fingerprint collision, masking unrelated DB
+ * failures behind the same "it's just a collision, left unchanged"
+ * user-facing message. These tests exercise the classification helper
+ * (`isFingerprintUniqueViolation()`) directly via reflection — it is the
+ * exact boundary the fix narrows, and constructing synthetic
+ * `QueryException`s lets every branch be pinned deterministically without
+ * needing to engineer a real DB failure of each specific kind.
+ *
+ * Relocated from `Modules/Migration/tests/Unit/Actions/
+ * CheckForUpdatesFingerprintClassificationTest.php` during the
+ * 13.5-HUMAN-UAT.md Test 3c gap-fix: `applyTransactionAmount()` and
+ * `isFingerprintUniqueViolation()` moved from `CheckForUpdates` to this
+ * shared `EntityChangeApplier` so `ConfirmMigration`'s new take-source
+ * conflict-apply step reuses the SAME fingerprint-safe writer instead of
+ * duplicating it. The classification rules themselves are unchanged.
  */
 function migrationBuildQueryException(string $sqlState, string $driverMessage): QueryException
 {
@@ -30,7 +38,7 @@ function migrationBuildQueryException(string $sqlState, string $driverMessage): 
 
 function migrationInvokeIsFingerprintUniqueViolation(QueryException $e): bool
 {
-    $method = new ReflectionMethod(CheckForUpdates::class, 'isFingerprintUniqueViolation');
+    $method = new ReflectionMethod(EntityChangeApplier::class, 'isFingerprintUniqueViolation');
 
     /** @var bool $result */
     $result = $method->invoke(null, $e);

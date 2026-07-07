@@ -5,9 +5,11 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
+use Modules\Migration\Internal\Http\Livewire\PreviewMigration;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Actions\CheckForUpdates;
 use Modules\Migration\Public\Actions\ConfirmMigration;
@@ -403,4 +405,231 @@ it('WR-03: a genuine fingerprint-uniqueness collision on transaction-amount appl
         ->where('display_label', 'Transaction amount update')
         ->get();
     expect($collisionRows)->not->toBeEmpty();
+});
+
+/*
+ * 13.5-HUMAN-UAT.md Test 3c gap-fix: the "Keep local"/"Take source" toggle
+ * was a cosmetic no-op — `CheckForUpdates` committed the keep-local decision
+ * synchronously, before the preview page ever rendered, so there was
+ * nothing left for the toggle to actually change. These tests pin the
+ * DEFERRED design: `CheckForUpdates` records the conflict with `resolution`
+ * NULL; `ConfirmMigration` is the only place a resolution (from whichever
+ * choice the user last persisted via `PreviewMigration::resolveConflict()`)
+ * is actually applied.
+ */
+
+it('UAT-3c: take_source resolution on a budget-assignment conflict applies the SOURCE value at Confirm', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
+    $jan = CarbonImmutable::parse('2026-01-01');
+
+    // LOCAL edit that collides with v2's Groceries change (200.00 -> 250.00).
+    app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
+
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+    expect($reconciliationRun->status)->toBe('needs_attention');
+
+    // The conflict is left UNRESOLVED by CheckForUpdates (Test 3c gap-fix)
+    // — the local 300.00 is NOT yet touched.
+    $groceriesAssignedBeforeConfirm = $this->db->connection()->table('envelope_assignments')
+        ->where('user_id', $this->user->id)
+        ->where('category_id', $groceries->id)
+        ->where('period_start', '2026-01-01')
+        ->value('assigned_minor');
+    expect((int) $groceriesAssignedBeforeConfirm)->toBe(30000);
+
+    // The user picks "Take source" for the Groceries conflict.
+    $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('migration_run_id', $reconciliationRun->id)
+        ->where('item_type', 'conflict')
+        ->where('entity_type', 'budget_assignment')
+        ->update(['resolution' => 'take_source']);
+
+    app(ConfirmMigration::class)->__invoke($reconciliationRun->id, $this->user);
+
+    $groceriesAssigned = $this->db->connection()->table('envelope_assignments')
+        ->where('user_id', $this->user->id)
+        ->where('category_id', $groceries->id)
+        ->where('period_start', '2026-01-01')
+        ->value('assigned_minor');
+
+    // Take-source means the SOURCE value (250.00) now wins over the
+    // previously-kept-local 300.00.
+    expect((int) $groceriesAssigned)->toBe(25000);
+
+    $confirmedRun = MigrationRun::query()->findOrFail($reconciliationRun->id);
+    expect($confirmedRun->status)->toBe('confirmed');
+});
+
+it('UAT-3c: keep_local (default, no toggle interaction) leaves the beatrax value unchanged at Confirm', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
+    $jan = CarbonImmutable::parse('2026-01-01');
+    app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
+
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+
+    // No toggle interaction at all — the resolution column stays NULL
+    // (D-14's default), never "committed" ahead of time.
+    $resolution = $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('migration_run_id', $reconciliationRun->id)
+        ->where('item_type', 'conflict')
+        ->where('entity_type', 'budget_assignment')
+        ->value('resolution');
+    expect($resolution)->toBeNull();
+
+    app(ConfirmMigration::class)->__invoke($reconciliationRun->id, $this->user);
+
+    $groceriesAssigned = $this->db->connection()->table('envelope_assignments')
+        ->where('user_id', $this->user->id)
+        ->where('category_id', $groceries->id)
+        ->where('period_start', '2026-01-01')
+        ->value('assigned_minor');
+
+    // The CR-01 guarantee still holds under the new deferred-resolution
+    // design: a NULL resolution behaves exactly like keep_local.
+    expect((int) $groceriesAssigned)->toBe(30000);
+});
+
+it('UAT-3c: switching the toggle keep_local -> take_source -> keep_local persists the LAST choice, and Confirm honors it', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
+    $jan = CarbonImmutable::parse('2026-01-01');
+    app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
+
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+
+    $conflictId = (int) $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('migration_run_id', $reconciliationRun->id)
+        ->where('item_type', 'conflict')
+        ->where('entity_type', 'budget_assignment')
+        ->value('id');
+    expect($conflictId)->toBeGreaterThan(0);
+
+    Livewire::actingAs($this->user)
+        ->test(PreviewMigration::class, ['id' => $reconciliationRun->id])
+        ->call('resolveConflict', $conflictId, 'take_source')
+        ->call('resolveConflict', $conflictId, 'keep_local');
+
+    $resolution = $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('id', $conflictId)
+        ->value('resolution');
+    expect($resolution)->toBe('keep_local');
+
+    app(ConfirmMigration::class)->__invoke($reconciliationRun->id, $this->user);
+
+    $groceriesAssigned = $this->db->connection()->table('envelope_assignments')
+        ->where('user_id', $this->user->id)
+        ->where('category_id', $groceries->id)
+        ->where('period_start', '2026-01-01')
+        ->value('assigned_minor');
+
+    // The FINAL choice (keep_local) is what Confirm honors — the local
+    // 300.00 survives even though "Take source" was selected in between.
+    expect((int) $groceriesAssigned)->toBe(30000);
+});
+
+it('UAT-3c: PreviewMigration::resolveConflict() persists the chosen resolution for the correct conflict row', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
+    $jan = CarbonImmutable::parse('2026-01-01');
+    app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
+
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+
+    $conflictId = (int) $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('migration_run_id', $reconciliationRun->id)
+        ->where('item_type', 'conflict')
+        ->where('entity_type', 'budget_assignment')
+        ->value('id');
+    expect($conflictId)->toBeGreaterThan(0);
+
+    Livewire::actingAs($this->user)
+        ->test(PreviewMigration::class, ['id' => $reconciliationRun->id])
+        ->call('resolveConflict', $conflictId, 'take_source')
+        ->assertOk();
+
+    $resolution = $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('id', $conflictId)
+        ->value('resolution');
+    expect($resolution)->toBe('take_source');
+});
+
+it('UAT-3a/3b: the conflict row renders formatted currency and a human label, not raw minor units or an internal field name', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
+    $jan = CarbonImmutable::parse('2026-01-01');
+    app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
+
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+
+    $response = $this->actingAs($this->user)->get("/migrations/{$reconciliationRun->id}/preview");
+
+    $response->assertOk();
+    // 3a: values render as formatted currency, e.g. "€ 300,00" / "€ 250,00".
+    $response->assertSee('€', false);
+    // 3b: a human label naming the category + budget month, not the raw
+    // internal "Budget_assignment budgeted_minor" shape.
+    $response->assertSee('Groceries', false);
+    $response->assertDontSee('Budget_assignment budgeted_minor', false);
 });

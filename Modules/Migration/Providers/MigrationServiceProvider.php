@@ -54,6 +54,15 @@ final class MigrationServiceProvider extends ServiceProvider
 
     private const SOURCE_MAP_WRITER_CLASS = 'Modules\Migration\Internal\Services\SourceMapWriter';
 
+    /**
+     * UAT gap-fix injection point (13.5-HUMAN-UAT.md Test 3c, post-Wave-0):
+     * the entity-field-apply/baseline-advance logic shared by
+     * `CheckForUpdates` and `ConfirmMigration`'s new take-source
+     * conflict-resolution step. Stateless, mirrors `SourceMapWriter`'s own
+     * singleton entry above.
+     */
+    private const ENTITY_CHANGE_APPLIER_CLASS = 'Modules\Migration\Internal\Pipeline\EntityChangeApplier';
+
     private const MIGRATIONS_INDEX_CLASS = 'Modules\Migration\Internal\Http\Livewire\MigrationsIndex';
 
     private const NEW_MIGRATION_CLASS = 'Modules\Migration\Internal\Http\Livewire\NewMigration';
@@ -87,6 +96,7 @@ final class MigrationServiceProvider extends ServiceProvider
         // forward-looking guard, so plain container autowiring resolves it
         // as a transient dependency of StartMigrationRun without any entry.
         $this->singletonIfExists(self::SOURCE_MAP_WRITER_CLASS);
+        $this->singletonIfExists(self::ENTITY_CHANGE_APPLIER_CLASS);
         $this->singletonIfExists(self::START_MIGRATION_RUN_CLASS);
         $this->singletonIfExists(self::CONFIRM_MIGRATION_CLASS);
         $this->singletonIfExists(self::DISCARD_MIGRATION_RUN_CLASS);
