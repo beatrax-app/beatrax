@@ -28,6 +28,15 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * convergence, same convention as `EnvelopeWriter::setAssigned()`'s
  * no-op-on-unchanged-value branch): a no-op update short-circuits before
  * ever opening a transaction or dispatching an event.
+ *
+ * WR-03: the dirty-check on `definition` compares a *normalized* copy of
+ * both sides — the list-valued filter fields (`accounts`/`categories`/
+ * `counterparties`) are sorted before the strict comparison — so a re-open
+ * that re-serializes the same filter *set* in a different array order
+ * (e.g. `[3,1,2]` vs. the stored `[1,2,3]`) is correctly treated as
+ * unchanged. A raw strict comparison would false-positive on order alone
+ * and write/emit a no-op edit, contradicting this class's own "no-op
+ * short-circuits" contract.
  */
 final class UpdateReport
 {
@@ -56,7 +65,7 @@ final class UpdateReport
         if ($existing->name !== $name) {
             $dirty['name'] = $name;
         }
-        if ($existing->definition !== $newDefinition) {
+        if (self::normalizeDefinition($existing->definition) !== self::normalizeDefinition($newDefinition)) {
             $dirty['definition'] = $newDefinition;
         }
 
@@ -86,5 +95,27 @@ final class UpdateReport
         }
 
         return $report;
+    }
+
+    /**
+     * Normalizes a report definition array for dirty-comparison purposes
+     * only (WR-03): the list-valued filter fields are sorted so a
+     * semantically-unchanged filter set compares equal regardless of
+     * element order. The persisted value (`$newDefinition` above) is never
+     * passed through this method — only the two sides of the `!==`
+     * comparison are.
+     *
+     * @param  array<array-key, mixed>  $definition
+     * @return array<array-key, mixed>
+     */
+    private static function normalizeDefinition(array $definition): array
+    {
+        foreach (['accounts', 'categories', 'counterparties'] as $key) {
+            if (isset($definition[$key]) && is_array($definition[$key])) {
+                sort($definition[$key]);
+            }
+        }
+
+        return $definition;
     }
 }

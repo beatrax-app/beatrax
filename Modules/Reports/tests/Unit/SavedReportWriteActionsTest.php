@@ -77,6 +77,48 @@ it('UpdateReport is a no-op when nothing actually changed', function (): void {
     expect($reloaded->updated_at?->equalTo($originalUpdatedAt))->toBeTrue();
 });
 
+it('WR-03: UpdateReport is a no-op when only the filter-array element order changed', function (): void {
+    $user = srwaUser();
+    test()->actingAs($user);
+
+    $original = new ReportDefinition(
+        metric: 'spend',
+        dimension: 'category',
+        periodPreset: 'this_month',
+        granularity: 'monthly',
+        currencyMode: 'base',
+        viz: 'table',
+        accounts: [1, 2, 3],
+        categories: [10, 20],
+        counterparties: [100, 200, 300],
+    );
+
+    $saved = app(SaveReport::class)->save($user, $original, 'Report with filters');
+    $originalUpdatedAt = $saved->fresh()?->updated_at;
+
+    // Same filter *sets*, reordered — semantically unchanged.
+    $reordered = new ReportDefinition(
+        metric: 'spend',
+        dimension: 'category',
+        periodPreset: 'this_month',
+        granularity: 'monthly',
+        currencyMode: 'base',
+        viz: 'table',
+        accounts: [3, 1, 2],
+        categories: [20, 10],
+        counterparties: [300, 100, 200],
+    );
+
+    app(UpdateReport::class)->update($user, $saved->id, $reordered, 'Report with filters');
+
+    /** @var SavedReport $reloaded */
+    $reloaded = SavedReport::query()->findOrFail($saved->id);
+    expect($reloaded->updated_at?->equalTo($originalUpdatedAt))->toBeTrue();
+    // The stored order is untouched — normalization only affects the
+    // comparison, never the persisted value.
+    expect($reloaded->definition['accounts'])->toBe([1, 2, 3]);
+});
+
 it('UpdateReport throws NotFoundHttpException for a foreign report id (T-999.6-17)', function (): void {
     $owner = srwaUser();
     $other = srwaUser();
