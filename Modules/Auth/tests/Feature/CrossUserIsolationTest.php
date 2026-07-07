@@ -216,6 +216,13 @@ const ISOLATION_ROUTE_COVERED = [
     'migrations.new',
     'migrations.preview',
     'migrations.results',
+    // 999.6-07 — Reports CSV export (Req 11, T-999.6-20). The route builds
+    // its ReportDefinition entirely from the REQUESTING user's own
+    // CurrentUser + query params and threads that $user through
+    // ReportAggregator's user-scoped dimension queries; probed below with
+    // a real two-user CSV-content check (not allow-listed — this route
+    // genuinely bears user-scoped data).
+    'reports.export',
 ];
 
 function xuiUser(string $username, bool $developer = false): User
@@ -957,6 +964,61 @@ it('does not bleed the owner migration run into the partner migrations index', f
 
 it('renders /migrations/new for any authenticated user — no per-entity id, no data to leak (T-13.5-04 shape)', function (): void {
     $this->actingAs($this->partner)->get('/migrations/new')->assertOk();
+});
+
+it('does not bleed the owner spend into the partner reports CSV export (999.6-07, T-999.6-20)', function (): void {
+    $ownerAccountId = xuiAccount($this->db, $this->owner->id, 'Owner Secret Export Account');
+    $partnerAccountId = xuiAccount($this->db, $this->partner->id, 'Partner Visible Export Account');
+
+    $seedExportTx = function (int $userId, int $accountId): void {
+        $suffix = bin2hex(random_bytes(4));
+        $runId = $this->db->connection()->table('import_runs')->insertGetId([
+            'user_id' => $userId,
+            'source_format' => 'asn-csv',
+            'raw_file_path' => '/tmp/xui-export-'.$suffix.'.csv',
+            'sha256' => hash('sha256', 'xui-export-run-'.$suffix),
+            'uploaded_at' => '2026-07-01 00:00:00',
+            'status' => 'committed',
+            'created_at' => '2026-07-01 00:00:00',
+            'updated_at' => '2026-07-01 00:00:00',
+        ]);
+
+        $this->db->connection()->table('transactions')->insert([
+            'user_id' => $userId,
+            'account_id' => $accountId,
+            'import_run_id' => $runId,
+            'fingerprint' => hash('sha256', 'xui-export-tx-'.$suffix),
+            'posted_at' => '2026-07-01',
+            'booked_at' => '2026-07-01 00:00:00',
+            'value_date' => '2026-07-01',
+            'amount_minor' => -5000,
+            'currency' => 'EUR',
+            'settled_amount_minor' => -5000,
+            'settled_currency' => 'EUR',
+            'counterparty_normalized' => 'xui-export-merchant',
+            'counterparty_name' => 'XUI Export Merchant BV',
+            'normalization_version' => 1,
+            'description' => 'xui-export-fixture',
+            'type' => 'expense',
+            'source_format' => 'asn-csv',
+            'source_row_index' => 1,
+            'fingerprint_version' => 3,
+            'created_at' => '2026-07-01 00:00:00',
+            'updated_at' => '2026-07-01 00:00:00',
+        ]);
+    };
+
+    $seedExportTx($this->owner->id, $ownerAccountId);
+    $seedExportTx($this->partner->id, $partnerAccountId);
+
+    $response = $this->actingAs($this->partner)
+        ->get('/reports/export?dim=account&metric=spend&period=custom&from=2026-07-01&to=2026-07-01');
+
+    $response->assertOk();
+    $csv = $response->streamedContent();
+
+    expect($csv)->toContain('Partner Visible Export Account');
+    expect($csv)->not->toContain('Owner Secret Export Account');
 });
 
 it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {
