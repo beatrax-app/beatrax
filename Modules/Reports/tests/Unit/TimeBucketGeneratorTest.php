@@ -48,7 +48,10 @@ it('generates weekly buckets for a 6-week span', function (): void {
 
     expect($buckets)->toHaveCount(6);
     foreach ($buckets as $bucket) {
-        expect($bucket->start->diffInDays($bucket->endExclusive))->toBe(7);
+        // CarbonInterface::diffInDays() always returns float (never int) in
+        // the installed Carbon version — Rule 1 fix, pre-existing Wave 0
+        // stub asserted a strict int 7 which can never equal float 7.0.
+        expect($bucket->start->diffInDays($bucket->endExclusive))->toBe(7.0);
     }
 });
 
