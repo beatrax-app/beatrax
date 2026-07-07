@@ -320,3 +320,87 @@ it('a kept-local transaction-amount conflict survives BOTH CheckForUpdates and a
     $confirmedRun = MigrationRun::query()->findOrFail($reconciliationRun->id);
     expect($confirmedRun->status)->toBe('confirmed');
 });
+
+it('WR-03: a genuine fingerprint-uniqueness collision on transaction-amount apply is still handled gracefully (left unchanged, recorded, no exception)', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $groceryTxId = (int) $this->db->connection()->table('migration_source_map')
+        ->where('user_id', $this->user->id)
+        ->where('source_product', 'ynab4')
+        ->where('source_entity_type', 'transaction')
+        ->where('source_external_id', 'row-0')
+        ->value('beatrax_id');
+    expect($groceryTxId)->toBeGreaterThan(0);
+
+    /** @var stdClass $groceryRow */
+    $groceryRow = $this->db->connection()->table('transactions')->where('id', $groceryTxId)->first();
+    $originalAmount = (int) $groceryRow->amount_minor;
+
+    // v2 changes 'row-0' from 45.00 to 50.00 outflow (amount_minor -5000).
+    // Plant a synthetic "clone" transaction that already occupies EVERY
+    // column `transactions_fingerprint_uq` covers for exactly that target
+    // value — so the real reconciliation UPDATE genuinely collides with
+    // this row's own composite unique index, not a contrived/mocked
+    // exception. amount_minor differs from the original row right now
+    // (only becomes identical once CheckForUpdates tries to apply -5000),
+    // and the fingerprint is a distinct fabricated value, so this INSERT
+    // itself does not collide with anything.
+    $cloneId = $this->db->connection()->table('transactions')->insertGetId([
+        'user_id' => $groceryRow->user_id,
+        'account_id' => $groceryRow->account_id,
+        'type' => $groceryRow->type,
+        'posted_at' => $groceryRow->posted_at,
+        'booked_at' => $groceryRow->booked_at,
+        'value_date' => $groceryRow->value_date,
+        'amount_minor' => -5000, // the exact value v2's reconciliation will try to apply
+        'currency' => $groceryRow->currency,
+        'settled_amount_minor' => -5000,
+        'settled_currency' => $groceryRow->settled_currency,
+        'fx_rate_used' => $groceryRow->fx_rate_used,
+        'counterparty_name' => $groceryRow->counterparty_name,
+        'counterparty_iban' => $groceryRow->counterparty_iban,
+        'counterparty_normalized' => $groceryRow->counterparty_normalized,
+        'normalization_version' => $groceryRow->normalization_version,
+        'description' => $groceryRow->description,
+        'category_id' => $groceryRow->category_id,
+        'source_format' => $groceryRow->source_format,
+        'import_run_id' => $groceryRow->import_run_id,
+        'source_row_index' => $groceryRow->source_row_index,
+        'source_ref' => $groceryRow->source_ref,
+        'fingerprint' => str_repeat('a', 64), // fabricated, distinct from any real computed value
+        'fingerprint_version' => $groceryRow->fingerprint_version,
+        'status' => $groceryRow->status,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    expect($cloneId)->toBeGreaterThan(0);
+
+    // Must not throw — a genuine fingerprint collision is an EXPECTED,
+    // benign outcome that CheckForUpdates itself handles by recording a
+    // conflict row and leaving the transaction untouched.
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+
+    // The original row must be left byte-for-byte untouched — the source's
+    // -5000 was NOT silently applied (it collided with the planted clone).
+    $amountAfter = (int) $this->db->connection()->table('transactions')->where('id', $groceryTxId)->value('amount_minor');
+    expect($amountAfter)->toBe($originalAmount);
+
+    // The collision is recorded for the user, not silently swallowed.
+    $collisionRows = $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('migration_run_id', $reconciliationRun->id)
+        ->where('item_type', 'extra')
+        ->where('display_label', 'Transaction amount update')
+        ->get();
+    expect($collisionRows)->not->toBeEmpty();
+});
