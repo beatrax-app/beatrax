@@ -234,20 +234,43 @@
             {{-- Actions row --}}
             <div class="flex items-center gap-2 flex-wrap">
                 @if (! $showSaveForm)
-                    <button type="button" wire:click="openSaveForm" @disabled(! $hasResults) class="pill-btn-primary">Save report</button>
+                    {{-- CR-01: button copy distinguishes "editing a loaded report" from "saving a fresh one" so the user understands which action they're about to take. --}}
+                    <button type="button" wire:click="openSaveForm" @disabled(! $hasResults) class="pill-btn-primary">{{ $loadedReportId !== null ? 'Update report' : 'Save report' }}</button>
                 @else
                     <form wire:submit.prevent="save" class="flex items-center gap-2">
                         <input type="text" wire:model="saveName" placeholder="Report name" class="srch-amount-input" style="min-width: 200px;" aria-label="Report name" autofocus />
-                        <button type="submit" class="pill-btn-primary">Save</button>
+                        <button type="submit" class="pill-btn-primary">{{ $loadedReportId !== null ? 'Update' : 'Save' }}</button>
                         <button type="button" wire:click="cancelSaveForm" class="pill-btn-ghost">Cancel</button>
                     </form>
                 @endif
 
+                {{-- WR-02: Export CSV is a real Livewire action (ReportBuilder::export()) so it can participate in wire:loading — mirrors Tax page's ↓ → … swap verbatim. --}}
                 @if ($hasResults)
-                    <a href="{{ $exportUrl }}" class="pill-btn-ghost" aria-label="Export CSV">↓ Export CSV</a>
+                    <button
+                        type="button"
+                        wire:click="export"
+                        wire:loading.attr="aria-busy"
+                        wire:loading.attr="disabled"
+                        wire:target="export"
+                        class="pill-btn-ghost"
+                        aria-label="Export CSV"
+                    >
+                        <span aria-hidden="true" wire:loading.remove wire:target="export">↓</span>
+                        <span aria-hidden="true" wire:loading wire:target="export">…</span>
+                        Export CSV
+                    </button>
                 @else
                     <span class="pill-btn-ghost" style="opacity: .5; cursor: not-allowed;" aria-disabled="true">↓ Export CSV</span>
                 @endif
+
+                {{-- WR-02: report-recompute loading feedback — the existing inline "…" glyph pattern, keyed to every mutable control-rail property so any rail interaction (metric/dimension/period/currency/granularity/filters/compare/viz) shows it. --}}
+                <span
+                    wire:loading
+                    wire:target="metric,dimension,periodPreset,customFrom,customTo,granularity,currencyMode,viz,compare,filterAccounts,filterCategories,filterCounterparties,filterAmountMin,filterAmountMax,filterAmountDir"
+                    style="font-size: var(--text-xs); color: var(--color-text-muted);"
+                    role="status"
+                    aria-live="polite"
+                >… Updating</span>
             </div>
 
             @if (! $hasResults)
@@ -258,7 +281,19 @@
                 </div>
             @else
                 @php
-                    $chartElementId = 'report-chart-'.md5(json_encode([$definition->metric, $definition->dimension, $definition->periodPreset, $definition->viz, count($displayRows)]) ?: '');
+                    // CR-03: the DOM id must stay stable for as long as the SAME
+                    // ApexCharts partial (viz type) is mounted — everything else
+                    // (metric/dimension/period/granularity/currency/filters/compare/
+                    // row count) is a content-only change that the `report-updated`
+                    // Alpine listener + `chart.updateOptions()` now handles in
+                    // place. Hashing off `viz` alone (rather than the previous
+                    // [metric, dimension, periodPreset, viz, count($displayRows)]
+                    // tuple) is what makes that possible: only a real `viz`
+                    // switch — which renders an entirely different @include
+                    // partial with its own fresh x-data wrapper anyway — changes
+                    // the id, so morphdom never tears down and recreates the
+                    // chart div for a same-viz control change.
+                    $chartElementId = 'report-chart-'.$definition->viz;
                 @endphp
 
                 @if ($viz === 'bar')
@@ -307,7 +342,7 @@
                         </thead>
                         <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
                             @foreach ($displayRows as $rowIndex => $row)
-                                <tr>
+                                <tr wire:key="report-row-{{ $row->groupKey ?? 'null' }}-{{ $rowIndex }}">
                                     <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
                                         <a
                                             href="{{ $drilldownUrls[$rowIndex] ?? '#' }}"
