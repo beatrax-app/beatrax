@@ -59,10 +59,20 @@ final class CategorySpendQuery
 
     /**
      * @param  string  $metric  'spend' | 'income' | 'net'
+     * @param  list<int>  $accountIds  T-999.6-06/14: restrict to these account ids (empty = no restriction). Applied ALONGSIDE the existing `where('user_id', ...)` guard below, so a foreign id can only ever narrow this user's own result to nothing — never widen it to another user's rows.
+     * @param  list<int>  $categoryIds  restrict to these category ids (empty = no restriction)
+     * @param  list<int>  $counterpartyIds  restrict to these counterparty ids (empty = no restriction)
      * @return list<ReportResultRow>
      */
-    public function forUserAndPeriod(User $user, Period $period, string $metric, string $currency): array
-    {
+    public function forUserAndPeriod(
+        User $user,
+        Period $period,
+        string $metric,
+        string $currency,
+        array $accountIds = [],
+        array $categoryIds = [],
+        array $counterpartyIds = [],
+    ): array {
         $connection = $this->db->connection();
         $types = self::metricTypes($metric);
         /** @var array<int, int> $map */
@@ -80,6 +90,9 @@ final class CategorySpendQuery
             ->whereIn('t.type', $types)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
+            ->when($accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.account_id', $accountIds))
+            ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.category_id', $categoryIds))
+            ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.counterparty_id', $counterpartyIds))
             ->groupBy('t.category_id')
             ->get(['t.category_id', $connection->raw(self::unsplitAmountExpr($metric).' AS amount_minor')]);
 
@@ -105,6 +118,9 @@ final class CategorySpendQuery
             // to the parent category above; ignored here so the two
             // branches never double-count nor drop spend.
             ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
+            ->when($accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.account_id', $accountIds))
+            ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('ts.category_id', $categoryIds))
+            ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.counterparty_id', $counterpartyIds))
             ->groupBy('ts.category_id')
             ->get(['ts.category_id', $connection->raw(self::legAmountExpr($metric).' AS amount_minor')]);
 
