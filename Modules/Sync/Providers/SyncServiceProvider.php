@@ -38,6 +38,7 @@ use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
+use Modules\Sync\Public\Events\SavedReportMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -295,6 +296,16 @@ final class SyncServiceProvider extends ServiceProvider
             $events->listen(
                 EnvelopeSettingMutated::class,
                 [SyncCaptureListener::class, 'handleEnvelopeSetting'],
+            );
+        }
+
+        // 999.6-01 (Req 9/10, D-02): saved-report capture listener. Same
+        // class_exists-guarded pattern as the envelope wiring above.
+        if (class_exists(SyncCaptureListener::class) &&
+            class_exists(SavedReportMutated::class)) {
+            $events->listen(
+                SavedReportMutated::class,
+                [SyncCaptureListener::class, 'handleSavedReport'],
             );
         }
 
