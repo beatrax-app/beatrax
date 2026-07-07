@@ -11,6 +11,7 @@ use Modules\Migration\Internal\Pipeline\PromoteResult;
 use Modules\Migration\Internal\Pipeline\PromoteStagingToDomain;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Dto\MigrationConfirmResult;
+use Modules\Migration\Public\Exceptions\MigrationAlreadyDiscardedException;
 
 /**
  * Confirms a migration run: promotes the staged IR into the user's real
@@ -68,6 +69,18 @@ final class ConfirmMigration
                 counterpartiesResolved: $run->counterparties_resolved_count,
                 goalsCreated: $run->goals_created_count,
             );
+        }
+
+        // WR-02: symmetric guard to DiscardMigrationRun's own
+        // already-confirmed check. Staging for a discarded run is already
+        // truncated, so letting this fall through to promote() would
+        // "succeed" with all-zero counts and silently flip the run's
+        // status back to 'confirmed' — corrupting the audit trail and
+        // making the phantom run eligible as a CheckForUpdates
+        // reconciliation target (see MigrationAlreadyDiscardedException's
+        // docblock).
+        if ($run->status === 'discarded') {
+            throw new MigrationAlreadyDiscardedException($migrationRunId);
         }
 
         // CR-01: a run left in 'needs_attention' by CheckForUpdates has
