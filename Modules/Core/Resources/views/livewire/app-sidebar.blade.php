@@ -191,6 +191,14 @@
         <span class="ic" aria-hidden="true">◫</span>
         Pots
     </a>
+    {{-- Reports — the user-composable report builder + saved-reports
+         library (999.6, Req 1/9). $isActive matches both /reports (the
+         builder) and /reports/library (the saved-report index) since
+         both share the "Reports" nav identity. --}}
+    <a href="{{ route('reports.index') }}" class="side-item {{ str_starts_with($currentPath, '/reports') ? 'active' : '' }}">
+        <span class="ic" aria-hidden="true">▤</span>
+        Reports
+    </a>
     {{-- Reconcile — standalone SC-2 statement-balance confirmation surface
          (D-05, no account-detail page exists in the app). --}}
     <a href="{{ route('reconcile.index') }}" class="side-item {{ $isActive('/reconcile') }}">

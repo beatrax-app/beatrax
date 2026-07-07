@@ -223,6 +223,12 @@ const ISOLATION_ROUTE_COVERED = [
     // a real two-user CSV-content check (not allow-listed — this route
     // genuinely bears user-scoped data).
     'reports.export',
+    // 999.6-09 — the live builder (`?report={id}` IDOR surface, T-999.6-25)
+    // and the saved-report library index. Both genuinely bear user-scoped
+    // data (`saved_reports` rows); probed below with real two-user checks —
+    // 999.6-08's SUMMARY explicitly deferred this coverage to this plan.
+    'reports.index',
+    'reports.library',
 ];
 
 function xuiUser(string $username, bool $developer = false): User
@@ -381,6 +387,35 @@ function xuiAccount(DatabaseManager $db, int $userId, string $name): int
         'default_currency' => 'EUR',
         'created_at' => '2026-05-19 00:00:00',
         'updated_at' => '2026-05-19 00:00:00',
+    ]);
+}
+
+/**
+ * Seeds a `saved_reports` row for the given user and returns its id. Raw
+ * insert — deliberately does NOT depend on the Reports module's own
+ * write-action wiring (`SaveReport`), keeping this cross-module isolation
+ * test self-contained (matches every other `xui*` helper's raw-insert
+ * style). The `definition` JSON only needs enough shape for
+ * `ReportBuilder`/`ReportsIndex` to render without erroring — the probes
+ * below assert on the report's `name`, not its aggregated figures.
+ */
+function xuiSavedReport(DatabaseManager $db, int $userId, string $name): int
+{
+    return $db->connection()->table('saved_reports')->insertGetId([
+        'user_id' => $userId,
+        'name' => $name,
+        'definition' => json_encode([
+            'metric' => 'spend',
+            'dimension' => 'category',
+            'periodPreset' => 'this_month',
+            'granularity' => 'monthly',
+            'currencyMode' => 'base',
+            'viz' => 'table',
+        ]),
+        'pinned' => false,
+        'pin_order' => null,
+        'created_at' => '2026-07-07 00:00:00',
+        'updated_at' => '2026-07-07 00:00:00',
     ]);
 }
 
@@ -1019,6 +1054,31 @@ it('does not bleed the owner spend into the partner reports CSV export (999.6-07
 
     expect($csv)->toContain('Partner Visible Export Account');
     expect($csv)->not->toContain('Owner Secret Export Account');
+});
+
+it('does not bleed the owner saved report into the partner reports library index (999.6-09, Req 9, T-999.6-25)', function (): void {
+    xuiSavedReport($this->db, $this->owner->id, 'Owner Secret Saved Report');
+    xuiSavedReport($this->db, $this->partner->id, 'Partner Visible Saved Report');
+
+    $this->actingAs($this->partner)
+        ->get('/reports/library')
+        ->assertOk()
+        ->assertSee('Partner Visible Saved Report')
+        ->assertDontSee('Owner Secret Saved Report');
+});
+
+it('does not restore the owner saved report definition when the partner opens it by id (999.6-09, T-999.6-25)', function (): void {
+    // ReportBuilder::mount(?int $report) (Plan 08) silently falls back to
+    // the builder's own empty default on a foreign/missing id — never a
+    // 404, which would confirm the id's existence (999.6-08-SUMMARY.md).
+    // The isolation contract here is "the owner's report name never
+    // renders", not a particular HTTP status.
+    $ownerReportId = xuiSavedReport($this->db, $this->owner->id, 'Owner Secret Builder Report');
+
+    $this->actingAs($this->partner)
+        ->get('/reports?report='.$ownerReportId)
+        ->assertOk()
+        ->assertDontSee('Owner Secret Builder Report');
 });
 
 it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {
