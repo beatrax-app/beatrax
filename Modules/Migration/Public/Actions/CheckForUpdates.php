@@ -17,6 +17,7 @@ use Modules\Migration\Internal\Pipeline\ThreeWayMergeResolver;
 use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Dto\ConflictDto;
+use Psr\Log\LoggerInterface;
 use stdClass;
 
 /**
@@ -76,6 +77,7 @@ final class CheckForUpdates
         private readonly PromoteStagingToDomain $promoter,
         private readonly SourceMapWriter $sourceMapWriter,
         private readonly FingerprintComposer $fingerprints,
+        private readonly LoggerInterface $logger,
     ) {}
 
     public function __invoke(int $priorConfirmedRunId, User $user, string $sourceProduct, string $extractedPath): MigrationRun
@@ -304,11 +306,72 @@ final class CheckForUpdates
                     'amount_minor' => $newAmountMinor,
                     'fingerprint' => $fingerprint,
                 ]);
-        } catch (QueryException) {
+        } catch (QueryException $e) {
+            // WR-03: only a genuine fingerprint-uniqueness violation is a
+            // benign, expected collision — this update touches ONLY
+            // amount_minor/fingerprint on an already-existing row (scoped
+            // by id+user_id), so any OTHER QueryException (transient
+            // connection error, disk-full, a future schema change adding a
+            // NOT NULL/CHECK constraint on one of these columns) must NOT
+            // be silently reclassified as "it's just a collision" — that
+            // would mask the real failure from both the user and anyone
+            // debugging a bug report. The raw exception is always logged
+            // so a genuinely unexpected failure is never swallowed
+            // invisibly, even in the collision case.
+            $this->logger->warning('CheckForUpdates: applyTransactionAmount() query failed.', [
+                'transaction_id' => $transactionId,
+                'user_id' => $user->id,
+                'is_fingerprint_collision' => self::isFingerprintUniqueViolation($e),
+                'exception_message' => $e->getMessage(),
+            ]);
+
+            if (! self::isFingerprintUniqueViolation($e)) {
+                throw $e;
+            }
+
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * True only for a genuine unique-constraint violation against one of
+     * the two fingerprint-related indexes this UPDATE could hit —
+     * `transactions_fingerprint_uq` (the composite `user_id, account_id,
+     * posted_at, amount_minor, currency, counterparty_normalized,
+     * source_ref` index — `amount_minor` is part of this tuple) or
+     * `transactions_fingerprint_sha_uq` (`user_id, fingerprint`). Every
+     * driver surfaces SQLSTATE 23000 for a unique violation (mirrors
+     * `CreateCategorizationRule::isUniqueViolation()`'s identical
+     * cross-driver check) — that alone is NOT enough here, since a 23000
+     * could in principle come from an unrelated constraint. This project
+     * is SQLite-only (CLAUDE.md), and SQLite's own error message lists the
+     * conflicting COLUMN names, not the index name (verified empirically:
+     * "UNIQUE constraint failed: transactions.user_id,
+     * transactions.account_id, ..., transactions.amount_minor, ..." for
+     * the composite index, "UNIQUE constraint failed: transactions.user_id,
+     * transactions.fingerprint" for the SHA index) — so the message is
+     * additionally required to reference `transactions.fingerprint` or
+     * `transactions.amount_minor` (the two columns this specific UPDATE
+     * writes that could trip either index), OR — for forward-compatibility
+     * with a driver that names the constraint instead — one of the two
+     * index names themselves. An unrelated 23000 (e.g. a NOT NULL/CHECK
+     * violation on some other column) matches none of these and is
+     * re-thrown.
+     */
+    private static function isFingerprintUniqueViolation(QueryException $e): bool
+    {
+        if ((string) $e->getCode() !== '23000') {
+            return false;
+        }
+
+        $message = $e->getMessage();
+
+        return str_contains($message, 'transactions.fingerprint')
+            || str_contains($message, 'transactions.amount_minor')
+            || str_contains($message, 'transactions_fingerprint_uq')
+            || str_contains($message, 'transactions_fingerprint_sha_uq');
     }
 
     private function recordAmountApplyCollision(int $runId, User $user, string $sourceExternalId): void
