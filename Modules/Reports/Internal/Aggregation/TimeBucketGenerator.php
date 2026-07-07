@@ -45,10 +45,42 @@ final class TimeBucketGenerator
     public function generate(Period $period, string $granularity): array
     {
         return match ($granularity) {
-            'weekly' => $this->stepBuckets($period, static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addWeek()),
+            'weekly' => $this->generateWeekly($period),
             'monthly' => $this->generateMonthly($period),
             default => throw new InvalidArgumentException("Unknown time-bucket granularity: {$granularity}"),
         };
+    }
+
+    /**
+     * WR-03: `generateMonthly()`'s count-then-widen cap only ever applied
+     * to the monthly branch — an unbounded custom range with
+     * `granularity: 'weekly'` (e.g. multi-year) could produce hundreds of
+     * weekly buckets, one dimension query each, silently violating this
+     * class's own documented `MAX_BUCKET_POINTS` cap contract. Mirrors
+     * `generateMonthly()`'s own strategy: widen weekly -> monthly (rather
+     * than truncating the range) whenever the uncapped weekly point count
+     * exceeds the cap. `generateMonthly()` applies its OWN further
+     * monthly -> quarterly widening on top of this, so an arbitrarily long
+     * custom range never exceeds the cap regardless of starting
+     * granularity.
+     *
+     * @return list<Period>
+     */
+    private function generateWeekly(Period $period): array
+    {
+        $uncappedPointCount = $this->countSteps(
+            $period,
+            static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addWeek(),
+        );
+
+        if ($uncappedPointCount > self::MAX_BUCKET_POINTS) {
+            return $this->generateMonthly($period);
+        }
+
+        return $this->stepBuckets(
+            $period,
+            static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addWeek(),
+        );
     }
 
     /**
