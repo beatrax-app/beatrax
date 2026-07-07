@@ -7,6 +7,7 @@ namespace Modules\Reports\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Reports\Internal\Support\DefinitionJsonDecoder;
 use Modules\Reports\Public\Dto\SavedReportIndexRow;
 use stdClass;
 
@@ -76,7 +77,7 @@ final readonly class SavedReportsQuery
             }
 
             $name = is_string($row->name ?? null) ? $row->name : '';
-            $definition = self::decodeDefinition($row->definition ?? null);
+            $definition = DefinitionJsonDecoder::decode($row->definition ?? null);
             $pinned = (bool) ($row->pinned ?? false);
             $pinOrderRaw = $row->pin_order ?? null;
             $pinOrder = is_numeric($pinOrderRaw) ? (int) $pinOrderRaw : null;
@@ -91,31 +92,6 @@ final readonly class SavedReportsQuery
         }
 
         return new Collection($result);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private static function decodeDefinition(mixed $raw): array
-    {
-        if (! is_string($raw) || $raw === '') {
-            return [];
-        }
-
-        $decoded = json_decode($raw, true);
-        if (! is_array($decoded)) {
-            return [];
-        }
-
-        /** @var array<string, mixed> $result */
-        $result = [];
-        foreach ($decoded as $key => $value) {
-            if (is_string($key)) {
-                $result[$key] = $value;
-            }
-        }
-
-        return $result;
     }
 
     /**

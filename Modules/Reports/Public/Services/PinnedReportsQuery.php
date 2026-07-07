@@ -6,6 +6,7 @@ namespace Modules\Reports\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Reports\Internal\Support\DefinitionJsonDecoder;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use stdClass;
 use Throwable;
@@ -56,7 +57,7 @@ final readonly class PinnedReportsQuery
             }
 
             $name = is_string($row->name ?? null) ? $row->name : '';
-            $definitionArray = self::decodeDefinition($row->definition ?? null);
+            $definitionArray = DefinitionJsonDecoder::decode($row->definition ?? null);
 
             try {
                 $definition = ReportDefinition::from($definitionArray);
@@ -73,31 +74,6 @@ final readonly class PinnedReportsQuery
                 'name' => $name,
                 'definition' => $definition,
             ];
-        }
-
-        return $result;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private static function decodeDefinition(mixed $raw): array
-    {
-        if (! is_string($raw) || $raw === '') {
-            return [];
-        }
-
-        $decoded = json_decode($raw, true);
-        if (! is_array($decoded)) {
-            return [];
-        }
-
-        /** @var array<string, mixed> $result */
-        $result = [];
-        foreach ($decoded as $key => $value) {
-            if (is_string($key)) {
-                $result[$key] = $value;
-            }
         }
 
         return $result;
