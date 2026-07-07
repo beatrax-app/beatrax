@@ -152,13 +152,13 @@ it('sums spend/income/net per category using the canonical type-based definition
     $query = app(CategorySpendQuery::class);
     $period = csqPeriod();
 
-    $spend = $query->forUserAndPeriod($user->id, $period, 'spend', 'EUR');
+    $spend = $query->forUserAndPeriod($user, $period, 'spend', 'EUR');
     expect(array_sum(array_map(fn ($r) => $r->amountMinor, $spend)))->toBe(12_000);
 
-    $income = $query->forUserAndPeriod($user->id, $period, 'income', 'EUR');
+    $income = $query->forUserAndPeriod($user, $period, 'income', 'EUR');
     expect(array_sum(array_map(fn ($r) => $r->amountMinor, $income)))->toBe(50_000);
 
-    $net = $query->forUserAndPeriod($user->id, $period, 'net', 'EUR');
+    $net = $query->forUserAndPeriod($user, $period, 'net', 'EUR');
     expect(array_sum(array_map(fn ($r) => $r->amountMinor, $net)))->toBe(38_000);
 });
 
@@ -174,7 +174,7 @@ it('attributes split legs to their own categories, excluding the split parent ro
     csqLeg($db, $user, $parentId, $groceries->id, -7_000);
     csqLeg($db, $user, $parentId, $fuel->id, -3_000);
 
-    $rows = app(CategorySpendQuery::class)->forUserAndPeriod($user->id, csqPeriod(), 'spend', 'EUR');
+    $rows = app(CategorySpendQuery::class)->forUserAndPeriod($user, csqPeriod(), 'spend', 'EUR');
     $byLabel = [];
     foreach ($rows as $row) {
         $byLabel[$row->groupLabel] = $row->amountMinor;
@@ -197,7 +197,7 @@ it('falls back to the parent category when split legs do not sum to the parent (
     // Broken split: only one surviving leg, does not sum to -10_000.
     csqLeg($db, $user, $parentId, $fuel->id, -3_000);
 
-    $rows = app(CategorySpendQuery::class)->forUserAndPeriod($user->id, csqPeriod(), 'spend', 'EUR');
+    $rows = app(CategorySpendQuery::class)->forUserAndPeriod($user, csqPeriod(), 'spend', 'EUR');
     $byLabel = [];
     foreach ($rows as $row) {
         $byLabel[$row->groupLabel] = $row->amountMinor;
@@ -216,7 +216,7 @@ it('groups uncategorized rows under a null-groupKey Uncategorized bucket', funct
 
     csqTransaction($db, $user, $account, ['type' => 'expense', 'settled_amount_minor' => -5_000, 'category_id' => null]);
 
-    $rows = app(CategorySpendQuery::class)->forUserAndPeriod($user->id, csqPeriod(), 'spend', 'EUR');
+    $rows = app(CategorySpendQuery::class)->forUserAndPeriod($user, csqPeriod(), 'spend', 'EUR');
 
     expect($rows)->toHaveCount(1);
     expect($rows[0]->groupKey)->toBeNull();
