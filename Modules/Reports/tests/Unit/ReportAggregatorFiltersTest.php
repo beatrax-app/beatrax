@@ -188,3 +188,53 @@ it('counterparties filter narrows a time_bucket-dimension report to the selected
 
     expect($result->totalMinor)->toBe(2_500);
 });
+
+it('AMOUNT FILTER: amountMin + amountDirection=in ("In > EUR 500") changes the total/rows — previously silently ignored', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = raftUser();
+    $account = raftAccount($user, 'ASN');
+    /** @var Category $groceries */
+    $groceries = Category::query()->create([
+        'user_id' => null, 'name' => 'Groceries', 'slug' => 'groceries-af-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 1,
+    ]);
+
+    // Below the EUR 500 threshold — excluded by amountMin regardless of direction.
+    raftTransaction($db, $user, $account, ['type' => 'income', 'settled_amount_minor' => 20_000, 'category_id' => $groceries->id]);
+    // Above the threshold AND incoming — the only row that should survive both predicates.
+    raftTransaction($db, $user, $account, ['type' => 'income', 'settled_amount_minor' => 80_000, 'category_id' => $groceries->id]);
+    // Above the threshold in absolute value, but OUTGOING — excluded by amountDirection=in.
+    raftTransaction($db, $user, $account, ['type' => 'expense', 'settled_amount_minor' => -90_000, 'category_id' => $groceries->id]);
+
+    $unfiltered = new ReportDefinition(
+        metric: 'net',
+        dimension: 'category',
+        periodPreset: 'custom',
+        granularity: 'monthly',
+        currencyMode: 'base',
+        viz: 'table',
+        customFrom: '2026-05-01',
+        customTo: '2026-05-31',
+    );
+    $unfilteredResult = app(ReportAggregator::class)->run($user, $unfiltered);
+    expect($unfilteredResult->totalMinor)->toBe(10_000); // 20_000 + 80_000 - 90_000
+
+    $filtered = new ReportDefinition(
+        metric: 'net',
+        dimension: 'category',
+        periodPreset: 'custom',
+        granularity: 'monthly',
+        currencyMode: 'base',
+        viz: 'table',
+        customFrom: '2026-05-01',
+        customTo: '2026-05-31',
+        amountMin: '500.00',
+        amountDirection: 'in',
+    );
+    $filteredResult = app(ReportAggregator::class)->run($user, $filtered);
+
+    // Amount filter is now wired into every dimension query — the total
+    // reflects ONLY the >= EUR 500, incoming row (80_000), never the whole
+    // unfiltered net total.
+    expect($filteredResult->totalMinor)->toBe(80_000);
+});
