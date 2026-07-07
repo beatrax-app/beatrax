@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Reports\Internal\Support\PinOrderCompactor;
 use Modules\Reports\Models\SavedReport;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -20,6 +21,14 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * throws `NotFoundHttpException` (404, never 403 — T-999.6-17) rather than
  * silently no-op'ing, so the existence of another user's report is never
  * leaked through the error path either.
+ *
+ * WR-02: when the deleted report was pinned, the remaining pinned reports'
+ * `pin_order` values are compacted back to a dense 1..N sequence inside the
+ * same transaction, via the shared `PinOrderCompactor` (also used by
+ * `TogglePin`'s unpin path) — deleting a pinned report must not leave a gap
+ * in the pin order, mirroring the invariant `TogglePin` already maintains
+ * on unpin. Each row whose `pin_order` actually changes gets its own
+ * `SavedReportMutated` 'edit' so every device's Sync op-log stays in step.
  */
 final class DeleteReport
 {
@@ -41,20 +50,33 @@ final class DeleteReport
             throw new NotFoundHttpException('Report not found.');
         }
 
-        /** @var SavedReportMutated|null $event */
-        $event = null;
+        /** @var list<SavedReportMutated> $events */
+        $events = [];
 
-        $this->db->connection()->transaction(function () use ($existing, $user, &$event): void {
+        $this->db->connection()->transaction(function () use ($existing, $user, &$events): void {
+            $wasPinned = $existing->pinned;
+
             $existing->delete();
 
-            $event = new SavedReportMutated(
+            $events[] = new SavedReportMutated(
                 reportId: $existing->id,
                 userId: $user->id,
                 mutationType: 'delete',
             );
+
+            if ($wasPinned) {
+                foreach (PinOrderCompactor::compact($this->db->connection(), $user) as $compacted) {
+                    $events[] = new SavedReportMutated(
+                        reportId: $compacted['id'],
+                        userId: $user->id,
+                        mutationType: 'edit',
+                        dirtyFields: ['pin_order' => $compacted['pin_order']],
+                    );
+                }
+            }
         });
 
-        if ($event !== null) {
+        foreach ($events as $event) {
             $this->events->dispatch($event);
         }
     }

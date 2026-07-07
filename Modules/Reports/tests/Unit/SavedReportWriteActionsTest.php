@@ -7,6 +7,7 @@ use Modules\Core\Models\User;
 use Modules\Reports\Models\SavedReport;
 use Modules\Reports\Public\Actions\DeleteReport;
 use Modules\Reports\Public\Actions\SaveReport;
+use Modules\Reports\Public\Actions\TogglePin;
 use Modules\Reports\Public\Actions\UpdateReport;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -120,4 +121,44 @@ it('DeleteReport throws NotFoundHttpException for a missing report id', function
 
     expect(fn () => app(DeleteReport::class)->delete($user, 999_999))
         ->toThrow(NotFoundHttpException::class);
+});
+
+it('WR-02: deleting a pinned report compacts the remaining pin_order values to a dense sequence', function (): void {
+    $user = srwaUser();
+    test()->actingAs($user);
+
+    $reports = [];
+    for ($i = 1; $i <= 3; $i++) {
+        $reports[] = app(SaveReport::class)->save($user, srwaDefinition(), "Report {$i}");
+        app(TogglePin::class)->toggle($user, $reports[$i - 1]->id);
+    }
+
+    // Reports are pinned in order 1, 2, 3. Delete the middle (pin_order = 2)
+    // pinned report directly — not via TogglePin's unpin path.
+    app(DeleteReport::class)->delete($user, $reports[1]->id);
+
+    /** @var SavedReport $first */
+    $first = SavedReport::query()->findOrFail($reports[0]->id);
+    /** @var SavedReport $third */
+    $third = SavedReport::query()->findOrFail($reports[2]->id);
+
+    expect($first->pin_order)->toBe(1);
+    expect($third->pin_order)->toBe(2);
+    expect(SavedReport::query()->where('pinned', true)->count())->toBe(2);
+});
+
+it('DeleteReport does not touch pin_order compaction when the deleted report was not pinned', function (): void {
+    $user = srwaUser();
+    test()->actingAs($user);
+
+    $pinned = app(SaveReport::class)->save($user, srwaDefinition(), 'Pinned report');
+    app(TogglePin::class)->toggle($user, $pinned->id);
+
+    $unpinned = app(SaveReport::class)->save($user, srwaDefinition(), 'Unpinned report');
+    app(DeleteReport::class)->delete($user, $unpinned->id);
+
+    /** @var SavedReport $reloaded */
+    $reloaded = SavedReport::query()->findOrFail($pinned->id);
+    expect($reloaded->pinned)->toBeTrue();
+    expect($reloaded->pin_order)->toBe(1);
 });
