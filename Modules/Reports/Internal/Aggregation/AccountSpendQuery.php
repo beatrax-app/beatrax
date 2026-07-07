@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Aggregation;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\Period;
@@ -27,10 +28,20 @@ final class AccountSpendQuery
 
     /**
      * @param  string  $metric  'spend' | 'income' | 'net'
+     * @param  list<int>  $accountIds  T-999.6-06/14: restrict to these account ids (empty = no restriction). Applied ALONGSIDE the existing `where('user_id', ...)` guard below, so a foreign id can only ever narrow this user's own result to nothing — never widen it to another user's rows.
+     * @param  list<int>  $categoryIds  restrict to these category ids (empty = no restriction)
+     * @param  list<int>  $counterpartyIds  restrict to these counterparty ids (empty = no restriction)
      * @return list<ReportResultRow>
      */
-    public function forUserAndPeriod(User $user, Period $period, string $metric, string $currency): array
-    {
+    public function forUserAndPeriod(
+        User $user,
+        Period $period,
+        string $metric,
+        string $currency,
+        array $accountIds = [],
+        array $categoryIds = [],
+        array $counterpartyIds = [],
+    ): array {
         $connection = $this->db->connection();
 
         $rows = $connection
@@ -40,6 +51,9 @@ final class AccountSpendQuery
             ->where('settled_currency', $currency)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
+            ->when($accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('account_id', $accountIds))
+            ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('category_id', $categoryIds))
+            ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('counterparty_id', $counterpartyIds))
             ->groupBy('account_id')
             ->selectRaw('account_id, '.self::amountExpr($metric).' AS amount_minor')
             ->get();
