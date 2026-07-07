@@ -1988,3 +1988,7 @@ it('every raw merchant_aliases query in production code carries an explicit user
         "Every raw `->table('merchant_aliases')` call in production code must carry an explicit `user_id` filter or column. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
+
+arch('Modules\\Reports\\Internal is only used inside Modules\\Reports')
+    ->expect('Modules\\Reports\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Reports');

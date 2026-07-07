@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/reports",
+    "description": "Reports module — user-composable analytics/report builder + saved/pinned reports.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Reports\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Reports\\Tests\\": "tests/"
+        }
+    }
+}

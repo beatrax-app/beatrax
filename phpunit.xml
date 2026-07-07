@@ -130,6 +130,15 @@
         <testsuite name="MigrationContracts">
             <directory suffix="Test.php">./Modules/Migration/tests/Contracts</directory>
         </testsuite>
+        <testsuite name="Reports Unit">
+            <directory suffix="Test.php">./Modules/Reports/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Reports Feature">
+            <directory suffix="Test.php">./Modules/Reports/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Reports Contracts">
+            <directory suffix="Test.php">./Modules/Reports/tests/Contracts</directory>
+        </testsuite>
     </testsuites>
     <php>
         <ini name="memory_limit" value="1G"/>
