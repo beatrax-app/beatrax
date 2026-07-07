@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Reports\Internal\Support\PinOrderCompactor;
 use Modules\Reports\Models\SavedReport;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -19,13 +20,20 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * The 3-pin cap (UI-SPEC "You can pin up to 3 reports. Unpin one to add
  * this.") is enforced HERE, in the write-service layer — never trusted from
  * the Livewire UI (999.6-PATTERNS.md "TogglePin's 3-pin cap", T-999.6-21).
- * The cap check runs BEFORE any transaction opens (mirrors
- * `EnvelopeWriter::setOverspendMode()`'s validate-before-transaction idiom):
- * a 4th pin attempt throws `InvalidArgumentException` with the exact UI-SPEC
- * copy and never touches the database.
+ * WR-01: the cap check runs INSIDE the same DB transaction as the write, not
+ * before it opens — two concurrent `toggle()` calls that both read the
+ * pinned count before either commits would otherwise both pass a
+ * pre-transaction check and together pin a 4th report (TOCTOU). Reading the
+ * count inside the transaction means the second, blocked transaction
+ * re-reads the now-updated count once it acquires the write lock and
+ * correctly rejects the 4th pin — SQLite's single-writer serialization
+ * actually protects the invariant. A 4th pin attempt throws
+ * `InvalidArgumentException` with the exact UI-SPEC copy and the transaction
+ * rolls back, so the database is never touched.
  *
  * Unpinning clears `pinned`/`pin_order` and compacts the remaining pinned
- * reports' `pin_order` values back to a dense 1..N sequence — each row whose
+ * reports' `pin_order` values back to a dense 1..N sequence via the shared
+ * `PinOrderCompactor` (WR-02, also used by `DeleteReport`) — each row whose
  * `pin_order` actually changes gets its own `SavedReportMutated` 'edit' so
  * every device's Sync op-log stays in step with the on-screen pin order.
  */
@@ -51,18 +59,6 @@ final class TogglePin
             throw new NotFoundHttpException('Report not found.');
         }
 
-        if (! $existing->pinned) {
-            $pinnedCount = $this->db->connection()
-                ->table('saved_reports')
-                ->where('user_id', $user->id)
-                ->where('pinned', true)
-                ->count();
-
-            if ($pinnedCount >= self::MAX_PINS) {
-                throw new InvalidArgumentException('You can pin up to 3 reports. Unpin one to add this.');
-            }
-        }
-
         /** @var list<SavedReportMutated> $events */
         $events = [];
 
@@ -79,7 +75,7 @@ final class TogglePin
                     dirtyFields: ['pinned' => false, 'pin_order' => null],
                 );
 
-                foreach ($this->compactPinOrders($user) as $compacted) {
+                foreach (PinOrderCompactor::compact($this->db->connection(), $user) as $compacted) {
                     $events[] = new SavedReportMutated(
                         reportId: $compacted['id'],
                         userId: $user->id,
@@ -89,6 +85,20 @@ final class TogglePin
                 }
 
                 return $existing;
+            }
+
+            // WR-01: the pinned-count cap check runs HERE, inside the write
+            // transaction, right before the write itself — not as a
+            // pre-transaction round trip. See class docblock for the TOCTOU
+            // rationale.
+            $pinnedCount = $this->db->connection()
+                ->table('saved_reports')
+                ->where('user_id', $user->id)
+                ->where('pinned', true)
+                ->count();
+
+            if ($pinnedCount >= self::MAX_PINS) {
+                throw new InvalidArgumentException('You can pin up to 3 reports. Unpin one to add this.');
             }
 
             $maxOrder = $this->db->connection()
@@ -117,40 +127,6 @@ final class TogglePin
         }
 
         return $report;
-    }
-
-    /**
-     * Re-numbers the user's remaining pinned reports to a dense 1..N
-     * `pin_order` sequence (ordered by their current `pin_order`) and
-     * returns only the rows whose order actually changed.
-     *
-     * @return list<array{id: int, pin_order: int}>
-     */
-    private function compactPinOrders(User $user): array
-    {
-        $connection = $this->db->connection();
-
-        $rows = $connection
-            ->table('saved_reports')
-            ->where('user_id', $user->id)
-            ->where('pinned', true)
-            ->orderBy('pin_order')
-            ->get(['id', 'pin_order']);
-
-        $changed = [];
-        $order = 1;
-        foreach ($rows as $row) {
-            /** @var \stdClass $row */
-            $id = self::toInt($row->id);
-            $currentOrder = self::toInt($row->pin_order);
-            if ($currentOrder !== $order) {
-                $connection->table('saved_reports')->where('id', $id)->update(['pin_order' => $order]);
-                $changed[] = ['id' => $id, 'pin_order' => $order];
-            }
-            $order++;
-        }
-
-        return $changed;
     }
 
     private static function toInt(mixed $value): int

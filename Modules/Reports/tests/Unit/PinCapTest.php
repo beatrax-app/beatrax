@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Reports\Models\SavedReport;
 use Modules\Reports\Public\Actions\SaveReport;
@@ -104,6 +106,38 @@ it('pin_cap_enforced: unpinning one of 3 pinned reports frees a slot for a 4th',
     expect($pinnedFourth->pinned)->toBeTrue();
 
     expect(SavedReport::query()->where('pinned', true)->count())->toBe(3);
+});
+
+it('pin_cap_enforced: WR-01 the pinned-count cap check runs inside the write transaction, not before it opens', function (): void {
+    $user = pctPinUser();
+    test()->actingAs($user);
+
+    $report = app(SaveReport::class)->save($user, pctPinDefinition(), 'Report 1');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $sawCountQuery = false;
+    $countQueryRanInsideTransaction = false;
+
+    DB::listen(function ($query) use (&$sawCountQuery, &$countQueryRanInsideTransaction, $db): void {
+        $sql = strtolower($query->sql);
+        if (str_contains($sql, 'count(*)') && str_contains($sql, 'saved_reports') && str_contains($sql, 'pinned')) {
+            $sawCountQuery = true;
+            // WR-01: before the fix this count ran BEFORE `transaction()` was
+            // ever called, so `transactionLevel()` would have been 0 here.
+            // After the fix it runs from inside the write transaction's
+            // closure, so a concurrent second writer blocked on SQLite's
+            // write lock re-reads the up-to-date count once it resumes,
+            // instead of trusting a pre-transaction snapshot.
+            $countQueryRanInsideTransaction = $db->connection()->transactionLevel() > 0;
+        }
+    });
+
+    app(TogglePin::class)->toggle($user, $report->id);
+
+    expect($sawCountQuery)->toBeTrue();
+    expect($countQueryRanInsideTransaction)->toBeTrue();
 });
 
 it('pin_cap_enforced: unpinning compacts the remaining pin_order values to a dense sequence', function (): void {
