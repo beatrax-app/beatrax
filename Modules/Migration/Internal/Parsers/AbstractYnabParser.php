@@ -317,13 +317,27 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
     }
 
     /**
-     * Distinct namespace from `naturalCategoryKey()` (`"group/{name}"` vs
-     * `"{group}/{name}"`) so a group's synthetic parent row can never collide
-     * with a real category's own natural key.
+     * CR-01 (13.5 deep review): a bare `'group/'.` prefix is NOT disjoint
+     * from `naturalCategoryKey()`'s own `"{group}/{name}"` shape whenever a
+     * source group is itself literally named "Group" (case-insensitively) —
+     * `naturalGroupKey('Group')` and `naturalCategoryKey('Group', 'x')` both
+     * start with the substring `'group/'`, so a genuinely different group
+     * named e.g. "group" (the leaf half of some OTHER category's key) could
+     * collide with this synthetic parent key and silently misattribute
+     * parentage (see 13.5-REVIEW-DEEP.md CR-01 for the exact colliding
+     * example). Every category key produced by `naturalCategoryKey()` is
+     * unconditionally tagged with the fixed literal prefix `'cat:'` and every
+     * group key produced here with the fixed literal prefix `'grp:'` — since
+     * BOTH prefixes are prepended unconditionally to every key in their
+     * respective space (never derived from `$group`/`$name` content), a
+     * category key can never start with `'grp:'` and a group key can never
+     * start with `'cat:'`, regardless of what any source group or category
+     * happens to be named. This makes the two keyspaces provably disjoint
+     * for every possible input, not just "unlikely to collide in practice".
      */
     private function naturalGroupKey(string $group): string
     {
-        return 'group/'.mb_strtolower(trim($group));
+        return 'grp:'.mb_strtolower(trim($group));
     }
 
     /**
@@ -456,7 +470,10 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         $normalisedGroup = $group !== null ? mb_strtolower(trim($group)) : '';
         $normalisedName = mb_strtolower(trim($name));
 
-        return $normalisedGroup.'/'.$normalisedName;
+        // CR-01: 'cat:' is unconditionally prepended to every category key
+        // (see naturalGroupKey()'s docblock for why this makes the two
+        // keyspaces provably disjoint).
+        return 'cat:'.$normalisedGroup.'/'.$normalisedName;
     }
 
     /**
