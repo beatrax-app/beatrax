@@ -219,6 +219,54 @@ it('saving a report persists the current builder composition under the given nam
     expect(SavedReport::query()->where('name', 'My income report')->exists())->toBeTrue();
 });
 
+it('CR-01: editing a loaded report updates the same row (no duplicate); a fresh save still creates a new one', function (): void {
+    $user = rbUser();
+    test()->actingAs($user);
+
+    // Save the original report (id 1).
+    $definition = new ReportDefinition(
+        metric: 'spend',
+        dimension: 'category',
+        periodPreset: 'this_month',
+        granularity: 'monthly',
+        currencyMode: 'base',
+        viz: 'table',
+    );
+    $saved = app(SaveReport::class)->save($user, $definition, 'Grocery spend');
+
+    expect(SavedReport::query()->count())->toBe(1);
+
+    // Open it (?report={id}), change the period, and save again under the
+    // same name — this must UPDATE row 1, never create a second row.
+    Livewire::test(ReportBuilder::class, ['report' => $saved->id])
+        ->assertSet('loadedReportId', $saved->id)
+        ->assertSet('periodPreset', 'this_month')
+        ->set('periodPreset', 'last_6_months')
+        ->call('openSaveForm')
+        ->assertSet('saveName', 'Grocery spend') // CR-01: pre-filled from the loaded report, not blank
+        ->call('save')
+        ->assertSee('Report updated.')
+        ->assertSet('loadedReportId', $saved->id);
+
+    expect(SavedReport::query()->count())->toBe(1);
+
+    $saved->refresh();
+    expect($saved->name)->toBe('Grocery spend')
+        ->and($saved->definition['periodPreset'])->toBe('last_6_months');
+
+    // A brand-new (never-loaded) builder still CREATES a new row on save.
+    Livewire::test(ReportBuilder::class)
+        ->set('metric', 'income')
+        ->call('openSaveForm')
+        ->assertSet('saveName', '') // never loaded — starts blank, not pre-filled
+        ->set('saveName', 'Income overview')
+        ->call('save')
+        ->assertSee('Report saved.');
+
+    expect(SavedReport::query()->count())->toBe(2)
+        ->and(SavedReport::query()->where('name', 'Income overview')->exists())->toBeTrue();
+});
+
 it('renders each of the four visualizations without error, always alongside the same always-on table', function (string $viz, string $expectedVariant): void {
     $user = rbUser();
     test()->actingAs($user);

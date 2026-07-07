@@ -65,22 +65,42 @@
     }
 @endphp
 
+{{--
+    CR-03: `buildOptions()` re-reads `data-options` (and re-attaches the
+    dataPointSelection drilldown handler off the FRESH `beatraxDrilldownUrls`
+    array) every time it's called — used both at `x-init` mount and again on
+    every `report-updated` browser event (dispatched by
+    `ReportBuilder::updated()` after any control-rail change), so
+    `chart.updateOptions()` refreshes both the chart's data AND its
+    click-through targets in place, without remounting the component. A
+    naive re-mount-only refresh (as Forecasting's simpler partials do) would
+    leave the click handler bound to the stale drilldown-url array.
+--}}
 <div
     style="width:100%"
-    x-data="{ chart: null }"
+    x-data="{
+        chart: null,
+        buildOptions() {
+            const opts = window.beatraxApplyChartTheme(JSON.parse($el.dataset.options));
+            const drilldownUrls = Array.isArray(opts.beatraxDrilldownUrls) ? opts.beatraxDrilldownUrls : [];
+            opts.chart = opts.chart || {};
+            opts.chart.events = Object.assign({}, opts.chart.events || {}, {
+                dataPointSelection(event, chartContext, config) {
+                    const url = drilldownUrls[config.dataPointIndex];
+                    if (url) { window.location = url; }
+                },
+            });
+            return opts;
+        },
+    }"
     x-init="
         if (! window.ApexCharts) { return; }
-        const opts = window.beatraxApplyChartTheme(JSON.parse($el.dataset.options));
-        const drilldownUrls = Array.isArray(opts.beatraxDrilldownUrls) ? opts.beatraxDrilldownUrls : [];
-        opts.chart = opts.chart || {};
-        opts.chart.events = Object.assign({}, opts.chart.events || {}, {
-            dataPointSelection(event, chartContext, config) {
-                const url = drilldownUrls[config.dataPointIndex];
-                if (url) { window.location = url; }
-            },
-        });
-        chart = new window.ApexCharts($el.querySelector('#{{ $chartElementId }}'), opts);
+        chart = new window.ApexCharts($el.querySelector('#{{ $chartElementId }}'), buildOptions());
         chart.render();
+    "
+    x-on:report-updated.window="
+        if (! window.ApexCharts || ! chart) { return; }
+        chart.updateOptions(buildOptions(), true, false);
     "
     data-options="{{ $optionsJson }}"
 >

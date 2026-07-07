@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -15,11 +16,14 @@ use Modules\Core\Public\Scopes\UserScope;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
+use Modules\Reports\Internal\Services\ReportCsvExporter;
 use Modules\Reports\Models\SavedReport;
 use Modules\Reports\Public\Actions\SaveReport;
+use Modules\Reports\Public\Actions\UpdateReport;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Dto\ReportResultDto;
 use Modules\Reports\Public\Dto\ReportResultRow;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * The `/reports` live single-page builder (D-01, Req 1/8/12). Every control
@@ -97,6 +101,14 @@ final class ReportBuilder extends Component
     /** The saved report id this builder was opened from, when any (?report=). */
     public ?int $loadedReportId = null;
 
+    /**
+     * The loaded report's name (CR-01) — stashed in `mount()` so
+     * `openSaveForm()` can pre-fill `saveName` with it instead of showing a
+     * blank field that silently implies "Save report" will create a new
+     * row rather than update the one currently open.
+     */
+    public string $loadedReportName = '';
+
     public bool $showSaveForm = false;
 
     public string $saveName = '';
@@ -122,12 +134,17 @@ final class ReportBuilder extends Component
 
         $this->applyDefinition(ReportDefinition::from($saved->definition));
         $this->loadedReportId = $saved->id;
+        $this->loadedReportName = $saved->name;
     }
 
     public function openSaveForm(): void
     {
         $this->showSaveForm = true;
-        $this->saveName = '';
+        // CR-01: pre-fill with the currently-loaded report's name (rather
+        // than always resetting to '') so the user sees, at a glance, that
+        // submitting will UPDATE that report — not silently fork a second,
+        // identically-named row.
+        $this->saveName = $this->loadedReportId !== null ? $this->loadedReportName : '';
     }
 
     public function cancelSaveForm(): void
@@ -136,23 +153,80 @@ final class ReportBuilder extends Component
         $this->saveName = '';
     }
 
-    public function save(SaveReport $action, CurrentUser $currentUser): void
+    /**
+     * CR-01: a builder opened from a saved report (`$loadedReportId !==
+     * null`) must UPDATE that same row — `UpdateReport::update()` — never
+     * fork a new one via `SaveReport::save()`. Only a builder that was
+     * never loaded from (or has not yet been saved as) an existing report
+     * creates a fresh row, and that fresh row's id is then stashed into
+     * `loadedReportId` so a subsequent save on the same page load also
+     * updates in place rather than creating a second duplicate.
+     */
+    public function save(SaveReport $action, UpdateReport $updateAction, CurrentUser $currentUser): void
     {
         $name = trim($this->saveName);
         if ($name === '') {
             return;
         }
 
-        $action->save($currentUser->user(), $this->currentDefinition(), $name);
+        if ($this->loadedReportId !== null) {
+            $updateAction->update($currentUser->user(), $this->loadedReportId, $this->currentDefinition(), $name);
+            $this->loadedReportName = $name;
+            $this->flashMessage = 'Report updated.';
+        } else {
+            $saved = $action->save($currentUser->user(), $this->currentDefinition(), $name);
+            $this->loadedReportId = $saved->id;
+            $this->loadedReportName = $saved->name;
+            $this->flashMessage = 'Report saved.';
+        }
 
         $this->showSaveForm = false;
         $this->saveName = '';
-        $this->flashMessage = 'Report saved.';
     }
 
     public function clearFlash(): void
     {
         $this->flashMessage = '';
+    }
+
+    /**
+     * CR-03: dispatches a browser event after every Livewire property sync
+     * (control-rail `$set(...)` calls, `wire:model.live` filter inputs) so
+     * the mounted ApexCharts instance can refresh in place via
+     * `chart.updateOptions()` — mirrors `ForecastPage`'s per-mutation
+     * `$this->dispatch('forecast-updated')` calls, but as a single generic
+     * hook rather than one dispatch call per action, since every control on
+     * this page is a bare property setter rather than a named method.
+     */
+    public function updated(string $property): void
+    {
+        $this->dispatch('report-updated');
+    }
+
+    /**
+     * WR-02: the CSV export CTA is a real Livewire action (not a plain
+     * `<a href>`) so it can participate in `wire:loading`/`wire:target`,
+     * mirroring `Modules\Tax\Internal\Http\Livewire\TaxPage::exportCsv()`
+     * verbatim. Reads through the same `$this->currentDefinition()` the
+     * table/chart render from, so the download can never disagree with
+     * what's on screen.
+     */
+    public function export(ResponseFactory $responses, ReportCsvExporter $exporter, CurrentUser $currentUser): StreamedResponse
+    {
+        if (! $currentUser->isAuthenticated()) {
+            // Defensive branch — 'auth' middleware already blocks unauthenticated access.
+            return new StreamedResponse(static function (): void {});
+        }
+
+        $user = $currentUser->user();
+        $definition = $this->currentDefinition();
+
+        return $responses->streamDownload(
+            static function () use ($exporter, $user, $definition): void {
+                echo $exporter->export($user, $definition);
+            },
+            "beatrax-report-{$definition->slug()}.csv",
+        );
     }
 
     public function render(
