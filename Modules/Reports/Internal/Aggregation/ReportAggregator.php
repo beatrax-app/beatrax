@@ -14,9 +14,9 @@ use Modules\Reports\Public\Dto\ReportResultRow;
 
 /**
  * The Reports module's central Public-facing aggregation entry point
- * (Req 2/3/4/5) — every consumer (builder, CSV export, saved/pinned
- * reports, later plans) calls `run()` and never talks to a dimension query
- * or `CurrencyModeApplier` collaborator directly.
+ * (Req 2/3/4/5/13) — every consumer (builder, CSV export, saved/pinned
+ * reports, later plans) calls `run()` and never talks to a dimension query,
+ * `CurrencyModeApplier`, or `PeriodComparison` collaborator directly.
  *
  * Dispatch shape: `net_worth` (dimension ignored, a time series) is split
  * from the three transaction metrics (spend/income/net) FIRST, then a
@@ -51,15 +51,37 @@ final class ReportAggregator
         private readonly TimeBucketSpendQuery $timeBucketSpendQuery,
         private readonly NetWorthSeriesQuery $netWorthSeriesQuery,
         private readonly CurrencyModeApplier $currencyModeApplier,
+        private readonly PeriodComparison $periodComparison,
     ) {}
 
     public function run(User $user, ReportDefinition $definition): ReportResultDto
     {
         $period = $this->periodPresetResolver->resolve($definition->periodPreset, $definition->customFrom, $definition->customTo);
 
-        return $definition->metric === 'net_worth'
+        $result = $definition->metric === 'net_worth'
             ? $this->buildNetWorthResult($user, $period, $definition)
             : $this->buildTransactionResult($user, $period, $definition);
+
+        if (! $definition->compare) {
+            return $result;
+        }
+
+        $comparisonRows = $this->periodComparison->compare(
+            $period,
+            $result->rows,
+            fn (Period $previousPeriod): array => $definition->metric === 'net_worth'
+                ? $this->netWorthRows($user, $previousPeriod, $definition)
+                : $this->transactionRows($user, $previousPeriod, $definition),
+        );
+
+        return new ReportResultDto(
+            rows: $result->rows,
+            totalMinor: $result->totalMinor,
+            currency: $result->currency,
+            hasExcludedAccounts: $result->hasExcludedAccounts,
+            accountsWithoutRate: $result->accountsWithoutRate,
+            comparisonRows: $comparisonRows,
+        );
     }
 
     // -------------------------------------------------------------------
@@ -71,6 +93,14 @@ final class ReportAggregator
         $queryForCurrency = fn (string $currency): array => $this->dimensionRows($user, $period, $definition, $currency);
 
         return $this->currencyModeApplier->apply($user, $period, $definition->metric, $definition->currencyMode, $queryForCurrency);
+    }
+
+    /**
+     * @return list<ReportResultRow>
+     */
+    private function transactionRows(User $user, Period $period, ReportDefinition $definition): array
+    {
+        return $this->buildTransactionResult($user, $period, $definition)->rows;
     }
 
     /**
@@ -154,6 +184,14 @@ final class ReportAggregator
             hasExcludedAccounts: $hasExcluded,
             accountsWithoutRate: $excludedTotal,
         );
+    }
+
+    /**
+     * @return list<ReportResultRow>
+     */
+    private function netWorthRows(User $user, Period $period, ReportDefinition $definition): array
+    {
+        return self::pointsToRows($this->netWorthSeriesQuery->forUser($user, $period, $definition->granularity));
     }
 
     /**
