@@ -8,6 +8,7 @@ use League\Csv\EscapeFormula;
 use League\Csv\Writer;
 use Modules\Core\Models\User;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
+use Modules\Reports\Internal\Support\MinorAmountFormatter;
 use Modules\Reports\Public\Dto\ReportDefinition;
 
 /**
@@ -22,6 +23,10 @@ use Modules\Reports\Public\Dto\ReportDefinition;
  * The header's first (group) column reflects the driving definition's
  * `dimension` — 'Category' | 'Counterparty' | 'Account' | 'Month' — never a
  * generic 'group' literal (Req 11).
+ *
+ * IN-01: the "Amount" column is formatted via `MinorAmountFormatter` (pure
+ * integer arithmetic), never plain `float` division — CLAUDE.md "What NOT
+ * to Use" explicitly forbids `/100`-style float division on money.
  */
 final class ReportCsvExporter
 {
@@ -51,7 +56,7 @@ final class ReportCsvExporter
             $writer->insertOne([
                 $row->groupLabel,
                 $definition->metric,
-                number_format(abs($row->amountMinor) / 100, 2, '.', ''),
+                MinorAmountFormatter::toUnsignedDecimalString($row->amountMinor),
                 $row->currency,
             ]);
         }
