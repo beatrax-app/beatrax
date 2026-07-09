@@ -50,6 +50,13 @@ final class RuleEvaluator
      * When multiple memories exist for the same merchant (rare —
      * usually one row per (user, merchant, category) tuple) the highest
      * occurrence_count wins.
+     *
+     * **14.1-07 Task 2 audit (D-06):** the JOIN matches on
+     * `merchants.normalized_name`/`$tx->counterpartyNormalized` —
+     * neither is a `SensitiveFieldRegistry` column (`normalized_name`
+     * is a derived lookup key, distinct from the encrypted
+     * `counterparties.merchant_name`), and `$tx` is the pre-persistence
+     * DTO. No decrypt is needed on this path.
      */
     public function lookupMemory(CanonicalTransaction $tx, int $userId): ?stdClass
     {

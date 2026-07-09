@@ -49,6 +49,16 @@ use Throwable;
  * ImportPipeline depends on the Public contract (not this Internal
  * class). Mirrors the RecordsStatementSummary / AppliesEnrichments
  * cross-module shape ImportPipeline already uses.
+ *
+ * **14.1-07 Task 2 audit (D-06, import-time twin of CR-04):**
+ * `apply()` matches `RuleMatchInput::fromCanonical($tx)` — the
+ * incoming, pre-persistence `$tx` DTO — never a stored `transactions`
+ * row. `ImportPipeline::preview()` always calls this method BEFORE
+ * `RecordTransactions` writes (and encrypts) anything, so the values
+ * matched are plaintext regardless of whether the user has encryption
+ * enabled. No decrypt is needed here; only `ReapplyRulesJob` (CR-04
+ * itself) reads a persisted, potentially-ciphertext row. See
+ * `ApplyAutoCategoryStageEncryptionTest`.
  */
 final class ApplyAutoCategoryStage implements AppliesAutoCategory
 {
