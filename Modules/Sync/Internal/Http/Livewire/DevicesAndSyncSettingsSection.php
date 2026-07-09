@@ -12,6 +12,8 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -87,6 +89,46 @@ final class DevicesAndSyncSettingsSection extends Component
      */
     public string $renameValue = '';
 
+    /**
+     * The id of the device row currently confirming removal (Surface D), or
+     * null when no revocation modal is open. Mirrors $renamingDeviceId.
+     */
+    public ?int $removingDeviceId = null;
+
+    /**
+     * Whether the revocation modal (Surface D) is open. A separate boolean
+     * flag (rather than binding <flux:modal wire:model> directly to the
+     * ?int $removingDeviceId) so Flux's own close-on-backdrop/-Escape flow —
+     * which sets its bound model to a JS `false` — can never violate the
+     * `?int` property type.
+     */
+    public bool $showRemoveModal = false;
+
+    // -------------------------------------------------------------------------
+    // At-rest encryption (Phase 14, D-07/D-09/D-11 — 14-UI-SPEC Surfaces A/B)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Whether at-rest encryption is currently ON for this user on this
+     * device (`sync_encryption_state.current_epoch` is set).
+     */
+    public bool $encryptionOn = false;
+
+    /**
+     * Whether the enable-encryption modal (Surface B) is open.
+     */
+    public bool $showEncryptionModal = false;
+
+    /**
+     * Enable-encryption modal step: confirm|progress|done|error.
+     */
+    public string $encryptionStep = 'confirm';
+
+    /**
+     * 0-100 migration progress, sourced from EncryptionMigrationService::progress().
+     */
+    public int $encryptionProgress = 0;
+
     // -------------------------------------------------------------------------
     // Relay endpoint URL (D-01 / Phase 13 Plan 06 / T-13-08)
     // -------------------------------------------------------------------------
@@ -136,6 +178,9 @@ final class DevicesAndSyncSettingsSection extends Component
         // Relay endpoint URL (D-01 default none, T-13-08 insecure flag).
         $this->relayEndpointUrl = $relayConfig->endpointUrl() ?? '';
         $this->relayIsInsecure = $relayConfig->isInsecure();
+
+        // Phase 14 (D-07/D-09): whether at-rest encryption is already ON.
+        $this->encryptionOn = $this->encryptionEnabled($db, $userId);
     }
 
     // -------------------------------------------------------------------------
@@ -146,6 +191,12 @@ final class DevicesAndSyncSettingsSection extends Component
      * Enable sync: generate + persist the device identity and show the self
      * device. Gated on an app-lock being configured (D-02). The service-level
      * LogicException guard is the defense-in-depth backstop.
+     *
+     * D-07 mandatory-when-synced: the moment this device becomes a sync peer,
+     * at-rest encryption auto-activates via EncryptionMigrationService::migrate()
+     * — no decline affordance exists on this path. migrate() is idempotent
+     * (a no-op once `current_epoch` is already set), so calling it here is safe
+     * even when this device was already synced+encrypted on a prior visit.
      */
     public function enableSync(
         CurrentUser $currentUser,
@@ -153,6 +204,7 @@ final class DevicesAndSyncSettingsSection extends Component
         Session $session,
         DatabaseManager $db,
         DeviceRegistryService $registry,
+        EncryptionMigrationService $migrationService,
     ): void {
         if ($this->syncEnabled) {
             return;
@@ -169,14 +221,29 @@ final class DevicesAndSyncSettingsSection extends Component
 
         try {
             $identityService->generateAndPersist($userId, $session);
-            $this->syncEnabled = true;
-            $this->flashMessage = '';
-            $this->devices = $this->loadDevices($registry, $userId);
         } catch (\LogicException) {
             // The KEK was unavailable despite the configured-lock check (the app
             // is locked, or the session is keyless) — surface the recovery copy.
             $this->flashMessage = 'Failed to enable sync. Make sure your app lock is active and try again.';
+
+            return;
         }
+
+        $this->syncEnabled = true;
+        $this->flashMessage = '';
+        $this->devices = $this->loadDevices($registry, $userId);
+
+        // D-07 mandatory auto-activation — no decline path. A migration
+        // failure never un-enables sync (D-09's own rollback already leaves
+        // zero half-encrypted rows); the encryption row simply keeps
+        // rendering its mandatory/off state until the next successful pass.
+        try {
+            $migrationService->migrate($currentUser->user(), $session);
+        } catch (\Throwable) {
+            // Best-effort — see docblock above.
+        }
+
+        $this->encryptionOn = $this->encryptionEnabled($db, $userId);
     }
 
     // -------------------------------------------------------------------------
@@ -234,6 +301,169 @@ final class DevicesAndSyncSettingsSection extends Component
     }
 
     // -------------------------------------------------------------------------
+    // Action: enable-encryption modal (Surface B, single-device optional offer)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Open the enable-encryption modal (Surface B, confirm step). ONLY
+     * reachable from the single-device (sync off) optional offer per D-07 —
+     * the synced/mandatory path never renders this CTA.
+     */
+    public function showEnableEncryptionModal(): void
+    {
+        $this->encryptionStep = 'confirm';
+        $this->encryptionProgress = 0;
+        $this->showEncryptionModal = true;
+    }
+
+    /**
+     * Decline the single-device offer (D-07 second bullet) — closes the
+     * modal with no action. Never reachable on the mandatory-when-synced path.
+     */
+    public function declineEncryption(): void
+    {
+        $this->showEncryptionModal = false;
+        $this->encryptionStep = 'confirm';
+    }
+
+    /**
+     * Run the D-09 migration for the single-device optional-offer path.
+     * Mirrors the D-07 auto-trigger in enableSync()/PairingFlowModal::confirmMatch()
+     * — same service call, same idempotent contract — just reached via an
+     * explicit user confirmation instead of an automatic activation.
+     */
+    public function enableEncryption(
+        EncryptionMigrationService $migrationService,
+        CurrentUser $currentUser,
+        Session $session,
+        DatabaseManager $db,
+    ): void {
+        $this->encryptionStep = 'progress';
+
+        try {
+            $migrationService->migrate($currentUser->user(), $session);
+            $userId = $currentUser->user()->id;
+            $this->encryptionOn = $this->encryptionEnabled($db, $userId);
+            $this->encryptionProgress = $migrationService->progress($userId);
+            $this->encryptionStep = 'done';
+        } catch (\Throwable) {
+            // D-09: migrate() already rolled back to zero half-encrypted rows
+            // and restored the pre-migration snapshot on any throw — the
+            // error copy reflects that guarantee (Surface B error state).
+            $this->encryptionStep = 'error';
+        }
+    }
+
+    /**
+     * Poll the in-flight migration progress (wire:poll target while
+     * $encryptionStep === 'progress'). Advances to done once
+     * EncryptionMigrationService::progress() reports 100.
+     */
+    public function pollEncryptionProgress(EncryptionMigrationService $migrationService, CurrentUser $currentUser): void
+    {
+        if ($this->encryptionStep !== 'progress') {
+            return;
+        }
+
+        $this->encryptionProgress = $migrationService->progress($currentUser->user()->id);
+
+        if ($this->encryptionProgress >= 100) {
+            $this->encryptionStep = 'done';
+        }
+    }
+
+    /**
+     * Close the enable-encryption modal after a done/error terminal state and
+     * refresh Surface A to the "On" state.
+     */
+    public function closeEncryptionModal(): void
+    {
+        $this->showEncryptionModal = false;
+        $this->encryptionStep = 'confirm';
+        $this->encryptionProgress = 0;
+    }
+
+    // -------------------------------------------------------------------------
+    // Action: device remove / revocation (Surfaces C + D, CRYPT-02 / D-06)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Open the revocation modal (Surface D) for a non-self device row.
+     * Mirrors startRename/cancelRename/renameDevice's structural precedent.
+     */
+    public function startRemove(int $deviceId): void
+    {
+        $this->removingDeviceId = $deviceId;
+        $this->showRemoveModal = true;
+    }
+
+    public function cancelRemove(): void
+    {
+        $this->removingDeviceId = null;
+        $this->showRemoveModal = false;
+    }
+
+    /**
+     * Flux's own close-on-backdrop/-Escape flow only flips the bound
+     * $showRemoveModal to false — keep $removingDeviceId in sync so a stale
+     * target id never lingers after a non-button dismissal.
+     */
+    public function updatedShowRemoveModal(bool $value): void
+    {
+        if (! $value) {
+            $this->removingDeviceId = null;
+        }
+    }
+
+    /**
+     * Confirm removal: revoke the device's trust AND rotate the GDK epoch in
+     * one operation via GdkRotationService::rotateAndRevoke (T-14-04 — the UI
+     * never rotates without revoking, and never revokes without rotating).
+     *
+     * The row is marked "removed" IN PLACE (not reloaded via
+     * DeviceRegistryService::confirmedDevices(), which excludes it the moment
+     * confirmed_at is cleared) so the "Removed" badge renders per Surface C —
+     * the row disappears only on the next page load/navigation.
+     */
+    public function removeDevice(GdkRotationService $rotationService, CurrentUser $currentUser): void
+    {
+        if ($this->removingDeviceId === null) {
+            return;
+        }
+
+        $targetId = $this->removingDeviceId;
+        $userId = $currentUser->user()->id;
+
+        try {
+            $rotationService->rotateAndRevoke($userId, $targetId);
+        } catch (\Throwable) {
+            $this->flashMessage = 'Failed to remove device. Please try again.';
+            $this->cancelRemove();
+
+            return;
+        }
+
+        foreach ($this->devices as $index => $device) {
+            if (($device['id'] ?? null) === $targetId) {
+                $this->devices[$index]['removed'] = true;
+            }
+        }
+
+        // Removed rows sort to the bottom (Surface C).
+        usort(
+            $this->devices,
+            static function (array $a, array $b): int {
+                $aRemoved = ($a['removed'] ?? false) === true;
+                $bRemoved = ($b['removed'] ?? false) === true;
+
+                return $aRemoved <=> $bRemoved;
+            },
+        );
+
+        $this->cancelRemove();
+    }
+
+    // -------------------------------------------------------------------------
     // Event hooks
     // -------------------------------------------------------------------------
 
@@ -250,12 +480,17 @@ final class DevicesAndSyncSettingsSection extends Component
     /**
      * A peer was just confirmed in the pairing modal (the success step, WR-02):
      * refresh the device list live so the newly-trusted device appears without
-     * waiting for the user to click "Done".
+     * waiting for the user to click "Done". Also re-reads the encryption
+     * state (D-07): PairingFlowModal::confirmMatch auto-triggers the
+     * migration the moment this device becomes a confirmed peer.
      */
     #[On('pairing-confirmed')]
-    public function onPairingConfirmed(CurrentUser $currentUser, DeviceRegistryService $registry): void
+    public function onPairingConfirmed(CurrentUser $currentUser, DeviceRegistryService $registry, DatabaseManager $db): void
     {
-        $this->devices = $this->loadDevices($registry, $currentUser->user()->id);
+        $userId = $currentUser->user()->id;
+        $this->devices = $this->loadDevices($registry, $userId);
+        $this->syncEnabled = true;
+        $this->encryptionOn = $this->encryptionEnabled($db, $userId);
     }
 
     /**
@@ -333,6 +568,24 @@ final class DevicesAndSyncSettingsSection extends Component
     }
 
     /**
+     * Whether at-rest encryption is ON for $userId on this device
+     * (`sync_encryption_state.current_epoch` is set). Read directly via the
+     * injected DatabaseManager — this table is device-local and never synced
+     * (see the create-table migration docblock), so a raw scoped read here
+     * mirrors selfRowExists()'s own precedent rather than reaching into
+     * Modules\Core\Public\Services\EncryptionMigrationService::isEnabled()
+     * for a value this component can read in one query already.
+     */
+    private function encryptionEnabled(DatabaseManager $db, int $userId): bool
+    {
+        $value = $db->connection()->table('sync_encryption_state')
+            ->where('user_id', $userId)
+            ->value('current_epoch');
+
+        return $value !== null;
+    }
+
+    /**
      * Load the confirmed-device rows for the list as plain view-model arrays.
      *
      * @return list<array<string, mixed>>
@@ -350,6 +603,7 @@ final class DevicesAndSyncSettingsSection extends Component
                 'paired_at' => is_string($row->paired_at) ? $row->paired_at : '',
                 'is_self' => is_numeric($row->is_self) && (int) $row->is_self === 1,
                 'confirmed' => $row->confirmed_at !== null,
+                'removed' => false,
             ];
         }
 
@@ -358,8 +612,10 @@ final class DevicesAndSyncSettingsSection extends Component
 
     /**
      * The current displayed name for a device id (from the loaded list).
+     * Public — Surface D's revocation modal sub-label ("Removing: {name}")
+     * reads this from the blade view.
      */
-    private function currentNameFor(int $deviceId): string
+    public function currentNameFor(int $deviceId): string
     {
         foreach ($this->devices as $device) {
             if (($device['id'] ?? null) === $deviceId) {

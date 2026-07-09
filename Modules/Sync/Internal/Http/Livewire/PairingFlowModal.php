@@ -12,6 +12,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
 use Modules\Sync\Internal\Pairing\PairingStateMachine;
@@ -266,11 +267,22 @@ final class PairingFlowModal extends Component
      * Poll the in-flight token: advance show_code → confirm when the responder
      * has accepted (state awaiting_confirm), and any step → success when both
      * sides have confirmed (state confirmed). Scoped to the CurrentUser id.
+     *
+     * D-07 (Rule 2 — missing critical functionality): the side that confirms
+     * FIRST never sees a CONFIRMED return from its own confirmMatch() call (it
+     * only sets awaitingPeer=true) — it learns of the completed both-confirm
+     * HERE, via this poll. Without the same mandatory-encryption auto-trigger
+     * confirmMatch() runs, that device would stay unencrypted despite being a
+     * fully-confirmed sync peer — the exact gap D-07 forbids. Guarded to the
+     * actual show_code/confirm → success TRANSITION so it does not re-run on
+     * every subsequent poll tick while the success step stays on screen.
      */
     public function checkPairingState(
         CurrentUser $currentUser,
         DatabaseManager $db,
         SafetyNumberDeriver $safetyDeriver,
+        Session $session,
+        EncryptionMigrationService $migrationService,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -294,8 +306,16 @@ final class PairingFlowModal extends Component
             return;
         }
 
-        if ($row->state === PairingStateMachine::CONFIRMED) {
+        if ($row->state === PairingStateMachine::CONFIRMED && $this->step !== 'success') {
             $this->step = 'success';
+
+            try {
+                $migrationService->migrate($currentUser->user(), $session);
+            } catch (\Throwable) {
+                // Best-effort — see confirmMatch()'s docblock.
+            }
+
+            $this->dispatch('pairing-confirmed');
         }
     }
 
@@ -309,12 +329,19 @@ final class PairingFlowModal extends Component
      * sole gate admitting the peer device to the trusted registry (D-07). When
      * the peer has already confirmed, this advances to success; otherwise this
      * side waits for the peer (the poll flips to success).
+     *
+     * D-07 mandatory-when-synced (Phase 14): the moment bothConfirmed() admits
+     * this device as a peer, at-rest encryption auto-activates via
+     * EncryptionMigrationService::migrate() — no decline affordance exists on
+     * this path, mirroring DevicesAndSyncSettingsSection::enableSync()'s own
+     * auto-trigger. migrate() is idempotent (a no-op once already enabled).
      */
     public function confirmMatch(
         CurrentUser $currentUser,
         DeviceIdentityLoader $identityLoader,
         PairingTokenService $tokenService,
         Session $session,
+        EncryptionMigrationService $migrationService,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -339,6 +366,17 @@ final class PairingFlowModal extends Component
         if ($state === PairingStateMachine::CONFIRMED) {
             $this->awaitingPeer = false;
             $this->step = 'success';
+
+            // D-07 mandatory auto-activation — no decline path. A migration
+            // failure never undoes the just-completed pairing; the encryption
+            // row simply keeps rendering its mandatory/off state until the
+            // next successful pass (mirrors enableSync()'s own best-effort
+            // handling).
+            try {
+                $migrationService->migrate($currentUser->user(), $session);
+            } catch (\Throwable) {
+                // Best-effort — see docblock above.
+            }
 
             $this->dispatch('pairing-confirmed');
 

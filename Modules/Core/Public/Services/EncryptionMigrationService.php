@@ -184,6 +184,19 @@ class EncryptionMigrationService
     }
 
     /**
+     * Whether at-rest encryption is currently ON for $userId on this device
+     * (`current_epoch` set). Read-only helper for callers (e.g. the Plan 09
+     * Devices & Sync UI, the D-10 Change-PIN flash) that only need the
+     * boolean state and must not reach into `Modules\Sync\Internal\*` to get
+     * it — this Core Public service already owns the `sync_encryption_state`
+     * read via {@see loadState()}/{@see currentEpochId()}.
+     */
+    public function isEnabled(int $userId): bool
+    {
+        return $this->currentEpochId($this->loadState($this->db->connection(), $userId)) !== null;
+    }
+
+    /**
      * Resumable-idempotent progress signal for the Plan 09 UI to poll:
      * 0-99 while a pass is running (cache-backed, mirrors
      * `ReapplyRulesJob`'s precedent — no new synced table), 100 once

@@ -18,6 +18,7 @@ use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\EncryptionMigrationService;
 
 /**
  * App Lock settings section component.
@@ -128,6 +129,15 @@ final class AppLockSettingsSection extends Component
      * Whether the "forgot PIN" recovery modal is open (D-11/D-21).
      */
     public bool $confirmingForgotPin = false;
+
+    /**
+     * Change-PIN success caption (Phase 14 D-10). Distinct from $flashMessage
+     * (which is reserved for the rose error/alert copy) — set ONLY after a
+     * successful changePin(), and ONLY carries the D-10 re-secured-encryption
+     * note (gated on an encrypted keyring existing for this user via
+     * EncryptionMigrationService::isEnabled()). Empty string renders nothing.
+     */
+    public string $changePinSuccessMessage = '';
 
     // -------------------------------------------------------------------------
     // Lifecycle
@@ -334,6 +344,7 @@ final class AppLockSettingsSection extends Component
         $this->currentPin = '';
         $this->newPin = '';
         $this->confirmPin = '';
+        $this->changePinSuccessMessage = '';
     }
 
     /**
@@ -341,8 +352,15 @@ final class AppLockSettingsSection extends Component
      *
      * Requires both the current PIN and a new confirmed PIN.
      * On wrong current PIN: flashes the wrong-PIN message.
+     *
+     * Phase 14 D-10: on success, when an encrypted keyring already exists for
+     * this user (EncryptionMigrationService::isEnabled()), surfaces the
+     * re-secured-encryption note via $changePinSuccessMessage — the GDK
+     * keyring re-wrap itself happens invisibly via the AppLockPassphraseChanged
+     * event -> RewrapGdkOnPassphraseChange listener (Plan 07); this is only
+     * the user-visible confirmation copy.
      */
-    public function changePin(CurrentUser $currentUser, AppLockProvisioner $provisioner): void
+    public function changePin(CurrentUser $currentUser, AppLockProvisioner $provisioner, EncryptionMigrationService $migrationService): void
     {
         if (strlen($this->newPin) < 4) {
             $this->flashMessage = 'PIN must be at least 4 digits.';
@@ -370,6 +388,10 @@ final class AppLockSettingsSection extends Component
         $this->newPin = '';
         $this->confirmPin = '';
         $this->flashMessage = '';
+
+        $this->changePinSuccessMessage = $migrationService->isEnabled($user->id)
+            ? 'Your encryption key has been re-secured with your new PIN.'
+            : '';
     }
 
     // -------------------------------------------------------------------------
