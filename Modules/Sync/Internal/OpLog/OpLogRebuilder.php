@@ -174,6 +174,10 @@ final class OpLogRebuilder
                         opType: OpType::from($opTypeStr),
                         signature: is_string($vars['signature'] ?? null) ? $vars['signature'] : '',
                         userId: is_numeric($vars['user_id'] ?? null) ? (int) $vars['user_id'] : 0,
+                        // Phase 14 (CRYPT-01): a GDK-encrypted entry's value can only be
+                        // decrypted with its original epoch tag — dropping this on rebuild
+                        // would silently lose every sensitive-field edit ever made.
+                        gdkEpoch: is_numeric($vars['gdk_epoch'] ?? null) ? (int) $vars['gdk_epoch'] : null,
                     );
                 }
 
