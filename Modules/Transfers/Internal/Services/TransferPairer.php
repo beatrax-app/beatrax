@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Transfers\Internal\Services;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Transaction;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use stdClass;
 
@@ -64,6 +66,21 @@ use stdClass;
  * to the Import module's ClassifyTransactionType pipeline stage on the
  * preview path, and to the Chains module's RetypeByAliasResolver on the
  * post-import healing path.
+ *
+ * CR-03 (D-02 — decrypt-then-match): `transactions.counterparty_iban`
+ * is a `SensitiveFieldRegistry` ciphertext column under encryption, so
+ * it can never be part of a SQL equality/`whereIn` predicate — a
+ * ciphertext value never equals a plaintext candidate. Both arms
+ * decrypt before comparing: the forward arm decrypts `$tx->counterparty_iban`
+ * ONCE into a plaintext local before it is compared against plaintext
+ * `accounts.iban` / handed to {@see ResolvesKnownCounterpartyIban};
+ * the reverse arm keeps its existing narrow SQL predicates (amount
+ * equal-and-opposite, currency, ±WINDOW_DAYS booked_at window, unpaired,
+ * type) — already a tiny candidate set — then decrypts each surviving
+ * candidate's `counterparty_iban` and matches it against the plaintext
+ * `$candidateIbans` set in PHP (mirrors `CounterpartyIndexQuery`'s
+ * decrypt-then-match template; `accounts.iban` predicates are NOT in
+ * the encrypted set and stay untouched).
  */
 final class TransferPairer implements PairsTransferLegs
 {
@@ -79,6 +96,8 @@ final class TransferPairer implements PairsTransferLegs
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly ResolvesKnownCounterpartyIban $aliasResolver,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     public function pairOne(Transaction $tx, User $user): ?int
@@ -115,16 +134,31 @@ final class TransferPairer implements PairsTransferLegs
             // one of the user's own Account.iban rows directly; Arm B
             // (alias bridge) resolves real institution IBANs to the user's
             // own synthetic-IBAN account via ResolvesKnownCounterpartyIban.
+            //
+            // CR-03 (D-02): $tx->counterparty_iban is ciphertext under
+            // encryption — decrypt ONCE into a plaintext local before
+            // either arm runs. Pass-through no-op when encryption is not
+            // enabled for this user. The null/'' cases already routed to
+            // the reverse-lookup branch above, so $tx->counterparty_iban
+            // is guaranteed a non-empty string here.
+            $plainIban = $this->codec->decryptValue(
+                'transactions',
+                'counterparty_iban',
+                $tx->counterparty_iban,
+                $user->id,
+                $this->session,
+            )['value'];
+
             $partnerAccountRow = $connection
                 ->table('accounts')
                 ->where('user_id', $user->id)
-                ->where('iban', $tx->counterparty_iban)
+                ->where('iban', $plainIban)
                 ->first(['id']);
 
             if ($partnerAccountRow !== null) {
                 $partnerAccountId = self::toInt($partnerAccountRow->id ?? null);
             } else {
-                $aliasAccount = $this->aliasResolver->resolveAccount($tx->counterparty_iban, $user->id);
+                $aliasAccount = $this->aliasResolver->resolveAccount($plainIban, $user->id);
                 if ($aliasAccount === null) {
                     return null;
                 }
@@ -300,7 +334,19 @@ final class TransferPairer implements PairsTransferLegs
             return null;
         }
 
-        return $connection
+        // CR-03 (D-02): the whereIn('counterparty_iban', ...) equality
+        // this used to run is a ciphertext column under encryption — a
+        // plaintext $candidateIbans value can never equal it in SQL. The
+        // narrowing predicates below (amount equal-and-opposite,
+        // currency, ±WINDOW_DAYS booked_at window, unpaired, type)
+        // already yield a tiny candidate set on their own (an indexed,
+        // per-account-pair scan bounded by the partial index cited
+        // above), so dropping the iban predicate here does not turn this
+        // into a full-history scan. Each surviving candidate's
+        // counterparty_iban is decrypted once and matched against
+        // $candidateIbans in PHP — mirrors CounterpartyIndexQuery's
+        // decrypt-then-match template.
+        $candidates = $connection
             ->table('transactions')
             ->where('user_id', $userId)
             ->where('account_id', '!=', $tx->account_id)
@@ -309,10 +355,30 @@ final class TransferPairer implements PairsTransferLegs
             ->whereBetween('booked_at', [$windowStart, $windowEnd])
             ->whereNull('pair_transaction_id')
             ->whereIn('type', ['transfer_out', 'transfer_in'])
-            ->whereIn('counterparty_iban', $candidateIbans)
             ->where('id', '!=', $tx->id)
             ->orderBy('booked_at')
-            ->first(['id']);
+            ->get(['id', 'counterparty_iban']);
+
+        foreach ($candidates as $candidate) {
+            /** @var stdClass $candidate */
+            $storedCandidateIban = $candidate->counterparty_iban ?? null;
+            if (! is_string($storedCandidateIban) || $storedCandidateIban === '') {
+                continue;
+            }
+            $plainCandidateIban = $this->codec->decryptValue(
+                'transactions',
+                'counterparty_iban',
+                $storedCandidateIban,
+                $userId,
+                $this->session,
+            )['value'];
+
+            if (in_array($plainCandidateIban, $candidateIbans, true)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**
