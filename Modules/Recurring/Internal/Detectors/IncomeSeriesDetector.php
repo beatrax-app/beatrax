@@ -6,17 +6,20 @@ namespace Modules\Recurring\Internal\Detectors;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
+use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -47,6 +50,28 @@ use stdClass;
  * Occurrence rows land via INSERT-OR-IGNORE on the
  * `(recurring_series_id, transaction_id)` UNIQUE constraint so re-runs
  * of the sweep do not duplicate the per-occurrence ledger.
+ *
+ * **CRYPT-01 (14.1-08, D-06):** `counterparty_iban` is a
+ * `SensitiveFieldRegistry`-listed column — at rest under an encrypted
+ * user it is random-nonce ciphertext that differs per row even for the
+ * SAME logical IBAN, so clustering on the raw stored value would
+ * scatter every income row into its own one-row, sub-threshold group
+ * and silently detect nothing. `$session` (optional — see below) is
+ * decrypted-through via {@see SensitiveColumnCodec::decryptValue()}
+ * BEFORE the value participates in cluster-key derivation. The codec
+ * call is itself a documented no-op pass-through for a plaintext
+ * (pre-encryption or never-encrypted) value, so passing a session is
+ * always safe.
+ *
+ * The `$session` parameter is deliberately optional and NOT part of
+ * the {@see SeriesDetector} contract (PHP permits an implementing
+ * method to add extra default-valued parameters without breaking
+ * interface conformance) — {@see DetectRecurringSeriesJob}
+ * is the ONLY caller that knows which dispatch origin it is running
+ * under (in-request `dispatchSync`, KEK present, vs the KEK-less
+ * scheduled daemon) and decides whether to pass a session at all;
+ * every OTHER caller resolving this class through the generic
+ * `SeriesDetector` interface still compiles and runs unchanged.
  */
 final class IncomeSeriesDetector implements SeriesDetector
 {
@@ -63,9 +88,20 @@ final class IncomeSeriesDetector implements SeriesDetector
         private readonly ClusterKeyComposer $clusterKeyComposer,
         private readonly RecurringSeriesStateMachine $stateMachine,
         private readonly Dispatcher $events,
+        private readonly SensitiveColumnCodec $codec,
     ) {}
 
-    public function detectForUser(User $user): void
+    /**
+     * @param  Session|null  $session  when non-null, `counterparty_iban` is
+     *                                 decrypted (codec no-op for a
+     *                                 plaintext/non-encrypted value) before
+     *                                 clustering. Null (the default) skips
+     *                                 the decrypt call entirely — used by
+     *                                 the generic `SeriesDetector` interface
+     *                                 call shape and by any caller with no
+     *                                 session context.
+     */
+    public function detectForUser(User $user, ?Session $session = null): void
     {
         $windowMonths = $user->recurring_detection_window_months;
         if ($windowMonths <= 0) {
@@ -102,6 +138,12 @@ final class IncomeSeriesDetector implements SeriesDetector
             /** @var stdClass $row */
             $counterparty = self::toStringNullable($row->counterparty_normalized);
             $iban = self::toStringNullable($row->counterparty_iban);
+            if ($iban !== '' && $session !== null) {
+                // CRYPT-01: decrypt BEFORE the value becomes the cluster
+                // key — a no-op pass-through when the value is already
+                // plaintext (not encrypted / no epoch verifies).
+                $iban = $this->codec->decryptValue('transactions', 'counterparty_iban', $iban, $user->id, $session)['value'];
+            }
             $currency = self::toStringNullable($row->currency);
             if ($currency === '') {
                 continue;
