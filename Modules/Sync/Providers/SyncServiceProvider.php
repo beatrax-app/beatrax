@@ -44,6 +44,7 @@ use Modules\Sync\Public\Events\SavedReportMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -95,6 +96,9 @@ final class SyncServiceProvider extends ServiceProvider
         }
         if (class_exists(GdkKeyringService::class)) {
             $this->app->singleton(GdkKeyringService::class);
+        }
+        if (class_exists(SensitiveColumnCodec::class)) {
+            $this->app->singleton(SensitiveColumnCodec::class);
         }
 
         // Phase 14 single-owner forward registration (mirrors the Phase 13
