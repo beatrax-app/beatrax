@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
@@ -12,6 +13,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Dto\TransactionListPage;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -55,6 +57,8 @@ final class TransactionListQuery
     public function __construct(
         private readonly Clock $clock,
         private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     public function recent(
@@ -73,7 +77,7 @@ final class TransactionListQuery
 
         $this->applyCursor($query, $cursorPostedAt, $cursorId);
 
-        return $this->buildPage($query, $limit);
+        return $this->buildPage($query, $limit, $user->id);
     }
 
     public function fullHistory(
@@ -87,7 +91,7 @@ final class TransactionListQuery
 
         $this->applyCursor($query, $cursorPostedAt, $cursorId);
 
-        return $this->buildPage($query, $limit);
+        return $this->buildPage($query, $limit, $user->id);
     }
 
     private function baseQuery(User $user, ?string $currency = null): Builder
@@ -174,7 +178,7 @@ final class TransactionListQuery
         );
     }
 
-    private function buildPage(Builder $query, int $limit): TransactionListPage
+    private function buildPage(Builder $query, int $limit, int $userId): TransactionListPage
     {
         $rows = $query->get();
         $hasMore = $rows->count() > $limit;
@@ -185,7 +189,7 @@ final class TransactionListQuery
         $lastId = null;
         $lastPostedAt = null;
         foreach ($sliced as $row) {
-            $dtos[] = $this->mapRow($row);
+            $dtos[] = $this->mapRow($row, $userId);
             $lastId = self::toInt($row->id);
             $lastPostedAt = self::toString($row->posted_at);
         }
@@ -198,12 +202,16 @@ final class TransactionListQuery
         );
     }
 
-    private function mapRow(stdClass $row): TransactionRowDto
+    private function mapRow(stdClass $row, int $userId): TransactionRowDto
     {
         $bookedAt = CarbonImmutable::parse(self::toString($row->booked_at));
         $categoryId = $row->category_id === null ? null : self::toInt($row->category_id);
         $categoryName = $row->category_name === null ? null : self::toString($row->category_name);
-        $counterpartyName = $row->counterparty_name === null ? null : self::toString($row->counterparty_name);
+        // CRYPT-01 (D-02b) read-side decrypt — pass-through no-op when
+        // encryption is not enabled for this user.
+        $counterpartyName = $row->counterparty_name === null
+            ? null
+            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, $this->session)['value'];
         $counterpartySlug = property_exists($row, 'counterparty_slug') && $row->counterparty_slug !== null
             ? self::toString($row->counterparty_slug)
             : null;

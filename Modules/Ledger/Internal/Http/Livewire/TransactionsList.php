@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -17,6 +18,7 @@ use Modules\Ledger\Public\Services\TransactionListQuery;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Dto\SearchRowDto;
 use Modules\Search\Public\Services\SearchQuery;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
@@ -313,6 +315,8 @@ final class TransactionsList extends Component
         DatabaseManager $db,
         TaxTagQuery $taxTagQuery,
         SearchQuery $searchQuery,
+        SensitiveColumnCodec $codec,
+        Session $session,
     ): View {
         $user = $currentUser->user();
 
@@ -386,7 +390,7 @@ final class TransactionsList extends Component
             $accIds = array_map(static fn (array $r): int => $r['id'], $this->accumulatedRows);
             $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
             $taxState = $this->taxTagStateFor($stateIds, $taxTagQuery, $currentUser);
-            $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $user->id);
+            $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $user->id, $codec, $session);
             $clearedState = $this->clearedStatusFor($stateIds, $db, $currentUser);
 
             foreach ($this->accumulatedRows as &$accRow) {
@@ -485,7 +489,7 @@ final class TransactionsList extends Component
         $accIds = array_map(static fn (array $r): int => $r['id'], $this->accumulatedRows);
         $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
         $taxState = $this->taxTagStateFor($stateIds, $taxTagQuery, $currentUser);
-        $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $user->id);
+        $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $user->id, $codec, $session);
         $clearedState = $this->clearedStatusFor($stateIds, $db, $currentUser);
         foreach ($this->accumulatedRows as &$accRow) {
             $accRowId = $accRow['id'];
@@ -664,7 +668,7 @@ final class TransactionsList extends Component
      * @param  array<int>  $transactionIds
      * @return array<int, list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>>
      */
-    private function legsFor(array $transactionIds, DatabaseManager $db, TaxTagQuery $taxTagQuery, int $userId): array
+    private function legsFor(array $transactionIds, DatabaseManager $db, TaxTagQuery $taxTagQuery, int $userId, SensitiveColumnCodec $codec, Session $session): array
     {
         if ($transactionIds === []) {
             return [];
@@ -695,13 +699,19 @@ final class TransactionsList extends Component
             $legId = is_numeric($row->id) ? (int) $row->id : 0;
             $legTag = $legTaxState[$txId.':'.$legId] ?? null;
 
+            // CRYPT-01 (D-02b) read-side decrypt — pass-through no-op
+            // when encryption is not enabled for this user.
+            $legNote = is_string($row->note)
+                ? $codec->decryptValue('transaction_splits', 'note', $row->note, $userId, $session)['value']
+                : null;
+
             $map[$txId] ??= [];
             $map[$txId][] = [
                 'id' => $legId,
                 'categoryName' => is_string($row->category_name) ? $row->category_name : '—',
                 'amountMinor' => is_numeric($row->settled_amount_minor) ? (int) $row->settled_amount_minor : 0,
                 'amountCurrency' => is_string($row->settled_currency) ? $row->settled_currency : 'EUR',
-                'note' => is_string($row->note) ? $row->note : null,
+                'note' => $legNote,
                 'taxTagged' => $legTag !== null,
                 'taxCategoryShortName' => $legTag->deductionCategoryShortName ?? null,
             ];

@@ -6,6 +6,7 @@ namespace Modules\Ledger\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -30,6 +31,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\SplittableTypes;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
@@ -149,7 +151,7 @@ final class TransactionDetail extends Component
     /** Index into `$legs` the user attempted to remove while only 2 remained (§8.2). */
     public ?int $pendingRemoveIndex = null;
 
-    public function mount(int $transactionId, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery): void
+    public function mount(int $transactionId, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session): void
     {
         $this->transactionId = $transactionId;
         $userId = $currentUser->user()->id;
@@ -175,9 +177,15 @@ final class TransactionDetail extends Component
         }
 
         // Load the existing note into the Livewire wire:model property.
-        $this->note = is_string($row->note) ? $row->note : '';
+        // CRYPT-01 (D-02b) read-side decrypt — the note projection column
+        // is ciphertext at rest once encryption is enabled (op-log
+        // write-back re-encrypts it via the same Sync Public codec, Plan
+        // 03); pass-through no-op otherwise.
+        $this->note = is_string($row->note)
+            ? $codec->decryptValue('transactions', 'note', $row->note, $userId, $session)['value']
+            : '';
 
-        $this->loadSplitState($currentUser, $db, $taxTagQuery);
+        $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session);
     }
 
     /**
@@ -833,7 +841,7 @@ final class TransactionDetail extends Component
      * defensively inside `SaveTransactionSplit`, Plan 01) or carries no
      * category, then delegates to the sole mutator.
      */
-    public function saveSplit(SavesTransactionSplit $splitter, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery): void
+    public function saveSplit(SavesTransactionSplit $splitter, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session): void
     {
         $this->splitError = null;
         $userId = $currentUser->user()->id;
@@ -902,7 +910,7 @@ final class TransactionDetail extends Component
 
         // Reload persisted legs (real DB ids) + tax state so subsequent
         // edits/removals correctly diff against the now-saved rows.
-        $this->loadSplitState($currentUser, $db, $taxTagQuery);
+        $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session);
         $this->dispatch('toast', message: 'Split saved');
     }
 
@@ -971,7 +979,7 @@ final class TransactionDetail extends Component
      * mount and after every successful `saveSplit()` so leg ids stay in
      * sync with the DB for subsequent edit diffs.
      */
-    private function loadSplitState(CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery): void
+    private function loadSplitState(CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session): void
     {
         $userId = $currentUser->user()->id;
 
@@ -997,11 +1005,17 @@ final class TransactionDetail extends Component
             $legId = is_numeric($row->id) ? (int) $row->id : 0;
             $key = $this->transactionId.':'.$legId;
 
+            // CRYPT-01 (D-02b) read-side decrypt — pass-through no-op
+            // when encryption is not enabled for this user.
+            $legNote = is_string($row->note)
+                ? $codec->decryptValue('transaction_splits', 'note', $row->note, $userId, $session)['value']
+                : '';
+
             $legs[] = [
                 'id' => $legId,
                 'categoryId' => is_numeric($row->category_id) ? (int) $row->category_id : null,
                 'amount' => self::formatAbsAmount(is_numeric($row->settled_amount_minor) ? abs((int) $row->settled_amount_minor) : 0),
-                'note' => is_string($row->note) ? $row->note : '',
+                'note' => $legNote,
                 'tax' => isset($taxStates[$key]),
             ];
         }
@@ -1151,7 +1165,11 @@ final class TransactionDetail extends Component
         TaxTagQuery $taxTagQuery,
         DatabaseManager $db,
         CategoryOptionsQuery $categoryOptions,
+        SensitiveColumnCodec $codec,
+        Session $session,
     ): View {
+        $userId = $currentUser->user()->id;
+
         // Eager-load the resolved counterparty + category so the Blade can
         // render both the click-through anchor to counterparties.profile
         // and the split section's empty-state category name without a
@@ -1162,8 +1180,23 @@ final class TransactionDetail extends Component
         $transaction = Transaction::query()
             ->with(['counterparty', 'category'])
             ->where('id', $this->transactionId)
-            ->where('user_id', $currentUser->user()->id)
+            ->where('user_id', $userId)
             ->firstOrFail();
+
+        // CRYPT-01 (D-02b) read-side decrypt — the headline
+        // counterparty_name is ciphertext at rest once encryption is
+        // enabled; pass-through no-op otherwise. Assigned back onto the
+        // in-memory model attribute only (never re-saved), so the Blade
+        // ($transaction->counterparty_name) renders plaintext.
+        if (is_string($transaction->counterparty_name)) {
+            $transaction->counterparty_name = $codec->decryptValue(
+                'transactions',
+                'counterparty_name',
+                $transaction->counterparty_name,
+                $userId,
+                $session,
+            )['value'];
+        }
 
         // Split editor gate (Req 6, D-07/D-08): offered for any non-transfer
         // type. The category options list is only loaded when needed —
@@ -1198,11 +1231,23 @@ final class TransactionDetail extends Component
 
         // Load the user's counterparties for the reassignment picker.
         // Only user-owned rows — WHERE user_id is mandatory (Pitfall 4).
+        // CRYPT-01 (D-02b) read-side decrypt: display_name is ciphertext
+        // at rest once encryption is enabled, so the DB-level ORDER BY
+        // above would sort by ciphertext — decrypt first, then re-sort in
+        // PHP so the dropdown stays alphabetical either way.
         $counterparties = $db->connection()
             ->table('counterparties')
-            ->where('user_id', $currentUser->user()->id)
-            ->orderBy('display_name')
-            ->get(['id', 'display_name', 'slug']);
+            ->where('user_id', $userId)
+            ->get(['id', 'display_name', 'slug'])
+            ->map(function (\stdClass $row) use ($codec, $userId, $session): \stdClass {
+                if (is_string($row->display_name)) {
+                    $row->display_name = $codec->decryptValue('counterparties', 'display_name', $row->display_name, $userId, $session)['value'];
+                }
+
+                return $row;
+            })
+            ->sortBy('display_name')
+            ->values();
 
         $view = $views->make('ledger::livewire.transaction-detail', [
             'transaction' => $transaction,
