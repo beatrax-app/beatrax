@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
@@ -15,6 +16,7 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Dto\RecordResult;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
  * Persists a batch of canonical transactions in bounded, independently-
@@ -61,6 +63,8 @@ final class RecordTransactions implements RecordsTransactions
         private readonly FingerprintComposer $fingerprints,
         private readonly Clock $clock,
         private readonly Dispatcher $events,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     public function __invoke(iterable $canonical, User $user): RecordResult
@@ -107,6 +111,11 @@ final class RecordTransactions implements RecordsTransactions
                     throw new InvalidArgumentException("Invalid transaction type: '{$row->type}'");
                 }
 
+                // CRITICAL (CRYPT-01 direct-write hook, 14-RESEARCH Pitfall 2):
+                // the de-dup fingerprint is composed from the plaintext DTO
+                // ($row), NEVER from the (possibly-encrypted) $attrs below —
+                // re-import idempotency must be identical whether or not
+                // encryption is enabled.
                 $fingerprint = $this->fingerprints->compose($row);
                 $attrs = $row->toAttributes() + [
                     'fingerprint' => $fingerprint,
@@ -114,6 +123,15 @@ final class RecordTransactions implements RecordsTransactions
                     'created_at' => $now,
                     'updated_at' => $now,
                 ];
+
+                // Encrypt the D-02b sensitive content columns (description,
+                // counterparty_name, counterparty_iban, raw_payload) under
+                // the current GDK epoch before the row ever touches disk.
+                // Pass-through (no-op) when encryption is not enabled for
+                // this user. amount_minor/settled_amount_minor/fx_rate_used
+                // are never touched — D-02a excludes them so SQL SUM()/
+                // GROUP BY keeps working (Pitfall 1).
+                $attrs = $this->codec->encryptAttrs('transactions', $attrs, $row->userId, $this->session);
 
                 $effected = Transaction::insertOrIgnore($attrs);
                 if ($effected === 1) {

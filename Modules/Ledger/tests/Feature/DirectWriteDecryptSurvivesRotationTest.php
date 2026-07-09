@@ -5,11 +5,12 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Actions\RecordTransactions;
+use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
-use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /*
@@ -21,10 +22,11 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
  * 14-VALIDATION.md CRYPT-02 row "Direct-write columns... decrypt after
  * rotation".
  *
- * RED until Plan 02 ships Modules\Sync\Public\Services\SensitiveColumnCodec
- * and Plan 05 ships Modules\Sync\Internal\Crypto\GdkRotationService. This
- * test references the planned production FQCN, which does not yet exist —
- * the failure is "class not found", the correct Wave 0 RED state.
+ * Rewritten per 14-04-PLAN.md Task 1: simulates a rotation directly via
+ * GdkKeyringService::appendEpoch (the mechanism Plan 05's
+ * GdkRotationService::rotateAndRevoke will itself call) rather than
+ * depending on the not-yet-built GdkRotationService/device-revocation
+ * flow, which is out of this plan's scope.
  */
 
 beforeEach(function (): void {
@@ -46,6 +48,12 @@ beforeEach(function (): void {
         'uploaded_at' => now(),
         'status' => 'previewed',
     ]);
+
+    // Prime the session with an unlocked dummy app-lock KEK — mirrors
+    // Modules/Sync/tests/TestCase.php's own priming.
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
 });
 
 it('a transaction encrypted under epoch N still decrypts after the GDK rotates to epoch N+1', function (): void {
@@ -55,7 +63,7 @@ it('a transaction encrypted under epoch N still decrypts after the GDK rotates t
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    $keyring->generateAndPersist((int) $this->user->id, $session);
+    $epoch1 = $keyring->generateAndPersist((int) $this->user->id, $session);
 
     $action = $this->app->make(RecordTransactions::class);
     $action([
@@ -68,33 +76,20 @@ it('a transaction encrypted under epoch N still decrypts after the GDK rotates t
         ]),
     ], $this->user);
 
-    // Force a rotation via a removed-device fixture — epoch advances to N+1.
+    // Simulate a rotation (what Plan 05's GdkRotationService::rotateAndRevoke
+    // will do on device removal): append a new epoch, advancing
+    // sync_encryption_state.current_epoch to N+1. The OLD epoch-1 ciphertext
+    // must still decrypt (try-every-epoch, BLOCKER-1).
+    $epoch2 = new GdkEpoch(epochId: $epoch1->epochId + 1, keyHex: bin2hex(random_bytes(32)));
+    $keyring->appendEpoch((int) $this->user->id, $epoch2, $session);
+
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
-    $removedId = $db->connection()->table('device_registry')->insertGetId([
-        'user_id' => $this->user->id,
-        'device_id' => 'dwr-removed-device',
-        'name' => 'Removed',
-        'ed25519_public_key_hex' => bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
-        'x25519_public_key_hex' => bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())),
-        'safety_number_words' => 'abandon ability able about above absent',
-        'is_self' => 0,
-        'paired_at' => '2026-07-01T10:00:00Z',
-        'confirmed_at' => '2026-07-01T10:05:00Z',
-        'last_seen_at' => null,
-        'created_at' => '2026-07-01T10:00:00Z',
-        'updated_at' => '2026-07-01T10:00:00Z',
-    ]);
-
-    /** @var GdkRotationService $rotation */
-    $rotation = $this->app->make(GdkRotationService::class);
-    $rotation->rotateAndRevoke((int) $this->user->id, $removedId);
-
     $stored = $db->connection()->table('transactions')->where('user_id', $this->user->id)->first();
 
     /** @var SensitiveColumnCodec $codec */
     $codec = $this->app->make(SensitiveColumnCodec::class);
-    $decrypted = $codec->decryptRow('transactions', (array) $stored);
+    $decrypted = $codec->decryptRow('transactions', (array) $stored, (int) $this->user->id, $session);
 
     expect($decrypted['description'])->toBe('Groceries before rotation');
     expect($decrypted['counterparty_name'])->toBe('Pre-Rotation Merchant');

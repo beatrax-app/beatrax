@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Actions\RecordTransactions;
@@ -17,11 +18,6 @@ use Modules\Sync\Internal\Crypto\GdkKeyringService;
  * ≥11 query classes depend on SQL-side aggregation over amount_minor /
  * settled_amount_minor; SQLite cannot aggregate ciphertext).
  * 14-VALIDATION.md CRYPT-01 row 4.
- *
- * RED until Plan 02 ships Modules\Sync\Internal\Crypto\GdkKeyringService
- * (the encryption-enabled precondition this test exercises). This test
- * references the planned production FQCN, which does not yet exist — the
- * failure is "class not found", the correct Wave 0 RED state.
  */
 
 beforeEach(function (): void {
@@ -43,6 +39,12 @@ beforeEach(function (): void {
         'uploaded_at' => now(),
         'status' => 'previewed',
     ]);
+
+    // Prime the session with an unlocked dummy app-lock KEK — mirrors
+    // Modules/Sync/tests/TestCase.php's own priming.
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
 });
 
 it('sums amount_minor correctly via raw SQL after encryption is enabled for the user', function (): void {

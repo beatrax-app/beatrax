@@ -3,10 +3,13 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Actions\RecordTransactions;
+use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /*
@@ -18,11 +21,10 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
  * the op-log entirely per SYNC-03 — this is a SEPARATE hook from Plan 03's
  * op-log encryption).
  *
- * RED until Plan 04 wires the encrypt-on-write hook into
- * RecordTransactions::persistChunk() and Plan 02 ships
- * Modules\Sync\Public\Services\SensitiveColumnCodec. These tests reference
- * the planned production FQCN, which does not yet exist — the failure is
- * "class not found", the correct Wave 0 RED state.
+ * Encryption must be explicitly turned on for the user (GdkKeyringService::
+ * generateAndPersist) before importing — RecordTransactions::persistChunk
+ * is a pass-through (plaintext at rest) when encryption is not enabled,
+ * exactly like every other SensitiveColumnCodec consumer.
  */
 
 beforeEach(function (): void {
@@ -44,6 +46,18 @@ beforeEach(function (): void {
         'uploaded_at' => now(),
         'status' => 'previewed',
     ]);
+
+    // Prime the session with an unlocked dummy app-lock KEK — mirrors
+    // Modules/Sync/tests/TestCase.php's own priming. Without this,
+    // GdkKeyringService::generateAndPersist() below hard-throws
+    // LogicException (D-02 weak-key-window guard).
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = $this->app->make(GdkKeyringService::class);
+    $keyring->generateAndPersist((int) $this->user->id, $session);
 });
 
 it('encrypts description/counterparty_name/counterparty_iban at rest and decrypts back to the original plaintext', function (): void {
@@ -71,7 +85,9 @@ it('encrypts description/counterparty_name/counterparty_iban at rest and decrypt
 
     /** @var SensitiveColumnCodec $codec */
     $codec = $this->app->make(SensitiveColumnCodec::class);
-    $decrypted = $codec->decryptRow('transactions', (array) $stored);
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    $decrypted = $codec->decryptRow('transactions', (array) $stored, (int) $this->user->id, $session);
 
     expect($decrypted['description'])->toBe('Albert Heijn weekly groceries');
     expect($decrypted['counterparty_name'])->toBe('Albert Heijn');
@@ -104,5 +120,7 @@ it('leaves amount_minor/settled_amount_minor plaintext (D-02a) while the content
     // this file cannot go accidentally green before the codec ships.
     /** @var SensitiveColumnCodec $codec */
     $codec = $this->app->make(SensitiveColumnCodec::class);
-    expect($codec->decryptRow('transactions', (array) $stored)['description'])->toBe('Plaintext-amount fixture');
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    expect($codec->decryptRow('transactions', (array) $stored, (int) $this->user->id, $session)['description'])->toBe('Plaintext-amount fixture');
 });
