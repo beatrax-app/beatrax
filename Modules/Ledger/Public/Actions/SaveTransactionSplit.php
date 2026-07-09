@@ -6,6 +6,7 @@ namespace Modules\Ledger\Public\Actions;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
@@ -17,6 +18,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\SplittableTypes;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -44,6 +46,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Dispatcher $events,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -177,29 +181,41 @@ final class SaveTransactionSplit implements SavesTransactionSplit
 
                 if ($legId !== null && in_array($legId, $existingIds, true)) {
                     // Matched by id → UPDATE in place, preserving the PK.
+                    // WR-04: canonicalise empty note to NULL on write so
+                    // '' and null are never distinct stored values.
+                    $normalizedNote = self::normalizeNote($leg['note']);
                     $fields = [
                         'category_id' => $leg['category_id'],
                         'settled_amount_minor' => $leg['settled_amount_minor'],
-                        // WR-04: canonicalise empty note to NULL on write so
-                        // '' and null are never distinct stored values.
-                        'note' => self::normalizeNote($leg['note']),
+                        'note' => $normalizedNote,
                         'sort_order' => $index,
                     ];
+
+                    // D-07 at-rest encrypt hook (CR-02): the DB row stores
+                    // ciphertext; $fields (plaintext) stays the dirty-diff
+                    // and dispatched-event source of truth so the op-log's
+                    // own encrypt-on-write never double-encrypts.
+                    $dbFields = $fields;
+                    $dbFields['note'] = $this->encryptNote($normalizedNote, $user->id);
 
                     $this->db->connection()
                         ->table('transaction_splits')
                         ->where('id', $legId)
                         ->where('user_id', $user->id)
-                        ->update($fields);
+                        ->update($dbFields);
 
                     // Dirty-field diff (T-13.1-09 / D-12): only fields whose
                     // value actually changed relative to the pre-write row
                     // are captured. See the comment above existingRows.
+                    // The stored note is ciphertext under an encrypted user
+                    // (CR-02) — decrypt before diffing so the comparison
+                    // runs on plaintext, never on a fresh random-nonce
+                    // ciphertext that would never equal the old one.
                     $old = $existingRows->get($legId);
                     $oldFields = $old !== null ? [
                         'category_id' => $old->category_id ?? null,
                         'settled_amount_minor' => $old->settled_amount_minor ?? null,
-                        'note' => $old->note ?? null,
+                        'note' => $this->decryptNote($old->note ?? null, $user->id),
                         'sort_order' => $old->sort_order ?? null,
                     ] : [];
 
@@ -238,7 +254,13 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                         'updated_at' => $now->toDateTimeString(),
                     ];
 
-                    $newId = self::toInt($this->db->connection()->table('transaction_splits')->insertGetId($fields));
+                    // D-07 at-rest encrypt hook (CR-02): $fields (plaintext)
+                    // stays the dispatched-event source of truth; only the DB
+                    // row gets the ciphertext note.
+                    $dbFields = $fields;
+                    $dbFields['note'] = $this->encryptNote($fields['note'], $user->id);
+
+                    $newId = self::toInt($this->db->connection()->table('transaction_splits')->insertGetId($dbFields));
 
                     $dispatchAfterCommit[] = new TransactionSplitMutated(
                         splitId: $newId,
@@ -398,5 +420,19 @@ final class SaveTransactionSplit implements SavesTransactionSplit
     private static function normalizeNote(?string $note): ?string
     {
         return ($note === null || $note === '') ? null : $note;
+    }
+
+    private function encryptNote(?string $note, int $userId): ?string
+    {
+        return is_string($note)
+            ? $this->codec->encryptValue('transaction_splits', 'note', $note, $userId, $this->session)
+            : $note;
+    }
+
+    private function decryptNote(mixed $stored, int $userId): ?string
+    {
+        return is_string($stored)
+            ? $this->codec->decryptValue('transaction_splits', 'note', $stored, $userId, $this->session)['value']
+            : null;
     }
 }
