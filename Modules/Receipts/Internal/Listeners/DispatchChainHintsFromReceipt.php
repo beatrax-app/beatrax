@@ -9,6 +9,7 @@ use Modules\Import\Public\Events\TransactionImported;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
 use Modules\Receipts\Public\Events\ChainHintDetected;
+use Psr\Log\LoggerInterface;
 
 /**
  * Bridges the canonical-write event (`TransactionImported`, dispatched
@@ -60,13 +61,30 @@ use Modules\Receipts\Public\Events\ChainHintDetected;
  *           listener does NOT live in `Receipts/Public/` because it
  *           has no caller outside this module; only the framework
  *           dispatches it.
+ *
+ * D-05/RESEARCH A3 trigger-context finding: `TransactionImported` is
+ * dispatched synchronously from inside `RecordTransactions::persistChunk()`,
+ * so this listener always runs in the EXACT SAME process/call-frame as the
+ * write it reacts to — whatever KEK availability applied when
+ * `raw_payload` was encrypted (or pass-through-plaintext) at write time is
+ * identical at this read, so the `EncryptedJsonCast` decrypt below can
+ * never mismatch its own write. `ProcessFetchedInboxMessagesJob` and
+ * `ScanInboxDropFolderJob` (both `ShouldQueue`) DO drive this path from a
+ * queue-worker daemon with no live app-lock session — a residual, separate
+ * gap (daemon writes bypass mandatory encryption for receipt-sourced rows)
+ * tracked outside this listener's scope. `is_array($rawPayload)` failing
+ * despite a non-empty raw stored column is logged rather than silently
+ * dropped.
  */
 final class DispatchChainHintsFromReceipt
 {
     /** Wire-format keys that may carry receipt chain hints. */
     private const RECEIPT_FORMATS = ['eml', 'mbox'];
 
-    public function __construct(private readonly Dispatcher $events) {}
+    public function __construct(
+        private readonly Dispatcher $events,
+        private readonly LoggerInterface $logger,
+    ) {}
 
     public function handle(TransactionImported $event): void
     {
@@ -78,6 +96,14 @@ final class DispatchChainHintsFromReceipt
 
         $rawPayload = $transaction->raw_payload;
         if (! is_array($rawPayload)) {
+            $rawStored = $transaction->getRawOriginal('raw_payload');
+            if (is_string($rawStored) && $rawStored !== '') {
+                $this->logger->warning(
+                    'DispatchChainHintsFromReceipt: raw_payload present but failed to decrypt/decode — chain hints skipped.',
+                    ['transaction_id' => $transaction->id],
+                );
+            }
+
             return;
         }
 

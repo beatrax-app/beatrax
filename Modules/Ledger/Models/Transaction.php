@@ -13,6 +13,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Internal\Casts\MoneyMinorCast;
+use Modules\Sync\Public\Casts\EncryptedJsonCast;
 
 /**
  * The canonical row in the ledger. One row per posted bank/card movement,
@@ -109,7 +110,7 @@ final class Transaction extends Model
             'normalization_version' => 'integer',
             'fingerprint_version' => 'integer',
             'source_row_index' => 'integer',
-            'raw_payload' => 'array',
+            'raw_payload' => EncryptedJsonCast::class,
             'auto_category_provenance' => 'array',
             'enriched_from' => AsArrayObject::class,
             'payment_type' => PaymentType::class,

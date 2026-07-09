@@ -59,6 +59,7 @@ abstract class TestCase extends RootTestCase
             'importRunId' => 1,
             'sourceRowIndex' => 0,
             'sourceRef' => 'ASN-REF-001',
+            'rawPayload' => null,
         ];
 
         $merged = array_merge($defaults, $overrides);
@@ -85,6 +86,7 @@ abstract class TestCase extends RootTestCase
             importRunId: $merged['importRunId'],
             sourceRowIndex: $merged['sourceRowIndex'],
             sourceRef: $merged['sourceRef'],
+            rawPayload: $merged['rawPayload'],
         );
     }
 
