@@ -72,6 +72,28 @@ it('returns false (never throws) when the stored ciphertext is tampered', functi
     expect($crypto->decrypt($tampered, $rawGdkKey, $ad))->toBeFalse();
 });
 
+it('returns false (never throws) for non-base64 or too-short stored input', function (): void {
+    /** @var OpLogFieldCrypto $crypto */
+    $crypto = $this->app->make(OpLogFieldCrypto::class);
+
+    $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+    $ad = 'transactions:1:note:1';
+
+    expect($crypto->decrypt('not valid base64!!', $rawGdkKey, $ad))->toBeFalse();
+    expect($crypto->decrypt(base64_encode('short'), $rawGdkKey, $ad))->toBeFalse();
+});
+
+it('throws InvalidArgumentException for an empty rawGdkKey before any sodium call', function (): void {
+    /** @var OpLogFieldCrypto $crypto */
+    $crypto = $this->app->make(OpLogFieldCrypto::class);
+
+    expect(fn () => $crypto->encrypt('a private note', '', 'transactions:1:note:1'))
+        ->toThrow(InvalidArgumentException::class);
+
+    expect(fn () => $crypto->decrypt('anything', '', 'transactions:1:note:1'))
+        ->toThrow(InvalidArgumentException::class);
+});
+
 it('returns false when the epoch id bound as associated data is relabeled (tamper-resistant epoch tag)', function (): void {
     /** @var OpLogFieldCrypto $crypto */
     $crypto = $this->app->make(OpLogFieldCrypto::class);
