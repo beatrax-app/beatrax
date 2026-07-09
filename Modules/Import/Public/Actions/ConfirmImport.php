@@ -276,11 +276,13 @@ final class ConfirmImport implements ConfirmsImports
                 // gate as the chain resolver above (inserts /
                 // enrichments only) and the same outside-the-
                 // transaction position to avoid the stale-read
-                // pitfall. The job's per-user
-                // ShouldBeUniqueUntilProcessing lock collapses this
-                // dispatch with a same-user re-detect click on
-                // `/recurring` and with the daily scheduled sweep
-                // into a single queued pass.
+                // pitfall. Both dispatchers now run their job via
+                // dispatchSync (14.1-04, CRYPT-01) so the decrypt
+                // work happens in-process with the KEK available;
+                // the queue-only ShouldBeUniqueUntilProcessing lock
+                // no longer collapses this with a same-user
+                // re-detect click on `/recurring` — both dispatches
+                // now run in full, redundantly but idempotently.
                 $this->recurringDispatcher->dispatchForUser($user->id);
             }
         }

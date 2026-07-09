@@ -125,10 +125,19 @@ final class RulesPage extends Component
      * ALWAYS reads the target user id from CurrentUser — never from a
      * client-suppliable parameter — so a tampered wire payload has no
      * way to trigger a re-apply for a foreign user (T-13.4-26).
+     *
+     * Runs via `dispatchSync` (14.1-04, CRYPT-01): `ReapplyRulesJob`
+     * decrypts `counterparty_name`/`description` to text-match rules,
+     * and the decryption KEK is only reachable through the live,
+     * unlocked Session on THIS request. Queuing it would hand the job
+     * to the KEK-less `queue:work` daemon, which decrypts to empty and
+     * silently classifies nothing (RESEARCH Pitfall 1). Running it
+     * in-process keeps the KEK in-process too — never serialized onto
+     * the `jobs` table.
      */
     public function triggerReapply(CurrentUser $currentUser, Dispatcher $bus): void
     {
-        $bus->dispatch(new ReapplyRulesJob($currentUser->user()->id));
+        $bus->dispatchSync(new ReapplyRulesJob($currentUser->user()->id));
         $this->reapplyDispatched = true;
         $this->flashMessage = 'Re-applying rules to your history…';
     }

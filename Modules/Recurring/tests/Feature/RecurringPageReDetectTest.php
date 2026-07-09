@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Recurring\Internal\Http\Livewire\RecurringPage;
@@ -11,13 +11,21 @@ use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 
 /*
  * "Re-detect now" button on /recurring. Dispatches the same
- * DetectRecurringSeriesJob the daily sweep dispatches; the job's
- * ShouldBeUniqueUntilProcessing per-user lock makes spam-clicks
- * collapse into a single queued pass at the worker boundary.
+ * DetectRecurringSeriesJob the daily sweep dispatches, but via
+ * dispatchSync (14.1-04, CRYPT-01): the KEK needed to decrypt
+ * counterparty_iban for the detectors is only reachable through the
+ * live, unlocked Session on this request, so the job now runs
+ * in-process rather than being queued. dispatchSync bypasses the
+ * queue-push boundary entirely, so the job's per-user
+ * ShouldBeUniqueUntilProcessing lock (queue-only) no longer collapses
+ * spam-clicks — each click now runs a full, idempotent, redundant
+ * pass instead.
  *
  * The arch invariant `noSynchronousDetectionInRequestLifecycle`
  * forbids the SFC from importing a `SeriesDetector` directly — only
- * the Job class is allowed at the HTTP layer.
+ * the Job class is allowed at the HTTP layer. This is unaffected by
+ * the dispatchSync change: the SFC still only references
+ * `DetectRecurringSeriesJob`, never `SeriesDetector`.
  */
 
 function rprdUser(string $username): User
@@ -39,31 +47,31 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('dispatches DetectRecurringSeriesJob with the caller`s userId (re-detect-dispatches-job)', function (): void {
-    Queue::fake();
+it('dispatches DetectRecurringSeriesJob synchronously with the caller`s userId (re-detect-dispatches-job)', function (): void {
+    Bus::fake();
 
     Livewire::actingAs($this->user)
         ->test(RecurringPage::class)
         ->call('reDetect');
 
-    Queue::assertPushed(
+    Bus::assertDispatchedSync(
         DetectRecurringSeriesJob::class,
         fn (DetectRecurringSeriesJob $job): bool => $job->userId === $this->user->id,
     );
 })->group('re-detect-dispatches-job');
 
-it('records both pushes for spam-clicks; worker-level ShouldBeUniqueUntilProcessing collapses them at execution (re-detect-spam-click-collapses)', function (): void {
-    Queue::fake();
+it('records both sync dispatches for spam-clicks; the queue-only unique lock no longer collapses them (re-detect-spam-click-collapses)', function (): void {
+    Bus::fake();
 
     $component = Livewire::actingAs($this->user)->test(RecurringPage::class);
     $component->call('reDetect');
     $component->call('reDetect');
 
-    Queue::assertPushed(DetectRecurringSeriesJob::class, 2);
+    Bus::assertDispatchedSync(DetectRecurringSeriesJob::class, 2);
 })->group('re-detect-spam-click-collapses');
 
 it('fires a `Detecting recurring series…` toast on dispatch (re-detect-toast-fires)', function (): void {
-    Queue::fake();
+    Bus::fake();
 
     $component = Livewire::actingAs($this->user)
         ->test(RecurringPage::class)
