@@ -126,18 +126,24 @@ class EncryptionMigrationService
      * uses `EncryptionMigrationSupport::isSensitive()` (the Public
      * passthrough to the real registry) as ITS source of truth instead.
      *
-     * `tax_transaction_tags.note`/`transaction_splits.note` are
-     * DELIBERATELY excluded from this projection-column list: 14-04-SUMMARY
-     * already flagged that neither has a write-side encrypt hook (both are
-     * written via raw DB calls with no `SensitiveColumnCodec` hook), so a
-     * one-time migration of their EXISTING rows would give a false sense of
-     * completeness while every future write stays plaintext — that gap is
-     * out of THIS plan's declared scope (Core service + rollback test
-     * only) and stays flagged for a future plan/the phase-level review.
+     * `tax_transaction_tags.note`/`transaction_splits.note` ARE covered here
+     * (D-08, 14.1-03-PLAN.md): 14.1-02 landed the write-side encrypt hooks
+     * for both columns (`Modules\Tax\Public\Actions\TagTransaction`,
+     * `Modules\Ledger\Public\Actions\SaveTransactionSplit`), so a one-time
+     * sweep of their PRE-EXISTING plaintext rows (written before those
+     * hooks landed) is now required for CRYPT-01 to hold for history
+     * retained forever, not just for new writes going forward — the exact
+     * same reasoning this class's own docblock gives for every other
+     * projection column. Both tables carry `user_id`+`note`
+     * (nullable `user_id`, per the multi-user-ready convention), so they
+     * slot into `encryptProjectionTable()`/`captureRows()` unchanged —
+     * no new sweep method was needed, only new entries in this table.
      */
     private const PROJECTION_COLUMNS = [
         'transactions' => ['note', 'description', 'counterparty_name', 'counterparty_iban', 'raw_payload'],
         'counterparties' => ['display_name', 'merchant_name', 'iban'],
+        'tax_transaction_tags' => ['note'],
+        'transaction_splits' => ['note'],
     ];
 
     public function __construct(
@@ -237,6 +243,10 @@ class EncryptionMigrationService
                 $this->encryptOpLogEntries($connection, $userId, $support, $total, $processed);
                 $this->encryptProjectionTable($connection, $userId, 'transactions', $support, $total, $processed);
                 $this->encryptProjectionTable($connection, $userId, 'counterparties', $support, $total, $processed);
+                // D-08 backfill sweep: pre-existing plaintext note rows
+                // written before the 14.1-02 write-side encrypt hooks landed.
+                $this->encryptProjectionTable($connection, $userId, 'tax_transaction_tags', $support, $total, $processed);
+                $this->encryptProjectionTable($connection, $userId, 'transaction_splits', $support, $total, $processed);
 
                 $this->finalizeMigration($connection, $userId);
             });
@@ -387,8 +397,11 @@ class EncryptionMigrationService
 
         $transactions = $connection->table('transactions')->where('user_id', $userId)->count();
         $counterparties = $connection->table('counterparties')->where('user_id', $userId)->count();
+        // D-08 backfill sweep tables.
+        $taxTags = $connection->table('tax_transaction_tags')->where('user_id', $userId)->count();
+        $splits = $connection->table('transaction_splits')->where('user_id', $userId)->count();
 
-        return max(1, $opLog + $transactions + $counterparties);
+        return max(1, $opLog + $transactions + $counterparties + $taxTags + $splits);
     }
 
     private function reportProgress(int $userId, int $processed, int $total): void
@@ -509,6 +522,10 @@ class EncryptionMigrationService
                 ->all(),
             'transactions' => $this->captureRows($connection, 'transactions', $userId),
             'counterparties' => $this->captureRows($connection, 'counterparties', $userId),
+            // D-08 backfill sweep tables — must be in the pre-migration
+            // snapshot too so a restore after a forced failure covers them.
+            'tax_transaction_tags' => $this->captureRows($connection, 'tax_transaction_tags', $userId),
+            'transaction_splits' => $this->captureRows($connection, 'transaction_splits', $userId),
         ];
 
         $json = json_encode($payload, JSON_THROW_ON_ERROR);
@@ -592,7 +609,7 @@ class EncryptionMigrationService
             ]);
         }
 
-        foreach (['transactions', 'counterparties'] as $table) {
+        foreach (['transactions', 'counterparties', 'tax_transaction_tags', 'transaction_splits'] as $table) {
             /** @var list<array<string, mixed>> $rows */
             $rows = is_array($payload[$table] ?? null) ? $payload[$table] : [];
             foreach ($rows as $row) {
