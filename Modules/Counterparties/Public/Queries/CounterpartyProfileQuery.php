@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Public\Queries;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Models\Counterparty;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -34,6 +36,8 @@ final readonly class CounterpartyProfileQuery
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
+        private SensitiveColumnCodec $codec,
+        private Session $session,
     ) {}
 
     /**
@@ -74,13 +78,27 @@ final readonly class CounterpartyProfileQuery
         $firstSeen = $lifetimeTotals !== null ? ($lifetimeTotals->first_seen ?? null) : null;
         $lastSeen = $lifetimeTotals !== null ? ($lifetimeTotals->last_seen ?? null) : null;
 
+        // CRYPT-01 (D-02b) read-side decrypt — display_name/merchant_name/
+        // iban are ciphertext at rest once encryption is enabled for the
+        // user; decryptRow tries every keyring epoch (rotation-safe) and
+        // is a pass-through no-op otherwise.
+        $decrypted = $this->codec->decryptRow('counterparties', [
+            'display_name' => $cp->display_name,
+            'merchant_name' => $cp->merchant_name,
+            'iban' => $cp->iban,
+        ], $user->id, $this->session);
+
+        $displayName = $decrypted['display_name'];
+        $iban = $decrypted['iban'];
+        $merchantName = $decrypted['merchant_name'];
+
         return new CounterpartyProfileDto(
             id: $cpId,
             slug: $cp->slug,
-            displayName: $cp->display_name,
+            displayName: is_string($displayName) ? $displayName : $cp->display_name,
             type: $cp->type,
-            iban: $cp->iban,
-            merchantName: $cp->merchant_name,
+            iban: is_string($iban) ? $iban : null,
+            merchantName: is_string($merchantName) ? $merchantName : null,
             total12mMinor: $total12m,
             transactionCount: $txCount,
             firstSeenDate: is_string($firstSeen) ? substr($firstSeen, 0, 10) : null,
@@ -107,9 +125,11 @@ final readonly class CounterpartyProfileQuery
             return null;
         }
 
+        $displayName = $this->codec->decryptValue('counterparties', 'display_name', $cp->display_name, $user->id, $this->session)['value'];
+
         return [
             'slug' => $cp->slug,
-            'displayName' => $cp->display_name,
+            'displayName' => $displayName,
             'type' => $cp->type,
         ];
     }
@@ -147,9 +167,12 @@ final readonly class CounterpartyProfileQuery
             if ($id <= 0) {
                 continue;
             }
+            $displayName = is_string($row->display_name)
+                ? $this->codec->decryptValue('counterparties', 'display_name', $row->display_name, $user->id, $this->session)['value']
+                : '';
             $map[$id] = [
                 'slug' => is_string($row->slug) ? $row->slug : '',
-                'displayName' => is_string($row->display_name) ? $row->display_name : '',
+                'displayName' => $displayName,
                 'type' => is_string($row->type) ? $row->type : '',
             ];
         }
@@ -203,6 +226,8 @@ final readonly class CounterpartyProfileQuery
      */
     public function recentActivity(Counterparty $cp, int $limit = 10): Collection
     {
+        $userId = (int) $cp->user_id;
+
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $cp->user_id)
             ->where('counterparty_id', $cp->id)
@@ -211,7 +236,17 @@ final readonly class CounterpartyProfileQuery
             ->limit($limit)
             ->get(['id', 'posted_at', 'description', 'amount_minor', 'currency']);
 
-        return new Collection($rows->all());
+        // CRYPT-01 (D-02b) read-side decrypt — description is ciphertext
+        // at rest once encryption is enabled; pass-through no-op otherwise.
+        $decrypted = $rows->map(function (stdClass $row) use ($userId): stdClass {
+            if (is_string($row->description)) {
+                $row->description = $this->codec->decryptValue('transactions', 'description', $row->description, $userId, $this->session)['value'];
+            }
+
+            return $row;
+        });
+
+        return new Collection($decrypted->all());
     }
 
     /**
