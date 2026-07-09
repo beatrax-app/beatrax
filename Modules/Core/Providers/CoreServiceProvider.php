@@ -29,6 +29,7 @@ use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\CurrentUserService;
+use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\NavCountsService;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Services\SystemAlertQuery;
@@ -66,6 +67,13 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(UserDataPathService::class);
         $this->app->singleton(NavCountsService::class);
         $this->app->singleton(RestoreEncryptedBackup::class);
+
+        // D-09: the enable-time backup-first atomic encryption migration
+        // (CRYPT-01, Phase 14 Plan 06). Depends on Modules\Sync\Internal\Crypto
+        // singletons (GdkKeyringService/OpLogFieldCrypto) already registered
+        // by SyncServiceProvider::register() — binding order across module
+        // providers does not matter since container resolution is lazy.
+        $this->app->singleton(EncryptionMigrationService::class);
 
         if (! class_exists(User::class, false)) {
             class_alias(CoreUser::class, User::class);
