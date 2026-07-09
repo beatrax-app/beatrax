@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal\Http\Livewire;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -18,6 +19,7 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -116,6 +118,8 @@ final class ChainDrawer extends Component
         ChainLinkQuery $query,
         DatabaseManager $db,
         ViewFactory $views,
+        SensitiveColumnCodec $codec,
+        Session $session,
     ): View {
         if ($this->transactionId === null) {
             return $views->make('chains::livewire.chain-drawer', [
@@ -125,7 +129,7 @@ final class ChainDrawer extends Component
         }
 
         $tree = $query->forTransaction($this->transactionId, $currentUser->user());
-        $tree = $this->attachFanoutChildren($tree, $db, $currentUser);
+        $tree = $this->attachFanoutChildren($tree, $db, $currentUser, $codec, $session);
 
         return $views->make('chains::livewire.chain-drawer', [
             'tree' => $tree,
@@ -146,7 +150,7 @@ final class ChainDrawer extends Component
      * bulk-settle leg) AND it has outgoing same-user `ics_bulk_settle`
      * legs.
      */
-    private function attachFanoutChildren(ChainTree $tree, DatabaseManager $db, CurrentUser $currentUser): ChainTree
+    private function attachFanoutChildren(ChainTree $tree, DatabaseManager $db, CurrentUser $currentUser, SensitiveColumnCodec $codec, Session $session): ChainTree
     {
         if ($tree->nodes === []) {
             return $tree;
@@ -221,7 +225,7 @@ final class ChainDrawer extends Component
         foreach ($childRows as $row) {
             /** @var stdClass $row */
             $childId = self::toInt($row->id);
-            $childNodes[$childId] = $this->makeChildNode($row, $db, $user);
+            $childNodes[$childId] = $this->makeChildNode($row, $db, $user, $codec, $session);
         }
 
         // Build a set of transaction ids that are children of some
@@ -278,7 +282,7 @@ final class ChainDrawer extends Component
         );
     }
 
-    private function makeChildNode(stdClass $row, DatabaseManager $db, User $user): ChainTreeNode
+    private function makeChildNode(stdClass $row, DatabaseManager $db, User $user, SensitiveColumnCodec $codec, Session $session): ChainTreeNode
     {
         $accountId = self::toInt($row->account_id ?? null);
         $accountName = '';
@@ -305,10 +309,17 @@ final class ChainDrawer extends Component
             ? CarbonImmutable::parse($bookedAtRaw)
             : CarbonImmutable::parse('1970-01-01 00:00:00');
 
+        $storedCounterpartyName = self::toString($row->counterparty_name ?? null);
+        // D-06 (14.1-10) read-side decrypt — pass-through no-op when
+        // encryption is not enabled for this user.
+        $counterpartyName = $storedCounterpartyName === ''
+            ? ''
+            : $codec->decryptValue('transactions', 'counterparty_name', $storedCounterpartyName, $user->id, $session)['value'];
+
         return new ChainTreeNode(
             transactionId: self::toInt($row->id),
             chainLinkId: null,
-            counterpartyName: self::toString($row->counterparty_name ?? null),
+            counterpartyName: $counterpartyName,
             amount: Money::ofMinor($amountMinor, $currency),
             bookedAt: $bookedAt,
             accountName: $accountName,

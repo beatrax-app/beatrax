@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chains\Public\Services;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Chains\Public\Actions\DismissChainLinkHint;
@@ -15,6 +16,7 @@ use Modules\Chains\Public\Dto\ChainTreeNode;
 use Modules\Chains\Public\Dto\SeriesFunderLink;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -62,7 +64,11 @@ final class ChainLinkQuery
      */
     private const AUTO_PROMOTE_THRESHOLD = 3;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
+    ) {}
 
     public function forTransaction(int $transactionId, User $user): ChainTree
     {
@@ -393,6 +399,20 @@ final class ChainLinkQuery
     }
 
     /**
+     * D-06 (14.1-10) read-side decrypt of `transactions.counterparty_name`
+     * — pass-through no-op when encryption is not enabled for this user.
+     */
+    private function decryptCounterpartyName(?string $raw, int $userId): string
+    {
+        $stored = $raw ?? '';
+        if ($stored === '') {
+            return '';
+        }
+
+        return $this->codec->decryptValue('transactions', 'counterparty_name', $stored, $userId, $this->session)['value'];
+    }
+
+    /**
      * D-91 confidence-tier mapping.
      */
     private function confidenceTier(string $state, string $resolver, float $confidence): string
@@ -423,7 +443,7 @@ final class ChainLinkQuery
         return new ChainTreeNode(
             transactionId: self::toInt($row->id),
             chainLinkId: $chainLinkId,
-            counterpartyName: self::toString($row->counterparty_name ?? null),
+            counterpartyName: $this->decryptCounterpartyName(self::toString($row->counterparty_name ?? null), $user->id),
             amount: Money::ofMinor($amountMinor, $currency),
             bookedAt: CarbonImmutable::parse(self::toString($row->booked_at ?? null)),
             accountName: $accountName,
@@ -514,7 +534,7 @@ final class ChainLinkQuery
             ])
             ->first();
         if ($fromRow !== null) {
-            $fromCounterparty = self::toString($fromRow->counterparty_name ?? null);
+            $fromCounterparty = $this->decryptCounterpartyName(self::toString($fromRow->counterparty_name ?? null), $user->id);
             $fromAmountMinor = self::toInt($fromRow->settled_amount_minor ?? null);
             $cur = self::toString($fromRow->settled_currency ?? null);
             $fromCurrency = $cur !== '' ? $cur : 'EUR';
@@ -544,7 +564,7 @@ final class ChainLinkQuery
                 ])
                 ->first();
             if ($toRow !== null) {
-                $toCounterparty = self::toString($toRow->counterparty_name ?? null);
+                $toCounterparty = $this->decryptCounterpartyName(self::toString($toRow->counterparty_name ?? null), $user->id);
                 $toAmountMinor = self::toInt($toRow->settled_amount_minor ?? null);
                 $cur = self::toString($toRow->settled_currency ?? null);
                 $toCurrency = $cur !== '' ? $cur : 'EUR';
@@ -616,7 +636,7 @@ final class ChainLinkQuery
             ->first();
         if ($fromRow !== null) {
             $fromAccountId = self::toInt($fromRow->account_id ?? null);
-            $fromCounterparty = self::toString($fromRow->counterparty_name ?? null);
+            $fromCounterparty = $this->decryptCounterpartyName(self::toString($fromRow->counterparty_name ?? null), $user->id);
             $fromAmountMinor = self::toInt($fromRow->settled_amount_minor ?? null);
             $cur = self::toString($fromRow->settled_currency ?? null);
             $fromCurrency = $cur !== '' ? $cur : 'EUR';
