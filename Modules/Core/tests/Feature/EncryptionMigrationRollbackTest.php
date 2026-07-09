@@ -133,6 +133,16 @@ it('a genuine forced failure mid-pass (real KEK, real data) leaves zero half-enc
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
+    // D-10 assertions below need a clean slate: RefreshDatabase resets the
+    // DB's autoincrement per test run, but the GDK keyring lives on the
+    // FILESYSTEM (storage/app/sync/gdk/{userId}.enc) — a stale file left
+    // behind by an EARLIER test process run against the same reused user
+    // id would otherwise make file_exists() true for reasons unrelated to
+    // THIS run's forced failure.
+    $keyringPath = UserDataPathService::appPath("sync/gdk/{$this->user->id}.enc");
+    @unlink($keyringPath);
+    @unlink($keyringPath.'.tmp');
+
     $db->connection()->table('transactions')->insert([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -205,6 +215,15 @@ it('a genuine forced failure mid-pass (real KEK, real data) leaves zero half-enc
     $snapshots = glob(UserDataPathService::appPath('sync/backups').'/pre-encryption-'.$this->user->id.'-*.enc');
     expect($snapshots)->not->toBeEmpty();
 
+    // D-10: current_epoch rolled back to null (asserted above) AND no
+    // FINALIZED epoch-1 keyring file contradicts it on disk — only a
+    // cleaned-up `.tmp` (or nothing at all) may remain. A prior version of
+    // this class finalized (renamed) the keyring file INSIDE the
+    // transaction, so this forced mid-pass failure would have left a
+    // stray epoch-1 file behind despite the DB rollback (T-14.1-05).
+    expect(file_exists($keyringPath))->toBeFalse();
+    expect(file_exists($keyringPath.'.tmp'))->toBeFalse();
+
     // Happy path: migrate() again (the real, un-overridden service) then
     // succeeds cleanly.
     /** @var EncryptionMigrationService $realMigration */
@@ -217,4 +236,9 @@ it('a genuine forced failure mid-pass (real KEK, real data) leaves zero half-enc
 
     $finalRow = $db->connection()->table('transactions')->where('user_id', $this->user->id)->first();
     expect($finalRow->description)->not->toBe('plaintext before forced failure');
+
+    // D-10 happy path: the successful migration produces exactly one
+    // finalized keyring file (no leftover `.tmp` sibling).
+    expect(file_exists($keyringPath))->toBeTrue();
+    expect(file_exists($keyringPath.'.tmp'))->toBeFalse();
 });

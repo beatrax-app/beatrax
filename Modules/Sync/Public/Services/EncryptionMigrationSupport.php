@@ -7,6 +7,7 @@ namespace Modules\Sync\Public\Services;
 use Illuminate\Contracts\Session\Session;
 use LogicException;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Crypto\GdkKeyringStage;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use RuntimeException;
@@ -17,7 +18,8 @@ use RuntimeException;
  * 06, D-09). The enable-time backup-first migration needs two Internal Sync
  * crypto capabilities no OTHER Public class exposes:
  *
- *   1. First-epoch generation (`GdkKeyringService::generateAndPersist`).
+ *   1. First-epoch generation (`GdkKeyringService::stageFirstEpoch()` /
+ *      `finalizeStagedEpoch()` — split in two per D-10, see below).
  *   2. `op_log_entries.value` encryption under the EXACT per-entry AD
  *      `Modules\Sync\Internal\OpLog\OpLogWriter` itself binds
  *      (`"{table}:{pk}:{field}:{epochId}"`) — deliberately DIFFERENT from
@@ -38,13 +40,31 @@ use RuntimeException;
  * caches the primed epoch's raw key material for the duration of ONE
  * migration pass so `encryptOpLogValue()`/`encryptProjectionValue()` never
  * re-derive the KEK or re-decrypt the keyring file per row (that I/O only
- * happens once, in `enableFirstEpoch()`/`primeCurrentEpoch()`).
+ * happens once, in `stageFirstEpoch()`/`primeCurrentEpoch()`).
+ *
+ * ## D-10 atomicity: staged epoch generation
+ *
+ * `stageFirstEpoch()` encrypts the epoch-1 keyring file to a `.tmp` sibling
+ * and writes `sync_encryption_state.current_epoch` (participating in the
+ * caller's ambient SQL transaction) but does NOT rename the file into
+ * place. The caller MUST call `finalizeStagedEpoch()` after that
+ * transaction commits (or `discardStagedEpoch()` if it rolls back) — this
+ * closes the file-vs-DB atomicity window a prior version of this class
+ * had, where the keyring file was finalized (renamed into place) INSIDE
+ * the transaction, so a later chunk throw would roll back `current_epoch`
+ * while the epoch-1 file persisted on disk (T-14.1-05).
  */
 final class EncryptionMigrationSupport
 {
     private ?int $cachedEpochId = null;
 
     private ?string $cachedEpochKeyHex = null;
+
+    /**
+     * D-10 atomicity: the pending stage from stageFirstEpoch(), passed back
+     * to finalizeStagedEpoch()/discardStagedEpoch() by the caller.
+     */
+    private ?GdkKeyringStage $pendingStage = null;
 
     public function __construct(
         private readonly GdkKeyringService $keyringService,
@@ -62,25 +82,66 @@ final class EncryptionMigrationSupport
     }
 
     /**
-     * Generate + persist GDK epoch 1 (group-of-one) for $userId and prime
-     * this instance's cached epoch for the encrypt*() calls that follow.
-     * Returns only the plain integer epoch id — never the raw key bytes.
+     * D-10 atomicity fix: STAGE (do not finalize) GDK epoch 1 (group-of-one)
+     * for $userId and prime this instance's cached epoch for the
+     * encrypt*() calls that follow. The keyring FILE is not renamed into
+     * place yet — the caller (`EncryptionMigrationService::runMigration()`)
+     * MUST call {@see finalizeStagedEpoch()} once its surrounding SQL
+     * transaction has committed, or {@see discardStagedEpoch()} if it
+     * rolled back. Returns only the plain integer epoch id — never the raw
+     * key bytes.
      *
      * @throws LogicException when the app-lock KEK is unavailable.
      */
-    public function enableFirstEpoch(int $userId, Session $session): int
+    public function stageFirstEpoch(int $userId, Session $session): int
     {
-        $epoch = $this->keyringService->generateAndPersist($userId, $session);
-        $this->cachedEpochId = $epoch->epochId;
-        $this->cachedEpochKeyHex = $epoch->keyHex;
+        $stage = $this->keyringService->stageFirstEpoch($userId, $session);
+        $this->pendingStage = $stage;
+        $this->cachedEpochId = $stage->epoch->epochId;
+        $this->cachedEpochKeyHex = $stage->epoch->keyHex;
 
-        return $epoch->epochId;
+        return $stage->epoch->epochId;
+    }
+
+    /**
+     * D-10: finalize the epoch-1 keyring file staged by
+     * {@see stageFirstEpoch()} — call ONLY after the surrounding SQL
+     * transaction has committed.
+     *
+     * @throws LogicException when stageFirstEpoch() was never called.
+     * @throws RuntimeException if the rename fails.
+     */
+    public function finalizeStagedEpoch(): void
+    {
+        if ($this->pendingStage === null) {
+            throw new LogicException('EncryptionMigrationSupport::finalizeStagedEpoch — no staged epoch to finalize.');
+        }
+
+        $this->keyringService->finalizeStagedEpoch($this->pendingStage);
+        $this->pendingStage = null;
+    }
+
+    /**
+     * D-10: discard the un-finalized `.tmp` keyring file staged by
+     * {@see stageFirstEpoch()} after the surrounding SQL transaction rolled
+     * back. A no-op when nothing was ever staged. Best-effort — never
+     * throws (mirrors `GdkKeyringService::discardStagedEpoch()`).
+     */
+    public function discardStagedEpoch(): void
+    {
+        if ($this->pendingStage === null) {
+            return;
+        }
+
+        $this->keyringService->discardStagedEpoch($this->pendingStage);
+        $this->pendingStage = null;
     }
 
     /**
      * Prime this instance's cached epoch from the CURRENT epoch already
      * recorded for $userId (used by a resumed/retried pass where
-     * `enableFirstEpoch()` already ran in an earlier attempt).
+     * `stageFirstEpoch()`/`finalizeStagedEpoch()` already ran in an
+     * earlier attempt).
      *
      * @throws LogicException when the app-lock KEK is unavailable.
      * @throws RuntimeException when no current epoch is recorded.
@@ -152,7 +213,7 @@ final class EncryptionMigrationSupport
     private function requirePrimedEpoch(): array
     {
         if ($this->cachedEpochId === null || $this->cachedEpochKeyHex === null) {
-            throw new LogicException('EncryptionMigrationSupport: call enableFirstEpoch()/primeCurrentEpoch() before encrypting.');
+            throw new LogicException('EncryptionMigrationSupport: call stageFirstEpoch()/primeCurrentEpoch() before encrypting.');
         }
 
         return [$this->cachedEpochId, sodium_hex2bin($this->cachedEpochKeyHex)];
