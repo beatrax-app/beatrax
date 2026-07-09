@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Categorization\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -18,6 +19,7 @@ use Modules\Categorization\Public\Dto\RuleConditionDto;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Services\TaxCategoryWriter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -391,14 +393,31 @@ final class RuleFormModal extends Component
         TaxCategoryWriter $taxCategories,
         DatabaseManager $db,
         ViewFactory $views,
+        SensitiveColumnCodec $codec,
+        Session $session,
     ): View {
         $user = $currentUser->user();
 
+        // D-06 (14.1-10): no longer ORDER BY the ciphertext display_name
+        // column — SQL order over ciphertext is meaningless once
+        // encryption is enabled. A stable orderBy('id') keeps row
+        // iteration deterministic; the real, user-facing order is the
+        // post-decrypt sortBy() below.
         $counterparties = $db->connection()
             ->table('counterparties')
             ->where('user_id', $user->id)
-            ->orderBy('display_name')
-            ->get(['id', 'display_name']);
+            ->orderBy('id')
+            ->get(['id', 'display_name'])
+            ->map(function (object $row) use ($codec, $session, $user): object {
+                $stored = is_string($row->display_name ?? null) ? $row->display_name : '';
+                $row->display_name = $stored === ''
+                    ? ''
+                    : $codec->decryptValue('counterparties', 'display_name', $stored, $user->id, $session)['value'];
+
+                return $row;
+            })
+            ->sortBy(static fn (object $row): string => is_string($row->display_name ?? null) ? $row->display_name : '')
+            ->values();
 
         return $views->make('categorization::livewire.rule-form-modal', [
             'categories' => $categoryOptions->for($user),

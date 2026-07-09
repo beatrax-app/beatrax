@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
@@ -67,15 +68,27 @@ it('RuleFormModal renders decrypted counterparty display_name in the picker (no 
     ddEncryptedCounterparty($user, $session, 'dd-zebra', 'Zebra Traders');
     ddEncryptedCounterparty($user, $session, 'dd-alpha', 'Alpha Traders');
 
-    $html = Livewire::test(RuleFormModal::class)
-        ->call('open', ruleId: null)
-        ->html();
+    $component = Livewire::test(RuleFormModal::class)
+        ->call('open', ruleId: null);
 
+    /** @var Collection $counterparties */
+    $counterparties = $component->viewData('counterparties');
+    $names = $counterparties->pluck('display_name')->all();
+
+    expect($names)->toContain('Zebra Traders');
+    expect($names)->toContain('Alpha Traders');
+
+    // Ciphertext must never leak into the resolved view data.
+    $stored = DB::table('counterparties')->where('user_id', $user->id)->pluck('display_name')->all();
+    foreach ($stored as $cipher) {
+        expect($names)->not->toContain($cipher);
+    }
+
+    // Set the counterparty-action type so the picker <select> actually
+    // renders, then assert the decrypted names surface in the raw HTML too.
+    $html = $component->set('actions.0.type', 'counterparty')->html();
     expect($html)->toContain('Zebra Traders');
     expect($html)->toContain('Alpha Traders');
-
-    // Ciphertext must never leak into the rendered HTML.
-    $stored = DB::table('counterparties')->where('user_id', $user->id)->pluck('display_name');
     foreach ($stored as $cipher) {
         expect($html)->not->toContain($cipher);
     }

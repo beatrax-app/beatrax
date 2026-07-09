@@ -6,6 +6,7 @@ namespace Modules\Categorization\Public\Services;
 
 use DateTimeImmutable;
 use Exception;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Categorization\Public\Dto\CategorizationRuleDto;
@@ -13,6 +14,7 @@ use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -45,6 +47,8 @@ final readonly class CategorizationRuleQuery
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
+        private SensitiveColumnCodec $codec,
+        private Session $session,
     ) {}
 
     /**
@@ -240,7 +244,12 @@ final readonly class CategorizationRuleQuery
 
         $out = [];
         foreach ($rows as $row) {
-            $out[self::toInt($row->id)] = is_string($row->display_name) ? $row->display_name : '';
+            $stored = is_string($row->display_name ?? null) ? $row->display_name : '';
+            // D-06 (14.1-10) read-side decrypt — pass-through no-op when
+            // encryption is not enabled for this user.
+            $out[self::toInt($row->id)] = $stored === ''
+                ? ''
+                : $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, $this->session)['value'];
         }
 
         return $out;
