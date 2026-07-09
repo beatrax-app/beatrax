@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
@@ -77,7 +78,10 @@ it('the removed device is no longer a confirmed/trusted key after rotateAndRevok
     /** @var GdkRotationService $rotation */
     $rotation = $this->app->make(GdkRotationService::class);
 
-    $rotation->rotateAndRevoke($userId, $removedId);
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    $rotation->rotateAndRevoke($userId, $removedId, $session);
 
     /** @var DeviceRegistryService $registry */
     $registry = $this->app->make(DeviceRegistryService::class);
@@ -115,7 +119,10 @@ it('an op-log entry signed by the removed device after rotation is rejected (no 
     /** @var GdkRotationService $rotation */
     $rotation = $this->app->make(GdkRotationService::class);
 
-    $rotation->rotateAndRevoke($userId, $removedId);
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    $rotation->rotateAndRevoke($userId, $removedId, $session);
 
     /** @var DeviceRegistryService $registry */
     $registry = $this->app->make(DeviceRegistryService::class);

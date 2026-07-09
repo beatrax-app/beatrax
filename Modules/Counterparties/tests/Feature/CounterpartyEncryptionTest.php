@@ -172,3 +172,37 @@ it('CounterpartyIndexQuery::forUser decrypts display_name', function (): void {
 
     expect($rows->pluck('displayName')->all())->toContain('Netflix');
 });
+
+it('CounterpartyIndexQuery::forUser stays correctly name-sorted (PHP usort) despite orderBy(\'id\') over ciphertext (D-12)', function (): void {
+    // Three merchants with zero 12-month transaction total each (only the
+    // resolver's creation write runs — no transaction rows are inserted),
+    // so the row order is decided ENTIRELY by the tie-break: name asc. Seed
+    // + resolve them in a deliberately non-alphabetical order so their
+    // auto-increment ids do NOT already happen to match the alphabetical
+    // order — if forUser() still ORDER BY'd the (now-ciphertext)
+    // display_name column, this would prove nothing either way; the point
+    // is that decrypt-then-usort is what actually produces the order.
+    DB::table('merchant_aliases')->insert([
+        ['user_id' => $this->user->id, 'pattern' => 'ZEBRA STORE AMSTERDAM', 'generalized_pattern' => 'zebra', 'friendly_name' => 'Zebra', 'merged_from' => null, 'created_at' => now()->toDateTimeString(), 'updated_at' => now()->toDateTimeString()],
+        ['user_id' => $this->user->id, 'pattern' => 'ALPHA SHOP AMSTERDAM', 'generalized_pattern' => 'alpha', 'friendly_name' => 'Alpha', 'merged_from' => null, 'created_at' => now()->toDateTimeString(), 'updated_at' => now()->toDateTimeString()],
+        ['user_id' => $this->user->id, 'pattern' => 'MIDDLE GOODS AMSTERDAM', 'generalized_pattern' => 'middle', 'friendly_name' => 'Middle', 'merged_from' => null, 'created_at' => now()->toDateTimeString(), 'updated_at' => now()->toDateTimeString()],
+    ]);
+
+    /** @var CounterpartyResolverService $resolver */
+    $resolver = $this->app->make(CounterpartyResolverService::class);
+    // Resolved in Zebra, Alpha, Middle order — ids are assigned in THIS
+    // order, not alphabetical order.
+    $resolver->resolve(ceTx($this->bank->id, (int) $this->user->id, 'ZEBRA STORE AMSTERDAM'), $this->user);
+    $resolver->resolve(ceTx($this->bank->id, (int) $this->user->id, 'ALPHA SHOP AMSTERDAM'), $this->user);
+    $resolver->resolve(ceTx($this->bank->id, (int) $this->user->id, 'MIDDLE GOODS AMSTERDAM'), $this->user);
+
+    /** @var CounterpartyIndexQuery $query */
+    $query = $this->app->make(CounterpartyIndexQuery::class);
+    $rows = $query->forUser($this->user);
+
+    $names = $rows->pluck('displayName')->filter(
+        static fn (string $name): bool => in_array($name, ['Zebra', 'Alpha', 'Middle'], true),
+    )->values()->all();
+
+    expect($names)->toBe(['Alpha', 'Middle', 'Zebra']);
+});

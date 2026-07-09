@@ -16,9 +16,9 @@ uses(RefreshDatabase::class);
  * appends it to the acting device's keyring, and produces one sealed-box
  * wrap per remaining trusted device. 14-VALIDATION.md CRYPT-02 row 1.
  *
- * RED until Plan 05 ships Modules\Sync\Internal\Crypto\GdkRotationService.
- * This test references the planned production FQCN, which does not yet
- * exist — the failure is "class not found", the correct Wave 0 RED state.
+ * 14.1-03 (D-11): rotateAndRevoke() takes Session as a per-method parameter
+ * (not a constructor field) — GdkRotationService is bound as a singleton, so
+ * a constructor-captured Session would go stale across requests.
  */
 
 function rotationUser(string $username): User
@@ -69,10 +69,28 @@ it('generates a new GDK epoch N+1 and appends it to the acting device keyring on
     /** @var GdkRotationService $rotation */
     $rotation = $this->app->make(GdkRotationService::class);
 
-    $rotation->rotateAndRevoke((int) $user->id, $removedDeviceId);
+    $rotation->rotateAndRevoke((int) $user->id, $removedDeviceId, $session);
 
     $current = $keyring->currentEpoch((int) $user->id, $session);
     expect($current->epochId)->toBeGreaterThan($initial->epochId);
+});
+
+it('takes Session as a per-method rotateAndRevoke() parameter, not a constructor field (D-11)', function (): void {
+    $ctorParams = (new ReflectionClass(GdkRotationService::class))->getConstructor()?->getParameters() ?? [];
+    $ctorParamTypes = array_map(
+        static fn (ReflectionParameter $param): string => (string) $param->getType(),
+        $ctorParams,
+    );
+
+    expect($ctorParamTypes)->not->toContain(Session::class);
+
+    $methodParams = (new ReflectionMethod(GdkRotationService::class, 'rotateAndRevoke'))->getParameters();
+    $methodParamTypes = array_map(
+        static fn (ReflectionParameter $param): string => (string) $param->getType(),
+        $methodParams,
+    );
+
+    expect($methodParamTypes)->toContain(Session::class);
 });
 
 it('builds one sealed-box GDK epoch wrap per remaining trusted device', function (): void {

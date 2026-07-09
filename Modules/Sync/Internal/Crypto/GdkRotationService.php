@@ -52,7 +52,6 @@ final class GdkRotationService
         private readonly RelayMailbox $relayMailbox,
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
-        private readonly Session $session,
     ) {}
 
     /**
@@ -60,12 +59,19 @@ final class GdkRotationService
      * fanning the new epoch out (sealed-box wrapped) to every remaining
      * confirmed device.
      *
+     * $session is a PER-METHOD parameter (D-11), not a constructor-captured
+     * field — this class is bound as a singleton (`SyncServiceProvider`), so
+     * a constructor-held `Session` would be captured once at first resolve
+     * and go stale across requests/the device-removal daemon path. Mirrors
+     * `GdkKeyringService`/`SensitiveColumnCodec`'s existing per-method-Session
+     * convention.
+     *
      * @throws \LogicException when the app-lock KEK is unavailable (propagated
      *                         from GdkKeyringService — the keyring is never
      *                         touched without the LOCK-04 key).
      * @throws RuntimeException on a crypto / I-O failure during rotation.
      */
-    public function rotateAndRevoke(int $userId, int $deviceRegistryId): void
+    public function rotateAndRevoke(int $userId, int $deviceRegistryId, Session $session): void
     {
         $now = $this->clock->now()->toIso8601String();
 
@@ -87,7 +93,7 @@ final class GdkRotationService
         // an empty keyring when encryption has not been enabled yet for this
         // user (group-of-one bootstrap) instead of throwing, so rotation
         // works whether or not a current epoch already exists.
-        $keyring = $this->keyringService->loadKeyring($userId, $this->session);
+        $keyring = $this->keyringService->loadKeyring($userId, $session);
         $newEpochId = 1;
         foreach ($keyring->epochs() as $epoch) {
             $newEpochId = max($newEpochId, $epoch->epochId + 1);
@@ -97,7 +103,7 @@ final class GdkRotationService
 
         try {
             $newEpoch = new GdkEpoch(epochId: $newEpochId, keyHex: sodium_bin2hex($rawGdkKey));
-            $this->keyringService->appendEpoch($userId, $newEpoch, $this->session);
+            $this->keyringService->appendEpoch($userId, $newEpoch, $session);
 
             // Step 3 (D-05): wrap-per-remaining-device fan-out over the
             // ZK-pure relay mailbox. Excludes self (no wrap-to-self needed —

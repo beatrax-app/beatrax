@@ -66,8 +66,13 @@ final readonly class CounterpartyIndexQuery
             $query = $query->where('type', $resolvedType);
         }
 
+        // D-12: no longer ORDER BY the ciphertext display_name column — SQL
+        // order over ciphertext is meaningless once encryption is enabled.
+        // A stable orderBy('id') here is purely to make row iteration
+        // deterministic; the REAL, user-facing order is the post-decrypt
+        // usort() below (12-month total desc, then name asc).
         /** @var iterable<stdClass> $cpRows */
-        $cpRows = $query->orderBy('display_name')->get(['id', 'slug', 'display_name', 'type']);
+        $cpRows = $query->orderBy('id')->get(['id', 'slug', 'display_name', 'type']);
 
         $cutoffDate = $this->clock->now()->subYear()->toDateString();
         $userId = $user->id;

@@ -448,7 +448,7 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
     // (Plan 05) — regardless of whether device-b happens to be connected.
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
-    $rotation->rotateAndRevoke((int) $user->id, $removedId);
+    $rotation->rotateAndRevoke((int) $user->id, $removedId, $session);
 
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
