@@ -11,15 +11,19 @@ use Amp\TimeoutException;
 use Amp\Websocket\Server\WebsocketClientHandler;
 use Amp\Websocket\WebsocketClient;
 use Amp\Websocket\WebsocketMessage;
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Session\Session as LaravelSession;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\Noise\NoiseHandshakeState;
 use Modules\Sync\Internal\Transport\Noise\NoiseSession;
+use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 
@@ -91,6 +95,15 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
      * fiber. Generous enough for legitimate slow links + large replay batches.
      */
     private const READ_TIMEOUT_SECONDS = 60.0;
+
+    /**
+     * Maximum GDK_EPOCH_WRAP rows drained from RelayMailbox per direction,
+     * per connection (Plan 08, D-05). Bounded like MAX_CATCHUP_FRAMES so an
+     * unbounded mailbox backlog cannot pin this fiber; a backlog larger than
+     * this is picked up on the peer's NEXT connect (RelayMailbox::drain()'s
+     * own existing pagination contract).
+     */
+    private const MAX_GDK_WRAPS_PER_CONNECT = 100;
 
     /**
      * @param  string  $localStaticSecret  32-byte X25519 secret key for the local device.
@@ -365,6 +378,96 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         $completeMsg = $this->receiveWithTimeout($client, self::READ_TIMEOUT_SECONDS, 'catch-up complete');
         if ($completeMsg !== null) {
             $session->decrypt($completeMsg->buffer());
+        }
+
+        // 6. Fixed-point GDK_EPOCH_WRAP delivery (Plan 08, D-05). NOT a
+        // generic control-message dispatch switch — 14-PATTERNS.md "No
+        // Analog Found" confirms none exists in this codebase — this is a
+        // dedicated linear step appended immediately after catch-up
+        // completes, mirroring the existing request/response/complete
+        // sequencing style rather than inventing a type-dispatcher.
+        $this->deliverGdkEpochWraps($client, $session);
+    }
+
+    /**
+     * CRYPT-02 distribution (D-05): deliver pending sealed-box GDK epoch
+     * wraps over the already-authenticated live Noise session, and drain
+     * this device's own inbound wraps through GdkEpochControlHandler.
+     *
+     * Both directions read from the SAME local `relay_mailbox` table
+     * `GdkRotationService::rotateAndRevoke()` (Plan 05) ALWAYS enqueues
+     * into — regardless of whether the recipient happens to be online right
+     * now — so this fixed step is purely an optimization that avoids making
+     * an already-connected peer wait for a separate relay round-trip:
+     *
+     *   1. OUTBOUND: any blob addressed to the peer we just finished
+     *      catching up with (`$session->peerDeviceId()`) is pushed directly
+     *      over this Noise session, then confirm()'d (T-14-17 — cleared so
+     *      it is never redelivered).
+     *   2. INBOUND: any blob addressed to THIS device
+     *      (`$this->localDeviceId`) is drained and routed through
+     *      `GdkEpochControlHandler::handle()`, which validates + opens +
+     *      appends to the local keyring under the local KEK, then
+     *      confirm()'d.
+     *
+     * Both directions degrade gracefully (skip, never throw) when a
+     * dependency is unavailable — no RelayMailbox binding, no
+     * GdkEpochControlHandler binding, no unlocked app-lock session, or (in
+     * the container factory's headless-daemon placeholder-credential state)
+     * an empty localDeviceId — mirroring `OpLogReplayer`'s established
+     * "headless daemon may have no unlocked session" convention (STATE
+     * [Phase 13]) rather than tearing down the whole sync session over one
+     * skippable delivery.
+     *
+     * @internal Public so the fixed-point delivery step is directly
+     *           testable without constructing a live amphp WebSocket
+     *           connection (mirrors LanDirectSessionTest's precedent of
+     *           exercising the underlying primitives the handler invokes).
+     */
+    public function deliverGdkEpochWraps(WebsocketClient $client, SyncSession $session): void
+    {
+        $container = Container::getInstance();
+        if (! $container->bound(RelayMailbox::class)) {
+            return;
+        }
+
+        /** @var RelayMailbox $relayMailbox */
+        $relayMailbox = $container->make(RelayMailbox::class);
+
+        $peerDeviceId = $session->peerDeviceId();
+        if ($peerDeviceId !== null && $peerDeviceId !== '') {
+            foreach ($relayMailbox->drain($peerDeviceId, self::MAX_GDK_WRAPS_PER_CONNECT) as $row) {
+                $blob = is_string($row->blob) ? $row->blob : '';
+                $rowId = is_numeric($row->id) ? (int) $row->id : null;
+                if ($blob === '' || $rowId === null) {
+                    continue;
+                }
+
+                $client->sendBinary($session->encrypt($blob));
+                $relayMailbox->confirm($rowId);
+            }
+        }
+
+        if ($this->localDeviceId === ''
+            || ! $container->bound(GdkEpochControlHandler::class)
+            || ! $container->bound(LaravelSession::class)
+        ) {
+            return;
+        }
+
+        /** @var GdkEpochControlHandler $handler */
+        $handler = $container->make(GdkEpochControlHandler::class);
+        $laravelSession = $container->make(LaravelSession::class);
+
+        foreach ($relayMailbox->drain($this->localDeviceId, self::MAX_GDK_WRAPS_PER_CONNECT) as $row) {
+            $blob = is_string($row->blob) ? $row->blob : '';
+            $rowId = is_numeric($row->id) ? (int) $row->id : null;
+            if ($blob === '' || $rowId === null) {
+                continue;
+            }
+
+            $handler->handle($blob, $this->userId, $laravelSession);
+            $relayMailbox->confirm($rowId);
         }
     }
 
