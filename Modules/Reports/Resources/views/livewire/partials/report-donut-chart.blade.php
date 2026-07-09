@@ -67,10 +67,12 @@
     dataPointSelection drilldown handler off the FRESH `beatraxDrilldownUrls`
     array) every time it's called — used both at `x-init` mount and again on
     every `report-updated` browser event (dispatched by
-    `ReportBuilder::updated()` after any control-rail change), so
-    `chart.updateOptions()` refreshes both the chart's data AND its
-    click-through targets in place, without remounting the component. A
-    naive re-mount-only refresh (as Forecasting's simpler partials do) would
+    `ReportBuilder::updated()` after any control-rail change). Unlike the
+    axis-based bar/line partials (which call `chart.updateOptions()`), the
+    axis-less donut destroys+recreates its ApexCharts instance on refresh —
+    `updateOptions()` throws on the donut's missing axis internals — which
+    refreshes both the slice data AND the drilldown click-through targets.
+    A naive re-mount-only refresh (as Forecasting's simpler partials do) would
     leave the click handler bound to the stale drilldown-url array.
 --}}
 <div
@@ -97,8 +99,10 @@
         chart.render();
     "
     x-on:report-updated.window="
-        if (! window.ApexCharts || ! chart) { return; }
-        chart.updateOptions(buildOptions(), true, false);
+        if (! window.ApexCharts) { return; }
+        if (chart) { chart.destroy(); }
+        chart = new window.ApexCharts($el.querySelector('#{{ $chartElementId }}'), buildOptions());
+        chart.render();
     "
     data-options="{{ $optionsJson }}"
 >
