@@ -93,7 +93,7 @@ it('a full OpLogRebuilder rebuild after multiple GDK rotations converges to the 
     // point is encrypted under N+1.
     /** @var GdkRotationService $rotation */
     $rotation = $this->app->make(GdkRotationService::class);
-    $rotation->rotateAndRevoke($userId, $removedDeviceId);
+    $rotation->rotateAndRevoke($userId, $removedDeviceId, $session);
 
     $beforeRebuild = $db->connection()->table('categories')->where('id', $categoryId)->value('name');
 

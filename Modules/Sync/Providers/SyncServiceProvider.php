@@ -121,6 +121,9 @@ final class SyncServiceProvider extends ServiceProvider
         // each class exists.
         $cryptoNamespace = 'Modules\Sync\Internal\Crypto\\';
         // Plan 05: device-removal rotation orchestration (D-04/D-05).
+        // 14.1-03 (D-11): the ctor no longer takes a Session — every method
+        // that needs one (rotateAndRevoke) takes it as a per-call parameter
+        // instead, so this singleton can never capture a stale session.
         $this->singletonIfExists($cryptoNamespace.'GdkRotationService');
 
         // Plan 07: GdkRewrapService bound behind its own contract, and the

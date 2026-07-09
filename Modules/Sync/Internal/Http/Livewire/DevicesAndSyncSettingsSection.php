@@ -425,7 +425,7 @@ final class DevicesAndSyncSettingsSection extends Component
      * confirmed_at is cleared) so the "Removed" badge renders per Surface C —
      * the row disappears only on the next page load/navigation.
      */
-    public function removeDevice(GdkRotationService $rotationService, CurrentUser $currentUser): void
+    public function removeDevice(GdkRotationService $rotationService, CurrentUser $currentUser, Session $session): void
     {
         if ($this->removingDeviceId === null) {
             return;
@@ -435,7 +435,7 @@ final class DevicesAndSyncSettingsSection extends Component
         $userId = $currentUser->user()->id;
 
         try {
-            $rotationService->rotateAndRevoke($userId, $targetId);
+            $rotationService->rotateAndRevoke($userId, $targetId, $session);
         } catch (\Throwable) {
             $this->flashMessage = 'Failed to remove device. Please try again.';
             $this->cancelRemove();
