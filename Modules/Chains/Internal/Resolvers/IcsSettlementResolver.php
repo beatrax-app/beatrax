@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal\Resolvers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
@@ -14,6 +15,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Account;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -77,6 +79,17 @@ use stdClass;
  * Parallel passes for the same user are not possible; parallel passes
  * for different users are safe because every query is user-scoped.
  *
+ * CR-03/D-06 (decrypt-then-match — Core Value): `transactions.counterparty_iban`
+ * is a `SensitiveFieldRegistry` ciphertext column under encryption.
+ * `resolveForUser()`'s `whereNotNull('counterparty_iban')` SQL narrowing
+ * stays (null semantics are preserved by the codec), but the value is
+ * decrypted before it is handed to {@see ResolvesKnownCounterpartyIban},
+ * which resolves it against the plaintext
+ * `known_counterparty_ibans.real_iban` column. The candidate set (this
+ * user's bank-account `transfer_out` rows not yet carrying a confirmed
+ * `ics_bulk_settle` chain_link) is already bounded per user, so no
+ * additional decrypt-scan limit is required here.
+ *
  * @internal Driven by the ResolveChainLinksJob — not called from
  *           public action classes directly.
  */
@@ -106,6 +119,8 @@ final class IcsSettlementResolver
         private readonly CardStatementStateMachine $stateMachine,
         private readonly ChainLinkInsertHelper $inserter,
         private readonly ResolvesKnownCounterpartyIban $aliasResolver,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -153,7 +168,19 @@ final class IcsSettlementResolver
 
         foreach ($candidateTransfers as $transfer) {
             /** @var stdClass $transfer */
-            $counterpartyIban = self::toString($transfer->counterparty_iban ?? null);
+            // D-06/CR-03: counterparty_iban is a SensitiveFieldRegistry
+            // ciphertext column under encryption — decrypt before it is
+            // handed to ResolvesKnownCounterpartyIban, which compares
+            // against the plaintext known_counterparty_ibans.real_iban
+            // column. Pass-through no-op when encryption is not enabled
+            // for this user. The candidate set is already bounded per
+            // user (bank-account transfer_out rows not yet carrying a
+            // confirmed ics_bulk_settle link), so no additional scan
+            // limit is needed here (LOW-MED risk per the audit).
+            $storedCounterpartyIban = self::toString($transfer->counterparty_iban ?? null);
+            $counterpartyIban = $storedCounterpartyIban === ''
+                ? ''
+                : $this->codec->decryptValue('transactions', 'counterparty_iban', $storedCounterpartyIban, $user->id, $this->session)['value'];
             $aliasAccount = $this->aliasResolver->resolveAccount($counterpartyIban, $user->id);
             if ($aliasAccount === null || $aliasAccount->kind !== 'ics_card') {
                 // Not an ASN→ICS hop — skip. Other transfer_out rows
