@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Modules\Recurring\Providers;
 
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
@@ -34,6 +37,7 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Psr\Log\LoggerInterface;
 
 /**
  * Wires the Recurring module.
@@ -81,6 +85,17 @@ final class RecurringServiceProvider extends ServiceProvider
         // (used in tests) and the database queue worker (production)
         // dispatch via Dispatcher::dispatchNow → Container::call, so
         // binding the method here covers every dispatch path.
+        //
+        // CRYPT-01 (14.1-08): Session/AppLockKeyService/
+        // EncryptionMigrationService are resolved here too, so BOTH real
+        // dispatch origins (RecurringPage::reDetect()'s dispatchSync AND
+        // the routes/console.php daily scheduler's queued dispatch) reach
+        // handle() with their true per-run context — a request has an
+        // unlocked Session (KEK present); the queue worker's Session was
+        // never unlocked (KEK absent). LoggerInterface is resolved here
+        // too so the KEK-absence warning actually reaches the log in
+        // production (previously unwired — bare `handle()` test callers
+        // are unaffected since all four new parameters are nullable).
         $this->app->bindMethod(
             [DetectRecurringSeriesJob::class, 'handle'],
             static function (DetectRecurringSeriesJob $job, Container $c): void {
@@ -91,6 +106,10 @@ final class RecurringServiceProvider extends ServiceProvider
                     $c->make(Clock::class),
                     $detectors,
                     $c->make(RecurringSeriesStateMachine::class),
+                    $c->make(Session::class),
+                    $c->make(AppLockKeyService::class),
+                    $c->make(EncryptionMigrationService::class),
+                    $c->make(LoggerInterface::class),
                 );
             },
         );
