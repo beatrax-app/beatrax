@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
  * Synchronous writer for the FTS5 search index.
@@ -33,6 +35,8 @@ final class SearchIndexWriter implements SearchIndexWriterContract
 {
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -68,8 +72,17 @@ final class SearchIndexWriter implements SearchIndexWriterContract
             return;
         }
 
-        $counterparty = is_string($tx->counterparty_name) ? $tx->counterparty_name : '';
-        $description = is_string($tx->description) ? $tx->description : '';
+        // CRYPT-01 (D-02b) / D-02c disclosed plaintext shadow (BLOCKER-2):
+        // counterparty_name/description are ciphertext at rest once
+        // encryption is enabled — decrypt via the Sync Public codec BEFORE
+        // building the search body so FTS5 tokenizes plaintext, never
+        // ciphertext. Pass-through no-op when encryption is not enabled.
+        $counterparty = is_string($tx->counterparty_name)
+            ? $this->codec->decryptValue('transactions', 'counterparty_name', $tx->counterparty_name, $userId, $this->session)['value']
+            : '';
+        $description = is_string($tx->description)
+            ? $this->codec->decryptValue('transactions', 'description', $tx->description, $userId, $this->session)['value']
+            : '';
 
         // Fetch the tax note for this transaction (if any).
         $tag = $connection
@@ -79,7 +92,9 @@ final class SearchIndexWriter implements SearchIndexWriterContract
             ->where('user_id', $userId)
             ->first();
 
-        $note = ($tag !== null && is_string($tag->note)) ? $tag->note : '';
+        $note = ($tag !== null && is_string($tag->note))
+            ? $this->codec->decryptValue('tax_transaction_tags', 'note', $tag->note, $userId, $this->session)['value']
+            : '';
 
         // Build the denormalized search body.
         // chr(12) = form-feed — not trigram-indexable, avoids cross-field
