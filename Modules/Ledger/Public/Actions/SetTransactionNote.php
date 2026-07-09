@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Actions;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
  * Mutates `transactions.note` for a transaction owned by the given user.
@@ -35,7 +37,11 @@ use Modules\Ledger\Public\Contracts\SetsTransactionNote;
  */
 final class SetTransactionNote implements SetsTransactionNote
 {
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
+    ) {}
 
     public function __invoke(int $transactionId, ?string $text, string $mode, User $user): int
     {
@@ -53,7 +59,12 @@ final class SetTransactionNote implements SetsTransactionNote
             return 0;
         }
 
-        $currentNote = is_string($row->note) ? $row->note : null;
+        // D-07 decrypt-before-compare (RESEARCH Pitfall 4): the stored note
+        // is ciphertext under an encrypted user, so append/change-guard must
+        // operate on the decrypted plaintext, never the raw stored value.
+        $currentNote = is_string($row->note)
+            ? $this->codec->decryptValue('transactions', 'note', $row->note, $user->id, $this->session)['value']
+            : null;
         $trimmed = $text === null ? '' : trim($text);
 
         $target = $mode === 'append'
@@ -67,7 +78,11 @@ final class SetTransactionNote implements SetsTransactionNote
         return Transaction::query()
             ->where('id', $transactionId)
             ->where('user_id', $user->id)
-            ->update(['note' => $target]);
+            ->update([
+                'note' => is_string($target)
+                    ? $this->codec->encryptValue('transactions', 'note', $target, $user->id, $this->session)
+                    : $target,
+            ]);
     }
 
     /**
