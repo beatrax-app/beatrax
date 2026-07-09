@@ -114,9 +114,12 @@ final class SyncServiceProvider extends ServiceProvider
         // Plan 07: GdkRewrapService bound behind its own contract, and the
         // Auth AppLockPassphraseChanged -> RewrapGdkOnPassphraseChange
         // listener wire (registered in boot() below, once both classes exist).
+        // GdkRewrapContract is an INTERFACE, not a class — class_exists()
+        // always returns false for interfaces (PHP semantics), so the guard
+        // uses interface_exists() for it (Rule 1 bug fix, 14-07).
         $gdkRewrapContract = $cryptoNamespace.'GdkRewrapContract';
         $gdkRewrapService = $cryptoNamespace.'GdkRewrapService';
-        if (class_exists($gdkRewrapContract) && class_exists($gdkRewrapService)) {
+        if (interface_exists($gdkRewrapContract) && class_exists($gdkRewrapService)) {
             $this->app->bind($gdkRewrapContract, $gdkRewrapService);
         }
 
