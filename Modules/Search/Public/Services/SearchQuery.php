@@ -41,7 +41,10 @@ use stdClass;
  * equals the normalized minor value, merged into the FTS rowid set.
  *
  * FTS path gates at strlen >= 3 (Pitfall-6 — trigram min token length).
- * Short queries (<3 chars) fall back to a LIKE scan on counterparty_name + description.
+ * Short queries (<3 chars) fall back to a bounded decrypt-then-substring
+ * scan on counterparty_name + description (CRYPT-01/D-06 — these columns
+ * are ciphertext at rest once encryption is enabled, so the fallback can no
+ * longer predicate in SQL; see likeFallbackIds()).
  */
 final class SearchQuery
 {
@@ -58,6 +61,15 @@ final class SearchQuery
     private const MARK_START = "\x02";
 
     private const MARK_END = "\x03";
+
+    /**
+     * CRYPT-01 (D-06) / RESEARCH Pitfall 3: the <3-char LIKE fallback can no
+     * longer run a SQL LIKE against ciphertext — it must decrypt candidate
+     * rows in PHP. Bound the candidate window so a short query never
+     * decrypts an entire multi-year transaction history on every keystroke.
+     * Most-recent-first ordering keeps the bound useful in practice.
+     */
+    private const LIKE_FALLBACK_CANDIDATE_CAP = 500;
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -91,7 +103,7 @@ final class SearchQuery
         // query is scoped by user_id + filters directly, with no whereIn over a
         // materialized id list (WR-03: avoids the SQLITE_MAX_VARIABLE_NUMBER
         // crash on full history).
-        $candidateIds = $this->resolveCandidateIds($user, $textQuery);
+        $candidateIds = $this->resolveCandidateIds($user, $textQuery, $filters);
 
         // Step 3: amount-query branch — numeric textQuery ALSO matches by amount
         // (D-07), but only when the text branch found no candidates. Otherwise a
@@ -354,7 +366,7 @@ final class SearchQuery
      *
      * @return list<int>|null
      */
-    private function resolveCandidateIds(User $user, string $textQuery): ?array
+    private function resolveCandidateIds(User $user, string $textQuery, SearchFilters $filters): ?array
     {
         if ($textQuery === '') {
             // No text query (filters-only mode). Return null to signal "do not
@@ -368,7 +380,7 @@ final class SearchQuery
         // Pitfall-6: FTS5 trigram requires >= 3 chars per token
         if (strlen($textQuery) < 3) {
             // LIKE fallback for short queries
-            return $this->likeFallbackIds($user, $textQuery);
+            return $this->likeFallbackIds($user, $textQuery, $filters);
         }
 
         // FTS5 MATCH path — escape each word (Pitfall-1: double-quote wrap + double embedded quotes)
@@ -388,7 +400,7 @@ final class SearchQuery
 
         if ($ftsWords === []) {
             // All words are too short for FTS — fall back to LIKE
-            return $this->likeFallbackIds($user, $textQuery);
+            return $this->likeFallbackIds($user, $textQuery, $filters);
         }
 
         $escaped = array_map(
@@ -416,27 +428,65 @@ final class SearchQuery
     /**
      * LIKE fallback used when the query is too short for the FTS5 trigram path.
      *
-     * WR-04: escape `%` and `_` wildcards with an explicit `ESCAPE '\'` clause
-     * (SQLite has no default LIKE escape character), mirroring EntityNameSearch
-     * so a query containing `%`/`_` matches literally rather than as a wildcard.
+     * CRYPT-01 (D-06): `counterparty_name`/`description` are ciphertext at
+     * rest once encryption is enabled — a raw `whereRaw(...LIKE...)` on the
+     * stored column can never match plaintext user input. Converted to the
+     * decrypt-then-match template (`CounterpartyIndexQuery::forUser()`
+     * precedent, RESEARCH "Decrypt-then-Match Template"): narrow the
+     * candidate set in SQL on cheap plaintext dimensions ONLY — user_id plus
+     * whatever date/account/category/counterparty/amount filters are already
+     * active (reusing `applyFilters()` is safe here since every predicate it
+     * applies targets non-sensitive columns) — then decrypt and
+     * substring-match in PHP. `decryptValue()` is a documented pass-through
+     * no-op when encryption is not enabled for the user, so this path is
+     * behavior-identical to the old LIKE for a plaintext user.
+     *
+     * Bounded scan (RESEARCH Pitfall 3): even with zero active filters, cap
+     * the candidate window at LIKE_FALLBACK_CANDIDATE_CAP rows,
+     * most-recent-first, so a <3-char query never decrypts an entire
+     * multi-year transaction history on every keystroke.
      *
      * @return list<int>
      */
-    private function likeFallbackIds(User $user, string $textQuery): array
+    private function likeFallbackIds(User $user, string $textQuery, SearchFilters $filters): array
     {
-        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $textQuery).'%';
+        $query = $this->db->connection()
+            ->table('transactions')
+            ->where('transactions.user_id', $user->id);
 
-        return self::toIntList(
-            $this->db->connection()
-                ->table('transactions')
-                ->where('user_id', $user->id)
-                ->where(static function (Builder $q) use ($like): void {
-                    $q->whereRaw("counterparty_name LIKE ? ESCAPE '\\'", [$like])
-                        ->orWhereRaw("description LIKE ? ESCAPE '\\'", [$like]);
-                })
-                ->pluck('id')
-                ->all(),
-        );
+        $this->applyFilters($query, $user, $filters);
+
+        /** @var iterable<stdClass> $candidates */
+        $candidates = $query
+            ->orderByDesc('transactions.posted_at')
+            ->orderByDesc('transactions.id')
+            ->limit(self::LIKE_FALLBACK_CANDIDATE_CAP)
+            ->get(['transactions.id', 'transactions.counterparty_name', 'transactions.description']);
+
+        $needle = mb_strtolower($textQuery);
+        $userId = $user->id;
+
+        $matched = [];
+        foreach ($candidates as $row) {
+            $storedName = $row->counterparty_name ?? null;
+            $storedDescription = $row->description ?? null;
+
+            $counterpartyName = is_string($storedName) && $storedName !== ''
+                ? $this->codec->decryptValue('transactions', 'counterparty_name', $storedName, $userId, $this->session)['value']
+                : '';
+            $description = is_string($storedDescription) && $storedDescription !== ''
+                ? $this->codec->decryptValue('transactions', 'description', $storedDescription, $userId, $this->session)['value']
+                : '';
+
+            if (
+                ($counterpartyName !== '' && str_contains(mb_strtolower($counterpartyName), $needle))
+                || ($description !== '' && str_contains(mb_strtolower($description), $needle))
+            ) {
+                $matched[] = self::toInt($row->id);
+            }
+        }
+
+        return $matched;
     }
 
     /**
