@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Categorization\Internal\Services;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Models\RuleAction;
 use Modules\Core\Models\User;
@@ -14,6 +15,7 @@ use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -58,6 +60,8 @@ final class RuleApplier
         private readonly SetsTransactionNote $setNote,
         private readonly TagTransaction $tagTransaction,
         private readonly FieldProvenanceWriter $provenance,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -252,7 +256,13 @@ final class RuleApplier
             ->where('id', $transactionId)
             ->where('user_id', $user->id)
             ->value('note');
-        $finalNote = is_string($finalNoteRaw) ? $finalNoteRaw : null;
+        // D-07: the re-read note is ciphertext under an encrypted user
+        // (SetTransactionNote's own write hook) — decrypt before it becomes
+        // an op-log dirtyFields value, or the op-log's own encrypt-on-write
+        // would double-encrypt it.
+        $finalNote = is_string($finalNoteRaw)
+            ? $this->codec->decryptValue('transactions', 'note', $finalNoteRaw, $user->id, $this->session)['value']
+            : null;
 
         $this->events->dispatch(new TransactionMutated(
             transactionId: $transactionId,
