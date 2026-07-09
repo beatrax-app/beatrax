@@ -3,20 +3,24 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
 
 /*
  * EncryptionMigrationRollbackTest — CRYPT-01 / D-09: a forced mid-migration
  * failure leaves ZERO half-encrypted rows and the pre-migration
  * BackupEncryptor snapshot restores; migration_in_progress gates read-trust.
  * 14-VALIDATION.md CRYPT-01 row 5.
- *
- * RED until Plan 06 ships Modules\Core\Public\Services\EncryptionMigrationService
- * (the D-09 backup-first, atomic, rollback-on-failure migration pass). This
- * test references the planned production FQCN, which does not yet exist —
- * the failure is "class not found", the correct Wave 0 RED state.
  */
 
 beforeEach(function (): void {
@@ -25,15 +29,28 @@ beforeEach(function (): void {
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
+    $this->account = Account::create([
+        'user_id' => $this->user->id,
+        'name' => 'ASN', 'slug' => 'asn-migration-rollback', 'kind' => 'asn',
+        'iban' => 'NL57ASNB0123456782', 'default_currency' => 'EUR',
+    ]);
+    $this->importRun = ImportRun::create([
+        'user_id' => $this->user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/migration-rollback.csv',
+        'sha256' => str_repeat('e', 64),
+        'uploaded_at' => now(),
+        'status' => 'previewed',
+    ]);
 });
 
-it('leaves zero half-encrypted rows when the migration is forced to fail mid-pass', function (): void {
+it('leaves the transaction row untouched when the app-lock KEK is unavailable — never a half-encrypted row', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
     $db->connection()->table('transactions')->insert([
         'user_id' => $this->user->id,
-        'account_id' => 1,
+        'account_id' => $this->account->id,
         'type' => 'expense',
         'posted_at' => '2026-07-01',
         'booked_at' => '2026-07-01 10:00:00',
@@ -47,7 +64,7 @@ it('leaves zero half-encrypted rows when the migration is forced to fail mid-pas
         'counterparty_normalized' => 'migration merchant',
         'normalization_version' => 1,
         'source_format' => 'asn-csv',
-        'import_run_id' => 1,
+        'import_run_id' => $this->importRun->id,
         'source_row_index' => 0,
         'fingerprint' => str_repeat('e', 64),
         'fingerprint_version' => 1,
@@ -61,14 +78,14 @@ it('leaves zero half-encrypted rows when the migration is forced to fail mid-pas
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    // Forcing a mid-pass failure (via a second, non-existent user with no
-    // rows, or an injected fault) must leave the schema in a fully-rolled-
-    // back state — no half-encrypted rows for THIS user either, since the
-    // migration is atomic for the whole pass, not per-row.
+    // No app-lock KEK is primed in this test (Core's TestCase does not
+    // prime one) — migrate() must never touch a row without it, and must
+    // not leave a half-flagged state hanging (see the KEK-unavailable case
+    // below, which asserts this explicitly with a pre-seeded stale row).
     try {
         $migration->migrate($this->user, $session);
         $forcedFailure = true;
-    } catch (\Throwable) {
+    } catch (Throwable) {
         $forcedFailure = false;
     }
 
@@ -106,4 +123,98 @@ it('gates read-trust while migration_in_progress is set — a stale in-progress 
 
     $state = $db->connection()->table('sync_encryption_state')->where('user_id', $this->user->id)->first();
     expect((bool) $state->migration_in_progress)->toBeFalse();
+});
+
+it('a genuine forced failure mid-pass (real KEK, real data) leaves zero half-encrypted rows, preserves the snapshot, and a subsequent happy-path migrate() then succeeds', function (): void {
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $db->connection()->table('transactions')->insert([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'expense',
+        'posted_at' => '2026-07-02',
+        'booked_at' => '2026-07-02 10:00:00',
+        'value_date' => '2026-07-02',
+        'amount_minor' => -750,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -750,
+        'settled_currency' => 'EUR',
+        'description' => 'plaintext before forced failure',
+        'counterparty_name' => 'Forced Failure Merchant',
+        'counterparty_normalized' => 'forced failure merchant',
+        'normalization_version' => 1,
+        'source_format' => 'asn-csv',
+        'import_run_id' => $this->importRun->id,
+        'source_row_index' => 0,
+        'fingerprint' => str_repeat('f', 64),
+        'fingerprint_version' => 1,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // 14-06-PLAN.md Task 2's own guidance: "if Task 1 lacks a clean
+    // failure-injection seam, add a minimal protected/overridable step" —
+    // EncryptionMigrationService::afterChunkProcessed() IS that seam. This
+    // anonymous subclass throws the first time it fires (the transactions
+    // chunk, since this user has no op_log_entries rows) and, before
+    // throwing, reads sync_encryption_state through the same (still open,
+    // still-uncommitted) DB transaction to prove migration_in_progress was
+    // genuinely observable as true at the injected-failure point.
+    $migration = new class($db, $this->app->make(BackupEncryptor::class), $this->app->make(AppLockKeyService::class), $this->app->make(Clock::class), $this->app->make(Container::class), $this->app->make(CacheRepository::class)) extends EncryptionMigrationService
+    {
+        public bool $observedInProgressMidPass = false;
+
+        protected function afterChunkProcessed(int $userId, int $rowsProcessedSoFar): void
+        {
+            $state = $this->db->connection()->table('sync_encryption_state')->where('user_id', $userId)->first();
+            $this->observedInProgressMidPass = $state !== null && (bool) $state->migration_in_progress;
+
+            throw new RuntimeException('EncryptionMigrationRollbackTest: injected mid-pass failure.');
+        }
+    };
+
+    try {
+        $migration->migrate($this->user, $session);
+        $threw = false;
+    } catch (RuntimeException $e) {
+        $threw = $e->getMessage() === 'EncryptionMigrationRollbackTest: injected mid-pass failure.';
+    }
+
+    expect($threw)->toBeTrue();
+    expect($migration->observedInProgressMidPass)->toBeTrue();
+
+    // Zero half-encrypted rows: the whole-pass transaction rollback (plus
+    // the explicit snapshot-restore defense-in-depth) leaves the row
+    // exactly as it was.
+    $row = $db->connection()->table('transactions')->where('user_id', $this->user->id)->first();
+    expect($row->description)->toBe('plaintext before forced failure');
+    expect($row->counterparty_name)->toBe('Forced Failure Merchant');
+
+    // current_epoch stays null (encryption NOT enabled) and no stale
+    // in-progress row survives the rollback.
+    $state = $db->connection()->table('sync_encryption_state')->where('user_id', $this->user->id)->first();
+    expect($state)->toBeNull();
+
+    // The pre-migration snapshot file is preserved on disk (D-09 backup-
+    // first) even though the pass failed.
+    $snapshots = glob(UserDataPathService::appPath('sync/backups').'/pre-encryption-'.$this->user->id.'-*.enc');
+    expect($snapshots)->not->toBeEmpty();
+
+    // Happy path: migrate() again (the real, un-overridden service) then
+    // succeeds cleanly.
+    /** @var EncryptionMigrationService $realMigration */
+    $realMigration = $this->app->make(EncryptionMigrationService::class);
+    $realMigration->migrate($this->user, $session);
+
+    $finalState = $db->connection()->table('sync_encryption_state')->where('user_id', $this->user->id)->first();
+    expect((int) $finalState->current_epoch)->toBe(1);
+    expect((bool) $finalState->migration_in_progress)->toBeFalse();
+
+    $finalRow = $db->connection()->table('transactions')->where('user_id', $this->user->id)->first();
+    expect($finalRow->description)->not->toBe('plaintext before forced failure');
 });
