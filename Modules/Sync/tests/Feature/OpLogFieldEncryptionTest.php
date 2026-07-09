@@ -3,14 +3,18 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
+use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 uses(RefreshDatabase::class);
 
@@ -21,10 +25,10 @@ uses(RefreshDatabase::class);
  * op_log_quarantine with reason 'gdk_decrypt_failed' (never throws — "false
  * not garbage"). 14-VALIDATION.md CRYPT-01 row 2.
  *
- * RED until Plan 02 ships Modules\Sync\Internal\Crypto\OpLogFieldCrypto and
- * Plan 03 wires the decrypt-before-decodeValue() hook into OpLogReplayer.
- * These tests reference the planned production FQCN, which does not yet
- * exist — the failure is "class not found", the correct Wave 0 RED state.
+ * The crypto-unit cases above were completed in Plan 02. The integration
+ * cases below (write->replay round-trip + tamper->quarantine) exercise the
+ * REAL OpLogWriter encrypt-on-write hook and OpLogReplayer decrypt-before-
+ * strategy hook wired in Plan 03 end-to-end.
  */
 
 function oplogCryptoUser(string $username): User
@@ -35,6 +39,88 @@ function oplogCryptoUser(string $username): User
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
     ]);
+}
+
+/**
+ * Seed a minimal transactions row (non-sensitive columns only) to attach a
+ * sensitive-field op-log SET to.
+ */
+function oplogCryptoTransaction(DatabaseManager $db, int $userId): int
+{
+    $accountId = $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId,
+        'name' => 'ASN crypto test',
+        'slug' => 'crypto-asn-'.bin2hex(random_bytes(4)),
+        'kind' => 'asn',
+        'iban' => 'NL00ASNB'.strtoupper(bin2hex(random_bytes(4))),
+        'default_currency' => 'EUR',
+        'created_at' => '2026-07-01 00:00:00',
+        'updated_at' => '2026-07-01 00:00:00',
+    ]);
+
+    $runId = $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $userId,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/crypto-test.csv',
+        'sha256' => hash('sha256', 'crypto-run-'.bin2hex(random_bytes(8))),
+        'uploaded_at' => '2026-07-01 00:00:00',
+        'status' => 'previewed',
+        'created_at' => '2026-07-01 00:00:00',
+        'updated_at' => '2026-07-01 00:00:00',
+    ]);
+
+    return $db->connection()->table('transactions')->insertGetId([
+        'user_id' => $userId,
+        'account_id' => $accountId,
+        'import_run_id' => $runId,
+        'fingerprint' => hash('sha256', 'crypto-'.bin2hex(random_bytes(8))),
+        'posted_at' => '2026-07-01',
+        'booked_at' => '2026-07-01 10:00:00',
+        'value_date' => '2026-07-01',
+        'amount_minor' => -1500,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -1500,
+        'settled_currency' => 'EUR',
+        'counterparty_normalized' => 'crypto merchant',
+        'counterparty_name' => 'Crypto Merchant',
+        'normalization_version' => 3,
+        'description' => 'oplog field encryption test',
+        'type' => 'expense',
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint_version' => 3,
+        'created_at' => '2026-07-01 00:00:00',
+        'updated_at' => '2026-07-01 00:00:00',
+    ]);
+}
+
+/**
+ * Reconstruct the OpLogEntry the writer just persisted (reads the durable
+ * row back, exactly as a peer receiving it over the wire — or a rebuild —
+ * would reconstruct it).
+ */
+function oplogCryptoReadEntry(DatabaseManager $db, int $userId, string $table, string $field, int|string $pk): OpLogEntry
+{
+    $row = $db->connection()->table('op_log_entries')
+        ->where('user_id', $userId)
+        ->where('table_name', $table)
+        ->where('field', $field)
+        ->where('pk', (string) $pk)
+        ->firstOrFail();
+
+    return new OpLogEntry(
+        table: $table,
+        pk: $pk,
+        field: $field,
+        value: is_string($row->value) ? $row->value : null,
+        hlcL: (int) $row->hlc_l,
+        hlcC: (int) $row->hlc_c,
+        deviceId: (string) $row->device_id,
+        opType: OpType::from((string) $row->op_type),
+        signature: (string) $row->signature,
+        userId: $userId,
+        gdkEpoch: is_numeric($row->gdk_epoch) ? (int) $row->gdk_epoch : null,
+    );
 }
 
 beforeEach(function (): void {
@@ -108,60 +194,142 @@ it('returns false when the epoch id bound as associated data is relabeled (tampe
     expect($crypto->decrypt($ciphertext, $rawGdkKey, 'transactions:1:note:2'))->toBeFalse();
 });
 
-it('a corrupted GDK-encrypted op-log entry value is quarantined with reason gdk_decrypt_failed and never throws', function (): void {
-    $user = oplogCryptoUser('oplog-crypto-quarantine');
+it('a full write->replay round-trip encrypts the op-log entry and lands the decrypted plaintext in the projection column, still ciphertext at rest', function (): void {
+    $user = oplogCryptoUser('oplog-crypto-roundtrip');
     $userId = (int) $user->id;
-
-    $signer = new DeviceKeySigner;
-    $keypair = sodium_crypto_sign_keypair();
-    $sk = sodium_crypto_sign_secretkey($keypair);
-    $pkHex = bin2hex(sodium_crypto_sign_publickey($keypair));
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var GdkKeyringService $keyringService */
+    $keyringService = $this->app->make(GdkKeyringService::class);
+    /** @var SensitiveColumnCodec $codec */
+    $codec = $this->app->make(SensitiveColumnCodec::class);
 
-    $categoryId = $db->connection()->table('categories')->insertGetId([
-        'user_id' => $userId,
-        'name' => 'Groceries',
-        'slug' => 'groceries',
-        'kind' => 'expense',
-        'created_at' => '2026-07-01 00:00:00',
-        'updated_at' => '2026-07-01 00:00:00',
+    // GDK encryption enabled for this user (Sync module TestCase primes an
+    // unlocked dummy app-lock KEK for $session — 14-02-SUMMARY).
+    $keyringService->generateAndPersist($userId, $session);
+
+    $txnId = oplogCryptoTransaction($db, $userId);
+
+    $keypair = sodium_crypto_sign_keypair();
+    /** @var OpLogWriter $writer */
+    $writer = $this->app->make(OpLogWriter::class, [
+        'deviceId' => 'oplog-crypto-device-a',
+        'userId' => $userId,
+        'secretKey' => sodium_crypto_sign_secretkey($keypair),
+        'publicKey' => sodium_crypto_sign_publickey($keypair),
     ]);
 
-    // A deliberately-corrupted ciphertext value simulating a tampered
-    // GDK-encrypted op-log payload — Wave 0 pins the contract the replayer
-    // must satisfy once Plan 03 wires the decrypt hook: this MUST route to
-    // quarantine with reason 'gdk_decrypt_failed', never throw, and never
-    // corrupt the target row.
-    $stub = new OpLogEntry(
-        table: 'categories',
-        pk: $categoryId,
-        field: 'name',
-        value: 'not-a-valid-gdk-ciphertext-payload',
-        hlcL: 5000,
-        hlcC: 0,
-        deviceId: 'oplog-crypto-device',
-        opType: OpType::Set,
+    // Real encrypt-on-write hook (Task 1): `note` is D-02b-sensitive.
+    $writer->writeSet('transactions', $txnId, 'note', 'a private note');
+
+    $storedRow = $db->connection()->table('op_log_entries')
+        ->where('user_id', $userId)
+        ->where('table_name', 'transactions')
+        ->where('field', 'note')
+        ->first();
+
+    expect($storedRow)->not->toBeNull();
+    expect($storedRow->value)->not->toBe(json_encode('a private note'));
+    expect((int) $storedRow->gdk_epoch)->toBe(1);
+
+    // Simulate a peer receiving this entry (or a rebuild reading it back) —
+    // reconstruct the OpLogEntry from the durable row and replay it.
+    $entry = oplogCryptoReadEntry($db, $userId, 'transactions', 'note', $txnId);
+
+    $replayer = new OpLogReplayer($db, ['oplog-crypto-device-a' => $writer->publicKeyHex()]);
+    $replayer->replay([$entry], $userId);
+
+    // Durable op-log entry is STILL ciphertext after replay — persistVerifiedEntry
+    // never re-persists the transient decrypted plaintext.
+    $afterReplayValue = $db->connection()->table('op_log_entries')
+        ->where('user_id', $userId)
+        ->where('table_name', 'transactions')
+        ->where('field', 'note')
+        ->value('value');
+    expect($afterReplayValue)->toBe($storedRow->value);
+
+    // Projection column (transactions.note) is codec-format ciphertext, NOT
+    // plaintext — but SensitiveColumnCodec::decryptRow round-trips it back to
+    // the edited plaintext (rotation-safe read path, matching Plan 04's read
+    // sites).
+    $projectedNote = $db->connection()->table('transactions')->where('id', $txnId)->value('note');
+    expect($projectedNote)->not->toBeNull();
+    expect($projectedNote)->not->toBe('a private note');
+
+    $decrypted = $codec->decryptRow('transactions', ['note' => $projectedNote], $userId, $session);
+    expect($decrypted['note'])->toBe('a private note');
+});
+
+it('a byte-flipped op-log entry value is quarantined with reason gdk_decrypt_failed and never throws, leaving the projection row untouched', function (): void {
+    $user = oplogCryptoUser('oplog-crypto-tamper');
+    $userId = (int) $user->id;
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var GdkKeyringService $keyringService */
+    $keyringService = $this->app->make(GdkKeyringService::class);
+
+    $keyringService->generateAndPersist($userId, $session);
+
+    $txnId = oplogCryptoTransaction($db, $userId);
+
+    $keypair = sodium_crypto_sign_keypair();
+    $sk = sodium_crypto_sign_secretkey($keypair);
+    $pk = sodium_crypto_sign_publickey($keypair);
+    /** @var OpLogWriter $writer */
+    $writer = $this->app->make(OpLogWriter::class, [
+        'deviceId' => 'oplog-crypto-device-b',
+        'userId' => $userId,
+        'secretKey' => $sk,
+        'publicKey' => $pk,
+    ]);
+
+    $writer->writeSet('transactions', $txnId, 'note', 'another private note');
+
+    $entry = oplogCryptoReadEntry($db, $userId, 'transactions', 'note', $txnId);
+
+    // Byte-flip the stored ciphertext — a REAL Ed25519-covered $value change
+    // would already be caught by the (separate, defense-in-depth) signature
+    // gate, so this re-signs the corrupted payload with the SAME device key,
+    // isolating the AEAD/decrypt failure this hook must independently catch
+    // (T-14-03: a relabeled epoch or corrupted ciphertext must fail closed
+    // even when the entry is otherwise validly signed).
+    $tamperedValue = substr((string) $entry->value, 0, -4).'XXXX';
+    $tamperedStub = new OpLogEntry(
+        table: $entry->table,
+        pk: $entry->pk,
+        field: $entry->field,
+        value: $tamperedValue,
+        hlcL: $entry->hlcL,
+        hlcC: $entry->hlcC,
+        deviceId: $entry->deviceId,
+        opType: $entry->opType,
         signature: '',
-        userId: $userId,
+        userId: $entry->userId,
+        gdkEpoch: $entry->gdkEpoch,
     );
-    $sig = $signer->sign($stub->signingPayload(), $sk);
-    $entry = new OpLogEntry(
-        table: 'categories',
-        pk: $categoryId,
-        field: 'name',
-        value: 'not-a-valid-gdk-ciphertext-payload',
-        hlcL: 5000,
-        hlcC: 0,
-        deviceId: 'oplog-crypto-device',
-        opType: OpType::Set,
-        signature: $sig,
-        userId: $userId,
+    $tamperedSignature = (new DeviceKeySigner)->sign($tamperedStub->signingPayload(), $sk);
+    $tampered = new OpLogEntry(
+        table: $entry->table,
+        pk: $entry->pk,
+        field: $entry->field,
+        value: $tamperedValue,
+        hlcL: $entry->hlcL,
+        hlcC: $entry->hlcC,
+        deviceId: $entry->deviceId,
+        opType: $entry->opType,
+        signature: $tamperedSignature,
+        userId: $entry->userId,
+        gdkEpoch: $entry->gdkEpoch,
     );
 
-    $replayer = new OpLogReplayer($db, ['oplog-crypto-device' => $pkHex]);
-    $replayer->replay([$entry], $userId);
+    $replayer = new OpLogReplayer($db, ['oplog-crypto-device-b' => $writer->publicKeyHex()]);
+    $replayer->replay([$tampered], $userId);
 
     $quarantined = $db->connection()
         ->table('op_log_quarantine')
@@ -171,8 +339,8 @@ it('a corrupted GDK-encrypted op-log entry value is quarantined with reason gdk_
 
     expect($quarantined)->toBeGreaterThanOrEqual(1);
 
-    // The category name must be untouched — a decrypt failure must never
-    // write garbage into the projection.
-    expect($db->connection()->table('categories')->where('id', $categoryId)->value('name'))
-        ->toBe('Groceries');
+    // The projection row must be untouched — a decrypt failure must never
+    // write garbage into transactions.note (T-05-03 "false not garbage").
+    expect($db->connection()->table('transactions')->where('id', $txnId)->value('note'))
+        ->toBeNull();
 });

@@ -160,6 +160,13 @@ final class TransportFramer
             'op_type' => $entry->opType->value,
             'signature' => $entry->signature,
             'user_id' => $entry->userId,
+            // Phase 14 (CRYPT-01): the GDK epoch tag doubles op-log-value
+            // encryption as transport encryption (D-02) — it MUST travel
+            // alongside the ciphertext, or the receiving peer cannot decrypt
+            // a sensitive field's value at all. Nullable: omitted/null means
+            // plaintext (field not sensitive, or encryption not yet enabled
+            // when the op was written).
+            'gdk_epoch' => $entry->gdkEpoch,
         ];
     }
 
@@ -243,6 +250,13 @@ final class TransportFramer
             throw new \UnexpectedValueException('TransportFramer::decode — user_id must be an int.');
         }
 
+        // Optional (backward-compatible with pre-Phase-14 wire frames that never
+        // carried this key): null means the value is plaintext.
+        $gdkEpochRaw = $row['gdk_epoch'] ?? null;
+        if ($gdkEpochRaw !== null && ! is_int($gdkEpochRaw)) {
+            throw new \UnexpectedValueException('TransportFramer::decode — gdk_epoch must be an int or null.');
+        }
+
         return new OpLogEntry(
             table: $table,
             pk: $pk,
@@ -254,6 +268,7 @@ final class TransportFramer
             opType: $opType,
             signature: $signature,
             userId: $userId,
+            gdkEpoch: $gdkEpochRaw,
         );
     }
 }

@@ -156,6 +156,11 @@ final readonly class PeerCatchUpExchanger
                 opType: $opType,
                 signature: is_string($row->signature) ? $row->signature : '',
                 userId: is_numeric($row->user_id) ? (int) $row->user_id : 0,
+                // Phase 14 (CRYPT-01): the GDK epoch tag MUST travel with the
+                // ciphertext over the wire — the op-log value column doubles as
+                // the transport-encrypted payload (D-02); dropping this here
+                // would leave the receiving peer unable to decrypt it.
+                gdkEpoch: property_exists($row, 'gdk_epoch') && is_numeric($row->gdk_epoch) ? (int) $row->gdk_epoch : null,
             );
         }
 
@@ -185,6 +190,7 @@ final readonly class PeerCatchUpExchanger
                 'op_type' => $entry->opType->value,
                 'signature' => $entry->signature,
                 'user_id' => $entry->userId,
+                'gdk_epoch' => $entry->gdkEpoch,
             ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 
             // +1 for comma separator between array elements.

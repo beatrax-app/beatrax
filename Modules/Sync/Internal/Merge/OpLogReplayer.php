@@ -6,11 +6,16 @@ namespace Modules\Sync\Internal\Merge;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Internal\Crypto\GdkKeyring;
+use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
+use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Merge\Strategies\GCounterStrategy;
 use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\MergeStrategyInterface;
@@ -18,6 +23,7 @@ use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
  * Production LWW / CRDT op-log replayer with SE-07 fix, quarantine-never-throw,
@@ -65,6 +71,25 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
  * AlwaysJsonWireContractTest calls $replayer->decodeValue($value) directly.
  * This method must be public so tests can verify the SE-07 fix in isolation.
  *
+ * ## GDK decrypt-before-strategy hook (Phase 14, CRYPT-01, D-02)
+ *
+ * Immediately after an entry passes the I1/Ed25519 gate and is persisted to
+ * op_log_entries (ciphertext, if the field is sensitive — persistVerifiedEntry
+ * always writes $entry->value UNCHANGED), a GDK-tagged sensitive entry is
+ * decrypted using the keyring key for its `gdk_epoch` BEFORE it is added to
+ * the HLC-sorted/strategy-dispatch candidate set. `decodeValue()`'s
+ * always-JSON contract stays intact — decrypt is a separate, independently
+ * quarantinable step layered in front of it. Any AEAD failure (tampered
+ * ciphertext, relabeled epoch, or a keyring with no key for that epoch)
+ * routes the entry to op_log_quarantine with reason 'gdk_decrypt_failed' and
+ * excludes it from strategy resolution entirely — the replayer NEVER throws
+ * on a decrypt failure (T-05-03 "false not garbage" posture, matching every
+ * other quarantine reason here). The value written into a sensitive
+ * PROJECTION column is separately RE-ENCRYPTED via the Sync Public
+ * `SensitiveColumnCodec` under the CURRENT epoch (rotation-safe projection
+ * AD) before the SQL UPDATE/INSERT — the projection column stays ciphertext
+ * at rest, never the transient in-memory plaintext.
+ *
  * @param  array<string, string>  $deviceKeys  device-id => hex Ed25519 public key.
  */
 final readonly class OpLogReplayer
@@ -93,6 +118,16 @@ final readonly class OpLogReplayer
 
     private Clock $clock;
 
+    private SensitiveFieldRegistry $sensitiveFields;
+
+    private ?OpLogFieldCrypto $fieldCrypto;
+
+    private ?GdkKeyringService $keyringService;
+
+    private ?SensitiveColumnCodec $columnCodec;
+
+    private ?Session $session;
+
     /**
      * @param  DatabaseManager  $db  Raw DB access (bypasses Eloquent model events).
      * @param  array<string, string>  $deviceKeys  device-id => hex Ed25519 public key.
@@ -101,6 +136,13 @@ final readonly class OpLogReplayer
      * @param  SearchIndexWriterContract|null  $searchWriter  FTS5 freshness hook (D-11 / SE-01).
      *                                                        Null disables FTS updates (used in OpLogRebuilder rebuild path where search is refreshed
      *                                                        in bulk after rebuild, and in tests that do not need FTS).
+     * @param  SensitiveFieldRegistry|null  $sensitiveFields  D-02b allow-list (default: new instance — stateless config).
+     * @param  OpLogFieldCrypto|null  $fieldCrypto  GDK entry-value AEAD (default: resolved from container; null disables
+     *                                              decrypt — a GDK-tagged entry then fails closed to quarantine).
+     * @param  GdkKeyringService|null  $keyringService  Per-user epoch keyring (default: resolved from container).
+     * @param  SensitiveColumnCodec|null  $columnCodec  Rotation-safe projection-column re-encrypt (default: resolved
+     *                                                  from container; null leaves the projection column plaintext).
+     * @param  Session|null  $session  Needed to release the app-lock KEK for keyring reads (default: resolved from container).
      */
     public function __construct(
         private DatabaseManager $db,
@@ -108,6 +150,11 @@ final readonly class OpLogReplayer
         ?MergeRulesRegistry $rules = null,
         ?Clock $wallClock = null,
         private readonly ?SearchIndexWriterContract $searchWriter = null,
+        ?SensitiveFieldRegistry $sensitiveFields = null,
+        ?OpLogFieldCrypto $fieldCrypto = null,
+        ?GdkKeyringService $keyringService = null,
+        ?SensitiveColumnCodec $columnCodec = null,
+        ?Session $session = null,
     ) {
         $this->signer = new DeviceKeySigner;
         $this->rules = $rules ?? new MergeRulesRegistry;
@@ -123,6 +170,11 @@ final readonly class OpLogReplayer
         // under tests either way. The container resolution is guarded because the
         // replayer is also constructed outside a booted app (e.g. some unit tests).
         $this->clock = $wallClock ?? $this->resolveClock();
+        $this->sensitiveFields = $sensitiveFields ?? new SensitiveFieldRegistry;
+        $this->fieldCrypto = $fieldCrypto ?? $this->resolveFromContainer(OpLogFieldCrypto::class);
+        $this->keyringService = $keyringService ?? $this->resolveFromContainer(GdkKeyringService::class);
+        $this->columnCodec = $columnCodec ?? $this->resolveFromContainer(SensitiveColumnCodec::class);
+        $this->session = $session ?? $this->resolveFromContainer(Session::class);
     }
 
     /**
@@ -144,6 +196,30 @@ final readonly class OpLogReplayer
                 return CarbonImmutable::now();
             }
         };
+    }
+
+    /**
+     * Resolve an optional GDK crypto collaborator from the container,
+     * mirroring resolveClock()'s guarded pattern — the replayer is also
+     * constructed outside a booted app (e.g. some unit tests) or before
+     * these Phase 14 services are bound.
+     *
+     * @template T of object
+     *
+     * @param  class-string<T>  $class
+     * @return T|null
+     */
+    private function resolveFromContainer(string $class): ?object
+    {
+        $container = Container::getInstance();
+
+        if (! $container->bound($class)) {
+            return null;
+        }
+
+        $instance = $container->make($class);
+
+        return $instance instanceof $class ? $instance : null;
     }
 
     /**
@@ -208,6 +284,112 @@ final readonly class OpLogReplayer
     }
 
     /**
+     * Load $userId's GDK keyring, or null when it cannot currently be loaded
+     * (crypto services unavailable in this replayer instance, no session, the
+     * app-lock is locked, or GDK encryption was never enabled for this user).
+     * Never throws — callers treat null as "cannot decrypt right now" and
+     * quarantine the entry (T-05-03 fail-closed posture).
+     */
+    private function tryLoadKeyring(int $userId): ?GdkKeyring
+    {
+        if ($this->keyringService === null || $this->session === null) {
+            return null;
+        }
+
+        try {
+            $keyring = $this->keyringService->loadKeyring($userId, $this->session);
+        } catch (\LogicException) {
+            return null;
+        }
+
+        return $keyring->epochs() === [] ? null : $keyring;
+    }
+
+    /**
+     * Decrypt a GDK-tagged sensitive entry's value for strategy resolution.
+     * Returns a NEW OpLogEntry carrying the decrypted plaintext JSON in
+     * ->value (all other fields unchanged, including ->gdkEpoch — needed so
+     * a later CREATE_ROW/SET write-back knows the source was encrypted).
+     * Returns null (and quarantines with 'gdk_decrypt_failed') when the
+     * keyring has no key for the tagged epoch, the crypto collaborator is
+     * unavailable, or the AEAD authentication fails (tampered ciphertext or
+     * a relabeled epoch tag) — NEVER throws.
+     */
+    private function decryptForStrategy(OpLogEntry $entry, ?GdkKeyring $keyring, string $now): ?OpLogEntry
+    {
+        if ($entry->value === null || $entry->gdkEpoch === null) {
+            return $entry;
+        }
+
+        if ($this->fieldCrypto === null || $keyring === null) {
+            $this->quarantine($entry, 'gdk_decrypt_failed', $now);
+
+            return null;
+        }
+
+        $keyHex = $keyring->keyFor($entry->gdkEpoch);
+        if ($keyHex === null) {
+            $this->quarantine($entry, 'gdk_decrypt_failed', $now);
+
+            return null;
+        }
+
+        $rawKey = sodium_hex2bin($keyHex);
+        try {
+            $plain = $this->fieldCrypto->decrypt(
+                $entry->value,
+                $rawKey,
+                "{$entry->table}:{$entry->pk}:{$entry->field}:{$entry->gdkEpoch}",
+            );
+        } finally {
+            sodium_memzero($rawKey);
+        }
+
+        if ($plain === false) {
+            $this->quarantine($entry, 'gdk_decrypt_failed', $now);
+
+            return null;
+        }
+
+        return new OpLogEntry(
+            table: $entry->table,
+            pk: $entry->pk,
+            field: $entry->field,
+            value: $plain,
+            hlcL: $entry->hlcL,
+            hlcC: $entry->hlcC,
+            deviceId: $entry->deviceId,
+            opType: $entry->opType,
+            signature: $entry->signature,
+            userId: $entry->userId,
+            gdkEpoch: $entry->gdkEpoch,
+        );
+    }
+
+    /**
+     * Re-encrypt a plaintext sensitive-field value for the PROJECTION column
+     * write-back (rotation-safe, current-epoch, projection AD) — the
+     * projection column stays ciphertext at rest and readable across a
+     * future rotation (SensitiveColumnCodec::decryptRow tries every epoch).
+     * Pass-through (returns $value unchanged) when the field is not
+     * sensitive, the value is not a string, or the codec is unavailable /
+     * encryption is not currently usable for $userId (SensitiveColumnCodec's
+     * own pass-through posture — never blocks the write).
+     */
+    private function reencryptForProjection(string $table, string $field, mixed $value, int $userId): mixed
+    {
+        if ($this->columnCodec === null || $this->session === null || ! is_string($value)) {
+            return $value;
+        }
+
+        if (! $this->sensitiveFields->isSensitive($table, $field)) {
+            return $value;
+        }
+
+        return $this->columnCodec->encryptValue($table, $field, $value, $userId, $this->session);
+    }
+
+    /**
      * Replay a merged set of op-log entries against the real SQLite schema.
      *
      * 1. Filter + verify signatures (I1 + Ed25519 gate). Rejected → quarantine
@@ -231,6 +413,13 @@ final readonly class OpLogReplayer
         // attacker-controlled rows can never become durable, replayable, or part of
         // a log export. Only entries that pass the gate are persisted below.
         $verified = [];
+
+        // GDK keyring: loaded at most once per replay() call, lazily (only if a
+        // GDK-tagged sensitive entry is actually encountered), and cached here —
+        // never as instance state (this class is readonly / potentially reused
+        // across many replay() calls with different users in a headless daemon).
+        $keyring = null;
+        $keyringLoaded = false;
 
         foreach ($entries as $entry) {
             if ($entry->userId !== $userId) {
@@ -287,8 +476,34 @@ final readonly class OpLogReplayer
             }
 
             // Verified — persist to the authoritative durable log (WR-08).
+            // persistVerifiedEntry() ALWAYS writes $entry->value UNCHANGED
+            // (ciphertext, if the field is sensitive) — the decrypt step
+            // below only affects the in-memory copy used for strategy
+            // resolution, never what lands in op_log_entries.
             $this->persistVerifiedEntry($entry, $now);
-            $verified[] = $entry;
+
+            if ($entry->gdkEpoch === null || ! $this->sensitiveFields->isSensitive($entry->table, $entry->field)) {
+                $verified[] = $entry;
+
+                continue;
+            }
+
+            if (! $keyringLoaded) {
+                $keyring = $this->tryLoadKeyring($userId);
+                $keyringLoaded = true;
+            }
+
+            $decrypted = $this->decryptForStrategy($entry, $keyring, $now);
+
+            if ($decrypted === null) {
+                // Quarantined inside decryptForStrategy() ('gdk_decrypt_failed').
+                // The entry is already durably persisted (ciphertext) above —
+                // it is simply excluded from strategy resolution, so the
+                // projection is never touched with garbage (T-05-03).
+                continue;
+            }
+
+            $verified[] = $decrypted;
         }
 
         // Step 2: sort verified entries by HLC total order [l, c, device_id].
@@ -408,7 +623,12 @@ final readonly class OpLogReplayer
                                 // must be JSON-encoded before it reaches a SQLite column.
                                 // Encoding inside the try means an encode failure also
                                 // routes to quarantine instead of aborting the whole batch.
-                                $payload[$field] = $this->encodeColumnValue($strategy->resolve($fieldEntries));
+                                $resolvedValue = $this->encodeColumnValue($strategy->resolve($fieldEntries));
+                                // Phase 14 (CRYPT-01/D-02b): a sensitive PROJECTION column is
+                                // re-encrypted under the CURRENT epoch (rotation-safe) before
+                                // the INSERT — the strategy above only ever saw the transient
+                                // decrypted plaintext, never the projection at rest.
+                                $payload[$field] = $this->reencryptForProjection($table, $field, $resolvedValue, $userId);
                             } catch (\Throwable) {
                                 $this->quarantine($fieldEntries[0], 'strategy_error', $now);
 
@@ -540,6 +760,11 @@ final readonly class OpLogReplayer
                                 // encode and the column write are guarded: a single bad op
                                 // is quarantined and the rest of the batch survives.
                                 $columnValue = $this->encodeColumnValue($strategy->resolve($fieldEntries));
+                                // Phase 14 (CRYPT-01/D-02b): a sensitive PROJECTION column is
+                                // re-encrypted under the CURRENT epoch (rotation-safe) before
+                                // the UPDATE — e.g. counterparties.display_name after a rename,
+                                // transactions.note after an edit.
+                                $columnValue = $this->reencryptForProjection($table, $field, $columnValue, $userId);
 
                                 $this->db->connection()
                                     ->table($table)
@@ -724,6 +949,7 @@ final readonly class OpLogReplayer
             [
                 'op_type' => $entry->opType->value,
                 'value' => $entry->value,
+                'gdk_epoch' => $entry->gdkEpoch,
                 'signature' => $entry->signature,
                 'recorded_at' => $now,
             ],
@@ -735,7 +961,8 @@ final readonly class OpLogReplayer
      * Never throws. Replay is deterministic.
      *
      * @param  string  $reason  'cross_user'|'missing_device_key'|'forged_signature'|
-     *                          'unknown_table'|'strategy_error'|'incomplete_create_row'
+     *                          'unknown_table'|'strategy_error'|'incomplete_create_row'|
+     *                          'gdk_decrypt_failed'
      */
     private function quarantine(OpLogEntry $entry, string $reason, string $now): void
     {
