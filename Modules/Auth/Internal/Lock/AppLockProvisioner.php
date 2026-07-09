@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Lock;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
@@ -44,6 +46,7 @@ final class AppLockProvisioner
         private readonly Clock $clock,
         private readonly LockStateManager $lockState,
         private readonly BiometricDeviceStore $biometricStore,
+        private readonly Dispatcher $events,
     ) {}
 
     /**
@@ -216,7 +219,19 @@ final class AppLockProvisioner
      * recovery wrap remains valid.
      *
      * Returns false when $currentPin is wrong or the blob is corrupted; the stored
-     * wraps are unchanged in that case.
+     * wraps are unchanged in that case — nothing is dispatched, no partial state.
+     *
+     * D-10: dispatches `AppLockPassphraseChanged` right before returning success so
+     * a Sync listener re-wraps the GDK (Group Data Key) keyring under the (still
+     * current — see the event's own docblock) app-lock data key, guaranteeing the
+     * keyring file is never left stale relative to the just-completed passphrase
+     * change. Auth has zero compile-time dependency on Sync: this dispatches only
+     * Auth's own Public event. The listener is deliberately best-effort/never-throw
+     * (mirrors `SyncCaptureListener`'s D-07 discipline) — a GDK re-wrap failure
+     * (e.g. an independently corrupted keyring file) must never make this method
+     * throw instead of returning its documented `bool`, and must never leave
+     * `user_app_lock_configs` half-updated; the PIN change itself has already
+     * succeeded by the time this dispatches.
      */
     public function changePin(int $userId, string $currentPin, string $newPin): bool
     {
@@ -250,7 +265,6 @@ final class AppLockProvisioner
         $newPinWrapKey = $this->kdf->deriveWrapKey($newPin, $row->kdf_salt);
         $newPinWrappedKey = $this->keyWrap->wrap($dataKey, $newPinWrapKey);
         sodium_memzero($newPinWrapKey);
-        sodium_memzero($dataKey);
 
         $newPinHash = $this->pinHasher->hash($newPin);
 
@@ -261,6 +275,13 @@ final class AppLockProvisioner
                 'pin_hash' => $newPinHash,
                 'pin_wrapped_key' => $newPinWrappedKey,
             ]);
+
+        // D-10 GDK re-wrap. $dataKey is the app-lock KEK; it is the same
+        // value before and after a plain PIN change (only its PIN-derived
+        // WRAP just changed above) — see AppLockPassphraseChanged's docblock.
+        $this->events->dispatch(new AppLockPassphraseChanged($userId, $dataKey, $dataKey));
+
+        sodium_memzero($dataKey);
 
         return true;
     }
