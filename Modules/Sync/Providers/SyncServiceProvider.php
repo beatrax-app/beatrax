@@ -16,6 +16,8 @@ use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Commands\SyncServeCommand;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -84,6 +86,38 @@ final class SyncServiceProvider extends ServiceProvider
 
         // DeviceKeySigner singleton (stateless verifier, safe to share).
         $this->app->singleton(DeviceKeySigner::class);
+
+        // Phase 14 Plan 02: GDK crypto primitives (class_exists-guarded so
+        // this provider stays clean at every intermediate commit of this
+        // very plan — both classes are stateless/DI-resolved, safe to share).
+        if (class_exists(OpLogFieldCrypto::class)) {
+            $this->app->singleton(OpLogFieldCrypto::class);
+        }
+        if (class_exists(GdkKeyringService::class)) {
+            $this->app->singleton(GdkKeyringService::class);
+        }
+
+        // Phase 14 single-owner forward registration (mirrors the Phase 13
+        // transport-namespace pattern above): Plans 05/07/08 create these
+        // classes; this guard wires them the moment they exist so those
+        // plans never need to touch this provider (STATE [11-02] precedent).
+        // Referenced by runtime-built FQCN so PHPStan stays clean before
+        // each class exists.
+        $cryptoNamespace = 'Modules\Sync\Internal\Crypto\\';
+        // Plan 05: device-removal rotation orchestration (D-04/D-05).
+        $this->singletonIfExists($cryptoNamespace.'GdkRotationService');
+
+        // Plan 07: GdkRewrapService bound behind its own contract, and the
+        // Auth AppLockPassphraseChanged -> RewrapGdkOnPassphraseChange
+        // listener wire (registered in boot() below, once both classes exist).
+        $gdkRewrapContract = $cryptoNamespace.'GdkRewrapContract';
+        $gdkRewrapService = $cryptoNamespace.'GdkRewrapService';
+        if (class_exists($gdkRewrapContract) && class_exists($gdkRewrapService)) {
+            $this->app->bind($gdkRewrapContract, $gdkRewrapService);
+        }
+
+        // Plan 08: GDK_EPOCH_WRAP control-message handler.
+        $this->singletonIfExists($cryptoNamespace.'GdkEpochControlHandler');
 
         // Production OpLogReplayer fed the confirmed-only device-key map
         // (Phase 12: turns the empty Phase 11 stub into the real registry map).
@@ -307,6 +341,16 @@ final class SyncServiceProvider extends ServiceProvider
                 SavedReportMutated::class,
                 [SyncCaptureListener::class, 'handleSavedReport'],
             );
+        }
+
+        // Phase 14 Plan 07: passphrase-change GDK re-wrap (D-10). Referenced by
+        // runtime-built FQCN so this provider stays PHPStan-clean before Plan
+        // 07 ships either class — the single-owner forward-registration
+        // precedent (STATE [11-02]) so Plan 07 never needs to edit this file.
+        $authPassphraseChanged = 'Modules\Auth\Public\Events\AppLockPassphraseChanged';
+        $rewrapListener = 'Modules\Sync\Internal\Crypto\RewrapGdkOnPassphraseChange';
+        if (class_exists($authPassphraseChanged) && class_exists($rewrapListener)) {
+            $events->listen($authPassphraseChanged, [$rewrapListener, 'handle']);
         }
 
         // Plan 05: Sync health-check Livewire component (class_exists-guarded).
