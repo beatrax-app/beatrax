@@ -139,6 +139,15 @@
             </button>
         </div>
 
+        {{-- Phase 14 D-10: re-secured-encryption note appended to the Change-PIN
+             success flash — shown only when an encrypted keyring exists for
+             this user (changePin() gates the message itself). --}}
+        @if ($changePinSuccessMessage !== '')
+            <p class="text-xs text-slate-500 dark:text-slate-400" role="status" data-testid="change-pin-success">
+                {{ $changePinSuccessMessage }}
+            </p>
+        @endif
+
         {{-- 3b': Forgot PIN recovery (D-11/D-21) — account password sets a new PIN --}}
         <div class="py-1">
             <button
