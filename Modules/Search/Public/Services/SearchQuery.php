@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Search\Public\Services;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
@@ -14,6 +15,7 @@ use Modules\Search\Internal\Services\QueryParser;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Dto\SearchResultPage;
 use Modules\Search\Public\Dto\SearchRowDto;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -61,6 +63,8 @@ final class SearchQuery
         private readonly DatabaseManager $db,
         private readonly QueryParser $parser,
         private readonly DidYouMeanSuggester $suggester,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -154,7 +158,7 @@ final class SearchQuery
         foreach ($sliced as $row) {
             $rowId = self::toInt($row->id);
             $highlight = $highlights[$rowId] ?? null;
-            $dtos[] = $this->mapRow($row, $highlight);
+            $dtos[] = $this->mapRow($row, $highlight, $user->id);
             $lastId = $rowId;
             $lastPostedAt = self::toString($row->posted_at);
         }
@@ -681,12 +685,18 @@ final class SearchQuery
         );
     }
 
-    private function mapRow(stdClass $row, ?stdClass $highlight): SearchRowDto
+    private function mapRow(stdClass $row, ?stdClass $highlight, int $userId): SearchRowDto
     {
         $bookedAt = CarbonImmutable::parse(self::toString($row->booked_at));
         $categoryId = $row->category_id === null ? null : self::toInt($row->category_id);
         $categoryName = $row->category_name === null ? null : self::toString($row->category_name);
-        $counterpartyName = $row->counterparty_name === null ? null : self::toString($row->counterparty_name);
+        // CRYPT-01 (D-02b) read-side decrypt — transactions.counterparty_name
+        // is ciphertext at rest once encryption is enabled; pass-through
+        // no-op otherwise. The FTS-sourced highlight/snippet below are
+        // already plaintext (D-02c disclosed shadow) and need no decrypt.
+        $counterpartyName = $row->counterparty_name === null
+            ? null
+            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, $this->session)['value'];
 
         $counterpartySlug = property_exists($row, 'counterparty_slug') && $row->counterparty_slug !== null
             ? self::toString($row->counterparty_slug)
@@ -725,7 +735,10 @@ final class SearchQuery
             // and a snippet that merely duplicates the name still renders.
             $snippetBody = self::toString($highlight->snippet_body);
             $snippetPlain = str_replace([self::MARK_START, self::MARK_END], '', $snippetBody);
-            if ($snippetBody !== '' && $snippetPlain !== self::toString($row->counterparty_name ?? '')) {
+            // Compare against the DECRYPTED counterparty name (not the raw,
+            // possibly-ciphertext $row->counterparty_name) — otherwise this
+            // dedup guard can never match once encryption is enabled.
+            if ($snippetBody !== '' && $snippetPlain !== ($counterpartyName ?? '')) {
                 $snippet = self::decorateHighlight($snippetBody);
             }
         }
