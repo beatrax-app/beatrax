@@ -85,6 +85,84 @@ final class GdkKeyringService
     }
 
     /**
+     * D-10 atomicity fix: like {@see generateAndPersist()}, but STAGES the
+     * keyring file (encrypts to the `.tmp` sibling of the real path)
+     * WITHOUT renaming it into place, and returns a {@see GdkKeyringStage}
+     * the caller must pass to {@see finalizeStagedEpoch()} (success) or
+     * {@see discardStagedEpoch()} (rollback) once the surrounding SQL
+     * transaction has committed/rolled back.
+     *
+     * The `sync_encryption_state.current_epoch` write still happens here,
+     * via the same `DatabaseManager` connection the caller's ambient SQL
+     * transaction runs on — so it participates in that transaction's
+     * rollback exactly like before. Only the FILE finalize (the
+     * rename-into-place) is deferred: a mid-migration failure that rolls
+     * back `current_epoch` must never leave a finalized epoch-1 keyring
+     * file contradicting it on disk (T-14.1-05).
+     *
+     * @throws \LogicException when the app-lock KEK is unavailable.
+     * @throws RuntimeException on a crypto / I-O failure.
+     */
+    public function stageFirstEpoch(int $userId, Session $session): GdkKeyringStage
+    {
+        $kek = $this->appLockKeyService->release($session);
+        if ($kek === null) {
+            // T-14-05 / weak-key-window guard: never write the keyring
+            // without the LOCK-04 KEK.
+            throw new \LogicException('Cannot generate GDK keyring: app-lock not unlocked.');
+        }
+
+        try {
+            $rawKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+            $keyHex = sodium_bin2hex($rawKey);
+            sodium_memzero($rawKey);
+
+            $epoch = new GdkEpoch(epochId: 1, keyHex: $keyHex);
+            $keyring = GdkKeyring::empty()->withEpoch($epoch);
+
+            $tmpEncPath = $this->stageKeyringFile($userId, $keyring, $kek);
+            $this->setCurrentEpoch($userId, $epoch->epochId);
+
+            return new GdkKeyringStage($userId, $epoch, $tmpEncPath);
+        } catch (SodiumException $e) {
+            throw new RuntimeException('Failed to generate GDK keyring: sodium error.', 0, $e);
+        } finally {
+            sodium_memzero($kek);
+        }
+    }
+
+    /**
+     * D-10: finalize a previously-staged epoch — rename the `.tmp`
+     * encrypted keyring file into place. Call ONLY after the ambient SQL
+     * transaction that wrote `current_epoch` in {@see stageFirstEpoch()}
+     * has committed.
+     *
+     * @throws RuntimeException if the rename fails.
+     */
+    public function finalizeStagedEpoch(GdkKeyringStage $stage): void
+    {
+        $encPath = $this->keyringPath($stage->userId);
+
+        if (! @rename($stage->tmpEncPath, $encPath)) {
+            @unlink($stage->tmpEncPath);
+
+            throw new RuntimeException("Could not finalize the GDK keyring file for user {$stage->userId}.");
+        }
+    }
+
+    /**
+     * D-10: discard a previously-staged epoch — delete the un-finalized
+     * `.tmp` encrypted keyring file after the ambient SQL transaction
+     * rolled back. Best-effort cleanup (never throws): the SQL rollback is
+     * the actual correctness guarantee, this only tidies up the orphaned
+     * `.tmp` file.
+     */
+    public function discardStagedEpoch(GdkKeyringStage $stage): void
+    {
+        @unlink($stage->tmpEncPath);
+    }
+
+    /**
      * Decrypt and return the full keyring (all epochs). Empty keyring when
      * no file exists yet for $userId.
      *
@@ -235,6 +313,30 @@ final class GdkKeyringService
     private function writeKeyringFile(int $userId, GdkKeyring $keyring, string $kek): void
     {
         $encPath = $this->keyringPath($userId);
+        $tmpEncPath = $this->stageKeyringFile($userId, $keyring, $kek);
+
+        // Rename over the real path immediately — every OTHER caller of
+        // this method (generateAndPersist/appendEpoch/rewrapUnderNewKek)
+        // does not need the D-10 deferred-finalize seam: none of them run
+        // inside an ambient SQL transaction whose rollback could strand
+        // this file.
+        if (! @rename($tmpEncPath, $encPath)) {
+            @unlink($tmpEncPath);
+
+            throw new RuntimeException("Could not finalize the GDK keyring file for user {$userId}.");
+        }
+    }
+
+    /**
+     * Encrypt $keyring to a `.tmp` sibling of the real keyring path WITHOUT
+     * renaming it into place — the shared staging primitive behind both
+     * {@see writeKeyringFile()} (immediate finalize) and
+     * {@see stageFirstEpoch()} (deferred finalize, D-10). Returns the
+     * `.tmp` path.
+     */
+    private function stageKeyringFile(int $userId, GdkKeyring $keyring, string $kek): string
+    {
+        $encPath = $this->keyringPath($userId);
         $dir = dirname($encPath);
         @mkdir($dir, 0700, true);
 
@@ -246,21 +348,17 @@ final class GdkKeyringService
         $tmpPlainPath = $dir.DIRECTORY_SEPARATOR.'beatrax_gdk_'.bin2hex(random_bytes(8)).'.tmp';
         SecureTempFile::write($tmpPlainPath, $payload);
 
-        // Encrypt to a `.enc.tmp` sibling and only rename over the real
-        // path once the encrypt call fully succeeds — a crash/failure
-        // mid-encrypt never corrupts (or half-overwrites) the existing file.
+        // Encrypt to a `.enc.tmp` sibling; the caller decides when (or
+        // whether) to rename it over the real path.
         $tmpEncPath = $encPath.'.tmp';
 
         try {
             $this->backupEncryptor->encrypt($tmpPlainPath, $tmpEncPath, $kek);
-
-            if (! @rename($tmpEncPath, $encPath)) {
-                @unlink($tmpEncPath);
-                throw new RuntimeException("Could not finalize the GDK keyring file for user {$userId}.");
-            }
         } finally {
             @unlink($tmpPlainPath);
         }
+
+        return $tmpEncPath;
     }
 
     /**

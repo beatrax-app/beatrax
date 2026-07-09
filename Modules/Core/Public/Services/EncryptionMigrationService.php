@@ -52,13 +52,31 @@ use Throwable;
  * correctness guarantee than trying to restore a whole live SQLite file
  * mid-request (file-descriptor/WAL/lock hazards against the app's own open
  * PDO connection) would: on ANY throw inside the closure, Laravel rolls
- * back every row this pass touched — INCLUDING the `current_epoch`/
- * `migration_in_progress` writes — automatically, atomically, with no
- * half-encrypted state possible. Rows are still processed in bounded
- * `CHUNK_SIZE` batches (via `chunkById`) so memory stays bounded even
- * though the SQL transaction itself spans the whole pass — the "batches
- * over the forever-retained history" must-have is about processing
- * shape, not about splitting the atomicity boundary.
+ * back every DB row this pass touched — INCLUDING the `current_epoch`/
+ * `migration_in_progress` writes — automatically, atomically. Rows are
+ * still processed in bounded `CHUNK_SIZE` batches (via `chunkById`) so
+ * memory stays bounded even though the SQL transaction itself spans the
+ * whole pass — the "batches over the forever-retained history" must-have
+ * is about processing shape, not about splitting the atomicity boundary.
+ *
+ * ## D-10: the file-vs-DB atomicity window (residual, now closed)
+ *
+ * The DB rollback above covers every ROW this pass writes, but the
+ * epoch-1 GDK keyring is also a FILESYSTEM write
+ * (`GdkKeyringService`'s encrypted key file) — a side effect a SQL
+ * transaction cannot roll back. An earlier version of this class called
+ * `EncryptionMigrationSupport::enableFirstEpoch()` (which finalized —
+ * renamed into place — the keyring file) from INSIDE the transaction
+ * closure below; a later chunk throw would then roll back
+ * `current_epoch` to null while the epoch-1 keyring file still existed
+ * on disk, half-encrypted-state-by-a-different-name (T-14.1-05). This is
+ * closed by splitting epoch generation into `stageFirstEpoch()` (writes
+ * `current_epoch` inside the transaction, encrypts the keyring to a
+ * `.tmp` sibling but does NOT rename it) and `finalizeStagedEpoch()`
+ * (the rename-into-place), called only AFTER `$connection->transaction()`
+ * below returns successfully. On failure, `discardStagedEpoch()` deletes
+ * the orphaned `.tmp` file — best-effort hygiene, since the DB rollback
+ * already makes `current_epoch` null again regardless.
  *
  * On top of the transaction, a pre-migration `BackupEncryptor` snapshot
  * (D-09's literal "backup-first" requirement) is taken BEFORE the
@@ -229,13 +247,21 @@ class EncryptionMigrationService
         // any row is touched.
         $snapshotPath = $this->takeSnapshot($userId, $connection, $kek);
 
-        try {
-            $connection->transaction(function () use ($userId, $session, $connection): void {
-                $support = $this->container->make(EncryptionMigrationSupport::class);
+        // D-10: $support is constructed OUTSIDE the transaction closure (not
+        // inline as before) so the SAME instance is reachable both inside
+        // the closure (to stage the epoch + encrypt rows) and after it
+        // returns (to finalize the staged keyring file — only once the SQL
+        // transaction has actually committed).
+        /** @var EncryptionMigrationSupport $support */
+        $support = $this->container->make(EncryptionMigrationSupport::class);
 
+        try {
+            $connection->transaction(function () use ($userId, $session, $connection, $support): void {
                 $this->setMigrationInProgress($connection, $userId, true);
 
-                $support->enableFirstEpoch($userId, $session);
+                // D-10: stages (does not finalize) the epoch-1 keyring file;
+                // `current_epoch` IS written here, inside this transaction.
+                $support->stageFirstEpoch($userId, $session);
 
                 $total = $this->estimateTotalRows($connection, $userId);
                 $processed = 0;
@@ -251,13 +277,27 @@ class EncryptionMigrationService
                 $this->finalizeMigration($connection, $userId);
             });
 
+            // D-10: only NOW — after the SQL transaction has fully
+            // committed — finalize (rename-into-place) the epoch-1 keyring
+            // file. A crash in the narrow window between the commit above
+            // and this line leaves `current_epoch=1` with no keyring file
+            // yet; that is a strictly better failure mode than the reverse
+            // (a finalized file contradicting a rolled-back epoch), and is
+            // the residual window this fix deliberately narrows rather than
+            // claims to eliminate entirely (no cross-process 2-phase-commit
+            // exists between SQLite and the filesystem).
+            $support->finalizeStagedEpoch();
+
             $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 100, self::PROGRESS_TTL_SECONDS);
         } catch (Throwable $e) {
             // The transaction() call above already rolled back every DB
             // write. This explicit restore is defense-in-depth proving the
             // snapshot is independently a valid, restorable backup (D-09's
             // literal instruction) even though the SQL rollback is the
-            // primary correctness guarantee.
+            // primary correctness guarantee. discardStagedEpoch() is a
+            // best-effort no-op when nothing was ever staged (e.g. the
+            // throw happened before stageFirstEpoch() ran).
+            $support->discardStagedEpoch();
             $this->restoreFromSnapshot($snapshotPath, $kek, $connection);
             $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
 
