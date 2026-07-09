@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
+use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Search\Internal\Services\DidYouMeanSuggester;
+use Modules\Search\Internal\Services\EntityNameSearch;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Services\SearchQuery;
 use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
@@ -177,4 +181,101 @@ it('the primary >= 3-char FTS path is unaffected by the fallback fix, for an enc
     $page = $query->search($user, 'groceries', SearchFilters::empty());
 
     expect(collect($page->rows)->pluck('id'))->toContain($txId);
+})->group('SearchEncryptionFallback');
+
+it('EntityNameSearch (⌘K) matches a decrypted counterparty display_name for an encrypted user (Task 2)', function (): void {
+    $user = sefUser();
+    $this->enablesEncryptionForUser($user);
+
+    $account = sefAccount($user);
+
+    // Same merchant-alias creation-write fixture as CounterpartyEncryptionTest
+    // — CounterpartyResolverService encrypts display_name/merchant_name on
+    // creation (already-fixed precedent), giving us a genuinely encrypted
+    // counterparties row rather than a raw plaintext insert.
+    DB::table('merchant_aliases')->insert([
+        'user_id' => $user->id,
+        'pattern' => 'NETFLIX.COM AMSTERDAM',
+        'generalized_pattern' => 'netflix',
+        'friendly_name' => 'Netflix',
+        'merged_from' => null,
+        'created_at' => now()->toDateTimeString(),
+        'updated_at' => now()->toDateTimeString(),
+    ]);
+
+    $tx = new CanonicalTransaction(
+        userId: $user->id,
+        accountId: $account->id,
+        type: 'expense',
+        postedAt: CarbonImmutable::create(2026, 6, 1, 12, 0, 0),
+        bookedAt: CarbonImmutable::create(2026, 6, 1, 12, 0, 0),
+        valueDate: CarbonImmutable::create(2026, 6, 1, 12, 0, 0),
+        amountMinor: -1099,
+        currency: 'EUR',
+        settledAmountMinor: -1099,
+        settledCurrency: 'EUR',
+        fxRateUsed: null,
+        counterpartyName: null,
+        counterpartyIban: null,
+        counterpartyNormalized: 'fixture',
+        normalizationVersion: 1,
+        description: 'NETFLIX.COM AMSTERDAM',
+        categoryId: null,
+        sourceFormat: 'asn_csv',
+        importRunId: 1,
+        sourceRowIndex: 1,
+        sourceRef: null,
+    );
+
+    /** @var CounterpartyResolverService $resolver */
+    $resolver = app(CounterpartyResolverService::class);
+    $dto = $resolver->resolve($tx, $user);
+    expect($dto)->not->toBeNull();
+
+    // Ciphertext at rest — proves this went through the real encrypting write.
+    $stored = DB::table('counterparties')->where('id', $dto->counterpartyId)->first(['display_name']);
+    expect($stored->display_name)->not->toBe('Netflix');
+
+    /** @var EntityNameSearch $entitySearch */
+    $entitySearch = app(EntityNameSearch::class);
+    $hits = $entitySearch->query($user, 'net');
+
+    $counterpartyLabels = collect($hits)->where('type', 'counterparty')->pluck('label');
+    expect($counterpartyLabels->all())->toContain('Netflix');
+})->group('SearchEncryptionFallback');
+
+it('did-you-mean suggests a close match derived from decrypted counterparty_name for an encrypted user (Task 2)', function (): void {
+    $user = sefUser();
+    $this->enablesEncryptionForUser($user);
+
+    $account = sefAccount($user);
+    $run = sefImportRun($user);
+
+    sefRecordTransaction($user, $account, $run, 'Albert Heijn', 'weekly groceries run', 'sef-dym-1');
+
+    /** @var SearchQuery $query */
+    $query = app(SearchQuery::class);
+
+    // "heijm" (a 1-edit typo of "heijn") matches nothing via FTS or the LIKE
+    // fallback — the zero-result search then falls through to
+    // DidYouMeanSuggester, which must decrypt the stored counterparty_name
+    // to build its corpus (it is ciphertext at rest) before it can find
+    // "heijn" as the closest word.
+    $page = $query->search($user, 'heijm', SearchFilters::empty());
+
+    expect($page->totalCount)->toBe(0);
+    expect($page->didYouMean)->toBe('heijn');
+})->group('SearchEncryptionFallback');
+
+it('the did-you-mean candidate row scan is bounded, not an unbounded full-history decrypt (Task 2)', function (): void {
+    // RESEARCH Pitfall 3 / T-14.1-06: DidYouMeanSuggester can no longer
+    // GROUP BY the ciphertext counterparty_name column, so it must fetch
+    // ungrouped rows to decrypt-then-tally in PHP — assert that fetch is
+    // capped at a genuinely bounded constant, not an unbounded ->get().
+    $reflection = new ReflectionClass(DidYouMeanSuggester::class);
+    $constant = $reflection->getConstant('CANDIDATE_ROW_CAP');
+
+    expect($constant)->toBeInt();
+    expect($constant)->toBeGreaterThan(0);
+    expect($constant)->toBeLessThan(100_000);
 })->group('SearchEncryptionFallback');
