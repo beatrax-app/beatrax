@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal\Resolvers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Services\PairLookup;
 use stdClass;
 
@@ -131,12 +133,23 @@ final class PaypalFundingResolver
 
     private const FUZZY_WEIGHT_DATE = 0.2;
 
+    /**
+     * Cap on the ASN-direct arm's amount+date-window candidate scan
+     * before per-row `counterparty_iban` decrypt-then-match (T-14.1-06).
+     * The amount+date predicate already narrows to a handful of rows in
+     * practice; this bounds the pathological case where many ASN debits
+     * share both the settled amount and the date window.
+     */
+    private const ASN_DIRECT_CANDIDATE_SCAN_LIMIT = 20;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly FingerprintComposer $fingerprints,
         private readonly PairLookup $pairLookup,
         private readonly ChainLinkInsertHelper $inserter,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -223,7 +236,17 @@ final class PaypalFundingResolver
      */
     private function deterministicMatch(stdClass $row, User $user): ?array
     {
-        $events = $this->extractEvents(self::toString($row->raw_payload ?? null));
+        // D-05: this row came off a raw query-builder read (`resolveForUser`'s
+        // `$connection->table('transactions')->get()` above), which bypasses
+        // the Eloquent `EncryptedJsonCast` entirely — the ciphertext must be
+        // decrypted explicitly before `extractEvents()` can `json_decode` it.
+        // Pass-through no-op when encryption is not enabled for this user.
+        $storedRawPayload = self::toString($row->raw_payload ?? null);
+        $plainRawPayload = $storedRawPayload === ''
+            ? ''
+            : $this->codec->decryptValue('transactions', 'raw_payload', $storedRawPayload, $user->id, $this->session)['value'];
+
+        $events = $this->extractEvents($plainRawPayload);
         if ($events === []) {
             return null;
         }
@@ -349,11 +372,36 @@ final class PaypalFundingResolver
         $windowStart = $center->subDays(self::DATE_WINDOW_DAYS)->startOfDay()->toDateTimeString();
         $windowEnd = $center->addDays(self::DATE_WINDOW_DAYS)->endOfDay()->toDateTimeString();
 
-        // Pull every ASN-side candidate inside the date + amount + alias
-        // gate. limit(2) is intentional — the arm only needs to know
-        // "0", "1", or "≥2"; the closest by booked_at is already the
-        // first row thanks to the orderByRaw clause.
-        //
+        // D-05: `tx.counterparty_iban` is a `SensitiveFieldRegistry`
+        // ciphertext column under encryption, so it CANNOT be part of a
+        // SQL equality predicate — a `kci.real_iban = tx.counterparty_iban`
+        // JOIN would never match once the user's data is encrypted. The
+        // alias set (`known_counterparty_ibans` for this user +
+        // target_account_kind='paypal') is small and plaintext, so it is
+        // loaded in full; the `tx` candidates are narrowed on cheap
+        // PLAINTEXT dims only (user/type/amount/date window, and the 1:1
+        // chain_links exclusion), then each candidate's `counterparty_iban`
+        // is decrypted and matched against the alias set in PHP —
+        // mirrors CounterpartyIndexQuery's decrypt-then-match template.
+        $paypalAliasRows = $this->db->connection()
+            ->table('known_counterparty_ibans')
+            ->where('user_id', $user->id)
+            ->where('target_account_kind', 'paypal')
+            ->get(['real_iban']);
+
+        /** @var array<string, bool> $aliasSet */
+        $aliasSet = [];
+        foreach ($paypalAliasRows as $aliasRow) {
+            /** @var stdClass $aliasRow */
+            $realIban = self::toString($aliasRow->real_iban ?? null);
+            if ($realIban !== '') {
+                $aliasSet[$realIban] = true;
+            }
+        }
+        if ($aliasSet === []) {
+            return null;
+        }
+
         // The left-join on chain_links is the 1:1 enforcement: an ASN
         // row already cited as `to_transaction_id` on another
         // `paypal_funding` link in a non-rejected state is excluded
@@ -361,14 +409,12 @@ final class PaypalFundingResolver
         // the per-pair pre-insert guard in ChainLinkInsertHelper still
         // suppresses re-proposal of the same (from, to, kind, user)
         // tuple, so a rejected pair stays rejected.
+        //
+        // ASN_DIRECT_CANDIDATE_SCAN_LIMIT bounds the decrypt scan
+        // (T-14.1-06) — the amount+date predicate already narrows this to
+        // a handful of rows in practice.
         $candidates = $this->db->connection()
             ->table('transactions as tx')
-            ->join('known_counterparty_ibans as kci', function ($join) use ($user): void {
-                /** @var JoinClause $join */
-                $join->on('kci.real_iban', '=', 'tx.counterparty_iban')
-                    ->where('kci.user_id', '=', $user->id)
-                    ->where('kci.target_account_kind', '=', 'paypal');
-            })
             ->leftJoin('chain_links as existing', function ($join): void {
                 /** @var JoinClause $join */
                 $join->on('existing.to_transaction_id', '=', 'tx.id')
@@ -381,7 +427,7 @@ final class PaypalFundingResolver
             ->whereBetween('tx.booked_at', [$windowStart, $windowEnd])
             ->whereNull('existing.id')
             ->orderByRaw('ABS(julianday(tx.booked_at) - julianday(?))', [$center->toDateTimeString()])
-            ->limit(2)
+            ->limit(self::ASN_DIRECT_CANDIDATE_SCAN_LIMIT)
             ->get([
                 'tx.id as candidate_id',
                 'tx.booked_at as candidate_booked_at',
@@ -392,14 +438,39 @@ final class PaypalFundingResolver
             return null;
         }
 
-        /** @var stdClass $closest */
-        $closest = $candidates->first();
+        // Decrypt-then-match: iterate in closest-by-date order (already
+        // sorted by the orderByRaw clause above) and keep only the rows
+        // whose decrypted IBAN is in the alias set. The arm only needs to
+        // know "0", "1", or "≥2" matches, so it stops once 2 are found.
+        /** @var list<stdClass> $matches */
+        $matches = [];
+        foreach ($candidates as $candidate) {
+            /** @var stdClass $candidate */
+            $storedIban = self::toString($candidate->candidate_iban ?? null);
+            if ($storedIban === '') {
+                continue;
+            }
+            $plainIban = $this->codec->decryptValue('transactions', 'counterparty_iban', $storedIban, $user->id, $this->session)['value'];
+            if (! isset($aliasSet[$plainIban])) {
+                continue;
+            }
+            $matches[] = $candidate;
+            if (count($matches) >= 2) {
+                break;
+            }
+        }
+
+        if ($matches === []) {
+            return null;
+        }
+
+        $closest = $matches[0];
         $partnerId = self::toInt($closest->candidate_id ?? null);
         if ($partnerId === 0) {
             return null;
         }
-        $partnerIban = self::toString($closest->candidate_iban ?? null);
-        $ambiguous = $candidates->count() > 1;
+        $partnerIban = $this->codec->decryptValue('transactions', 'counterparty_iban', self::toString($closest->candidate_iban ?? null), $user->id, $this->session)['value'];
+        $ambiguous = count($matches) > 1;
 
         $bookedCarbon = CarbonImmutable::parse(self::toString($closest->candidate_booked_at ?? null));
         $dateDeltaDays = abs((int) $bookedCarbon->diffInDays($center, false));
