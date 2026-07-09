@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\DB;
+use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Categorization\Internal\Jobs\ReapplyRulesJob;
 use Modules\Categorization\Internal\Services\RuleApplier;
 use Modules\Categorization\Internal\Services\RuleEngine;
@@ -20,6 +22,7 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 
 /*
@@ -46,6 +49,9 @@ function reapplyRunJob(int $userId): void
         app(CacheRepository::class),
         app(Clock::class),
         app(LoggerInterface::class),
+        app(SensitiveColumnCodec::class),
+        app(Session::class),
+        app(AppLockKeyService::class),
     );
 }
 

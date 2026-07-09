@@ -9,18 +9,21 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\LazyCollection;
+use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Categorization\Internal\Services\RuleApplier;
 use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
 use Throwable;
@@ -72,6 +75,18 @@ use Throwable;
  * `transactions` WRITE itself — every mutation is delegated to
  * `RuleApplier`, which in turn delegates to the Ledger Public actions
  * (Plan 04/05).
+ *
+ * **CR-04 (14.1-07):** `counterparty_name`/`description` are decrypted
+ * via {@see SensitiveColumnCodec} before {@see RuleMatchInput} is
+ * built, so substring conditions match plaintext even though the two
+ * columns are ciphertext at rest under an encrypted user. Safe by
+ * construction under `dispatchSync` (this job's only reachable
+ * dispatch shape, per plan 04/D-03): the KEK is always the caller's
+ * own request-context key. The {@see AppLockKeyService::release()}
+ * check below is a defensive belt against a future re-introduction of
+ * a queued/daemon dispatch origin (RESEARCH Pitfall 1) — if it ever
+ * fires, decrypting would silently no-op and this run would silently
+ * classify nothing, exactly the failure this plan exists to close.
  */
 final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
 {
@@ -123,6 +138,9 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
         Repository $cache,
         Clock $clock,
         LoggerInterface $logger,
+        SensitiveColumnCodec $codec,
+        Session $session,
+        AppLockKeyService $appLockKeyService,
     ): void {
         /** @var User|null $user */
         $user = User::query()->where('id', $this->userId)->first();
@@ -132,6 +150,14 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
 
         $connection = $db->connection();
         $userId = $this->userId;
+
+        $hasKek = $appLockKeyService->release($session) !== null;
+        if (! $hasKek) {
+            $logger->warning(
+                'ReapplyRulesJob: no app-lock KEK available for this run — counterparty_name/description will be matched using their stored values as-is (any genuinely-encrypted value will fail to substring-match).',
+                ['user_id' => $userId],
+            );
+        }
 
         $nonSplitQuery = static fn (): Builder => $connection->table('transactions')
             ->where('transactions.user_id', $userId)
@@ -181,6 +207,9 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
                 $cache,
                 $cacheKey,
                 $logger,
+                $codec,
+                $session,
+                $hasKek,
                 &$progress,
             ): void {
                 $ids = [];
@@ -216,7 +245,7 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
                     // ENTIRE queued job (all remaining chunks too) instead
                     // of just skipping the one bad row.
                     try {
-                        $input = self::matchInputFromRow($row);
+                        $input = self::matchInputFromRow($row, $codec, $session, $userId, $hasKek);
                         $matched = $engine->match($input, $user);
                         $changed = $applier->applyAtReapply($matched, $transactionId, $userId);
                     } catch (Throwable $e) {
@@ -246,10 +275,30 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
         $cache->put($cacheKey, $progress, self::PROGRESS_TTL_SECONDS);
     }
 
-    private static function matchInputFromRow(stdClass $row): RuleMatchInput
-    {
+    private static function matchInputFromRow(
+        stdClass $row,
+        SensitiveColumnCodec $codec,
+        Session $session,
+        int $userId,
+        bool $hasKek,
+    ): RuleMatchInput {
         $counterpartyName = is_string($row->counterparty_name) ? $row->counterparty_name : null;
         $description = is_string($row->description) ? $row->description : null;
+
+        // CR-04: decrypt-before-match — codec->decryptValue() is itself a
+        // no-op pass-through when encryption isn't enabled, but skipping
+        // the call entirely when $hasKek is false avoids a wasted
+        // keyring-load attempt per row (the KEK-absence guard in handle()
+        // already logged once for the whole run).
+        if ($hasKek) {
+            if ($counterpartyName !== null && $counterpartyName !== '') {
+                $counterpartyName = $codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $userId, $session)['value'];
+            }
+            if ($description !== null && $description !== '') {
+                $description = $codec->decryptValue('transactions', 'description', $description, $userId, $session)['value'];
+            }
+        }
+
         $settledAmountMinor = is_numeric($row->settled_amount_minor) ? (int) $row->settled_amount_minor : 0;
         $postedAt = is_string($row->posted_at) ? CarbonImmutable::parse($row->posted_at) : CarbonImmutable::now();
 

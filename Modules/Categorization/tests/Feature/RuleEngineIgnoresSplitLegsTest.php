@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Event;
+use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Categorization\Internal\Jobs\ReapplyRulesJob;
 use Modules\Categorization\Internal\Pipeline\ApplyAutoCategoryStage;
 use Modules\Categorization\Internal\Services\RuleApplier;
@@ -22,6 +24,7 @@ use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 
 /*
@@ -315,6 +318,9 @@ it('a full ReapplyRulesJob pass leaves a split transaction\'s legs byte-identica
         app(CacheRepository::class),
         app(Clock::class),
         app(LoggerInterface::class),
+        app(SensitiveColumnCodec::class),
+        app(Session::class),
+        app(AppLockKeyService::class),
     );
 
     // Never even walked — no TransactionMutated for this split parent.
