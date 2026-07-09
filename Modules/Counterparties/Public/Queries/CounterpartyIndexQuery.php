@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Public\Queries;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -37,6 +39,8 @@ final readonly class CounterpartyIndexQuery
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
+        private SensitiveColumnCodec $codec,
+        private Session $session,
     ) {}
 
     /**
@@ -66,6 +70,7 @@ final readonly class CounterpartyIndexQuery
         $cpRows = $query->orderBy('display_name')->get(['id', 'slug', 'display_name', 'type']);
 
         $cutoffDate = $this->clock->now()->subYear()->toDateString();
+        $userId = $user->id;
 
         /** @var list<CounterpartyIndexRow> $result */
         $result = [];
@@ -75,7 +80,12 @@ final readonly class CounterpartyIndexQuery
                 continue;
             }
             $slug = is_string($cpRow->slug ?? null) ? $cpRow->slug : '';
-            $displayName = is_string($cpRow->display_name ?? null) ? $cpRow->display_name : '';
+            $storedDisplayName = is_string($cpRow->display_name ?? null) ? $cpRow->display_name : '';
+            // CRYPT-01 (D-02b) read-side decrypt — pass-through no-op when
+            // encryption is not enabled for this user.
+            $displayName = $storedDisplayName === ''
+                ? ''
+                : $this->codec->decryptValue('counterparties', 'display_name', $storedDisplayName, $userId, $this->session)['value'];
             $type = is_string($cpRow->type ?? null) ? $cpRow->type : 'unknown';
 
             // 12-month total + transaction count via a single aggregate
@@ -108,6 +118,14 @@ final readonly class CounterpartyIndexQuery
                 $postedAt = $recent->posted_at ?? null;
                 $description = $recent->description ?? null;
                 $counterpartyName = $recent->counterparty_name ?? null;
+                // CRYPT-01 (D-02b) read-side decrypt — pass-through no-op
+                // when encryption is not enabled for this user.
+                if (is_string($description) && $description !== '') {
+                    $description = $this->codec->decryptValue('transactions', 'description', $description, $userId, $this->session)['value'];
+                }
+                if (is_string($counterpartyName) && $counterpartyName !== '') {
+                    $counterpartyName = $this->codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $userId, $this->session)['value'];
+                }
                 $date = is_string($postedAt) ? substr($postedAt, 0, 10) : '';
                 $label = is_string($description) && $description !== ''
                     ? $description

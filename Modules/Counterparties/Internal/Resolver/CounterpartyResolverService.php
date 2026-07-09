@@ -6,6 +6,7 @@ namespace Modules\Counterparties\Internal\Resolver;
 
 use Iban\Validation\Validator as IbanValidator;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Dto\ClassificationRule;
 use Modules\Community\Public\Services\ClassificationRuleProvider;
@@ -18,6 +19,7 @@ use Modules\Counterparties\Public\Events\CounterpartyResolved;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
  * Default `CounterpartyResolver` implementation — walks the seven-step
@@ -138,6 +140,8 @@ final class CounterpartyResolverService implements CounterpartyResolver
         private readonly IbanValidator $ibanValidator,
         private readonly ClassificationRuleProvider $ruleProvider,
         private readonly CorpusPatternMatcher $matcher,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     public function resolve(CanonicalTransaction $tx, User $user): ?CounterpartyResolutionDto
@@ -440,18 +444,26 @@ final class CounterpartyResolverService implements CounterpartyResolver
         $baseSlug = $this->slugify($displayName);
         $slug = $this->resolveSlugForUpsert($userId, $baseSlug, $displayName);
 
+        // CRYPT-01 (D-02b): display_name/merchant_name/iban are encrypted at
+        // this creation-time direct write via the Sync Public
+        // SensitiveColumnCodec — pass-through when encryption is not
+        // enabled for this user. counterparty_normalized/slug/type are
+        // NEVER passed through the codec (matching/routing keys stay
+        // plaintext, per D-02b). Only fires on a genuine INSERT —
+        // firstOrCreate() leaves an already-existing row's stored
+        // ciphertext untouched.
         $row = Counterparty::query()->firstOrCreate(
             [
                 'user_id' => $userId,
                 'slug' => $slug,
             ],
-            [
+            $this->codec->encryptAttrs('counterparties', [
                 'type' => $type,
                 'display_name' => $displayName,
                 'iban' => $iban,
                 'merchant_name' => $merchantName,
                 'metadata' => $metadata === [] ? null : $metadata,
-            ],
+            ], $userId, $this->session),
         );
 
         $this->events->dispatch(new CounterpartyResolved(
@@ -481,6 +493,16 @@ final class CounterpartyResolverService implements CounterpartyResolver
      * a numeric suffix is appended (`bol-2`, `bol-3`, …) until a free
      * slot is found. The walk is bounded; per-user UNIQUE on
      * (user_id, slug) keeps the suffix space finite in practice.
+     *
+     * [Rule 1] Once display_name is encrypted at rest (CRYPT-01), the
+     * stored value read off `counterparties.display_name` is ciphertext
+     * and can never `===` the plaintext `$displayName` being resolved —
+     * a naive comparison would treat every already-resolved counterparty
+     * as "taken by a different name" on every re-import, silently
+     * fragmenting one merchant into `bol`, `bol-2`, `bol-3`, … forever.
+     * The stored value is decrypted (rotation-safe, try-every-epoch; a
+     * pass-through no-op when encryption is not enabled) before the
+     * comparison.
      */
     private function resolveSlugForUpsert(
         int $userId,
@@ -497,7 +519,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
             return $baseSlug;
         }
 
-        if (is_string($existing) && $existing === $displayName) {
+        if (is_string($existing) && $this->decryptDisplayName($existing, $userId) === $displayName) {
             return $baseSlug;
         }
 
@@ -514,12 +536,24 @@ final class CounterpartyResolverService implements CounterpartyResolver
                 return $candidate;
             }
 
-            if (is_string($candidateExisting) && $candidateExisting === $displayName) {
+            if (is_string($candidateExisting) && $this->decryptDisplayName($candidateExisting, $userId) === $displayName) {
                 return $candidate;
             }
 
             $suffix++;
         }
+    }
+
+    /**
+     * Decrypts a stored `counterparties.display_name` value for the
+     * idempotency comparison above. Never throws — a tampered/undecryptable
+     * value falls back to the raw stored (ciphertext) string, which simply
+     * fails the `===` comparison and falls through to slug suffixing
+     * (safe: it can never falsely collide with a plaintext $displayName).
+     */
+    private function decryptDisplayName(string $stored, int $userId): string
+    {
+        return $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, $this->session)['value'];
     }
 
     /**
