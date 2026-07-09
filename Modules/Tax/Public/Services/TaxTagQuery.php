@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Public\Services;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\BatchTagSuggestion;
 use Modules\Tax\Public\Dto\TaxTagData;
 use Modules\Tax\Public\Dto\TaxYearSummary;
@@ -25,6 +27,8 @@ final class TaxTagQuery
 {
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -72,7 +76,7 @@ final class TaxTagQuery
                 transactionId: $txId,
                 deductionCategoryId: $row->deduction_category_id !== null ? self::toInt($row->deduction_category_id) : null,
                 deductionCategoryShortName: self::toStrOrNull($row->category_short_name),
-                note: self::toStrOrNull($row->note),
+                note: $this->decryptNoteOrNull($row->note, $userId),
                 taxYearOverride: $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
             );
         }
@@ -129,7 +133,7 @@ final class TaxTagQuery
                 transactionId: $txId,
                 deductionCategoryId: $row->deduction_category_id !== null ? self::toInt($row->deduction_category_id) : null,
                 deductionCategoryShortName: self::toStrOrNull($row->category_short_name),
-                note: self::toStrOrNull($row->note),
+                note: $this->decryptNoteOrNull($row->note, $userId),
                 taxYearOverride: $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
                 transactionSplitId: $splitId,
             );
@@ -221,13 +225,17 @@ final class TaxTagQuery
 
         $cpId = self::toInt($tx->counterparty_id);
 
-        // Resolve counterparty name.
+        // Resolve counterparty name. CRYPT-01 (D-02b) read-side decrypt —
+        // display_name is ciphertext at rest once encryption is enabled;
+        // pass-through no-op otherwise.
         $cpRow = $connection
             ->table('counterparties')
             ->where('id', $cpId)
             ->first(['display_name']);
 
-        $cpName = $cpRow !== null ? self::toStr($cpRow->display_name) : '';
+        $cpName = $cpRow !== null && is_string($cpRow->display_name)
+            ? $this->codec->decryptValue('counterparties', 'display_name', $cpRow->display_name, $userId, $this->session)['value']
+            : '';
 
         // Count OTHER untagged transactions for this counterparty in the effective tax year.
         $untaggedCount = $connection
@@ -284,14 +292,23 @@ final class TaxTagQuery
         return $result;
     }
 
+    /**
+     * Decrypts a raw `tax_transaction_tags.note` stored value, or returns
+     * null when the stored value isn't a non-empty string. Never throws —
+     * a pass-through no-op when encryption is not enabled for this user.
+     */
+    private function decryptNoteOrNull(mixed $value, int $userId): ?string
+    {
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        return $this->codec->decryptValue('tax_transaction_tags', 'note', $value, $userId, $this->session)['value'];
+    }
+
     private static function toInt(mixed $value): int
     {
         return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 
     private static function toStrOrNull(mixed $value): ?string

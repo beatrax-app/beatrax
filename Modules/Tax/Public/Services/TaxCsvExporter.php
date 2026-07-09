@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Public\Services;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Services\TaxCsvExporter as InternalTaxCsvExporter;
 use Modules\Tax\Internal\Services\TaxYearQuery as InternalTaxYearQuery;
 
@@ -23,6 +25,8 @@ final class TaxCsvExporter
 {
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -32,7 +36,7 @@ final class TaxCsvExporter
      */
     public function export(User $user, int $year): string
     {
-        $internalQuery = new InternalTaxYearQuery($this->db);
+        $internalQuery = new InternalTaxYearQuery($this->db, $this->codec, $this->session);
         $internalExporter = new InternalTaxCsvExporter($internalQuery);
 
         return $internalExporter->export($user, $year);

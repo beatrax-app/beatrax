@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Internal\Services;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\TaxYearData;
 
 /**
@@ -45,6 +47,8 @@ final class TaxYearQuery
 {
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -155,15 +159,19 @@ final class TaxYearQuery
                 $deductionsTotal += abs($minor);
             }
 
+            // CRYPT-01 (D-02b) read-side decrypt — the tax cockpit /
+            // CSV / PDF export reads description/counterparty display
+            // name/iban/note, all of which are ciphertext at rest once
+            // encryption is enabled; pass-through no-op otherwise.
             $rowData = [
                 'transactionId' => self::toInt($row->transaction_id),
                 'transactionSplitId' => $row->transaction_split_id !== null ? self::toInt($row->transaction_split_id) : null,
                 'bookedAt' => self::toStrOrNull($row->booked_at),
                 'accountName' => self::toStrOrNull($row->account_name),
-                'counterpartyName' => self::toStrOrNull($row->counterparty_name),
-                'counterpartyIban' => self::toStrOrNull($row->counterparty_iban),
-                'description' => self::toStrOrNull($row->description),
-                'note' => self::toStrOrNull($row->note),
+                'counterpartyName' => $this->decryptOrNull('counterparties', 'display_name', $row->counterparty_name, $userId),
+                'counterpartyIban' => $this->decryptOrNull('counterparties', 'iban', $row->counterparty_iban, $userId),
+                'description' => $this->decryptOrNull('transactions', 'description', $row->description, $userId),
+                'note' => $this->decryptOrNull('tax_transaction_tags', 'note', $row->note, $userId),
                 'settledAmountMinor' => $minor,
                 'settledCurrency' => self::toStr($row->settled_currency),
                 'amountMinor' => self::toInt($row->amount_minor),
@@ -249,6 +257,21 @@ final class TaxYearQuery
         }
 
         return $years;
+    }
+
+    /**
+     * Decrypts a raw stored (possibly mixed-type stdClass property) value
+     * for the given sensitive (table, field) pair, or returns null when
+     * the stored value isn't a non-empty string. Never throws — a
+     * pass-through no-op when encryption is not enabled for this user.
+     */
+    private function decryptOrNull(string $table, string $field, mixed $value, int $userId): ?string
+    {
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        return $this->codec->decryptValue($table, $field, $value, $userId, $this->session)['value'];
     }
 
     private static function toInt(mixed $value): int
