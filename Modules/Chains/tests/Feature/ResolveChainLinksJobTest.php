@@ -7,7 +7,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Bus;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
@@ -28,7 +28,11 @@ use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 /*
  * Wave 2 coverage for the ResolveChainLinksJob lifecycle. Covers:
  *  - Interface contracts (ShouldQueue, ShouldBeUniqueUntilProcessing)
- *  - Per-user uniqueness via Queue::fake
+ *  - dispatchSync call counting via Bus::fake (14.1-04, CRYPT-01: the
+ *    dispatcher now runs the job in-process so the decrypt-requiring
+ *    resolvers have the KEK available; the queue-only unique lock no
+ *    longer collapses repeat dispatches — see the "no queue-lock
+ *    collapse" test below)
  *  - chain_resolution_runs row transitions (pending → running → complete)
  *  - ConfirmImport post-commit dispatch via the DispatchesChainResolution contract
  */
@@ -95,19 +99,26 @@ it('uniqueVia returns a Cache Repository resolved through the LockStore helper',
     expect($job->uniqueVia())->toBeInstanceOf(CacheRepository::class);
 });
 
-it('per-user uniqueness: dispatching twice for the same user enqueues once', function (): void {
-    Queue::fake();
+it('no queue-lock collapse: dispatchSync runs the job every call, even for the same user (14.1-04)', function (): void {
+    // BusChainResolutionDispatcher now calls ::dispatchSync (14.1-04,
+    // CRYPT-01) so the KEK is available in-process for the encrypted
+    // counterparty_iban resolvers. dispatchSync bypasses
+    // PendingDispatch::shouldDispatch() entirely, so the per-user
+    // ShouldBeUniqueUntilProcessing lock — which only exists at the
+    // queue-push boundary — never engages. Two calls for the same
+    // user therefore run the job body twice, not once.
+    Bus::fake();
     /** @var DispatchesChainResolution $dispatcher */
     $dispatcher = $this->app->make(DispatchesChainResolution::class);
 
     $dispatcher->dispatchForUser($this->user->id);
     $dispatcher->dispatchForUser($this->user->id);
 
-    Queue::assertPushed(ResolveChainLinksJob::class, 1);
+    Bus::assertDispatchedSync(ResolveChainLinksJob::class, 2);
 });
 
-it('per-user uniqueness: different users enqueue separately', function (): void {
-    Queue::fake();
+it('different users each run their own dispatchSync call', function (): void {
+    Bus::fake();
     $otherFixtures = seedJobUserAndFixtures(2);
     /** @var DispatchesChainResolution $dispatcher */
     $dispatcher = $this->app->make(DispatchesChainResolution::class);
@@ -115,7 +126,7 @@ it('per-user uniqueness: different users enqueue separately', function (): void 
     $dispatcher->dispatchForUser($this->user->id);
     $dispatcher->dispatchForUser($otherFixtures['user']->id);
 
-    Queue::assertPushed(ResolveChainLinksJob::class, 2);
+    Bus::assertDispatchedSync(ResolveChainLinksJob::class, 2);
 });
 
 it('handle() runs both resolvers and transitions chain_resolution_runs from running to complete', function (): void {
@@ -223,13 +234,13 @@ it('handle() runs both resolvers and transitions chain_resolution_runs from runn
 });
 
 it('ConfirmImport invokes the chain dispatcher when inserted > 0 via the contract', function (): void {
-    Queue::fake();
+    Bus::fake();
 
     /** @var DispatchesChainResolution $dispatcher */
     $dispatcher = $this->app->make(DispatchesChainResolution::class);
     $dispatcher->dispatchForUser($this->user->id);
 
-    Queue::assertPushed(ResolveChainLinksJob::class, function (ResolveChainLinksJob $job): bool {
+    Bus::assertDispatchedSync(ResolveChainLinksJob::class, function (ResolveChainLinksJob $job): bool {
         return $job->userId === $this->user->id;
     });
 });

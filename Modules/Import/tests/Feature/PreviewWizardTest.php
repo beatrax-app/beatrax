@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Core\Models\User;
@@ -77,7 +77,12 @@ it('confirms an import and redirects to the results page', function (): void {
     expect(ImportRun::query()->find($preview->importRunId)?->status)->toBe('confirmed');
 });
 
-it('dispatches DetectRecurringSeriesJob alongside ResolveChainLinksJob after a successful confirm', function (): void {
+it('dispatches DetectRecurringSeriesJob alongside ResolveChainLinksJob synchronously after a successful confirm', function (): void {
+    // 14.1-04 (CRYPT-01): both dispatchers now call ::dispatchSync so
+    // the decrypt-requiring resolvers/detectors run in-process with
+    // this request's KEK available. Bus::fake + assertDispatchedSync
+    // replaces Queue::fake + assertPushed — dispatchSync never
+    // reaches the queue layer, so Queue::fake would see nothing.
     /** @var RunsImports $importer */
     $importer = $this->app->make(RunsImports::class);
     $preview = $importer->runFromUpload(
@@ -88,17 +93,17 @@ it('dispatches DetectRecurringSeriesJob alongside ResolveChainLinksJob after a s
         BankCsvFormatHint::Asn,
     );
 
-    Queue::fake();
+    Bus::fake();
 
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
         ->call('confirm')
         ->assertRedirect();
 
-    Queue::assertPushed(
+    Bus::assertDispatchedSync(
         ResolveChainLinksJob::class,
         fn (ResolveChainLinksJob $job): bool => $job->userId === $this->fixtureUser->id,
     );
-    Queue::assertPushed(
+    Bus::assertDispatchedSync(
         DetectRecurringSeriesJob::class,
         fn (DetectRecurringSeriesJob $job): bool => $job->userId === $this->fixtureUser->id,
     );
@@ -122,14 +127,14 @@ it('does NOT dispatch DetectRecurringSeriesJob on a re-confirm with zero new wor
     // Second confirm on the same already-confirmed run: ConfirmImport's
     // idempotent short-circuit returns zero inserted + zero enriched, so
     // neither downstream sweep should fire again.
-    Queue::fake();
+    Bus::fake();
 
     /** @var ConfirmsImports $confirmer */
     $confirmer = $this->app->make(ConfirmsImports::class);
     ($confirmer)($preview->importRunId, $this->fixtureUser);
 
-    Queue::assertNotPushed(ResolveChainLinksJob::class);
-    Queue::assertNotPushed(DetectRecurringSeriesJob::class);
+    Bus::assertNotDispatched(ResolveChainLinksJob::class);
+    Bus::assertNotDispatched(DetectRecurringSeriesJob::class);
 });
 
 it('discards an import and redirects back to /imports/new', function (): void {

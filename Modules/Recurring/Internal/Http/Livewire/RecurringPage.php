@@ -51,12 +51,23 @@ final class RecurringPage extends Component
 
     /**
      * Dispatches the same `DetectRecurringSeriesJob` the daily sweep
-     * dispatches. The job's per-user `ShouldBeUniqueUntilProcessing`
-     * lock collapses spam-clicks into a single queued pass at the
-     * worker boundary. The HTTP layer only enqueues — no detector
-     * runs synchronously, so the
-     * `noSynchronousDetectionInRequestLifecycle` arch invariant stays
-     * green.
+     * dispatches, via `dispatchSync` (14.1-04, CRYPT-01): the
+     * detectors read/group encrypted `counterparty_iban`, and the
+     * decryption KEK is only reachable through the live, unlocked
+     * Session on THIS request — the daily sweep runs in the KEK-less
+     * scheduler daemon and stays queued (owned by plan 08's
+     * skip-with-warning guard), but a "Detect now" click here always
+     * has the KEK available and must run in-process. `dispatchSync`
+     * bypasses the queue entirely, so the per-user
+     * `ShouldBeUniqueUntilProcessing` lock (queue-only) no longer
+     * collapses spam-clicks — a double-click now runs detection twice
+     * in sequence, which is idempotent/re-run-safe.
+     *
+     * The `noSynchronousDetectionInRequestLifecycle` arch invariant
+     * stays green regardless: it forbids this SFC from importing the
+     * detector contract interface directly, which it still never
+     * does — only the `DetectRecurringSeriesJob` class is referenced
+     * here, exactly as before.
      *
      * Short-circuits when the caller is unauthenticated (mirrors the
      * top-nav badge composer's defensive guard). The route is auth-
@@ -68,7 +79,7 @@ final class RecurringPage extends Component
         if (! $currentUser->isAuthenticated()) {
             return;
         }
-        $bus->dispatch(new DetectRecurringSeriesJob($currentUser->user()->id));
+        $bus->dispatchSync(new DetectRecurringSeriesJob($currentUser->user()->id));
         $this->dispatch('toast', message: 'Detecting recurring series…', undoAction: '', undoPayload: null);
     }
 
