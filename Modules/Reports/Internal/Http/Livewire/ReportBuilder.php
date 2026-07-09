@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -23,6 +24,7 @@ use Modules\Reports\Public\Actions\UpdateReport;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Dto\ReportResultDto;
 use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -236,6 +238,8 @@ final class ReportBuilder extends Component
         DatabaseManager $db,
         DrilldownUrlBuilder $drilldownUrlBuilder,
         PeriodPresetResolver $periodPresetResolver,
+        SensitiveColumnCodec $codec,
+        Session $session,
     ): View {
         $user = $currentUser->user();
         $definition = $this->currentDefinition();
@@ -276,7 +280,7 @@ final class ReportBuilder extends Component
             'showGranularity' => $definition->metric === 'net_worth' || $definition->dimension === 'time_bucket',
             'availableAccounts' => $this->availableAccounts($db, $user->id),
             'availableCategories' => $this->availableCategories($db, $user->id),
-            'availableCounterparties' => $this->availableCounterparties($db, $user->id),
+            'availableCounterparties' => $this->availableCounterparties($db, $user->id, $codec, $session),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -371,20 +375,34 @@ final class ReportBuilder extends Component
     /**
      * @return list<array{id: int, name: string}>
      */
-    private function availableCounterparties(DatabaseManager $db, int $userId): array
+    private function availableCounterparties(DatabaseManager $db, int $userId, SensitiveColumnCodec $codec, Session $session): array
     {
+        // D-06 (14.1-10): no longer ORDER BY the ciphertext display_name
+        // column — SQL order over ciphertext is meaningless once
+        // encryption is enabled. A stable orderBy('id') keeps row
+        // iteration deterministic; the real, user-facing order is the
+        // post-decrypt usort() below.
         $rows = $db->connection()
             ->table('counterparties')
             ->where('user_id', $userId)
-            ->orderBy('display_name')
+            ->orderBy('id')
             ->get(['id', 'display_name'])
             ->all();
 
-        return array_values(array_map(static function (object $row): array {
+        $result = array_values(array_map(static function (object $row) use ($codec, $session, $userId): array {
+            $stored = is_string($row->display_name ?? null) ? $row->display_name : '';
+            $name = $stored === ''
+                ? ''
+                : $codec->decryptValue('counterparties', 'display_name', $stored, $userId, $session)['value'];
+
             return [
                 'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'name' => is_string($row->display_name) ? $row->display_name : '',
+                'name' => $name,
             ];
         }, $rows));
+
+        usort($result, static fn (array $a, array $b): int => $a['name'] <=> $b['name']);
+
+        return $result;
     }
 }
