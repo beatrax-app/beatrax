@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\OpLog;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use LogicException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
+use Modules\Sync\Internal\Crypto\GdkEpoch;
+use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
+use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use RuntimeException;
 
 /**
  * Persists op-log entries to the op_log_entries table.
@@ -33,6 +40,19 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
  * same DB transaction. On construction, any existing hlc_clock_state row for
  * (user_id, device_id) is read and clock->receive() is called to restore the
  * high-water mark.
+ *
+ * ## GDK encrypt-on-write hook (Phase 14, CRYPT-01, D-02)
+ *
+ * Before a sensitive field's JSON-encoded value ever reaches op_log_entries
+ * (and therefore the wire — this is the "doubles as transport encryption"
+ * boundary, 14-RESEARCH.md Pattern 1), it is encrypted under the CURRENT GDK
+ * epoch and the entry is tagged with `gdk_epoch`. The epoch id is bound as
+ * AEAD associated data (`"{table}:{pk}:{field}:{epochId}"`) so relabeling the
+ * tag on a stored ciphertext invalidates the authentication tag. When GDK
+ * encryption is not yet enabled for this user (no `sync_encryption_state`
+ * row, or the app-lock is currently locked), the write falls back to
+ * plaintext with a null `gdk_epoch` — pre-migration rows stay plaintext
+ * until the Plan 06 migration converts them.
  */
 final class OpLogWriter
 {
@@ -45,6 +65,10 @@ final class OpLogWriter
         private readonly int $userId,
         private readonly string $secretKey,
         private readonly string $publicKey,
+        private readonly SensitiveFieldRegistry $sensitiveFields,
+        private readonly OpLogFieldCrypto $fieldCrypto,
+        private readonly GdkKeyringService $keyring,
+        private readonly Session $session,
     ) {
         $this->restoreClockState();
     }
@@ -71,7 +95,8 @@ final class OpLogWriter
     public function writeSet(string $table, int|string $pk, string $field, mixed $value): void
     {
         $jsonValue = $value !== null ? json_encode($value, JSON_THROW_ON_ERROR) : null;
-        $this->writeEntry($table, $pk, $field, $jsonValue, OpType::Set);
+        [$jsonValue, $gdkEpochId] = $this->maybeEncrypt($table, $pk, $field, $jsonValue);
+        $this->writeEntry($table, $pk, $field, $jsonValue, OpType::Set, $gdkEpochId);
     }
 
     /**
@@ -87,7 +112,60 @@ final class OpLogWriter
     {
         foreach ($fields as $field => $rawValue) {
             $jsonValue = $rawValue !== null ? json_encode($rawValue, JSON_THROW_ON_ERROR) : null;
-            $this->writeEntry($table, $pk, $field, $jsonValue, OpType::CreateRow);
+            [$jsonValue, $gdkEpochId] = $this->maybeEncrypt($table, $pk, $field, $jsonValue);
+            $this->writeEntry($table, $pk, $field, $jsonValue, OpType::CreateRow, $gdkEpochId);
+        }
+    }
+
+    /**
+     * Encrypt $jsonValue under the CURRENT GDK epoch when (table, field) is
+     * on the D-02b sensitive allow-list. Returns [value, gdkEpochId] — the
+     * (possibly ciphertext) value to persist, and the epoch id to tag the
+     * entry with (null when the value was left plaintext).
+     *
+     * Falls back to plaintext + null epoch when GDK encryption is not
+     * currently usable for this user (never enabled yet, or the app-lock is
+     * locked) — never blocks the write, matching every other GDK read site's
+     * "false not garbage" / pass-through posture.
+     *
+     * @return array{0: ?string, 1: ?int}
+     */
+    private function maybeEncrypt(string $table, int|string $pk, string $field, ?string $jsonValue): array
+    {
+        if ($jsonValue === null || ! $this->sensitiveFields->isSensitive($table, $field)) {
+            return [$jsonValue, null];
+        }
+
+        $epoch = $this->tryCurrentEpoch();
+        if ($epoch === null) {
+            return [$jsonValue, null];
+        }
+
+        $rawKey = sodium_hex2bin($epoch->keyHex);
+        try {
+            $ciphertext = $this->fieldCrypto->encrypt(
+                $jsonValue,
+                $rawKey,
+                "{$table}:{$pk}:{$field}:{$epoch->epochId}",
+            );
+        } finally {
+            sodium_memzero($rawKey);
+        }
+
+        return [$ciphertext, $epoch->epochId];
+    }
+
+    /**
+     * Resolve the current GDK epoch, or null when encryption is not
+     * currently usable (never enabled for this user, or the app-lock KEK is
+     * unavailable) — never throws.
+     */
+    private function tryCurrentEpoch(): ?GdkEpoch
+    {
+        try {
+            return $this->keyring->currentEpoch($this->userId, $this->session);
+        } catch (LogicException|RuntimeException) {
+            return null;
         }
     }
 
@@ -133,6 +211,7 @@ final class OpLogWriter
         string $field,
         ?string $jsonValue,
         OpType $opType,
+        ?int $gdkEpoch = null,
     ): void {
         [$hlcL, $hlcC] = $this->clock->tick();
 
@@ -148,6 +227,7 @@ final class OpLogWriter
             opType: $opType,
             signature: '',
             userId: $this->userId,
+            gdkEpoch: $gdkEpoch,
         );
 
         $signature = $this->signer->sign($stub->signingPayload(), $this->secretKey);
@@ -164,6 +244,7 @@ final class OpLogWriter
             opType: $opType,
             signature: $signature,
             userId: $this->userId,
+            gdkEpoch: $gdkEpoch,
         );
 
         $now = $this->wallClock->now()->toDateTimeString();
@@ -177,6 +258,7 @@ final class OpLogWriter
                 'field' => $entry->field,
                 'op_type' => $entry->opType->value,
                 'value' => $entry->value,
+                'gdk_epoch' => $entry->gdkEpoch,
                 'hlc_l' => $entry->hlcL,
                 'hlc_c' => $entry->hlcC,
                 'signature' => $entry->signature,
