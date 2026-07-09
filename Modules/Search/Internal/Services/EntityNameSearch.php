@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
  * Name-only LIKE search across palette entity types (D-28).
@@ -23,8 +25,17 @@ use Modules\Core\Models\User;
  */
 final class EntityNameSearch
 {
+    /**
+     * Max counterparty matches returned — mirrors every other entity type's
+     * `limit(3)` here. Applied in PHP (not SQL) now that the match itself
+     * happens post-decrypt (CRYPT-01/D-06).
+     */
+    private const COUNTERPARTY_MATCH_LIMIT = 3;
+
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -41,24 +52,52 @@ final class EntityNameSearch
         /** @var list<array{id: int, type: string, label: string, url: string}> $results */
         $results = [];
 
-        // 1. Counterparties — display_name LIKE query, result URL: /counterparties/{slug}
+        // 1. Counterparties — decrypt-then-substring on display_name (CRYPT-01/
+        // D-06). display_name is ciphertext at rest once encryption is
+        // enabled, so a raw `where(...,'LIKE',...)` on the stored column can
+        // never match plaintext user input. Converted to the decrypt-then-
+        // match template (`CounterpartyIndexQuery::forUser()` precedent):
+        // fetch the user's counterparties — a naturally small, per-user
+        // bounded set, unlike `transactions` — decrypt `display_name` per
+        // row, and substring-match in PHP. `decryptValue()` is a documented
+        // pass-through no-op when encryption is not enabled, so this stays
+        // behavior-identical to the old LIKE for a plaintext user. The
+        // limit(3) cap moves from SQL to PHP since matching now happens
+        // post-decrypt; `each()` returning false stops iteration early once
+        // the cap is hit.
+        $matchCount = 0;
         $this->db->connection()
             ->table('counterparties')
             ->where('user_id', $user->id)
-            ->where('display_name', 'LIKE', $like)
-            ->limit(3)
+            ->orderBy('id')
             ->get(['id', 'display_name', 'slug'])
-            ->each(static function (object $row) use (&$results): void {
+            ->each(function (object $row) use (&$results, &$matchCount, $user, $q): bool {
+                if ($matchCount >= self::COUNTERPARTY_MATCH_LIMIT) {
+                    return false;
+                }
+
+                $stored = is_string($row->display_name) ? $row->display_name : '';
+                if ($stored === '') {
+                    return true;
+                }
+
+                $displayName = $this->codec->decryptValue('counterparties', 'display_name', $stored, $user->id, $this->session)['value'];
+                if (! str_contains(mb_strtolower($displayName), mb_strtolower($q))) {
+                    return true;
+                }
+
                 $id = is_numeric($row->id) ? (int) $row->id : 0;
-                $label = is_string($row->display_name) ? $row->display_name : '';
                 $slug = is_string($row->slug) ? $row->slug : '';
                 /** @var list<array{id: int, type: string, label: string, url: string}> $results */
                 $results[] = [
                     'id' => $id,
                     'type' => 'counterparty',
-                    'label' => $label,
+                    'label' => $displayName,
                     'url' => '/counterparties/'.$slug,
                 ];
+                $matchCount++;
+
+                return true;
             });
 
         // 2. Categories — name LIKE query, result URL: /transactions?category={id}
