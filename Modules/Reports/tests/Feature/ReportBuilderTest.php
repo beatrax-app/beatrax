@@ -323,6 +323,44 @@ it('the bar viz uses a {name,data} series shape', function (): void {
     expect($html)->toContain('&quot;name&quot;:&quot;Spend&quot;');
 });
 
+it('refreshes the donut by destroy+recreate (never updateOptions, which throws on the axis-less donut)', function (): void {
+    // Regression guard for the Phase 999.6 UAT donut fix: the axis-less donut
+    // must NOT use chart.updateOptions() on report-updated (it throws inside
+    // ApexCharts' convertedCatToNumeric / revertDefaultAxisMinMax axis code),
+    // it must destroy() the old instance and recreate a fresh one. Reverting
+    // the donut partial back to updateOptions makes this spec fail in CI.
+    $user = rbUser();
+    test()->actingAs($user);
+    $db = app(DatabaseManager::class);
+    $account = rbAccount($user);
+    rbTransaction($db, $user, $account, ['settled_amount_minor' => -5_000]);
+
+    // Blade strips {{-- --}} comments from rendered output, and the
+    // x-on:report-updated.window attribute body is emitted as plain HTML text
+    // (not entity-escaped like the data-options JSON), so the handler tokens
+    // appear verbatim in the rendered markup.
+    $html = Livewire::test(ReportBuilder::class)->set('viz', 'donut')->html();
+
+    expect($html)->toContain('chart.destroy()')
+        ->and($html)->toContain('new window.ApexCharts')
+        ->and($html)->not->toContain('chart.updateOptions');
+});
+
+it('keeps the axis-based bar/line viz refreshing via updateOptions, never destroy+recreate', function (string $viz): void {
+    // The donut destroy+recreate fix must not leak into the axis-based viz —
+    // bar/line keep chart.updateOptions() so their refresh has no flash.
+    $user = rbUser();
+    test()->actingAs($user);
+    $db = app(DatabaseManager::class);
+    $account = rbAccount($user);
+    rbTransaction($db, $user, $account, ['settled_amount_minor' => -5_000]);
+
+    $html = Livewire::test(ReportBuilder::class)->set('viz', $viz)->html();
+
+    expect($html)->toContain('chart.updateOptions')
+        ->and($html)->not->toContain('chart.destroy()');
+})->with(['bar', 'line']);
+
 it('mounts every chart through the shared beatraxApplyChartTheme Alpine hook', function (string $viz): void {
     $user = rbUser();
     test()->actingAs($user);
