@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Modules\Tax\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Events\TransactionTagged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -45,6 +47,8 @@ final class TagTransaction
         private readonly Dispatcher $events,
         private readonly Clock $clock,
         private readonly FieldProvenanceWriter $provenance,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
         private readonly ?SearchIndexWriterContract $searchIndex = null,
     ) {}
 
@@ -146,7 +150,8 @@ final class TagTransaction
                         'transaction_id' => $transactionId,
                         'transaction_split_id' => $transactionSplitId,
                         'deduction_category_id' => $deductionCategoryId,
-                        'note' => $note,
+                        // D-07 at-rest encrypt hook (CR-01).
+                        'note' => $this->encryptNote($note, $userId),
                         'tax_year_override' => $taxYearOverride,
                         'created_at' => $now,
                         'updated_at' => $now,
@@ -201,7 +206,7 @@ final class TagTransaction
         $values = ['updated_at' => $now];
         if ($deductionCategoryId !== null || $note !== null || $taxYearOverride !== null) {
             $values['deduction_category_id'] = $deductionCategoryId;
-            $values['note'] = $note;
+            $values['note'] = $this->encryptNote($note, $userId);
             $values['tax_year_override'] = $taxYearOverride;
         }
 
@@ -215,5 +220,12 @@ final class TagTransaction
                 static fn (QueryBuilder $q) => $q->where('transaction_split_id', $transactionSplitId),
             )
             ->update($values);
+    }
+
+    private function encryptNote(?string $note, int $userId): ?string
+    {
+        return is_string($note)
+            ? $this->codec->encryptValue('tax_transaction_tags', 'note', $note, $userId, $this->session)
+            : $note;
     }
 }
