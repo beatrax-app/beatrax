@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Public\Services;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Services\TaxYearQuery as InternalTaxYearQuery;
 use Modules\Tax\Public\Dto\TaxYearData;
 
@@ -22,6 +24,8 @@ final class TaxYearQuery
 {
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -31,7 +35,7 @@ final class TaxYearQuery
      */
     public function forUser(int $userId, int $year): TaxYearData
     {
-        return (new InternalTaxYearQuery($this->db))->forUser($userId, $year);
+        return (new InternalTaxYearQuery($this->db, $this->codec, $this->session))->forUser($userId, $year);
     }
 
     /**
@@ -41,6 +45,6 @@ final class TaxYearQuery
      */
     public function availableYears(int $userId): array
     {
-        return (new InternalTaxYearQuery($this->db))->availableYears($userId);
+        return (new InternalTaxYearQuery($this->db, $this->codec, $this->session))->availableYears($userId);
     }
 }
