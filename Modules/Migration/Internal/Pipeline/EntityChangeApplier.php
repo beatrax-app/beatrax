@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Migration\Internal\Services\SourceMapWriter;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
@@ -47,6 +49,8 @@ final class EntityChangeApplier
         private readonly SourceMapWriter $sourceMapWriter,
         private readonly FingerprintComposer $fingerprints,
         private readonly LoggerInterface $logger,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     /**
@@ -83,10 +87,25 @@ final class EntityChangeApplier
                 return false;
             }
         } else {
+            // CRYPT-01 / T-14.1-14b: route $fields through the
+            // SensitiveColumnCodec before the raw update() (mirrors
+            // TagTransaction's encrypt-before-write) — a reconciled
+            // transaction.description (or any future SensitiveFieldRegistry
+            // column reconciled through this path) must never land as
+            // plaintext in an at-rest-encrypted column. encryptAttrs() only
+            // touches registry-listed columns and is a no-op for
+            // non-sensitive fields (category/account `name`) and for a
+            // plaintext user, so this call is safe uniformly across every
+            // entity kind apply() handles. The UNENCRYPTED $fields are
+            // still what gets snapshotted into migration_import_baseline
+            // below (record()) — the baseline compare in
+            // ThreeWayMergeResolver is always plaintext-to-decrypted-plaintext.
+            $storedFields = $this->codec->encryptAttrs($table, $fields, $user->id, $this->session);
+
             $this->db->connection()->table($table)
                 ->where('id', $beatraxId)
                 ->where('user_id', $user->id)
-                ->update($fields);
+                ->update($storedFields);
         }
 
         $this->sourceMapWriter->record(
@@ -143,6 +162,25 @@ final class EntityChangeApplier
      * actual content. Returns false (no write performed) on a genuine
      * `transactions_fingerprint_uq` collision rather than letting the raw
      * `QueryException` bubble out of the caller.
+     *
+     * CRYPT-01 / 14.1-AUDIT.md Cluster 4 (T-14.1-14c) INVESTIGATION FINDING
+     * (the flagged lower-confidence sub-issue): `FingerprintComposer::compose()`
+     * hashes the tuple `user_id | account_id | posted_at | booked_at |
+     * amount_minor | currency | counterparty_normalized` — it does NOT
+     * consume `counterparty_name`, `counterparty_iban`, or `description`
+     * bytes at all. `counterparty_normalized` is the only counterparty-ish
+     * field in the tuple, and it is deliberately NOT
+     * `SensitiveFieldRegistry`-listed (D-02b) — it is always plaintext,
+     * regardless of whether the user has encryption enabled. Therefore the
+     * raw reads of `counterparty_name`/`counterparty_iban`/`description`
+     * below (ciphertext under an encrypted user) are stored on the
+     * `CanonicalTransaction` DTO but never reach `compose()`'s input tuple,
+     * so the recomputed fingerprint is IDENTICAL to what a plaintext
+     * re-import would produce for the same logical row — no decrypt is
+     * needed here for fingerprint correctness, and
+     * `transactions_fingerprint_uq` idempotency is NOT at risk. This is
+     * proven by `MigrationEntityChangeApplierEncryptionTest`'s idempotency
+     * regression test rather than left as an assumption.
      */
     public function applyTransactionAmount(User $user, int $transactionId, int $newAmountMinor): bool
     {
