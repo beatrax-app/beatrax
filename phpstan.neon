@@ -125,6 +125,23 @@ parameters:
                 - Modules/Desktop/Internal/Listeners/NavigateOnNotificationDeepLink.php
                 - Modules/Desktop/Internal/Listeners/ApplyCloseWindowChoice.php
             reportUnmatched: false
+        # Phase 15 native-facade carve-out (mirrors the Native\Desktop\
+        # Facades allow-list above): nativephp/mobile's Network/Biometrics/
+        # Scanner API is only reachable through its facades. Registered now
+        # (Plan 01, single-owner forward-registration) so Plans 05-07 never
+        # need to touch this file when they add the first actual facade
+        # call — the crossing is confined to the Mobile module's native-
+        # bridge classes. reportUnmatched: false because no file yet
+        # contains a matching facade call (the nativephp/mobile-* packages
+        # are not installed until Plan 03).
+        -
+            message: '#Native\\Mobile\\Facades\\(Network|Biometrics|Scanner) facade should not be used\.#'
+            paths:
+                - Modules/Mobile/Internal/NativeMobileAppServiceProvider.php
+                - Modules/Mobile/Internal/Identity/*.php
+                - Modules/Mobile/Internal/Pairing/*.php
+                - Modules/Mobile/Internal/Sync/*.php
+            reportUnmatched: false
     allowedGlobalFunctions:
         - 'app_path'
         - 'base_path'

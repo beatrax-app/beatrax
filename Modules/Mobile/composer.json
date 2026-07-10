@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/mobile",
+    "description": "Mobile module — NativePHP-for-Mobile client peer: on-device encrypted SQLite, client-only sync transport, biometric app-lock, resumable initial sync.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Mobile\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Mobile\\Tests\\": "tests/"
+        }
+    }
+}

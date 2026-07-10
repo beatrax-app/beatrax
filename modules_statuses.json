@@ -13,6 +13,7 @@
     "Ingestion": true,
     "Ledger": true,
     "Migration": true,
+    "Mobile": true,
     "Onboarding": true,
     "Reports": true,
     "Search": true,
