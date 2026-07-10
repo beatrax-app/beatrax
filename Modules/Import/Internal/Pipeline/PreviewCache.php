@@ -25,6 +25,21 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  * or schema skew loud rather than silently dropping rows.
  *
  * `Clock` is injected so the TTL window is deterministic in tests.
+ *
+ * WR-11 (knowingly-accepted transient plaintext staging): the canonical
+ * (`CanonicalTransaction::toArray()`) and enrichments payloads written here
+ * carry sensitive content in the clear — `counterparty_name`/`description`/
+ * `counterparty_iban`, and the decrypted `conflictingFields['stored']` value
+ * (see CR-03). With `CACHE_STORE=file` that is a plaintext file under
+ * `storage/framework/cache/`; the default `database` store is an on-disk SQLite
+ * `cache` table. Either way sensitive content sits in cleartext at rest for the
+ * 30-minute TTL between preview and confirm. This is a REVIEWED, accepted
+ * exposure given the bounded TTL and transient staging role — the preview/confirm
+ * flow runs only behind the unlocked app-lock. A future hardening encrypts these
+ * payloads via `SensitiveColumnCodec` before `cache->put`, which requires
+ * threading the user id + session through this cache's put/get API and every
+ * caller; deferred rather than done here. Not added to SensitiveFieldRegistry
+ * (that enumerates DB columns, not cache keys) — tracked at the call site.
  */
 final class PreviewCache
 {
