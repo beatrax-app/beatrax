@@ -77,10 +77,20 @@ arch('Modules\\Counterparties\\Internal is only used inside Modules\\Counterpart
 // LOCK-04), so this single test-infrastructure base class is an explicit,
 // reviewed exemption. Scoped to the one class so any PRODUCTION Sync code
 // reaching into Auth\Internal still fails this rule.
+//
+// Modules\Sync\Tests\Support\EnablesEncryptionForUser (Phase 14.1) is the
+// same shape of exemption: every 14.1 encryption regression test primes the
+// KEK via this shared trait, which also calls LockStateManager->unlock()
+// directly for the identical reason (no Public unlock seam). Added
+// alongside the TestCase exemption above rather than replacing it, since
+// both are real, distinct test-infrastructure classes that need it.
 arch('Modules\\Auth\\Internal is only used inside Modules\\Auth')
     ->expect('Modules\\Auth\\Internal')
     ->toOnlyBeUsedIn('Modules\\Auth')
-    ->ignoring('Modules\\Sync\\Tests\\TestCase');
+    ->ignoring([
+        'Modules\\Sync\\Tests\\TestCase',
+        'Modules\\Sync\\Tests\\Support\\EnablesEncryptionForUser',
+    ]);
 
 arch('Modules\\DevMode\\Internal is only used inside Modules\\DevMode')
     ->expect('Modules\\DevMode\\Internal')
