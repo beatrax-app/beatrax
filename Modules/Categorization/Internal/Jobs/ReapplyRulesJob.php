@@ -22,7 +22,6 @@ use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
@@ -142,7 +141,6 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
         SensitiveColumnCodec $codec,
         Session $session,
         AppLockKeyService $appLockKeyService,
-        EncryptionMigrationService $encryptionService,
     ): void {
         /** @var User|null $user */
         $user = User::query()->where('id', $this->userId)->first();
@@ -153,16 +151,10 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
         $connection = $db->connection();
         $userId = $this->userId;
 
-        // WR-14: only warn about a missing KEK when the user has actually
-        // enabled encryption. release() returns null for EVERY user who never
-        // enrolled encryption (the default single-user state), so the old
-        // unconditional warning fired on every re-apply for the common,
-        // nothing-is-encrypted path — a false alarm. A missing KEK only
-        // degrades matching when there IS encrypted content to decrypt.
         $hasKek = $appLockKeyService->release($session) !== null;
-        if (! $hasKek && $encryptionService->isEnabled($userId)) {
+        if (! $hasKek) {
             $logger->warning(
-                'ReapplyRulesJob: encryption is enabled but no app-lock KEK is available for this run — counterparty_name/description will be matched using their stored values as-is (any genuinely-encrypted value will fail to substring-match).',
+                'ReapplyRulesJob: no app-lock KEK available for this run — counterparty_name/description will be matched using their stored values as-is (any genuinely-encrypted value will fail to substring-match).',
                 ['user_id' => $userId],
             );
         }
