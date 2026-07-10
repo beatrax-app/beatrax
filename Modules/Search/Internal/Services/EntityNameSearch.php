@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
@@ -36,6 +37,7 @@ final class EntityNameSearch
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
         private readonly Session $session,
+        private readonly EncryptionMigrationService $encryptionService,
     ) {}
 
     /**
@@ -66,12 +68,13 @@ final class EntityNameSearch
         // post-decrypt; `each()` returning false stops iteration early once
         // the cap is hit.
         $matchCount = 0;
+        $encryptionEnabled = $this->encryptionService->isEnabled($user->id);
         $this->db->connection()
             ->table('counterparties')
             ->where('user_id', $user->id)
             ->orderBy('id')
             ->get(['id', 'display_name', 'slug'])
-            ->each(function (object $row) use (&$results, &$matchCount, $user, $q): bool {
+            ->each(function (object $row) use (&$results, &$matchCount, $user, $q, $encryptionEnabled): bool {
                 if ($matchCount >= self::COUNTERPARTY_MATCH_LIMIT) {
                     return false;
                 }
@@ -81,7 +84,18 @@ final class EntityNameSearch
                     return true;
                 }
 
-                $displayName = $this->codec->decryptValue('counterparties', 'display_name', $stored, $user->id, $this->session)['value'];
+                $result = $this->codec->decryptValue('counterparties', 'display_name', $stored, $user->id, $this->session);
+
+                // WR-18: when encryption is enabled, a decrypted:false result is
+                // ciphertext (rekey/epoch gap, or a locked app-lock) — skip this
+                // row rather than substring-matching against a ciphertext blob
+                // (a silently-missed suggestion). Non-encryption users keep the
+                // plaintext pass-through.
+                if ($encryptionEnabled && ! $result['decrypted']) {
+                    return true;
+                }
+
+                $displayName = $result['value'];
                 if (! str_contains(mb_strtolower($displayName), mb_strtolower($q))) {
                     return true;
                 }

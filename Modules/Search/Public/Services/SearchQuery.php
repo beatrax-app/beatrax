@@ -9,6 +9,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\QueryParser;
@@ -77,6 +78,7 @@ final class SearchQuery
         private readonly DidYouMeanSuggester $suggester,
         private readonly SensitiveColumnCodec $codec,
         private readonly Session $session,
+        private readonly EncryptionMigrationService $encryptionService,
     ) {}
 
     /**
@@ -465,18 +467,31 @@ final class SearchQuery
 
         $needle = mb_strtolower($textQuery);
         $userId = $user->id;
+        $encryptionEnabled = $this->encryptionService->isEnabled($userId);
 
         $matched = [];
         foreach ($candidates as $row) {
             $storedName = $row->counterparty_name ?? null;
             $storedDescription = $row->description ?? null;
 
-            $counterpartyName = is_string($storedName) && $storedName !== ''
-                ? $this->codec->decryptValue('transactions', 'counterparty_name', $storedName, $userId, $this->session)['value']
-                : '';
-            $description = is_string($storedDescription) && $storedDescription !== ''
-                ? $this->codec->decryptValue('transactions', 'description', $storedDescription, $userId, $this->session)['value']
-                : '';
+            $nameResult = is_string($storedName) && $storedName !== ''
+                ? $this->codec->decryptValue('transactions', 'counterparty_name', $storedName, $userId, $this->session)
+                : ['value' => '', 'decrypted' => true];
+            $descriptionResult = is_string($storedDescription) && $storedDescription !== ''
+                ? $this->codec->decryptValue('transactions', 'description', $storedDescription, $userId, $this->session)
+                : ['value' => '', 'decrypted' => true];
+
+            // WR-18: when encryption is enabled, a decrypted:false result is
+            // ciphertext (rekey/epoch gap, or a locked app-lock during the
+            // pass) — skip the row so the substring match never runs against a
+            // ciphertext blob and silently misses. Non-encryption users keep the
+            // plaintext pass-through (isEnabled is false → this branch no-ops).
+            if ($encryptionEnabled && (! $nameResult['decrypted'] || ! $descriptionResult['decrypted'])) {
+                continue;
+            }
+
+            $counterpartyName = $nameResult['value'];
+            $description = $descriptionResult['value'];
 
             if (
                 ($counterpartyName !== '' && str_contains(mb_strtolower($counterpartyName), $needle))
