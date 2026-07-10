@@ -154,6 +154,17 @@ final class IncomeSeriesDetector implements SeriesDetector
             // (employer, freelance client) more stably than the free-
             // form description — banks rewrite the description text
             // over time but the SEPA IBAN is constant.
+            //
+            // WR-17 (knowingly-accepted plaintext derivative): this decrypted
+            // IBAN is persisted verbatim into the unencrypted
+            // `recurring_series.cluster_counterparty_key` below as a DETERMINISTIC
+            // lookup key. Random-nonce ciphertext cannot serve as a stable WHERE
+            // key, so this column is deliberately kept plaintext and recorded as
+            // a reviewed exception in SensitiveFieldRegistry's DEFERRED list. A
+            // future hardening replaces it with a keyed HMAC / blind-index
+            // (deterministic-but-non-reversible), which requires a stable key
+            // source AND a migration of existing cluster keys to avoid splitting
+            // series — deferred rather than done silently here.
             $counterpartyKey = $iban !== '' ? $iban : $counterparty;
             if ($counterpartyKey === '') {
                 continue;

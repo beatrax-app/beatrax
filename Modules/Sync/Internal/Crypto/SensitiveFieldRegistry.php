@@ -35,6 +35,16 @@ namespace Modules\Sync\Internal\Crypto;
  * plausibly sensitive but lower-certainty and out of the locked D-02b set;
  * revisit in a future hardening phase.
  *
+ * KNOWINGLY-ACCEPTED PLAINTEXT DERIVATIVE (WR-17):
+ * `recurring_series.cluster_counterparty_key` stores a decrypted payer IBAN (or
+ * normalized-description fallback) verbatim as a DETERMINISTIC clustering/lookup
+ * key. Random-nonce ciphertext cannot be a stable WHERE key, so this column is
+ * deliberately excluded from encryption here. A future hardening replaces it
+ * with a keyed HMAC / blind-index (deterministic, non-reversible) — that change
+ * needs a stable key source AND a migration of existing cluster keys to avoid
+ * splitting series, so it is a reviewed, tracked exception rather than an
+ * oversight. See `Modules\Recurring\Internal\Detectors\IncomeSeriesDetector`.
+ *
  * Both a static accessor (columns()) and an instance method (isSensitive())
  * are provided, mirroring Modules\Core\Public\Services\SecretsColumnRegistry's
  * shape — DI consumers (OpLogWriter, the Sync Public SensitiveColumnCodec)
