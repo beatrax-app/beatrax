@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Public\Queries;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Import\Public\Services\MerchantNameResolver;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -41,6 +43,8 @@ final readonly class CounterpartyTriageQueue
     public function __construct(
         private DatabaseManager $db,
         private MerchantNameResolver $merchantResolver,
+        private SensitiveColumnCodec $codec,
+        private Session $session,
     ) {}
 
     /**
@@ -132,6 +136,13 @@ final readonly class CounterpartyTriageQueue
             if ($description === '') {
                 continue;
             }
+            // CRYPT-01 (14.1-13): decrypt each candidate description before
+            // matching — the description arrives ciphertext at rest once
+            // encryption is enabled, and substring/corpus matching against
+            // ciphertext always misses. Pass-through no-op for a
+            // non-encrypted user; the candidate set stays bounded to the
+            // limit(20) read above (no query widening).
+            $description = $this->codec->decryptValue('transactions', 'description', $description, $unknown->user_id, $this->session)['value'];
             $total++;
             $resolved = $this->merchantResolver->resolve($description, $unknown->user_id);
             if ($resolved === null) {
