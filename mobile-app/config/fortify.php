@@ -1,0 +1,1 @@
+../../config/fortify.php

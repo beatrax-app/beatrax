@@ -1,0 +1,1 @@
+../../config/email-scan.php
