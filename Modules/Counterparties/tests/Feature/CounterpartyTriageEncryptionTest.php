@@ -123,7 +123,13 @@ it('encrypts display_name/merchant_name at rest when acceptSuggestion() promotes
 
     /** @var SensitiveColumnCodec $codec */
     $codec = $this->app->make(SensitiveColumnCodec::class);
-    cpteTx($user, $account, $unknown, $run, 'SPOTIFY P AMSTERDAM', $codec, $session);
+    // Task 1 (write fix) is tested in isolation from Task 2 (match fix):
+    // the transaction description is stored in plaintext here so
+    // suggestionFor() can resolve a suggestion regardless of whether
+    // the Task 2 decrypt-before-match fix has landed yet — this test
+    // only proves what acceptSuggestion() does with the suggestion it
+    // receives.
+    cpteTx($user, $account, $unknown, $run, 'SPOTIFY P AMSTERDAM');
 
     DB::table('merchant_aliases')->insert([
         'user_id' => $user->id,
