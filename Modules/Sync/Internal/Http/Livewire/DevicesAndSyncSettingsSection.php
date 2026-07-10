@@ -17,6 +17,7 @@ use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Psr\Log\LoggerInterface;
 
 /**
  * "Devices & Sync" settings section (PAIR-02/PAIR-03, D-02/D-09/D-10/D-11/D-12).
@@ -129,6 +130,16 @@ final class DevicesAndSyncSettingsSection extends Component
      */
     public int $encryptionProgress = 0;
 
+    /**
+     * WR-05: set true when the D-07 mandatory auto-activation of at-rest
+     * encryption (via EncryptionMigrationService::migrate()) threw during
+     * enableSync(). The device is synced but its data is NOT yet encrypted at
+     * rest — the blade renders a non-blocking "encryption did not complete"
+     * indicator + retry affordance rather than failing silently on this
+     * security-critical path. Cleared on a successful retry.
+     */
+    public bool $encryptionActivationFailed = false;
+
     // -------------------------------------------------------------------------
     // Relay endpoint URL (D-01 / Phase 13 Plan 06 / T-13-08)
     // -------------------------------------------------------------------------
@@ -205,6 +216,7 @@ final class DevicesAndSyncSettingsSection extends Component
         DatabaseManager $db,
         DeviceRegistryService $registry,
         EncryptionMigrationService $migrationService,
+        LoggerInterface $logger,
     ): void {
         if ($this->syncEnabled) {
             return;
@@ -237,10 +249,23 @@ final class DevicesAndSyncSettingsSection extends Component
         // failure never un-enables sync (D-09's own rollback already leaves
         // zero half-encrypted rows); the encryption row simply keeps
         // rendering its mandatory/off state until the next successful pass.
+        //
+        // WR-05: do NOT swallow the failure silently. D-07 makes encryption
+        // mandatory the moment a device becomes a sync peer, so a migrate()
+        // throw here leaves the device synced with data unencrypted at rest —
+        // a security-critical outcome. Log the throwable (structured) and raise
+        // a non-blocking indicator so the blade can render a retry affordance,
+        // instead of an empty catch that informs neither the user nor the log.
+        $this->encryptionActivationFailed = false;
         try {
             $migrationService->migrate($currentUser->user(), $session);
-        } catch (\Throwable) {
-            // Best-effort — see docblock above.
+        } catch (\Throwable $e) {
+            $this->encryptionActivationFailed = true;
+            $logger->warning('At-rest encryption auto-activation failed during enableSync.', [
+                'user_id' => $userId,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
         }
 
         $this->encryptionOn = $this->encryptionEnabled($db, $userId);
@@ -331,6 +356,16 @@ final class DevicesAndSyncSettingsSection extends Component
      * Mirrors the D-07 auto-trigger in enableSync()/PairingFlowModal::confirmMatch()
      * — same service call, same idempotent contract — just reached via an
      * explicit user confirmation instead of an automatic activation.
+     *
+     * IN-01 (known cosmetic limitation): migrate() runs SYNCHRONOUSLY within
+     * this Livewire request, and Livewire requests are sequential, so the
+     * `wire:poll` target pollEncryptionProgress() cannot execute while this
+     * method blocks — the progress bar jumps 0 → done rather than animating.
+     * The reportProgress/cache machinery is effectively unused on this
+     * single-device path. Animating it would require dispatching migrate() to a
+     * queued job and letting the poll drive progress; deferred as the pass is
+     * near-instant for a single-device corpus and the terminal done/error
+     * states are still shown correctly.
      */
     public function enableEncryption(
         EncryptionMigrationService $migrationService,
@@ -425,14 +460,35 @@ final class DevicesAndSyncSettingsSection extends Component
      * confirmed_at is cleared) so the "Removed" badge renders per Surface C —
      * the row disappears only on the next page load/navigation.
      */
-    public function removeDevice(GdkRotationService $rotationService, CurrentUser $currentUser, Session $session): void
-    {
+    public function removeDevice(
+        GdkRotationService $rotationService,
+        CurrentUser $currentUser,
+        Session $session,
+        DatabaseManager $db,
+    ): void {
         if ($this->removingDeviceId === null) {
             return;
         }
 
         $targetId = $this->removingDeviceId;
         $userId = $currentUser->user()->id;
+
+        // WR-06: server-side self-removal guard (defense-in-depth with the
+        // authoritative check inside GdkRotationService::rotateAndRevoke).
+        // Livewire actions are client-invokable, so a crafted
+        // startRemove(selfRowId) → removeDevice must be rejected here against an
+        // AUTHORITATIVE, user-scoped DB read — never against the client-hydrated
+        // $this->devices array — before any rotation/revoke write is attempted.
+        $targetIsSelf = $db->connection()->table('device_registry')
+            ->where('id', $targetId)
+            ->where('user_id', $userId)
+            ->value('is_self');
+        if (is_numeric($targetIsSelf) && (int) $targetIsSelf === 1) {
+            $this->flashMessage = 'You cannot remove this device — it is the one you are using.';
+            $this->cancelRemove();
+
+            return;
+        }
 
         try {
             $rotationService->rotateAndRevoke($userId, $targetId, $session);
