@@ -37,6 +37,7 @@ use Modules\Sync\Public\Casts\EncryptedJsonCast;
  * @property string $counterparty_normalized
  * @property int $normalization_version
  * @property string|null $description
+ * @property string|null $note
  * @property int|null $category_id
  * @property int|null $counterparty_id
  * @property array<string, mixed>|null $auto_category_provenance

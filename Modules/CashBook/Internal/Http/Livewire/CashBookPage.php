@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CashBook\Internal\Http\Livewire;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -13,6 +14,7 @@ use Livewire\Component;
 use Modules\CashBook\Internal\Actions\RecordManualTransaction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
@@ -98,8 +100,14 @@ final class CashBookPage extends Component
         $this->dispatch('toast', message: 'Cash entry removed.');
     }
 
-    public function render(CurrentUser $currentUser, DatabaseManager $db, ViewFactory $views, TaxTagQuery $taxTagQuery): View
-    {
+    public function render(
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        ViewFactory $views,
+        TaxTagQuery $taxTagQuery,
+        SensitiveColumnCodec $codec,
+        Session $session,
+    ): View {
         $user = $currentUser->user();
         $connection = $db->connection();
 
@@ -111,6 +119,26 @@ final class CashBookPage extends Component
             ->orderByDesc('t.id')
             ->limit(100)
             ->get(['t.id', 't.posted_at', 't.counterparty_name', 't.settled_amount_minor', 't.type', 'c.name as category_name']);
+
+        // WR-12: `transactions.counterparty_name` is a SensitiveFieldRegistry
+        // column stored as AEAD ciphertext at rest. The raw query builder
+        // applies no cast, so decrypt each entry before it reaches the view —
+        // otherwise an encrypted user sees a ciphertext blob in the cash-book
+        // list. decryptValue never throws and is a pass-through no-op for
+        // non-encryption users.
+        $entries = $entries->map(function (object $entry) use ($codec, $user, $session): object {
+            if (is_string($entry->counterparty_name) && $entry->counterparty_name !== '') {
+                $entry->counterparty_name = $codec->decryptValue(
+                    'transactions',
+                    'counterparty_name',
+                    $entry->counterparty_name,
+                    $user->id,
+                    $session,
+                )['value'];
+            }
+
+            return $entry;
+        });
 
         $categories = $connection->table('categories')
             ->where(static function (Builder $query) use ($user): void {
