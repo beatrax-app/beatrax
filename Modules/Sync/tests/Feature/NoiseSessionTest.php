@@ -30,7 +30,7 @@ use Modules\Sync\Internal\Transport\Noise\NoiseSession;
  * Creates a pair of NoiseSession objects via an in-memory IK handshake
  * between a freshly generated initiator and responder keypair.
  *
- * @return array{0: NoiseSession, 1: NoiseSession}  [initiatorSession, responderSession]
+ * @return array{0: NoiseSession, 1: NoiseSession} [initiatorSession, responderSession]
  */
 function makeIkSessionPair(): array
 {
@@ -109,7 +109,7 @@ it('tampered ciphertext throws RuntimeException on decrypt (AEAD authentication 
     $tampered[5] = chr(ord($tampered[5]) ^ 0xFF);
 
     expect(fn () => $respSession->decrypt($tampered))
-        ->toThrow(\RuntimeException::class);
+        ->toThrow(RuntimeException::class);
 });
 
 it('session is bidirectional: responder can also encrypt and initiator decrypts', function (): void {
@@ -136,7 +136,7 @@ it('nonce overflow guard rekeys before reaching PHP_INT_MAX (Pitfall 1 protectio
     expect($plain)->toBe('test');
 
     // The overflow guard exists: set nonceLo and nonceHi to near-max values via reflection.
-    $ref = new \ReflectionClass($cipher);
+    $ref = new ReflectionClass($cipher);
     $lo = $ref->getProperty('nonceLo');
     $hi = $ref->getProperty('nonceHi');
     $lo->setValue($cipher, 0xFFFFFFFF);
@@ -144,5 +144,5 @@ it('nonce overflow guard rekeys before reaching PHP_INT_MAX (Pitfall 1 protectio
 
     // The next encrypt call should throw because the nonce is at the overflow boundary.
     expect(fn () => $cipher->encrypt('overflow test', ''))
-        ->toThrow(\RuntimeException::class, 'nonce overflow');
+        ->toThrow(RuntimeException::class, 'nonce overflow');
 });

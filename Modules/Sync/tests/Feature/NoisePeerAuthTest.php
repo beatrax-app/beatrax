@@ -6,7 +6,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Transport\Noise\NoiseHandshakeState;
-use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
 uses(RefreshDatabase::class);
@@ -55,17 +54,17 @@ it('admits a Noise session whose static key matches a confirmed device_registry 
     // Insert a CONFIRMED device entry with a known X25519 public key
     $deviceId = 'auth-test-device-'.bin2hex(random_bytes(4));
     DB::table('device_registry')->insert([
-        'user_id'                => $user->id,
-        'device_id'              => $deviceId,
-        'name'                   => 'Auth Test Device',
+        'user_id' => $user->id,
+        'device_id' => $deviceId,
+        'name' => 'Auth Test Device',
         'ed25519_public_key_hex' => bin2hex(random_bytes(32)),
-        'x25519_public_key_hex'  => sodium_bin2hex($initStaticPublic),
-        'safety_number_words'    => 'word one two three four five',
-        'is_self'                => 0,
-        'paired_at'              => now()->toIso8601String(),
-        'confirmed_at'           => now()->toIso8601String(),  // CONFIRMED
-        'created_at'             => now()->toIso8601String(),
-        'updated_at'             => now()->toIso8601String(),
+        'x25519_public_key_hex' => sodium_bin2hex($initStaticPublic),
+        'safety_number_words' => 'word one two three four five',
+        'is_self' => 0,
+        'paired_at' => now()->toIso8601String(),
+        'confirmed_at' => now()->toIso8601String(),  // CONFIRMED
+        'created_at' => now()->toIso8601String(),
+        'updated_at' => now()->toIso8601String(),
     ]);
 
     // Do IK handshake (responder learns initiator's static key from msg1)
@@ -133,17 +132,17 @@ it('rejects a Noise session whose static key belongs to a different user (cross-
 
     // Register the initiator's key under user B (NOT user A)
     DB::table('device_registry')->insert([
-        'user_id'                => $userB->id,
-        'device_id'              => 'cross-user-device-b',
-        'name'                   => 'User B Device',
+        'user_id' => $userB->id,
+        'device_id' => 'cross-user-device-b',
+        'name' => 'User B Device',
         'ed25519_public_key_hex' => bin2hex(random_bytes(32)),
-        'x25519_public_key_hex'  => sodium_bin2hex($initStaticPublic),
-        'safety_number_words'    => 'word one two three four five',
-        'is_self'                => 0,
-        'paired_at'              => now()->toIso8601String(),
-        'confirmed_at'           => now()->toIso8601String(),
-        'created_at'             => now()->toIso8601String(),
-        'updated_at'             => now()->toIso8601String(),
+        'x25519_public_key_hex' => sodium_bin2hex($initStaticPublic),
+        'safety_number_words' => 'word one two three four five',
+        'is_self' => 0,
+        'paired_at' => now()->toIso8601String(),
+        'confirmed_at' => now()->toIso8601String(),
+        'created_at' => now()->toIso8601String(),
+        'updated_at' => now()->toIso8601String(),
     ]);
 
     // When user A performs the auth gate check, user B's key must NOT appear
@@ -172,17 +171,17 @@ it('rejects a Noise session after static key is removed from device_registry (re
 
     $deviceId = 'revoked-device-'.bin2hex(random_bytes(4));
     DB::table('device_registry')->insert([
-        'user_id'                => $user->id,
-        'device_id'              => $deviceId,
-        'name'                   => 'To Be Revoked',
+        'user_id' => $user->id,
+        'device_id' => $deviceId,
+        'name' => 'To Be Revoked',
         'ed25519_public_key_hex' => bin2hex(random_bytes(32)),
-        'x25519_public_key_hex'  => sodium_bin2hex($initStaticPublic),
-        'safety_number_words'    => 'word one two three four five',
-        'is_self'                => 0,
-        'paired_at'              => now()->toIso8601String(),
-        'confirmed_at'           => now()->toIso8601String(),
-        'created_at'             => now()->toIso8601String(),
-        'updated_at'             => now()->toIso8601String(),
+        'x25519_public_key_hex' => sodium_bin2hex($initStaticPublic),
+        'safety_number_words' => 'word one two three four five',
+        'is_self' => 0,
+        'paired_at' => now()->toIso8601String(),
+        'confirmed_at' => now()->toIso8601String(),
+        'created_at' => now()->toIso8601String(),
+        'updated_at' => now()->toIso8601String(),
     ]);
 
     $registryService = app(DeviceRegistryService::class);

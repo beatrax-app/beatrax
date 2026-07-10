@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use Amp\Websocket\Server\WebsocketClientHandler;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
@@ -59,7 +62,7 @@ function lanTestUser(string $name): User
  */
 function buildSyncSession(array $deviceKeys = []): SyncSession
 {
-    $db = app(\Illuminate\Database\DatabaseManager::class);
+    $db = app(DatabaseManager::class);
 
     return new SyncSession(
         registryService: app(DeviceRegistryService::class),
@@ -67,7 +70,7 @@ function buildSyncSession(array $deviceKeys = []): SyncSession
         replayer: new OpLogReplayer(db: $db, deviceKeys: $deviceKeys),
         framer: new TransportFramer,
         db: $db,
-        clock: app(\Modules\Core\Public\Contracts\Clock::class),
+        clock: app(Clock::class),
     );
 }
 
@@ -79,7 +82,7 @@ it('loopback WebSocket connection is established between two sync transport inst
 
     $implements = class_implements(SyncWebSocketHandler::class);
     // class_implements() returns array<interface-name, interface-name> — check key presence.
-    expect(isset($implements[\Amp\Websocket\Server\WebsocketClientHandler::class]))->toBeTrue(
+    expect(isset($implements[WebsocketClientHandler::class]))->toBeTrue(
         'SyncWebSocketHandler must implement WebsocketClientHandler (D-08 design)',
     );
 

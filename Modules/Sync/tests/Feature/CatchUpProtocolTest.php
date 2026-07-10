@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 
@@ -65,7 +65,7 @@ it('catch-up request correctly identifies ops missing from the peer (HLC waterma
 
     $framer = new TransportFramer;
     $exchanger = new PeerCatchUpExchanger(
-        db: app(\Illuminate\Database\DatabaseManager::class),
+        db: app(DatabaseManager::class),
         framer: $framer,
     );
 
@@ -93,7 +93,7 @@ it('catch-up delivers missing ops to the peer and both ends converge', function 
 
     $framer = new TransportFramer;
     $exchanger = new PeerCatchUpExchanger(
-        db: app(\Illuminate\Database\DatabaseManager::class),
+        db: app(DatabaseManager::class),
         framer: $framer,
     );
 
@@ -118,7 +118,7 @@ it('catch-up with no gap (peer already up to date) sends an empty CATCH_UP_RESPO
     insertOpLogRow(['hlc_l' => 1_718_000_000_100, 'hlc_c' => 0]);
 
     $exchanger = new PeerCatchUpExchanger(
-        db: app(\Illuminate\Database\DatabaseManager::class),
+        db: app(DatabaseManager::class),
         framer: new TransportFramer,
     );
 
@@ -156,7 +156,7 @@ it('catch-up batches large op sets into ≤ 64KB frames (backpressure guard)', f
 
     $framer = new TransportFramer;
     $exchanger = new PeerCatchUpExchanger(
-        db: app(\Illuminate\Database\DatabaseManager::class),
+        db: app(DatabaseManager::class),
         framer: $framer,
     );
 
@@ -183,7 +183,7 @@ it('catch-up is user-scoped: ops from other users are never included in the CATC
 
     $framer = new TransportFramer;
     $exchanger = new PeerCatchUpExchanger(
-        db: app(\Illuminate\Database\DatabaseManager::class),
+        db: app(DatabaseManager::class),
         framer: $framer,
     );
 

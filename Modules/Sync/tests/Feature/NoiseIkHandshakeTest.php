@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Sync\Internal\Transport\Noise\NoiseCipherState;
 use Modules\Sync\Internal\Transport\Noise\NoiseHandshakeState;
-use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 
 /*
  * NoiseIkHandshakeTest — XPORT-01: Noise IK pattern handshake.
@@ -48,7 +48,7 @@ function loadIkVector(): array
         }
     }
 
-    throw new \RuntimeException('IK vector not found in noise_test_vectors.json');
+    throw new RuntimeException('IK vector not found in noise_test_vectors.json');
 }
 
 it('IK handshake produces split keys (initiator and responder symmetric keys)', function (): void {
@@ -78,8 +78,8 @@ it('IK handshake produces split keys (initiator and responder symmetric keys)', 
     [$initSend, $initRecv, $peerStatic] = $initHs->split();
 
     // split() returns two NoiseCipherState instances
-    expect($initSend)->toBeInstanceOf(\Modules\Sync\Internal\Transport\Noise\NoiseCipherState::class);
-    expect($initRecv)->toBeInstanceOf(\Modules\Sync\Internal\Transport\Noise\NoiseCipherState::class);
+    expect($initSend)->toBeInstanceOf(NoiseCipherState::class);
+    expect($initRecv)->toBeInstanceOf(NoiseCipherState::class);
 
     // peerStatic is 32-byte X25519 public key
     expect(strlen($peerStatic))->toBe(32);

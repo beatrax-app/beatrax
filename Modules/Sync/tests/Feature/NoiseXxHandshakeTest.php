@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Sync\Internal\Transport\Noise\NoiseCipherState;
 use Modules\Sync\Internal\Transport\Noise\NoiseHandshakeState;
-use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 
 /*
  * NoiseXxHandshakeTest — XPORT-01: Noise XX pattern handshake.
@@ -48,7 +48,7 @@ function loadXxVector(): array
         }
     }
 
-    throw new \RuntimeException('XX vector not found in noise_test_vectors.json');
+    throw new RuntimeException('XX vector not found in noise_test_vectors.json');
 }
 
 it('XX handshake produces split keys after 3-message exchange', function (): void {
@@ -80,8 +80,8 @@ it('XX handshake produces split keys after 3-message exchange', function (): voi
 
     [$initSend, $initRecv, $peerStaticI] = $initHs->split();
 
-    expect($initSend)->toBeInstanceOf(\Modules\Sync\Internal\Transport\Noise\NoiseCipherState::class);
-    expect($initRecv)->toBeInstanceOf(\Modules\Sync\Internal\Transport\Noise\NoiseCipherState::class);
+    expect($initSend)->toBeInstanceOf(NoiseCipherState::class);
+    expect($initRecv)->toBeInstanceOf(NoiseCipherState::class);
     expect(strlen($peerStaticI))->toBe(32);
     expect($peerStaticI)->toBe($respStaticPublic);
 });
