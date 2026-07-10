@@ -45,6 +45,16 @@ namespace Modules\Sync\Internal\Crypto;
  * splitting series, so it is a reviewed, tracked exception rather than an
  * oversight. See `Modules\Recurring\Internal\Detectors\IncomeSeriesDetector`.
  *
+ * KNOWINGLY-ACCEPTED PLAINTEXT SINK (WR-10):
+ * `migration_import_baseline.baseline_value` snapshots the plaintext value of a
+ * reconciled `transactions.description` (and other fields) for the three-way
+ * merge compare in `ThreeWayMergeResolver`. The resolver relies on the baseline
+ * being plaintext, and it only covers reconciliation-touched rows. Encrypting it
+ * (and decrypting in `ThreeWayMergeResolver::baselineValue`) is viable — it is a
+ * stored compare value, not a lookup key — but changes reconciliation-correctness
+ * paths, so it is a reviewed, tracked exception deferred to a future hardening.
+ * See `Modules\Migration\Internal\Pipeline\EntityChangeApplier`.
+ *
  * Both a static accessor (columns()) and an instance method (isSensitive())
  * are provided, mirroring Modules\Core\Public\Services\SecretsColumnRegistry's
  * shape — DI consumers (OpLogWriter, the Sync Public SensitiveColumnCodec)
