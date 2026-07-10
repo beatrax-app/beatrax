@@ -6,9 +6,11 @@ namespace Modules\Migration\Internal\Pipeline;
 
 use Brick\Money\Exception\MoneyMismatchException;
 use Brick\Money\Money;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Migration\Public\Dto\ConflictDto;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -77,11 +79,27 @@ use stdClass;
  * `user_id`-scoped (never a chained dynamic-Eloquent call — PHPStan L10
  * strict `staticMethod.dynamicCall`), matching `SourceMapWriter`'s/
  * `PreviewSummaryBuilder`'s established discipline.
+ *
+ * CRYPT-01 / 14.1-AUDIT.md Cluster 4 (T-14.1-14a): `reconcileTransactionDescriptions()`
+ * decrypts the LIVE stored `transactions.description` before the equality
+ * compare against the plaintext `$baseline` snapshot — the stored value is
+ * ciphertext once encryption is enabled for the user, and comparing it raw
+ * would register a spurious conflict on every re-run (mirrors
+ * `SetTransactionNote`'s decrypt-before-compare fix). Investigation finding:
+ * the 14.1-AUDIT.md fix sketch also flagged an "analogous counterparty-name
+ * reconciliation earlier in the same file" — no such site exists in this
+ * class. `reconcileCategories()`/`reconcileAccounts()` compare a `name`
+ * column, but `categories.name`/`accounts.name` are NOT
+ * `SensitiveFieldRegistry`-listed (only `counterparties.display_name`/
+ * `merchant_name`/`iban` are), so those two methods are correctly
+ * unaffected and were left unchanged.
  */
 final class ThreeWayMergeResolver
 {
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     public function resolve(int $newRunId, User $user, string $sourceProduct): MergeDecision
@@ -315,9 +333,18 @@ final class ThreeWayMergeResolver
 
             $transactionId = self::toInt($map->beatrax_id);
             $sNew = $row->description !== null ? self::toStr($row->description) : '';
-            $current = self::toStr(
-                $connection->table('transactions')->where('id', $transactionId)->where('user_id', $user->id)->value('description')
-            );
+            $currentRaw = $connection->table('transactions')->where('id', $transactionId)->where('user_id', $user->id)->value('description');
+            // CRYPT-01 / T-14.1-14a decrypt-before-compare: the LIVE stored
+            // value is ciphertext under an encrypted user — comparing it
+            // raw against the plaintext $baseline would register a
+            // spurious conflict on every re-run (ciphertext never equals
+            // plaintext). decryptValue() is a documented pass-through
+            // no-op for a plaintext user/legacy value, so this is safe for
+            // both populations. Guarded on is_string so a NULL stored
+            // description is never handed to the codec.
+            $current = is_string($currentRaw)
+                ? $this->codec->decryptValue('transactions', 'description', $currentRaw, $user->id, $this->session)['value']
+                : self::toStr($currentRaw);
 
             if ($sNew === $baseline) {
                 continue;
