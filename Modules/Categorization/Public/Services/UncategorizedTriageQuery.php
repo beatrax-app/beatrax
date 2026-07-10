@@ -61,12 +61,14 @@ final class UncategorizedTriageQuery
             ])
             ->limit($limit + 1);
 
-        if ($cursorId !== null) {
-            if ($cursorPostedAt === null) {
-                $query->where('transactions.id', '<', $cursorId);
-            } else {
-                $query->whereRaw('(transactions.posted_at, transactions.id) < (?, ?)', [$cursorPostedAt, $cursorId]);
-            }
+        // IN-06: the cursor requires BOTH components. The former id-only
+        // fallback (`where id < cursorId`) did not compose with the primary
+        // `posted_at DESC, id DESC` ordering and could drop or duplicate rows.
+        // The batch always emits both cursor values, so requiring both here can
+        // never diverge from the sort; an id-only cursor is treated as no cursor
+        // (first page) rather than silently mis-paginating.
+        if ($cursorId !== null && $cursorPostedAt !== null) {
+            $query->whereRaw('(transactions.posted_at, transactions.id) < (?, ?)', [$cursorPostedAt, $cursorId]);
         }
 
         $rows = $query->get();
