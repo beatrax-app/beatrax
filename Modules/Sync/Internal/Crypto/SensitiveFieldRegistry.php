@@ -55,6 +55,20 @@ namespace Modules\Sync\Internal\Crypto;
  * paths, so it is a reviewed, tracked exception deferred to a future hardening.
  * See `Modules\Migration\Internal\Pipeline\EntityChangeApplier`.
  *
+ * KNOWINGLY-ACCEPTED PLAINTEXT SINK (CR-03, code-review 14.1):
+ * `pending_enrichment_conflicts.stored_value` / `.incoming_value` hold the
+ * decrypted `counterparty_name`/`description` of a held receipt-enrichment
+ * conflict (JSON-wrapped scalars) until the user resolves the toast. This is the
+ * ORIGINAL, deliberate D-02b decision — `ApplyEnrichments::holdConflicts()`
+ * receives already-decrypted values so the toast never renders ciphertext, and
+ * `ApplyEnrichmentsEncryptionTest` + `ReceiptConflictResolutionTest` pin the
+ * plaintext round-trip (writer → `ReceiptConflictQuery` → `ApplyReceiptConflict-
+ * Resolution`, including tolerant delete of malformed rows). A code review flagged
+ * the at-rest exposure; encrypting the two columns (and decrypting at both read
+ * sites) is viable but reverses a locked, tested contract, so it is recorded here
+ * as a reviewed, tracked exception deferred to a future hardening rather than
+ * changed silently. See `Modules\Import\Public\Actions\ApplyEnrichments`.
+ *
  * Both a static accessor (columns()) and an instance method (isSensitive())
  * are provided, mirroring Modules\Core\Public\Services\SecretsColumnRegistry's
  * shape — DI consumers (OpLogWriter, the Sync Public SensitiveColumnCodec)
