@@ -100,6 +100,20 @@ final class EntityChangeApplier
             // still what gets snapshotted into migration_import_baseline
             // below (record()) — the baseline compare in
             // ThreeWayMergeResolver is always plaintext-to-decrypted-plaintext.
+            //
+            // WR-10 (knowingly-accepted plaintext sink): the plaintext $fields
+            // snapshotted into `migration_import_baseline.baseline_value` means
+            // a reconciled `transactions.description` (D-02b-encrypted at rest)
+            // has a plaintext copy in that sibling table, which is NOT in
+            // SensitiveFieldRegistry. This is a REVIEWED, accepted exposure —
+            // ThreeWayMergeResolver::reconcileTransactionDescriptions() relies on
+            // the baseline being plaintext for its three-way compare, and it only
+            // covers reconciliation-touched rows. A future hardening encrypts
+            // baseline_value and decrypts it in ThreeWayMergeResolver::baselineValue
+            // (baseline_value is a stored compare value, not a lookup key, so
+            // random-nonce ciphertext is viable there — unlike WR-17); deferred
+            // rather than done blind because it changes reconciliation-correctness
+            // paths. Recorded in SensitiveFieldRegistry's DEFERRED list.
             $storedFields = $this->codec->encryptAttrs($table, $fields, $user->id, $this->session);
 
             $this->db->connection()->table($table)
