@@ -191,6 +191,8 @@ final class CounterpartyTriage extends Component
         CounterpartyTriageQueue $queue,
         ViewFactory $views,
         DatabaseManager $db,
+        SensitiveColumnCodec $codec,
+        Session $session,
     ): View {
         $user = $currentUser->user();
         $items = $queue->forUser($user, $this->queueFirstId);
@@ -212,7 +214,7 @@ final class CounterpartyTriage extends Component
 
         $recentTransactions = [];
         if ($current !== null && $current->user_id !== null) {
-            $recentTransactions = $this->recentTransactionsFor($current, $db);
+            $recentTransactions = $this->recentTransactionsFor($current, $db, $codec, $session);
         }
 
         return $views->make('counterparties::livewire.counterparty-triage', [
@@ -253,15 +255,37 @@ final class CounterpartyTriage extends Component
      *
      * @return list<\stdClass>
      */
-    private function recentTransactionsFor(Counterparty $cp, DatabaseManager $db): array
-    {
-        return array_values($db->connection()->table('transactions')
+    private function recentTransactionsFor(
+        Counterparty $cp,
+        DatabaseManager $db,
+        SensitiveColumnCodec $codec,
+        Session $session,
+    ): array {
+        $rows = $db->connection()->table('transactions')
             ->where('user_id', $cp->user_id)
             ->where('counterparty_id', $cp->id)
             ->orderByDesc('posted_at')
             ->orderByDesc('id')
             ->limit(5)
-            ->get(['id', 'posted_at', 'description', 'amount_minor'])
-            ->all());
+            ->get(['id', 'posted_at', 'description', 'amount_minor']);
+
+        // CR-05: `transactions.description` is a SensitiveFieldRegistry column
+        // stored as AEAD ciphertext at rest. The raw query builder applies no
+        // cast, so decrypt each row before it reaches the view (mirroring
+        // CounterpartyTriageQueue::suggestionFor()). decryptValue never throws
+        // and is a pass-through no-op for non-encryption users.
+        return array_values($rows->map(function (\stdClass $tx) use ($codec, $cp, $session): \stdClass {
+            if (is_string($tx->description) && $tx->description !== '') {
+                $tx->description = $codec->decryptValue(
+                    'transactions',
+                    'description',
+                    $tx->description,
+                    $cp->user_id,
+                    $session,
+                )['value'];
+            }
+
+            return $tx;
+        })->all());
     }
 }
