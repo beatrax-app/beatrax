@@ -8,13 +8,18 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Psr\Log\LoggerInterface;
 
 /**
  * Per-user daily counterparty garbage-collector job. Prunes
@@ -59,6 +64,50 @@ use Modules\Core\Public\Support\LockStore;
  *   AND counterparties.merchant_name IS NULL
  *       OR no merchant_aliases row exists with friendly_name =
  *          counterparties.merchant_name AND user_id = $userId.
+ *
+ * **CRYPT-01 (14.1-15) — KEK-less daemon skip-with-warning:** this job's
+ * ONLY dispatch origin is `routes/console.php`'s daily `counterparties.gc`
+ * `Schedule::call(...)` per-user fan-out — a real queue worker with no
+ * live Session, and therefore NEVER a KEK. `counterparties.merchant_name`
+ * is a `SensitiveFieldRegistry`-listed encrypted column; the alias-
+ * preservation half of the orphan predicate (`whereColumn(
+ * 'merchant_aliases.friendly_name', 'counterparties.merchant_name')`) is a
+ * raw SQL string equality between that ciphertext and the always-plaintext
+ * `merchant_aliases.friendly_name`. Under encryption the two can never
+ * match, so evaluating that branch would make every alias-protected,
+ * non-null-merchant_name counterparty wrongly look alias-less and
+ * therefore prunable purely because its `merchant_name` is now ciphertext.
+ *
+ * `merchant_aliases` carries no id/FK link back to `counterparties` (only
+ * the string pair), so there is no KEK-independent alias signal to fall
+ * back on. `handle()` therefore splits the orphan predicate in two:
+ *
+ *   - The `merchant_name IS NULL` half is ALWAYS plaintext-safe —
+ *     `SensitiveColumnCodec::encryptAttrs()` only encrypts string values
+ *     (`is_string($value)` guard), so a NULL `merchant_name` is never
+ *     turned into ciphertext by encryption. Rows in this half prune
+ *     unconditionally, encrypted or not.
+ *   - The `merchant_name IS NOT NULL` half is where the fix branches
+ *     three ways:
+ *       - Not encrypted: the original raw-SQL `whereColumn` equality is
+ *         left untouched — both sides are genuinely plaintext.
+ *       - Encrypted AND a KEK is available (never true for this job's
+ *         sole daemon origin today, kept symmetric with plan 08's
+ *         `DetectRecurringSeriesJob` pattern for a future request-bound
+ *         dispatch origin): the raw-SQL equality is NEVER used, because
+ *         AEAD ciphertext is non-deterministic (random nonce per
+ *         encryption) — even WITH a KEK, `counterparties.merchant_name`
+ *         ciphertext can never byte-equal the always-plaintext
+ *         `merchant_aliases.friendly_name` at the SQL layer. Instead,
+ *         candidates are loaded, `SensitiveColumnCodec::decryptValue()`
+ *         decrypts each row's `merchant_name` in PHP (mirrors
+ *         `FingerprintStage::detectConflicts()`'s decrypt-before-compare
+ *         template), and the decrypted plaintext is compared against the
+ *         user's `merchant_aliases.friendly_name` set in PHP.
+ *       - Encrypted AND no KEK: the half is SKIPPED entirely — no
+ *         candidate in it is ever pruned — and a warning naming the user
+ *         and the skipped-row count is logged
+ *         (preserve-data-on-uncertainty; NEVER a wrongful prune).
  */
 final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -91,51 +140,152 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         return LockStore::forUniqueJobs();
     }
 
-    public function handle(DatabaseManager $db): void
-    {
+    public function handle(
+        DatabaseManager $db,
+        ?Session $session = null,
+        ?AppLockKeyService $appLockKeyService = null,
+        ?EncryptionMigrationService $encryptionMigrationService = null,
+        ?SensitiveColumnCodec $codec = null,
+        ?LoggerInterface $logger = null,
+    ): void {
         $connection = $db->connection();
 
-        $connection->transaction(function () use ($connection): void {
-            // Step 1 — collect every counterparty id owned by this
-            // user that satisfies the orphan predicate. Doing the
-            // identification first keeps the DELETE bounded to a
-            // known id list rather than a correlated subquery.
+        // CRYPT-01 (14.1-15): only gate on KEK-absence when a real
+        // Session/AppLockKeyService/EncryptionMigrationService context was
+        // resolved (production dispatch — see class docblock). The legacy
+        // 1-arg test-call shape leaves all three null, which defaults to
+        // "not encrypted" — correct for those tests' always-plaintext
+        // fixtures (the raw-SQL branch below runs unchanged).
+        $canDecryptMerchantName = false;
+        $isEncrypted = false;
+        if ($session !== null && $appLockKeyService !== null && $encryptionMigrationService !== null) {
+            $hasKek = $appLockKeyService->release($session) !== null;
+            $isEncrypted = $encryptionMigrationService->isEnabled($this->userId);
+            $canDecryptMerchantName = $isEncrypted && $hasKek;
+        }
+
+        $connection->transaction(function () use ($connection, $isEncrypted, $canDecryptMerchantName, $session, $codec, $logger): void {
+            $notRecentlyTransacted = function (Builder $query): void {
+                $query
+                    ->select(new Expression('1'))
+                    ->from('transactions')
+                    ->whereColumn('transactions.counterparty_id', 'counterparties.id')
+                    ->where('transactions.user_id', $this->userId)
+                    // SQLite-portable date arithmetic. The
+                    // 365-day window mirrors the long-history
+                    // retention promise — a counterparty that
+                    // has not been transacted with in a full
+                    // year is a strong prune candidate.
+                    ->whereRaw("transactions.created_at >= datetime('now', '-365 days')");
+            };
+
+            // Step 1a — the `merchant_name IS NULL` half of the orphan
+            // predicate. Always plaintext-safe (see class docblock): a
+            // NULL column is never turned into ciphertext, so this half
+            // prunes unconditionally, encrypted or not.
             /** @var list<int> $orphans */
             $orphans = $connection
                 ->table('counterparties')
                 ->where('counterparties.user_id', $this->userId)
-                ->whereNotExists(function (Builder $query): void {
-                    $query
-                        ->select(new Expression('1'))
-                        ->from('transactions')
-                        ->whereColumn('transactions.counterparty_id', 'counterparties.id')
-                        ->where('transactions.user_id', $this->userId)
-                        // SQLite-portable date arithmetic. The
-                        // 365-day window mirrors the long-history
-                        // retention promise — a counterparty that
-                        // has not been transacted with in a full
-                        // year is a strong prune candidate.
-                        ->whereRaw("transactions.created_at >= datetime('now', '-365 days')");
-                })
-                ->where(function (Builder $q): void {
-                    $q
-                        ->whereNull('counterparties.merchant_name')
-                        ->orWhereNotExists(function (Builder $query): void {
-                            $query
-                                ->select(new Expression('1'))
-                                ->from('merchant_aliases')
-                                ->whereColumn(
-                                    'merchant_aliases.friendly_name',
-                                    'counterparties.merchant_name',
-                                )
-                                ->where('merchant_aliases.user_id', $this->userId);
-                        });
-                })
+                ->whereNotExists($notRecentlyTransacted)
+                ->whereNull('counterparties.merchant_name')
                 ->pluck('counterparties.id')
                 ->filter(static fn (mixed $id): bool => is_numeric($id))
                 ->map(static fn (int|float|string $id): int => (int) $id)
                 ->values()
                 ->all();
+
+            // Step 1b — the `merchant_name IS NOT NULL` half.
+            if (! $isEncrypted) {
+                // Not encrypted: both sides of the comparison are
+                // genuinely plaintext — the original raw-SQL equality is
+                // valid and untouched.
+                $ciphertextBranchOrphans = $connection
+                    ->table('counterparties')
+                    ->where('counterparties.user_id', $this->userId)
+                    ->whereNotExists($notRecentlyTransacted)
+                    ->whereNotNull('counterparties.merchant_name')
+                    ->whereNotExists(function (Builder $query): void {
+                        $query
+                            ->select(new Expression('1'))
+                            ->from('merchant_aliases')
+                            ->whereColumn(
+                                'merchant_aliases.friendly_name',
+                                'counterparties.merchant_name',
+                            )
+                            ->where('merchant_aliases.user_id', $this->userId);
+                    })
+                    ->pluck('counterparties.id')
+                    ->filter(static fn (mixed $id): bool => is_numeric($id))
+                    ->map(static fn (int|float|string $id): int => (int) $id)
+                    ->values()
+                    ->all();
+
+                $orphans = [...$orphans, ...$ciphertextBranchOrphans];
+            } elseif ($canDecryptMerchantName && $session !== null && $codec !== null) {
+                // Encrypted AND a KEK is available: the raw-SQL equality
+                // can NEVER match — AEAD ciphertext is non-deterministic
+                // (random nonce per encryption), so
+                // `counterparties.merchant_name` ciphertext can never
+                // byte-equal the plaintext `merchant_aliases.friendly_name`
+                // at the SQL layer regardless of KEK availability. Decrypt
+                // each candidate's merchant_name in PHP and compare against
+                // the user's alias friendly_names in PHP instead.
+                /** @var list<string> $aliasNames */
+                $aliasNames = $connection
+                    ->table('merchant_aliases')
+                    ->where('user_id', $this->userId)
+                    ->pluck('friendly_name')
+                    ->filter(static fn (mixed $name): bool => is_string($name))
+                    ->values()
+                    ->all();
+
+                $candidates = $connection
+                    ->table('counterparties')
+                    ->where('counterparties.user_id', $this->userId)
+                    ->whereNotExists($notRecentlyTransacted)
+                    ->whereNotNull('counterparties.merchant_name')
+                    ->get(['id', 'merchant_name']);
+
+                foreach ($candidates as $candidate) {
+                    $rawId = $candidate->id;
+                    $id = is_numeric($rawId) ? (int) $rawId : null;
+                    if ($id === null || ! is_string($candidate->merchant_name)) {
+                        continue;
+                    }
+
+                    $decrypted = $codec->decryptValue(
+                        'counterparties',
+                        'merchant_name',
+                        $candidate->merchant_name,
+                        $this->userId,
+                        $session,
+                    )['value'];
+
+                    if (! in_array($decrypted, $aliasNames, true)) {
+                        $orphans[] = $id;
+                    }
+                }
+            } elseif ($logger !== null) {
+                // Encrypted with NO KEK — the only shape this job's sole
+                // daemon dispatch origin ever produces today. Skip this
+                // half entirely (preserve-data-on-uncertainty: NEVER a
+                // wrongful prune) and log a warning naming the user and
+                // the skipped-row count.
+                $skippedCount = $connection
+                    ->table('counterparties')
+                    ->where('counterparties.user_id', $this->userId)
+                    ->whereNotExists($notRecentlyTransacted)
+                    ->whereNotNull('counterparties.merchant_name')
+                    ->count();
+
+                if ($skippedCount > 0) {
+                    $logger->warning(
+                        'CounterpartyGarbageCollectorJob: no app-lock KEK available for an encrypted user in this run — merchant_name/alias-dependent prune skipped for candidate counterparties; they will be re-evaluated on a future run with an available KEK.',
+                        ['user_id' => $this->userId, 'skipped_count' => $skippedCount],
+                    );
+                }
+            }
 
             if ($orphans === []) {
                 return;
