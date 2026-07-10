@@ -352,10 +352,15 @@ it(
          * @param  string  $field
          * @param  string  $value
          */
-        $makeCreate = static function (string $field, string $value) use ($signer, $sk, $userId): OpLogEntry {
+        // The pk IS the numeric row id (carried as an explicit `id` field op).
+        // The 2026_07_06 redesign dropped the flat field/match/value/category_id
+        // columns (moved to rule_conditions/rule_actions) and the old UNIQUE
+        // (user_id, field, match, value); idempotency now comes from the PK.
+        $probePk = 8802;
+        $makeCreate = static function (string $field, string $value) use ($signer, $sk, $userId, $probePk): OpLogEntry {
             $stub = new OpLogEntry(
                 table: 'categorization_rules',
-                pk: 'new-rule-probe-b',  // logical pk for assembly; not a real DB id yet
+                pk: $probePk,
                 field: $field,
                 value: $value,
                 hlcL: 1000,
@@ -369,7 +374,7 @@ it(
 
             return new OpLogEntry(
                 table: 'categorization_rules',
-                pk: 'new-rule-probe-b',
+                pk: $probePk,
                 field: $field,
                 value: $value,
                 hlcL: 1000,
@@ -381,13 +386,13 @@ it(
             );
         };
 
-        // Provide ALL required fields: field, match, value, category_id, hits_count, active.
-        // user_id is injected by the replayer from the $userId scope parameter.
+        // Provide ALL required fields for the redesigned parent row: id (pk),
+        // priority, combinator, active, hits_count. user_id is injected by the
+        // replayer from the $userId scope parameter.
         $entries = [
-            $makeCreate('field', '"merchant"'),     // JSON-encoded string
-            $makeCreate('match', '"contains"'),     // JSON-encoded string
-            $makeCreate('value', '"probe-merchant"'), // JSON-encoded string
-            $makeCreate('category_id', (string) $this->catA),  // numeric string (json_decode → int)
+            $makeCreate('id', (string) $probePk),
+            $makeCreate('priority', '55'),
+            $makeCreate('combinator', '"all"'),   // JSON-encoded string, enum-guarded by trigger
             $makeCreate('hits_count', '0'),
             $makeCreate('active', 'true'),
         ];
@@ -399,27 +404,27 @@ it(
         $rules = $db->connection()
             ->table('categorization_rules')
             ->where('user_id', $userId)
-            ->where('value', 'probe-merchant')
+            ->where('id', $probePk)
             ->get();
 
         expect($rules)->toHaveCount(1);
 
-        // ASSERTION B2: field and match values are correctly set and pass enum check.
+        // ASSERTION B2: the redesigned columns are correctly set and combinator
+        // passes the enum-guard trigger.
         $rule = $rules->first();
-        expect($rule->field)->toBe('merchant')
-            ->and($rule->match)->toBe('contains')
-            ->and($rule->value)->toBe('probe-merchant')
-            ->and((int) $rule->category_id)->toBe($this->catA)
+        expect((int) $rule->priority)->toBe(55)
+            ->and($rule->combinator)->toBe('all')
             ->and((int) $rule->hits_count)->toBe(0)
             ->and((bool) $rule->active)->toBeTrue();
 
-        // ASSERTION B3: re-applying the same CREATE_ROW ops is idempotent (insertOrIgnore).
-        // UNIQUE (user_id, field, match, value) prevents duplicate row.
+        // ASSERTION B3: re-applying the same CREATE_ROW ops is idempotent.
+        // The PK (via insertOrIgnore) prevents a duplicate row now that the old
+        // UNIQUE (user_id, field, match, value) is gone.
         $replayer->replay($entries, $userId);
         $countAfter = $db->connection()
             ->table('categorization_rules')
             ->where('user_id', $userId)
-            ->where('value', 'probe-merchant')
+            ->where('id', $probePk)
             ->count();
         expect($countAfter)->toBe(1);
 
@@ -429,7 +434,7 @@ it(
             ->table('op_log_entries')
             ->where('user_id', $userId)
             ->count();
-        expect($logCount)->toBeGreaterThanOrEqual(6); // 6 field ops per replay, replayed twice = at least 6 total (dedup by design may reduce)
+        expect($logCount)->toBeGreaterThanOrEqual(5); // 5 field ops per replay (id, priority, combinator, hits_count, active), replayed twice = at least 5 total (dedup by design may reduce)
     }
 );
 

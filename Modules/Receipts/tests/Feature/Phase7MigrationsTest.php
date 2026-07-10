@@ -93,32 +93,29 @@ it('adds the matcher_key nullable column to inbox_messages', function (): void {
     expect($schema->hasColumn('inbox_messages', 'matcher_key'))->toBeTrue();
 });
 
-it('creates the categorization_rules table and enforces UNIQUE (user_id, field, match, value)', function (): void {
+it('creates the categorization_rules table with the redesigned parent-rule columns', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $schema = $db->connection()->getSchemaBuilder();
 
     expect($schema->hasTable('categorization_rules'))->toBeTrue();
 
+    // The 2026_07_06 redesign replaced the flat single-condition shape with a
+    // multi-condition parent: field/match/value/category_id moved to the
+    // rule_conditions/rule_actions child tables, and priority/combinator were
+    // added. (New-schema behaviour is covered in depth by
+    // Modules\Categorization\tests\Feature\RuleSchemaMigrationTest.)
+    expect($schema->hasColumn('categorization_rules', 'priority'))->toBeTrue();
+    expect($schema->hasColumn('categorization_rules', 'combinator'))->toBeTrue();
+    expect($schema->hasColumn('categorization_rules', 'field'))->toBeFalse();
+    expect($schema->hasColumn('categorization_rules', 'value'))->toBeFalse();
+
     seedFileImportUser($db);
-    $db->connection()->table('categories')->insertOrIgnore([
-        'id' => 1,
-        'user_id' => 1,
-        'parent_id' => null,
-        'name' => 'Subscriptions',
-        'slug' => 'subscriptions',
-        'kind' => 'expense',
-        'display_order' => 0,
-        'created_at' => '2026-05-17 00:00:00',
-        'updated_at' => '2026-05-17 00:00:00',
-    ]);
 
     $row = [
         'user_id' => 1,
-        'field' => 'merchant',
-        'match' => 'contains',
-        'value' => 'SPOTIFY',
-        'category_id' => 1,
+        'priority' => 0,
+        'combinator' => 'all',
         'hits_count' => 0,
         'active' => 1,
         'notes' => null,
@@ -126,38 +123,23 @@ it('creates the categorization_rules table and enforces UNIQUE (user_id, field, 
         'updated_at' => '2026-05-17 00:00:00',
     ];
 
+    // A well-formed parent row inserts cleanly under the new schema.
     $db->connection()->table('categorization_rules')->insert($row);
-
-    $duplicate = static function () use ($db, $row): void {
-        $db->connection()->table('categorization_rules')->insert($row);
-    };
-
-    expect($duplicate)->toThrow(QueryException::class);
+    expect($db->connection()->table('categorization_rules')->where('user_id', 1)->count())->toBe(1);
 });
 
-it('rejects an invalid categorization_rules.field via the BEFORE INSERT trigger', function (): void {
+it('rejects an invalid categorization_rules.combinator via the BEFORE INSERT trigger', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     seedFileImportUser($db);
-    $db->connection()->table('categories')->insertOrIgnore([
-        'id' => 1,
-        'user_id' => 1,
-        'parent_id' => null,
-        'name' => 'Subscriptions',
-        'slug' => 'subscriptions',
-        'kind' => 'expense',
-        'display_order' => 0,
-        'created_at' => '2026-05-17 00:00:00',
-        'updated_at' => '2026-05-17 00:00:00',
-    ]);
 
+    // The old field/match enum triggers were retired by the 2026_07_06 redesign
+    // and replaced with a combinator enum-guard trigger ('all' | 'any').
     $insert = static function () use ($db): void {
         $db->connection()->table('categorization_rules')->insert([
             'user_id' => 1,
-            'field' => 'iban',
-            'match' => 'contains',
-            'value' => 'NL00',
-            'category_id' => 1,
+            'priority' => 0,
+            'combinator' => 'bogus',
             'hits_count' => 0,
             'active' => 1,
             'notes' => null,
