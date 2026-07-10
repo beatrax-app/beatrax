@@ -428,7 +428,15 @@ final class ThreeWayMergeResolver
                 continue; // source unchanged since last import.
             }
 
-            if (self::moneyEquals($currentMinor, $currentCurrency, $baselineMinor, $sourceCurrency)) {
+            // WR-13: tag the baseline leg with the currency the LIVE transaction
+            // is recorded under, not $sourceCurrency. The baseline captured the
+            // prior same-transaction minor amount, so its currency provenance is
+            // $currentCurrency. Tagging it $sourceCurrency made moneyEquals catch
+            // a MoneyMismatchException and return false whenever the live
+            // transaction's currency differed from the incoming source currency,
+            // spuriously flagging a conflict on a currency-stable, amount-stable
+            // row.
+            if (self::moneyEquals($currentMinor, $currentCurrency, $baselineMinor, $currentCurrency)) {
                 $applies[] = [
                     'entityType' => 'transaction',
                     'sourceExternalId' => $externalId,
