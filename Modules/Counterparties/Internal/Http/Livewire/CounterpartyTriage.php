@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -11,6 +12,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
  * `/counterparties/triage` focused single-card queue for labelling
@@ -78,8 +80,12 @@ final class CounterpartyTriage extends Component
         $this->showSuggestion = false;
     }
 
-    public function acceptSuggestion(CurrentUser $currentUser, CounterpartyTriageQueue $queue): void
-    {
+    public function acceptSuggestion(
+        CurrentUser $currentUser,
+        CounterpartyTriageQueue $queue,
+        SensitiveColumnCodec $codec,
+        Session $session,
+    ): void {
         $current = $this->resolveCurrent($currentUser, $queue);
         if ($current === null) {
             return;
@@ -98,9 +104,24 @@ final class CounterpartyTriage extends Component
         // accept path operates on an existing row's id; the
         // (user_id, slug) UNIQUE is preserved by keeping the unknown
         // row's slug intact and only flipping its type + display_name.
+        //
+        // CRYPT-01 (14.1-13): route display_name/merchant_name through
+        // the codec before save() — mirrors
+        // CounterpartyResolverService::upsert()'s encryptAttrs() call on
+        // the normal create path. Pass-through no-op for a
+        // non-encrypted user.
+        $encrypted = $codec->encryptAttrs('counterparties', [
+            'display_name' => $suggestion->suggestedCounterpartyName,
+            'merchant_name' => $suggestion->suggestedCounterpartyName,
+        ], $currentUser->id(), $session);
+
         $current->type = 'merchant';
-        $current->display_name = $suggestion->suggestedCounterpartyName;
-        $current->merchant_name = $suggestion->suggestedCounterpartyName;
+        $current->display_name = is_string($encrypted['display_name'] ?? null)
+            ? $encrypted['display_name']
+            : $suggestion->suggestedCounterpartyName;
+        $current->merchant_name = is_string($encrypted['merchant_name'] ?? null)
+            ? $encrypted['merchant_name']
+            : $suggestion->suggestedCounterpartyName;
         $current->save();
 
         $this->sessionDoneIds[] = $current->id;
@@ -123,8 +144,14 @@ final class CounterpartyTriage extends Component
         $this->nextItem();
     }
 
-    public function manualLabel(string $name, string $type, CurrentUser $currentUser, CounterpartyTriageQueue $queue): void
-    {
+    public function manualLabel(
+        string $name,
+        string $type,
+        CurrentUser $currentUser,
+        CounterpartyTriageQueue $queue,
+        SensitiveColumnCodec $codec,
+        Session $session,
+    ): void {
         $current = $this->resolveCurrent($currentUser, $queue);
         if ($current === null) {
             return;
@@ -136,10 +163,22 @@ final class CounterpartyTriage extends Component
             return;
         }
 
-        $current->display_name = $name;
+        // CRYPT-01 (14.1-13): route display_name/merchant_name through
+        // the codec before save(), mirroring acceptSuggestion() above.
+        $attrs = ['display_name' => $name];
+        if ($type === 'merchant') {
+            $attrs['merchant_name'] = $name;
+        }
+        $encrypted = $codec->encryptAttrs('counterparties', $attrs, $currentUser->id(), $session);
+
+        $current->display_name = is_string($encrypted['display_name'] ?? null)
+            ? $encrypted['display_name']
+            : $name;
         $current->type = $type;
         if ($type === 'merchant') {
-            $current->merchant_name = $name;
+            $current->merchant_name = is_string($encrypted['merchant_name'] ?? null)
+                ? $encrypted['merchant_name']
+                : $name;
         }
         $current->save();
 
