@@ -254,15 +254,28 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
                         continue;
                     }
 
-                    $decrypted = $codec->decryptValue(
+                    $result = $codec->decryptValue(
                         'counterparties',
                         'merchant_name',
                         $candidate->merchant_name,
                         $this->userId,
                         $session,
-                    )['value'];
+                    );
 
-                    if (! in_array($decrypted, $aliasNames, true)) {
+                    // WR-16: decryptValue never throws; on any decrypt failure
+                    // (no key for the row's epoch, a rekey/revoked-device epoch
+                    // the current keyring no longer covers, or corruption) it
+                    // returns the raw CIPHERTEXT with decrypted:false. Comparing
+                    // that blob against plaintext alias names would never match,
+                    // mis-classify the row as alias-less, and DELETE an
+                    // alias-protected counterparty — violating this job's
+                    // "NEVER a wrongful prune" contract. Preserve-on-uncertainty:
+                    // skip any candidate that did not decrypt.
+                    if (! $result['decrypted']) {
+                        continue;
+                    }
+
+                    if (! in_array($result['value'], $aliasNames, true)) {
                         $orphans[] = $id;
                     }
                 }
