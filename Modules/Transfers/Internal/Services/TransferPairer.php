@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Transaction;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -98,6 +99,7 @@ final class TransferPairer implements PairsTransferLegs
         private readonly ResolvesKnownCounterpartyIban $aliasResolver,
         private readonly SensitiveColumnCodec $codec,
         private readonly Session $session,
+        private readonly EncryptionMigrationService $encryptionService,
     ) {}
 
     public function pairOne(Transaction $tx, User $user): ?int
@@ -141,13 +143,27 @@ final class TransferPairer implements PairsTransferLegs
             // enabled for this user. The null/'' cases already routed to
             // the reverse-lookup branch above, so $tx->counterparty_iban
             // is guaranteed a non-empty string here.
-            $plainIban = $this->codec->decryptValue(
+            $ibanResult = $this->codec->decryptValue(
                 'transactions',
                 'counterparty_iban',
                 $tx->counterparty_iban,
                 $user->id,
                 $this->session,
-            )['value'];
+            );
+
+            // WR-18: decryptValue never throws — on a decrypt failure (a
+            // rekey/epoch gap, or the app-lock locked during a background pass)
+            // it returns the raw CIPHERTEXT with decrypted:false. Matching that
+            // blob against plaintext account IBANs would silently miss and
+            // mis-pair, with no signal. Only distrust decrypted:false when
+            // encryption is actually ENABLED for the user — for a
+            // non-encryption user decrypted:false is expected and the value is
+            // valid plaintext (isEnabled is the KEK-independent DB signal, so a
+            // locked-but-enabled user is correctly treated as "cannot match").
+            if ($this->encryptionService->isEnabled($user->id) && ! $ibanResult['decrypted']) {
+                return null;
+            }
+            $plainIban = $ibanResult['value'];
 
             $partnerAccountRow = $connection
                 ->table('accounts')
@@ -359,21 +375,30 @@ final class TransferPairer implements PairsTransferLegs
             ->orderBy('booked_at')
             ->get(['id', 'counterparty_iban']);
 
+        $encryptionEnabled = $this->encryptionService->isEnabled($userId);
+
         foreach ($candidates as $candidate) {
             /** @var stdClass $candidate */
             $storedCandidateIban = $candidate->counterparty_iban ?? null;
             if (! is_string($storedCandidateIban) || $storedCandidateIban === '') {
                 continue;
             }
-            $plainCandidateIban = $this->codec->decryptValue(
+            $candidateResult = $this->codec->decryptValue(
                 'transactions',
                 'counterparty_iban',
                 $storedCandidateIban,
                 $userId,
                 $this->session,
-            )['value'];
+            );
 
-            if (in_array($plainCandidateIban, $candidateIbans, true)) {
+            // WR-18: skip a candidate whose IBAN failed to decrypt (encryption
+            // enabled + decrypted:false) rather than comparing $candidateIbans
+            // against ciphertext — a silently-missed pairing otherwise.
+            if ($encryptionEnabled && ! $candidateResult['decrypted']) {
+                continue;
+            }
+
+            if (in_array($candidateResult['value'], $candidateIbans, true)) {
                 return $candidate;
             }
         }

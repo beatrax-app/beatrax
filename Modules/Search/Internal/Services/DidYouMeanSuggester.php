@@ -7,6 +7,7 @@ namespace Modules\Search\Internal\Services;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
@@ -46,6 +47,7 @@ final class DidYouMeanSuggester
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
         private readonly Session $session,
+        private readonly EncryptionMigrationService $encryptionService,
     ) {}
 
     public function suggest(User $user, string $query): ?string
@@ -86,6 +88,7 @@ final class DidYouMeanSuggester
             ->pluck('counterparty_name');
 
         $userId = $user->id;
+        $encryptionEnabled = $this->encryptionService->isEnabled($userId);
 
         // Tokenize decrypted names into individual words, keeping each word's
         // accumulated corpus frequency so distance ties can be broken by
@@ -98,7 +101,17 @@ final class DidYouMeanSuggester
             if (! is_string($name) || $name === '') {
                 continue;
             }
-            $decrypted = $this->codec->decryptValue('transactions', 'counterparty_name', $name, $userId, $this->session)['value'];
+            $result = $this->codec->decryptValue('transactions', 'counterparty_name', $name, $userId, $this->session);
+
+            // WR-18: when encryption is enabled, a decrypted:false result is
+            // ciphertext (rekey/epoch gap, or a locked app-lock) — skip it
+            // rather than tokenizing a ciphertext blob into the suggestion
+            // corpus. Non-encryption users keep the plaintext pass-through.
+            if ($encryptionEnabled && ! $result['decrypted']) {
+                continue;
+            }
+
+            $decrypted = $result['value'];
             if ($decrypted === '') {
                 continue;
             }
