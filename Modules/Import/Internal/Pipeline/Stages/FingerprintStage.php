@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Pipeline\Stages;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Dto\FingerprintDisposition;
 use Modules\Import\Public\Services\SourceRefRanker;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -74,6 +76,8 @@ final class FingerprintStage
         private readonly FingerprintComposer $fingerprints,
         private readonly DatabaseManager $db,
         private readonly SourceRefRanker $ranker,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     public function classify(CanonicalTransaction $tx, User $user): FingerprintDisposition
@@ -132,7 +136,7 @@ final class FingerprintStage
         $existingRank = $this->ranker->rank($existingRef, $existingFormat);
 
         if ($incomingRank > $existingRank && $tx->sourceRef !== null) {
-            $conflictingFields = $this->detectConflicts($existing, $tx);
+            $conflictingFields = $this->detectConflicts($existing, $tx, $user);
 
             return FingerprintDisposition::enriched(
                 existingId: $existingId,
@@ -158,13 +162,28 @@ final class FingerprintStage
      *  - currency: uppercase compare (USD === usd is not a conflict).
      *  - amount_minor: exact int compare.
      *
+     * D-07 decrypt-before-compare (14.1-12 Cluster 3 / RESEARCH Pitfall
+     * 4): `counterparty_name`/`description` are ciphertext at rest for an
+     * encrypted user, so the stored value is decrypted before the
+     * `stringsDiffer()` compare — otherwise ciphertext can never equal
+     * the incoming plaintext and every receipt-vs-statement re-import
+     * would register a false-positive conflict. The DECRYPTED value is
+     * what lands in `conflictingFields['stored']` so nothing downstream
+     * (persisted JSON, event payload, toast UI) ever sees ciphertext.
+     * `decryptValue()` is a documented no-op pass-through for a
+     * non-encrypted user (or a genuinely plaintext legacy value), so
+     * this call is safe unconditionally.
+     *
      * @return array<string, array{stored: mixed, incoming: mixed}>
      */
-    private function detectConflicts(stdClass $existing, CanonicalTransaction $tx): array
+    private function detectConflicts(stdClass $existing, CanonicalTransaction $tx, User $user): array
     {
         $map = [];
 
         $storedName = is_string($existing->counterparty_name) ? $existing->counterparty_name : null;
+        if ($storedName !== null) {
+            $storedName = $this->codec->decryptValue('transactions', 'counterparty_name', $storedName, $user->id, $this->session)['value'];
+        }
         if ($storedName !== null && $tx->counterpartyName !== null) {
             if (self::stringsDiffer($storedName, $tx->counterpartyName)) {
                 $map['counterparty_name'] = ['stored' => $storedName, 'incoming' => $tx->counterpartyName];
@@ -172,6 +191,9 @@ final class FingerprintStage
         }
 
         $storedDescription = is_string($existing->description) ? $existing->description : null;
+        if ($storedDescription !== null) {
+            $storedDescription = $this->codec->decryptValue('transactions', 'description', $storedDescription, $user->id, $this->session)['value'];
+        }
         if ($storedDescription !== null && $tx->description !== null) {
             if (self::stringsDiffer($storedDescription, $tx->description)) {
                 $map['description'] = ['stored' => $storedDescription, 'incoming' => $tx->description];
