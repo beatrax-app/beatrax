@@ -261,8 +261,14 @@ final class CounterpartyTriage extends Component
         SensitiveColumnCodec $codec,
         Session $session,
     ): array {
+        $userId = $cp->user_id;
+
+        if ($userId === null) {
+            return [];
+        }
+
         $rows = $db->connection()->table('transactions')
-            ->where('user_id', $cp->user_id)
+            ->where('user_id', $userId)
             ->where('counterparty_id', $cp->id)
             ->orderByDesc('posted_at')
             ->orderByDesc('id')
@@ -274,13 +280,13 @@ final class CounterpartyTriage extends Component
         // cast, so decrypt each row before it reaches the view (mirroring
         // CounterpartyTriageQueue::suggestionFor()). decryptValue never throws
         // and is a pass-through no-op for non-encryption users.
-        return array_values($rows->map(function (\stdClass $tx) use ($codec, $cp, $session): \stdClass {
+        return array_values($rows->map(function (\stdClass $tx) use ($codec, $userId, $session): \stdClass {
             if (is_string($tx->description) && $tx->description !== '') {
                 $tx->description = $codec->decryptValue(
                     'transactions',
                     'description',
                     $tx->description,
-                    $cp->user_id,
+                    $userId,
                     $session,
                 )['value'];
             }
