@@ -11,6 +11,7 @@ use JsonException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Psr\Log\LoggerInterface;
 use stdClass;
 
 /**
@@ -79,6 +80,7 @@ final class ApplyReceiptConflictResolution
         private readonly Clock $clock,
         private readonly SensitiveColumnCodec $codec,
         private readonly Session $session,
+        private readonly LoggerInterface $logger,
     ) {}
 
     public function __invoke(User $user, string $choice): int
@@ -127,45 +129,70 @@ final class ApplyReceiptConflictResolution
         $fieldIsAllowed = in_array($fieldName, self::ALLOWED_FIELDS, true);
 
         if ($choice === 'prefer_receipt' && $fieldIsAllowed) {
-            $incomingRaw = is_string($row->incoming_value) ? $row->incoming_value : 'null';
+            $incomingStored = is_string($row->incoming_value) ? $row->incoming_value : 'null';
+
+            // CR-03/WR-19: incoming_value is persisted encrypted-at-rest by
+            // ApplyEnrichments::holdConflicts() for an encrypted user. Decrypt
+            // BEFORE json_decode. decryptValue never throws and is a
+            // pass-through for legacy-plaintext / non-encryption rows.
+            $incomingRaw = $this->codec->decryptValue(
+                'pending_enrichment_conflicts',
+                'incoming_value',
+                $incomingStored,
+                $user->id,
+                $this->session,
+            )['value'];
 
             try {
                 /** @var mixed $incoming */
                 $incoming = json_decode($incomingRaw, associative: true, flags: JSON_THROW_ON_ERROR);
+            } catch (JsonException $e) {
+                // WR-19: a decode failure here means the stored value could not
+                // be decrypted (e.g. a rekey/epoch gap left it as ciphertext)
+                // or is genuinely corrupt. Do NOT delete the pending row — the
+                // old code silently deleted on JsonException, which (once
+                // incoming_value is encrypted) SILENTLY DROPS the receipt's
+                // resolution. Log and KEEP the row so it can be retried once the
+                // covering epoch is available (or inspected). The transactions
+                // table is left untouched.
+                $this->logger->warning('Receipt conflict resolution skipped: incoming_value could not be decoded/decrypted — pending row preserved.', [
+                    'user_id' => $user->id,
+                    'conflict_id' => $conflictId,
+                    'field' => $fieldName,
+                    'error' => $e->getMessage(),
+                ]);
 
-                // D-07 encrypt-incoming-before-update (14.1-12 Cluster 3 /
-                // CR-01/CR-02 class): $incoming is a fresh plaintext value
-                // parsed straight out of the held-conflict JSON — it must be
-                // encrypted before landing in the transactions UPDATE for
-                // an encrypted user, mirroring TagTransaction's
-                // encrypt-before-write. Only the two sensitive columns are
-                // ever encrypted; a non-string value (e.g. a decoded null)
-                // is left untouched. Pass-through no-op for a
-                // non-encrypted user.
-                if (is_string($incoming) && in_array($fieldName, self::ENCRYPTED_FIELDS, true)) {
-                    $incoming = $this->codec->encryptValue('transactions', $fieldName, $incoming, $user->id, $this->session);
-                }
-
-                $this->db->connection()
-                    ->table('transactions')
-                    ->where('id', $transactionId)
-                    ->where('user_id', $user->id)
-                    ->update([
-                        $fieldName => $incoming,
-                        'updated_at' => $now,
-                    ]);
-            } catch (JsonException) {
-                // A malformed stored value must not 500 the request — the read
-                // side (ReceiptConflictQuery::decodeScalar) already tolerates
-                // it. Skip the apply and fall through to delete the pending row
-                // so a corrupted value can never block future conflicts.
+                return;
             }
+
+            // D-07 encrypt-incoming-before-update (14.1-12 Cluster 3 /
+            // CR-01/CR-02 class): $incoming is a fresh plaintext value parsed
+            // out of the (now-decrypted) held-conflict JSON — it must be
+            // encrypted before landing in the transactions UPDATE for an
+            // encrypted user, mirroring TagTransaction's encrypt-before-write.
+            // Only the two sensitive columns are ever encrypted; a non-string
+            // value (e.g. a decoded null) is left untouched. Pass-through no-op
+            // for a non-encrypted user.
+            if (is_string($incoming) && in_array($fieldName, self::ENCRYPTED_FIELDS, true)) {
+                $incoming = $this->codec->encryptValue('transactions', $fieldName, $incoming, $user->id, $this->session);
+            }
+
+            $this->db->connection()
+                ->table('transactions')
+                ->where('id', $transactionId)
+                ->where('user_id', $user->id)
+                ->update([
+                    $fieldName => $incoming,
+                    'updated_at' => $now,
+                ]);
         }
 
-        // Always delete the pending row, even when field_name fell
-        // outside the whitelist — a corrupted row should not block
-        // future conflicts on the same user. The transactions table
-        // is never mutated in that case.
+        // Delete the pending row. Reached for prefer_first_write, a
+        // non-whitelisted field_name (a corrupted row should not block future
+        // conflicts — transactions is never mutated in that case), or a
+        // successfully-applied prefer_receipt row. The WR-19 decrypt/decode
+        // failure path above returns EARLY and never reaches here, so an
+        // undecryptable resolution is preserved rather than silently dropped.
         $this->db->connection()
             ->table('pending_enrichment_conflicts')
             ->where('id', $conflictId)
