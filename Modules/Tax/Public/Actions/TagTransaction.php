@@ -193,6 +193,17 @@ final class TagTransaction
      * an existing tag's category/note/override — only a save carrying at
      * least one value rewrites the payload columns. created_at is never
      * touched on update — it is the "first tagged" audit signal (WR-02).
+     *
+     * IN-07 full-payload contract: when ANY of deductionCategoryId/note/
+     * taxYearOverride is non-null, ALL THREE payload columns are rewritten
+     * together (a whole-payload upsert, not a per-field patch). A caller that
+     * means to change only the category MUST therefore re-send the existing
+     * note + year, or a null note/year will overwrite (clear) the stored
+     * value. The internal rule-driven caller (RuleApplier::applyTaxTag) already
+     * re-reads and forwards the existing note for exactly this reason (see
+     * CR-04). If per-field partial updates are ever needed, switch to
+     * null-coalescing here rather than relying on every caller sending the
+     * full payload.
      */
     private function updateExisting(
         int $userId,
