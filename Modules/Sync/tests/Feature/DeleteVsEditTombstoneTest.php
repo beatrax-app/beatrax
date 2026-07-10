@@ -53,13 +53,14 @@ function tombRule(DatabaseManager $db, int $userId, string $suffix): array
         'updated_at' => '2026-06-01 00:00:00',
     ]);
 
-    // field and match must be in the SQLite-trigger-enforced enum sets.
+    // Redesigned (2026_07_06) parent-rule shape: the flat field/match/value/
+    // category_id columns moved to rule_conditions/rule_actions; combinator is
+    // enum-guarded by a SQLite trigger. These tests only exercise `notes` SET
+    // ops + tombstones against the row id, so only the row shape matters here.
     $ruleId = $db->connection()->table('categorization_rules')->insertGetId([
         'user_id' => $userId,
-        'field' => 'merchant',
-        'match' => 'contains',
-        'value' => 'test-merchant-'.$suffix,
-        'category_id' => $categoryId,
+        'priority' => 0,
+        'combinator' => 'all',
         'hits_count' => 0,
         'active' => true,
         'notes' => 'original',

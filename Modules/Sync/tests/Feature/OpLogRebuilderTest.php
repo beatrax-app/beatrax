@@ -183,34 +183,38 @@ it('rebuild() recreates an op-log-CREATED row from CreateRow ops (CR-04)', funct
     $db = $this->db;
     [$userId] = rebuildSeedBase($db, 'cr');
 
-    $catId = $db->connection()->table('categories')->insertGetId([
-        'user_id' => $userId, 'name' => 'CrCat', 'slug' => 'cr-cat',
-        'kind' => 'expense', 'created_at' => '2026-06-15 00:00:00', 'updated_at' => '2026-06-15 00:00:00',
-    ]);
-
-    // CreateRow ops assemble a categorization_rules row (all required fields).
-    $pk = 'rule-rebuild-1';
+    // CreateRow ops assemble a categorization_rules row from the fields the
+    // MergeRulesRegistry replicates for the redesigned (multi-condition)
+    // parent table: priority, combinator, active, hits_count. The flat
+    // field/match/value/category_id columns moved to rule_conditions /
+    // rule_actions in the 2026_07_06 redesign and no longer exist here.
+    //
+    // The pk is the numeric row id, carried as an explicit `id` field op. The
+    // redesign dropped the old UNIQUE (user_id, field, match, value) that used
+    // to make re-applied CreateRows idempotent; idempotency now comes from the
+    // PK via insertOrIgnore, and rebuild's createdRowPks (numeric-pk only)
+    // deletes the op-log-created row by that id before recreating it.
+    $pk = 8801;
     $deviceKeys = ['device-rebuild' => $this->pkHex];
     $replayer = new OpLogReplayer($db, $deviceKeys);
 
     $creates = [
-        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'field', json_encode('merchant', JSON_THROW_ON_ERROR), OpType::CreateRow, 1000),
-        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'match', json_encode('contains', JSON_THROW_ON_ERROR), OpType::CreateRow, 1000),
-        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'value', json_encode('rebuild-merchant', JSON_THROW_ON_ERROR), OpType::CreateRow, 1000),
-        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'category_id', (string) $catId, OpType::CreateRow, 1000),
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'id', (string) $pk, OpType::CreateRow, 1000),
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'priority', '777', OpType::CreateRow, 1000),
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'combinator', json_encode('all', JSON_THROW_ON_ERROR), OpType::CreateRow, 1000),
         rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'hits_count', '0', OpType::CreateRow, 1000),
         rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, 'active', 'true', OpType::CreateRow, 1000),
     ];
     $replayer->replay($creates, $userId);
 
-    $beforeCount = $db->connection()->table('categorization_rules')->where('user_id', $userId)->where('value', 'rebuild-merchant')->count();
+    $beforeCount = $db->connection()->table('categorization_rules')->where('user_id', $userId)->where('id', $pk)->count();
     expect($beforeCount)->toBe(1);
 
     // Rebuild: the created row is deleted then recreated from its CreateRow ops.
     $rebuilder = new OpLogRebuilder($db, $replayer, new MergeRulesRegistry, ['categorization_rules']);
     $rebuilder->rebuild($userId);
 
-    $afterCount = $db->connection()->table('categorization_rules')->where('user_id', $userId)->where('value', 'rebuild-merchant')->count();
+    $afterCount = $db->connection()->table('categorization_rules')->where('user_id', $userId)->where('id', $pk)->count();
     expect($afterCount)->toBe(1);
 });
 
