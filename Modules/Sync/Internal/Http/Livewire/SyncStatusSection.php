@@ -102,8 +102,8 @@ final class SyncStatusSection extends Component
     /**
      * Map raw stdClass rows to safe wire-serialisable view-model arrays.
      *
-     * @param  array<int, \stdClass> $rows
-     * @param  CarbonImmutable       $now  Reference point for relative time.
+     * @param  array<int, \stdClass>  $rows
+     * @param  CarbonImmutable  $now  Reference point for relative time.
      * @return list<array<string, mixed>>
      */
     private function buildPeerViewModels(array $rows, CarbonImmutable $now): array

@@ -38,7 +38,7 @@ function statusUser(string $username): User
 /**
  * Insert a sync_sessions row and return its id.
  *
- * @param  array<string, mixed> $overrides
+ * @param  array<string, mixed>  $overrides
  */
 function insertSession(DatabaseManager $db, User $user, array $overrides = []): int
 {
@@ -83,7 +83,8 @@ it('shows all_synced status when a peer session is closed with last_seen_at', fu
 
     // Freeze time so the "last synced" calculation is deterministic.
     $now = CarbonImmutable::parse('2026-06-15T10:05:00Z');
-    $this->app->bind(Clock::class, fn () => new class ($now) implements Clock {
+    $this->app->bind(Clock::class, fn () => new class($now) implements Clock
+    {
         public function __construct(private readonly CarbonImmutable $frozen) {}
 
         public function now(): CarbonImmutable

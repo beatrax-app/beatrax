@@ -54,7 +54,7 @@ it('relay_stores_only_ciphertext', function (): void {
         'expires_at' => '2026-07-15T10:00:00Z',
     ]);
 
-    /** @var \stdClass $row */
+    /** @var stdClass $row */
     $row = DB::table('relay_mailbox')->where('recipient_did', 'device-b-uuid')->first();
 
     // ASSERTION 1: The blob does NOT contain op-log plaintext field names.
@@ -110,7 +110,7 @@ it('relay_mailbox blob column accepts binary data without modification', functio
         'expires_at' => '2026-07-15T10:00:00Z',
     ]);
 
-    /** @var \stdClass $row */
+    /** @var stdClass $row */
     $row = DB::table('relay_mailbox')->where('recipient_did', 'device-d-uuid')->first();
 
     expect($row->blob)->toBe($rawBytes, 'binary blob must round-trip without modification');
