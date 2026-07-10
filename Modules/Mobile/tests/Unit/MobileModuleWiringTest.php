@@ -1,0 +1,95 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Nwidart\Modules\Contracts\RepositoryInterface;
+
+uses(RefreshDatabase::class);
+
+/*
+ * 15-01 Task 2: proves the module-skeleton + single-owner wiring is
+ * correct — Mobile is enabled, the mobile_sync_progress durable cursor
+ * table exists with the expected columns, the three Mobile testsuites are
+ * declared in phpunit.xml, and MobileServiceProvider forward-registers
+ * every future wave's FQCN (so downstream plans never re-edit it).
+ */
+
+it('registers the Mobile module as enabled', function (): void {
+    /** @var RepositoryInterface $modules */
+    $modules = app(RepositoryInterface::class);
+
+    $module = $modules->find('Mobile');
+    expect($module)->not->toBeNull('Mobile module is not registered with nwidart/laravel-modules');
+    expect($modules->isEnabled('Mobile'))->toBeTrue();
+});
+
+it('creates the mobile_sync_progress durable-cursor table with the expected columns and unique index', function (): void {
+    // RefreshDatabase has already migrated the test schema; introspect it directly.
+    $connection = app(DatabaseManager::class)->connection();
+    $columns = collect($connection->getSchemaBuilder()->getColumns('mobile_sync_progress'))
+        ->keyBy('name');
+
+    foreach ([
+        'id', 'user_id', 'peer_device_id', 'records_expected',
+        'records_applied', 'last_hlc_l', 'last_hlc_c', 'phase',
+        'created_at', 'updated_at',
+    ] as $expectedColumn) {
+        expect($columns->has($expectedColumn))->toBeTrue("Missing column: {$expectedColumn}");
+    }
+
+    expect($columns['user_id']['nullable'])->toBeFalse();
+    expect($columns['records_applied']['nullable'])->toBeFalse();
+
+    // No float/double column types (RESEARCH.md convention — plain
+    // integers only for progress math).
+    $types = $columns->pluck('type_name')->map(static fn (string $t): string => strtolower($t));
+    expect($types->filter(static fn (string $t): bool => str_contains($t, 'float') || str_contains($t, 'double')))
+        ->toBeEmpty();
+
+    // sqlite_master is the canonical introspection for indexes when
+    // Schema::getIndexes isn't reliable across every driver in this
+    // Laravel version (Modules/EmailScan/tests/Integration/MigrationsTest
+    // precedent).
+    $indexSql = $connection
+        ->table('sqlite_master')
+        ->where('type', 'index')
+        ->where('tbl_name', 'mobile_sync_progress')
+        ->pluck('sql')
+        ->filter()
+        ->implode("\n");
+    expect(stripos($indexSql, 'unique'))->not->toBeFalse('Missing a UNIQUE index on mobile_sync_progress');
+    expect(str_contains($indexSql, 'user_id') && str_contains($indexSql, 'peer_device_id'))->toBeTrue();
+});
+
+it('declares the three Mobile testsuites in phpunit.xml', function (): void {
+    $xml = (string) file_get_contents(base_path('phpunit.xml'));
+
+    foreach (['Mobile', 'MobileUnit', 'MobileFeature'] as $suite) {
+        expect($xml)->toContain('name="'.$suite.'"');
+    }
+});
+
+it('forward-registers every future Internal/Livewire/command FQCN in MobileServiceProvider', function (): void {
+    $provider = (string) file_get_contents(base_path('Modules/Mobile/Providers/MobileServiceProvider.php'));
+
+    expect($provider)->toContain('singletonIfExists');
+
+    foreach ([
+        'LanSyncClient',
+        'NetworkPolicyResolver',
+        'MobileSyncTriggerService',
+        'InitialSyncPuller',
+        'BiometricUnlockBridge',
+        'QrScanBridge',
+        'MobileFirstLaunchBootstrap',
+        'MobilePullCommand',
+        'MobileLockScreen',
+        'MobilePairingScan',
+        'SetupProgressScreen',
+        'SyncScreen',
+    ] as $futureClass) {
+        expect($provider)->toContain($futureClass);
+    }
+});
