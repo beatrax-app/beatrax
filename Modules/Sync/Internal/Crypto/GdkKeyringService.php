@@ -144,8 +144,13 @@ final class GdkKeyringService
         $encPath = $this->keyringPath($stage->userId);
 
         if (! @rename($stage->tmpEncPath, $encPath)) {
-            @unlink($stage->tmpEncPath);
-
+            // CR-01: do NOT @unlink the staged file on rename failure. At this
+            // point `current_epoch` is already committed, and this staged
+            // `.tmp` is the ONLY copy of the epoch key. Deleting it would leave
+            // `current_epoch` set with no recoverable keyring — encryption
+            // silently and permanently disabled. Keep the staged file so a
+            // re-entry (see EncryptionMigrationService::migrate WR-01 reconcile)
+            // can retry the rename and recover.
             throw new RuntimeException("Could not finalize the GDK keyring file for user {$stage->userId}.");
         }
     }
@@ -348,9 +353,17 @@ final class GdkKeyringService
         $tmpPlainPath = $dir.DIRECTORY_SEPARATOR.'beatrax_gdk_'.bin2hex(random_bytes(8)).'.tmp';
         SecureTempFile::write($tmpPlainPath, $payload);
 
-        // Encrypt to a `.enc.tmp` sibling; the caller decides when (or
+        // Encrypt to a randomized `.tmp` sibling; the caller decides when (or
         // whether) to rename it over the real path.
-        $tmpEncPath = $encPath.'.tmp';
+        //
+        // WR-08: the staged encrypted filename is randomized (mirroring the
+        // decrypt path in readKeyringFile()) rather than a fixed
+        // `{userId}.enc.tmp`. A fixed path let two concurrent stage/write
+        // operations — or a stale `.tmp` from a crashed run — collide, so one
+        // could silently overwrite the other or be mistaken for the current
+        // stage on finalize. The concrete path is returned and threaded through
+        // GdkKeyringStage, so each stage is isolated.
+        $tmpEncPath = $encPath.'.'.bin2hex(random_bytes(8)).'.tmp';
 
         try {
             $this->backupEncryptor->encrypt($tmpPlainPath, $tmpEncPath, $kek);
