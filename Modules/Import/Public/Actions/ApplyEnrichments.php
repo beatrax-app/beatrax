@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -12,6 +13,7 @@ use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Services\SourceRefRanker;
 use Modules\Receipts\Public\Events\ReceiptConflictDetected;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -74,6 +76,8 @@ final class ApplyEnrichments implements AppliesEnrichments
         private readonly SourceRefRanker $ranker,
         private readonly LoggerInterface $logger,
         private readonly Dispatcher $events,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     public function __invoke(array $enrichments, User $user): int
@@ -215,7 +219,7 @@ final class ApplyEnrichments implements AppliesEnrichments
         }
 
         if ($userPolicy === 'prefer_receipt') {
-            return $this->extractIncomingValues($enrichment);
+            return $this->extractIncomingValues($enrichment, $user);
         }
 
         // prefer_first_write: keep the stored value verbatim — no
@@ -229,6 +233,14 @@ final class ApplyEnrichments implements AppliesEnrichments
      * The (user_id, transaction_id, field_name) UNIQUE constraint on
      * the table makes re-import idempotent — the second import upserts
      * via insertOrIgnore so no duplicate pending rows accumulate.
+     *
+     * D-07 plaintext-only persistence (14.1-12 Cluster 3): `$values['stored']`
+     * arrives here ALREADY DECRYPTED — `FingerprintStage::detectConflicts()`
+     * is the sole producer of `conflictingFields` and decrypts the stored
+     * `counterparty_name`/`description` before ever populating the map (see
+     * that method's own D-07 fix). So `stored_value` and the dispatched
+     * event's `csvValue` below carry plaintext, never ciphertext, without
+     * any further decrypt step here.
      */
     private function holdConflicts(PendingEnrichment $enrichment, User $user): void
     {
@@ -272,14 +284,25 @@ final class ApplyEnrichments implements AppliesEnrichments
 
     /**
      * Build the per-field update map for the prefer_receipt policy:
-     * the incoming value lands as-is on each conflicting column.
-     * Field names outside `ALLOWED_CONFLICT_FIELDS` are dropped so a
-     * corrupted cache row cannot inject an unintended column name into
-     * the UPDATE.
+     * the incoming value lands on each conflicting column. Field names
+     * outside `ALLOWED_CONFLICT_FIELDS` are dropped so a corrupted
+     * cache row cannot inject an unintended column name into the
+     * UPDATE.
+     *
+     * D-07 encrypt-incoming-before-update (14.1-12 Cluster 3 / CR-01/
+     * CR-02 class): the incoming value is a fresh plaintext string
+     * (parsed straight off the receipt), so it must be encrypted
+     * before it lands in the `transactions` UPDATE for an encrypted
+     * user — otherwise plaintext is re-introduced into an at-rest-
+     * encrypted column. `encryptAttrs()` only touches string-valued,
+     * `SensitiveFieldRegistry`-listed columns (counterparty_name/
+     * description), so `currency`/`amount_minor` pass through
+     * untouched, and it is a documented no-op pass-through for a
+     * non-encrypted user.
      *
      * @return array<string, mixed>
      */
-    private function extractIncomingValues(PendingEnrichment $enrichment): array
+    private function extractIncomingValues(PendingEnrichment $enrichment, User $user): array
     {
         $updates = [];
         foreach ($enrichment->conflictingFields as $fieldName => $values) {
@@ -289,7 +312,7 @@ final class ApplyEnrichments implements AppliesEnrichments
             $updates[$fieldName] = $values['incoming'] ?? null;
         }
 
-        return $updates;
+        return $this->codec->encryptAttrs('transactions', $updates, $user->id, $this->session);
     }
 
     private function loadReceiptConflictPolicy(User $user): string

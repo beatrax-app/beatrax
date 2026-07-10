@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Receipts\Public\Actions;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use JsonException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
@@ -61,9 +63,22 @@ final class ApplyReceiptConflictResolution
      */
     private const ALLOWED_FIELDS = ['counterparty_name', 'description', 'currency', 'amount_minor'];
 
+    /**
+     * Sensitive columns whose incoming value must be encrypted before
+     * the `transactions` UPDATE (D-07). Mirrors the two field names in
+     * `SensitiveFieldRegistry` out of `ALLOWED_FIELDS`'s four —
+     * `currency`/`amount_minor` are never sensitive and pass through
+     * unencrypted.
+     *
+     * @var list<string>
+     */
+    private const ENCRYPTED_FIELDS = ['counterparty_name', 'description'];
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly Session $session,
     ) {}
 
     public function __invoke(User $user, string $choice): int
@@ -117,6 +132,19 @@ final class ApplyReceiptConflictResolution
             try {
                 /** @var mixed $incoming */
                 $incoming = json_decode($incomingRaw, associative: true, flags: JSON_THROW_ON_ERROR);
+
+                // D-07 encrypt-incoming-before-update (14.1-12 Cluster 3 /
+                // CR-01/CR-02 class): $incoming is a fresh plaintext value
+                // parsed straight out of the held-conflict JSON — it must be
+                // encrypted before landing in the transactions UPDATE for
+                // an encrypted user, mirroring TagTransaction's
+                // encrypt-before-write. Only the two sensitive columns are
+                // ever encrypted; a non-string value (e.g. a decoded null)
+                // is left untouched. Pass-through no-op for a
+                // non-encrypted user.
+                if (is_string($incoming) && in_array($fieldName, self::ENCRYPTED_FIELDS, true)) {
+                    $incoming = $this->codec->encryptValue('transactions', $fieldName, $incoming, $user->id, $this->session);
+                }
 
                 $this->db->connection()
                     ->table('transactions')
