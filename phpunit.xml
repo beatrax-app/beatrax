@@ -121,6 +121,16 @@
             <directory suffix="Test.php">./Modules/Sync/tests/Feature</directory>
             <directory suffix="Test.php">./Modules/Sync/tests/Unit</directory>
         </testsuite>
+        <testsuite name="Mobile">
+            <directory suffix="Test.php">./Modules/Mobile/tests/Feature</directory>
+            <directory suffix="Test.php">./Modules/Mobile/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="MobileUnit">
+            <directory suffix="Test.php">./Modules/Mobile/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="MobileFeature">
+            <directory suffix="Test.php">./Modules/Mobile/tests/Feature</directory>
+        </testsuite>
         <testsuite name="MigrationUnit">
             <directory suffix="Test.php">./Modules/Migration/tests/Unit</directory>
         </testsuite>

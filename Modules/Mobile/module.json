@@ -1,0 +1,11 @@
+{
+    "name": "Mobile",
+    "alias": "mobile",
+    "description": "Mobile client peer (NativePHP-for-Mobile): on-device encrypted SQLite, client-only sync transport (LAN-direct dial-out + relay), biometric app-lock, resumable initial sync.",
+    "keywords": ["mobile", "sync", "nativephp"],
+    "priority": 40,
+    "providers": [
+        "Modules\\Mobile\\Providers\\MobileServiceProvider"
+    ],
+    "files": []
+}
