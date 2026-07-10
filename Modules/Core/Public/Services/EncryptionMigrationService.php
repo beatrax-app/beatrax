@@ -185,25 +185,56 @@ class EncryptionMigrationService
         $connection = $this->db->connection();
 
         $state = $this->loadState($connection, $userId);
-        if ($this->currentEpochId($state) !== null) {
-            // Encryption already enabled for this user on this device.
-            return;
-        }
+        $currentEpochId = $this->currentEpochId($state);
 
-        $kek = $this->appLockKeyService->release($session);
-        if ($kek === null) {
-            $this->clearStaleInProgressFlag($connection, $userId, $state);
-
-            return;
-        }
         // The raw KEK is only needed by this method for the BackupEncryptor
         // snapshot (mirrors GdkKeyringService's own "raw KEK bytes as the
         // passphrase" idiom); GDK epoch key material never reaches this
         // class at all — EncryptionMigrationSupport owns that.
+        $kek = $this->appLockKeyService->release($session);
+
         try {
+            if ($currentEpochId !== null) {
+                // WR-01: `current_epoch` being set does NOT prove the keyring
+                // file actually holds a key for it. A CR-01-class crash in the
+                // commit→finalize window (or a never-finalized staged file) can
+                // leave `current_epoch` set with no usable key — a state the old
+                // unconditional early-return reported as "already enabled,
+                // nothing to do" forever, silently disabling every future
+                // sensitive write while the UI still showed "On". When the
+                // app-lock is unlocked, verify the keyring can resolve the
+                // recorded epoch; if it cannot, surface a distinct error rather
+                // than reporting success, so the stranded state is observable
+                // (and can drive the retry affordance) instead of permanent and
+                // invisible. When the app-lock is locked we cannot verify now —
+                // defer to a later unlocked call rather than false-alarm.
+                if ($kek !== null) {
+                    /** @var EncryptionMigrationSupport $support */
+                    $support = $this->container->make(EncryptionMigrationSupport::class);
+                    if (! $support->hasUsableCurrentEpoch($userId, $session)) {
+                        throw new RuntimeException(
+                            "Encryption is recorded as enabled for user {$userId} "
+                            ."(current_epoch={$currentEpochId}) but the GDK keyring holds no key "
+                            .'for that epoch — a stranded post-commit finalize state (CR-01). The '
+                            .'keyring file must be finalized/restored before sensitive writes resume.',
+                        );
+                    }
+                }
+
+                return;
+            }
+
+            if ($kek === null) {
+                $this->clearStaleInProgressFlag($connection, $userId, $state);
+
+                return;
+            }
+
             $this->runMigration($userId, $session, $kek, $connection);
         } finally {
-            sodium_memzero($kek);
+            if ($kek !== null) {
+                sodium_memzero($kek);
+            }
         }
     }
 
@@ -255,6 +286,10 @@ class EncryptionMigrationService
         /** @var EncryptionMigrationSupport $support */
         $support = $this->container->make(EncryptionMigrationSupport::class);
 
+        // Phase 1: the encrypt pass + `current_epoch` write, all inside one
+        // SQL transaction. A throw HERE means the transaction rolled back every
+        // DB write — plaintext is intact, no epoch was committed — so the
+        // snapshot restore + staged-file discard are the correct response.
         try {
             $connection->transaction(function () use ($userId, $session, $connection, $support): void {
                 $this->setMigrationInProgress($connection, $userId, true);
@@ -276,33 +311,54 @@ class EncryptionMigrationService
 
                 $this->finalizeMigration($connection, $userId);
             });
-
-            // D-10: only NOW — after the SQL transaction has fully
-            // committed — finalize (rename-into-place) the epoch-1 keyring
-            // file. A crash in the narrow window between the commit above
-            // and this line leaves `current_epoch=1` with no keyring file
-            // yet; that is a strictly better failure mode than the reverse
-            // (a finalized file contradicting a rolled-back epoch), and is
-            // the residual window this fix deliberately narrows rather than
-            // claims to eliminate entirely (no cross-process 2-phase-commit
-            // exists between SQLite and the filesystem).
-            $support->finalizeStagedEpoch();
-
-            $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 100, self::PROGRESS_TTL_SECONDS);
         } catch (Throwable $e) {
-            // The transaction() call above already rolled back every DB
-            // write. This explicit restore is defense-in-depth proving the
-            // snapshot is independently a valid, restorable backup (D-09's
-            // literal instruction) even though the SQL rollback is the
-            // primary correctness guarantee. discardStagedEpoch() is a
-            // best-effort no-op when nothing was ever staged (e.g. the
-            // throw happened before stageFirstEpoch() ran).
+            // In-transaction failure: transaction() already rolled back every
+            // DB write (including `current_epoch`). Discard the un-finalized
+            // staged `.tmp` and restore plaintext from the snapshot (WR-09:
+            // the restore is itself all-or-nothing). This restore branch is
+            // ONLY reached for genuine rollbacks — never for a post-commit
+            // finalize failure (see Phase 2 below), because restoring plaintext
+            // while `current_epoch` stays committed is the exact CR-01
+            // corruption.
             $support->discardStagedEpoch();
             $this->restoreFromSnapshot($snapshotPath, $kek, $connection);
             $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
 
             throw $e;
         }
+
+        // Phase 2: the SQL transaction has COMMITTED — `current_epoch=1` is
+        // durable and the rows are ciphertext. From here a failure must NOT
+        // restore plaintext (that would leave `current_epoch` set over
+        // plaintext rows = CR-01 corruption). Finalize (rename-into-place) the
+        // staged epoch-1 keyring file. On failure, GdkKeyringService keeps the
+        // staged `.tmp` (it no longer @unlinks it — CR-01), so a re-entry via
+        // migrate()'s WR-01 reconcile can recover; surface a DISTINCT error so
+        // the post-commit failure is observable rather than masquerading as a
+        // rolled-back attempt.
+        try {
+            $support->finalizeStagedEpoch();
+        } catch (Throwable $e) {
+            $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
+
+            throw new RuntimeException(
+                "Keyring finalize failed after commit for user {$userId}: `current_epoch` is "
+                .'committed but the keyring file is not yet in place. The staged key file was '
+                .'preserved for retry — re-run migrate() to reconcile. Plaintext was NOT restored '
+                .'(that would corrupt the committed epoch).',
+                0,
+                $e,
+            );
+        }
+
+        // WR-02: on success the pre-migration plaintext snapshot (a full
+        // KEK-wrapped copy of every sensitive value in the clear) is no longer
+        // needed — delete it so it does not survive on disk indefinitely and
+        // defeat the at-rest guarantee (it is wrapped only under the
+        // migration-time KEK, so a later passphrase rewrap would not cover it).
+        @unlink($snapshotPath);
+
+        $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 100, self::PROGRESS_TTL_SECONDS);
     }
 
     /**
@@ -637,32 +693,41 @@ class EncryptionMigrationService
             return;
         }
 
-        /** @var list<array<string, mixed>> $opLogRows */
-        $opLogRows = is_array($payload['op_log_entries'] ?? null) ? $payload['op_log_entries'] : [];
-        foreach ($opLogRows as $row) {
-            if (! isset($row['id'])) {
-                continue;
-            }
-            $connection->table('op_log_entries')->where('id', $row['id'])->update([
-                'value' => $row['value'] ?? null,
-                'gdk_epoch' => null,
-            ]);
-        }
-
-        foreach (['transactions', 'counterparties', 'tax_transaction_tags', 'transaction_splits'] as $table) {
-            /** @var list<array<string, mixed>> $rows */
-            $rows = is_array($payload[$table] ?? null) ? $payload[$table] : [];
-            foreach ($rows as $row) {
+        // WR-09: wrap every restore write in ONE transaction so the restore is
+        // all-or-nothing. Without it, a throw partway (DB error / one bad row)
+        // left some rows restored to plaintext and others as-is — a
+        // partially-restored mixed state — before the original exception was
+        // rethrown. This method is only invoked on a genuine rollback (see
+        // runMigration Phase 1), so restoring plaintext here never contradicts
+        // a committed epoch.
+        $connection->transaction(function () use ($connection, $payload): void {
+            /** @var list<array<string, mixed>> $opLogRows */
+            $opLogRows = is_array($payload['op_log_entries'] ?? null) ? $payload['op_log_entries'] : [];
+            foreach ($opLogRows as $row) {
                 if (! isset($row['id'])) {
                     continue;
                 }
-                $id = $row['id'];
-                unset($row['id']);
-                if ($row === []) {
-                    continue;
-                }
-                $connection->table($table)->where('id', $id)->update($row);
+                $connection->table('op_log_entries')->where('id', $row['id'])->update([
+                    'value' => $row['value'] ?? null,
+                    'gdk_epoch' => null,
+                ]);
             }
-        }
+
+            foreach (['transactions', 'counterparties', 'tax_transaction_tags', 'transaction_splits'] as $table) {
+                /** @var list<array<string, mixed>> $rows */
+                $rows = is_array($payload[$table] ?? null) ? $payload[$table] : [];
+                foreach ($rows as $row) {
+                    if (! isset($row['id'])) {
+                        continue;
+                    }
+                    $id = $row['id'];
+                    unset($row['id']);
+                    if ($row === []) {
+                        continue;
+                    }
+                    $connection->table($table)->where('id', $id)->update($row);
+                }
+            }
+        });
     }
 }
