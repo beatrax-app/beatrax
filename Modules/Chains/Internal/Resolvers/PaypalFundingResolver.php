@@ -489,7 +489,12 @@ final class PaypalFundingResolver
                 'matched_iban' => $partnerIban,
                 'matched_amount_minor' => $settledMinor,
                 'date_delta_days' => $dateDeltaDays,
-                'ambiguous_candidates' => $ambiguous ? $candidates->count() : null,
+                // WR-15: report the true IBAN-matched count (capped at 2 by the
+                // decrypt-then-match loop above), not $candidates->count() — the
+                // up-to-20 rows narrowed on amount/date BEFORE the decrypt filter.
+                // Rows whose decrypted IBAN is not in the alias set never became
+                // matches and must not inflate the reported ambiguity.
+                'ambiguous_candidates' => $ambiguous ? count($matches) : null,
                 'signature_hash' => $this->signatureHash(
                     self::toString($row->counterparty_normalized ?? null),
                     $partnerIban,
