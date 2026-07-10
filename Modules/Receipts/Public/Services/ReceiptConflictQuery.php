@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Modules\Receipts\Public\Services;
 
 use Exception;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
  * Read-side projection of pending_enrichment_conflicts. Used by the
@@ -21,7 +23,11 @@ use Modules\Core\Models\User;
  */
 final readonly class ReceiptConflictQuery
 {
-    public function __construct(private DatabaseManager $db) {}
+    public function __construct(
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private Session $session,
+    ) {}
 
     /**
      * @return array{transactionId: int, field: string, storedValue: ?string, incomingValue: ?string, sourceFormat: string}|null
@@ -38,11 +44,23 @@ final readonly class ReceiptConflictQuery
             return null;
         }
 
+        // CR-03: stored_value/incoming_value are persisted encrypted-at-rest by
+        // ApplyEnrichments::holdConflicts() for an encrypted user. Decrypt each
+        // JSON blob before decoding. decryptValue never throws and is a
+        // pass-through for legacy-plaintext / non-encryption rows (returns the
+        // raw value with decrypted:false, which decodeScalar handles as before).
+        $storedRaw = is_string($row->stored_value)
+            ? $this->codec->decryptValue('pending_enrichment_conflicts', 'stored_value', $row->stored_value, $user->id, $this->session)['value']
+            : null;
+        $incomingRaw = is_string($row->incoming_value)
+            ? $this->codec->decryptValue('pending_enrichment_conflicts', 'incoming_value', $row->incoming_value, $user->id, $this->session)['value']
+            : null;
+
         return [
             'transactionId' => self::toInt($row->transaction_id),
             'field' => is_string($row->field_name) ? $row->field_name : '',
-            'storedValue' => self::decodeScalar(is_string($row->stored_value) ? $row->stored_value : null),
-            'incomingValue' => self::decodeScalar(is_string($row->incoming_value) ? $row->incoming_value : null),
+            'storedValue' => self::decodeScalar($storedRaw),
+            'incomingValue' => self::decodeScalar($incomingRaw),
             'sourceFormat' => is_string($row->incoming_source_format) ? $row->incoming_source_format : '',
         ];
     }

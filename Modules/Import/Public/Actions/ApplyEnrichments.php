@@ -234,13 +234,23 @@ final class ApplyEnrichments implements AppliesEnrichments
      * the table makes re-import idempotent — the second import upserts
      * via insertOrIgnore so no duplicate pending rows accumulate.
      *
-     * D-07 plaintext-only persistence (14.1-12 Cluster 3): `$values['stored']`
-     * arrives here ALREADY DECRYPTED — `FingerprintStage::detectConflicts()`
-     * is the sole producer of `conflictingFields` and decrypts the stored
-     * `counterparty_name`/`description` before ever populating the map (see
-     * that method's own D-07 fix). So `stored_value` and the dispatched
-     * event's `csvValue` below carry plaintext, never ciphertext, without
-     * any further decrypt step here.
+     * CR-03 encrypt-at-rest (round-trip with ReceiptConflictQuery +
+     * ApplyReceiptConflictResolution / WR-19): `$values['stored']` arrives here
+     * ALREADY DECRYPTED — `FingerprintStage::detectConflicts()` decrypts the
+     * stored `counterparty_name`/`description` before populating the map — and
+     * `$values['incoming']` is fresh receipt plaintext. For an encrypted user
+     * both would otherwise land in `pending_enrichment_conflicts` (a durable
+     * table NOT in `SensitiveFieldRegistry`) as CLEARTEXT copies of values that
+     * are ciphertext in `transactions`, defeating the at-rest guarantee. So the
+     * JSON-wrapped scalars are re-encrypted via the codec before persistence.
+     * The codec's single-value `encryptValue()` binds AEAD to the
+     * `pending_enrichment_conflicts:{col}:{epoch}` associated data WITHOUT
+     * requiring the scope-locked registry to grow, and is a pass-through no-op
+     * for non-encryption users (values stay plaintext JSON, exactly as before).
+     * The read side (ReceiptConflictQuery, ApplyReceiptConflictResolution)
+     * decrypts symmetrically. NOTE: the dispatched `ReceiptConflictDetected`
+     * event below still carries plaintext `csvValue`/`receiptValue` — it is a
+     * transient in-memory toast payload, never persisted at rest.
      */
     private function holdConflicts(PendingEnrichment $enrichment, User $user): void
     {
@@ -259,12 +269,29 @@ final class ApplyEnrichments implements AppliesEnrichments
             $stored = $values['stored'] ?? null;
             $incoming = $values['incoming'] ?? null;
 
+            // CR-03: encrypt-at-rest the JSON-wrapped scalars before they land
+            // in the durable pending row (pass-through for non-encryption users).
+            $storedJson = $this->codec->encryptValue(
+                'pending_enrichment_conflicts',
+                'stored_value',
+                json_encode($stored, JSON_THROW_ON_ERROR),
+                $user->id,
+                $this->session,
+            );
+            $incomingJson = $this->codec->encryptValue(
+                'pending_enrichment_conflicts',
+                'incoming_value',
+                json_encode($incoming, JSON_THROW_ON_ERROR),
+                $user->id,
+                $this->session,
+            );
+
             $connection->table('pending_enrichment_conflicts')->insertOrIgnore([
                 'user_id' => $user->id,
                 'transaction_id' => $enrichment->existingTransactionId,
                 'field_name' => $fieldName,
-                'stored_value' => json_encode($stored, JSON_THROW_ON_ERROR),
-                'incoming_value' => json_encode($incoming, JSON_THROW_ON_ERROR),
+                'stored_value' => $storedJson,
+                'incoming_value' => $incomingJson,
                 'incoming_source_format' => $enrichment->sourceFormat,
                 'import_run_id' => $enrichment->importRunId,
                 'created_at' => $now,
