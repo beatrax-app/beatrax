@@ -322,7 +322,17 @@ final class RuleApplier
         // `null` note would silently wipe a user-authored tax note on every
         // rule-driven category/year change. Read the existing note and pass
         // it through unchanged so a rule re-apply never touches it.
-        $currentNote = $current !== null && is_string($current->note) ? $current->note : null;
+        //
+        // CR-04: `tax_transaction_tags.note` is a SensitiveFieldRegistry column,
+        // so `$current->note` is ciphertext under an encrypted user. Because
+        // TagTransaction::updateExisting() unconditionally re-encrypts the note
+        // it receives on this path, passing the ciphertext back through would
+        // double-encrypt it and irreversibly corrupt the note. Decrypt it first
+        // (mirroring applyNote() above); decryptValue is a pass-through no-op for
+        // non-encryption users, so this is safe on both paths.
+        $currentNote = $current !== null && is_string($current->note)
+            ? $this->codec->decryptValue('tax_transaction_tags', 'note', $current->note, $userId, $this->session)['value']
+            : null;
 
         if ($currentDeductionCategoryId === $deductionCategoryId && $currentYear === $year) {
             return null;
