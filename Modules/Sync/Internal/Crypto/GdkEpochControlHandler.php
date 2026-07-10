@@ -37,6 +37,27 @@ use SodiumException;
  * type-checked AND the `recipient_device_id` has been confirmed to match
  * this device's own identity.
  *
+ * ## SECURITY PRECONDITION: authenticated sender required (WR-07)
+ *
+ * The wrapped epoch key travels as an anonymous `sodium_crypto_box_seal` —
+ * confidential but UNauthenticated: anyone who knows this device's X25519
+ * public key can craft a `GDK_EPOCH_WRAP` sealing an attacker-chosen key to
+ * it, and (with a not-yet-present, higher `epoch_id`) drive
+ * `GdkKeyringService::appendEpoch()`'s unconditional `current_epoch` advance
+ * so future writes encrypt under the attacker's key. The seal opening +
+ * `recipient_device_id` match here therefore do NOT by themselves establish
+ * trust. `handle()` MUST only be called with a `$json` envelope that arrived
+ * over a channel that has already authenticated the sender as a CONFIRMED
+ * peer — in this codebase, the Noise IK session in `SyncWebSocketHandler`
+ * (peer static key verified against the confirmed-only
+ * `DeviceRegistryService::deviceX25519Keys()` before any blob is exchanged).
+ * The relay-mailbox drain in `SyncWebSocketHandler::deliverGdkEpochWraps()`
+ * runs only after that handshake succeeds. Do NOT wire a new caller that
+ * routes an unauthenticated (e.g. raw relay-pushed) blob into this method.
+ * A future hardening adds an explicit Ed25519 sender signature over the wrap
+ * so provenance is verifiable independent of the transport; until then the
+ * authenticated-channel precondition above is a hard requirement.
+ *
  * ## False-not-garbage (Pitfall 5)
  *
  * `sodium_crypto_box_seal_open()`'s return is checked with a strict
