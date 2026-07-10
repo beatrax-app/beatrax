@@ -1,0 +1,108 @@
+{
+    "name": "beatrax/beatrax-mobile",
+    "type": "project",
+    "description": "beatrax mobile peer — thin NativePHP-for-Mobile app shell over the shared Modules/ domain codebase.",
+    "keywords": [
+        "laravel",
+        "personal-finance",
+        "nativephp",
+        "mobile"
+    ],
+    "license": "Hippocratic-3.0",
+    "require": {
+        "php": "^8.5",
+        "ext-ctype": "*",
+        "ext-filter": "*",
+        "ext-iconv": "*",
+        "ext-intl": "*",
+        "ext-libxml": "*",
+        "ext-mbstring": "*",
+        "ext-pcntl": "*",
+        "ext-pdo": "*",
+        "ext-posix": "*",
+        "ext-simplexml": "*",
+        "composer-runtime-api": "^2.0",
+        "amphp/http-server": "*",
+        "amphp/socket": "*",
+        "amphp/websocket-client": "*",
+        "amphp/websocket-server": "*",
+        "brick/math": "^0.14",
+        "brick/money": "^0.11",
+        "doctrine/sql-formatter": "^1.5",
+        "dompdf/dompdf": "^3.0",
+        "genkgo/camt": "^2.10",
+        "google/apiclient": "^2.19",
+        "google/apiclient-services": "*",
+        "guzzlehttp/guzzle": "^7.8",
+        "jschaedl/iban-validation": "^2.5",
+        "laravel/fortify": "^1.21",
+        "laravel/framework": "^13.0",
+        "laravel/tinker": "^3.0",
+        "league/csv": "^9.28",
+        "league/oauth2-client": "^2.9",
+        "league/oauth2-google": "^5.0",
+        "livewire/flux": "^2.0",
+        "livewire/livewire": "^4.0",
+        "monolog/monolog": "^3.0",
+        "nativephp/mobile": "^3.0",
+        "nativephp/mobile-network": "*",
+        "nwidart/laravel-modules": "^13.0",
+        "psr/log": "^3.0",
+        "spatie/laravel-activitylog": "^5.0",
+        "spatie/laravel-data": "^4.0",
+        "spatie/pdf-to-text": "^1.0",
+        "symfony/process": "^7.0",
+        "symfony/yaml": "^8.0",
+        "thenetworg/oauth2-azure": "^2.2",
+        "zbateson/mail-mime-parser": "^4.0"
+    },
+    "conflict": {
+        "webklex/laravel-imap": "*",
+        "webklex/php-imap": "*",
+        "ddeboer/imap": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Modules\\Auth\\": "Modules/Auth/",
+            "Modules\\": "Modules/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "Google\\Task\\Composer::cleanup",
+            "@php artisan package:discover --ansi"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": [
+                "laravel/horizon"
+            ]
+        },
+        "google/apiclient-services": [
+            "Gmail"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "license-validation": false,
+        "platform": {
+            "ext-pcntl": "8.5",
+            "ext-posix": "8.5"
+        },
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true,
+            "tbachert/spi": true,
+            "wikimedia/composer-merge-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

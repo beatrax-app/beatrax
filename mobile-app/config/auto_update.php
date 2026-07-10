@@ -1,0 +1,1 @@
+../../config/auto_update.php

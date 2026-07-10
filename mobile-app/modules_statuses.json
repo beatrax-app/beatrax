@@ -1,0 +1,23 @@
+{
+    "Pots": true,
+    "Auth": true,
+    "Budgets": true,
+    "CashBook": true,
+    "Categorization": true,
+    "Community": true,
+    "Core": true,
+    "Counterparties": true,
+    "Desktop": false,
+    "FX": true,
+    "Goals": true,
+    "Import": true,
+    "Ingestion": true,
+    "Ledger": true,
+    "Migration": true,
+    "Mobile": true,
+    "Onboarding": true,
+    "Reports": true,
+    "Search": true,
+    "Sync": true,
+    "Tax": true
+}
