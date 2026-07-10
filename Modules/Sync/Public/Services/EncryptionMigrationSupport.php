@@ -138,6 +138,33 @@ final class EncryptionMigrationSupport
     }
 
     /**
+     * WR-01: whether the GDK keyring actually holds a usable key for the
+     * epoch recorded in `sync_encryption_state.current_epoch`. A `current_epoch`
+     * value being set does NOT prove the keyring file was finalized (a
+     * CR-01-class crash in the commit→finalize window can strand the key as a
+     * lingering `.tmp`). `EncryptionMigrationService::migrate()` uses this to
+     * distinguish "genuinely enabled" from "recorded-enabled but stranded"
+     * before it reports success.
+     *
+     * Returns false (rather than throwing) for the stranded case — "no current
+     * epoch recorded" or "keyring has no key for it". Still propagates
+     * `LogicException` when the app-lock KEK is unavailable, since the caller
+     * only invokes this on the unlocked path.
+     *
+     * @throws LogicException when the app-lock KEK is unavailable.
+     */
+    public function hasUsableCurrentEpoch(int $userId, Session $session): bool
+    {
+        try {
+            $this->keyringService->currentEpoch($userId, $session);
+
+            return true;
+        } catch (RuntimeException) {
+            return false;
+        }
+    }
+
+    /**
      * Prime this instance's cached epoch from the CURRENT epoch already
      * recorded for $userId (used by a resumed/retried pass where
      * `stageFirstEpoch()`/`finalizeStagedEpoch()` already ran in an
