@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ac86f2b849b9a959a59fa35ed0133140",
+    "content-hash": "bfdcc20f8234cf5468ecaf8dba5f06a7",
     "packages": [
         {
             "name": "amphp/amp",
@@ -5247,6 +5247,94 @@
             "time": "2026-06-05T17:27:23+00:00"
         },
         {
+            "name": "nativephp/mobile-background-tasks",
+            "version": "0.0.3",
+            "dist": {
+                "type": "zip",
+                "url": "https://plugins.nativephp.com/dist/nativephp/mobile-background-tasks/nativephp-mobile-background-tasks-d7c25148d9bebe78e74ba8b125673969d94fb151-zip-58d276.zip",
+                "reference": "d7c25148d9bebe78e74ba8b125673969d94fb151",
+                "shasum": "9bdf0a82d7ec826d9081b96fc72acf53fbe6ace8"
+            },
+            "require": {
+                "nativephp/mobile": "^3.2.1",
+                "php": "^8.2"
+            },
+            "type": "nativephp-plugin",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "NativePHP\\BackgroundTasks\\BackgroundTasksServiceProvider"
+                    ]
+                },
+                "nativephp": {
+                    "manifest": "nativephp.json"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "NativePHP\\BackgroundTasks\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "NativePHP",
+                    "email": "support@nativephp.com"
+                }
+            ],
+            "description": "Background task scheduling via WorkManager for NativePHP Mobile",
+            "support": {
+                "issues": "https://github.com/NativePHP/mobile-background-tasks/issues"
+            },
+            "time": "2026-04-24T15:21:34+00:00"
+        },
+        {
+            "name": "nativephp/mobile-biometrics",
+            "version": "1.0.2",
+            "dist": {
+                "type": "zip",
+                "url": "https://plugins.nativephp.com/dist/nativephp/mobile-biometrics/nativephp-mobile-biometrics-64b6ded4a38e3466984aef45778ed81bf52fbada-zip-7a04f6.zip",
+                "reference": "64b6ded4a38e3466984aef45778ed81bf52fbada",
+                "shasum": "d3a94041df785ca8a2c6882fb19de7ddc40f0d5c"
+            },
+            "require": {
+                "nativephp/mobile": "^3.0",
+                "php": "^8.2"
+            },
+            "type": "nativephp-plugin",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Native\\Mobile\\Providers\\BiometricsServiceProvider"
+                    ]
+                },
+                "nativephp": {
+                    "manifest": "nativephp.json"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Native\\Mobile\\Providers\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "NativePHP",
+                    "email": "info@nativephp.com"
+                }
+            ],
+            "description": "Biometric authentication plugin for NativePHP Mobile (Face ID, Touch ID, Fingerprint)",
+            "support": {
+                "issues": "https://github.com/NativePHP/mobile-biometrics/issues"
+            },
+            "time": "2026-03-20T22:08:33+00:00"
+        },
+        {
             "name": "nativephp/mobile-network",
             "version": "1.0.1",
             "source": {
@@ -5294,6 +5382,50 @@
             "support": {
                 "issues": "https://github.com/NativePHP/mobile-network/issues",
                 "source": "https://github.com/NativePHP/mobile-network/tree/1.0.1"
+            },
+            "time": "2026-03-20T22:08:33+00:00"
+        },
+        {
+            "name": "nativephp/mobile-scanner",
+            "version": "1.0.2",
+            "dist": {
+                "type": "zip",
+                "url": "https://plugins.nativephp.com/dist/nativephp/mobile-scanner/nativephp-mobile-scanner-b819d8eb9521f9f7ad3b067c2171015894c310a5-zip-505868.zip",
+                "reference": "b819d8eb9521f9f7ad3b067c2171015894c310a5",
+                "shasum": "a6ccca07daca2e3507a8fa7a4ebbb1f225e69e68"
+            },
+            "require": {
+                "nativephp/mobile": "^3.0",
+                "php": "^8.2"
+            },
+            "type": "nativephp-plugin",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Native\\Mobile\\Providers\\ScannerServiceProvider"
+                    ]
+                },
+                "nativephp": {
+                    "manifest": "nativephp.json"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Native\\Mobile\\Providers\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "NativePHP",
+                    "email": "support@nativephp.com"
+                }
+            ],
+            "description": "QR code and barcode scanner plugin for NativePHP Mobile - supports multiple barcode formats with continuous scanning",
+            "support": {
+                "issues": "https://github.com/NativePHP/mobile-scanner/issues"
             },
             "time": "2026-03-20T22:08:33+00:00"
         },
