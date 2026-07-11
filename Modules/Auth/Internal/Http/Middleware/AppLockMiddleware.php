@@ -63,6 +63,17 @@ final readonly class AppLockMiddleware
      * which a locked session never has, so exempting it only widened the
      * locked-session surface. Challenge/verify stay exempt (unlock path).
      *
+     * `mobile.lock` (Phase 15 Plan 06, R6/MOBILE-01) is the on-device
+     * biometric-primary/PIN-fallback unlock screen at `/mobile/lock`. Without
+     * this exemption a locked mobile session would be redirected away from
+     * its own unlock screen to `auth.lock` on every request, making
+     * `MobileLockScreen` structurally unreachable whenever actually locked —
+     * this middleware pre-dates Phase 15 and had no mobile-route awareness.
+     * The redirect TARGET below still always points at `auth.lock` (desktop/
+     * web); the mobile shell is responsible for its own initial navigation
+     * to `/mobile/lock` — this exemption only stops that screen, once
+     * reached, from immediately bouncing itself away.
+     *
      * @var list<string>
      */
     private const ALLOWED_ROUTE_NAMES = [
@@ -70,6 +81,7 @@ final readonly class AppLockMiddleware
         'auth.lock.biometric.challenge',
         'auth.lock.biometric.verify',
         'auth.lock.engage',
+        'mobile.lock',
         'logout',
     ];
 
