@@ -45,7 +45,10 @@
         "livewire/livewire": "^4.0",
         "monolog/monolog": "^3.0",
         "nativephp/mobile": "^3.0",
+        "nativephp/mobile-background-tasks": "0.0.3",
+        "nativephp/mobile-biometrics": "1.0.2",
         "nativephp/mobile-network": "*",
+        "nativephp/mobile-scanner": "1.0.2",
         "nwidart/laravel-modules": "^13.0",
         "psr/log": "^3.0",
         "spatie/laravel-activitylog": "^5.0",
@@ -104,5 +107,10 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [{
+        "name": "nativephp-plugins",
+        "type": "composer",
+        "url": "https://plugins.nativephp.com"
+    }]
 }
