@@ -57,6 +57,27 @@ final class UserDataPathService
         return $databaseDir.DIRECTORY_SEPARATOR.'database.sqlite';
     }
 
+    /**
+     * The NativePHP mobile runtime signal (`ios`/`android`), or `null` when
+     * absent (local dev, desktop, or a plain web request).
+     *
+     * Per 15-SPIKE-FINDINGS.md (Spike B, run on a real iPhone): NativePHP
+     * mobile does NOT set `NATIVEPHP_STORAGE_PATH` — that env var stays
+     * unset on-device. Instead NativePHP mobile retargets `base_path()`
+     * itself into the app-sandbox container, so every accessor above
+     * already resolves inside the sandbox with no dedicated mobile branch.
+     * `NATIVEPHP_PLATFORM` is the reliable on-device signal; this accessor
+     * exists so callers (the mobile boot-reconciliation hook) can detect
+     * the mobile runtime WITHOUT introducing a `NATIVEPHP_STORAGE_PATH`
+     * branch here — deliberately read-only, no path derives from it.
+     */
+    public static function platform(): ?string
+    {
+        $platform = getenv('NATIVEPHP_PLATFORM');
+
+        return is_string($platform) && $platform !== '' ? $platform : null;
+    }
+
     public static function storageBase(): string
     {
         return self::storageRoot();
