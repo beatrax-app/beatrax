@@ -103,6 +103,18 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // <iframe src="/horizon"> wrapper — the iframe target has its own
     // auth gate. EnsureDeveloperMode covers the wrapper.
     'dev.horizon',
+    // Phase 15 Plan 10 — mobile pairing/biometric-unlock entries. Both
+    // routes are genuine closure-stub shapes today (`abort_unless
+    // (class_exists($component), 404)` in Modules/Mobile/Routes/web.php):
+    // MobilePairingScan/MobileLockScreen do not exist yet (Plans 06/07 are
+    // gated behind the Plan 03 paid-plugin license/supply-chain
+    // human-verify checkpoint per STATE.md). Every authenticated request —
+    // owner or partner — gets an identical 404 with zero rendered body, so
+    // there is structurally no per-user data to leak. Re-classify to
+    // ISOLATION_ROUTE_COVERED with a real two-user probe once Plans 06/07
+    // ship the real components.
+    'mobile.lock',
+    'mobile.pair',
     // 16-07: Doctor + System snapshot surfaces. The doctor page reads
     // the latest beatrax:doctor dev_mode_audit row (operator-level
     // event log — same audit-disclosure contract as dev.audit) and
@@ -229,6 +241,16 @@ const ISOLATION_ROUTE_COVERED = [
     // 999.6-08's SUMMARY explicitly deferred this coverage to this plan.
     'reports.index',
     'reports.library',
+    // Phase 15 Plan 10 — the /sync status surface embeds the existing
+    // sync.sync-status-section component (SyncStatusService-backed peer
+    // rows) and reads the own-module mobile_sync_progress cursor; both
+    // genuinely bear user-scoped data (T-15-26). Probed below.
+    'sync.index',
+    // Phase 15 Plan 08 shipped SetupProgressScreen behind this route; its
+    // mount() reads the user-scoped mobile_sync_progress durable cursor
+    // (InitialSyncPuller::progress()). Probed below (closes the gap
+    // 15-05-SUMMARY.md logged as deferred to a later plan).
+    'mobile.setup',
 ];
 
 function xuiUser(string $username, bool $developer = false): User
@@ -999,6 +1021,56 @@ it('does not bleed the owner migration run into the partner migrations index', f
 
 it('renders /migrations/new for any authenticated user — no per-entity id, no data to leak (T-13.5-04 shape)', function (): void {
     $this->actingAs($this->partner)->get('/migrations/new')->assertOk();
+});
+
+it('does not bleed the owner peer device id into the partner /sync status surface (Phase 15 Plan 10, T-15-26)', function (): void {
+    $seedSession = function (int $userId, string $localDeviceId, string $peerDeviceId): void {
+        $this->db->connection()->table('sync_sessions')->insert([
+            'user_id' => $userId,
+            'local_device_id' => $localDeviceId,
+            'peer_device_id' => $peerDeviceId,
+            'status' => 'closed',
+            'error_message' => null,
+            'last_seen_at' => '2026-07-11T10:00:00Z',
+            'connected_at' => '2026-07-11T09:55:00Z',
+            'created_at' => '2026-07-11T09:55:00Z',
+            'updated_at' => '2026-07-11T10:00:00Z',
+        ]);
+    };
+
+    $seedSession($this->owner->id, 'owner-local-dev', 'owner-secret-peer-device');
+    $seedSession($this->partner->id, 'partner-local-dev', 'partner-visible-peer-device');
+
+    $this->actingAs($this->partner)
+        ->get('/sync')
+        ->assertOk()
+        ->assertSee('partner-visible-peer-device')
+        ->assertDontSee('owner-secret-peer-device');
+});
+
+it('does not bleed the owner initial-sync progress cursor into the partner /mobile/setup screen (Phase 15 Plan 08/10)', function (): void {
+    $seedProgress = function (int $userId, string $peerDeviceId, int $applied, int $expected): void {
+        $this->db->connection()->table('mobile_sync_progress')->insert([
+            'user_id' => $userId,
+            'peer_device_id' => $peerDeviceId,
+            'records_expected' => $expected,
+            'records_applied' => $applied,
+            'last_hlc_l' => $applied,
+            'last_hlc_c' => 0,
+            'phase' => 'pulling',
+            'created_at' => '2026-07-11T09:55:00Z',
+            'updated_at' => '2026-07-11T10:00:00Z',
+        ]);
+    };
+
+    $seedProgress($this->owner->id, 'owner-secret-peer-device-setup', 77, 100);
+    $seedProgress($this->partner->id, 'partner-peer-device-setup', 12, 40);
+
+    $this->actingAs($this->partner)
+        ->get('/mobile/setup')
+        ->assertOk()
+        ->assertSee('12 of 40 records')
+        ->assertDontSee('77 of 100 records');
 });
 
 it('does not bleed the owner spend into the partner reports CSV export (999.6-07, T-999.6-20)', function (): void {
