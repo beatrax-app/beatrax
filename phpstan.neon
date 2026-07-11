@@ -142,6 +142,23 @@ parameters:
                 - Modules/Mobile/Internal/Pairing/*.php
                 - Modules/Mobile/Internal/Sync/*.php
             reportUnmatched: false
+        # Phase 15 Plan 05 (MOBILE-01) wire-protocol carve-out: the phone's
+        # client-only LAN transport (LanSyncClient) and its KEK-gated
+        # trigger orchestrator (MobileSyncTriggerService) MUST reuse the
+        # desktop's sync transport byte-for-byte — the Noise IK handshake
+        # state machine, PeerCatchUpExchanger's catch-up constants,
+        # TransportFramer framing, SyncSession's auth-gate + replay, the
+        # OpLogReplayer/MergeRulesRegistry merge, the device identity
+        # loader, and the relay client — per 15-05-PLAN.md's SPEC boundary
+        # ("wire protocol consumed as-is, no redesign"). These are
+        # transport/crypto/merge internals, not a general-purpose
+        # cross-module API, so no Modules\Sync\Public re-export exists (nor
+        # should one). The crossing is confined to the Mobile module's own
+        # sync-transport classes.
+        -
+            message: '#Cross-module Internal/Models import forbidden: Mobile cannot use Modules\\Sync\\Internal\\(Config\\MergeRulesRegistry|Identity\\(DeviceIdentityDto|DeviceIdentityLoader)|Merge\\OpLogReplayer|Signing\\DeviceKeySigner|Transport\\(Frame\\TransportFramer|Noise\\(NoiseHandshakeState|NoiseSession)|PeerCatchUpExchanger|SyncSession|Relay\\(RelayClient|RelayConfig)))#'
+            path: Modules/Mobile/Internal/Sync/*.php
+            reportUnmatched: false
     allowedGlobalFunctions:
         - 'app_path'
         - 'base_path'
