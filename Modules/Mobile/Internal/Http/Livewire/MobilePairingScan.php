@@ -1,0 +1,349 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Mobile\Internal\Http\Livewire;
+
+use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Contracts\Session\Session;
+use Illuminate\Contracts\View\Factory as ViewFactory;
+use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
+use Livewire\Component;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Mobile\Internal\Pairing\QrScanBridge;
+use Modules\Sync\Public\Services\PairingGateway;
+use Throwable;
+
+/**
+ * The `/mobile/pair` route (D-01/D-02, MOBILE-01) — camera-first pairing
+ * entry with a word-code fallback, extending the Phase 12 `PairingFlowModal`
+ * step machine (15-PATTERNS.md §MobilePairingScan — "extend, don't
+ * rebuild") into a standalone mobile page rather than a nested modal step.
+ *
+ * Step machine: `scan` (default, camera viewfinder) | `enter_code`
+ * (fallback, D-02) → `confirm` (safety-number, D-07) → `success`. Reuses
+ * `PairingFlowModal`'s exact METHOD NAMES (`enterACode()`, `submitCode()`)
+ * and `#[Locked]` property discipline on `pairingTokenId`/`side` — the
+ * trust-gate defense-in-depth this mobile entry point must not weaken
+ * (T-15-19) — but is a SEPARATE class (structurally analogous, not literal
+ * PHP inheritance): `PairingFlowModal` lives in `Modules\Sync\Internal\
+ * Http\Livewire`, which this module may never import directly
+ * (`App\PhpStan\Rules\BoundaryRule`), mirroring how `MobileLockScreen`
+ * (Plan 06) is "structurally identical" to `LockScreen` via a SEPARATE
+ * class, not inheritance.
+ *
+ * Cross-module rule: every Sync-module collaborator is reached exclusively
+ * via `Modules\Sync\Public\Services\PairingGateway` (added alongside this
+ * plan, mirrors `Modules\Auth\Public\Services\MobileLockGateway`'s Plan 06
+ * precedent) or `Modules\Core\Public\Services\EncryptionMigrationService`
+ * (already Public) — never `Modules\Sync\Internal\*` directly.
+ *
+ * Trust gate (D-07, unchanged): the safety-number is derived independently
+ * on BOTH peers from BOTH stored public keys; `device_registry.confirmed_at`
+ * is set ONLY after `PairingGateway::confirm()`'s underlying
+ * `PairingTokenService::confirm()` both-confirm transition (T-15-17). Both
+ * the camera-scan path (`submitCode($scannedPayload)`) and the typed
+ * word-code path (`submitCode()`) funnel into the IDENTICAL `confirmMatch()`
+ * gate below — no new trust mechanism (must_haves.truths).
+ *
+ * Constructor-free Livewire component (phpstan-strict-rules forbids a
+ * constructor on a `Component` subclass) — every collaborator arrives as a
+ * mount()/action-method parameter, exactly like the Auth/Sync analogs.
+ */
+final class MobilePairingScan extends Component
+{
+    /** The active step: scan|enter_code|confirm|success. */
+    public string $step = 'scan';
+
+    /**
+     * The pairing_tokens row id for the in-flight handshake ('' when none).
+     *
+     * #[Locked] — the trust gate (D-07/CR-01) MUST NOT let the client
+     * retarget which token is being confirmed. Only server code
+     * (submitCode()) may set this; Livewire rejects any client-side
+     * mutation. Mirrors PairingFlowModal::$pairingTokenId exactly.
+     */
+    #[Locked]
+    public string $pairingTokenId = '';
+
+    /**
+     * Which side this device plays in the in-flight handshake. Always
+     * 'responder' on this mobile entry point (it only ever scans/types the
+     * OTHER device's code — "show my code" is not this plan's scope).
+     *
+     * #[Locked] — a client must never be able to flip its side and confirm
+     * the peer's column (CR-01). The authoritative side is re-derived
+     * server-side in PairingTokenService::confirm() from the caller's own
+     * device id; this property is UI-only and locked as defense-in-depth.
+     */
+    #[Locked]
+    public string $side = '';
+
+    /** The typed word-code: the user-input on the enter_code fallback step. */
+    public string $wordCode = '';
+
+    /** Inline error / status message (invalid-code, expired, locked). */
+    public string $flashMessage = '';
+
+    /**
+     * True when the camera-unavailable / permission-denied amber notice
+     * should render on the enter_code step (UI-SPEC §1 copy contract) —
+     * kept separate from $flashMessage so an actual invalid-code error
+     * never gets overwritten by (or confused with) the notice's different
+     * visual tone (amber vs rose).
+     */
+    public bool $cameraUnavailableNotice = false;
+
+    /** Whether this side has confirmed the safety-number (awaits the peer). */
+    public bool $awaitingPeer = false;
+
+    /**
+     * The 6 derived safety-number words shown on the confirm step.
+     *
+     * @var list<string>
+     */
+    public array $safetyWords = [];
+
+    // -------------------------------------------------------------------------
+    // Lifecycle
+    // -------------------------------------------------------------------------
+
+    public function mount(QrScanBridge $qrBridge): void
+    {
+        $this->enterACode($qrBridge);
+    }
+
+    // -------------------------------------------------------------------------
+    // Landing hook (D-01) — camera-first, word-code fallback (D-02)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Camera-first landing hook — mirrors `PairingFlowModal::enterACode()`'s
+     * role/name exactly (15-PATTERNS.md), but on mobile the camera
+     * viewfinder REPLACES the text-first `enter_code` step as the default
+     * landing (UI-SPEC §1). Falls through to the SAME `enter_code` text
+     * step, unchanged, when the native scanner is unavailable (D-02) — never
+     * a dead end.
+     */
+    public function enterACode(QrScanBridge $qrBridge): void
+    {
+        $this->wordCode = '';
+        $this->flashMessage = '';
+        $this->side = 'responder';
+
+        if ($qrBridge->isAvailable()) {
+            $this->step = 'scan';
+            $this->cameraUnavailableNotice = false;
+
+            return;
+        }
+
+        $this->step = 'enter_code';
+        $this->cameraUnavailableNotice = true;
+    }
+
+    /**
+     * The native camera reports permission-denied / no-camera at RUNTIME —
+     * a DIFFERENT signal than `QrScanBridge::isAvailable()`'s coarse
+     * plugin-resolvable check (the plugin can be resolvable while the OS
+     * permission is still denied). Falls through to the SAME `enter_code`
+     * text step (D-02) with the amber notice — never a dead end.
+     */
+    public function cameraDenied(): void
+    {
+        $this->cameraUnavailableNotice = true;
+        $this->step = 'enter_code';
+    }
+
+    // -------------------------------------------------------------------------
+    // Accept a code — camera decode OR typed word-code (D-01/D-02)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Accept a decoded QR payload OR the typed word-code fallback — same
+     * method name as `PairingFlowModal::submitCode()` (15-PATTERNS.md),
+     * extended with an optional scanned-payload argument for the camera
+     * path. Mirrors `submitCode()`'s decode-then-accept-then-derive-safety-
+     * words shape exactly, entirely via `QrScanBridge`/`PairingGateway`
+     * (`Modules\Sync\Internal\*` is off-limits to this module —
+     * BoundaryRule).
+     *
+     * On success: auto-advances to the SAME `confirm` step the word-code
+     * path uses — no new confirmation screen (UI-SPEC §1).
+     *
+     * @param  string|null  $scannedPayload  The raw decoded QR string from
+     *                                       the camera path, or null when
+     *                                       called from the enter_code
+     *                                       form (reads $this->wordCode).
+     */
+    public function submitCode(
+        ?string $scannedPayload,
+        CurrentUser $currentUser,
+        QrScanBridge $qrBridge,
+        PairingGateway $gateway,
+        Session $session,
+    ): void {
+        $userId = $currentUser->user()->id;
+
+        $result = $scannedPayload !== null
+            ? $qrBridge->accept($scannedPayload, $userId, $session)
+            : $gateway->acceptWordCode($this->wordCode, $userId, $session);
+
+        if ($result === null) {
+            $this->flashMessage = 'This code is invalid or has expired. Ask the other device to generate a new one.';
+
+            return;
+        }
+
+        $this->pairingTokenId = $result['pairingTokenId'];
+        $this->side = 'responder';
+        $this->safetyWords = $result['safetyWords'];
+        $this->flashMessage = '';
+        $this->cameraUnavailableNotice = false;
+        $this->step = 'confirm';
+    }
+
+    // -------------------------------------------------------------------------
+    // Poll: advance the flow when the peer acts (wire:poll.3s target on the
+    // confirm step) — mirrors PairingFlowModal::checkPairingState()
+    // -------------------------------------------------------------------------
+
+    /**
+     * D-07 (Rule 2 — missing critical functionality if omitted): the side
+     * that confirms FIRST never sees a CONFIRMED return from its own
+     * confirmMatch() call (it only sets awaitingPeer=true) — it learns of
+     * the completed both-confirm HERE, via this poll, exactly like
+     * `PairingFlowModal::checkPairingState()`. Guarded to the actual
+     * confirm → success TRANSITION so it does not re-run the migration on
+     * every subsequent poll tick while the success step stays on screen.
+     */
+    public function checkPairingState(
+        CurrentUser $currentUser,
+        PairingGateway $gateway,
+        Session $session,
+        EncryptionMigrationService $migrationService,
+    ): void {
+        if ($this->pairingTokenId === '') {
+            return;
+        }
+
+        $userId = $currentUser->user()->id;
+        $state = $gateway->tokenState((int) $this->pairingTokenId, $userId);
+
+        if ($state === PairingGateway::STATE_CONFIRMED && $this->step !== 'success') {
+            $this->step = 'success';
+
+            try {
+                $migrationService->migrate($currentUser->user(), $session);
+            } catch (Throwable) {
+                // Best-effort — see PairingFlowModal::checkPairingState()'s
+                // identical docblock. A migration failure never undoes the
+                // just-completed pairing.
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 3: confirm the safety-number (the trust gate, D-07)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Record this side's safety-number confirmation — IDENTICAL trust gate
+     * to `PairingFlowModal::confirmMatch()` (D-07), reached via
+     * `PairingGateway::confirm()`. `device_registry.confirmed_at` is set
+     * ONLY once bothConfirmed() inside that call — this mobile entry point
+     * introduces NO new admission path (T-15-17/T-15-19).
+     *
+     * D-07 mandatory-when-synced (Phase 14): the moment bothConfirmed()
+     * admits this device as a peer, at-rest encryption auto-activates via
+     * `EncryptionMigrationService::migrate()` — no decline affordance,
+     * mirroring `PairingFlowModal::confirmMatch()`'s own auto-trigger.
+     * `migrate()` is idempotent (a no-op once already enabled).
+     */
+    public function confirmMatch(
+        CurrentUser $currentUser,
+        PairingGateway $gateway,
+        Session $session,
+        EncryptionMigrationService $migrationService,
+    ): void {
+        if ($this->pairingTokenId === '') {
+            return;
+        }
+
+        $userId = $currentUser->user()->id;
+
+        // Bind the confirming side to THIS device's real identity (CR-01) —
+        // the gateway derives the side from this device id, never from
+        // client state.
+        $deviceId = $gateway->currentDeviceId($userId, $session);
+        if ($deviceId === null) {
+            $this->flashMessage = 'Your device identity is locked. Unlock the app and try again.';
+
+            return;
+        }
+
+        $state = $gateway->confirm((int) $this->pairingTokenId, $userId, $deviceId);
+
+        if ($state === PairingGateway::STATE_CONFIRMED) {
+            $this->awaitingPeer = false;
+            $this->step = 'success';
+
+            try {
+                $migrationService->migrate($currentUser->user(), $session);
+            } catch (Throwable) {
+                // Best-effort — see docblock above.
+            }
+
+            return;
+        }
+
+        // This side has confirmed; wait for the peer (the poll advances to success).
+        $this->awaitingPeer = true;
+    }
+
+    // -------------------------------------------------------------------------
+    // Cancel / finish
+    // -------------------------------------------------------------------------
+
+    /**
+     * Cancel an in-flight pairing (mirrors PairingFlowModal::cancelPairing()
+     * — only expire a still-pending/awaiting_confirm token, never a
+     * just-confirmed one) and leave the page.
+     */
+    public function cancelPairing(
+        CurrentUser $currentUser,
+        PairingGateway $gateway,
+        UrlGenerator $urls,
+    ): void {
+        if ($this->pairingTokenId !== '') {
+            $gateway->expire((int) $this->pairingTokenId, $currentUser->user()->id);
+        }
+
+        $this->redirect($urls->route('sync.index'), navigate: false);
+    }
+
+    /**
+     * Leave the page after a SUCCESSFUL pairing (the success-step "Done"
+     * button) — does not touch the now-confirmed token.
+     */
+    public function finishPairing(UrlGenerator $urls): void
+    {
+        $this->redirect($urls->route('sync.index'), navigate: false);
+    }
+
+    // -------------------------------------------------------------------------
+    // Render
+    // -------------------------------------------------------------------------
+
+    public function render(ViewFactory $views): View
+    {
+        $view = $views->make('mobile::livewire.mobile-pairing-scan');
+
+        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
+        $view->extends('layouts.app', ['title' => 'Pair a device · beatrax']);
+
+        return $view;
+    }
+}
