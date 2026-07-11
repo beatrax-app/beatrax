@@ -13,6 +13,14 @@
     T-04-03-01: one mount only (verified by the acceptance test grep -c).
     T-04-03-02: x-trap.inert.noscroll is bound to the reactive drawerOpen flag
                 and released automatically on close — no stuck focus trap.
+
+    D-05 (Phase 15 Plan 10): the /sync status surface's drawer entry
+    (route('sync.index'), side-item "Sync") lives INSIDE the embedded
+    core.app-sidebar component below, not as separate markup here — this
+    drawer has exactly one content source (Pitfall 1 above), so any new
+    nav row added to app-sidebar.blade.php's SETTINGS section
+    automatically surfaces in both the desktop static sidebar and this
+    phone/tablet slide-over drawer without touching this file's structure.
 --}}
 
 {{-- Scrim (phone/tablet only — CSS hides it at desktop via .drawer-scrim rule) --}}

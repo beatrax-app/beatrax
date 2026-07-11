@@ -245,6 +245,20 @@
     </a>
 
     <div class="side-section-label">SETTINGS</div>
+    {{-- /sync status surface (D-05, Phase 15 Plan 10). Icon is a hand-copied
+         outline stroke-1.5 circular-arrows/refresh glyph (matches the
+         existing stroke-1.5 SVG icon convention used elsewhere in the app,
+         e.g. Modules/Sync/Resources/views/livewire/pairing-flow-modal.blade.php)
+         — deliberately NOT Flux's device-phone-mobile icon, which is
+         reserved for device-type indicators (15-UI-SPEC.md §3). --}}
+    <a href="{{ route('sync.index') }}" class="side-item {{ $isActive('/sync') }}">
+        <span class="ic" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+        </span>
+        Sync
+    </a>
     <a href="{{ route('settings') }}" class="side-item {{ $isActive('/settings') }}">
         <span class="ic" aria-hidden="true">⚙</span>
         Settings
