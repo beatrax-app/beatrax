@@ -8,7 +8,6 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
-use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
@@ -49,8 +48,17 @@ use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
  * Already routed (`/sync`, named `sync.index`) and Livewire-tag-registered
  * (`mobile.sync-screen`) by the Plan 01 `MobileServiceProvider`/
  * `Routes/web.php` — this class does not edit either file.
+ *
+ * Layout: `render()` calls `$view->extends('layouts.app', [...])`
+ * manually (mirrors `ReconcilePage`/`SetupProgressScreen`'s established
+ * shape) rather than the `#[Layout(...)]` PHP attribute. `layouts.app` is
+ * a traditional `@extends`/`@yield('content')` Blade layout, not a Blade
+ * component; the `#[Layout(...)]` attribute drives Livewire's
+ * component-slot layout mode (`@component`/`@slot('slot')`) instead, which
+ * silently renders an EMPTY page body against a `@yield`-style layout —
+ * confirmed via a real authenticated HTTP GET during this task's own
+ * verification (Rule 1 bug, fixed inline; see 15-10-SUMMARY.md).
  */
-#[Layout('layouts.app')]
 final class SyncScreen extends Component
 {
     /**
@@ -112,7 +120,12 @@ final class SyncScreen extends Component
 
     public function render(ViewFactory $views): View
     {
-        return $views->make('mobile::livewire.sync-screen');
+        $view = $views->make('mobile::livewire.sync-screen');
+
+        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
+        $view->extends('layouts.app', ['title' => 'Sync · beatrax']);
+
+        return $view;
     }
 
     /**
