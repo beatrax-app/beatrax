@@ -61,4 +61,24 @@ return [
         'BEATRAX_DEV_MODE',
         'REDIS_*',
     ],
+
+    /*
+     * iOS Info.plist permission usage strings (nativephp/mobile's
+     * 'permissions' override array — see
+     * mobile-app/vendor/nativephp/mobile/config/nativephp.php for the
+     * shape this mirrors).
+     *
+     * NSLocalNetworkUsageDescription is REQUIRED for Plan 05's LanSyncClient
+     * (15-05-PLAN.md): the phone's outbound amphp/websocket-client dial to
+     * the desktop's `sync:serve` listener crosses iOS's Local Network
+     * Privacy boundary. 15-SPIKE-FINDINGS.md (Spike A, real iPhone) proved
+     * this permission gates the FIRST LAN connection per install — without
+     * this string declared, iOS never shows the permission prompt at all
+     * and every LAN dial fails permanently. Unlike camera/biometric
+     * permissions, this key is NOT auto-provided by any installed plugin
+     * and must be declared here.
+     */
+    'permissions' => [
+        'NSLocalNetworkUsageDescription' => 'beatrax uses your local network to sync your finances directly with your other beatrax devices — nothing ever leaves your home network for this.',
+    ],
 ];
