@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mobile-app-rooted PHPUnit/Pest config (15-11-PLAN.md Task 2).
+
+    This file MUST be a real file, never a symlink to the repo-root
+    phpunit.xml — `bootstrap="vendor/autoload.php"` is resolved relative to
+    THIS file's own realpath, and a symlink would resolve to the repo
+    root's vendor/ (the desktop-coupled one), not `mobile-app/vendor/`
+    (mirrors the documented artisan/bootstrap/app.php "must be real"
+    constraint from 15-TOPOLOGY-SPIKE-FINDINGS.md).
+
+    Scoped to ONLY the Mobile-owning testsuites — `tests/Pest.php` (symlinked
+    from the repo root, see `mobile-app/tests`) still binds every module's
+    TestCase at bootstrap time since `Modules/` is shared, but this config
+    intentionally exposes just Mobile/MobileUnit/MobileFeature as runnable
+    suites so the mobile-app-rooted CI job proves "the shell boots + the
+    Mobile module's own shared code passes" without redundantly re-running
+    the full desktop-rooted suite from a second root (that job already runs
+    at the repo root).
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache">
+    <testsuites>
+        <testsuite name="Mobile">
+            <directory suffix="Test.php">./Modules/Mobile/tests/Feature</directory>
+            <directory suffix="Test.php">./Modules/Mobile/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="MobileUnit">
+            <directory suffix="Test.php">./Modules/Mobile/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="MobileFeature">
+            <directory suffix="Test.php">./Modules/Mobile/tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <ini name="memory_limit" value="1G"/>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:vQc4qXIjcS1Wt2kPQzGpL3yvqW6CrLqzqkEYqFqW7DA="/>
+        <env name="APP_URL" value="https://beatrax.test" force="true"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BEATRAX_DEV_MODE" value="false" force="true"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="sqlite_testing" force="true"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="database"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+    </php>
+</phpunit>

@@ -114,7 +114,10 @@
             "Modules\\Recurring\\Tests\\": "Modules/Recurring/tests/",
             "Modules\\Transfers\\Tests\\": "Modules/Transfers/tests/",
             "Modules\\Tax\\Tests\\": "Modules/Tax/tests/",
-            "Modules\\Search\\Tests\\": "Modules/Search/tests/"
+            "Modules\\Search\\Tests\\": "Modules/Search/tests/",
+            "Modules\\Sync\\Tests\\": "Modules/Sync/tests/",
+            "Modules\\Mobile\\Tests\\": "Modules/Mobile/tests/",
+            "Modules\\Reports\\Tests\\": "Modules/Reports/tests/"
         }
     },
     "scripts": {
