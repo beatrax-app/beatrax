@@ -141,3 +141,115 @@ jobs:
               env:
                   APP_ENV: testing
               run: php artisan test
+
+    # mobile-app quality gate (15-11-PLAN.md Task 2). The desktop `quality`
+    # job above builds from the REPO ROOT; the mobile shell is a SEPARATE
+    # Composer root at `mobile-app/` (its own vendor/, own nativephp/mobile
+    # instead of nativephp/desktop — the two host packages hard-conflict,
+    # 15-TOPOLOGY-SPIKE-FINDINGS.md) that shares the domain codebase via
+    # symlinks (Modules/, app/, resources/, database/, routes/, public/,
+    # tests/). This job proves the mobile shell BOOTS with the shared
+    # modules correctly wired (Mobile enabled, Desktop excluded) and that
+    # Mobile's own shared code passes — it does NOT attempt a full signed
+    # native iOS/Android build (Xcode/Gradle + Apple signing stays a LOCAL
+    # `native:run` step for dev/sideload delivery until Phase 19 app-store
+    # publishing).
+    mobile-quality:
+        name: mobile-app quality (PHP ${{ matrix.php }})
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        strategy:
+            fail-fast: false
+            matrix:
+                php: ['8.5']
+        env:
+            TZ: Europe/Amsterdam
+            # `nativephp/mobile-biometrics`, `nativephp/mobile-background-tasks`,
+            # and `nativephp/mobile-scanner` are PAID, PRIVATE packages served
+            # from the `plugins.nativephp.com` Composer repository
+            # (`mobile-app/composer.json` `repositories.nativephp-plugins`,
+            # 15-03-SUMMARY.md). `composer install` below cannot resolve them
+            # without http-basic credentials. Before this job can succeed, add
+            # two repository secrets under Settings > Secrets and variables >
+            # Actions:
+            #   NATIVEPHP_LICENSE_EMAIL — the plugins.nativephp.com account email
+            #   NATIVEPHP_LICENSE_KEY   — that account's license/API key
+            # (the same credential pair already resolved locally from the
+            # developer's own `~/.composer/auth.json` — 15-03-SUMMARY.md; no
+            # project-local auth.json exists and none should ever be committed).
+            COMPOSER_AUTH: >-
+                {"http-basic":{"plugins.nativephp.com":{"username":"${{ secrets.NATIVEPHP_LICENSE_EMAIL }}","password":"${{ secrets.NATIVEPHP_LICENSE_KEY }}"}}}
+        steps:
+            - name: Check out the source
+              uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+
+            - name: Set up PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Cache Composer packages (mobile-app/ lock file)
+              uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+              with:
+                  path: ~/.composer/cache
+                  key: composer-mobile-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('mobile-app/composer.lock') }}
+                  restore-keys: |
+                      composer-mobile-${{ runner.os }}-${{ matrix.php }}-
+
+            - name: Install Composer dependencies (mobile-app/ root)
+              working-directory: mobile-app
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            - name: Prepare environment for the mobile-scoped Pest pass
+              # mobile-app/.env is gitignored (own, machine-local — mirrors
+              # the developer's own local setup, 15-TOPOLOGY-SPIKE-FINDINGS.md).
+              # There is no mobile-app/.env.example; the repo-root one is the
+              # single source of truth for required keys and is copied in,
+              # same shape as the desktop `quality` job's own env prep above.
+              working-directory: mobile-app
+              run: |
+                  cp ../.env.example .env
+                  php artisan key:generate --ansi
+                  mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+                  touch database/database.sqlite
+                  chmod -R u+rwX storage bootstrap/cache
+
+            - name: Assert shared-module discovery (Mobile enabled, Desktop excluded)
+              # T-15-34: the mobile shell must never silently pick up a
+              # Desktop-coupled provider or route — `Modules\Desktop` has no
+              # `module.json` (loaded only via bootstrap/providers.php) and
+              # `mobile-app/bootstrap/providers.php` deliberately omits
+              # DesktopServiceProvider (15-TOPOLOGY-SPIKE-FINDINGS.md).
+              working-directory: mobile-app
+              run: |
+                  php artisan config:clear
+                  MODULE_LIST=$(php artisan module:list)
+                  echo "$MODULE_LIST"
+                  echo "$MODULE_LIST" | grep -q '\[Enabled\] Mobile' || { echo "::error::Mobile module is not enabled under mobile-app/"; exit 1; }
+                  if echo "$MODULE_LIST" | grep -qi 'Desktop'; then
+                      echo "::error::Desktop module leaked into the mobile-app/ shell"
+                      exit 1
+                  fi
+                  DESKTOP_ROUTES=$(php artisan route:list --name=desktop 2>&1)
+                  if echo "$DESKTOP_ROUTES" | grep -q '^  desktop'; then
+                      echo "::error::Desktop routes leaked into the mobile-app/ shell"
+                      echo "$DESKTOP_ROUTES"
+                      exit 1
+                  fi
+
+            - name: Mobile-scoped Pest pass (mobile-app root)
+              # Scoped to the Mobile-owning testsuite ONLY (mobile-app/phpunit.xml)
+              # — the desktop `quality` job above already runs the full suite
+              # from the repo root; re-running it here would be redundant CI
+              # cost against the SAME shared Modules/ tree. `--exclude-group=
+              # repo-root-only` skips the handful of assertions that are only
+              # true when running against the repo-root Composer tree (e.g. a
+              # premium NativePHP plugin facade being genuinely ABSENT there) —
+              # each excluded test documents why in its own file.
+              working-directory: mobile-app
+              env:
+                  APP_ENV: testing
+              run: vendor/bin/pest --testsuite=Mobile --exclude-group=repo-root-only

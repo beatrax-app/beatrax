@@ -30,6 +30,21 @@
 !/storage/logs/.gitignore
 /storage/*.key
 
+# Generated app-runtime secret material — mirrors the repo-root .gitignore's
+# storage/app/* entries (15-11-PLAN.md Task 2). Running the Mobile-scoped
+# test suite from this root (device identity keys, GDK epoch keyring blobs,
+# the relay auth token) writes real, per-run generated secrets under these
+# paths; they must never enter git history from either root.
+/storage/app/private
+/storage/app/public
+/storage/app/secrets
+/storage/app/sync
+/storage/app/mobile
+/storage/app/first-launch.app-key-generated
+
+# PHPUnit result cache — machine/run-local, never committed.
+/.phpunit.cache
+
 # NativePHP-for-Mobile platform scaffolds. `native:install` / `native:run`
 # generate large native iOS (Xcode) + Android (Gradle) project trees plus a
 # working dir; these are hundreds of MB, machine-specific, and regenerated on

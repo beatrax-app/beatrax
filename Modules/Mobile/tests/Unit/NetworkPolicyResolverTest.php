@@ -75,6 +75,14 @@ it('degrades to "sync now" when the native Network facade is unavailable (class_
     // on-device Composer root) — the repo-root vendor/ the host toolchain
     // runs this test against does NOT have it installed (15-05-PLAN.md
     // environment note). shouldSyncNow() must never fatal here.
+    //
+    // ->group('repo-root-only'): this assertion is ONLY true when this
+    // suite runs against the repo-root Composer tree. The 15-11-PLAN.md
+    // Task 2 mobile-app/-rooted CI job runs the SAME test file against
+    // mobile-app/vendor, where nativephp/mobile-network genuinely IS
+    // installed — the opposite of what this test asserts, by design. The
+    // mobile-app-rooted job excludes this group; every other test in this
+    // file is context-agnostic and still runs there.
     expect(class_exists(Network::class))->toBeFalse();
 
     $resolver = new NetworkPolicyResolver;
@@ -84,7 +92,7 @@ it('degrades to "sync now" when the native Network facade is unavailable (class_
     // cellular/expensive connection without the plugin — the gate only
     // fires on a positive signal, never on ambiguity.
     expect($resolver->shouldSyncNow())->toBeTrue();
-});
+})->group('repo-root-only');
 
 it('one policy object governs both the pause-on-cellular read and the shouldSyncNow() decision', function (): void {
     expect(class_exists(NetworkPolicyResolver::class))->toBeTrue();

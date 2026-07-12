@@ -134,9 +134,18 @@ it('runs schedule:list without error under the repo-root context, where the entr
     // Composer tree this test suite runs against (15-TOPOLOGY-SPIKE-FINDINGS.md).
     // The Plan 01 Routes/console.php registration is guarded on this exact
     // macro, so it stays inert here.
+    //
+    // ->group('repo-root-only'): this assertion is ONLY true when this
+    // suite runs against the repo-root Composer tree. The 15-11-PLAN.md
+    // Task 2 mobile-app/-rooted CI job runs the SAME test file against
+    // mobile-app/vendor, where nativephp/mobile-background-tasks genuinely
+    // IS installed and DOES register the macro — the opposite of what this
+    // test asserts, by design (T-15-SC: the plugin is real there). The
+    // mobile-app-rooted job excludes this group; every other test in this
+    // file is context-agnostic and still runs there.
     expect(Event::hasMacro('onAnyNetwork'))->toBeFalse();
 
     $exitCode = Artisan::call('schedule:list');
 
     expect($exitCode)->toBe(0);
-});
+})->group('repo-root-only');
