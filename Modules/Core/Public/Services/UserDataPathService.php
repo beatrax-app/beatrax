@@ -58,7 +58,7 @@ final class UserDataPathService
         // never fires. Target the sibling NativePHP PERSISTED store instead:
         // empty on a genuine fresh install (pm clear wipes it too) and retained
         // across app updates — the correct home for on-device user data.
-        if (self::platform() !== null) {
+        if (self::isMobileRuntime()) {
             return dirname(self::projectRoot())
                 .DIRECTORY_SEPARATOR.'persisted_data'
                 .DIRECTORY_SEPARATOR.'database'
@@ -92,6 +92,35 @@ final class UserDataPathService
         $platform = getenv('NATIVEPHP_PLATFORM');
 
         return is_string($platform) && $platform !== '' ? $platform : null;
+    }
+
+    /**
+     * True on the NativePHP mobile runtime.
+     *
+     * `platform()` (`getenv('NATIVEPHP_PLATFORM')`) is the primary signal, but
+     * it is NOT reliably visible at per-request config-load in NativePHP's
+     * PERSISTENT runtime — the env is present when the `->booted()` hook fires
+     * yet reads back null when `config/*.php` is re-evaluated per request (the
+     * persistent runtime re-bootstraps config each request). Since
+     * `config/database.php` resolves `databaseFile()` per request, a
+     * platform-only check silently fell back to the app-BUNDLE database path
+     * on-device — re-shipping/using the dev database.sqlite (data leak) and
+     * defeating the fresh-install onboarding gate. Detect the runtime
+     * STRUCTURALLY as a fallback: NativePHP mobile relocates `base_path()` into
+     * `<app_storage>/laravel` and provisions a sibling `persisted_data` store
+     * (created by the native layer before the PHP runtime serves a request),
+     * so the sibling dir existing is a request-load-stable mobile signal that
+     * never matches on desktop/host.
+     */
+    private static function isMobileRuntime(): bool
+    {
+        if (self::platform() !== null) {
+            return true;
+        }
+
+        return is_dir(
+            dirname(self::projectRoot()).DIRECTORY_SEPARATOR.'persisted_data',
+        );
     }
 
     public static function storageBase(): string
