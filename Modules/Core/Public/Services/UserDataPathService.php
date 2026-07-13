@@ -49,6 +49,22 @@ final class UserDataPathService
 
     public static function databaseFile(): string
     {
+        // NativePHP mobile: base_path() is the app BUNDLE (app_storage/laravel),
+        // which is wiped + re-shipped on every app update AND ships a populated
+        // dev database.sqlite (the /database/database.sqlite build-exclude does
+        // not match through the mobile-app/database -> ../database symlink).
+        // Using it would (a) leak dev/financial data into every install and
+        // (b) keep a fresh phone from ever being empty, so onboarding/pairing
+        // never fires. Target the sibling NativePHP PERSISTED store instead:
+        // empty on a genuine fresh install (pm clear wipes it too) and retained
+        // across app updates — the correct home for on-device user data.
+        if (self::platform() !== null) {
+            return dirname(self::projectRoot())
+                .DIRECTORY_SEPARATOR.'persisted_data'
+                .DIRECTORY_SEPARATOR.'database'
+                .DIRECTORY_SEPARATOR.'database.sqlite';
+        }
+
         $native = getenv('NATIVEPHP_STORAGE_PATH');
         $databaseDir = is_string($native) && $native !== ''
             ? rtrim($native, '/\\').DIRECTORY_SEPARATOR.'database'
