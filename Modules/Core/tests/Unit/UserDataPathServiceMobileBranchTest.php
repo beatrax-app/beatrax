@@ -143,3 +143,29 @@ it('behaves unchanged with no native signal at all (plain web/test regression)',
     expect(UserDataPathService::platform())->toBeNull();
     expect(UserDataPathService::databaseFile())->toBe(base_path('database/database.sqlite'));
 });
+
+it('detects the mobile runtime STRUCTURALLY when NATIVEPHP_PLATFORM is invisible at config-load — a sibling persisted_data store next to base_path routes databaseFile() to it', function (): void {
+    // Mirrors the persistent-runtime reality: getenv('NATIVEPHP_PLATFORM')
+    // reads null when config/database.php re-evaluates per request, so the
+    // env-only branch silently fell back to the app-bundle DB path on-device.
+    // The structural fallback keys off the NativePHP mobile layout — a
+    // `<app_storage>/laravel` base_path with a sibling `persisted_data` store.
+    $appStorage = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-appstorage-'.bin2hex(random_bytes(8));
+    $bundleRoot = $appStorage.DIRECTORY_SEPARATOR.'laravel';
+    $persistedDir = $appStorage.DIRECTORY_SEPARATOR.'persisted_data';
+    mkdir($bundleRoot, 0700, true);
+    mkdir($persistedDir, 0700, true);
+
+    $originalBasePath = $this->app->basePath();
+    putenv('NATIVEPHP_PLATFORM'); // explicitly UNSET — no env signal at all
+
+    try {
+        $this->app->setBasePath($bundleRoot);
+
+        expect(UserDataPathService::platform())->toBeNull();
+        expect(UserDataPathService::databaseFile())
+            ->toBe($persistedDir.DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'database.sqlite');
+    } finally {
+        $this->app->setBasePath($originalBasePath);
+    }
+});
