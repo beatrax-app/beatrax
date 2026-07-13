@@ -27,6 +27,7 @@ use Livewire\LivewireManager;
  *   Plan 08: InitialSyncPuller, SetupProgressScreen (Livewire)
  *   Plan 09: MobilePullCommand (artisan command, `sync:mobile-pull`)
  *   Plan 10: SyncScreen (Livewire)
+ *   15-onboarding: MobileWelcomeScreen (Livewire, first-run welcome)
  *
  * Every future class is referenced by a runtime-built FQCN string (never a
  * `use` import / `::class` literal) so this provider stays PHPStan-clean
@@ -96,6 +97,7 @@ final class MobileServiceProvider extends ServiceProvider
                 'mobile.pairing-scan' => 'MobilePairingScan',
                 'mobile.setup-progress-screen' => 'SetupProgressScreen',
                 'mobile.sync-screen' => 'SyncScreen',
+                'mobile.welcome-screen' => 'MobileWelcomeScreen',
             ];
 
             foreach ($components as $tag => $class) {
