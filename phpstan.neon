@@ -25,6 +25,20 @@ parameters:
             - app/PhpStan/Rules/Fixtures/*
             - database/migrations/*
             - tests/*
+            # NativePHP's published plugin-registration stub
+            # (nativephp/mobile's resources/stubs/NativeServiceProvider.php.stub,
+            # scaffolded via `php artisan native:plugin:register`). Its
+            # `plugins()` return type names the mobile plugin provider classes
+            # (`Native\Mobile\Providers\*`, `NativePHP\BackgroundTasks\*`)
+            # verbatim per the vendor contract; those packages are installed
+            # ONLY in `mobile-app/vendor` (the Phase 15 sibling-root topology —
+            # `nativephp/desktop` conflicts with `nativephp/mobile`), never in
+            # this repo-root toolchain, so they are permanently unresolvable
+            # here — mirrors why `mobile-app/bootstrap/app.php` (a real, never
+            # symlinked file) is likewise outside these paths. Registered
+            # exclusively from `mobile-app/bootstrap/providers.php`; the
+            # desktop root's own manifest never loads this provider.
+            - app/Providers/NativeServiceProvider.php
     reportUnmatchedIgnoredErrors: true
     ignoreErrors:
         # Single permitted facade + config() use in module code: the

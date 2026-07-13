@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Providers\HorizonServiceProvider;
+use App\Providers\NativeServiceProvider;
 use Modules\Anomaly\Providers\AnomalyServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
 use Modules\Budgets\Providers\BudgetsServiceProvider;
@@ -50,6 +51,7 @@ use Modules\Transfers\Providers\TransfersServiceProvider;
  */
 return array_values(array_filter([
     class_exists(Laravel\Horizon\HorizonServiceProvider::class) ? HorizonServiceProvider::class : null,
+    NativeServiceProvider::class,
     CoreServiceProvider::class,
     AuthServiceProvider::class,
     LedgerServiceProvider::class,
