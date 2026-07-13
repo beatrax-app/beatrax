@@ -99,12 +99,50 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // (1) Reconcile the live sqlite connection to the ONE canonical
         // UserDataPathService-resolved path BEFORE any migrate/read/write —
-        // this is what closes the divergent-path 500 (T-15-32).
+        // this is what closes the divergent-path 500 (T-15-32). On mobile the
+        // authority now resolves to the persisted store (see
+        // UserDataPathService::databaseFile()); ensure its directory exists on
+        // a genuine fresh install before the migrator opens the sqlite file.
+        $canonicalDb = UserDataPathService::databaseFile();
+        if (! is_dir(dirname($canonicalDb))) {
+            @mkdir(dirname($canonicalDb), 0775, true);
+        }
         $app->make('config')->set(
             'database.connections.sqlite.database',
-            UserDataPathService::databaseFile(),
+            $canonicalDb,
         );
         $app->make('db')->purge('sqlite');
+
+        // (1b) Recreate the writable storage/framework tree on-device. The
+        // native app-copy rsync strips `/storage/framework` (views/cache/
+        // sessions), so at config-load `realpath(storage_path('framework/
+        // views'))` returns false → an empty `view.compiled` → the Blade
+        // compiler throws "Please provide a valid cache path." on EVERY
+        // render, 500ing every surface. Recreate the stripped dirs and
+        // re-point the compiled-view path at the now-existing dir (the
+        // config value was frozen empty before these dirs existed). Same
+        // divergence class as the DB reconcile above, for the file-based
+        // storage tree instead of the sqlite path.
+        foreach (['framework/views', 'framework/cache/data', 'framework/sessions', 'logs', 'app/public'] as $storageDir) {
+            $full = storage_path($storageDir);
+            if (! is_dir($full)) {
+                @mkdir($full, 0775, true);
+            }
+        }
+        // Reconcile the storage-dependent config for the on-device runtime.
+        // The native app-copy strips /storage/framework and the build caches
+        // config with file-based session/cache paths that do not exist (and
+        // whose runtime storage_path resolves differently than at build time),
+        // so a file-backed session/cache 500s every request. The on-device
+        // sqlite DB (reconciled above, fully migrated — sessions/cache/
+        // cache_locks tables all present) is the reliable source of truth, so
+        // drive session + cache through it instead of the filesystem. Blade
+        // genuinely needs a file path; view.compiled must be non-empty (else
+        // "Please provide a valid cache path.") and Blade auto-creates the dir.
+        $cfg = $app->make('config');
+        $cfg->set('view.compiled', storage_path('framework/views'));
+        $cfg->set('session.driver', 'database');
+        $cfg->set('cache.default', 'database');
 
         if (! class_exists(MobileFirstLaunchBootstrap::class)) {
             return;
