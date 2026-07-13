@@ -12,6 +12,7 @@ use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
+use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
 use Modules\Mobile\Internal\Spike\SpikeStoragePathCommand;
 use Modules\Mobile\Internal\Spike\SpikeSyncDialCommand;
 use Psr\Log\LoggerInterface;
@@ -26,14 +27,22 @@ use Psr\Log\LoggerInterface;
  * PHP, so a symlinked bootstrap would silently retarget base_path() to the
  * parent and boot the desktop app instead.
  *
- * DELIBERATE DIVERGENCE FROM THE DESKTOP ROOT: the desktop root appends
- * `Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady` to the web
- * group (its first-launch migration/welcome gate). That middleware is a
- * Desktop-module surface and its collaborator (`FirstLaunchBootstrap`) is
- * desktop-only; the mobile peer's first-launch gate is the `->booted()`
- * hook below, which reconciles the live sqlite connection to the one
- * `UserDataPathService` path authority and then runs
- * `Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap` (Plan 04).
+ * DIVERGENCE FROM THE DESKTOP ROOT, NARROWED (15-onboarding): the desktop
+ * root appends `Modules\Desktop\Internal\Http\Middleware\
+ * EnsureDatabaseReady` to the web group, which handles BOTH the
+ * pending-migrations redirect AND the fresh-install → welcome redirect.
+ * On mobile, migrations are reconciled + run by the `->booted()` hook
+ * below (which runs BEFORE any HTTP request reaches the router, per
+ * 15-04-PLAN.md) — so by request time migrations are always caught up and
+ * this root does NOT need a pending-migrations gate. What mobile DID lack
+ * until this plan is the fresh-install → welcome redirect: without it, a
+ * genuine 0-user mobile device hit `auth` middleware on any protected
+ * route, threw `AuthenticationException`, and landed on the desktop-shaped
+ * `/login` (Sign in) screen instead of a mobile first-run welcome surface.
+ * `MobileEnsureDatabaseReady` (mobile-module-owned, collaborating with the
+ * mobile-only `MobileFirstLaunchBootstrap`) closes that gap the same way
+ * the desktop gate's fresh-install branch does — appended to the `web`
+ * group below, running BEFORE route `auth` middleware.
  *
  * MOBILE FIRST-LAUNCH RECONCILE + MIGRATE-ON-LAUNCH (15-04 Task 2):
  * per 15-SPIKE-FINDINGS.md (Spike B, real-device run) the live SQLite
@@ -75,6 +84,15 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(LoopbackOnly::class);
         $middleware->append(NoStoreFinancialData::class);
+        // First-launch fresh-install gate (15-onboarding mobile mirror of
+        // the desktop EnsureDatabaseReady welcome branch). Appended to the
+        // `web` group so it runs BEFORE route `auth` middleware: a 0-user
+        // device is redirected to `mobile.welcome` instead of throwing
+        // AuthenticationException → `/login`. The middleware itself
+        // exempts welcome/signup/pair/setup so the redirect cannot loop.
+        $middleware->web(append: [
+            MobileEnsureDatabaseReady::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->dontReport([

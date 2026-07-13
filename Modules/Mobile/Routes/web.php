@@ -40,6 +40,25 @@ use Illuminate\Support\Facades\Route;
  *
  * Loaded by MobileServiceProvider via loadRoutesFrom(__DIR__.'/../Routes/web.php').
  */
+/*
+ * 15-onboarding: mobile first-run welcome surface (D-21/D-22 mobile mirror).
+ *
+ * Deliberately OUTSIDE the `auth` group — it renders BEFORE any user
+ * account exists on the device, gated in front of it by
+ * `MobileEnsureDatabaseReady` (registered on the mobile-app root's `web`
+ * middleware group in `mobile-app/bootstrap/app.php`). The welcome
+ * screen's two CTAs lead into `/signup` (open while `User::count() === 0`,
+ * Phase 12 D-03) and `/mobile/pair` (the auth-gated pairing entry below).
+ */
+Route::middleware(['web'])->group(static function (): void {
+    Route::get('/mobile/welcome', static function () {
+        $component = 'Modules\Mobile\Internal\Http\Livewire\MobileWelcomeScreen';
+        abort_unless(class_exists($component), 404);
+
+        return app($component)();
+    })->name('mobile.welcome');
+});
+
 Route::middleware(['web', 'auth'])->group(static function (): void {
     // Plan 10: sync-status surface. `/sync` — the sidebar/drawer entry
     // (15-PATTERNS.md) links here by name.
