@@ -207,6 +207,14 @@ final class PairingRelayCourier
             return true; // malformed — permanently invalid.
         }
 
+        // LOW-03 (15-crossdevice-pairing-REVIEW.md): the device id arrives from
+        // an untrusted drained frame. Reject anything that is not a UUIDv4
+        // (DeviceIdentityService's format) before it is persisted or signed
+        // over — bounds length + charset and excludes the '|' signing delimiter.
+        if (! self::isValidDeviceId($responderDeviceId)) {
+            return true; // malformed device id — permanently invalid.
+        }
+
         // applyResponderAccept() never defers — it either binds (or
         // idempotently no-ops) or fails closed (false). Either outcome is
         // terminal for this frame.
@@ -229,11 +237,31 @@ final class PairingRelayCourier
             return true; // malformed — permanently invalid.
         }
 
+        // LOW-03: reject non-UUID device ids from the untrusted frame (see
+        // applyResponderAcceptFrame).
+        if (! self::isValidDeviceId($confirmingDeviceId) || ! self::isValidDeviceId($peerDeviceId)) {
+            return true;
+        }
+
         $result = $this->tokenService->applyPeerConfirm($userId, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex);
 
         // 'deferred' is the ONLY non-terminal outcome — everything else
         // (a real state string, or null for a permanent rejection) is
         // terminal for this exact frame.
         return $result !== 'deferred';
+    }
+
+    /**
+     * A device id from an untrusted drained frame is only accepted when it is a
+     * UUIDv4 — the exact shape `DeviceIdentityService` mints. This bounds length
+     * + charset and structurally excludes the '|' signing-message delimiter
+     * (LOW-01/LOW-03, 15-crossdevice-pairing-REVIEW.md).
+     */
+    private static function isValidDeviceId(string $deviceId): bool
+    {
+        return preg_match(
+            '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/',
+            $deviceId,
+        ) === 1;
     }
 }

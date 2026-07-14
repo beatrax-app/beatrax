@@ -89,8 +89,26 @@ final class PairingGateway
             return;
         }
 
+        // MED-01 (15-crossdevice-pairing-REVIEW.md): $endpoint arrives from an
+        // untrusted scanned QR. Never persist an insecure endpoint (RelayClient
+        // later refuses http://, which would durably brick ALL relay-backed
+        // sync), and only bootstrap a FRESH device — never clobber an existing
+        // working relay (a crafted/wrong QR must not redirect the device's
+        // relay). Only overwrite the token when the QR actually carries one, so
+        // a token-less relay endpoint cannot wipe an existing auth token.
+        if (! str_starts_with($endpoint, 'https://')) {
+            return;
+        }
+
+        if ($this->relayConfig->endpointUrl() !== null) {
+            return;
+        }
+
         $this->relayConfig->setEndpointUrl($endpoint);
-        $this->relayConfig->setAuthToken($authToken);
+
+        if ($authToken !== null && $authToken !== '') {
+            $this->relayConfig->setAuthToken($authToken);
+        }
     }
 
     /**
