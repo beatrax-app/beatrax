@@ -17,6 +17,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Services\PairingGateway;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -223,6 +224,7 @@ final class MobilePairingScan extends Component
         QrScanBridge $qrBridge,
         PairingGateway $gateway,
         Session $session,
+        LoggerInterface $logger,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -245,6 +247,14 @@ final class MobilePairingScan extends Component
         // as any other bad code. $scannedPayload is guaranteed non-null
         // here — the guard above already returned for the importMode +
         // null-payload (word-code) combination.
+        //
+        // Phase 15 HIGH-01 (Task 6): $identity also carries the QR's
+        // optional relay/rtok params — captured here (import mode only,
+        // the only branch that reads the full identity envelope) so the
+        // responder-accept send below has a device id + relay transport to
+        // address.
+        $identity = null;
+
         if ($this->importMode) {
             $identity = $qrBridge->extractIdentity($scannedPayload);
 
@@ -253,6 +263,15 @@ final class MobilePairingScan extends Component
 
                 return;
             }
+
+            // Auto-configure this device's relay transport from the QR
+            // BEFORE seeding/accepting, so the responder-accept send below
+            // has somewhere to deliver to. No-op when the QR carried no
+            // relay param — seed/accept/confirm below proceed exactly as
+            // before regardless (the relay is needed only for the
+            // pre-confirm handshake frames, never for the eventual
+            // LAN-direct sync transport).
+            $gateway->configureRelayFromQr($identity['relayEndpoint'], $identity['relayAuthToken']);
 
             $gateway->seedResponderToken(
                 $identity['token'],
@@ -279,6 +298,31 @@ final class MobilePairingScan extends Component
         $this->flashMessage = '';
         $this->cameraUnavailableNotice = false;
         $this->step = 'confirm';
+
+        // Phase 15 HIGH-01 (Task 6): propagate this device's responder
+        // identity to the desktop's OWN separate database over the relay —
+        // import mode only ($identity is the only branch that ever reads
+        // the desktop's device id off the wire; the non-import same-account
+        // path has no cross-device peer to address a frame to). $identity
+        // is guaranteed non-null here — the ONLY way $this->importMode is
+        // true at this point is via the identical branch above, which
+        // already returned early on a null extractIdentity() result.
+        // Best-effort: a relay failure (including "unconfigured") never
+        // dead-ends the confirm step already rendered above — the
+        // desktop's own poll simply will not advance until this device
+        // retries.
+        if ($this->importMode) {
+            $tokenHash = hash('sha256', $identity['token']);
+
+            try {
+                $gateway->sendResponderAccept($userId, $tokenHash, $identity['deviceId'], $session);
+            } catch (Throwable $e) {
+                $logger->warning('MobilePairingScan: cross-device PAIR_RESPONDER_ACCEPT relay delivery failed.', [
+                    'pairing_token_id' => $this->pairingTokenId,
+                    'exception' => $e::class,
+                ]);
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -302,12 +346,31 @@ final class MobilePairingScan extends Component
         EncryptionMigrationService $migrationService,
         MobileImportIntentGate $importIntent,
         DatabaseManager $db,
+        LoggerInterface $logger,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
         }
 
         $userId = $currentUser->user()->id;
+
+        // Phase 15 HIGH-01 (Task 6): apply any inbound cross-device frame
+        // (the desktop's PAIR_CONFIRM) BEFORE reading tokenState() below —
+        // this is what drives this device's local row to CONFIRMED, which
+        // in turn lets the MEDIUM-01 self-mint deferral (shouldDeferSelfMint())
+        // correctly keep this device from self-minting once its keyring is
+        // meant to converge from the desktop's delivered epochs instead.
+        // Never throws out of the poll; defense-in-depth try/catch even
+        // though drainPairingFrames()/drainAndApply() are designed not to.
+        try {
+            $gateway->drainPairingFrames($userId, $session);
+        } catch (Throwable $e) {
+            $logger->warning('MobilePairingScan: cross-device relay drain failed during poll.', [
+                'user_id' => $userId,
+                'exception' => $e::class,
+            ]);
+        }
+
         $state = $gateway->tokenState((int) $this->pairingTokenId, $userId);
 
         if ($state === PairingGateway::STATE_CONFIRMED && $this->step !== 'success') {
@@ -363,6 +426,7 @@ final class MobilePairingScan extends Component
         EncryptionMigrationService $migrationService,
         MobileImportIntentGate $importIntent,
         DatabaseManager $db,
+        LoggerInterface $logger,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -381,6 +445,17 @@ final class MobilePairingScan extends Component
         }
 
         $state = $gateway->confirm((int) $this->pairingTokenId, $userId, $deviceId);
+
+        // Phase 15 HIGH-01 (Task 6): send this device's own signed
+        // PAIR_CONFIRM to the peer (the bound initiator side — this
+        // component always plays 'responder', T-15-19) over the relay.
+        // Safe regardless of $state (CONFIRMED or still awaiting) — the
+        // frame is only ever consumable once the peer's own local side
+        // independently confirms too. Best-effort: never dead-ends the
+        // caller when no relay is configured (the peer id is always known
+        // from the local row itself, so this is unconditional, unlike the
+        // import-mode-only responder-accept send in submitCode()).
+        $this->sendConfirmOverRelay($gateway, $userId, $db, $session, $logger);
 
         if ($state === PairingGateway::STATE_CONFIRMED) {
             $this->awaitingPeer = false;
@@ -437,6 +512,43 @@ final class MobilePairingScan extends Component
      * unrelated pairing (e.g. adding a THIRD device) on the same phone
      * would also incorrectly defer self-mint forever.
      */
+    /**
+     * Phase 15 HIGH-01 (Task 6): deliver this device's Ed25519-signed
+     * PAIR_CONFIRM frame to the bound INITIATOR side of the in-flight
+     * token — this component always plays 'responder' (T-15-19), so the
+     * peer is always `initiator_device_id` on the local row.
+     *
+     * Best-effort, never dead-ends the caller: a `RuntimeException` from
+     * the gateway (no relay configured — the ordinary same-account,
+     * non-import pairing case never configures one) is caught and logged
+     * (ids/counts only — never key material or the signature itself), not
+     * surfaced as a flash error.
+     */
+    private function sendConfirmOverRelay(
+        PairingGateway $gateway,
+        int $userId,
+        DatabaseManager $db,
+        Session $session,
+        LoggerInterface $logger,
+    ): void {
+        $initiatorDeviceId = $db->connection()->table('pairing_tokens')
+            ->where('id', (int) $this->pairingTokenId)
+            ->value('initiator_device_id');
+
+        if (! is_string($initiatorDeviceId) || $initiatorDeviceId === '') {
+            return;
+        }
+
+        try {
+            $gateway->sendConfirm($userId, (int) $this->pairingTokenId, $initiatorDeviceId, $session);
+        } catch (Throwable $e) {
+            $logger->warning('MobilePairingScan: cross-device PAIR_CONFIRM relay delivery failed.', [
+                'pairing_token_id' => $this->pairingTokenId,
+                'exception' => $e::class,
+            ]);
+        }
+    }
+
     private function shouldDeferSelfMint(int $userId, MobileImportIntentGate $importIntent, DatabaseManager $db): bool
     {
         if (! $importIntent->isImporting($userId)) {
