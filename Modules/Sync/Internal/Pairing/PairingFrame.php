@@ -71,7 +71,17 @@ final class PairingFrame
         string $confirmingDeviceId,
         string $peerDeviceId,
     ): string {
-        return self::SIG_CONTEXT.'|'.$tokenHash.'|'.$confirmingDeviceId.'|'.$peerDeviceId;
+        // LOW-01 (15-crossdevice-pairing-REVIEW.md): length-prefix each field so
+        // a device id containing the '|' delimiter cannot shift field boundaries
+        // in the signed string (canonical, unambiguous encoding). Both sign and
+        // verify resolve through this single method, so the format stays
+        // consistent across the two sides.
+        return implode('|', [
+            self::SIG_CONTEXT,
+            strlen($tokenHash).':'.$tokenHash,
+            strlen($confirmingDeviceId).':'.$confirmingDeviceId,
+            strlen($peerDeviceId).':'.$peerDeviceId,
+        ]);
     }
 
     /**

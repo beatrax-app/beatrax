@@ -118,6 +118,21 @@ final class MobilePairingScan extends Component
     #[Locked]
     public bool $importMode = false;
 
+    /**
+     * #[Locked] — the cross-device PAIR_RESPONDER_ACCEPT addressing (the
+     * scanned desktop device id + the token hash), stashed at submitCode() so
+     * checkPairingState() can idempotently RE-EMIT the responder-accept on each
+     * poll while still awaiting the desktop's confirm. MED-02
+     * (15-crossdevice-pairing-REVIEW.md): the initial send was single-shot with
+     * no recovery if its one relay delivery was lost — the desktop would never
+     * bind and the ceremony would silently dead-end.
+     */
+    #[Locked]
+    public string $importResponderTokenHash = '';
+
+    #[Locked]
+    public string $importDesktopDeviceId = '';
+
     /** Whether this side has confirmed the safety-number (awaits the peer). */
     public bool $awaitingPeer = false;
 
@@ -314,6 +329,11 @@ final class MobilePairingScan extends Component
         if ($this->importMode) {
             $tokenHash = hash('sha256', $identity['token']);
 
+            // MED-02: stash the addressing so the poll can idempotently re-emit
+            // this responder-accept if the initial delivery below is lost.
+            $this->importResponderTokenHash = $tokenHash;
+            $this->importDesktopDeviceId = $identity['deviceId'];
+
             try {
                 $gateway->sendResponderAccept($userId, $tokenHash, $identity['deviceId'], $session);
             } catch (Throwable $e) {
@@ -372,6 +392,30 @@ final class MobilePairingScan extends Component
         }
 
         $state = $gateway->tokenState((int) $this->pairingTokenId, $userId);
+
+        // MED-02 (15-crossdevice-pairing-REVIEW.md): the initial
+        // PAIR_RESPONDER_ACCEPT is single-shot; if its one relay delivery was
+        // lost the desktop never binds and the ceremony dead-ends. Re-emit it
+        // idempotently on each poll while still on the confirm step and not yet
+        // CONFIRMED — applyResponderAccept is a same-responder no-op on the
+        // desktop, so a transient relay failure self-heals rather than
+        // requiring the user to restart the whole ceremony. Best-effort: a
+        // relay failure here never crashes the poll.
+        if ($this->importMode
+            && $state !== PairingGateway::STATE_CONFIRMED
+            && $this->step === 'confirm'
+            && $this->importResponderTokenHash !== ''
+            && $this->importDesktopDeviceId !== ''
+        ) {
+            try {
+                $gateway->sendResponderAccept($userId, $this->importResponderTokenHash, $this->importDesktopDeviceId, $session);
+            } catch (Throwable $e) {
+                $logger->warning('MobilePairingScan: cross-device PAIR_RESPONDER_ACCEPT relay re-emit failed during poll.', [
+                    'user_id' => $userId,
+                    'exception' => $e::class,
+                ]);
+            }
+        }
 
         if ($state === PairingGateway::STATE_CONFIRMED && $this->step !== 'success') {
             $this->step = 'success';
