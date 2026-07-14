@@ -8,12 +8,14 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
+use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Services\PairingGateway;
 use Throwable;
 
@@ -129,12 +131,25 @@ final class MobilePairingScan extends Component
     // Lifecycle
     // -------------------------------------------------------------------------
 
-    public function mount(QrScanBridge $qrBridge, Request $request): void
+    public function mount(QrScanBridge $qrBridge, Request $request, CurrentUser $currentUser, MobileImportIntentGate $importIntent): void
     {
         // Phase 15 import-join: read-only signal, set once at mount() from
         // the server-side request query — never re-derived from client
         // state afterward (#[Locked]).
         $this->importMode = $request->query('mode') === 'import';
+
+        // MEDIUM-01 fix (15-import-join-REVIEW.md): the SELF-MINT-SKIP
+        // decision below (confirmMatch()/checkPairingState()) must not
+        // depend on this query param surviving every navigation — echo it
+        // into the durable MobileImportIntentGate marker the moment it is
+        // observed, so a LATER re-entry to this route WITHOUT the param
+        // (back button, bookmark, a relaunched/tombstoned process) still
+        // reads the durable signal this visit already persisted.
+        // `MobileImportBootstrap::provisionDeviceLocally()` is the
+        // AUTHORITATIVE source of this marker; this is defense-in-depth.
+        if ($this->importMode) {
+            $importIntent->markImporting($currentUser->user()->id);
+        }
 
         $this->enterACode($qrBridge);
     }
@@ -285,6 +300,8 @@ final class MobilePairingScan extends Component
         PairingGateway $gateway,
         Session $session,
         EncryptionMigrationService $migrationService,
+        MobileImportIntentGate $importIntent,
+        DatabaseManager $db,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -305,7 +322,12 @@ final class MobilePairingScan extends Component
             // already-present epoch id). The CREATE-ACCOUNT (non-import)
             // path is UNCHANGED — it still self-mints here exactly as
             // before.
-            if (! $this->importMode) {
+            //
+            // MEDIUM-01 fix (15-import-join-REVIEW.md): the decision is
+            // now derived from DURABLE state (the MobileImportIntentGate
+            // marker + an empty keyring), not `$this->importMode` alone —
+            // see shouldDeferSelfMint()'s own docblock.
+            if (! $this->shouldDeferSelfMint($userId, $importIntent, $db)) {
                 try {
                     $migrationService->migrate($currentUser->user(), $session);
                 } catch (Throwable) {
@@ -339,6 +361,8 @@ final class MobilePairingScan extends Component
         PairingGateway $gateway,
         Session $session,
         EncryptionMigrationService $migrationService,
+        MobileImportIntentGate $importIntent,
+        DatabaseManager $db,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -365,7 +389,10 @@ final class MobilePairingScan extends Component
             // Phase 15 import-join (B2) — see checkPairingState()'s
             // identical guard docblock. The CREATE-ACCOUNT (non-import)
             // path is UNCHANGED.
-            if (! $this->importMode) {
+            //
+            // MEDIUM-01 fix (15-import-join-REVIEW.md): see
+            // shouldDeferSelfMint()'s own docblock.
+            if (! $this->shouldDeferSelfMint($userId, $importIntent, $db)) {
                 try {
                     $migrationService->migrate($currentUser->user(), $session);
                 } catch (Throwable) {
@@ -378,6 +405,50 @@ final class MobilePairingScan extends Component
 
         // This side has confirmed; wait for the peer (the poll advances to success).
         $this->awaitingPeer = true;
+    }
+
+    /**
+     * MEDIUM-01 fix (15-import-join-REVIEW.md): whether the self-mint
+     * `EncryptionMigrationService::migrate()` call above must be skipped —
+     * derived from DURABLE state, never `$this->importMode` alone. The
+     * previous implementation gated purely on the `?mode=import` query
+     * param read once at mount() — a re-entry to this route WITHOUT the
+     * param (back button, bookmark, a relaunched/tombstoned NativePHP
+     * process) would self-mint a colliding local epoch 1, silently
+     * stranding the desktop's delivered epoch-1 history in
+     * `gdk_decrypt_failed` quarantine (`GdkEpochControlHandler`'s
+     * idempotency guard).
+     *
+     * Deferral requires BOTH:
+     *   1. `MobileImportIntentGate::isImporting()` — this device's account
+     *      was bootstrapped (or has ever visited this route) via the
+     *      import flow.
+     *   2. The keyring is still genuinely empty
+     *      (`sync_encryption_state.current_epoch IS NULL`) — read via a
+     *      bare table query, mirroring `InitialSyncPuller::
+     *      keyringIsNonEmpty()`'s identical "a raw read of a public,
+     *      non-secret column crosses no module boundary" precedent
+     *      (`Modules\Sync\Internal\Crypto\GdkKeyringService` is off-limits
+     *      to this module directly).
+     *
+     * The second condition matters even for a genuinely marked-import
+     * device: once its keyring has converged (the desktop's epochs
+     * arrived), this must stop returning true — otherwise a LATER,
+     * unrelated pairing (e.g. adding a THIRD device) on the same phone
+     * would also incorrectly defer self-mint forever.
+     */
+    private function shouldDeferSelfMint(int $userId, MobileImportIntentGate $importIntent, DatabaseManager $db): bool
+    {
+        if (! $importIntent->isImporting($userId)) {
+            return false;
+        }
+
+        $currentEpoch = $db->connection()
+            ->table('sync_encryption_state')
+            ->where('user_id', $userId)
+            ->value('current_epoch');
+
+        return $currentEpoch === null;
     }
 
     // -------------------------------------------------------------------------

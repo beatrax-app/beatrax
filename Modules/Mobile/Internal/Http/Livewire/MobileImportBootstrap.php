@@ -14,6 +14,7 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Services\PairingGateway;
 use Throwable;
 
@@ -108,6 +109,7 @@ final class MobileImportBootstrap extends Component
         PairingGateway $pairingGateway,
         Session $session,
         DatabaseManager $db,
+        MobileImportIntentGate $importIntent,
     ): void {
         if ($this->password !== $this->passwordConfirmation) {
             $this->flashMessage = 'Passwords do not match.';
@@ -172,7 +174,7 @@ final class MobileImportBootstrap extends Component
         // Forgotten the instant provisioning actually succeeds, below.
         $session->put(self::PENDING_CREDENTIALS_SESSION_KEY, ['pin' => $pin, 'password' => $accountPassword]);
 
-        if (! $this->provisionDeviceLocally($userId, $pin, $accountPassword, $session, $lockGateway, $pairingGateway, $db)) {
+        if (! $this->provisionDeviceLocally($userId, $pin, $accountPassword, $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
             $this->step = 'provisioning_failed';
 
             return;
@@ -205,6 +207,7 @@ final class MobileImportBootstrap extends Component
         PairingGateway $pairingGateway,
         Session $session,
         DatabaseManager $db,
+        MobileImportIntentGate $importIntent,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -223,7 +226,7 @@ final class MobileImportBootstrap extends Component
             return;
         }
 
-        if (! $this->provisionDeviceLocally($userId, $pending['pin'], $pending['password'], $session, $lockGateway, $pairingGateway, $db)) {
+        if (! $this->provisionDeviceLocally($userId, $pending['pin'], $pending['password'], $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
             $this->flashMessage = 'Still could not finish setting up this device. Please try again.';
 
             return;
@@ -269,6 +272,14 @@ final class MobileImportBootstrap extends Component
      * failure never double-inserts a device_registry row or needlessly
      * re-rotates an already-minted app-lock data key. Returns false on any
      * failure (never throws onward) — the caller surfaces the retry step.
+     *
+     * MEDIUM-01/LOW-01 fix (15-import-join-REVIEW.md): durably marks this
+     * user as an import device via `MobileImportIntentGate` BEFORE either
+     * provisioning step — the authoritative source `MobilePairingScan`'s
+     * own defense-in-depth echo (at `?mode=import` mount time) backs up.
+     * Marking here (rather than only after success) means even a device
+     * that never gets past `provisioning_failed` still carries the durable
+     * signal once it does eventually complete via retryProvisioning().
      */
     private function provisionDeviceLocally(
         int $userId,
@@ -278,7 +289,10 @@ final class MobileImportBootstrap extends Component
         MobileLockGateway $lockGateway,
         PairingGateway $pairingGateway,
         DatabaseManager $db,
+        MobileImportIntentGate $importIntent,
     ): bool {
+        $importIntent->markImporting($userId);
+
         try {
             $lockAlreadyEnabled = (bool) ($db->connection()
                 ->table('user_app_lock_configs')
