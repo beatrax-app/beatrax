@@ -57,6 +57,18 @@ Route::middleware(['web'])->group(static function (): void {
 
         return app($component)();
     })->name('mobile.welcome');
+
+    // Phase 15 import-join (Task 5): the "Import from another device"
+    // fresh-device local-identity bootstrap. Deliberately OUTSIDE the
+    // `auth` group — it runs BEFORE any user account exists, exactly like
+    // mobile.welcome above (MobileEnsureDatabaseReady exempts this route
+    // name the same way).
+    Route::get('/mobile/import', static function () {
+        $component = 'Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap';
+        abort_unless(class_exists($component), 404);
+
+        return app($component)();
+    })->name('mobile.import');
 });
 
 Route::middleware(['web', 'auth'])->group(static function (): void {

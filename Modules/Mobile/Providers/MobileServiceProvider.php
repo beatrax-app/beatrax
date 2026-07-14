@@ -93,6 +93,7 @@ final class MobileServiceProvider extends ServiceProvider
 
             $livewireNamespace = 'Modules\Mobile\Internal\Http\Livewire\\';
             $components = [
+                'mobile.import-bootstrap' => 'MobileImportBootstrap',
                 'mobile.lock-screen' => 'MobileLockScreen',
                 'mobile.pairing-scan' => 'MobilePairingScan',
                 'mobile.setup-progress-screen' => 'SetupProgressScreen',
