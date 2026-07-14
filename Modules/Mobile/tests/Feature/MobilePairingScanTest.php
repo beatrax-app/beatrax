@@ -12,6 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
+use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
@@ -455,6 +456,81 @@ it('import mode defers self-mint on both-confirm — sync_encryption_state stays
         ->first();
     expect($initiatorRow)->not->toBeNull();
     expect($initiatorRow->confirmed_at)->not->toBeNull();
+});
+
+it('MEDIUM-01: a re-entry to /mobile/pair WITHOUT ?mode=import still defers self-mint once the durable import-intent marker was set on an earlier visit', function (): void {
+    $user = pairingScanTestUser('mobile-pair-import-durable-reentry');
+    test()->actingAs($user);
+
+    // A prior, unrelated test process may have left a keyring file on disk
+    // for this same reused numeric user id (documented cross-test
+    // filesystem-isolation gap — see the sibling B2 test's identical
+    // comment).
+    @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+
+    $initiatorDeviceId = 'desktop-import-reentry';
+    $initiatorEd = bin2hex(random_bytes(32));
+    $initiatorKx = bin2hex(random_bytes(32));
+    $token = bin2hex(random_bytes(16));
+
+    // Simulate exactly what an EARLIER visit (WITH ?mode=import) already
+    // durably left behind before the app was killed/relaunched/navigated
+    // away mid-flow: (1) the responder token seeded from the scanned QR
+    // (G1 — a bare table row, still PENDING, never accepted yet) and (2)
+    // the durable import-intent marker (MEDIUM-01's own fix). Mirrors
+    // exactly what `MobilePairingScan::submitCode()`'s import branch does
+    // internally — used directly here as a fixture, the same convention
+    // `pairingScanIssueToken()` already establishes in this file for
+    // `PairingTokenService::issue()`.
+    /** @var MobileImportIntentGate $importIntent */
+    $importIntent = app(MobileImportIntentGate::class);
+    $importIntent->markImporting((int) $user->id);
+
+    /** @var PairingGateway $seedGateway */
+    $seedGateway = app(PairingGateway::class);
+    $seedGateway->seedResponderToken($token, $initiatorDeviceId, $initiatorEd, $initiatorKx, (int) $user->id);
+
+    /** @var QrPayloadBuilder $qrBuilder */
+    $qrBuilder = app(QrPayloadBuilder::class);
+    $qrPayload = $qrBuilder->buildUri($initiatorDeviceId, $initiatorEd, $initiatorKx, $token);
+
+    // Crucially: NO ?mode=import on THIS request — a genuine re-entry
+    // (back button / bookmark / relaunched process) that lost the query
+    // param. `submitCode()`'s G1 re-seed is correctly skipped (the row
+    // already exists, still PENDING); `accept()` still succeeds against
+    // it. Without the MEDIUM-01 fix, the self-mint decision below would
+    // incorrectly follow this request's (false) `importMode` and silently
+    // strand the desktop's delivered epoch-1 history.
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
+
+    $component = Livewire::test(MobilePairingScan::class)
+        ->assertSet('importMode', false)
+        ->call('submitCode', $qrPayload)
+        ->assertSet('step', 'confirm');
+
+    $component->call('confirmMatch')->assertSet('awaitingPeer', true);
+
+    /** @var PairingTokenService $tokenService */
+    $tokenService = app(PairingTokenService::class);
+    $pairingTokenId = (int) $component->get('pairingTokenId');
+    $tokenService->confirm($pairingTokenId, (int) $user->id, $initiatorDeviceId);
+
+    $component->call('checkPairingState')->assertSet('step', 'success');
+
+    // The durable marker — NOT the (false) query-string importMode — must
+    // have deferred self-mint: no sync_encryption_state row, no GDK epoch.
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    expect($db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->exists())
+        ->toBeFalse('the durable import-intent marker must defer self-mint even when ?mode=import is absent on THIS request');
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    expect($keyring->loadKeyring((int) $user->id, $session)->epochs())->toBe([]);
 });
 
 it('non-import mode (CREATE-ACCOUNT path) is UNCHANGED — both-confirm still self-mints the GDK epoch', function (): void {
