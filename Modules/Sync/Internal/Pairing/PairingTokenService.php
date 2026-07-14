@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
+use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 /**
  * Issues and validates single-use, short-expiry pairing tokens (D-06/D-13).
@@ -44,6 +45,7 @@ final class PairingTokenService
         private readonly PairingStateMachine $stateMachine,
         private readonly SafetyNumberDeriver $safetyNumberDeriver,
         private readonly DeviceNameDetector $deviceNameDetector,
+        private readonly DeviceKeySigner $deviceKeySigner,
     ) {}
 
     /**
@@ -311,6 +313,308 @@ final class PairingTokenService
             return null;
         }
 
+        return $this->finalizeIfBothConfirmed($row, $userId);
+    }
+
+    /**
+     * Cross-device HIGH-01 (Phase 15): apply a relayed `PAIR_RESPONDER_ACCEPT`
+     * frame — the cross-device counterpart of {@see self::accept()}. Binds the
+     * phone's responder identity onto the DESKTOP's own local row (the row
+     * `issue()` created), which never happens automatically because the
+     * desktop and the phone are two GENUINELY SEPARATE physical databases —
+     * `accept()` can only ever bind a responder against a row THIS database
+     * already holds.
+     *
+     * No new trust decision: this performs no admission and sets no
+     * `*_confirmed_at` column — it only lets the local row learn the peer's
+     * identity, exactly like a client-submitted `accept()` call would, just
+     * arriving over the relay instead of a client request. Validates the
+     * responder key material at the same WR-01 trust boundary `accept()`
+     * uses.
+     *
+     * Idempotent: a redelivered frame for the SAME already-bound responder is
+     * a no-op (returns the row unchanged). A frame that tries to bind a
+     * DIFFERENT responder onto an already-bound row is refused — the first
+     * binding wins (single-use, T-12-10 posture), so a relay that redelivers
+     * (or a MITM that injects) a second `PAIR_RESPONDER_ACCEPT` can never
+     * hijack an in-flight handshake.
+     *
+     * @return object|false The bound (or already-bound, idempotent) row, or
+     *                      `false` when the local row is unknown/expired/
+     *                      already terminal, or the responder key material
+     *                      is malformed (WR-01) — fail closed in every case.
+     */
+    public function applyResponderAccept(
+        int $userId,
+        string $tokenHash,
+        string $responderDeviceId,
+        string $responderEd25519Hex,
+        string $responderX25519Hex,
+    ): object|false {
+        try {
+            SafetyNumberDeriver::hexToRawKey($responderEd25519Hex);
+            SafetyNumberDeriver::hexToRawKey($responderX25519Hex);
+        } catch (InvalidPublicKeyException) {
+            return false;
+        }
+
+        $now = $this->clock->now();
+
+        // No state filter here (unlike accept()): a redelivered frame must be
+        // recognizable as idempotent even after the row has already advanced
+        // past PENDING, so the row is located first and the legal-state
+        // branching happens below.
+        $row = $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->where('token_hash', $tokenHash)
+            ->where('expires_at', '>', $now->toIso8601String())
+            ->first();
+
+        if ($row === null) {
+            return false;
+        }
+
+        if (! is_string($row->token_hash) || ! hash_equals($row->token_hash, $tokenHash)) {
+            return false;
+        }
+
+        $state = is_string($row->state) ? $row->state : '';
+
+        if ($state === PairingStateMachine::AWAITING_CONFIRM) {
+            $existingResponder = is_string($row->responder_device_id) ? $row->responder_device_id : null;
+
+            // Idempotent redelivery of the SAME responder-accept: return the
+            // row unchanged rather than re-binding (a re-bind would otherwise
+            // re-extend the TTL on every relay poll tick indefinitely).
+            if ($existingResponder !== null && hash_equals($existingResponder, $responderDeviceId)) {
+                return $row;
+            }
+
+            // Bound to a DIFFERENT responder already — the first binding
+            // wins; refuse (single-use, T-12-10 posture, T5 in the threat
+            // model: duplicate/replayed responder-accept).
+            return false;
+        }
+
+        if ($state !== PairingStateMachine::PENDING) {
+            // CONFIRMED / EXPIRED / unknown state — fail closed (T7: rejected
+            // / expired / cancelled pairing propagates nothing).
+            return false;
+        }
+
+        $acceptedAt = $now->toIso8601String();
+
+        // Extend the window exactly like accept()'s max-not-shrink grace rule
+        // (Pitfall 6 / CR-02) — an early responder-accept never shortens the
+        // live handshake.
+        $graceExpiry = $now->addMinutes(self::ACCEPT_GRACE_MINUTES);
+        $existingExpiry = is_string($row->expires_at)
+            ? CarbonImmutable::parse($row->expires_at)
+            : $graceExpiry;
+        $newExpiry = $graceExpiry->greaterThan($existingExpiry) ? $graceExpiry : $existingExpiry;
+
+        $rowId = is_numeric($row->id) ? (int) $row->id : 0;
+
+        $this->db->connection()->table('pairing_tokens')
+            ->where('id', $rowId)
+            ->where('user_id', $userId)
+            ->update([
+                'responder_device_id' => $responderDeviceId,
+                'responder_ed25519_pub_hex' => $responderEd25519Hex,
+                'responder_x25519_pub_hex' => $responderX25519Hex,
+                'state' => PairingStateMachine::AWAITING_CONFIRM,
+                'accepted_at' => $acceptedAt,
+                'expires_at' => $newExpiry->toIso8601String(),
+            ]);
+
+        $accepted = $this->db->connection()->table('pairing_tokens')
+            ->where('id', $rowId)
+            ->where('user_id', $userId)
+            ->first();
+
+        return $accepted ?? false;
+    }
+
+    /**
+     * Cross-device HIGH-01 (Phase 15): apply a relayed, Ed25519-SIGNED
+     * `PAIR_CONFIRM` frame from the bound peer identity — the sole mechanism
+     * that lets a genuinely separate device's confirmation reach THIS local
+     * row. This is the anti-forgery gate the whole cross-device propagation
+     * rests on (threat model T2/T3/T4).
+     *
+     * Gates, in order (every one fail-closed — returns `null` on failure):
+     *   1. The local row must exist, be `awaiting_confirm` OR already
+     *      `confirmed` (idempotent replay), and not expired.
+     *   2. This device's own self identity must be resolvable
+     *      (`device_registry.is_self = 1`) and must own EXACTLY one side of
+     *      the row (`$peerDeviceId` must equal it).
+     *   3. `$confirmingDeviceId` must equal the OTHER (peer) side bound on
+     *      the row — a frame claiming to be from a device this row never
+     *      bound is rejected.
+     *   4. The Ed25519 signature over
+     *      {@see PairingFrame::confirmSigningMessage()} must verify against
+     *      the PEER's public key stored on the local row. The relay does not
+     *      hold the peer's secret key, so it cannot forge this (T2/T3).
+     *   5. **The load-bearing local-human gate**: the LOCAL side's own
+     *      `*_confirmed_at` must ALREADY be set (the local human already
+     *      visually matched the safety words and tapped confirm) before the
+     *      peer's column may be written. If not yet confirmed locally, this
+     *      returns the `'deferred'` sentinel — a VALID, correctly-signed
+     *      frame that simply cannot be applied yet — so the courier leaves
+     *      the relay row pending for redelivery on the next poll, once the
+     *      local human confirms. No relayed frame alone can ever advance a
+     *      row toward CONFIRMED without the local confirm.
+     *
+     * Idempotent: if the peer's column is already set (a replayed frame,
+     * post both-confirm), the existing timestamp is left untouched and
+     * {@see self::finalizeIfBothConfirmed()} is simply re-run (a no-op admit
+     * via the existing insert-or-update-by-(user_id, device_id) unique key).
+     *
+     * @return string|null Returns the resulting pairing state
+     *                     (`'awaiting_confirm'`/`'confirmed'`) on success,
+     *                     the literal string `'deferred'` when the frame is
+     *                     valid but the local side has not yet confirmed, or
+     *                     `null` on any fail-closed rejection (unknown/
+     *                     expired row, identity mismatch, or a bad
+     *                     signature).
+     */
+    public function applyPeerConfirm(
+        int $userId,
+        string $tokenHash,
+        string $confirmingDeviceId,
+        string $peerDeviceId,
+        string $sigHex,
+    ): ?string {
+        $now = $this->clock->now();
+
+        $row = $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->where('token_hash', $tokenHash)
+            ->whereIn('state', [PairingStateMachine::AWAITING_CONFIRM, PairingStateMachine::CONFIRMED])
+            ->where('expires_at', '>', $now->toIso8601String())
+            ->first();
+
+        if ($row === null) {
+            // T7: no live row (unknown/expired/still-pending/cancelled) —
+            // propagate nothing.
+            return null;
+        }
+
+        if (! is_string($row->token_hash) || ! hash_equals($row->token_hash, $tokenHash)) {
+            return null;
+        }
+
+        $selfDeviceId = $this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 1)
+            ->value('device_id');
+
+        if (! is_string($selfDeviceId) || $selfDeviceId === '') {
+            return null;
+        }
+
+        // $peerDeviceId is populated by the SENDER from ITS OWN view of who
+        // the recipient is (PairingFrame::buildConfirm()'s `peer_device_id`)
+        // — on receipt it must equal THIS device's own self identity, or the
+        // frame was never addressed to this device/side at all.
+        if (! hash_equals($selfDeviceId, $peerDeviceId)) {
+            return null;
+        }
+
+        $initiatorDeviceId = is_string($row->initiator_device_id) ? $row->initiator_device_id : null;
+        $responderDeviceId = is_string($row->responder_device_id) ? $row->responder_device_id : null;
+
+        if ($initiatorDeviceId !== null && hash_equals($initiatorDeviceId, $selfDeviceId)) {
+            $localSide = 'initiator';
+        } elseif ($responderDeviceId !== null && hash_equals($responderDeviceId, $selfDeviceId)) {
+            $localSide = 'responder';
+        } else {
+            // This device owns neither side of this row — never apply.
+            return null;
+        }
+
+        $peerBoundDeviceId = $localSide === 'initiator' ? $responderDeviceId : $initiatorDeviceId;
+        $peerPublicKeyHex = $localSide === 'initiator'
+            ? (is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null)
+            : (is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null);
+
+        if ($peerBoundDeviceId === null || $peerPublicKeyHex === null) {
+            // The peer side has not bound an identity yet (e.g. the
+            // responder-accept has not landed) — nothing to verify against.
+            return null;
+        }
+
+        // The frame's claimed sender must equal the identity THIS row
+        // actually bound for the peer side — a frame purporting to be from
+        // some other device id is rejected even before touching sodium.
+        if (! hash_equals($peerBoundDeviceId, $confirmingDeviceId)) {
+            return null;
+        }
+
+        try {
+            $peerPublicKeyBin = SafetyNumberDeriver::hexToRawKey($peerPublicKeyHex);
+        } catch (InvalidPublicKeyException) {
+            return null;
+        }
+
+        $message = PairingFrame::confirmSigningMessage($tokenHash, $confirmingDeviceId, $peerDeviceId);
+
+        if (! $this->deviceKeySigner->verify($message, $sigHex, $peerPublicKeyBin)) {
+            // T2/T3: the relay (or any active/passive attacker) cannot forge
+            // this — it never holds the peer's Ed25519 secret key.
+            return null;
+        }
+
+        $localConfirmedColumn = $localSide === 'initiator' ? 'initiator_confirmed_at' : 'responder_confirmed_at';
+        $peerConfirmedColumn = $localSide === 'initiator' ? 'responder_confirmed_at' : 'initiator_confirmed_at';
+
+        $localConfirmedAt = is_string($row->{$localConfirmedColumn}) ? $row->{$localConfirmedColumn} : null;
+
+        if ($localConfirmedAt === null) {
+            // The load-bearing gate: a validly-signed peer confirm CANNOT by
+            // itself drive this row toward CONFIRMED — the local human must
+            // have already visually matched the safety words and tapped
+            // confirm. Leave the relay row pending for redelivery once that
+            // happens.
+            return 'deferred';
+        }
+
+        $peerConfirmedAt = is_string($row->{$peerConfirmedColumn}) ? $row->{$peerConfirmedColumn} : null;
+
+        $rowId = is_numeric($row->id) ? (int) $row->id : 0;
+
+        if ($peerConfirmedAt === null) {
+            $this->db->connection()->table('pairing_tokens')
+                ->where('id', $rowId)
+                ->where('user_id', $userId)
+                ->update([$peerConfirmedColumn => $this->clock->now()->toIso8601String()]);
+        }
+
+        $freshRow = $this->db->connection()->table('pairing_tokens')
+            ->where('id', $rowId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($freshRow === null) {
+            return null;
+        }
+
+        return $this->finalizeIfBothConfirmed($freshRow, $userId);
+    }
+
+    /**
+     * Shared tail of {@see self::confirm()} (the local-human confirm path)
+     * and {@see self::applyPeerConfirm()} (the relayed cross-device confirm
+     * path) — extracted (Phase 15 HIGH-01, Task 3) so BOTH paths reach the
+     * EXACT same admission semantics: `bothConfirmed()` → set `CONFIRMED` →
+     * `admitResponderDevice()` → conditional `admitInitiatorDevice()`
+     * (gated on `initiator_seeded_at`, Phase 15 import-join G2). Pure
+     * extraction, no behavior change — every existing single-database test
+     * (`PairingFlowTest`, `PairingTrustGateTest`, `CrossDevicePairingAdmissionTest`,
+     * `MobilePairingScanTest`) exercises this via `confirm()` unchanged.
+     */
+    private function finalizeIfBothConfirmed(\stdClass $row, int $userId): string
+    {
         $initiatorConfirmedAt = is_string($row->initiator_confirmed_at) ? $row->initiator_confirmed_at : null;
         $responderConfirmedAt = is_string($row->responder_confirmed_at) ? $row->responder_confirmed_at : null;
 
@@ -320,8 +624,10 @@ final class PairingTokenService
             return is_string($row->state) ? $row->state : PairingStateMachine::AWAITING_CONFIRM;
         }
 
+        $rowId = is_numeric($row->id) ? (int) $row->id : 0;
+
         $this->db->connection()->table('pairing_tokens')
-            ->where('id', $tokenId)
+            ->where('id', $rowId)
             ->where('user_id', $userId)
             ->update(['state' => PairingStateMachine::CONFIRMED]);
 
