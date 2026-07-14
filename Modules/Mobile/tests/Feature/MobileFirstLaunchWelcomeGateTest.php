@@ -116,6 +116,21 @@ it('exempts the signup route so the welcome to create-account chain does not loo
         ->assertOk();
 });
 
+it('exempts routes named exactly "mobile.import" via prefix matching (Phase 15 import-join)', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    $this->app['router']
+        ->middleware(['web', MobileEnsureDatabaseReady::class])
+        ->get('/__test/mobile-import-stub', static fn () => 'MOBILE-IMPORT-STUB')
+        ->name('mobile.import');
+
+    expect(User::query()->count())->toBe(0);
+
+    $this->get('/__test/mobile-import-stub')
+        ->assertOk()
+        ->assertSee('MOBILE-IMPORT-STUB');
+});
+
 it('exempts routes named exactly "mobile.pair" via prefix matching', function (): void {
     $this->withoutMiddleware(EnsureDatabaseReady::class);
 
@@ -204,7 +219,11 @@ it('renders the welcome screen on a genuine fresh install with both CTAs', funct
         ->assertSee('Create account')
         ->assertSee('Import from another device')
         ->assertSeeHtml(route('signup'))
-        ->assertSeeHtml(route('mobile.pair'));
+        // Phase 15 import-join (Task 5): the CTA now targets the
+        // fresh-device local-identity bootstrap (mobile.import), which
+        // itself redirects into mobile.pair?mode=import once provisioned
+        // — not mobile.pair directly.
+        ->assertSeeHtml(route('mobile.import'));
 });
 
 it('redirects an already-set-up device (a user exists) to the dashboard', function (): void {

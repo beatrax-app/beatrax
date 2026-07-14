@@ -21,11 +21,13 @@ use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
  *   - "Create account" → `/signup` (Phase 12 D-03 gates the signup route to
  *     `User::count() === 0`, so the welcome → signup path is internally
  *     consistent — this reuses the Auth module's signup ceremony AS-IS).
- *   - "Import from another device" → `/mobile/pair`, the camera-first
- *     pairing entry. The end-to-end fresh-device pairing/identity-bootstrap
- *     flow beyond that entry point is a SEPARATE, deliberately-deferred
- *     design item (cross-device key-delivery model unconfirmed) — this
- *     screen's only job is to route the CTA to the pairing entry.
+ *   - "Import from another device" → `/mobile/import`
+ *     (`MobileImportBootstrap`, Phase 15 import-join), the fresh-device
+ *     local-identity bootstrap: creates a minimal local account + app-lock
+ *     + sync identity (no epoch mint), then redirects into
+ *     `/mobile/pair?mode=import` — closing the deferred item this
+ *     docblock previously named ("cross-device key-delivery model
+ *     unconfirmed").
  *
  * Once an account exists the device is set up, so any later landing on
  * `/mobile/welcome` — a stale `intended()` URL, a bookmark — must bounce to

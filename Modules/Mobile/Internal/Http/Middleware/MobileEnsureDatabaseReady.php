@@ -51,12 +51,19 @@ final class MobileEnsureDatabaseReady
      * `mobile.welcome` is the gated-state-rendering surface itself.
      * `signup` is the first-user ceremony the welcome screen's "Create
      * account" CTA leads into (Phase 12 D-03 / `FirstUserOnlyMiddleware`
-     * gates it to `User::count() === 0` independently).
-     * `mobile.pair` is the "Import from another device" CTA's target —
-     * the pairing entry point. `mobile.setup` is the post-pairing
-     * resumable initial-sync gate. `setup` covers the shared Onboarding
-     * module's post-signup first-run wizard (mirrors the desktop gate's
-     * own `setup` exemption).
+     * gates it to `User::count() === 0` independently). `mobile.import`
+     * (Phase 15 import-join) is the "Import from another device" CTA's
+     * NEW fresh-device local-identity bootstrap target — it also runs
+     * before any user exists, so it must be exempt for the same reason
+     * `mobile.welcome`/`signup` are. `mobile.pair` is the pairing entry
+     * point `mobile.import` redirects into once its own bootstrap has
+     * created a local user (by then the device is no longer "fresh", so
+     * this exemption is mostly relevant for the pre-Phase-15-import-join
+     * "scan without importing an identity" desktop-mirrored flow).
+     * `mobile.setup` is the post-pairing resumable initial-sync gate.
+     * `setup` covers the shared Onboarding module's post-signup
+     * first-run wizard (mirrors the desktop gate's own `setup`
+     * exemption).
      *
      * `site.webmanifest` and `pwa.icon` cover the web manifest and PWA
      * icon set — public artifacts required before any user exists,
@@ -67,6 +74,7 @@ final class MobileEnsureDatabaseReady
     private const EXEMPT_ROUTE_PREFIXES = [
         'mobile.welcome',
         'signup',
+        'mobile.import',
         'mobile.pair',
         'mobile.setup',
         'setup',
