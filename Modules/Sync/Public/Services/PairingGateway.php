@@ -11,6 +11,7 @@ use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
+use Modules\Sync\Internal\Pairing\PairingRelayCourier;
 use Modules\Sync\Internal\Pairing\PairingStateMachine;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
@@ -58,6 +59,7 @@ final class PairingGateway
         private readonly DeviceIdentityService $identityService,
         private readonly GdkRotationService $rotationService,
         private readonly RelayConfig $relayConfig,
+        private readonly PairingRelayCourier $relayCourier,
     ) {}
 
     /**
@@ -89,6 +91,86 @@ final class PairingGateway
 
         $this->relayConfig->setEndpointUrl($endpoint);
         $this->relayConfig->setAuthToken($authToken);
+    }
+
+    /**
+     * Deliver this device's `PAIR_RESPONDER_ACCEPT` frame (phone → desktop)
+     * over the relay — thin pass-through to
+     * `PairingRelayCourier::sendResponderAccept()`, loading this device's own
+     * identity first (the responder's OWN keys always come from the LOCAL
+     * `DeviceIdentityLoader`, never from any wire content, T-15-18).
+     *
+     * No-op (silent) when the local identity is locked/unavailable — mirrors
+     * every other identity-gated method on this gateway; the caller's own
+     * "unlock and retry" affordance handles that case, not an exception here.
+     *
+     * @throws \RuntimeException when the relay is unconfigured or the
+     *                           delivery request fails — the CALLER is
+     *                           responsible for catching this and surfacing a
+     *                           non-blocking retry indicator (mirrors
+     *                           `PairingFlowModal::fanOutToNewlyConfirmedDevice()`'s
+     *                           established try/catch shape).
+     */
+    public function sendResponderAccept(int $userId, string $tokenHash, string $desktopDeviceId, Session $session): void
+    {
+        $identity = $this->identityLoader->load($userId, $session);
+        if ($identity === null) {
+            return;
+        }
+
+        $this->relayCourier->sendResponderAccept(
+            $identity->deviceId,
+            $desktopDeviceId,
+            $tokenHash,
+            $identity->ed25519PublicKeyHex,
+            $identity->x25519PublicKeyHex,
+        );
+    }
+
+    /**
+     * Deliver this device's Ed25519-SIGNED `PAIR_CONFIRM` frame to $peerDeviceId
+     * over the relay — thin pass-through to
+     * `PairingRelayCourier::sendConfirm()`. Reads the token's `token_hash`
+     * from the local row so the caller never reconstructs trust state itself.
+     *
+     * No-op (silent) when the local identity is locked/unavailable, or when
+     * $tokenId does not resolve to a local row for $userId.
+     *
+     * @throws \RuntimeException — see {@see self::sendResponderAccept()}'s
+     *                           identical propagation contract.
+     */
+    public function sendConfirm(int $userId, int $tokenId, string $peerDeviceId, Session $session): void
+    {
+        $identity = $this->identityLoader->load($userId, $session);
+        if ($identity === null) {
+            return;
+        }
+
+        $tokenHash = $this->db->connection()->table('pairing_tokens')
+            ->where('id', $tokenId)
+            ->where('user_id', $userId)
+            ->value('token_hash');
+
+        if (! is_string($tokenHash) || $tokenHash === '') {
+            return;
+        }
+
+        $this->relayCourier->sendConfirm($identity, $peerDeviceId, $tokenHash);
+    }
+
+    /**
+     * Drain this device's own relay mailbox and apply every pending pairing
+     * frame — thin pass-through to `PairingRelayCourier::drainAndApply()`.
+     * Callers invoke this at the TOP of their poll handler, before re-reading
+     * local pairing state, so an inbound `PAIR_RESPONDER_ACCEPT`/`PAIR_CONFIRM`
+     * is applied before the same tick decides what to render.
+     *
+     * Never throws out of the poll (LOW-02 posture) — every failure inside
+     * the courier's drain loop is caught, logged, and skipped.
+     */
+    public function drainPairingFrames(int $userId, Session $session): void
+    {
+        $this->relayCourier->drainAndApply($userId);
     }
 
     /**

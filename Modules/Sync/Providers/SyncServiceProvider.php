@@ -193,6 +193,10 @@ final class SyncServiceProvider extends ServiceProvider
             'PairingStateMachine',
             'WordCodeEncoder',
             'QrPayloadBuilder',
+            // Phase 15 HIGH-01: relay courier for the cross-device
+            // both-confirm handshake (PairingFrame is static-only, no
+            // binding needed).
+            'PairingRelayCourier',
         ] as $pairingClass) {
             $this->singletonIfExists($pairingNamespace.$pairingClass);
         }
