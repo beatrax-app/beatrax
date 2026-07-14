@@ -15,6 +15,7 @@ use Modules\Sync\Internal\Pairing\PairingStateMachine;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
+use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use stdClass;
 
 /**
@@ -56,7 +57,39 @@ final class PairingGateway
         private readonly DatabaseManager $db,
         private readonly DeviceIdentityService $identityService,
         private readonly GdkRotationService $rotationService,
+        private readonly RelayConfig $relayConfig,
     ) {}
+
+    /**
+     * Auto-configure this device's relay endpoint (+ optional bearer token)
+     * from a scanned QR's `relay`/`rtok` params (Phase 15 HIGH-01, Task 1) —
+     * the Mobile-module seam wrapping `RelayConfig::setEndpointUrl()`/
+     * `setAuthToken()` directly, since `Modules\Sync\Internal\*` is off-limits
+     * to `Modules\Mobile` (BoundaryRule). A fresh phone has no relay
+     * configured; without this, the cross-device pre-confirm handshake
+     * (`PairingRelayCourier`) has no transport to reach the desktop over.
+     *
+     * No-op when $endpoint is null (the QR carried no `relay` param — e.g. an
+     * older QR, or a desktop with no relay configured) — the caller falls
+     * through to the existing "connect over the same Wi-Fi" copy rather than
+     * a dead end. HTTPS enforcement stays in `RelayClient::deliver()`/
+     * `drain()` (`resolvedEndpoint()` throws on `http://`); this method only
+     * persists the raw values, exactly like the desktop's own
+     * `RelayConfig::setEndpointUrl()` call site.
+     *
+     * No new trust decision: the relay is zero-knowledge transport — the
+     * human-verified safety words remain the sole trust anchor (OQ-1,
+     * reviewed).
+     */
+    public function configureRelayFromQr(?string $endpoint, ?string $authToken): void
+    {
+        if ($endpoint === null || $endpoint === '') {
+            return;
+        }
+
+        $this->relayConfig->setEndpointUrl($endpoint);
+        $this->relayConfig->setAuthToken($authToken);
+    }
 
     /**
      * Enable this device's sync identity WITHOUT minting a GDK epoch —

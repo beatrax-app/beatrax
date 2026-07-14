@@ -1,0 +1,91 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Services\PairingGateway;
+
+uses(RefreshDatabase::class);
+
+/*
+ * PairingRelayBootstrapTest — Phase 15 HIGH-01 (Task 1), case 10.
+ *
+ * PairingGateway::configureRelayFromQr() is the Mobile-reachable Public seam
+ * wrapping RelayConfig::setEndpointUrl()/setAuthToken() — a fresh phone has
+ * no relay configured, so the cross-device pre-confirm handshake has no
+ * transport until this runs. No new trust decision: this only persists
+ * transport config, exactly like the desktop's own RelayConfig call site.
+ */
+
+function relayBootstrapUser(string $username): User
+{
+    return User::query()->create([
+        'username' => $username,
+        'password' => bcrypt('fixture'),
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+}
+
+afterEach(function (): void {
+    // Mirrors RelayRoundTripTest's cleanup — never leave a relay config
+    // artifact in storage/app for a subsequent, unrelated test to trip over.
+    $tokenPath = UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.'sync-relay-token.json';
+    $relayPath = UserDataPathService::appPath('sync/relay.json');
+
+    foreach ([$tokenPath, $relayPath] as $path) {
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
+});
+
+it('configures the relay endpoint + auth token from QR-carried values', function (): void {
+    $user = relayBootstrapUser('relay-bootstrap-configure');
+    test()->actingAs($user);
+
+    /** @var PairingGateway $gateway */
+    $gateway = app(PairingGateway::class);
+
+    $gateway->configureRelayFromQr('https://relay.example.com', 'shared-secret');
+
+    /** @var RelayConfig $config */
+    $config = app(RelayConfig::class);
+
+    expect($config->endpointUrl())->toBe('https://relay.example.com');
+    expect($config->authToken())->toBe('shared-secret');
+});
+
+it('is a no-op when the QR carried no relay endpoint — never dead-ends a relay-less device', function (): void {
+    $user = relayBootstrapUser('relay-bootstrap-noop');
+    test()->actingAs($user);
+
+    /** @var PairingGateway $gateway */
+    $gateway = app(PairingGateway::class);
+
+    $gateway->configureRelayFromQr(null, null);
+
+    /** @var RelayConfig $config */
+    $config = app(RelayConfig::class);
+
+    expect($config->isConfigured())->toBeFalse();
+});
+
+it('configures the endpoint without a token when the relay is deployed token-less', function (): void {
+    $user = relayBootstrapUser('relay-bootstrap-no-token');
+    test()->actingAs($user);
+
+    /** @var PairingGateway $gateway */
+    $gateway = app(PairingGateway::class);
+
+    $gateway->configureRelayFromQr('https://relay.example.com', null);
+
+    /** @var RelayConfig $config */
+    $config = app(RelayConfig::class);
+
+    expect($config->endpointUrl())->toBe('https://relay.example.com');
+    expect($config->authToken())->toBeNull();
+});
