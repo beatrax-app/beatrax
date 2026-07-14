@@ -87,6 +87,83 @@ final class PairingTokenService
     }
 
     /**
+     * Seed a LOCAL `pairing_tokens` row from a scanned QR's initiator
+     * identity (Phase 15 import-join, G1) — the cross-device counterpart of
+     * `issue()`. `accept()` looks up a PENDING row by `token_hash` on THIS
+     * device's own local database; on a genuinely fresh phone that row only
+     * ever existed on the desktop that called `issue()`, so `accept()` would
+     * always return `false`. This method creates that row locally, using the
+     * initiator identity + token the QR itself carried (an out-of-band
+     * physically-scanned channel), so the SAME `accept()`/`confirm()` trust
+     * boundary every other pairing path uses can proceed unmodified.
+     *
+     * `initiator_seeded_at` is set (unlike a plain `issue()` row, where it
+     * stays NULL) — this is the marker `confirm()`'s `admitInitiatorDevice()`
+     * branch below gates on, so this new cross-device admission path can
+     * never fire for a normal same-database `issue()`-created row (every
+     * existing single-database pairing test depends on that).
+     *
+     * Idempotent: a pending row already seeded for this EXACT token_hash +
+     * user is returned as-is rather than duplicated — a re-rendered QR poll
+     * or a retried scan of the same physical code must not create two rows.
+     *
+     * @return object|false The seeded (or already-seeded) row, or `false`
+     *                      when the initiator's key material is malformed
+     *                      (WR-01 — same posture as `issue()`/`accept()`).
+     */
+    public function seedFromInitiator(
+        int $userId,
+        string $initiatorDeviceId,
+        string $initiatorEd25519PubHex,
+        string $initiatorX25519PubHex,
+        string $token,
+    ): object|false {
+        try {
+            SafetyNumberDeriver::hexToRawKey($initiatorEd25519PubHex);
+            SafetyNumberDeriver::hexToRawKey($initiatorX25519PubHex);
+        } catch (InvalidPublicKeyException) {
+            return false;
+        }
+
+        $now = $this->clock->now();
+
+        // WR-04: prune stale handshake rows for this user before seeding a
+        // fresh one — mirrors issue()'s own pruning discipline.
+        $this->prune($userId, $now);
+
+        $tokenHash = hash('sha256', $token);
+
+        $existing = $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->where('token_hash', $tokenHash)
+            ->where('state', PairingStateMachine::PENDING)
+            ->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $this->db->connection()->table('pairing_tokens')->insert([
+            'user_id' => $userId,
+            'token_hash' => $tokenHash, // never the plaintext (T-12-09).
+            'initiator_device_id' => $initiatorDeviceId,
+            'initiator_ed25519_pub_hex' => $initiatorEd25519PubHex,
+            'initiator_x25519_pub_hex' => $initiatorX25519PubHex,
+            'state' => PairingStateMachine::PENDING,
+            'expires_at' => $now->addMinutes(self::TTL_MINUTES)->toIso8601String(),
+            'initiator_seeded_at' => $now->toIso8601String(),
+            'created_at' => $now->toIso8601String(),
+        ]);
+
+        $seeded = $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->where('token_hash', $tokenHash)
+            ->first();
+
+        return $seeded ?? false;
+    }
+
+    /**
      * Validate a submitted token and bind the responder identity.
      *
      * Returns the updated token row on success, or false when the token is
@@ -248,7 +325,24 @@ final class PairingTokenService
             ->where('user_id', $userId)
             ->update(['state' => PairingStateMachine::CONFIRMED]);
 
+        // Unconditional, unchanged (every existing desktop-side pairing test
+        // depends on this) — the responder is admitted into WHICHEVER local
+        // registry observes bothConfirmed(), same as before Phase 15.
         $this->admitResponderDevice($row, $userId);
+
+        // Phase 15 import-join (G2): ALSO admit the initiator into the
+        // local registry — but ONLY for a row that was seeded from a
+        // genuinely scanned QR (`initiator_seeded_at IS NOT NULL`, set
+        // exclusively by seedFromInitiator()). This makes admission
+        // SYMMETRIC for real cross-device pairing (each device admits the
+        // peer it does not own) WITHOUT changing behavior for any
+        // `issue()`-created row — every existing single-database test
+        // (PairingFlowTest, PairingTrustGateTest, MobilePairingScanTest)
+        // passes a placeholder initiator_device_id that is never a real
+        // device and must never become a phantom device_registry row.
+        if (is_string($row->initiator_seeded_at)) {
+            $this->admitInitiatorDevice($row, $userId);
+        }
 
         return PairingStateMachine::CONFIRMED;
     }
@@ -317,6 +411,86 @@ final class PairingTokenService
             'name' => $this->deviceNameDetector->detect(),
             'ed25519_public_key_hex' => $responderEd,
             'x25519_public_key_hex' => $responderKx,
+            'safety_number_words' => $safetyWords,
+            'is_self' => 0,
+            'paired_at' => $now,
+            'confirmed_at' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
+    /**
+     * Admit the initiator device to the trusted registry with confirmed_at
+     * set — the Phase 15 import-join (G2) counterpart of
+     * {@see admitResponderDevice()}, structurally identical (same WR-05
+     * self-collision guard, same safety-number derivation, same
+     * insert/update-by-(user_id,device_id,is_self=0) shape). Only ever
+     * called from `confirm()`'s `initiator_seeded_at IS NOT NULL` branch —
+     * i.e. only for a row seeded from a genuinely scanned QR
+     * ({@see seedFromInitiator()}), never for a placeholder
+     * `issue()`-created row.
+     *
+     * Security note: admission still happens ONLY inside the
+     * `bothConfirmed()` branch above — never on a first confirm — so a
+     * one-sided confirm admits nobody. The admitted keys come from the
+     * token row that was seeded from the physically-scanned QR (an
+     * out-of-band authenticated channel) + verified by the safety-number
+     * both-confirm ceremony (D-07) — no wire-trust is introduced.
+     */
+    private function admitInitiatorDevice(\stdClass $row, int $userId): void
+    {
+        $deviceId = is_string($row->initiator_device_id) ? $row->initiator_device_id : null;
+        $initiatorEd = is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null;
+        $initiatorKx = is_string($row->initiator_x25519_pub_hex) ? $row->initiator_x25519_pub_hex : null;
+        $responderEd = is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null;
+
+        if ($deviceId === null || $initiatorEd === null || $initiatorKx === null || $responderEd === null) {
+            return;
+        }
+
+        // WR-05 symmetric guard: never admit an initiator whose device_id
+        // collides with this LOCAL user's own self device.
+        $selfDeviceId = $this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 1)
+            ->value('device_id');
+
+        if (is_string($selfDeviceId) && hash_equals($selfDeviceId, $deviceId)) {
+            return;
+        }
+
+        $safetyWords = implode(' ', $this->safetyNumberDeriver->deriveWords($initiatorEd, $responderEd));
+        $now = $this->clock->now()->toIso8601String();
+
+        $existing = $this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('device_id', $deviceId)
+            ->where('is_self', 0)
+            ->first();
+
+        if ($existing !== null) {
+            $this->db->connection()->table('device_registry')
+                ->where('user_id', $userId)
+                ->where('device_id', $deviceId)
+                ->where('is_self', 0)
+                ->update([
+                    'ed25519_public_key_hex' => $initiatorEd,
+                    'x25519_public_key_hex' => $initiatorKx,
+                    'safety_number_words' => $safetyWords,
+                    'confirmed_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
+            return;
+        }
+
+        $this->db->connection()->table('device_registry')->insert([
+            'user_id' => $userId,
+            'device_id' => $deviceId,
+            'name' => $this->deviceNameDetector->detect(),
+            'ed25519_public_key_hex' => $initiatorEd,
+            'x25519_public_key_hex' => $initiatorKx,
             'safety_number_words' => $safetyWords,
             'is_self' => 0,
             'paired_at' => $now,
