@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
 use Modules\Sync\Internal\Pairing\PairingStateMachine;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
@@ -52,7 +53,33 @@ final class PairingGateway
         private readonly WordCodeEncoder $wordEncoder,
         private readonly SafetyNumberDeriver $safetyDeriver,
         private readonly DatabaseManager $db,
+        private readonly DeviceIdentityService $identityService,
     ) {}
+
+    /**
+     * Enable this device's sync identity WITHOUT minting a GDK epoch —
+     * identity only. Thin wrapper over
+     * `DeviceIdentityService::generateAndPersist()`, added for the mobile
+     * "Import from another device" fresh-device bootstrap (Phase 15
+     * import-join, B2). The import path defers epoch acquisition entirely
+     * to the desktop's delivered epochs (`GdkEpochControlHandler::handle()`
+     * over the authenticated LAN session) — calling
+     * `Modules\Core\Public\Services\EncryptionMigrationService::migrate()`
+     * here (or anywhere on the import path before pairing confirms) would
+     * self-mint a colliding local epoch 1 and permanently strand every
+     * desktop epoch-1 entry in `gdk_decrypt_failed` quarantine
+     * (`GdkEpochControlHandler`'s idempotency guard silently drops an
+     * already-present epoch id). This method MUST NOT be extended to touch
+     * the GDK keyring or `EncryptionMigrationService` — identity only.
+     *
+     * @throws \LogicException when the app-lock KEK is unavailable (D-02
+     *                         weak-key-window guard — propagated from
+     *                         `DeviceIdentityService::generateAndPersist()`).
+     */
+    public function enableSyncIdentityWithoutEpoch(int $userId, Session $session): void
+    {
+        $this->identityService->generateAndPersist($userId, $session);
+    }
 
     /**
      * Accept a pairing token already in raw hex form — the QR path. The QR's

@@ -7,6 +7,7 @@ namespace Modules\Auth\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
@@ -39,7 +40,28 @@ final class MobileLockGateway
         private readonly BiometricDeviceStore $biometricStore,
         private readonly PlatformDetector $detector,
         private readonly DatabaseManager $db,
+        private readonly AppLockProvisioner $provisioner,
     ) {}
+
+    /**
+     * Enable the app lock for a fresh device-local identity bootstrap
+     * (Phase 15 import-join, LOCK-04 precondition) — thin pass-through to
+     * `AppLockProvisioner::enable()` unchanged. Added for the mobile
+     * "Import from another device" onboarding screen
+     * (`MobileImportBootstrap`), which needs to provision the app-lock KEK
+     * immediately after `SignupAction` creates the local user, BEFORE any
+     * sync-identity/GDK keyring write — every one of those writes hard-throws
+     * without an unlocked KEK. No new trust decision: $accountPassword is the
+     * SAME plaintext password the caller just used to create the account in
+     * this same request, so no separate re-verification against the stored
+     * hash is performed here (mirrors `AppLockProvisioner::enable()`'s own
+     * contract — the caller is responsible for having authenticated
+     * $accountPassword before calling this).
+     */
+    public function enableAppLock(int $userId, string $pin, string $accountPassword, Session $session): void
+    {
+        $this->provisioner->enable($userId, $pin, $accountPassword, $session);
+    }
 
     /**
      * Platform-aware biometric button label, derived from the User-Agent
