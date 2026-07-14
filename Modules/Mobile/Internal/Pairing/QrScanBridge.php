@@ -115,4 +115,54 @@ final class QrScanBridge
 
         return is_string($token) && $token !== '' ? $token : null;
     }
+
+    /**
+     * Unwrap the FULL `beatrax://pair?v=1&token=<hex>&ed=<hex>&kx=<hex>&
+     * device=<id>` envelope — the ADD (Phase 15 import-join, G1) that
+     * recovers the initiator's public identity ALONGSIDE the token, unlike
+     * `extractToken()` above (which the NORMAL same-account pairing path
+     * deliberately ignores per `QrPayloadBuilder::buildUri()`'s own
+     * docblock — this device's own identity always comes from the LOCAL
+     * `DeviceIdentityLoader`, never from QR content, T-15-18).
+     *
+     * Used ONLY by the mobile IMPORT-mode branch
+     * (`MobilePairingScan::submitCode()`), which needs the scanned
+     * initiator identity to seed a LOCAL `pairing_tokens` row
+     * (`PairingGateway::seedResponderToken()`) on a genuinely fresh,
+     * separate device database — closing G1. This is still no bespoke
+     * trust decision: the extracted fields are handed unmodified to the
+     * SAME `PairingTokenService::seedFromInitiator()` validation boundary
+     * (WR-01 malformed-key rejection) `issue()`/`accept()` already use.
+     *
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string}|null
+     */
+    public function extractIdentity(string $decodedPayload): ?array
+    {
+        $parts = parse_url($decodedPayload);
+        if (! is_array($parts) || ($parts['scheme'] ?? null) !== 'beatrax' || ! isset($parts['query'])) {
+            return null;
+        }
+
+        parse_str($parts['query'], $query);
+
+        $token = $query['token'] ?? null;
+        $deviceId = $query['device'] ?? null;
+        $ed = $query['ed'] ?? null;
+        $kx = $query['kx'] ?? null;
+
+        if (! is_string($token) || $token === ''
+            || ! is_string($deviceId) || $deviceId === ''
+            || ! is_string($ed) || $ed === ''
+            || ! is_string($kx) || $kx === ''
+        ) {
+            return null;
+        }
+
+        return [
+            'token' => $token,
+            'deviceId' => $deviceId,
+            'ed25519PubHex' => $ed,
+            'x25519PubHex' => $kx,
+        ];
+    }
 }

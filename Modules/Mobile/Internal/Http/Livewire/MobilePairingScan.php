@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -96,6 +97,24 @@ final class MobilePairingScan extends Component
      */
     public bool $cameraUnavailableNotice = false;
 
+    /**
+     * Phase 15 import-join (Task 2): true when this pairing attempt reached
+     * `/mobile/pair` via the "Import from another device" fresh-device
+     * bootstrap CTA (`?mode=import`, set from `MobileImportBootstrap`'s
+     * redirect). Toggles TWO independently-safe things, neither a trust
+     * decision: (1) `submitCode()` seeds a LOCAL pairing_tokens row from
+     * the scanned QR's initiator identity before accepting (G1), and (2)
+     * `confirmMatch()`/`checkPairingState()` skip the self-mint
+     * `EncryptionMigrationService::migrate()` call (B2) — the import
+     * keyring stays empty until the desktop's real epochs are delivered.
+     *
+     * #[Locked] — read-only from `?mode=import` at mount() time; never
+     * client-settable (defense-in-depth, though neither branch it gates
+     * admits a device or mints/reveals any key material on its own).
+     */
+    #[Locked]
+    public bool $importMode = false;
+
     /** Whether this side has confirmed the safety-number (awaits the peer). */
     public bool $awaitingPeer = false;
 
@@ -110,8 +129,13 @@ final class MobilePairingScan extends Component
     // Lifecycle
     // -------------------------------------------------------------------------
 
-    public function mount(QrScanBridge $qrBridge): void
+    public function mount(QrScanBridge $qrBridge, Request $request): void
     {
+        // Phase 15 import-join: read-only signal, set once at mount() from
+        // the server-side request query — never re-derived from client
+        // state afterward (#[Locked]).
+        $this->importMode = $request->query('mode') === 'import';
+
         $this->enterACode($qrBridge);
     }
 
@@ -187,6 +211,43 @@ final class MobilePairingScan extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
+        // Phase 15 import-join (Task 2, OQ-2): the typed word-code carries
+        // only the token — no initiator identity to seed a cross-device row
+        // from (G1) — so v1 import supports the QR path only. Never a dead
+        // end: the copy directs the user back to the QR.
+        if ($this->importMode && $scannedPayload === null) {
+            $this->flashMessage = 'Scan the QR code shown on the other device to import.';
+
+            return;
+        }
+
+        // Phase 15 import-join (G1): on a genuinely fresh, separate device
+        // database, acceptToken()'s underlying PairingTokenService::accept()
+        // finds no local pending row — seed one from the scanned QR's
+        // initiator identity FIRST. A seed failure (malformed key material)
+        // simply means the subsequent accept() call below finds no pending
+        // row and falls through to the SAME generic invalid/expired flash
+        // as any other bad code. $scannedPayload is guaranteed non-null
+        // here — the guard above already returned for the importMode +
+        // null-payload (word-code) combination.
+        if ($this->importMode) {
+            $identity = $qrBridge->extractIdentity($scannedPayload);
+
+            if ($identity === null) {
+                $this->flashMessage = 'This code is invalid or has expired. Ask the other device to generate a new one.';
+
+                return;
+            }
+
+            $gateway->seedResponderToken(
+                $identity['token'],
+                $identity['deviceId'],
+                $identity['ed25519PubHex'],
+                $identity['x25519PubHex'],
+                $userId,
+            );
+        }
+
         $result = $scannedPayload !== null
             ? $qrBridge->accept($scannedPayload, $userId, $session)
             : $gateway->acceptWordCode($this->wordCode, $userId, $session);
@@ -235,12 +296,23 @@ final class MobilePairingScan extends Component
         if ($state === PairingGateway::STATE_CONFIRMED && $this->step !== 'success') {
             $this->step = 'success';
 
-            try {
-                $migrationService->migrate($currentUser->user(), $session);
-            } catch (Throwable) {
-                // Best-effort — see PairingFlowModal::checkPairingState()'s
-                // identical docblock. A migration failure never undoes the
-                // just-completed pairing.
+            // Phase 15 import-join (B2): the import branch NEVER self-mints
+            // — it defers epoch acquisition entirely to the desktop's
+            // delivered epochs. Calling migrate() here would mint a
+            // colliding local epoch 1 and permanently strand every
+            // desktop epoch-1 entry in gdk_decrypt_failed quarantine
+            // (GdkEpochControlHandler's idempotency guard silently drops an
+            // already-present epoch id). The CREATE-ACCOUNT (non-import)
+            // path is UNCHANGED — it still self-mints here exactly as
+            // before.
+            if (! $this->importMode) {
+                try {
+                    $migrationService->migrate($currentUser->user(), $session);
+                } catch (Throwable) {
+                    // Best-effort — see PairingFlowModal::checkPairingState()'s
+                    // identical docblock. A migration failure never undoes the
+                    // just-completed pairing.
+                }
             }
         }
     }
@@ -290,10 +362,15 @@ final class MobilePairingScan extends Component
             $this->awaitingPeer = false;
             $this->step = 'success';
 
-            try {
-                $migrationService->migrate($currentUser->user(), $session);
-            } catch (Throwable) {
-                // Best-effort — see docblock above.
+            // Phase 15 import-join (B2) — see checkPairingState()'s
+            // identical guard docblock. The CREATE-ACCOUNT (non-import)
+            // path is UNCHANGED.
+            if (! $this->importMode) {
+                try {
+                    $migrationService->migrate($currentUser->user(), $session);
+                } catch (Throwable) {
+                    // Best-effort — see docblock above.
+                }
             }
 
             return;
@@ -327,10 +404,19 @@ final class MobilePairingScan extends Component
     /**
      * Leave the page after a SUCCESSFUL pairing (the success-step "Done"
      * button) — does not touch the now-confirmed token.
+     *
+     * Phase 15 import-join: in import mode this advances into the
+     * blocking, resumable initial-sync gate (`mobile.setup`) — the phone
+     * has no meaningful sync SETTINGS to show yet, it needs to pull its
+     * full history (and receive the desktop's epochs) before landing on a
+     * populated dashboard. The non-import (existing) path is UNCHANGED —
+     * it still returns to the sync/devices screen.
      */
     public function finishPairing(UrlGenerator $urls): void
     {
-        $this->redirect($urls->route('sync.index'), navigate: false);
+        $route = $this->importMode ? 'mobile.setup' : 'sync.index';
+
+        $this->redirect($urls->route($route), navigate: false);
     }
 
     // -------------------------------------------------------------------------
