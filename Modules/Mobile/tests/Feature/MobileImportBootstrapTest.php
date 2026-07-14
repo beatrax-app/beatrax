@@ -92,6 +92,76 @@ it('continueToPairing() forgets the recovery-codes session key and redirects int
     expect(session('auth.signup.recovery_codes_plain'))->toBeNull('the recovery-codes ceremony must forget the session key exactly once, mirroring RecoveryCodesDisplay');
 });
 
+// -------------------------------------------------------------------------
+// HIGH-02 (15-import-join-REVIEW.md) — retryProvisioning() must use the
+// ORIGINALLY submitted credentials, never the emptied public properties.
+// -------------------------------------------------------------------------
+
+it('retryProvisioning() without a pending-credentials session copy never provisions and returns to collect_pin (HIGH-02)', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    // Simulates a `provisioning_failed` device whose session-stashed
+    // credentials are genuinely gone (e.g. a new session) — mirrors what a
+    // real interrupted submit() would leave the account/session in
+    // (SignupAction already committed; nothing provisioned yet).
+    $user = User::query()->create([
+        'username' => 'phone-owner-retry-nopending',
+        'password' => bcrypt('a-genuinely-long-password'),
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+    test()->actingAs($user);
+
+    Livewire::test(MobileImportBootstrap::class)
+        ->set('step', 'provisioning_failed')
+        ->call('retryProvisioning')
+        ->assertSet('step', 'collect_pin');
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = app(AppLockProvisioner::class);
+    expect($provisioner->isEnabled((int) $user->id))->toBeFalse('a retry with no recoverable credentials must never provision anything — never a silent empty-passphrase KEK');
+});
+
+it('retryProvisioning() succeeds with the ORIGINALLY submitted credentials after a simulated provisioning failure (HIGH-02)', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    $user = User::query()->create([
+        'username' => 'phone-owner-retry-pending',
+        'password' => bcrypt('a-genuinely-long-password'),
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+    test()->actingAs($user);
+
+    // Simulates exactly what submit() stashes before attempting
+    // provisionDeviceLocally() — the real, non-empty PIN/password from the
+    // original submission, server-side only.
+    session()->put('mobile.import.pending_credentials', [
+        'pin' => '4269',
+        'password' => 'a-genuinely-long-password',
+    ]);
+
+    Livewire::test(MobileImportBootstrap::class)
+        ->set('step', 'provisioning_failed')
+        ->call('retryProvisioning')
+        ->assertSet('step', 'recovery_codes')
+        ->assertSet('flashMessage', '');
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = app(AppLockProvisioner::class);
+    expect($provisioner->isEnabled((int) $user->id))->toBeTrue('retry must provision the app-lock KEK from the ORIGINAL non-empty credentials, not the emptied public properties');
+
+    expect(session('mobile.import.pending_credentials'))->toBeNull('the pending-credentials session stash must be forgotten once provisioning succeeds');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $selfRow = $db->connection()->table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('is_self', 1)
+        ->first();
+    expect($selfRow)->not->toBeNull('sync identity must also be provisioned by the retry');
+});
+
 it('rejects mismatched passwords and a too-short PIN without provisioning anything', function (): void {
     $this->withoutMiddleware(EnsureDatabaseReady::class);
 

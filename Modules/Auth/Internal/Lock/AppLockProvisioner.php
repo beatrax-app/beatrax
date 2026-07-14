@@ -7,6 +7,7 @@ namespace Modules\Auth\Internal\Lock;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Validation\ValidationException;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\Clock;
 
@@ -61,9 +62,27 @@ final class AppLockProvisioner
      *     state with the data key stored (the user just proved their PIN + account
      *     password, so an unlocked session with the key is the coherent post-enable
      *     state — Gap B fix per QA review).
+     *
+     * @throws ValidationException when $pin or $accountPassword is empty (HIGH-02,
+     *                             15-import-join-REVIEW.md). Defense-in-depth: every
+     *                             known caller (AppLockSettingsSection::setPin(),
+     *                             MobileImportBootstrap::provisionDeviceLocally())
+     *                             already validates non-empty input BEFORE calling
+     *                             here, but a caller-level validation gap must never
+     *                             be able to mint an app-lock KEK derived from an
+     *                             EMPTY PIN/password — that KEK goes on to wrap the
+     *                             GDK keyring that will hold delivered desktop
+     *                             epochs, so a weak/empty-derived key is a real
+     *                             security regression, not just a UX bug.
      */
     public function enable(int $userId, string $pin, string $accountPassword, ?Session $session = null): void
     {
+        if ($pin === '' || $accountPassword === '') {
+            throw ValidationException::withMessages([
+                'pin' => ['A PIN and account password are required to enable the app lock.'],
+            ]);
+        }
+
         // WR-06: enable() generates a NEW data key, which invalidates every
         // existing per-device biometric wrap (they hold the OLD key). Delete
         // stale credentials so a leftover enrollment from a previous
