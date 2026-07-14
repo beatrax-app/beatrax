@@ -8,9 +8,14 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
+use Modules\Sync\Internal\Crypto\GdkEpoch;
+use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 
 uses(RefreshDatabase::class);
 
@@ -203,4 +208,144 @@ it('skips a pull entirely — no cursor mutation, data stays encrypted — when 
     expect($progress)->toBe(['records_applied' => 0, 'records_expected' => null, 'percent' => 0, 'phase' => 'pending']);
     expect($db->connection()->table('mobile_sync_progress')->where('user_id', $user->id)->count())->toBe(0);
     expect($db->connection()->table('op_log_entries')->where('user_id', $user->id)->count())->toBe(0);
+});
+
+/*
+ * Task 4 + threat item 6 (Phase 15 import-join) — resumability/idempotency
+ * of the epoch-install -> rebuild-once step. 6h per
+ * 15-import-join-PLAN.md's test-plan.
+ */
+
+it('runs the history re-projection AT MOST ONCE per cursor once the keyring becomes non-empty; percent never regresses', function (): void {
+    $user = mobileResumeUser('mobile-resume-reproject-'.bin2hex(random_bytes(4)));
+    $userId = (int) $user->id;
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+
+    @unlink(UserDataPathService::appPath('sync/gdk/'.$userId.'.enc'));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $identityService->generateAndPersist($userId, $session);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $peerDeviceId = 'desktop-fixture-reproject-'.bin2hex(random_bytes(4));
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $peerDeviceId,
+        'name' => 'Fixture Desktop',
+        'ed25519_public_key_hex' => bin2hex(random_bytes(32)),
+        'x25519_public_key_hex' => bin2hex(random_bytes(32)),
+        'safety_number_words' => 'one two three four five six',
+        'is_self' => 0,
+        'paired_at' => '2026-07-01 00:00:00',
+        'confirmed_at' => '2026-07-01 00:00:00',
+        'created_at' => '2026-07-01 00:00:00',
+        'updated_at' => '2026-07-01 00:00:00',
+    ]);
+
+    seedResumeOpLogRows($db, $userId, $peerDeviceId, 10, 1);
+
+    // The keyring is populated BEFORE the first pull() step — standing in
+    // for "LanSyncClient's post-catch-up receive leg just installed the
+    // desktop's epoch during THIS connection attempt" (Task 4's own
+    // sequence: sync step -> install epochs -> if newly decryptable,
+    // rebuild). current_epoch transitions null -> non-null exactly once,
+    // which is the ONLY signal InitialSyncPuller::pull() reads.
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    $keyring->generateAndPersist($userId, $session);
+
+    /** @var RelayConfig $relayConfig */
+    $relayConfig = app(RelayConfig::class);
+    $relayConfig->setEndpointUrl('https://relay.fixture.test');
+    $relayConfig->setAuthToken('fixture-relay-token');
+    Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
+
+    /** @var InitialSyncPuller $puller */
+    $puller = app(InitialSyncPuller::class);
+
+    $first = $puller->pull($userId, $session);
+    expect($first['phase'])->toBe('complete');
+    expect($first['percent'])->toBe(100);
+
+    $cursorAfterFirst = $db->connection()->table('mobile_sync_progress')
+        ->where('user_id', $userId)
+        ->where('peer_device_id', $peerDeviceId)
+        ->first();
+    expect($cursorAfterFirst->reprojected_at)->not->toBeNull('the FIRST pull() step to see a non-empty keyring must run the re-projection');
+
+    $reprojectedAtAfterFirst = $cursorAfterFirst->reprojected_at;
+
+    // A second pull() tick (e.g. a wire:poll after phase === 'complete')
+    // must NOT re-run the re-projection — the guard flag stays UNCHANGED.
+    $second = $puller->pull($userId, $session);
+    expect($second['phase'])->toBe('complete');
+    expect($second['percent'])->toBe(100, 'percent must never regress');
+    expect($second['records_applied'])->toBe($first['records_applied'], 'a completed pull is a cheap idempotent no-op');
+
+    $cursorAfterSecond = $db->connection()->table('mobile_sync_progress')
+        ->where('user_id', $userId)
+        ->where('peer_device_id', $peerDeviceId)
+        ->first();
+    expect($cursorAfterSecond->reprojected_at)->toBe($reprojectedAtAfterFirst, 'the re-projection must run AT MOST ONCE per cursor');
+});
+
+it('re-delivering an already-installed (stale) epoch wrap through the receive gateway is a no-op — no duplication, no current_epoch downgrade', function (): void {
+    $user = mobileResumeUser('mobile-resume-stale-wrap-'.bin2hex(random_bytes(4)));
+    $userId = (int) $user->id;
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+
+    @unlink(UserDataPathService::appPath('sync/gdk/'.$userId.'.enc'));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $phone = $identityService->generateAndPersist($userId, $session);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+
+    $rawEpochKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+
+    /** @var GdkRotationService $rotation */
+    $rotation = app(GdkRotationService::class);
+    $recipientPub = sodium_hex2bin($phone->x25519PublicKeyHex);
+    $wrap = $rotation->buildGdkEpochWrap(1, $rawEpochKey, $recipientPub, $phone->deviceId);
+    $wrapJson = json_encode($wrap, JSON_THROW_ON_ERROR);
+
+    /** @var GdkEpochDeliveryGateway $delivery */
+    $delivery = app(GdkEpochDeliveryGateway::class);
+    $delivery->receiveEpochWrap($wrapJson, $userId, $session);
+
+    $afterFirst = $keyring->currentEpoch($userId, $session);
+    expect($afterFirst->epochId)->toBe(1);
+
+    // Advance further (mirrors GdkEpochDeliveryTest's idempotency
+    // assertion at :346), then re-deliver the SAME stale epoch-1 wrap.
+    $keyring->appendEpoch(
+        $userId,
+        new GdkEpoch(2, sodium_bin2hex(random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES))),
+        $session,
+    );
+
+    $delivery->receiveEpochWrap($wrapJson, $userId, $session);
+
+    $final = $keyring->currentEpoch($userId, $session);
+    expect($final->epochId)->toBe(2, 'a redelivered stale wrap must never downgrade current_epoch');
+
+    $loaded = $keyring->loadKeyring($userId, $session);
+    $countOfEpochOne = 0;
+    foreach ($loaded->epochs() as $epoch) {
+        if ($epoch->epochId === 1) {
+            $countOfEpochOne++;
+        }
+    }
+    expect($countOfEpochOne)->toBe(1, 'epoch 1 must not be duplicated in the keyring');
 });

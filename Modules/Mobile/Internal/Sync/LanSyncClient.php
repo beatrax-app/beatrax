@@ -10,6 +10,7 @@ use Amp\TimeoutException;
 use Amp\Websocket\Client\WebsocketConnectException;
 use Amp\Websocket\Client\WebsocketConnection;
 use Amp\Websocket\WebsocketMessage;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
@@ -23,6 +24,7 @@ use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Internal\Transport\SyncSession;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
@@ -74,6 +76,19 @@ use function Amp\Websocket\Client\connect;
  * (retryable — pairing / first local catch-up of `device_registry` may not
  * have propagated yet).
  *
+ * ## Post-catch-up GDK_EPOCH_WRAP receive (Phase 15 import-join, Task 4, G3)
+ *
+ * `syncOnce()` additionally receives any pending `GDK_EPOCH_WRAP` frames the
+ * desktop pushes immediately after catch-up
+ * (`SyncWebSocketHandler::deliverGdkEpochWraps()`, additive/backward-
+ * compatible — no wire-frame change) and routes each through
+ * `Modules\Sync\Public\Services\GdkEpochDeliveryGateway` (the Sync Public
+ * seam wrapping `GdkEpochControlHandler::handle()`), which validates,
+ * sealed-box-opens, and appends the recovered epoch key to the LOCAL
+ * device's keyring under the LOCAL app-lock KEK — never a wire-supplied
+ * key. This is the ONLY new wire-adjacent behavior this plan adds; the
+ * catch-up/op-exchange protocol itself is unchanged.
+ *
  * @internal Plan 05 — dialed by `MobileSyncTriggerService` only. Never a
  *           listener/server/daemon.
  */
@@ -92,6 +107,28 @@ final class LanSyncClient
      */
     private const int MAX_CATCHUP_FRAMES = 100_000;
 
+    /**
+     * Maximum GDK_EPOCH_WRAP frames accepted from the post-catch-up push
+     * (Phase 15 import-join, Task 4, G3) — mirrors
+     * `SyncWebSocketHandler::MAX_GDK_WRAPS_PER_CONNECT`. Bounded so an
+     * unbounded backlog cannot pin this fiber; a backlog larger than this
+     * is picked up on the NEXT connect (`RelayMailbox::drain()`'s own
+     * existing pagination contract, unchanged).
+     */
+    private const int MAX_GDK_WRAPS_PER_CONNECT = 100;
+
+    /**
+     * Seconds to wait for each post-catch-up GDK_EPOCH_WRAP frame — a SHORT,
+     * DEDICATED bound (unlike READ_TIMEOUT_SECONDS's generous 15s catch-up
+     * budget): the desktop pushes any pending wraps immediately and
+     * synchronously after catch-up completes
+     * (`SyncWebSocketHandler::runCatchUp()` step 6), so a short idle bound
+     * is sufficient to detect "no more wraps" without stalling every single
+     * sync (most of which have zero pending wraps) behind the full catch-up
+     * timeout.
+     */
+    private const float GDK_WRAP_READ_TIMEOUT_SECONDS = 2.0;
+
     public function __construct(
         private readonly DeviceRegistryService $registryService,
         private readonly DeviceKeySigner $signer,
@@ -100,13 +137,14 @@ final class LanSyncClient
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly MergeRulesRegistry $rules,
+        private readonly GdkEpochDeliveryGateway $epochDelivery,
         private readonly ?SearchIndexWriterContract $searchWriter = null,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
     /**
      * Dial the desktop's `sync:serve` listener, run one bounded bidirectional
-     * catch-up exchange, then close.
+     * catch-up exchange, receive any pushed GDK epoch wraps, then close.
      *
      * @return bool `true` on a completed catch-up exchange; `false` for any
      *              RETRYABLE outcome (no confirmed peer key yet, or the
@@ -117,7 +155,7 @@ final class LanSyncClient
      *              confirmed device) still throws — that is a real
      *              security-relevant rejection, not a transient outcome.
      */
-    public function syncOnce(string $host, int $port, DeviceIdentityDto $identity): bool
+    public function syncOnce(string $host, int $port, DeviceIdentityDto $identity, Session $session): bool
     {
         $peerStaticHex = $this->resolvePeerStaticKeyHex($identity);
         if ($peerStaticHex === null) {
@@ -134,17 +172,27 @@ final class LanSyncClient
 
             $noiseSession = $this->performHandshake($connection, $identity, $peerStaticHex);
 
-            [$session, $deviceKeys] = $this->buildSyncSession($identity);
+            [$syncSession, $deviceKeys] = $this->buildSyncSession($identity);
 
-            $admitted = $session->authenticate($noiseSession, $identity->userId, $identity->deviceId);
+            $admitted = $syncSession->authenticate($noiseSession, $identity->userId, $identity->deviceId);
             if (! $admitted) {
                 throw new RuntimeException(
                     'LanSyncClient: desktop peer failed the confirmed-device auth gate (T-13-13).'
                 );
             }
 
-            $this->runCatchUp($connection, $session, $identity->userId, $identity->deviceId, $deviceKeys);
-            $session->close();
+            $this->runCatchUp($connection, $syncSession, $identity->userId, $identity->deviceId, $deviceKeys);
+
+            // Phase 15 import-join (Task 4, G3): consume any GDK_EPOCH_WRAP
+            // frames the desktop pushes immediately after catch-up
+            // (SyncWebSocketHandler::deliverGdkEpochWraps(), step 6 of ITS
+            // runCatchUp()) — inside the STILL-OPEN Noise session (the
+            // wraps were encrypted with $syncSession->encrypt(), so
+            // decrypting them requires this SAME session, not a new
+            // connection). Must run BEFORE session->close() below.
+            $this->receiveGdkEpochWraps($connection, $syncSession, $identity->userId, $session);
+
+            $syncSession->close();
 
             return true;
         } catch (WebsocketConnectException|CancelledException|TimeoutException $e) {
@@ -260,14 +308,14 @@ final class LanSyncClient
      */
     private function runCatchUp(
         WebsocketConnection $connection,
-        SyncSession $session,
+        SyncSession $syncSession,
         int $userId,
         string $localDeviceId,
         array $deviceKeys,
     ): void {
         // 1. SEND our CATCH_UP_REQUEST.
         $myReq = $this->catchUp->buildRequest($userId, $localDeviceId);
-        $connection->sendBinary($session->encrypt(json_encode($myReq, JSON_THROW_ON_ERROR)));
+        $connection->sendBinary($syncSession->encrypt(json_encode($myReq, JSON_THROW_ON_ERROR)));
 
         // 2. RECEIVE the desktop's CATCH_UP_RESPONSE control + frames.
         $respMsg = $this->receiveWithTimeout($connection, 'catch-up response');
@@ -275,7 +323,7 @@ final class LanSyncClient
             return;
         }
 
-        $resp = $this->catchUp->parseControlMessage($session->decrypt($respMsg->buffer()));
+        $resp = $this->catchUp->parseControlMessage($syncSession->decrypt($respMsg->buffer()));
         $declaredFrameCount = isset($resp['frame_count']) && is_int($resp['frame_count']) ? $resp['frame_count'] : 0;
         // CR-05 mirror: clamp the desktop-declared frame_count so a
         // corrupted/malicious response cannot pin this bounded burst.
@@ -287,7 +335,7 @@ final class LanSyncClient
                 break;
             }
 
-            $session->receiveOps($frameMsg->buffer(), $userId, $deviceKeys);
+            $syncSession->receiveOps($frameMsg->buffer(), $userId, $deviceKeys);
         }
 
         // 3. RECEIVE the desktop's own CATCH_UP_REQUEST (its watermark).
@@ -296,28 +344,110 @@ final class LanSyncClient
             return;
         }
 
-        $peerReq = $this->catchUp->parseControlMessage($session->decrypt($peerReqMsg->buffer()));
+        $peerReq = $this->catchUp->parseControlMessage($syncSession->decrypt($peerReqMsg->buffer()));
         $peerHlcL = isset($peerReq['hlc_l']) && is_int($peerReq['hlc_l']) ? max(0, $peerReq['hlc_l']) : 0;
         $peerHlcC = isset($peerReq['hlc_c']) && is_int($peerReq['hlc_c']) ? max(0, $peerReq['hlc_c']) : 0;
 
         // 4. SEND our CATCH_UP_RESPONSE control + our own outgoing frames.
         $frames = $this->catchUp->opsAfterWatermark($userId, $peerHlcL, $peerHlcC);
         $myResp = $this->catchUp->buildResponse($frames);
-        $connection->sendBinary($session->encrypt(json_encode($myResp, JSON_THROW_ON_ERROR)));
+        $connection->sendBinary($syncSession->encrypt(json_encode($myResp, JSON_THROW_ON_ERROR)));
 
         foreach ($frames as $frame) {
-            $connection->sendBinary($session->encrypt($frame));
+            $connection->sendBinary($syncSession->encrypt($frame));
         }
 
         // 5. RECEIVE the desktop's CATCH_UP_COMPLETE, then SEND ours.
         $peerCompleteMsg = $this->receiveWithTimeout($connection, 'catch-up complete');
         if ($peerCompleteMsg !== null) {
-            $session->decrypt($peerCompleteMsg->buffer());
+            $syncSession->decrypt($peerCompleteMsg->buffer());
         }
 
-        $connection->sendBinary($session->encrypt(
+        $connection->sendBinary($syncSession->encrypt(
             json_encode($this->catchUp->buildComplete(), JSON_THROW_ON_ERROR)
         ));
+    }
+
+    /**
+     * Post-catch-up GDK_EPOCH_WRAP receive step (Phase 15 import-join,
+     * Task 4, G3) — the CLIENT (initiator) read-side mirror of
+     * `SyncWebSocketHandler::deliverGdkEpochWraps()`'s outbound push
+     * (`SyncWebSocketHandler::runCatchUp()` step 6): the desktop, right
+     * after catch-up completes, pushes any `RelayMailbox` rows addressed to
+     * THIS device as `$session->encrypt($blob)` frames over the SAME
+     * already-authenticated Noise session, then proceeds to its own
+     * "live stream" read loop (it does not close the connection or send
+     * anything further). This method drains up to
+     * `MAX_GDK_WRAPS_PER_CONNECT` such frames, each bounded by a SHORT idle
+     * timeout — a non-wrap message, a malformed/unparseable frame, or an
+     * idle timeout all end the loop (the desktop sends ONLY wrap frames in
+     * this fixed step; a non-wrap read means the push is over).
+     *
+     * SECURITY (WR-07, threat-model item 3): the wrap is routed into
+     * `GdkEpochDeliveryGateway::receiveEpochWrap()` (-> `GdkEpochControlHandler
+     * ::handle()`) ONLY from inside THIS still-open, already-authenticated
+     * session — `$syncSession->authenticate()` already verified the peer's
+     * static key against the confirmed-only device registry before catch-up
+     * ever ran (`syncOnce()` above). This satisfies `handle()`'s documented
+     * authenticated-channel precondition. Never wire an unauthenticated
+     * source (e.g. a raw relay-pushed blob) into this path —
+     * `MobileSyncTriggerService::relayLeg()` deliberately stays a
+     * non-installing drain for exactly this reason.
+     *
+     * Never throws on a malformed wrap — `receiveEpochWrap()`/`handle()`
+     * already logs and returns; a parse failure here simply ends the loop.
+     *
+     * @internal Public so this fixed-point receive step is directly
+     *           testable without constructing a live amphp WebSocket
+     *           connection (mirrors `SyncWebSocketHandler::
+     *           deliverGdkEpochWraps()`'s identical public-for-testability
+     *           precedent) — a real loopback WebSocket TCP connection is
+     *           Manual-Only Verification (`LanDirectSessionTest`'s own
+     *           documented precedent).
+     */
+    public function receiveGdkEpochWraps(
+        WebsocketConnection $connection,
+        SyncSession $syncSession,
+        int $userId,
+        Session $session,
+    ): void {
+        for ($i = 0; $i < self::MAX_GDK_WRAPS_PER_CONNECT; $i++) {
+            try {
+                $message = $connection->receive(new TimeoutCancellation(self::GDK_WRAP_READ_TIMEOUT_SECONDS));
+            } catch (TimeoutException) {
+                // No more wraps pending — the desktop's fixed push step is
+                // over (it never sends anything further until the phone
+                // itself disconnects). Not an error.
+                return;
+            }
+
+            if ($message === null) {
+                // Clean disconnect — nothing more to read.
+                return;
+            }
+
+            $decrypted = $syncSession->decrypt($message->buffer());
+
+            try {
+                $parsed = $this->catchUp->parseControlMessage($decrypted);
+            } catch (\UnexpectedValueException) {
+                // Malformed frame — the desktop's fixed step only ever
+                // sends wrap frames, so treat this as "push is over" rather
+                // than throwing.
+                return;
+            }
+
+            // 'GDK_EPOCH_WRAP' mirrors Modules\Sync\Internal\Crypto\
+            // GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP verbatim — that
+            // class is off-limits to this module directly (BoundaryRule);
+            // the literal wire-protocol string is not a class reference.
+            if (($parsed['type'] ?? null) !== 'GDK_EPOCH_WRAP') {
+                // A non-wrap message ends this fixed step.
+                return;
+            }
+
+            $this->epochDelivery->receiveEpochWrap($decrypted, $userId, $session);
+        }
     }
 
     /**
