@@ -134,7 +134,20 @@ final class QrScanBridge
      * SAME `PairingTokenService::seedFromInitiator()` validation boundary
      * (WR-01 malformed-key rejection) `issue()`/`accept()` already use.
      *
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string}|null
+     * ## Cross-device relay bootstrap (Phase 15 HIGH-01, Task 1)
+     *
+     * Also reads the OPTIONAL `relay`/`rtok` query params
+     * (`QrPayloadBuilder::buildUri()`) so the fresh phone can auto-configure
+     * its own `RelayConfig` (`PairingGateway::configureRelayFromQr()`)
+     * BEFORE the cross-device confirm handshake needs a transport. Missing
+     * `relay` yields a null `relayEndpoint` — NOT a failure of the whole
+     * extraction (the token/device/ed/kx identity fields remain the only
+     * required fields) — the caller falls through to the existing "connect
+     * over the same Wi-Fi / configure a relay" copy rather than a dead end.
+     * `rtok` is read only when `relay` is present; a relay configured
+     * without a bearer token is a valid deployment shape.
+     *
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, relayEndpoint: ?string, relayAuthToken: ?string}|null
      */
     public function extractIdentity(string $decodedPayload): ?array
     {
@@ -158,11 +171,19 @@ final class QrScanBridge
             return null;
         }
 
+        $relay = $query['relay'] ?? null;
+        $relayEndpoint = is_string($relay) && $relay !== '' ? $relay : null;
+
+        $rtok = $query['rtok'] ?? null;
+        $relayAuthToken = $relayEndpoint !== null && is_string($rtok) && $rtok !== '' ? $rtok : null;
+
         return [
             'token' => $token,
             'deviceId' => $deviceId,
             'ed25519PubHex' => $ed,
             'x25519PubHex' => $kx,
+            'relayEndpoint' => $relayEndpoint,
+            'relayAuthToken' => $relayAuthToken,
         ];
     }
 }
