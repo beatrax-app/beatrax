@@ -7,6 +7,7 @@ namespace Modules\Sync\Public\Services;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
@@ -54,6 +55,7 @@ final class PairingGateway
         private readonly SafetyNumberDeriver $safetyDeriver,
         private readonly DatabaseManager $db,
         private readonly DeviceIdentityService $identityService,
+        private readonly GdkRotationService $rotationService,
     ) {}
 
     /**
@@ -79,6 +81,40 @@ final class PairingGateway
     public function enableSyncIdentityWithoutEpoch(int $userId, Session $session): void
     {
         $this->identityService->generateAndPersist($userId, $session);
+    }
+
+    /**
+     * Fan out EVERY epoch in $userId's GDK keyring, sealed to
+     * $newDeviceRegistryId's confirmed X25519 public key, over the ZK-pure
+     * RelayMailbox — the ADD-device analog of the existing device-removal
+     * fan-out (`GdkRotationService::rotateAndRevoke()`). Thin wrapper over
+     * `GdkRotationService::fanOutAllEpochsToDevice()` — no new trust
+     * decision here.
+     *
+     * ## WR-07 authenticated-channel precondition (threat-model item 3)
+     *
+     * Reuses the SAME `sodium_crypto_box_seal` delivery primitive
+     * `buildGdkEpochWrap()` already uses: confidential but unauthenticated
+     * on its own. Safe here ONLY because the recipient must already be a
+     * CONFIRMED `device_registry` row (re-checked inside
+     * `fanOutAllEpochsToDevice()`) — confirmation is gated behind the
+     * both-screen safety-number ceremony (D-07), an out-of-band-verified
+     * trust anchor independent of this wrap's own confidentiality property.
+     *
+     * ## Trust-gate ordering (critical, threat-model item 1)
+     *
+     * Callers MUST reach this method ONLY from the `state === CONFIRMED`
+     * branch returned by `confirm()`'s underlying
+     * `PairingTokenService::confirm()` both-confirm transition — never
+     * speculatively, never on a pending/awaiting/expired/rejected token.
+     * `fanOutAllEpochsToDevice()` independently re-verifies `confirmed_at`
+     * on the recipient row (defense-in-depth) and refuses otherwise.
+     *
+     * @throws \LogicException when the app-lock KEK is unavailable.
+     */
+    public function deliverAllEpochsToDevice(int $userId, int $newDeviceRegistryId, Session $session): void
+    {
+        $this->rotationService->fanOutAllEpochsToDevice($userId, $newDeviceRegistryId, $session);
     }
 
     /**
