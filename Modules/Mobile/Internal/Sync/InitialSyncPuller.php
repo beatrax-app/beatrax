@@ -11,6 +11,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\HistoryReprojector;
 
 /**
  * Idempotent, resumable full-history initial-sync pull (R5 / D-03 / D-04,
@@ -66,6 +67,7 @@ final class InitialSyncPuller
         private readonly PeerCatchUpExchanger $catchUp,
         private readonly TransportFramer $framer,
         private readonly Clock $clock,
+        private readonly HistoryReprojector $reprojector,
     ) {}
 
     /**
@@ -125,7 +127,26 @@ final class InitialSyncPuller
             ? $recordsApplied
             : max($cursor['records_expected'] ?? 0, $recordsApplied);
 
-        $this->persistCursor($userId, $peerDeviceId, $recordsApplied, $recordsExpected, $lastHlcL, $lastHlcC, $phase);
+        // Phase 15 import-join (Task 4, O1): the FIRST pull() step to
+        // observe a non-empty GDK keyring (i.e. the desktop's delivered
+        // epochs — possibly just installed by THIS very step's
+        // LanSyncClient post-catch-up receive leg) re-projects the entire
+        // persisted op-log via OpLogRebuilder::rebuild(), so any entry that
+        // arrived (and was quarantined gdk_decrypt_failed) BEFORE the
+        // keyring was populated now decrypts and projects. Runs AT MOST
+        // ONCE per (user, peer) cursor — reprojected_at guards the repeat.
+        // Runs synchronously, INLINE, before phase is allowed to read
+        // 'complete' below — so a caller that observes phase === 'complete'
+        // has ALWAYS already seen the re-projection finish (sequence:
+        // sync step -> install epochs -> if newly decryptable, rebuild ->
+        // then allow complete).
+        $reprojectedAt = $cursor['reprojected_at'];
+        if ($reprojectedAt === null && $this->keyringIsNonEmpty($userId)) {
+            $this->reprojector->reproject($userId);
+            $reprojectedAt = $this->clock->now()->toIso8601String();
+        }
+
+        $this->persistCursor($userId, $peerDeviceId, $recordsApplied, $recordsExpected, $lastHlcL, $lastHlcC, $phase, $reprojectedAt);
 
         return [
             'records_applied' => $recordsApplied,
@@ -133,6 +154,27 @@ final class InitialSyncPuller
             'percent' => self::percentOf($recordsApplied, $recordsExpected),
             'phase' => $phase,
         ];
+    }
+
+    /**
+     * True once `sync_encryption_state.current_epoch` is set for $userId —
+     * a plain, non-secret integer pointer (T-14-01: never key material) the
+     * SAME signal `GdkKeyringService::appendEpoch()`/`setCurrentEpoch()`
+     * writes on every successful epoch install (self-mint OR a delivered
+     * desktop wrap). Read directly via a raw table query rather than
+     * `Modules\Sync\Internal\Crypto\GdkKeyringService` — that class is
+     * off-limits to this module directly (BoundaryRule has no per-file
+     * ignore); a bare table read of a public, non-secret column crosses no
+     * module boundary.
+     */
+    private function keyringIsNonEmpty(int $userId): bool
+    {
+        $currentEpoch = $this->db->connection()
+            ->table('sync_encryption_state')
+            ->where('user_id', $userId)
+            ->value('current_epoch');
+
+        return $currentEpoch !== null;
     }
 
     /**
@@ -186,7 +228,7 @@ final class InitialSyncPuller
     }
 
     /**
-     * @return array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: string}
+     * @return array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: string, reprojected_at: ?string}
      */
     private function loadOrCreateCursor(int $userId, string $peerDeviceId): array
     {
@@ -203,6 +245,7 @@ final class InitialSyncPuller
                 'last_hlc_l' => is_numeric($row->last_hlc_l) ? (int) $row->last_hlc_l : 0,
                 'last_hlc_c' => is_numeric($row->last_hlc_c) ? (int) $row->last_hlc_c : 0,
                 'phase' => is_string($row->phase) ? $row->phase : 'pending',
+                'reprojected_at' => is_string($row->reprojected_at ?? null) ? $row->reprojected_at : null,
             ];
         }
 
@@ -215,6 +258,7 @@ final class InitialSyncPuller
             'last_hlc_l' => 0,
             'last_hlc_c' => 0,
             'phase' => 'pending',
+            'reprojected_at' => null,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -225,6 +269,7 @@ final class InitialSyncPuller
             'last_hlc_l' => 0,
             'last_hlc_c' => 0,
             'phase' => 'pending',
+            'reprojected_at' => null,
         ];
     }
 
@@ -236,6 +281,7 @@ final class InitialSyncPuller
         int $lastHlcL,
         int $lastHlcC,
         string $phase,
+        ?string $reprojectedAt,
     ): void {
         $now = $this->clock->now()->toIso8601String();
 
@@ -253,6 +299,7 @@ final class InitialSyncPuller
                 'last_hlc_l' => $lastHlcL,
                 'last_hlc_c' => $lastHlcC,
                 'phase' => $phase,
+                'reprojected_at' => $reprojectedAt,
                 'updated_at' => $now,
             ]);
     }

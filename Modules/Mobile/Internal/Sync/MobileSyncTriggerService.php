@@ -98,7 +98,7 @@ final class MobileSyncTriggerService
         }
 
         if ($lanHost !== null && $lanPort !== null) {
-            if ($this->dialLanWithBoundedRetry($lanHost, $lanPort, $identity)) {
+            if ($this->dialLanWithBoundedRetry($lanHost, $lanPort, $identity, $session)) {
                 return true;
             }
         }
@@ -112,15 +112,15 @@ final class MobileSyncTriggerService
      * Never an unbounded loop: at most two `LanSyncClient::syncOnce()`
      * calls per `syncOnce()` invocation.
      */
-    private function dialLanWithBoundedRetry(string $host, int $port, DeviceIdentityDto $identity): bool
+    private function dialLanWithBoundedRetry(string $host, int $port, DeviceIdentityDto $identity, Session $session): bool
     {
-        if ($this->lanSyncClient->syncOnce($host, $port, $identity)) {
+        if ($this->lanSyncClient->syncOnce($host, $port, $identity, $session)) {
             return true;
         }
 
         // Single bounded retry — the OS local-network permission prompt may
         // resolve between the first and second attempt.
-        return $this->lanSyncClient->syncOnce($host, $port, $identity);
+        return $this->lanSyncClient->syncOnce($host, $port, $identity, $session);
     }
 
     /**
