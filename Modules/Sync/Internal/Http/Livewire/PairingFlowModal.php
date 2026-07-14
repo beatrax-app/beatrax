@@ -20,6 +20,9 @@ use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
+use Modules\Sync\Public\Services\PairingGateway;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * Bidirectional pairing-flow modal (PAIR-02, D-04/D-05/D-07/D-13).
@@ -92,6 +95,17 @@ final class PairingFlowModal extends Component
     public bool $awaitingPeer = false;
 
     /**
+     * Phase 15 import-join (Task 3, B1): non-blocking retry indicator for a
+     * failed epoch fan-out on the desktop side — mirrors
+     * `DevicesAndSyncSettingsSection::$encryptionActivationFailed`'s
+     * established shape. A fan-out failure must never silently strand the
+     * newly-confirmed phone permanently unable to decrypt, so this is
+     * logged (never key material — device ids / epoch ids / counts only)
+     * and surfaced here for a future retry affordance.
+     */
+    public bool $fanOutFailed = false;
+
+    /**
      * Which side this device plays in the in-flight handshake.
      *
      * #[Locked] — a client must never be able to flip its side and confirm the
@@ -140,6 +154,7 @@ final class PairingFlowModal extends Component
         $this->expiresInSeconds = 600;
         $this->flashMessage = '';
         $this->awaitingPeer = false;
+        $this->fanOutFailed = false;
         $this->side = '';
         $this->safetyWords = [];
         $this->open = true;
@@ -283,6 +298,8 @@ final class PairingFlowModal extends Component
         SafetyNumberDeriver $safetyDeriver,
         Session $session,
         EncryptionMigrationService $migrationService,
+        PairingGateway $gateway,
+        LoggerInterface $logger,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -311,9 +328,16 @@ final class PairingFlowModal extends Component
 
             try {
                 $migrationService->migrate($currentUser->user(), $session);
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Best-effort — see confirmMatch()'s docblock.
             }
+
+            // Phase 15 import-join (Task 3, B1): fan out EVERY desktop epoch
+            // to the just-confirmed device — ONLY reachable here, inside the
+            // state === CONFIRMED branch (trust-gate ordering, threat-model
+            // item 1). migrate() runs FIRST so a desktop that had never
+            // enabled encryption has something to deliver.
+            $this->fanOutToNewlyConfirmedDevice($db, $gateway, $logger, $userId, $session);
 
             $this->dispatch('pairing-confirmed');
         }
@@ -342,6 +366,9 @@ final class PairingFlowModal extends Component
         PairingTokenService $tokenService,
         Session $session,
         EncryptionMigrationService $migrationService,
+        DatabaseManager $db,
+        PairingGateway $gateway,
+        LoggerInterface $logger,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -374,9 +401,16 @@ final class PairingFlowModal extends Component
             // handling).
             try {
                 $migrationService->migrate($currentUser->user(), $session);
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Best-effort — see docblock above.
             }
+
+            // Phase 15 import-join (Task 3, B1): fan out EVERY desktop epoch
+            // to the just-confirmed device — ONLY reachable here, inside the
+            // state === CONFIRMED branch (trust-gate ordering, threat-model
+            // item 1). migrate() runs FIRST so a desktop that had never
+            // enabled encryption has something to deliver.
+            $this->fanOutToNewlyConfirmedDevice($db, $gateway, $logger, $userId, $session);
 
             $this->dispatch('pairing-confirmed');
 
@@ -385,6 +419,66 @@ final class PairingFlowModal extends Component
 
         // This side has confirmed; wait for the peer (the poll advances to success).
         $this->awaitingPeer = true;
+    }
+
+    /**
+     * Resolve the just-confirmed RESPONDER device's `device_registry.id`
+     * from this in-flight token, then fan out every keyring epoch to it
+     * (Phase 15 import-join, Task 3). Best-effort — a fan-out failure
+     * surfaces `$fanOutFailed` (non-blocking retry indicator, mirrors
+     * `DevicesAndSyncSettingsSection::$encryptionActivationFailed`) but
+     * NEVER undoes the just-completed pairing; a silently-swallowed
+     * failure would leave the phone permanently unable to decrypt, so it is
+     * logged (device/epoch ids and counts only — NEVER key material).
+     *
+     * Guarded exactly like the existing `migrate()` auto-trigger — reached
+     * ONLY from the `state === CONFIRMED` branch in `confirmMatch()`/
+     * `checkPairingState()` above, i.e. only after
+     * `PairingTokenService::confirm()` returned CONFIRMED via
+     * `bothConfirmed()` (T-15-17/T-15-19).
+     */
+    private function fanOutToNewlyConfirmedDevice(
+        DatabaseManager $db,
+        PairingGateway $gateway,
+        LoggerInterface $logger,
+        int $userId,
+        Session $session,
+    ): void {
+        $tokenRow = $db->connection()->table('pairing_tokens')
+            ->where('id', (int) $this->pairingTokenId)
+            ->where('user_id', $userId)
+            ->first(['responder_device_id']);
+
+        $responderDeviceId = $tokenRow !== null && is_string($tokenRow->responder_device_id)
+            ? $tokenRow->responder_device_id
+            : null;
+
+        if ($responderDeviceId === null) {
+            return;
+        }
+
+        $deviceRegistryId = $db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('device_id', $responderDeviceId)
+            ->where('is_self', 0)
+            ->value('id');
+
+        if (! is_numeric($deviceRegistryId)) {
+            return;
+        }
+
+        $this->fanOutFailed = false;
+
+        try {
+            $gateway->deliverAllEpochsToDevice($userId, (int) $deviceRegistryId, $session);
+        } catch (Throwable $e) {
+            $this->fanOutFailed = true;
+            $logger->warning('GDK epoch fan-out to newly-confirmed device failed.', [
+                'user_id' => $userId,
+                'device_registry_id' => (int) $deviceRegistryId,
+                'exception' => $e::class,
+            ]);
+        }
     }
 
     // -------------------------------------------------------------------------
