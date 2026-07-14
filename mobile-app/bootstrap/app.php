@@ -108,6 +108,28 @@ return Application::configure(basePath: dirname(__DIR__))
             ];
         });
     })
+    ->booting(function (): void {
+        // Ensure the on-device (persisted-store) DB directory exists BEFORE any
+        // provider opens the sqlite connection. SqliteOptimizationsProvider
+        // applies `PRAGMA journal_mode = WAL` on the ConnectionEstablished
+        // event during provider boot — EARLIER than the ->booted() migrate hook
+        // below — so without the directory the very first cold-boot connection
+        // throws "Database file … does not exist" (a one-time, self-healing but
+        // noisy error). Harmless off-device: dirname() of the desktop/host DB
+        // already exists, so the mkdir is a no-op there.
+        $dbFile = UserDataPathService::databaseFile();
+        $dbDir = dirname($dbFile);
+        if (! is_dir($dbDir)) {
+            @mkdir($dbDir, 0775, true);
+        }
+        // Laravel's SQLite connector THROWS "Database file … does not exist"
+        // instead of creating the file, so the empty file must exist before the
+        // first ConnectionEstablished (SqliteOptimizationsProvider's PRAGMA WAL)
+        // — the migrator populates its schema afterwards in ->booted().
+        if (! file_exists($dbFile)) {
+            @touch($dbFile);
+        }
+    })
     ->booted(function (Application $app): void {
         if (getenv('NATIVEPHP_PLATFORM') === false) {
             // Not the mobile runtime (desktop root / host dev / test) —
