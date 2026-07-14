@@ -3,12 +3,16 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
+use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
@@ -333,4 +337,153 @@ it('GET /mobile/pair renders 200 for an authenticated user', function (): void {
 
     test()->get('/mobile/pair')
         ->assertOk();
+});
+
+// -------------------------------------------------------------------------
+// Phase 15 import-join (Task 2) — importMode: self-mint deferral (B2, 6c)
+// -------------------------------------------------------------------------
+
+it('import mode reads ?mode=import at mount() and seeds a local token from the scanned QR identity (G1)', function (): void {
+    $user = pairingScanTestUser('mobile-pair-import-seed');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+
+    // Simulate a genuinely fresh phone: the scanned QR carries a token +
+    // initiator identity that NEVER existed in this device's own local
+    // pairing_tokens table (no issue() call on this device at all — the
+    // token was issued on the DESKTOP's OWN separate database).
+    $initiatorDeviceId = 'desktop-import-initiator';
+    $initiatorEd = bin2hex(random_bytes(32));
+    $initiatorKx = bin2hex(random_bytes(32));
+    $token = bin2hex(random_bytes(16));
+
+    /** @var QrPayloadBuilder $qrBuilder */
+    $qrBuilder = app(QrPayloadBuilder::class);
+    $qrPayload = $qrBuilder->buildUri($initiatorDeviceId, $initiatorEd, $initiatorKx, $token);
+
+    // Set mode=import on the container-bound Request BEFORE mount() runs
+    // (Livewire::test() resolves mount()'s Request param from the SAME
+    // container-bound instance the app would use for a real GET request).
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    Livewire::test(MobilePairingScan::class)
+        ->assertSet('importMode', true)
+        ->call('submitCode', $qrPayload)
+        ->assertSet('step', 'confirm')
+        ->assertSet('flashMessage', '');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $row = $db->connection()->table('pairing_tokens')
+        ->where('user_id', $user->id)
+        ->where('initiator_device_id', $initiatorDeviceId)
+        ->first();
+
+    expect($row)->not->toBeNull('seedFromInitiator() must have created a local row from the scanned QR identity');
+    expect($row->initiator_seeded_at)->not->toBeNull();
+    expect($row->state)->toBe('awaiting_confirm', 'accept() must have bound the responder side on top of the seeded row');
+});
+
+it('import mode defers self-mint on both-confirm — sync_encryption_state stays absent and the GDK keyring stays empty (B2)', function (): void {
+    $user = pairingScanTestUser('mobile-pair-import-no-selfmint');
+    test()->actingAs($user);
+
+    // A prior, unrelated test process may have left a keyring file on disk
+    // for this same reused numeric user id (SQLite rowids are reused
+    // across RefreshDatabase transaction rollbacks — GdkEpochDeliveryTest's
+    // own documented cross-test filesystem-isolation gap). Start from a
+    // genuinely empty on-disk state.
+    @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+
+    $initiatorDeviceId = 'desktop-import-confirm';
+    $initiatorEd = bin2hex(random_bytes(32));
+    $initiatorKx = bin2hex(random_bytes(32));
+    $token = bin2hex(random_bytes(16));
+
+    /** @var QrPayloadBuilder $qrBuilder */
+    $qrBuilder = app(QrPayloadBuilder::class);
+    $qrPayload = $qrBuilder->buildUri($initiatorDeviceId, $initiatorEd, $initiatorKx, $token);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    $component = Livewire::test(MobilePairingScan::class)
+        ->assertSet('importMode', true)
+        ->call('submitCode', $qrPayload)
+        ->assertSet('step', 'confirm');
+
+    // Phone (responder) confirms first — awaits the peer.
+    $component->call('confirmMatch')->assertSet('awaitingPeer', true);
+
+    // The desktop (initiator) side confirms — simulated directly here
+    // exactly as CrossDevicePairingAdmissionTest / PairingFlowTest do for
+    // the two-sided flow (this codebase's established single-database
+    // pairing-confirm test convention).
+    /** @var PairingTokenService $tokenService */
+    $tokenService = app(PairingTokenService::class);
+    $pairingTokenId = (int) $component->get('pairingTokenId');
+    $tokenService->confirm($pairingTokenId, (int) $user->id, $initiatorDeviceId);
+
+    // The poll observes the completed both-confirm — the SAME transition
+    // that (in non-import mode) would auto-run migrate().
+    $component->call('checkPairingState')->assertSet('step', 'success');
+
+    /** @var PairingGateway $gateway */
+    $gateway = app(PairingGateway::class);
+    expect($gateway->tokenState($pairingTokenId, (int) $user->id))->toBe(PairingGateway::STATE_CONFIRMED);
+
+    // B2: migrate() was NEVER called on the import path — no
+    // sync_encryption_state row, no GDK epoch, no keyring file.
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    expect($db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->exists())->toBeFalse();
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    expect($keyring->loadKeyring((int) $user->id, $session)->epochs())->toBe([], 'the import path must never self-mint a GDK epoch (B2)');
+
+    // G2: the initiator (desktop) is admitted into this device's registry.
+    $initiatorRow = $db->connection()->table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('device_id', $initiatorDeviceId)
+        ->first();
+    expect($initiatorRow)->not->toBeNull();
+    expect($initiatorRow->confirmed_at)->not->toBeNull();
+});
+
+it('non-import mode (CREATE-ACCOUNT path) is UNCHANGED — both-confirm still self-mints the GDK epoch', function (): void {
+    $user = pairingScanTestUser('mobile-pair-nonimport-selfmint');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+    $issued = pairingScanIssueToken($user);
+
+    // importMode defaults to false — no ?mode=import query set.
+    $component = Livewire::test(MobilePairingScan::class)
+        ->assertSet('importMode', false)
+        ->call('submitCode', $issued['qrPayload'])
+        ->assertSet('step', 'confirm');
+
+    $component->call('confirmMatch')->assertSet('awaitingPeer', true);
+
+    /** @var PairingTokenService $tokenService */
+    $tokenService = app(PairingTokenService::class);
+    $pairingTokenId = (int) $component->get('pairingTokenId');
+    $tokenService->confirm($pairingTokenId, (int) $user->id, $issued['initiatorDeviceId']);
+
+    $component->call('checkPairingState')->assertSet('step', 'success');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $state = $db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->first();
+    expect($state)->not->toBeNull('the non-import CREATE-ACCOUNT path must still self-mint on both-confirm — unchanged (D-07)');
+    expect($state->current_epoch)->toBe(1);
 });
