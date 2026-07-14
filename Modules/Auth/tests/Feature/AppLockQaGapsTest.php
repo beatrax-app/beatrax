@@ -7,6 +7,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
@@ -98,6 +99,46 @@ it('AppLockSettingsSection setPin stores the data key in the session after enabl
     $session = $this->app->make(Session::class);
     $dataKey = $session->get(LockStateManager::DATA_KEY_SESSION);
     expect($dataKey)->toBeString()->not->toBeEmpty();
+});
+
+// ---------------------------------------------------------------------------
+// HIGH-02 (15-import-join-REVIEW.md) — defense-in-depth: enable() must
+// never mint a KEK from an empty PIN/password, regardless of what the
+// caller already validated (or failed to validate).
+// ---------------------------------------------------------------------------
+
+it('enable() rejects an empty PIN — never mints a weak/empty-derived KEK (HIGH-02)', function (): void {
+    $user = User::query()->create([
+        'username' => 'high-02-empty-pin-user',
+        'password' => bcrypt('a-real-password'),
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+
+    expect(fn () => $provisioner->enable($user->id, '', 'a-real-password'))
+        ->toThrow(ValidationException::class);
+
+    expect($provisioner->isEnabled($user->id))->toBeFalse('a rejected empty-PIN call must never leave a config row behind');
+});
+
+it('enable() rejects an empty account password — never mints a weak/empty-derived KEK (HIGH-02)', function (): void {
+    $user = User::query()->create([
+        'username' => 'high-02-empty-password-user',
+        'password' => bcrypt('a-real-password'),
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+
+    expect(fn () => $provisioner->enable($user->id, '654321', ''))
+        ->toThrow(ValidationException::class);
+
+    expect($provisioner->isEnabled($user->id))->toBeFalse('a rejected empty-password call must never leave a config row behind');
 });
 
 // ---------------------------------------------------------------------------

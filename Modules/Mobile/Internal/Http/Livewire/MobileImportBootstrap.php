@@ -68,6 +68,18 @@ final class MobileImportBootstrap extends Component
     /** Session key SignupAction stashes the plaintext recovery codes under. */
     private const RECOVERY_CODES_SESSION_KEY = 'auth.signup.recovery_codes_plain';
 
+    /**
+     * Session key the ORIGINALLY submitted PIN/password are stashed under
+     * for the lifetime of the `provisioning_failed` retry window (HIGH-02,
+     * 15-import-join-REVIEW.md). Server-side only — never sent to the
+     * client, mirrors RECOVERY_CODES_SESSION_KEY's identical stash-then-
+     * forget shape immediately below. Forgotten the moment
+     * provisionDeviceLocally() actually succeeds (from either submit() or
+     * retryProvisioning()) — never lingers longer than the retry window
+     * genuinely needs.
+     */
+    private const PENDING_CREDENTIALS_SESSION_KEY = 'mobile.import.pending_credentials';
+
     private const MINIMUM_PASSWORD_LENGTH = 12;
 
     /** collect_pin|provisioning_failed|recovery_codes. */
@@ -139,7 +151,11 @@ final class MobileImportBootstrap extends Component
 
         // The plaintext PIN/password are needed by provisionDeviceLocally()
         // below and, on a retry, by retryProvisioning() — but must never
-        // linger in the component's public wire snapshot once used.
+        // linger in the component's public wire snapshot once used (a
+        // public Livewire property survives re-renders inside the
+        // serialized wire:snapshot payload sent to the browser on every
+        // subsequent request, which is exactly the leak this class must
+        // avoid for plaintext credentials).
         $pin = $this->pin;
         $accountPassword = $this->password;
         $this->pin = '';
@@ -147,12 +163,22 @@ final class MobileImportBootstrap extends Component
         $this->password = '';
         $this->passwordConfirmation = '';
 
+        // HIGH-02 fix (15-import-join-REVIEW.md): stash the credentials
+        // SERVER-SIDE (session, never rendered to the client) so a genuine
+        // mid-flow failure AFTER SignupAction already committed can still
+        // be retried with the SAME real credentials — never the empty
+        // properties cleared immediately above. Mirrors
+        // RECOVERY_CODES_SESSION_KEY's identical stash-then-forget shape.
+        // Forgotten the instant provisioning actually succeeds, below.
+        $session->put(self::PENDING_CREDENTIALS_SESSION_KEY, ['pin' => $pin, 'password' => $accountPassword]);
+
         if (! $this->provisionDeviceLocally($userId, $pin, $accountPassword, $session, $lockGateway, $pairingGateway, $db)) {
             $this->step = 'provisioning_failed';
 
             return;
         }
 
+        $session->forget(self::PENDING_CREDENTIALS_SESSION_KEY);
         $this->step = 'recovery_codes';
     }
 
@@ -162,6 +188,16 @@ final class MobileImportBootstrap extends Component
      * reject a second signup attempt outright). Reached only from the
      * `provisioning_failed` step, for the ALREADY-authenticated user
      * SignupAction just logged in.
+     *
+     * HIGH-02 fix (15-import-join-REVIEW.md): reads the ORIGINALLY
+     * submitted PIN/password from the server-side session stash — NEVER
+     * `$this->pin`/`$this->password`, which `submit()` always clears back
+     * to '' regardless of outcome (see that method's docblock). Reading
+     * the emptied public properties here was the bug: it either permanently
+     * stranded the device in `provisioning_failed` (once
+     * `AppLockProvisioner::enable()` gained its own empty-input guard) or,
+     * before that guard existed, minted the app-lock KEK from an EMPTY
+     * passphrase.
      */
     public function retryProvisioning(
         CurrentUser $currentUser,
@@ -172,12 +208,28 @@ final class MobileImportBootstrap extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
-        if (! $this->provisionDeviceLocally($userId, $this->pin, $this->password, $session, $lockGateway, $pairingGateway, $db)) {
+        /** @var array{pin: string, password: string}|null $pending */
+        $pending = $session->get(self::PENDING_CREDENTIALS_SESSION_KEY);
+
+        if ($pending === null || $pending['pin'] === '' || $pending['password'] === '') {
+            // The session copy is genuinely gone (e.g. a new session mid-
+            // flow) — never provision with an empty PIN/password (
+            // AppLockProvisioner::enable() would reject it anyway); the
+            // only safe recovery is a full re-entry through collect_pin so
+            // the user re-types real credentials. Never a silent dead end.
+            $this->flashMessage = 'Your session expired before setup finished. Please re-enter your PIN and password.';
+            $this->step = 'collect_pin';
+
+            return;
+        }
+
+        if (! $this->provisionDeviceLocally($userId, $pending['pin'], $pending['password'], $session, $lockGateway, $pairingGateway, $db)) {
             $this->flashMessage = 'Still could not finish setting up this device. Please try again.';
 
             return;
         }
 
+        $session->forget(self::PENDING_CREDENTIALS_SESSION_KEY);
         $this->pin = '';
         $this->confirmPin = '';
         $this->password = '';
