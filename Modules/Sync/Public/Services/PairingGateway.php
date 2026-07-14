@@ -118,6 +118,31 @@ final class PairingGateway
     }
 
     /**
+     * Seed a LOCAL pending `pairing_tokens` row from a scanned QR's
+     * initiator identity (Phase 15 import-join, G1) — closes the gap where
+     * `acceptToken()`'s underlying `PairingTokenService::accept()` would
+     * otherwise find no local row on a genuinely fresh, separate device
+     * database. Thin wrapper over `PairingTokenService::seedFromInitiator()`
+     * — no new trust decision here; the seeded row still requires the full
+     * `acceptToken()` + both-confirm ceremony before any admission occurs.
+     *
+     * Callers should invoke this BEFORE `acceptToken($tokenHex, ...)` in
+     * import mode; a failed/no-op seed (malformed initiator key material)
+     * simply means the subsequent `acceptToken()` call finds no pending row
+     * and returns the SAME generic invalid/expired outcome any other bad
+     * code produces.
+     */
+    public function seedResponderToken(
+        string $tokenHex,
+        string $initiatorDeviceId,
+        string $initiatorEd25519Hex,
+        string $initiatorX25519Hex,
+        int $userId,
+    ): void {
+        $this->tokenService->seedFromInitiator($userId, $initiatorDeviceId, $initiatorEd25519Hex, $initiatorX25519Hex, $tokenHex);
+    }
+
+    /**
      * Accept a pairing token already in raw hex form — the QR path. The QR's
      * `token` query parameter (`Modules\Sync\Internal\Pairing\
      * QrPayloadBuilder::buildUri()`) IS the same raw hex
