@@ -97,6 +97,16 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
     $identityService = app(DeviceIdentityService::class);
     $identity = $identityService->generateAndPersist((int) $user->id, $session);
 
+    // A device that reaches InitialSyncPuller holds a GDK keyring — it has
+    // either self-minted (create-account) or received the peer's epochs
+    // (import). Self-mint one so this durable-cursor resume test reflects a
+    // decryptable device: LOW-01 (15-import-join-REVIEW.md) now gates
+    // 'complete' on an installed keyring so an import can't finish onto a
+    // dashboard of gdk_decrypt_failed rows.
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    $keyring->generateAndPersist((int) $user->id, $session);
+
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -348,4 +358,51 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
         }
     }
     expect($countOfEpochOne)->toBe(1, 'epoch 1 must not be duplicated in the keyring');
+});
+
+it('does not report complete while the GDK keyring is empty — an import awaiting the desktop epochs stays blocking (LOW-01)', function (): void {
+    $user = mobileResumeUser('mobile-low01-'.bin2hex(random_bytes(4)));
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $identityService->generateAndPersist((int) $user->id, $session);
+
+    // Deliberately NO keyring self-mint — this device is importing and has
+    // not yet received the desktop's epochs (empty keyring).
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $peerDeviceId = 'desktop-fixture-'.bin2hex(random_bytes(4));
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $user->id,
+        'device_id' => $peerDeviceId,
+        'name' => 'Fixture Desktop',
+        'ed25519_public_key_hex' => bin2hex(random_bytes(32)),
+        'x25519_public_key_hex' => bin2hex(random_bytes(32)),
+        'safety_number_words' => 'one two three four five six',
+        'is_self' => 0,
+        'paired_at' => '2026-07-01 00:00:00',
+        'confirmed_at' => '2026-07-01 00:00:00',
+        'created_at' => '2026-07-01 00:00:00',
+        'updated_at' => '2026-07-01 00:00:00',
+    ]);
+    seedResumeOpLogRows($db, (int) $user->id, $peerDeviceId, 10, 1);
+
+    // Faked relay so syncOnce() can report a genuine catch-up — the ONLY
+    // thing that must prevent 'complete' here is the empty keyring.
+    /** @var RelayConfig $relayConfig */
+    $relayConfig = app(RelayConfig::class);
+    $relayConfig->setEndpointUrl('https://relay.fixture.test');
+    $relayConfig->setAuthToken('fixture-relay-token');
+    Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
+
+    /** @var InitialSyncPuller $puller */
+    $puller = app(InitialSyncPuller::class);
+    $progress = $puller->pull((int) $user->id, $session);
+
+    expect($progress['phase'])->not->toBe('complete', 'an import with an empty keyring must not report complete — it would land on a gdk_decrypt_failed dashboard');
 });

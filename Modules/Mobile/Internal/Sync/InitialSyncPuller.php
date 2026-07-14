@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\HistoryReprojector;
+use Psr\Log\LoggerInterface;
 
 /**
  * Idempotent, resumable full-history initial-sync pull (R5 / D-03 / D-04,
@@ -68,6 +69,7 @@ final class InitialSyncPuller
         private readonly TransportFramer $framer,
         private readonly Clock $clock,
         private readonly HistoryReprojector $reprojector,
+        private readonly LoggerInterface $logger,
     ) {}
 
     /**
@@ -122,29 +124,51 @@ final class InitialSyncPuller
         $lastHlcL = $newlyApplied > 0 ? $maxHlcL : $cursor['last_hlc_l'];
         $lastHlcC = $newlyApplied > 0 ? $maxHlcC : $cursor['last_hlc_c'];
 
-        $phase = $result === true ? 'complete' : 'pulling';
-        $recordsExpected = $result === true
+        $keysInstalled = $this->keyringIsNonEmpty($userId);
+
+        // Phase 15 import-join (Task 4, O1): the FIRST pull() step to observe
+        // a non-empty GDK keyring (the desktop's delivered epochs — possibly
+        // just installed by THIS step's LanSyncClient post-catch-up receive
+        // leg) re-projects the entire persisted op-log so any entry that
+        // arrived (and was quarantined gdk_decrypt_failed) BEFORE the keyring
+        // was populated now decrypts and projects. Runs at most once per
+        // (user, peer) cursor (reprojected_at guards the repeat), synchronously
+        // INLINE before phase is allowed to read 'complete'.
+        $reprojectedAt = $cursor['reprojected_at'];
+        if ($reprojectedAt === null && $keysInstalled) {
+            try {
+                $this->reprojector->reproject($userId);
+                $reprojectedAt = $this->clock->now()->toIso8601String();
+            } catch (\Throwable $e) {
+                // LOW-02 (15-import-join-REVIEW.md): a re-projection failure
+                // must NOT crash the setup-screen poll. Log and leave
+                // reprojected_at NULL; completion stays gated on it below, so
+                // the next pull() retries (graceful degradation, matching the
+                // rest of the delivery path). NOTE: no hard attempt cap — a
+                // genuinely un-projectable entry keeps setup blocking with
+                // logged errors rather than crash-looping; a bounded cap would
+                // need a dedicated cursor column (deferred).
+                $this->logger->error('InitialSyncPuller: history re-projection failed; will retry on the next pull.', [
+                    'user_id' => $userId,
+                    'exception' => $e,
+                ]);
+            }
+        }
+
+        // LOW-01 (15-import-join-REVIEW.md): finishing the sync leg
+        // ($result === true) is necessary but NOT sufficient for an IMPORT —
+        // 'complete' also requires the desktop's epochs INSTALLED
+        // ($keysInstalled) AND the history re-projected ($reprojectedAt), else
+        // a relay-only / not-yet-delivered import would report complete and
+        // land on a dashboard of gdk_decrypt_failed rows. A create-account /
+        // self-minting peer has a non-empty keyring from its OWN epoch and a
+        // cheap successful reproject, so it completes normally.
+        $isComplete = $result === true && $keysInstalled && $reprojectedAt !== null;
+
+        $phase = $isComplete ? 'complete' : 'pulling';
+        $recordsExpected = $isComplete
             ? $recordsApplied
             : max($cursor['records_expected'] ?? 0, $recordsApplied);
-
-        // Phase 15 import-join (Task 4, O1): the FIRST pull() step to
-        // observe a non-empty GDK keyring (i.e. the desktop's delivered
-        // epochs — possibly just installed by THIS very step's
-        // LanSyncClient post-catch-up receive leg) re-projects the entire
-        // persisted op-log via OpLogRebuilder::rebuild(), so any entry that
-        // arrived (and was quarantined gdk_decrypt_failed) BEFORE the
-        // keyring was populated now decrypts and projects. Runs AT MOST
-        // ONCE per (user, peer) cursor — reprojected_at guards the repeat.
-        // Runs synchronously, INLINE, before phase is allowed to read
-        // 'complete' below — so a caller that observes phase === 'complete'
-        // has ALWAYS already seen the re-projection finish (sequence:
-        // sync step -> install epochs -> if newly decryptable, rebuild ->
-        // then allow complete).
-        $reprojectedAt = $cursor['reprojected_at'];
-        if ($reprojectedAt === null && $this->keyringIsNonEmpty($userId)) {
-            $this->reprojector->reproject($userId);
-            $reprojectedAt = $this->clock->now()->toIso8601String();
-        }
 
         $this->persistCursor($userId, $peerDeviceId, $recordsApplied, $recordsExpected, $lastHlcL, $lastHlcC, $phase, $reprojectedAt);
 
