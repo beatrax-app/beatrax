@@ -221,6 +221,102 @@ final class GdkRotationService
     }
 
     /**
+     * ADD-device analog of {@see rotateAndRevoke()}'s Steps 1-2 fan-out
+     * (minus Steps 1-2 themselves): wrap EVERY epoch already in $userId's
+     * keyring, sealed to $newDeviceRegistryId's confirmed X25519 public key,
+     * and enqueue each on the ZK-pure RelayMailbox for pickup — the SAME
+     * delivery primitive `rotateAndRevoke()` uses, reused unchanged. Added
+     * for Phase 15 import-join (B1): the desktop must push its FULL epoch
+     * history to a newly-confirmed phone, not just future rotations.
+     *
+     * NO rotation, NO revoke, NO `appendEpoch()`, NO `current_epoch` change
+     * — this is purely additive delivery of ALREADY-EXISTING epochs. An
+     * empty keyring (encryption never enabled on this desktop) enqueues
+     * zero wraps — benign; the phone stays unencrypted-but-synced.
+     *
+     * ## Trust-gate ordering (critical, threat-model item 1)
+     *
+     * This method is SAFE to call only for an already-CONFIRMED recipient.
+     * Defense-in-depth: it re-checks `confirmed_at IS NOT NULL` on the
+     * recipient row itself and refuses (zero wraps, no exception, nothing
+     * logged that could leak trust state) when the row is not confirmed OR
+     * is the acting self device (no wrap-to-self) OR does not exist for
+     * this user. The CALLER (`PairingFlowModal`, Task 3 UI half) is
+     * additionally responsible for reaching this method ONLY from the
+     * `state === CONFIRMED` branch returned by
+     * `PairingTokenService::confirm()`'s `bothConfirmed()` transition — a
+     * pending/awaiting/expired/rejected token must never reach this method
+     * at all, so the two checks are independent, redundant gates on the
+     * SAME invariant (T-15-17/T-15-19 preserved).
+     *
+     * @throws \LogicException when the app-lock KEK is unavailable
+     *                         (propagated from `GdkKeyringService::loadKeyring()`).
+     * @throws RuntimeException on a crypto / I-O failure while wrapping.
+     */
+    public function fanOutAllEpochsToDevice(int $userId, int $newDeviceRegistryId, Session $session): void
+    {
+        $connection = $this->db->connection();
+
+        $recipient = $connection->table('device_registry')
+            ->where('id', $newDeviceRegistryId)
+            ->where('user_id', $userId)
+            ->first(['device_id', 'x25519_public_key_hex', 'is_self', 'confirmed_at']);
+
+        if ($recipient === null) {
+            return;
+        }
+
+        // Defense-in-depth (threat-model item 1): never wrap to an
+        // unconfirmed device, even if this method is ever mis-called.
+        if ($recipient->confirmed_at === null) {
+            return;
+        }
+
+        // No wrap-to-self — mirrors rotateAndRevoke()'s Step 3 self-exclusion.
+        if ((bool) $recipient->is_self === true) {
+            return;
+        }
+
+        $recipientDeviceId = is_string($recipient->device_id) ? $recipient->device_id : null;
+        $recipientPubHex = is_string($recipient->x25519_public_key_hex) ? $recipient->x25519_public_key_hex : null;
+
+        if ($recipientDeviceId === null || $recipientPubHex === null) {
+            return;
+        }
+
+        // loadKeyring() throws \LogicException when the KEK is unavailable
+        // (D-02 weak-key-window guard) and returns an EMPTY keyring when
+        // encryption was never enabled for this user (group-of-one
+        // bootstrap posture, mirrors rotateAndRevoke()'s own tolerance) —
+        // in the latter case the foreach below simply enqueues zero wraps.
+        $keyring = $this->keyringService->loadKeyring($userId, $session);
+        $selfDeviceId = $this->selfDeviceId($userId);
+        $recipientPub = sodium_hex2bin($recipientPubHex);
+
+        try {
+            $connection->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId): void {
+                foreach ($keyring->epochs() as $epoch) {
+                    $rawKey = sodium_hex2bin($epoch->keyHex);
+
+                    try {
+                        $wrap = $this->buildGdkEpochWrap($epoch->epochId, $rawKey, $recipientPub, $recipientDeviceId);
+
+                        $this->relayMailbox->deliver(
+                            senderDid: $selfDeviceId ?? '',
+                            recipientDid: $recipientDeviceId,
+                            blob: json_encode($wrap, JSON_THROW_ON_ERROR),
+                        );
+                    } finally {
+                        sodium_memzero($rawKey);
+                    }
+                }
+            });
+        } catch (SodiumException $e) {
+            throw new RuntimeException('GdkRotationService::fanOutAllEpochsToDevice — sodium error during fan-out.', 0, $e);
+        }
+    }
+
+    /**
      * The acting device's own device_id (the `is_self = 1` row), or null if
      * this user somehow has no self row yet.
      */
