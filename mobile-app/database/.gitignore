@@ -1,0 +1,6 @@
+# The on-device DB lives in the NativePHP persisted store (see
+# UserDataPathService::databaseFile). The dev database.sqlite must NEVER
+# be bundled into the mobile app (privacy: financial data in the binary).
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
