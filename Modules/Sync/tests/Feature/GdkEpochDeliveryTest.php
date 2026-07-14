@@ -15,8 +15,10 @@ use Amp\Websocket\WebsocketTimestamp;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery\MockInterface;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
@@ -393,6 +395,78 @@ it('is idempotent — re-handling an already-present epoch does not duplicate or
         }
     }
     expect($countOfEpochTwo)->toBe(1, 'epoch 2 must not be duplicated in the keyring');
+});
+
+/*
+ * MEDIUM-02 (15-import-join-REVIEW.md) — the idempotency-guard drop above
+ * (an already-present epoch_id) is EXACTLY where a normal (non-import)
+ * desktop ADD-device fan-out silently collides: PairingFlowModal::
+ * fanOutToNewlyConfirmedDevice() fires on every confirmed peer, including
+ * a self-minting one that already holds its OWN epoch 1 under a DIFFERENT
+ * key. Before this fix the drop was silent (no log line at all). This
+ * test proves the drop is now observable via a distinct warning.
+ */
+it('logs a distinct warning when an inbound GDK_EPOCH_WRAP collides with an already-present epoch_id (MEDIUM-02)', function (): void {
+    $user = deliveryUser('delivery-collision-user');
+
+    // Cross-test filesystem-isolation gap (documented at the top of the
+    // "is idempotent" test above): SQLite rowids can be reused across
+    // RefreshDatabase transaction rollbacks within one process, so a prior
+    // test's on-disk keyring file may already exist for this same reused
+    // user id. Start from a genuinely empty on-disk state.
+    @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
+
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    /** @var DeviceIdentityDto $deviceB */
+    $deviceB = $identityService->generateAndPersist((int) $user->id, $session);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    // Device B already self-minted its OWN epoch 1 (mirrors a normal,
+    // non-import self-minting peer — a scenario the desktop cannot
+    // distinguish from an import peer without a cross-device signal,
+    // see HIGH-01).
+    $keyring->generateAndPersist((int) $user->id, $session);
+
+    /** @var GdkRotationService $rotation */
+    $rotation = app(GdkRotationService::class);
+
+    // The desktop's OWN, DIFFERENT epoch-1 key is now fanned out and
+    // collides with device B's already-present epoch 1.
+    $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+    $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
+    $wrap = $rotation->buildGdkEpochWrap(1, $rawGdkKey, $recipientPub, $deviceB->deviceId);
+
+    // The handler logs via a constructor-injected LoggerInterface, NOT the
+    // Log facade — bind a container spy so the injected instance is captured.
+    // GdkEpochControlHandler is a singleton (SyncServiceProvider), so forget
+    // any cached instance and let it re-resolve with the spy logger.
+    /** @var MockInterface $logSpy */
+    $logSpy = Mockery::spy(LoggerInterface::class);
+    app()->instance(LoggerInterface::class, $logSpy);
+    app()->forgetInstance(GdkEpochControlHandler::class);
+
+    /** @var GdkEpochControlHandler $handler */
+    $handler = app(GdkEpochControlHandler::class);
+    $handler->handle(json_encode($wrap, JSON_THROW_ON_ERROR), (int) $user->id, $session);
+
+    $logSpy->shouldHaveReceived('warning')
+        ->withArgs(function (string $message, array $ctx) use ($deviceB): bool {
+            return str_starts_with($message, 'GdkEpochControlHandler:')
+                && str_contains($message, 'colliding delivery dropped')
+                && ($ctx['epoch_id'] ?? null) === 1
+                && ($ctx['recipient_device_id'] ?? null) === $deviceB->deviceId;
+        })
+        ->once();
+
+    // The collision must still be a genuine no-op — device B's OWN
+    // epoch-1 key is unchanged (never overwritten by the colliding wrap).
+    $loaded = $keyring->loadKeyring((int) $user->id, $session);
+    expect($loaded->keyFor(1))->not->toBe(sodium_bin2hex($rawGdkKey), 'the colliding wrap must never overwrite the already-present epoch key');
 });
 
 // ---------------------------------------------------------------------

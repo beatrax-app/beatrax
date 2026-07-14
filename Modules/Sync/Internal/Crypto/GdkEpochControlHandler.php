@@ -173,7 +173,25 @@ final class GdkEpochControlHandler
         }
 
         // T-14-17 idempotency: an already-present epoch is never re-appended.
+        //
+        // MEDIUM-02 fix (15-import-join-REVIEW.md): this is also the exact
+        // point where a NORMAL (non-import) desktop ADD-device fan-out
+        // silently collides — PairingFlowModal::fanOutToNewlyConfirmedDevice()
+        // fires on EVERY confirmed peer, including a self-minting one that
+        // already holds its OWN epoch 1 under a DIFFERENT key. Before this
+        // fix that collision was dropped with NO log line at all — the
+        // recipient could never decrypt the sender's epoch-1 history and
+        // nothing surfaced the gap. A distinct warning (never key material
+        // — device/epoch ids only) makes the drop observable without
+        // requiring the desktop to know the recipient's remote keyring
+        // state (a genuinely separate device database — see HIGH-01, out
+        // of scope for this fix).
         if ($existing->keyFor($epochIdRaw) !== null) {
+            $this->logger->warning('GdkEpochControlHandler: GDK_EPOCH_WRAP epoch_id already present locally — colliding delivery dropped (idempotency guard).', [
+                'epoch_id' => $epochIdRaw,
+                'recipient_device_id' => $recipientDeviceId,
+            ]);
+
             return;
         }
 
