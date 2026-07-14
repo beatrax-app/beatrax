@@ -71,6 +71,18 @@ trait CrossDevicePairingHarness
         $this->harnessMigratePairingSchema($db, 'phone');
         $this->harnessMigrateRelaySchema($db, 'relay');
 
+        // A real production database carries a `relay_mailbox` table
+        // regardless of whether that device runs `relay:serve` itself —
+        // GdkRotationService writes GDK_EPOCH_WRAP entries into the LOCAL
+        // relay_mailbox (an outbox for both a live LAN push and eventual
+        // relay forwarding), distinct from the `relay` connection above
+        // (the transport-level ZK mailbox the fake RelayServeCommand
+        // handler reads/writes for PAIRING frames). Both device
+        // connections need their own copy so GDK epoch fan-out tests
+        // (case 8) do not fail on a missing table.
+        $this->harnessMigrateRelaySchema($db, 'desktop');
+        $this->harnessMigrateRelaySchema($db, 'phone');
+
         $this->harnessRelayConfig = new RelayConfig;
         $this->harnessRelayConfig->setEndpointUrl('https://relay.test');
         $this->harnessRelayConfig->setAuthToken('cross-device-harness-relay-secret');
