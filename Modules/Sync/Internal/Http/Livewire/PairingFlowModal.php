@@ -13,13 +13,16 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
+use Modules\Sync\Internal\Pairing\PairingRelayCourier;
 use Modules\Sync\Internal\Pairing\PairingStateMachine;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
+use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\PairingGateway;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -176,6 +179,7 @@ final class PairingFlowModal extends Component
         WordCodeEncoder $wordEncoder,
         DatabaseManager $db,
         Session $session,
+        RelayConfig $relayConfig,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -193,11 +197,20 @@ final class PairingFlowModal extends Component
             $identity->x25519PublicKeyHex,
         );
 
+        // Phase 15 HIGH-01 (Task 1/5): carry this device's own relay
+        // endpoint (+ optional bearer token) in the QR so a fresh phone can
+        // auto-configure its own transport before the cross-device
+        // confirm handshake needs one. Null/absent when no relay is
+        // configured on this device (D-01 default-none) — the QR then
+        // carries no relay/rtok params at all, identical to before this
+        // plan.
         $this->qrSvg = $qrBuilder->buildSvg(
             $identity->deviceId,
             $identity->ed25519PublicKeyHex,
             $identity->x25519PublicKeyHex,
             $token,
+            $relayConfig->endpointUrl(),
+            $relayConfig->authToken(),
         );
         $this->wordCode = $wordEncoder->encode($token);
         $this->pairingTokenId = (string) $this->tokenRowId($db, $userId, $token);
@@ -300,12 +313,29 @@ final class PairingFlowModal extends Component
         EncryptionMigrationService $migrationService,
         PairingGateway $gateway,
         LoggerInterface $logger,
+        PairingRelayCourier $relayCourier,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
         }
 
         $userId = $currentUser->user()->id;
+
+        // Phase 15 HIGH-01 (Task 5): apply any inbound cross-device frame
+        // BEFORE re-reading local state — this is what applies the phone's
+        // PAIR_RESPONDER_ACCEPT (advancing show_code -> confirm below) and
+        // its PAIR_CONFIRM (advancing to CONFIRMED). drainAndApply() is
+        // designed to never throw (LOW-02); the try/catch here is
+        // defense-in-depth so a poll tick can never be aborted by this
+        // step regardless.
+        try {
+            $relayCourier->drainAndApply($userId);
+        } catch (Throwable $e) {
+            $logger->warning('PairingFlowModal: cross-device relay drain failed during poll.', [
+                'user_id' => $userId,
+                'exception' => $e::class,
+            ]);
+        }
 
         $row = $db->connection()->table('pairing_tokens')
             ->where('id', (int) $this->pairingTokenId)
@@ -369,6 +399,8 @@ final class PairingFlowModal extends Component
         DatabaseManager $db,
         PairingGateway $gateway,
         LoggerInterface $logger,
+        PairingRelayCourier $relayCourier,
+        RelayConfig $relayConfig,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -389,6 +421,16 @@ final class PairingFlowModal extends Component
         // returns the resulting state, so we never re-read the row and re-derive
         // bothConfirmed() here (IN-04).
         $state = $tokenService->confirm((int) $this->pairingTokenId, $userId, $identity->deviceId);
+
+        // Phase 15 HIGH-01 (Task 5): send this device's own signed
+        // PAIR_CONFIRM to the peer over the relay — safe regardless of
+        // whether $state is CONFIRMED or still awaiting_confirm (the frame
+        // is only ever CONSUMABLE by the peer once the peer's own local
+        // side has independently confirmed too — PairingTokenService::
+        // applyPeerConfirm()'s local-confirm precondition). No-op when no
+        // relay is configured (the ordinary same-network LAN-direct
+        // pairing case, D-01 default-none) — never dead-ends that path.
+        $this->sendConfirmOverRelay($db, $relayCourier, $relayConfig, $identity, $logger);
 
         if ($state === PairingStateMachine::CONFIRMED) {
             $this->awaitingPeer = false;
@@ -515,8 +557,9 @@ final class PairingFlowModal extends Component
         WordCodeEncoder $wordEncoder,
         DatabaseManager $db,
         Session $session,
+        RelayConfig $relayConfig,
     ): void {
-        $this->showMyCode($currentUser, $identityLoader, $tokenService, $qrBuilder, $wordEncoder, $db, $session);
+        $this->showMyCode($currentUser, $identityLoader, $tokenService, $qrBuilder, $wordEncoder, $db, $session, $relayConfig);
     }
 
     /**
@@ -592,6 +635,60 @@ final class PairingFlowModal extends Component
     // -------------------------------------------------------------------------
     // Internals
     // -------------------------------------------------------------------------
+
+    /**
+     * Phase 15 HIGH-01 (Task 5): deliver this device's Ed25519-signed
+     * PAIR_CONFIRM frame to the PEER side of the in-flight token (whichever
+     * of initiator_device_id/responder_device_id this device does NOT
+     * own — derived from `$this->side`, mirrors how
+     * `PairingTokenService::applyPeerConfirm()` derives local-vs-peer on
+     * the receiving end).
+     *
+     * Best-effort, never dead-ends the caller: a `RuntimeException` from
+     * the courier (no relay configured — the ORDINARY same-network
+     * LAN-direct pairing case, D-01 default-none) is caught and logged
+     * (ids/counts only — never key material or the signature itself), not
+     * surfaced as a flash error. Skips entirely (no attempt, no log) when
+     * no relay is configured at all, so a normal LAN-only pairing never
+     * even touches the network layer.
+     */
+    private function sendConfirmOverRelay(
+        DatabaseManager $db,
+        PairingRelayCourier $relayCourier,
+        RelayConfig $relayConfig,
+        DeviceIdentityDto $identity,
+        LoggerInterface $logger,
+    ): void {
+        if (! $relayConfig->isConfigured()) {
+            return;
+        }
+
+        $row = $db->connection()->table('pairing_tokens')
+            ->where('id', (int) $this->pairingTokenId)
+            ->first(['token_hash', 'initiator_device_id', 'responder_device_id']);
+
+        if ($row === null) {
+            return;
+        }
+
+        $tokenHash = is_string($row->token_hash) ? $row->token_hash : null;
+        $peerDeviceId = $this->side === 'initiator'
+            ? (is_string($row->responder_device_id) ? $row->responder_device_id : null)
+            : (is_string($row->initiator_device_id) ? $row->initiator_device_id : null);
+
+        if ($tokenHash === null || $peerDeviceId === null) {
+            return;
+        }
+
+        try {
+            $relayCourier->sendConfirm($identity, $peerDeviceId, $tokenHash);
+        } catch (Throwable $e) {
+            $logger->warning('PairingFlowModal: cross-device PAIR_CONFIRM relay delivery failed.', [
+                'pairing_token_id' => $this->pairingTokenId,
+                'exception' => $e::class,
+            ]);
+        }
+    }
 
     /**
      * Look up the just-issued token's row id (user-scoped) so the poll can read
