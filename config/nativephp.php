@@ -76,6 +76,7 @@ return [
         'NATIVEPHP_APPLE_ID',
         'NATIVEPHP_APPLE_ID_PASS',
         'NATIVEPHP_APPLE_TEAM_ID',
+        'NATIVEPHP_MAC_IDENTITY',
         'NATIVEPHP_AZURE_PUBLISHER_NAME',
         'NATIVEPHP_AZURE_ENDPOINT',
         'NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME',
@@ -119,6 +120,22 @@ return [
         // matches across slashes — `*/.claude` matches `vendor/.claude`,
         // `vendor/nativephp/desktop/resources/build/app/.claude`, etc.
         '*/.claude',
+
+        // The `mobile-app/` sibling shell is the NativePHP MOBILE app (a
+        // separate root that symlinks the shared `Modules/`). It is tracked
+        // inside this repo but the DESKTOP bundle never needs it — and it
+        // carries ~1.1 GB of iOS/Android native build artifacts under
+        // `mobile-app/nativephp/{ios,android}/build/` (Xcode DerivedData,
+        // SwiftPM checkouts). The top-level `nativephp` exclude above does
+        // NOT catch `mobile-app/nativephp` (fnmatch has no wildcard there),
+        // so without this the copy walker folds the whole mobile shell into
+        // the desktop bundle and codesign then aborts on a locked-perms
+        // SwiftPM test fixture (ZIPFoundation's read-only .zip). Exclude the
+        // shell outright. (Do NOT add `*/nativephp` here — fnmatch has no
+        // FNM_PATHNAME so `*` spans slashes and it would also match
+        // `vendor/nativephp`, stripping the NativePHP desktop package
+        // itself → "Class Native\Desktop\NativeServiceProvider not found".)
+        'mobile-app',
 
         // NOTE: `bootstrap/cache/*.php` are intentionally NOT excluded here.
         // Laravel's PackageManifest requires `bootstrap/cache/` to already
@@ -229,12 +246,15 @@ return [
         // build for electron-builder to discover them.
         'php scripts/nativephp_stage_build_resources.php',
 
-        // Force deterministic ad-hoc macOS code signing. Without an explicit
-        // `mac.identity`, electron-builder auto-discovers a keychain identity
-        // and can partially sign the bundle, producing a Team ID mismatch
-        // between the app shell and the nested Electron Framework that aborts
-        // launch on Apple Silicon.
-        'php scripts/nativephp_force_adhoc_signing.php',
+        // Real Developer ID macOS code signing. Pins an EXPLICIT
+        // `mac.identity` (from NATIVEPHP_MAC_IDENTITY) + Hardened Runtime so
+        // electron-builder signs the whole bundle — shell AND nested Electron
+        // Framework/helpers — with one identity/Team ID. This both enables
+        // notarization (build/notarize.js afterSign) and avoids the Team ID
+        // mismatch that ad-hoc auto-discovery caused on Apple Silicon.
+        // (Replaces the earlier nativephp_force_adhoc_signing.php, kept in the
+        // repo for local unsigned dev builds.)
+        'php scripts/nativephp_developer_id_signing.php',
 
         // Bypass electron-updater's OS-signature differential-download
         // validation on macOS by setting `autoUpdater.disableDifferential
@@ -263,6 +283,14 @@ return [
         // show + focus the existing main window OR post to
         // `/api/window/open` to re-construct it from any state.
         'php scripts/nativephp_inject_persistent_tray.php',
+
+        // Patch NativePHP's `php.js` so electron-builder's beforePack
+        // extracts the bundled static PHP binary BYTE-EXACT (ditto/unzip
+        // instead of the yauzl streaming pipe, which inflates the arm64
+        // Mach-O ~5 MB and makes codesign reject it: "main executable failed
+        // strict validation"). A hard precondition for Developer ID signing
+        // + notarization; idempotent and reapplied on every build.
+        'php scripts/nativephp_fix_php_binary_extraction.php',
     ],
 
     'postbuild' => [
