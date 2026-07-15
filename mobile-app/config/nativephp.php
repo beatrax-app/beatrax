@@ -60,6 +60,14 @@ return [
         'BIFROST_*',
         'BEATRAX_DEV_MODE',
         'REDIS_*',
+        // Code-signing credentials are BUILD-TIME ONLY (keytool/gradle read
+        // them on the host). They must NEVER ship inside the APK/IPA .env —
+        // the keystore passwords especially would hand an attacker the
+        // release-signing key. Strip every signing var from the bundled env.
+        'ANDROID_KEYSTORE_*',
+        'ANDROID_KEY_*',
+        'APP_STORE_API_*',
+        'IOS_TEAM_ID',
     ],
 
     /*
@@ -80,5 +88,24 @@ return [
      */
     'permissions' => [
         'NSLocalNetworkUsageDescription' => 'beatrax uses your local network to sync your finances directly with your other beatrax devices — nothing ever leaves your home network for this.',
+    ],
+
+    /*
+     * iOS release signing (Phase 15 device-signing). NativePHP's iOS build
+     * uses Xcode AUTOMATIC signing keyed off the Apple Developer Team ID
+     * ({@see PackagesIos::teamId}) + the App Store Connect API key for
+     * headless distribution/notarization ({@see PackagesIos::getAppStoreApiKey}).
+     * All three values come from env so no secret lives in this committed
+     * file; every one of them is stripped from the bundled .env by
+     * `cleanup_env_keys` above. The .p8 lives outside the repo tree at
+     * `APP_STORE_API_KEY_PATH` (git-ignored `.signing/`). The signing cert
+     * itself ("Apple Distribution: Wessel Verheij (NV5645J73B)") + its private
+     * key already live in the login keychain — automatic signing consumes them.
+     */
+    'development_team' => env('IOS_TEAM_ID'),
+
+    'app_store_connect' => [
+        'api_key_id' => env('APP_STORE_API_KEY_ID'),
+        'api_issuer_id' => env('APP_STORE_API_ISSUER_ID'),
     ],
 ];
