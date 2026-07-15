@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -75,5 +76,34 @@ return Application::configure(basePath: dirname(__DIR__))
                 'path' => '/'.ltrim($request->path(), '/'),
             ];
         });
+    })
+    ->booting(function (): void {
+        // Ensure the SQLite file exists BEFORE any provider opens the
+        // connection. Laravel's SQLite connector THROWS "Database file …
+        // does not exist" rather than creating the file, and
+        // SqliteOptimizationsProvider applies `PRAGMA journal_mode = WAL`
+        // on the first ConnectionEstablished during provider boot — so the
+        // empty file must already be on disk. This fires on EVERY boot and
+        // is the desktop counterpart of mobile-app/bootstrap/app.php's
+        // ->booting hook. Two distinct callers depend on it:
+        //   • the `native:build` desktop packaging step runs
+        //     `composer install` → `package:discover`, which boots the app
+        //     in the copied build tree where `database/*.sqlite` was
+        //     stripped by cleanup_exclude_files — without this the build
+        //     aborts before electron-builder ever signs.
+        //   • a genuine fresh install resolves databaseFile() to the
+        //     writable NATIVEPHP_STORAGE_PATH root where no file exists yet;
+        //     FirstLaunchBootstrap then migrates into it.
+        // Harmless everywhere else: in local dev the file already exists so
+        // both branches no-op. NEVER seeds or migrates here — this only
+        // guarantees an empty file the migrator can populate.
+        $dbFile = UserDataPathService::databaseFile();
+        $dbDir = dirname($dbFile);
+        if (! is_dir($dbDir)) {
+            @mkdir($dbDir, 0775, true);
+        }
+        if (! file_exists($dbFile)) {
+            @touch($dbFile);
+        }
     })
     ->create();
