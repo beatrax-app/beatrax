@@ -26,6 +26,15 @@ use Spatie\LaravelData\Data;
  * the fact that non-EUR spend hit this envelope; 0 means none. Because it may
  * mix multiple non-EUR currencies it is only ever a "there is spend not shown
  * here" signal, never an authoritative amount.
+ *
+ * `notifyThresholdPercent` (D-20) is the EFFECTIVE over-budget notification
+ * threshold for this envelope — already null-coalesced by `CarryoverQuery` to
+ * `CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT` (90) when the envelope
+ * has no explicit `envelope_settings.threshold_percent`. This is the Public
+ * read seam plan 18-07's over-budget nudge job consumes: it reads the
+ * already-resolved value here and never re-applies the default or reaches for
+ * the raw column. It is unrelated to `spentMinor`/`availableMinor` — it is a
+ * notification preference, not a money figure.
  */
 final class EnvelopeRow extends Data
 {
@@ -40,5 +49,6 @@ final class EnvelopeRow extends Data
         public readonly string $overspendMode,
         public readonly string $currency,
         public readonly int $nonEurSpentMinor = 0,
+        public readonly int $notifyThresholdPercent = 90,
     ) {}
 }

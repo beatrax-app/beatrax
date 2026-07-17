@@ -98,6 +98,7 @@
                     <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">Spent</th>
                     <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">Available</th>
                     <th class="px-4 py-2 text-left text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">If overspent</th>
+                    <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">Notify at</th>
                     <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400"><span class="sr-only">Actions</span></th>
                 </tr>
             </thead>
@@ -148,6 +149,25 @@
                                 <option value="carry_negative" @selected($row->overspendMode === 'carry_negative')>Carry the negative in this envelope</option>
                             </select>
                         </td>
+                        <td class="px-4 py-2 text-right align-top">
+                            <div class="inline-flex items-center gap-1">
+                                <input
+                                    type="text"
+                                    inputmode="numeric"
+                                    wire:model="thresholdInputs.{{ $row->categoryId }}"
+                                    wire:keydown.enter="setNotifyThreshold({{ $row->categoryId }})"
+                                    wire:blur="setNotifyThreshold({{ $row->categoryId }})"
+                                    aria-label="Notify me at percent used for {{ $row->categoryName }}"
+                                    placeholder="{{ $defaultNotifyThreshold }}"
+                                    class="w-14 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                    style="font-variant-numeric: tabular-nums;"
+                                >
+                                <span class="text-sm text-slate-500 dark:text-slate-400">%</span>
+                            </div>
+                            @if (! empty($thresholdErrors[$row->categoryId]))
+                                <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $thresholdErrors[$row->categoryId] }}</p>
+                            @endif
+                        </td>
                         <td class="px-4 py-2 text-right">
                             <button
                                 type="button"
@@ -159,7 +179,7 @@
                     </tr>
                     @if (count($recentMoves[$row->categoryId] ?? []) > 0)
                         <tr class="border-b border-slate-100 dark:border-slate-800" x-data="{ open: false }" wire:key="envelope-history-row-{{ $row->categoryId }}">
-                            <td colspan="6" class="px-4 pb-3">
+                            <td colspan="7" class="px-4 pb-3">
                                 <button
                                     type="button"
                                     x-on:click="open = !open"
@@ -223,17 +243,37 @@
                             · <span class="{{ $row->availableMinor < 0 ? 'text-rose-600 dark:text-rose-400' : '' }}">Available {{ $fmt($row->availableMinor, $row->currency) }}</span>
                         </p>
                     </div>
-                    <input
-                        type="text"
-                        inputmode="decimal"
-                        wire:model="assignedInputs.{{ $row->categoryId }}"
-                        wire:keydown.enter="setAssigned({{ $row->categoryId }})"
-                        wire:blur="setAssigned({{ $row->categoryId }})"
-                        aria-label="Assigned for {{ $row->categoryName }}"
-                        placeholder="0.00"
-                        class="amount w-20 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                        style="font-variant-numeric: tabular-nums;"
-                    >
+                    <div class="flex flex-col items-end gap-1">
+                        <input
+                            type="text"
+                            inputmode="decimal"
+                            wire:model="assignedInputs.{{ $row->categoryId }}"
+                            wire:keydown.enter="setAssigned({{ $row->categoryId }})"
+                            wire:blur="setAssigned({{ $row->categoryId }})"
+                            aria-label="Assigned for {{ $row->categoryName }}"
+                            placeholder="0.00"
+                            class="amount w-20 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                            style="font-variant-numeric: tabular-nums;"
+                        >
+                        <label class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                            <span>Notify at</span>
+                            <input
+                                type="text"
+                                inputmode="numeric"
+                                wire:model="thresholdInputs.{{ $row->categoryId }}"
+                                wire:keydown.enter="setNotifyThreshold({{ $row->categoryId }})"
+                                wire:blur="setNotifyThreshold({{ $row->categoryId }})"
+                                aria-label="Notify me at percent used for {{ $row->categoryName }}"
+                                placeholder="{{ $defaultNotifyThreshold }}"
+                                class="w-12 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-right text-xs text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                style="font-variant-numeric: tabular-nums;"
+                            >
+                            <span>%</span>
+                        </label>
+                        @if (! empty($thresholdErrors[$row->categoryId]))
+                            <p class="text-xs text-rose-600 dark:text-rose-400">{{ $thresholdErrors[$row->categoryId] }}</p>
+                        @endif
+                    </div>
                     <button
                         type="button"
                         wire:click="openMove({{ $row->categoryId }})"

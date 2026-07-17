@@ -95,15 +95,6 @@ it('computes spent against budget and buckets the status as under', function ():
     expect($rows[0]->fractionUsed)->toBe(0.5);
     expect($rows[0]->status)->toBe('under');
     expect($rows[0]->remainingMinor())->toBe(20000);
-    expect($rows[0]->notifyThresholdPercent)->toBe(90);
-});
-
-it('reports the explicit threshold_percent instead of the D-20 default when set', function (): void {
-    CategoryBudget::create(['user_id' => $this->user->id, 'category_id' => $this->groceries->id, 'budget_minor' => 40000, 'currency' => 'EUR', 'period_type' => 'monthly', 'threshold_percent' => 75]);
-
-    $rows = app(BudgetProgressQuery::class)->forCurrentPeriod($this->user);
-
-    expect($rows[0]->notifyThresholdPercent)->toBe(75);
 });
 
 it('flags near at 80% and over above 100%', function (): void {

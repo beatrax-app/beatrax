@@ -15,14 +15,6 @@ use Spatie\LaravelData\Data;
  * `under` (< 80%), `near` (80–100%), `over` (> 100%). All money is signed
  * minor units in `currency`; the view wraps them in the Money value object
  * for locale formatting.
- *
- * `notifyThresholdPercent` (D-20) is the EFFECTIVE per-budget notification
- * threshold — already null-coalesced by `BudgetProgressQuery` to the
- * `DEFAULT_NOTIFY_THRESHOLD_PERCENT` default, so consumers (plan 18-07's
- * over-budget nudge trigger) never re-apply the default themselves. It is a
- * DIFFERENT concept from `$status`'s bar-colour buckets (which are driven by
- * the unrelated, hardcoded `BudgetProgressQuery::NEAR_THRESHOLD` constant) —
- * do not conflate the two.
  */
 final class BudgetProgressRow extends Data
 {
@@ -34,7 +26,6 @@ final class BudgetProgressRow extends Data
         public readonly string $currency,
         public readonly float $fractionUsed,
         public readonly string $status,
-        public readonly int $notifyThresholdPercent,
     ) {}
 
     public function remainingMinor(): int

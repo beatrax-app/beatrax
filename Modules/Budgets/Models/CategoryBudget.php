@@ -18,7 +18,6 @@ use Modules\Ledger\Models\Category;
  * @property string $period_type
  * @property int $budget_minor
  * @property string $currency
- * @property int|null $threshold_percent
  */
 final class CategoryBudget extends Model
 {
@@ -30,7 +29,6 @@ final class CategoryBudget extends Model
         'period_type',
         'budget_minor',
         'currency',
-        'threshold_percent',
     ];
 
     /**
@@ -48,7 +46,6 @@ final class CategoryBudget extends Model
     {
         return [
             'budget_minor' => 'integer',
-            'threshold_percent' => 'integer',
         ];
     }
 }
