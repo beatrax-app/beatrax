@@ -271,13 +271,24 @@ final class MergeRulesRegistry
             // deterministic sha256 string PK + existing LWW merge, no new
             // OpType. Cross-checked against
             // Modules/Notifications/Database/Migrations/2026_07_17_010001_create_notifications_table.php.
+            //
+            // `id` IS in `_create_required` — unlike every other table here,
+            // `notifications.id` is NOT an autoincrement surrogate; it is the
+            // D-05 deterministic sha256 digest computed by domain code
+            // BEFORE insert. `OpLogReplayer`'s CREATE_ROW assembly never
+            // writes the pk column into the INSERT payload on its own
+            // (every other table relies on the DB's own autoincrement to
+            // fill it in) — for a non-autoincrement string PK, omitting it
+            // makes `insertOrIgnore` silently drop the row on the `id` NOT
+            // NULL constraint. `SyncCaptureListener::handleNotificationCreate`
+            // carries `id` as an explicit field for exactly this reason.
             'notifications' => [
                 'read_at' => ['strategy' => 'lww', 'nullable' => true],
                 'dismissed_at' => ['strategy' => 'lww', 'nullable' => true],
                 '_delete_wins' => true,
                 // `state` has a DB default('open') so it is deliberately
                 // excluded here (same pattern as saved_reports.pinned above).
-                '_create_required' => ['user_id', 'title', 'body', 'trigger_type'],
+                '_create_required' => ['id', 'user_id', 'title', 'body', 'trigger_type'],
             ],
             // 18-04 (D-07/D-34/D-35): per-(user, device) notification
             // preference row. These rows SYNC so the other-devices settings

@@ -481,12 +481,27 @@ final class SyncCaptureListener
         }
     }
 
+    /**
+     * Unlike every other registered table, `notifications.id` is NOT an
+     * autoincrement surrogate — it is the D-05 deterministic sha256 digest
+     * computed by domain code before insert. `OpLogReplayer`'s CreateRow
+     * assembly writes resolved fields straight into the INSERT payload but
+     * never adds the pk column itself (every other table relies on the DB's
+     * own autoincrement to fill it in), so `id` MUST be carried as an
+     * explicit field here or a fresh device's `insertOrIgnore` would
+     * silently drop the row on the `id` NOT NULL constraint. Mirrors the
+     * existing `user_id` field-carrying precedent documented in
+     * `OpLogReplayer`'s CREATE_ROW path (the "SEC finding" comment) —
+     * `id` is registered in `MergeRulesRegistry`'s `notifications
+     * ._create_required` for the same reason `user_id` is registered on
+     * `envelope_assignments`/`envelope_settings`.
+     */
     private function handleNotificationCreate(NotificationMutated $event, OpLogWriter $writer): void
     {
         $writer->writeCreateRow(
             table: 'notifications',
             pk: $event->notificationId,
-            fields: $event->dirtyFields,
+            fields: ['id' => $event->notificationId, ...$event->dirtyFields],
         );
     }
 
