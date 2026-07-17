@@ -95,4 +95,50 @@ final readonly class DeviceRegistryService
 
         return implode(' ', $deriver->deriveWords($selfPubHex, $peerPubHex));
     }
+
+    /**
+     * Resolves this installation's own device id, or null when unpaired.
+     *
+     * This is the sanctioned crossing for `Modules\Notifications`, which may
+     * not reach `Modules\Sync\Internal\Identity` directly. Reads only the
+     * `device_registry` row where `is_self = 1` — public data, no key
+     * material, no app-lock unlock required. `null` (unpaired / no self
+     * row) is a total, non-error outcome: callers treat it as "no
+     * preference row exists for this device".
+     */
+    public function localDeviceId(int $userId): ?string
+    {
+        $deviceId = $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 1)
+            ->value('device_id');
+
+        return is_string($deviceId) && $deviceId !== '' ? $deviceId : null;
+    }
+
+    /**
+     * Confirmed-only device-id → name map, excluding the local device's own
+     * row (D-35's read-only "Other devices" panel).
+     *
+     * This is the sanctioned crossing for `Modules\Notifications`, which may
+     * not reach `Modules\Sync\Internal\Identity` directly. Mirrors
+     * `confirmedDevices()`'s `confirmed_at IS NOT NULL` filter exactly, so
+     * an unconfirmed peer never surfaces here either.
+     *
+     * @return array<string, string> device_id => name.
+     */
+    public function otherDeviceNames(int $userId): array
+    {
+        /** @var array<string, string> $names */
+        $names = $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->whereNotNull('confirmed_at')
+            ->where('is_self', 0)
+            ->pluck('name', 'device_id')
+            ->all();
+
+        return $names;
+    }
 }
