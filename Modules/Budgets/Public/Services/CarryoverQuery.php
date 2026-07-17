@@ -64,6 +64,15 @@ final class CarryoverQuery
 {
     private const CURRENCY = 'EUR';
 
+    /**
+     * D-20: the default over-budget notify threshold (percent) for an envelope
+     * with no explicit `envelope_settings.threshold_percent`. Single source of
+     * the default — the effective value is resolved here and surfaced on
+     * `EnvelopeRow::$notifyThresholdPercent`, which plan 18-07's nudge job
+     * reads already-resolved. Unrelated to any bar-colour bucket.
+     */
+    public const DEFAULT_NOTIFY_THRESHOLD_PERCENT = 90;
+
     /** D-12c: future horizon bound, in periods past "now". */
     private const FUTURE_HORIZON_PERIODS = 12;
 
@@ -117,7 +126,9 @@ final class CarryoverQuery
 
         $assignedByPeriod = $this->batchAssignments($user, $genesisPeriod, $targetBounded);
         $movedByPeriod = $this->batchMoves($user, $genesisPeriod, $targetBounded);
-        $overspendModeByCategory = $this->overspendModes($user);
+        $settings = $this->envelopeSettings($user);
+        $overspendModeByCategory = $settings['modes'];
+        $notifyThresholdByCategory = $settings['thresholds'];
 
         $poolCarry = 0;
         $carriedIn = [];
@@ -182,6 +193,7 @@ final class CarryoverQuery
                 $available = $availableMoney->toMinor();
 
                 $mode = $overspendModeByCategory[$categoryId] ?? 'reduce_to_budget';
+                $notifyThreshold = $notifyThresholdByCategory[$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
 
                 if ($available < 0 && $mode === 'reduce_to_budget') {
                     // D-10: default toggle resets to 0 next period and debits
@@ -209,6 +221,7 @@ final class CarryoverQuery
                     overspendMode: $mode,
                     currency: self::CURRENCY,
                     nonEurSpentMinor: $nonEurSpent,
+                    notifyThresholdPercent: $notifyThreshold,
                 );
             }
 
@@ -342,21 +355,32 @@ final class CarryoverQuery
     }
 
     /**
-     * @return array<int, string> category_id => overspend_mode
+     * Reads every `envelope_settings` row for the user in ONE query and
+     * returns two per-category maps: the overspend mode and the EFFECTIVE
+     * (already null-coalesced to `DEFAULT_NOTIFY_THRESHOLD_PERCENT`) over-budget
+     * notify threshold. Combined into one read so the fold never issues a
+     * second query against the same small table.
+     *
+     * @return array{modes: array<int, string>, thresholds: array<int, int>}
      */
-    private function overspendModes(User $user): array
+    private function envelopeSettings(User $user): array
     {
         $rows = $this->db->connection()
             ->table('envelope_settings')
             ->where('user_id', $user->id)
-            ->get(['category_id', 'overspend_mode']);
+            ->get(['category_id', 'overspend_mode', 'threshold_percent']);
 
         $modes = [];
+        $thresholds = [];
         foreach ($rows as $row) {
-            $modes[self::toInt($row->category_id)] = self::toStr($row->overspend_mode);
+            $categoryId = self::toInt($row->category_id);
+            $modes[$categoryId] = self::toStr($row->overspend_mode);
+            $thresholds[$categoryId] = is_numeric($row->threshold_percent ?? null)
+                ? (int) $row->threshold_percent
+                : self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
         }
 
-        return $modes;
+        return ['modes' => $modes, 'thresholds' => $thresholds];
     }
 
     private static function periodKeyFromRaw(mixed $value): string

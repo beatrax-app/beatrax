@@ -66,6 +66,12 @@ final class BudgetsPage extends Component
     /** @var array<int, string> decimal strings keyed by category id */
     public array $assignedInputs = [];
 
+    /** @var array<int, string> whole-number notify-threshold strings keyed by category id (D-20) */
+    public array $thresholdInputs = [];
+
+    /** @var array<int, string> inline per-row threshold validation errors keyed by category id */
+    public array $thresholdErrors = [];
+
     // Move-money modal state (Req 5, D-19)
     public int $moveFromCategoryId = 0;
 
@@ -157,6 +163,54 @@ final class BudgetsPage extends Component
         } else {
             $this->assignedInputs[$categoryId] = $this->minorToDecimal($minor);
         }
+    }
+
+    /**
+     * Commits the per-envelope over-budget notify-threshold control (D-20,
+     * Req 6) via `EnvelopeWriter::setNotifyThreshold()`. An empty input clears
+     * the explicit threshold back to the default (null). A bounds-check
+     * (`1..200`, whole numbers only) runs HERE before the writer is called —
+     * an out-of-range or non-numeric value sets an inline per-row error string
+     * rather than throwing (T-18-04, defence in depth with the writer's own
+     * server-side check). The writer re-validates `$categoryId` server-side
+     * (IDOR) and scopes the write to the current user (T-18-05).
+     */
+    public function setNotifyThreshold(CurrentUser $currentUser, EnvelopeWriter $writer, int $categoryId): void
+    {
+        if (! $currentUser->isAuthenticated()) {
+            return;
+        }
+
+        unset($this->thresholdErrors[$categoryId]);
+
+        $raw = trim($this->thresholdInputs[$categoryId] ?? '');
+
+        if ($raw === '') {
+            $threshold = null;
+        } elseif (ctype_digit($raw)) {
+            $threshold = (int) $raw;
+            if ($threshold < 1 || $threshold > 200) {
+                $this->thresholdErrors[$categoryId] = 'Enter a whole number between 1 and 200.';
+
+                return;
+            }
+        } else {
+            $this->thresholdErrors[$categoryId] = 'Enter a whole number between 1 and 200.';
+
+            return;
+        }
+
+        try {
+            $writer->setNotifyThreshold($currentUser->user(), $categoryId, $threshold);
+        } catch (InvalidArgumentException $e) {
+            $this->thresholdErrors[$categoryId] = $e->getMessage();
+
+            return;
+        }
+
+        // Reflect the stored value back: an explicit value shows as itself; a
+        // cleared threshold empties the field so the placeholder default shows.
+        $this->thresholdInputs[$categoryId] = $threshold === null ? '' : (string) $threshold;
     }
 
     /**
@@ -310,6 +364,7 @@ final class BudgetsPage extends Component
                 'moveFromCategory' => null,
                 'moveDestinations' => [],
                 'recentMoves' => [],
+                'defaultNotifyThreshold' => CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -331,6 +386,19 @@ final class BudgetsPage extends Component
             if (! array_key_exists($categoryId, $this->assignedInputs)) {
                 $this->assignedInputs[$categoryId] = $row->assignedMinor > 0
                     ? $this->minorToDecimal($row->assignedMinor)
+                    : '';
+            }
+        }
+
+        // Seed the notify-threshold inputs from the EXPLICIT stored values
+        // only (D-20). Envelopes with no explicit threshold stay blank so the
+        // placeholder default (DEFAULT_NOTIFY_THRESHOLD_PERCENT) is what shows,
+        // rather than pre-filling the resolved 90 as if it were user-set.
+        $explicitThresholds = $this->explicitThresholds($db, $user->id);
+        foreach ($rows as $categoryId => $row) {
+            if (! array_key_exists($categoryId, $this->thresholdInputs)) {
+                $this->thresholdInputs[$categoryId] = array_key_exists($categoryId, $explicitThresholds)
+                    ? (string) $explicitThresholds[$categoryId]
                     : '';
             }
         }
@@ -377,6 +445,7 @@ final class BudgetsPage extends Component
             'moveFromCategory' => $moveFromCategory,
             'moveDestinations' => $moveDestinations,
             'recentMoves' => $recentMoves,
+            'defaultNotifyThreshold' => CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -449,6 +518,35 @@ final class BudgetsPage extends Component
         }
 
         return $max;
+    }
+
+    /**
+     * The user's EXPLICIT per-envelope notify thresholds (D-20) as
+     * category_id => percent, reading only rows where `threshold_percent` is
+     * set. Envelopes with no explicit value are absent from the map (they fall
+     * back to the placeholder default in the view). Explicitly `user_id`-scoped
+     * — never trusts a global scope for this read.
+     *
+     * @return array<int, int>
+     */
+    private function explicitThresholds(DatabaseManager $db, int $userId): array
+    {
+        $rows = $db->connection()
+            ->table('envelope_settings')
+            ->where('user_id', $userId)
+            ->whereNotNull('threshold_percent')
+            ->get(['category_id', 'threshold_percent']);
+
+        $map = [];
+        foreach ($rows as $row) {
+            $categoryId = is_numeric($row->category_id) ? (int) $row->category_id : 0;
+            $percent = is_numeric($row->threshold_percent) ? (int) $row->threshold_percent : 0;
+            if ($categoryId > 0 && $percent > 0) {
+                $map[$categoryId] = $percent;
+            }
+        }
+
+        return $map;
     }
 
     private function periodHasAssignments(DatabaseManager $db, int $userId, Period $period): bool

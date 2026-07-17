@@ -230,6 +230,93 @@ final class EnvelopeWriter
     }
 
     /**
+     * Set the D-20 over-budget notify threshold for (user, category) — upserts
+     * one envelope_settings row (the live per-envelope settings home now that
+     * `category_budgets` is write-dead post-cutover). `null` clears the
+     * explicit threshold back to "use the default"
+     * (`CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT`).
+     *
+     * T-18-04: server-side bounds check `1..200`, mirroring
+     * `AnomalySettingsSection::save()`'s discipline — a tampered Livewire
+     * payload cannot persist an out-of-range value. The column is
+     * `unsignedTinyInteger`, so a negative or >255 value could not land even
+     * if this check were bypassed.
+     *
+     * T-18-05: the write is scoped by an explicit `user_id` predicate resolved
+     * from `$user`; the client supplies only `$categoryId`, which is
+     * re-validated against the current user via `assertCategoryAccessible()`.
+     *
+     * When no settings row exists yet, one is created carrying the D-12a
+     * default `overspend_mode` ('reduce_to_budget') alongside the threshold —
+     * an explicit default-mode row is behaviourally identical to no row.
+     *
+     * @throws InvalidArgumentException category not owned/global (IDOR), or an
+     *                                  out-of-range threshold
+     */
+    public function setNotifyThreshold(User $user, int $categoryId, ?int $thresholdPercent): void
+    {
+        $this->assertCategoryAccessible($user, $categoryId);
+
+        if ($thresholdPercent !== null && ($thresholdPercent < 1 || $thresholdPercent > 200)) {
+            throw new InvalidArgumentException('Notify threshold must be between 1 and 200.');
+        }
+
+        /** @var EnvelopeSettingMutated|null $event */
+        $event = null;
+
+        $this->db->connection()->transaction(function () use ($user, $categoryId, $thresholdPercent, &$event): void {
+            /** @var EnvelopeSetting|null $existing */
+            $existing = EnvelopeSetting::query()
+                ->withoutGlobalScope(UserScope::class)
+                ->where('user_id', $user->id)
+                ->where('category_id', $categoryId)
+                ->first();
+
+            if ($existing instanceof EnvelopeSetting) {
+                if ($existing->threshold_percent === $thresholdPercent) {
+                    return;
+                }
+
+                $existing->threshold_percent = $thresholdPercent;
+                $existing->save();
+
+                $event = new EnvelopeSettingMutated(
+                    settingId: $existing->id,
+                    userId: $user->id,
+                    mutationType: 'edit',
+                    dirtyFields: ['threshold_percent' => $thresholdPercent],
+                );
+
+                return;
+            }
+
+            /** @var EnvelopeSetting $created */
+            $created = EnvelopeSetting::query()->withoutGlobalScope(UserScope::class)->create([
+                'user_id' => $user->id,
+                'category_id' => $categoryId,
+                'overspend_mode' => 'reduce_to_budget',
+                'threshold_percent' => $thresholdPercent,
+            ]);
+
+            $event = new EnvelopeSettingMutated(
+                settingId: $created->id,
+                userId: $user->id,
+                mutationType: 'create',
+                dirtyFields: [
+                    'user_id' => $user->id,
+                    'category_id' => $categoryId,
+                    'overspend_mode' => 'reduce_to_budget',
+                    'threshold_percent' => $thresholdPercent,
+                ],
+            );
+        });
+
+        if ($event !== null) {
+            $this->events->dispatch($event);
+        }
+    }
+
+    /**
      * Reproduce every assigned amount from `$fromPeriod` into `$toPeriod`
      * (Req 6) — an envelope that was never assigned in `$fromPeriod` stays
      * unassigned in `$toPeriod`. Delegates to `setAssigned()` per envelope so

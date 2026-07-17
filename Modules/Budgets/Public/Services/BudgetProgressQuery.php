@@ -27,16 +27,6 @@ final class BudgetProgressQuery
     /** Fraction of a budget at/above which the bar turns amber. */
     private const NEAR_THRESHOLD = 0.8;
 
-    /**
-     * D-20: the default per-budget notification threshold when a budget has
-     * no explicit `threshold_percent` set. This is the single source of the
-     * default — plan 18-07's over-budget nudge trigger reads the
-     * already-resolved `BudgetProgressRow::$notifyThresholdPercent`, never
-     * this constant or the raw column, directly. Unrelated to
-     * `NEAR_THRESHOLD` above (bar-colour bucket, not a notification setting).
-     */
-    public const DEFAULT_NOTIFY_THRESHOLD_PERCENT = 90;
-
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly PeriodQuery $periods,
@@ -61,7 +51,7 @@ final class BudgetProgressQuery
                 $query->whereNull('c.user_id')->orWhere('c.user_id', $user->id);
             })
             ->orderBy('c.name')
-            ->get(['b.category_id', 'c.name', 'b.budget_minor', 'b.currency', 'b.threshold_percent']);
+            ->get(['b.category_id', 'c.name', 'b.budget_minor', 'b.currency']);
 
         if ($budgets->isEmpty()) {
             return [];
@@ -91,11 +81,6 @@ final class BudgetProgressQuery
                 default => 'under',
             };
 
-            $rawThreshold = $budget->threshold_percent ?? null;
-            $notifyThresholdPercent = is_numeric($rawThreshold)
-                ? (int) $rawThreshold
-                : self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
-
             $rows[] = new BudgetProgressRow(
                 categoryId: $categoryId,
                 name: self::toStr($budget->name),
@@ -104,7 +89,6 @@ final class BudgetProgressQuery
                 currency: $currency,
                 fractionUsed: $fraction,
                 status: $status,
-                notifyThresholdPercent: $notifyThresholdPercent,
             );
         }
 
