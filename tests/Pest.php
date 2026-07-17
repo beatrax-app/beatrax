@@ -44,6 +44,7 @@ foreach (
         'Modules/Ledger' => Modules\Ledger\Tests\TestCase::class,
         'Modules/Migration' => Modules\Migration\Tests\TestCase::class,
         'Modules/Mobile' => Modules\Mobile\Tests\TestCase::class,
+        'Modules/Notifications' => Modules\Notifications\Tests\TestCase::class,
         'Modules/Onboarding' => Modules\Onboarding\Tests\TestCase::class,
         'Modules/Receipts' => Modules\Receipts\Tests\TestCase::class,
         'Modules/Recurring' => Modules\Recurring\Tests\TestCase::class,

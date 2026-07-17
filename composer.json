@@ -117,7 +117,8 @@
             "Modules\\Search\\Tests\\": "Modules/Search/tests/",
             "Modules\\Sync\\Tests\\": "Modules/Sync/tests/",
             "Modules\\Mobile\\Tests\\": "Modules/Mobile/tests/",
-            "Modules\\Reports\\Tests\\": "Modules/Reports/tests/"
+            "Modules\\Reports\\Tests\\": "Modules/Reports/tests/",
+            "Modules\\Notifications\\Tests\\": "Modules/Notifications/tests/"
         }
     },
     "scripts": {
