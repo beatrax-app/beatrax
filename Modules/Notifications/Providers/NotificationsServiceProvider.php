@@ -9,6 +9,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\SuppressionEvaluator;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
 /**
@@ -36,6 +37,7 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->app->singleton(NotificationStateMachine::class);
         $this->app->singleton(DeterministicKeyDeriver::class);
         $this->app->singleton(NotificationPreferenceQuery::class);
+        $this->app->singleton(SuppressionEvaluator::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
