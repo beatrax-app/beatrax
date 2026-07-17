@@ -215,8 +215,16 @@ final class MergeRulesRegistry
             // 13.2-05 (Req 11 / D-25): one row per (user_id, category_id)
             // holding the overspend-mode toggle. Cross-checked against
             // Modules/Budgets/Database/Migrations/2026_07_05_000003_create_envelope_settings_table.php.
+            // 18-04 (D-20 redirect, see class docblock reference in
+            // 18-04-PLAN.md <planner_decisions>): the D-20 per-envelope
+            // notify threshold landed on this LIVE table (not the write-dead
+            // `category_budgets`) via
+            // Modules/Budgets/Database/Migrations/2026_07_17_000003_add_threshold_percent_to_envelope_settings.php.
+            // Nullable with no DB default (null = "use the 90% D-20
+            // default"), so it stays OUT of `_create_required` below.
             'envelope_settings' => [
                 'overspend_mode' => ['strategy' => 'lww', 'nullable' => false],
+                'threshold_percent' => ['strategy' => 'lww', 'nullable' => true],
                 '_delete_wins' => true,
                 '_create_required' => ['user_id', 'category_id', 'overspend_mode'],
             ],
@@ -254,6 +262,41 @@ final class MergeRulesRegistry
                 'pin_order' => ['strategy' => 'lww', 'nullable' => true],
                 '_delete_wins' => true,
                 '_create_required' => ['name', 'definition'],
+            ],
+            // 18-04 (Req 11/D-05/D-09): notifications inbox. `state` is
+            // DELIBERATELY ABSENT — it is locally derived by
+            // `NotificationStateMachine`, never synced (18-01
+            // <planner_decisions>). `read_at`/`dismissed_at` are plain
+            // nullable LWW latches; convergence falls out of the
+            // deterministic sha256 string PK + existing LWW merge, no new
+            // OpType. Cross-checked against
+            // Modules/Notifications/Database/Migrations/2026_07_17_010001_create_notifications_table.php.
+            'notifications' => [
+                'read_at' => ['strategy' => 'lww', 'nullable' => true],
+                'dismissed_at' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                // `state` has a DB default('open') so it is deliberately
+                // excluded here (same pattern as saved_reports.pinned above).
+                '_create_required' => ['user_id', 'title', 'body', 'trigger_type'],
+            ],
+            // 18-04 (D-07/D-34/D-35): per-(user, device) notification
+            // preference row. These rows SYNC so the other-devices settings
+            // panel can read them, but a device only ever OBEYS its own row
+            // — that policy lives in `SuppressionEvaluator`, not here.
+            // Cross-checked against
+            // Modules/Notifications/Database/Migrations/2026_07_17_010002_create_notification_preferences_table.php.
+            'notification_preferences' => [
+                'reminders_enabled' => ['strategy' => 'lww', 'nullable' => false],
+                'budget_nudges_enabled' => ['strategy' => 'lww', 'nullable' => false],
+                'digest_cadence' => ['strategy' => 'lww', 'nullable' => false],
+                'savings_prompts_enabled' => ['strategy' => 'lww', 'nullable' => false],
+                'reminder_lead_days' => ['strategy' => 'lww', 'nullable' => false],
+                'quiet_hours_enabled' => ['strategy' => 'lww', 'nullable' => false],
+                'quiet_hours_from' => ['strategy' => 'lww', 'nullable' => true],
+                'quiet_hours_to' => ['strategy' => 'lww', 'nullable' => true],
+                'hide_details' => ['strategy' => 'lww', 'nullable' => false],
+                '_delete_wins' => true,
+                '_create_required' => ['user_id', 'device_id'],
             ],
         ];
     }

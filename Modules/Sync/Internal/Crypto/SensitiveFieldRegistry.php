@@ -97,6 +97,15 @@ final class SensitiveFieldRegistry
             'counterparties.iban',
             'tax_transaction_tags.note',
             'transaction_splits.note',
+            // 18-04 (D-11/D-12/D-13): notification content columns. `id`,
+            // `user_id`, `created_at`, `read_at`, `dismissed_at`, and `state`
+            // are deliberately NOT listed — the PK is matched in dedup
+            // `WHERE` clauses and the timestamps drive KEK-less pruning /
+            // unread counts; encrypting any of them breaks Req 1 and Req 14.
+            'notifications.title',
+            'notifications.body',
+            'notifications.params',
+            'notifications.trigger_type',
         ];
     }
 
