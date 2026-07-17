@@ -11,6 +11,7 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
+use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Commands\SyncServeCommand;
@@ -40,6 +41,7 @@ use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
+use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
@@ -366,6 +368,25 @@ final class SyncServiceProvider extends ServiceProvider
             $events->listen(
                 SavedReportMutated::class,
                 [SyncCaptureListener::class, 'handleSavedReport'],
+            );
+        }
+
+        // 18-04 (Req 11/12, D-05/D-09): notification capture listeners. Same
+        // class_exists-guarded pattern as the saved-report wiring above.
+        if (class_exists(SyncCaptureListener::class) &&
+            class_exists(NotificationMutated::class)) {
+            $events->listen(
+                NotificationMutated::class,
+                [SyncCaptureListener::class, 'handleNotificationMutated'],
+            );
+        }
+
+        // 18-04 (D-34): per-device notification-preference capture listener.
+        if (class_exists(SyncCaptureListener::class) &&
+            class_exists(NotificationPreferenceMutated::class)) {
+            $events->listen(
+                NotificationPreferenceMutated::class,
+                [SyncCaptureListener::class, 'handleNotificationPreferenceMutated'],
             );
         }
 

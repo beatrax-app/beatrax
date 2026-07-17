@@ -6,10 +6,12 @@ namespace Modules\Sync\Internal\Listeners;
 
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
+use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
+use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
@@ -427,6 +429,116 @@ final class SyncCaptureListener
         $writer->writeCreateRow(
             table: 'saved_reports',
             pk: $event->reportId,
+            fields: $event->dirtyFields,
+        );
+    }
+
+    /**
+     * Routes NotificationMutated events to the OpLogWriter with
+     * table: 'notifications' (18-04 / Req 11/12). `$event->notificationId`
+     * is the D-05 deterministic sha256 STRING pk — flows straight through
+     * `OpLogWriter::writeSet(pk:)`/`writeCreateRow(pk:)` unchanged since
+     * `OpLogEntry::$pk` is already typed `int|string`.
+     *
+     * Only 'create' and 'edit' are routed — `notifications` has no delete
+     * mutation path in this phase. An unrecognized mutationType (including
+     * an accidental 'delete') hits the logged default arm rather than
+     * throwing, matching every other handler's future-proofing.
+     */
+    public function handleNotificationMutated(NotificationMutated $event): void
+    {
+        try {
+            $writer = $this->container->make(OpLogWriter::class);
+
+            match ($event->mutationType) {
+                'edit' => $this->handleNotificationEdit($event, $writer),
+                'create' => $this->handleNotificationCreate($event, $writer),
+                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                    'mutationType' => $event->mutationType,
+                    'notificationId' => $event->notificationId,
+                ]),
+            };
+        } catch (\Throwable $e) {
+            // Swallow — a capture failure must NEVER break the originating save (D-07).
+            $this->log->error('SyncCaptureListener: notification capture failed', [
+                'exception' => $e->getMessage(),
+                'mutationType' => $event->mutationType,
+                'notificationId' => $event->notificationId,
+                'userId' => $event->userId,
+            ]);
+        }
+    }
+
+    private function handleNotificationEdit(NotificationMutated $event, OpLogWriter $writer): void
+    {
+        foreach ($event->dirtyFields as $field => $value) {
+            $writer->writeSet(
+                table: 'notifications',
+                pk: $event->notificationId,
+                field: $field,
+                value: $value,
+            );
+        }
+    }
+
+    private function handleNotificationCreate(NotificationMutated $event, OpLogWriter $writer): void
+    {
+        $writer->writeCreateRow(
+            table: 'notifications',
+            pk: $event->notificationId,
+            fields: $event->dirtyFields,
+        );
+    }
+
+    /**
+     * Routes NotificationPreferenceMutated events to the OpLogWriter with
+     * table: 'notification_preferences' (18-04 / D-34). `preferenceId` is
+     * the LOCAL autoincrement `notification_preferences.id` surrogate —
+     * unlike `notifications`, this table is never independently generated
+     * on two devices from the same logical fact (D-05's convergence
+     * argument does not apply), so an int pk is correct here.
+     */
+    public function handleNotificationPreferenceMutated(NotificationPreferenceMutated $event): void
+    {
+        try {
+            $writer = $this->container->make(OpLogWriter::class);
+
+            match ($event->mutationType) {
+                'edit' => $this->handleNotificationPreferenceEdit($event, $writer),
+                'create' => $this->handleNotificationPreferenceCreate($event, $writer),
+                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                    'mutationType' => $event->mutationType,
+                    'preferenceId' => $event->preferenceId,
+                ]),
+            };
+        } catch (\Throwable $e) {
+            // Swallow — a capture failure must NEVER break the originating save (D-07).
+            $this->log->error('SyncCaptureListener: notification preference capture failed', [
+                'exception' => $e->getMessage(),
+                'mutationType' => $event->mutationType,
+                'preferenceId' => $event->preferenceId,
+                'userId' => $event->userId,
+            ]);
+        }
+    }
+
+    private function handleNotificationPreferenceEdit(NotificationPreferenceMutated $event, OpLogWriter $writer): void
+    {
+        foreach ($event->dirtyFields as $field => $value) {
+            $writer->writeSet(
+                table: 'notification_preferences',
+                pk: $event->preferenceId,
+                field: $field,
+                value: $value,
+            );
+        }
+    }
+
+    private function handleNotificationPreferenceCreate(NotificationPreferenceMutated $event, OpLogWriter $writer): void
+    {
+        $writer->writeCreateRow(
+            table: 'notification_preferences',
+            pk: $event->preferenceId,
             fields: $event->dirtyFields,
         );
     }
