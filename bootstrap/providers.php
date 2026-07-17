@@ -23,6 +23,7 @@ use Modules\Goals\Providers\GoalsServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
+use Modules\Notifications\Providers\NotificationsServiceProvider;
 use Modules\Onboarding\Providers\OnboardingServiceProvider;
 use Modules\Pots\Providers\PotsServiceProvider;
 use Modules\Receipts\Providers\ReceiptsServiceProvider;
@@ -60,4 +61,5 @@ return array_values(array_filter([
     OnboardingServiceProvider::class,
     CommunityServiceProvider::class,
     CounterpartiesServiceProvider::class,
+    NotificationsServiceProvider::class,
 ]));

@@ -33,6 +33,7 @@
             <directory>Modules/Calendar/tests/Unit</directory>
             <directory>Modules/Tax/tests/Unit</directory>
             <directory>Modules/Search/tests/Unit</directory>
+            <directory>Modules/Notifications/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
@@ -61,6 +62,7 @@
             <directory>Modules/Calendar/tests/Feature</directory>
             <directory>Modules/Tax/tests/Feature</directory>
             <directory>Modules/Search/tests/Feature</directory>
+            <directory>Modules/Notifications/tests/Feature</directory>
         </testsuite>
         <testsuite name="Contracts">
             <directory>tests/Contracts</directory>

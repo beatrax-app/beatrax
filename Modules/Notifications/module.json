@@ -1,0 +1,11 @@
+{
+    "name": "Notifications",
+    "alias": "notifications",
+    "description": "Persistent, deduplicated notification store (deterministic sha256 string PK from trigger+subject+occurrence) with the /notifications inbox, per-device preferences, quiet-hours-defer, and proactive + reactive triggers.",
+    "keywords": ["notifications", "reminders", "inbox"],
+    "priority": 13,
+    "providers": [
+        "Modules\\Notifications\\Providers\\NotificationsServiceProvider"
+    ],
+    "files": []
+}

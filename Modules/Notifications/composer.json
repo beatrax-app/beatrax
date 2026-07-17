@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/notifications",
+    "description": "Notifications module — persistent, deduplicated notification store keyed by a deterministic sha256 string PK, the /notifications inbox, per-device preferences, quiet-hours-defer, and proactive/reactive triggers.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Notifications\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Notifications\\Tests\\": "tests/"
+        }
+    }
+}
