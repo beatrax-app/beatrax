@@ -8,7 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
-use Modules\Notifications\Internal\Support\SuppressionEvaluator;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 /*
  * Req 10 — closes the deferred per-row notification spam debt (D-22): a

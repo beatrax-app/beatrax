@@ -8,7 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
-use Modules\Notifications\Internal\Support\SuppressionEvaluator;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use Modules\Recurring\Internal\Jobs\EmitPaymentRemindersJob;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;

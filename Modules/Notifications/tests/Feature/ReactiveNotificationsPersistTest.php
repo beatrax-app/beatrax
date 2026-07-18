@@ -10,7 +10,7 @@ use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
-use Modules\Notifications\Internal\Support\SuppressionEvaluator;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 /*
  * Req 3's first acceptance criterion, verbatim: "Triggering each of the 4

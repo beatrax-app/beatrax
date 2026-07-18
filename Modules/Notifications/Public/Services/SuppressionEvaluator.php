@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Modules\Notifications\Internal\Support;
+namespace Modules\Notifications\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
+use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Dto\DeliveryDecision;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
-use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -16,6 +17,14 @@ use Psr\Log\LoggerInterface;
  * `DispatchMobileNotification` (18-15) call `shouldDeliver()`; plan 18-17's
  * BoundaryArchTest proves nothing else evaluates toggles / quiet hours /
  * the seeding flag.
+ *
+ * Lives on the module's `Public\Services` surface (relocated from
+ * `Internal\Support` during 18-11) because both consumers are OTHER
+ * modules' delivery adapters — `Modules\Desktop` and (18-15)
+ * `Modules\Mobile` — and the cross-module `BoundaryRule` only admits
+ * `Public\*` / `Models\*` imports. `DeliveryDecision` moved alongside it to
+ * `Public\Dto` for the same reason: an adapter that cannot see the return
+ * type cannot call the method.
  *
  * D-08 / Req 9 shared contract (binding): this class decides DELIVERY only.
  * It NEVER prevents a notification row from being written and nothing is

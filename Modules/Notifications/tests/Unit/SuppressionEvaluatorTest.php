@@ -7,7 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
-use Modules\Notifications\Internal\Support\SuppressionEvaluator;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 uses(RefreshDatabase::class);
 

@@ -16,7 +16,7 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
-use Modules\Notifications\Internal\Support\SuppressionEvaluator;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 /*
  * Req 6 — the over-budget nudge trigger, redirected (D-20 AMENDMENT — see

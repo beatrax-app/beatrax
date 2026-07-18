@@ -9,7 +9,7 @@ use Modules\Core\Models\User;
 use Modules\DriftAlerts\Internal\Jobs\EmitSavingsPromptsJob;
 use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
-use Modules\Notifications\Internal\Support\SuppressionEvaluator;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 /*
  * Req 7 — the savings-opportunity prompt trigger. Exercises
