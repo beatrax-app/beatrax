@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace Modules\Notifications\Providers;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\View\Factory as ViewFactoryContract;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
+use Modules\Notifications\Internal\Support\DeepLinkResolver;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\Actions\DismissNotification;
@@ -93,6 +98,10 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->app->singleton(MarkNotificationRead::class);
         $this->app->singleton(DismissNotification::class);
         $this->app->singleton(UndoDismissNotification::class);
+
+        // 18-12: the /notifications inbox's render-time deep-link
+        // existence check (D-25).
+        $this->app->singleton(DeepLinkResolver::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
@@ -107,7 +116,60 @@ final class NotificationsServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'notifications');
         }
 
+        // 18-12: the /notifications inbox Livewire SFC + its nav-badge
+        // unread count (D-03). The settings section's Livewire
+        // registration belongs to plan 18-13 (wave 6) — not added here.
+        $livewire->component('notifications.page', NotificationsPage::class);
+        $this->registerNavBadgeComposer();
+
         $this->registerTriggerListeners($events);
+    }
+
+    /**
+     * Injects the D-03 unread count into the sidebar nav as
+     * `navCounts['notifications']` via the View Factory contract (the
+     * global `view()` helper is forbidden in module code). Cloned from
+     * `AnomalyServiceProvider::registerNavBadgeComposer()` verbatim,
+     * swapping `AnomalyAlertQuery::openCountForUser` for
+     * `NotificationQuery::unreadCountForUser` — including BOTH load-
+     * bearing details of that clone: the boot-scoped per-user memo array
+     * that collapses repeated renders to one COUNT query, and the
+     * unauthenticated-user branch that zeroes the count BEFORE the
+     * `CurrentUser::user()` call (T-18-51 — the count reads only
+     * plaintext `read_at`/`dismissed_at` columns, so it also works on a
+     * locked, KEK-less device).
+     */
+    private function registerNavBadgeComposer(): void
+    {
+        $app = $this->app;
+        $factory = $app->make(ViewFactoryContract::class);
+
+        /** @var array<int, int> $cache */
+        $cache = [];
+
+        $factory->composer('core::livewire.app-sidebar', static function (View $compose) use ($app, &$cache): void {
+            $currentUser = $app->make(CurrentUser::class);
+
+            /** @var array<string, int> $navCounts */
+            $navCounts = (array) ($compose->getData()['navCounts'] ?? []);
+
+            if (! $currentUser->isAuthenticated()) {
+                $navCounts['notifications'] = 0;
+                $compose->with('navCounts', $navCounts);
+
+                return;
+            }
+
+            $user = $currentUser->user();
+            $userId = $user->id;
+            if (! array_key_exists($userId, $cache)) {
+                $query = $app->make(NotificationQuery::class);
+                $cache[$userId] = $query->unreadCountForUser($user);
+            }
+
+            $navCounts['notifications'] = $cache[$userId];
+            $compose->with('navCounts', $navCounts);
+        });
     }
 
     /**
