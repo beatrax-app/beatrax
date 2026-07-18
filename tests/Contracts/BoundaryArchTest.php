@@ -2203,3 +2203,242 @@ it('does not allow the Desktop NativePHP facade allow-list to grow beyond the pi
         ."the pinned set. Actual:\n  ".implode("\n  ", $ignoringDesktopEntries),
     );
 });
+
+it('derives the deterministic notification key in exactly one place and mutates notifications.state through exactly one class, naming OpLogReplayer as the legitimate read_at/dismissed_at mutator (onlyOneNotificationKeyDeriverAndStateMutator)', function (): void {
+    // D-38 invariant 3 (T-18-73) — the highest-value test in the phase. A
+    // drifting key deriver passes every unit test and breaks Reqs 1/12's
+    // cross-device convergence SILENTLY: two devices independently deciding
+    // "this user's forecast just went into shortfall for period 2026-08"
+    // MUST derive the same sha256 id from the same
+    // `(user_id, trigger_type, subject_key, occurrence)` tuple, or they
+    // never converge on one row — surfacing months later as unexplained
+    // duplicate rows on merge, never as a failing test, unless this arch
+    // test exists.
+    //
+    // Deliberately NOT a blanket `hash('sha256'` ban across the repo: Sync's
+    // signing/pairing paths (`SafetyNumberDeriver`, `PairingTokenService`),
+    // Ledger's `FingerprintComposer`, Receipts' `.eml` content hashing, and
+    // several demo seeders all use sha256 legitimately for unrelated
+    // fingerprints/tokens. Two narrower checks instead:
+    //
+    //   A. Within `Modules/Notifications` itself, `hash('sha256'` may
+    //      appear ONLY in `DeterministicKeyDeriver.php`.
+    //   B. A repo-wide check for a SECOND notification-key derivation: a
+    //      file (other than `DeterministicKeyDeriver.php`) that combines a
+    //      sha256 hash call with the three tuple-member field names
+    //      (`trigger_type`, `subject_key`, `occurrence`) is the specific
+    //      signature of someone having manually rebuilt the same key
+    //      elsewhere — not a blanket sha256 ban.
+    //
+    // `DeterministicKeyDeriver::derive()`'s only legitimate direct callers
+    // are `NotificationWriter` (every fresh write) and two RE-derive sites
+    // that look up an EXISTING row rather than mint a new key:
+    // `ResolveSettledReminder` (Req 13's after-delivery withdrawal, 18-06)
+    // and `DemoNotificationsSeeder` (re-derives an id purely to mark an
+    // already-seeded demo row read/dismissed). No `Persist*` listener may
+    // call `derive()` directly — they all go through `NotificationWriter`.
+    //
+    // Also folds in D-39's single-mutator assertion for `notifications.state`
+    // (T-18-75), naming the replayer explicitly rather than pretending it
+    // does not write: `OpLogReplayer` IS a legitimate second mutator of
+    // `notifications.read_at` / `notifications.dismissed_at` (via its
+    // LWW-per-field merge strategy when applying a peer's ops) and is NOT a
+    // mutator of `notifications.state`, because `state` is a
+    // locally-derived column deliberately left out of
+    // `MergeRulesRegistry['notifications']` (18-01 / 18-04). This is why
+    // D-39's replayer wrinkle does not bite: the invariant can name the
+    // replayer and still hold.
+    $notificationsDir = base_path('Modules/Notifications');
+    $keyDeriverFile = base_path('Modules/Notifications/Internal/Support/DeterministicKeyDeriver.php');
+    $stateMachineFile = base_path('Modules/Notifications/Internal/StateMachines/NotificationStateMachine.php');
+    $allowedDirectCallers = [
+        base_path('Modules/Notifications/Internal/Support/NotificationWriter.php'),
+        base_path('Modules/Notifications/Internal/Listeners/ResolveSettledReminder.php'),
+        // Re-derives an EXISTING row's id purely to mark it read/dismissed
+        // for demo-data purposes — the same "look up, don't mint" shape as
+        // ResolveSettledReminder, never a second key-computation surface.
+        base_path('Modules/Notifications/Database/Seeders/Demo/DemoNotificationsSeeder.php'),
+    ];
+
+    $sha256Hits = [];
+    $illegalCallerHits = [];
+    $stateMutationHits = [];
+
+    if (is_dir($notificationsDir)) {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($notificationsDir, RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+                continue;
+            }
+            $path = $file->getPathname();
+            if (str_contains($path, '/tests/')) {
+                continue;
+            }
+            $contents = (string) file_get_contents($path);
+            $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+
+            // A. sha256 confined to DeterministicKeyDeriver.
+            if ($path !== $keyDeriverFile && preg_match("/hash\\s*\\(\\s*['\"]sha256['\"]/", $stripped) === 1) {
+                $sha256Hits[] = str_replace(base_path().'/', '', $path).' (sha256 hashing outside DeterministicKeyDeriver)';
+            }
+
+            // Direct ->derive( callers restricted to the allow-list.
+            if ($path !== $keyDeriverFile && ! in_array($path, $allowedDirectCallers, true)) {
+                if (preg_match('/->derive\s*\(/', $stripped) === 1 || preg_match('/::derive\s*\(/', $stripped) === 1) {
+                    $illegalCallerHits[] = str_replace(base_path().'/', '', $path).' (calls DeterministicKeyDeriver::derive() directly)';
+                }
+            }
+
+            // D-39: notifications.state mutated only by NotificationStateMachine.
+            if ($path !== $stateMachineFile && ! str_starts_with($path, base_path('Modules/Notifications/Database/Migrations').DIRECTORY_SEPARATOR)) {
+                if (
+                    preg_match("/->table\\(['\"]notifications['\"]\\)[^;]*->update\\s*\\(\\s*\\[\\s*['\"]state['\"]/", $stripped) === 1
+                    || preg_match('/Notification::query\(\)[^;]*->update\(\s*\[\s*[\'"]state[\'"]/', $stripped) === 1
+                ) {
+                    $stateMutationHits[] = str_replace(base_path().'/', '', $path);
+                }
+            }
+        }
+    }
+
+    // B. Repo-wide check for a second, independently-built notification key.
+    $modulesDir = base_path('Modules');
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($modulesDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if ($path === $keyDeriverFile || str_contains($path, '/tests/')) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (
+            preg_match("/hash\\s*\\(\\s*['\"]sha256['\"]/", $stripped) === 1
+            && preg_match('/trigger_type/', $stripped) === 1
+            && preg_match('/subject_key/', $stripped) === 1
+            && preg_match('/occurrence/', $stripped) === 1
+        ) {
+            $sha256Hits[] = str_replace(base_path().'/', '', $path).' (possible second notification-key derivation — combines a sha256 hash with the trigger_type/subject_key/occurrence tuple)';
+        }
+    }
+
+    expect(array_unique($sha256Hits))->toBe(
+        [],
+        'Reqs 1/12 depend on two devices computing an IDENTICAL notification key from identical '
+        .'inputs; a second, slightly-different implementation breaks convergence SILENTLY — it '
+        .'surfaces only as mysterious duplicate rows on merge, never as a failing test. The '
+        ."deterministic key must be derived ONLY in DeterministicKeyDeriver::derive(). Offenders:\n  "
+        .implode("\n  ", array_unique($sha256Hits)),
+    );
+
+    expect($illegalCallerHits)->toBe(
+        [],
+        'DeterministicKeyDeriver::derive() may only be called directly by NotificationWriter (every '
+        .'fresh write) and the two legitimate re-derive sites (ResolveSettledReminder, '
+        ."DemoNotificationsSeeder). Offenders:\n  ".implode("\n  ", $illegalCallerHits),
+    );
+
+    expect($stateMutationHits)->toBe(
+        [],
+        'Only NotificationStateMachine may mutate notifications.state. OpLogReplayer IS a legitimate '
+        .'second mutator of notifications.read_at / notifications.dismissed_at (LWW-per-field replay of '
+        .'a peer'."'".'s ops) — but it is NOT, and must never become, a mutator of notifications.state, '
+        .'which is a locally-derived column deliberately excluded from '
+        ."MergeRulesRegistry['notifications'] (18-01 / 18-04). Offenders:\n  ".implode("\n  ", $stateMutationHits),
+    );
+});
+
+it('evaluates notification-delivery suppression (quiet hours + per-trigger toggles) in exactly one place (onlyOneSuppressionEvaluator)', function (): void {
+    // D-38 invariant 4 (T-18-74) — the other silent-failure-mode test in
+    // the phase. Two independently-written suppression checks WILL drift:
+    // D-31/D-32's two delivery adapters (`DispatchOsNotification` for
+    // desktop, `DispatchMobileNotification` for mobile) both call
+    // `SuppressionEvaluator::shouldDeliver()` and MUST NOT re-implement any
+    // slice of quiet-hours / per-trigger-toggle logic themselves — a user
+    // experiencing "my phone ignores quiet hours" would have no failing
+    // test to point at without this arch invariant.
+    $bannedLiterals = [
+        'quiet_hours',
+        'quietHours',
+        'reminders_enabled',
+        'budget_nudges_enabled',
+        'savings_prompts_enabled',
+        'digest_cadence',
+        'notification_preferences',
+    ];
+    $adapterFiles = [
+        base_path('Modules/Desktop/Internal/Listeners/DispatchOsNotification.php'),
+        base_path('Modules/Mobile/Internal/Listeners/DispatchMobileNotification.php'),
+    ];
+
+    $literalHits = [];
+    foreach ($adapterFiles as $path) {
+        if (! is_file($path)) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        foreach ($bannedLiterals as $literal) {
+            if (preg_match('/'.preg_quote($literal, '/').'/', $stripped) === 1) {
+                $literalHits[] = str_replace(base_path().'/', '', $path)." references '{$literal}' directly instead of going through SuppressionEvaluator";
+            }
+        }
+    }
+
+    expect($literalHits)->toBe(
+        [],
+        'Neither delivery adapter (Desktop nor Mobile) may reference a quiet-hours / per-trigger-toggle '
+        .'preference literal directly — both must consult SuppressionEvaluator::shouldDeliver() and '
+        ."nothing else. Two independently-written suppression checks WILL drift, and D-31/D-32's two "
+        ."adapters are exactly where that drift would land. Offenders:\n  ".implode("\n  ", $literalHits),
+    );
+
+    // Second half: no non-test file outside SuppressionEvaluator reads the
+    // notification_preferences table directly, except NotificationPreferenceQuery
+    // (its Public seam).
+    $allowedReaders = [
+        base_path('Modules/Notifications/Public/Services/NotificationPreferenceQuery.php'),
+    ];
+    $modulesDir = base_path('Modules');
+    $readerHits = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($modulesDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (str_contains($path, '/tests/') || str_contains($path, '/Database/Migrations/')) {
+            continue;
+        }
+        if (in_array($path, $allowedReaders, true)) {
+            continue;
+        }
+        $contents = (string) file_get_contents($path);
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        if (
+            preg_match("/->table\\(\\s*['\"]notification_preferences['\"]\\s*\\)/", $stripped) === 1
+            || preg_match('/NotificationPreference::query\s*\(/', $stripped) === 1
+            || preg_match('/NotificationPreference::where\s*\(/', $stripped) === 1
+        ) {
+            $readerHits[] = str_replace(base_path().'/', '', $path);
+        }
+    }
+
+    expect($readerHits)->toBe(
+        [],
+        'Only NotificationPreferenceQuery may read the notification_preferences table directly outside '
+        ."SuppressionEvaluator's own preference lookup (which itself goes through "
+        ."NotificationPreferenceQuery::forCurrentDevice()). Offenders:\n  ".implode("\n  ", $readerHits),
+    );
+});
