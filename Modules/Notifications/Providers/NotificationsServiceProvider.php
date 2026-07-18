@@ -11,6 +11,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
+use Modules\Notifications\Internal\Http\Livewire\NotificationsSettingsSection;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeepLinkResolver;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
@@ -117,9 +118,12 @@ final class NotificationsServiceProvider extends ServiceProvider
         }
 
         // 18-12: the /notifications inbox Livewire SFC + its nav-badge
-        // unread count (D-03). The settings section's Livewire
-        // registration belongs to plan 18-13 (wave 6) — not added here.
+        // unread count (D-03).
         $livewire->component('notifications.page', NotificationsPage::class);
+
+        // 18-13: the Settings "Notifications" section (D-36).
+        $livewire->component('notifications.settings-section', NotificationsSettingsSection::class);
+
         $this->registerNavBadgeComposer();
 
         $this->registerTriggerListeners($events);
