@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/position",
+    "description": "Position module — the single Public composition of 'your current position' (D-30), consumed first by the position digest.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Position\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Position\\Tests\\": "tests/"
+        }
+    }
+}

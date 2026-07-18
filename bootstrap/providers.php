@@ -25,6 +25,7 @@ use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
 use Modules\Notifications\Providers\NotificationsServiceProvider;
 use Modules\Onboarding\Providers\OnboardingServiceProvider;
+use Modules\Position\Providers\PositionServiceProvider;
 use Modules\Pots\Providers\PotsServiceProvider;
 use Modules\Receipts\Providers\ReceiptsServiceProvider;
 use Modules\Recurring\Providers\RecurringServiceProvider;
@@ -62,4 +63,5 @@ return array_values(array_filter([
     CommunityServiceProvider::class,
     CounterpartiesServiceProvider::class,
     NotificationsServiceProvider::class,
+    PositionServiceProvider::class,
 ]));

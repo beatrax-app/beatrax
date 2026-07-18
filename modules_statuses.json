@@ -16,6 +16,7 @@
     "Mobile": true,
     "Notifications": true,
     "Onboarding": true,
+    "Position": true,
     "Reports": true,
     "Search": true,
     "Sync": true,
