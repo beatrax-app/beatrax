@@ -4,127 +4,84 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Listeners;
 
-use Illuminate\Contracts\Routing\UrlGenerator;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
-use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
-use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
-use Modules\Import\Public\Events\TransactionImported;
+use Modules\Notifications\Public\Events\NotificationDeliverable;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use Native\Desktop\Facades\Notification;
 
 /**
- * Context-aware OS notification dispatcher (D-12 / D-13 / D-14).
+ * The sole desktop delivery adapter (D-31/D-32) — the ONLY listener on
+ * `Modules\Notifications\Public\Events\NotificationDeliverable`. The prior
+ * three per-category handlers have collapsed into this ONE handler: the
+ * Notifications module now decides WHAT to notify (title/body/deep-link,
+ * D-29 copy authority) and persists the row FIRST; this listener only
+ * decides whether/how to DELIVER it to the OS.
  *
- * Subscribes to the four in-app event categories the UI-SPEC names —
- * drift alert detected, import finished, new receipts found, forecast
- * shortfall — and decides per-event whether to fire a native OS
- * notification (when the window is unfocused, D-13) or stay quiet
- * (when the window is focused — the in-app `SystemAlertsBanner` is
- * showing the same information).
+ * Delivery decision order:
  *
- * Each fired notification carries the verbatim UI-SPEC title, a
- * substantive body, and a click-event of type `NotificationDeepLink`
- * with the relevant in-app route URL as the reference — NativePHP
- * fires the click event back into the Laravel event bus when the
- * user clicks the notification, so a downstream handler navigates
- * the focused window to the route (D-14).
+ *   1. `SuppressionEvaluator::shouldDeliver()` (D-38 invariant 4) — the
+ *      single suppression site for per-trigger toggles + quiet hours + the
+ *      D-43 seeding flag. The row is ALREADY persisted at this point (by
+ *      `NotificationWriter`, before this event was even dispatched) — a
+ *      suppressed decision means "stay quiet on this device", never
+ *      "drop the row" (D-08 / Req 9 shared contract).
+ *   2. The D-13 focus-gate — UNCHANGED: fires only when the window is
+ *      unfocused. When focused, the in-app `SystemAlertsBanner` /
+ *      notification inbox already surfaces the same information.
+ *   3. D-24 hide-details: when the device's `hide_details` preference is
+ *      on, the OS body is replaced with a detail-free fallback instead of
+ *      the event's real body.
  *
- * Native-chrome carve-out: this listener calls the
- * `Native\Desktop\Facades\Notification` facade directly. NativePHP's
- * notification API is only reachable through that facade (no
- * container-bound alternative), so the file is added to
- * `BoundaryArchTest`'s facade allow-list + `phpstan.neon` ignore
- * list. The crossing stays confined to this one listener; the
- * `WindowFocusState` collaborator and the `UrlGenerator` come
- * through constructor DI.
+ * Native-chrome carve-out: this listener calls the NativePHP `Notification`
+ * facade directly (see the `use` import above). That facade is the only
+ * reachable surface for NativePHP's notification API (no container-bound
+ * alternative), so the file is on `BoundaryArchTest`'s facade allow-list +
+ * `phpstan.neon` ignore list. The crossing stays confined to this one
+ * listener and to `fire()` specifically — `SuppressionEvaluator` and
+ * `Clock` are plain constructor-DI collaborators that touch no NativePHP
+ * facade.
  *
- * Per-event noise: the in-app domain events are per-row (e.g.
- * `TransactionImported` fires for each canonical-row INSERT). The
- * notification listener subscribes to those events as-is; per-batch
- * rate limiting is out of scope for this plan and lands later if
- * the unfocused-default fires too often during a large import. The
- * focus-gate (D-13) is the primary noise control: in-app users see
- * the SystemAlertsBanner instead.
+ * Per-batch noise (Req 10 / D-22 — CLOSED): the prior per-row import
+ * subscription that could fire hundreds of OS notifications for one large
+ * import is gone. `Modules\Ledger`'s batch-altitude
+ * `TransactionBatchImported` event now feeds `PersistCoalescedImport`,
+ * which writes exactly ONE notification per import batch — this listener
+ * never sees more than one deliverable event per batch, closing the debt
+ * this class's docblock used to record as deferred.
  */
 final class DispatchOsNotification
 {
-    /** Verbatim UI-SPEC notification titles (locked copy). */
-    public const TITLE_IMPORT_FINISHED = 'Import finished';
-
-    public const TITLE_DRIFT = 'A recurring charge changed';
-
-    public const TITLE_RECEIPTS = 'New receipts found';
-
-    public const TITLE_FORECAST = 'Cash-flow shortfall ahead';
-
-    /** Wire-format keys the `TransactionImported` event carries when the row originated from an email receipt. */
-    private const RECEIPT_FORMATS = ['eml', 'mbox'];
+    /** Detail-free fallback body used when the device's D-24 hide-details preference is on. */
+    private const HIDDEN_DETAILS_BODY = 'Open beatrax to see the details.';
 
     public function __construct(
         private readonly WindowFocusState $focus,
-        private readonly UrlGenerator $urls,
+        private readonly SuppressionEvaluator $suppression,
+        private readonly Clock $clock,
     ) {}
 
     /**
-     * Subscriber for `TransactionImported`. The single event carries
-     * BOTH the "import finished" case (CSV / CAMT / MT940 / PDF
-     * source formats) and the "new receipts found" case (eml /
-     * mbox); the body + deep-link route differ. This split keeps
-     * the listener idiomatic (one method per UI-SPEC category)
-     * without requiring two separate event classes upstream.
+     * Subscriber for `NotificationDeliverable` — the ONE event both
+     * platform delivery adapters (Desktop here, Mobile in 18-15) consume
+     * (D-31/D-32).
      */
-    public function handleTransactionImported(TransactionImported $event): void
+    public function handleNotificationDeliverable(NotificationDeliverable $event): void
     {
+        $decision = $this->suppression->shouldDeliver($event->userId, $event->triggerType, $this->clock->now());
+
+        if (! $decision->deliver) {
+            return;
+        }
+
         if (! $this->shouldFire()) {
             return;
         }
 
-        $source = $event->transaction->source_format ?? '';
-        if (in_array($source, self::RECEIPT_FORMATS, true)) {
-            $this->fire(
-                title: self::TITLE_RECEIPTS,
-                body: '1 receipt matched from your email.',
-                deepLinkRoute: $this->urls->route('inboxes.index'),
-            );
+        $body = $decision->hideDetails ? self::HIDDEN_DETAILS_BODY : $event->body;
 
-            return;
-        }
-
-        $this->fire(
-            title: self::TITLE_IMPORT_FINISHED,
-            body: '1 transaction added from '.($source !== '' ? $source : 'your import').'.',
-            deepLinkRoute: $this->urls->route('imports.new'),
-        );
-    }
-
-    public function handleDriftAlert(DriftAlertOpened $event): void
-    {
-        if (! $this->shouldFire()) {
-            return;
-        }
-
-        $direction = $event->direction === 'up' ? 'up' : 'down';
-        $delta = number_format(abs($event->deltaMinor) / 100, 2);
-        $currency = $event->currency;
-
-        $this->fire(
-            title: self::TITLE_DRIFT,
-            body: 'A recurring charge moved '.$direction.' by '.$delta.' '.$currency.'.',
-            deepLinkRoute: $this->urls->route('drift.index'),
-        );
-    }
-
-    public function handleForecastShortfall(ForecastShortfallDetected $event): void
-    {
-        if (! $this->shouldFire()) {
-            return;
-        }
-
-        $this->fire(
-            title: self::TITLE_FORECAST,
-            body: 'Your projected balance dips below zero within the next 30 days.',
-            deepLinkRoute: $this->urls->route('forecast.index'),
-        );
+        $this->fire($event->title, $body, $event->deepLinkRoute);
     }
 
     /**
@@ -137,12 +94,12 @@ final class DispatchOsNotification
         return ! $this->focus->isFocused();
     }
 
-    private function fire(string $title, string $body, string $deepLinkRoute): void
+    private function fire(string $title, string $body, ?string $deepLinkRoute): void
     {
         Notification::title($title)
             ->message($body)
             ->event(NotificationDeepLink::class)
-            ->reference($deepLinkRoute)
+            ->reference($deepLinkRoute ?? '')
             ->show();
     }
 }

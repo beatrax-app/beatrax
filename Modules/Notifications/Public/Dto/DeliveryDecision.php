@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Modules\Notifications\Internal\Support;
+namespace Modules\Notifications\Public\Dto;
 
 /**
  * The outcome of a single `SuppressionEvaluator::shouldDeliver()` call.
+ *
+ * Lives on `Public\Dto` (relocated from `Internal\Support` during 18-11)
+ * alongside `SuppressionEvaluator` itself — a cross-module delivery adapter
+ * that can call the method still needs to see its return type.
  *
  * A decision object rather than a bare bool (locked planner decision): the
  * delivery adapters need to know WHY delivery was suppressed for their logs

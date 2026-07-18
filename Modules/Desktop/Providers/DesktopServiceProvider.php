@@ -10,6 +10,8 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\FileStagingPage;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
@@ -26,14 +28,13 @@ use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
 use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
 use Modules\Desktop\Internal\Native\PendingFileIntent;
+use Modules\Desktop\Internal\Native\SafeStorageSecretShield;
 use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
 use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
-use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
-use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
-use Modules\Import\Public\Events\TransactionImported;
+use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Native\Desktop\Events\App\OpenFile;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
 use Native\Desktop\Events\Windows\WindowBlurred;
@@ -67,7 +68,8 @@ use Native\Desktop\Events\Windows\WindowHidden;
  * `boot()` loads migrations from `Database/Migrations`, web routes
  * from `Routes/web.php`, views under the `desktop` namespace, the
  * two first-launch Livewire screens (plan 15-05), and subscribes the
- * D-13 focus-state flippers + the four D-12 OS-notification handlers.
+ * D-13 focus-state flippers + the single D-31 notification-deliverable
+ * OS-notification handler.
  */
 final class DesktopServiceProvider extends ServiceProvider
 {
@@ -179,6 +181,19 @@ final class DesktopServiceProvider extends ServiceProvider
         if ($config->get('nativephp-internal.running') === true) {
             $this->app->singleton(OsThemeSignal::class, OsThemeProbe::class);
 
+            // D-20 / WR-08: on the desktop bundle, route the unlocked data
+            // key through Electron safeStorage (OS keychain) instead of the
+            // plaintext session copy. Overrides the Auth NullKeyCustodian
+            // default. Web / CI never enter this block, so they keep the
+            // pass-through session custody.
+            $this->app->singleton(KeyCustodian::class, DesktopKeyCustodian::class);
+
+            // At-rest keychain shielding for persisted secrets (biometric
+            // wrap blob, OAuth token blob). Delegates to DesktopKeyCustodian
+            // so safeStorage stays in one place. Overrides the Core
+            // PassthroughSecretShield default on the desktop bundle only.
+            $this->app->singleton(SecretShield::class, SafeStorageSecretShield::class);
+
             // Keep the NativePHP security secret in sync with the live
             // launch so PreventRegularBrowserAccess does not 403 the
             // app's own window. See reassertNativePhpSecret() for the
@@ -278,10 +293,9 @@ final class DesktopServiceProvider extends ServiceProvider
         // gate mirrors the `OsThemeProbe` contract-binding gate in
         // `register()`: the bundle sets `NATIVEPHP_RUNNING=true`
         // (see `config/nativephp-internal.php`), and the listener
-        // wiring lights up only then. CI / test runs that fire
-        // `TransactionImported` / `DriftAlertOpened` /
-        // `ForecastShortfallDetected` therefore never reach the
-        // NativePHP HTTP client.
+        // wiring lights up only then. CI / test runs that dispatch the
+        // Notifications module's deliverable event therefore never
+        // reach the NativePHP HTTP client.
         $config = $this->app->make(ConfigRepository::class);
         if ($config->get('nativephp-internal.running') !== true) {
             return;
@@ -302,13 +316,12 @@ final class DesktopServiceProvider extends ServiceProvider
             $focusState->markBlurred();
         });
 
-        // D-12 OS-notification subscriptions. Each in-app domain
-        // event the UI-SPEC names routes through one handler method
-        // on the dispatcher; the dispatcher itself owns the D-13
-        // focus-gate.
-        $events->listen(TransactionImported::class, [DispatchOsNotification::class, 'handleTransactionImported']);
-        $events->listen(DriftAlertOpened::class, [DispatchOsNotification::class, 'handleDriftAlert']);
-        $events->listen(ForecastShortfallDetected::class, [DispatchOsNotification::class, 'handleForecastShortfall']);
+        // D-12/D-31 OS-notification subscription. The Notifications
+        // module now decides WHAT to notify (title/body/deep-link) and
+        // persists the row FIRST; this ONE listener decides only
+        // whether/how to deliver it to the OS (suppression + the D-13
+        // focus-gate). Three per-category handlers collapsed into one.
+        $events->listen(NotificationDeliverable::class, [DispatchOsNotification::class, 'handleNotificationDeliverable']);
 
         // D-07 worker crash-loop subscription. NativePHP fires
         // `ProcessExited` for every supervised child-process exit; the

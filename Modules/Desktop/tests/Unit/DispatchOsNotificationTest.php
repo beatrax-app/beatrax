@@ -2,38 +2,114 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Carbon;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
-use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
-use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
+use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Events\NotificationDeliverable;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
+
+uses(RefreshDatabase::class);
 
 /*
- * Tests the D-12 / D-13 / D-14 context-aware OS notification model.
+ * Tests the D-31 collapsed OS-notification model: DispatchOsNotification is
+ * now the SOLE listener on `NotificationDeliverable`, deciding only
+ * whether/how to deliver an ALREADY-PERSISTED row to the OS —
+ * SuppressionEvaluator (D-38 invariant 4) then the D-13 focus-gate then
+ * D-24 hide-details.
  *
  * NATIVEPHP-FAKES.md records the `Notification` facade as ABSENT in
  * NativePHP v2 — there is no fakeable client we can intercept the
  * `Notification::title(...)->message(...)->event(...)->reference(...)
  * ->show()` chain against. Where the test needs to assert the FIRED
  * payload (event class + reference URL), the assertion is deferred
- * `->todo()`. Where the test asserts the FOCUS-GATE DECISION (the
- * listener's branch between "fire OS notification" and "do nothing —
- * SystemAlertsBanner handles it"), the assertion is always automated:
- * we `Http::fake()` the NativePHP HTTP client so a fired notification
- * surfaces as an outbound POST to `/api/notification`, and assert the
- * presence / absence of that POST.
- *
- * Focus-gate is always automated; payload-detail assertions are
- * deferred. The four event categories (drift / import / receipts /
- * forecast) all share the same focus-gate seam, so a single
- * focus-suppression test against one event class covers the gate
- * shape for all four.
+ * `->todo()`. Where the test asserts the DELIVERY DECISION (fire vs stay
+ * quiet), the assertion is always automated: we `Http::fake()` the
+ * NativePHP HTTP client so a fired notification surfaces as an outbound
+ * POST to `/api/notification`, and assert the presence / absence of that
+ * POST.
  */
+
+function donUser(string $username): User
+{
+    return User::query()->create([
+        'username' => $username,
+        'password' => 'fixture-password',
+        'period_start_day' => 1,
+    ]);
+}
+
+function donSeedSelfDevice(DatabaseManager $db, int $userId, string $deviceId = 'don-self-device'): void
+{
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $deviceId,
+        'name' => 'Self',
+        'ed25519_public_key_hex' => str_repeat('a', 64),
+        'x25519_public_key_hex' => str_repeat('b', 64),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 1,
+        'paired_at' => '2026-07-01T10:00:00Z',
+        'confirmed_at' => '2026-07-01T10:05:00Z',
+        'last_seen_at' => null,
+        'created_at' => '2026-07-01T10:00:00Z',
+        'updated_at' => '2026-07-01T10:00:00Z',
+    ]);
+}
+
+/**
+ * @param  array<string, mixed>  $overrides
+ */
+function donSeedPrefs(DatabaseManager $db, int $userId, array $overrides = [], string $deviceId = 'don-self-device'): void
+{
+    $db->connection()->table('notification_preferences')->insert(array_merge([
+        'user_id' => $userId,
+        'device_id' => $deviceId,
+        'reminders_enabled' => true,
+        'budget_nudges_enabled' => true,
+        'digest_cadence' => 'weekly',
+        'savings_prompts_enabled' => true,
+        'reminder_lead_days' => 3,
+        'quiet_hours_enabled' => false,
+        'quiet_hours_from' => '22:00',
+        'quiet_hours_to' => '08:00',
+        'hide_details' => false,
+        'created_at' => '2026-07-01T10:00:00Z',
+        'updated_at' => '2026-07-01T10:00:00Z',
+    ], $overrides));
+}
+
+function donForecastDeliverable(int $userId): NotificationDeliverable
+{
+    return new NotificationDeliverable(
+        notificationId: hash('sha256', 'don-forecast-'.$userId),
+        userId: $userId,
+        triggerType: DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
+        title: 'Cash-flow shortfall ahead',
+        body: 'Your projected balance dips below zero within the next 30 days.',
+        deepLinkRoute: '/forecast',
+    );
+}
+
+function donDriftDeliverable(int $userId): NotificationDeliverable
+{
+    return new NotificationDeliverable(
+        notificationId: hash('sha256', 'don-drift-'.$userId),
+        userId: $userId,
+        triggerType: DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
+        title: 'A recurring charge changed',
+        body: 'A recurring charge moved up by 2.50 EUR.',
+        deepLinkRoute: '/drift',
+    );
+}
 
 it('notification suppressed when focused (D-13 — does not fire when the window is focused)', function (): void {
     Http::fake();
+    $user = donUser('don-focused-forecast');
 
     /** @var WindowFocusState $focus */
     $focus = app(WindowFocusState::class);
@@ -42,22 +118,14 @@ it('notification suppressed when focused (D-13 — does not fire when the window
     /** @var DispatchOsNotification $listener */
     $listener = app(DispatchOsNotification::class);
 
-    $listener->handleForecastShortfall(new ForecastShortfallDetected(
-        userId: 1,
-        accountId: 1,
-        scenarioId: null,
-        startsAt: Carbon::parse('2026-06-01'),
-        endsAt: Carbon::parse('2026-06-15'),
-        lowestBalanceMinor: -1500,
-        currency: 'EUR',
-        bufferUsedMinor: 0,
-    ));
+    $listener->handleNotificationDeliverable(donForecastDeliverable($user->id));
 
     Http::assertNothingSent();
 });
 
 it('fires an OS notification when the window is unfocused (D-13 unfocused branch)', function (): void {
     Http::fake();
+    $user = donUser('don-unfocused-forecast');
 
     /** @var WindowFocusState $focus */
     $focus = app(WindowFocusState::class);
@@ -66,56 +134,78 @@ it('fires an OS notification when the window is unfocused (D-13 unfocused branch
     /** @var DispatchOsNotification $listener */
     $listener = app(DispatchOsNotification::class);
 
-    $listener->handleForecastShortfall(new ForecastShortfallDetected(
-        userId: 1,
-        accountId: 1,
-        scenarioId: null,
-        startsAt: Carbon::parse('2026-06-01'),
-        endsAt: Carbon::parse('2026-06-15'),
-        lowestBalanceMinor: -1500,
-        currency: 'EUR',
-        bufferUsedMinor: 0,
-    ));
+    $listener->handleNotificationDeliverable(donForecastDeliverable($user->id));
 
-    // The Notification facade has no v2 fake — the focus-gate
-    // decision surfaces as an outbound POST to `notification` on
-    // the NativePHP HTTP client. Asserting the POST happened proves
-    // the listener took the "fire" branch.
+    // The Notification facade has no v2 fake — the delivery decision
+    // surfaces as an outbound POST to `notification` on the NativePHP
+    // HTTP client. Asserting the POST happened proves the listener took
+    // the "fire" branch.
     Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
 });
 
 it('suppresses the drift-alert OS notification when focused', function (): void {
     Http::fake();
+    $user = donUser('don-focused-drift');
     app(WindowFocusState::class)->markFocused();
 
-    app(DispatchOsNotification::class)->handleDriftAlert(new DriftAlertOpened(
-        userId: 1,
-        driftAlertId: 42,
-        recurringSeriesId: 17,
-        direction: 'up',
-        deltaMinor: 250,
-        annualizedImpactMinor: 3000,
-        currency: 'EUR',
-    ));
+    app(DispatchOsNotification::class)->handleNotificationDeliverable(donDriftDeliverable($user->id));
 
     Http::assertNothingSent();
 });
 
 it('fires a drift-alert OS notification when unfocused', function (): void {
     Http::fake();
+    $user = donUser('don-unfocused-drift');
     app(WindowFocusState::class)->markBlurred();
 
-    app(DispatchOsNotification::class)->handleDriftAlert(new DriftAlertOpened(
-        userId: 1,
-        driftAlertId: 42,
-        recurringSeriesId: 17,
-        direction: 'up',
-        deltaMinor: 250,
-        annualizedImpactMinor: 3000,
-        currency: 'EUR',
-    ));
+    app(DispatchOsNotification::class)->handleNotificationDeliverable(donDriftDeliverable($user->id));
 
     Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
+});
+
+it('does not fire even when unfocused when SuppressionEvaluator suppresses delivery (D-38 invariant 4)', function (): void {
+    Http::fake();
+    $user = donUser('don-suppressed');
+    app(WindowFocusState::class)->markBlurred();
+
+    /** @var DispatchOsNotification $listener */
+    $listener = app(DispatchOsNotification::class);
+    /** @var SuppressionEvaluator $suppression */
+    $suppression = app(SuppressionEvaluator::class);
+
+    // The D-43 seeding/test suppression flag: shouldDeliver() returns
+    // deliver=false regardless of the trigger type or focus state — the
+    // ONE suppression site the listener consults BEFORE the focus gate.
+    $suppression->suppressDelivery(function () use ($listener, $user): void {
+        $listener->handleNotificationDeliverable(donForecastDeliverable($user->id));
+    });
+
+    Http::assertNothingSent();
+});
+
+it('substitutes a non-empty detail-free body when the device hide-details preference is on (D-24)', function (): void {
+    Http::fake();
+    $user = donUser('don-hide-details');
+    app(WindowFocusState::class)->markBlurred();
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    donSeedSelfDevice($db, $user->id);
+    donSeedPrefs($db, $user->id, ['hide_details' => true]);
+
+    $deliverable = donForecastDeliverable($user->id);
+
+    app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable);
+
+    Http::assertSent(function ($request) use ($deliverable) {
+        /** @var array<string, mixed> $body */
+        $body = $request->data();
+        $sentBody = (string) ($body['body'] ?? '');
+
+        return str_ends_with((string) $request->url(), '/notification')
+            && $sentBody !== ''
+            && $sentBody !== $deliverable->body;
+    });
 });
 
 it('uses the UI-SPEC verbatim title "Cash-flow shortfall ahead" for the forecast notification — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();

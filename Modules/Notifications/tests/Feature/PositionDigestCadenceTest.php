@@ -12,7 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
-use Modules\Notifications\Internal\Support\SuppressionEvaluator;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use Modules\Position\Internal\Jobs\EmitPositionDigestJob;
 use Modules\Position\Public\Events\PositionDigestDue;
 use Modules\Position\Public\Services\PositionQuery;

@@ -10,12 +10,12 @@ use Livewire\LivewireManager;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationWriter;
-use Modules\Notifications\Internal\Support\SuppressionEvaluator;
 use Modules\Notifications\Public\Actions\DismissNotification;
 use Modules\Notifications\Public\Actions\MarkNotificationRead;
 use Modules\Notifications\Public\Actions\UndoDismissNotification;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Modules\Notifications\Public\Services\NotificationQuery;
+use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 /**
  * Wires the Notifications module.
