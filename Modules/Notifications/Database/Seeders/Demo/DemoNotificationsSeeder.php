@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Carbon as SupportCarbon;
 use Modules\Budgets\Public\Events\BudgetThresholdCrossed;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
@@ -288,7 +289,7 @@ final class DemoNotificationsSeeder
 
         // r8 — read.
         $weeklyOccurrence = $realToday->isoWeekYear.'-W'.str_pad((string) $realToday->isoWeek, 2, '0', STR_PAD_LEFT);
-        $this->frozen($realToday->subDays(1)->setTime(8, 0), function () use ($user, $weeklyOccurrence): void {
+        $this->frozen($realToday->subDays(1)->setTime(8, 0), function () use ($user, $weeklyOccurrence, $realToday): void {
             $this->events->dispatch(new PositionDigestDue(
                 userId: $user->id,
                 cadence: 'weekly',
@@ -343,14 +344,19 @@ final class DemoNotificationsSeeder
         // r11 — unread.
         $asnAccountId = $this->accountId($user, 'asn-demo-1');
         if ($asnAccountId !== null) {
-            $startsAt = $realToday->addDays(18);
-            $this->frozen($realToday->subDays(1)->setTime(6, 0), function () use ($user, $asnAccountId, $startsAt, $realToday): void {
+            // ForecastShortfallDetected carries Illuminate\Support\Carbon
+            // (not CarbonImmutable, unlike every other event in this
+            // seeder) — Carbon::instance() converts without disturbing the
+            // CarbonImmutable-only test-now freeze used elsewhere.
+            $startsAt = SupportCarbon::instance($realToday->addDays(18));
+            $endsAt = SupportCarbon::instance($realToday->addDays(22));
+            $this->frozen($realToday->subDays(1)->setTime(6, 0), function () use ($user, $asnAccountId, $startsAt, $endsAt): void {
                 $this->events->dispatch(new ForecastShortfallDetected(
                     userId: $user->id,
                     accountId: $asnAccountId,
                     scenarioId: null,
                     startsAt: $startsAt,
-                    endsAt: $realToday->addDays(22),
+                    endsAt: $endsAt,
                     lowestBalanceMinor: -8500,
                     currency: 'EUR',
                     bufferUsedMinor: 50000,
@@ -406,7 +412,7 @@ final class DemoNotificationsSeeder
             $day = $realToday->subDays(100 + $i);
             $occurrence = $day->toDateString();
 
-            $this->frozen($day->setTime(8, 0), function () use ($user, $occurrence): void {
+            $this->frozen($day->setTime(8, 0), function () use ($user, $occurrence, $realToday): void {
                 $this->events->dispatch(new PositionDigestDue(
                     userId: $user->id,
                     cadence: 'daily',
