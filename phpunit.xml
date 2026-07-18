@@ -63,6 +63,7 @@
             <directory>Modules/Tax/tests/Feature</directory>
             <directory>Modules/Search/tests/Feature</directory>
             <directory>Modules/Notifications/tests/Feature</directory>
+            <directory>Modules/Position/tests/Feature</directory>
         </testsuite>
         <testsuite name="Contracts">
             <directory>tests/Contracts</directory>

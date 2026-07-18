@@ -1,0 +1,11 @@
+{
+    "name": "Position",
+    "alias": "position",
+    "description": "The single Public definition of 'your current position' (D-30) — net worth + budgets + upcoming charges + shortfalls, composed from other modules' existing Public seams. Register-only, thin module: no routes, no views.",
+    "keywords": ["position", "digest", "dashboard-composition"],
+    "priority": 14,
+    "providers": [
+        "Modules\\Position\\Providers\\PositionServiceProvider"
+    ],
+    "files": []
+}

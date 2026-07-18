@@ -118,7 +118,8 @@
             "Modules\\Sync\\Tests\\": "Modules/Sync/tests/",
             "Modules\\Mobile\\Tests\\": "Modules/Mobile/tests/",
             "Modules\\Reports\\Tests\\": "Modules/Reports/tests/",
-            "Modules\\Notifications\\Tests\\": "Modules/Notifications/tests/"
+            "Modules\\Notifications\\Tests\\": "Modules/Notifications/tests/",
+            "Modules\\Position\\Tests\\": "Modules/Position/tests/"
         }
     },
     "scripts": {
