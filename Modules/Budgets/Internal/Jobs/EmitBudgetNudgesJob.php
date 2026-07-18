@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Budgets\Internal\Jobs;
 
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
@@ -42,15 +45,27 @@ use Modules\Ledger\Public\Dto\Period;
  * by `CarryoverQuery` — this job never re-applies that default.
  *
  * Period computation: `CarryoverQuery::forUserAndPeriod()` needs a `Period`
- * for "now", but `Modules\Ledger\Public\Services\PeriodQuery::current()` is
- * bound to the request-scoped `CurrentUser` contract (the authenticated web
- * guard user) — there is no authenticated guard user in a queue/console
- * context. This job therefore reproduces `PeriodQuery::containing()`'s exact
- * period-window algorithm inline, scoped explicitly to the loaded `$user`'s
- * own `period_start_day` (clamped 1..28, `subMonthNoOverflow`/
- * `addMonthNoOverflow` boundaries) rather than inventing a new period
- * format — the SAME algorithm, just sourced from the explicit user instead
- * of the request-bound `CurrentUser`.
+ * for "now", but `Modules\Ledger\Public\Services\PeriodQuery::current()` /
+ * `containing()` is bound to the request-scoped `CurrentUser` contract (the
+ * authenticated web guard user) — there is no authenticated guard user in a
+ * queue/console context. This job therefore reproduces
+ * `PeriodQuery::containing()`'s exact period-window algorithm inline, scoped
+ * explicitly to the loaded `$user`'s own `period_start_day` (clamped 1..28,
+ * `subMonthNoOverflow`/`addMonthNoOverflow` boundaries) rather than
+ * inventing a new period format — the SAME algorithm, just sourced from the
+ * explicit user instead of the request-bound `CurrentUser`.
+ *
+ * `CarryoverQuery` ALSO calls `PeriodQuery` internally (for its own genesis
+ * and current-period horizon bounds) — that dependency cannot be bypassed
+ * from outside the class. So for the DURATION of the `forUserAndPeriod()`
+ * call only, this job binds the loaded `$user` onto the default auth guard
+ * (`CurrentUserService` — the bound `CurrentUser` implementation — is a
+ * thin, uncached pass-through to that guard, so this correctly makes every
+ * `CurrentUser` read inside the call resolve to `$user`, regardless of when
+ * any singleton in that dependency chain was constructed) and restores
+ * whatever guard state existed beforehand in a `finally` block — this job
+ * never leaves a queue worker process with another user's identity bound to
+ * the guard after it returns.
  *
  * Explicit user scoping on every query (T-18-25 / D-25): the job holds one
  * `int $userId` and never batches across users — `BelongsToUser`'s
@@ -90,7 +105,7 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
         return LockStore::forUniqueJobs();
     }
 
-    public function handle(CarryoverQuery $carryover, Clock $clock, Dispatcher $events): void
+    public function handle(CarryoverQuery $carryover, Clock $clock, Dispatcher $events, AuthFactory $auth): void
     {
         /** @var User|null $user */
         $user = User::query()->where('id', $this->userId)->first();
@@ -101,10 +116,13 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
         $period = $this->currentPeriodFor($user, $clock);
         $periodKey = $period->start->toDateString();
 
-        $fold = $carryover->forUserAndPeriod($user, $period);
-
         /** @var array<int, EnvelopeRow> $rows */
-        $rows = $fold['rows'];
+        $rows = $this->withGuardBoundTo($user, $auth, function () use ($carryover, $user, $period): array {
+            /** @var array{toBudgetMinor: int, overspentCount: int, rows: array<int, EnvelopeRow>} $fold */
+            $fold = $carryover->forUserAndPeriod($user, $period);
+
+            return $fold['rows'];
+        });
 
         foreach ($rows as $row) {
             $budgetMinor = $row->availableMinor + $row->spentMinor;
@@ -153,5 +171,41 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
             : $start->format('j M').' → '.$endExclusive->subDay()->format('j M Y');
 
         return new Period(start: $start, endExclusive: $endExclusive, label: $label);
+    }
+
+    /**
+     * Runs `$callback` with `$user` bound to the default auth guard, so any
+     * `CurrentUser` read reached transitively during the call (via
+     * `CarryoverQuery` -> `PeriodQuery` -> `CurrentUserService` -> the guard)
+     * resolves to `$user` rather than throwing `NotAuthenticatedException`.
+     * Always restores the guard's prior state in a `finally` — a real
+     * previous user is set back via `setUser()`; an unauthenticated prior
+     * state is cleared back via `SessionGuard::forgetUser()` when the
+     * resolved guard is the app's configured session guard (the only guard
+     * driver this project runs), otherwise left as-is rather than risking
+     * an unsupported mutation on an unknown guard implementation.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    private function withGuardBoundTo(User $user, AuthFactory $auth, callable $callback): mixed
+    {
+        /** @var Guard $guard */
+        $guard = $auth->guard();
+        $previousUser = $guard->user();
+
+        $guard->setUser($user);
+
+        try {
+            return $callback();
+        } finally {
+            if ($previousUser !== null) {
+                $guard->setUser($previousUser);
+            } elseif ($guard instanceof SessionGuard) {
+                $guard->forgetUser();
+            }
+        }
     }
 }
