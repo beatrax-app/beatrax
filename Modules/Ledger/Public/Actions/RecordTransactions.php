@@ -15,6 +15,7 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Dto\RecordResult;
+use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
@@ -71,6 +72,8 @@ final class RecordTransactions implements RecordsTransactions
     {
         $inserted = 0;
         $duplicates = 0;
+        /** @var list<string> $sourceFormats */
+        $sourceFormats = [];
 
         // Buffer the (possibly lazy) iterable into bounded chunks and commit
         // each chunk on its own. iterator_to_array would force the whole batch
@@ -79,14 +82,30 @@ final class RecordTransactions implements RecordsTransactions
         foreach ($canonical as $row) {
             $chunk[] = $row;
             if (count($chunk) >= self::CHUNK_SIZE) {
-                $this->persistChunk($chunk, $user, $inserted, $duplicates);
+                $this->persistChunk($chunk, $user, $inserted, $duplicates, $sourceFormats);
                 $chunk = [];
             }
         }
 
         // Flush the trailing partial chunk.
         if ($chunk !== []) {
-            $this->persistChunk($chunk, $user, $inserted, $duplicates);
+            $this->persistChunk($chunk, $user, $inserted, $duplicates, $sourceFormats);
+        }
+
+        // Batch-altitude announcement (D-22): dispatched exactly ONCE per
+        // call, AFTER every chunk transaction above has already committed,
+        // and only when at least one row actually landed. See
+        // TransactionBatchImported's docblock for the emit-after-commit
+        // contract this satisfies for free.
+        if ($inserted > 0) {
+            $distinctFormats = array_values(array_unique($sourceFormats));
+            sort($distinctFormats);
+
+            $this->events->dispatch(new TransactionBatchImported(
+                userId: $user->id,
+                insertedCount: $inserted,
+                sourceFormats: $distinctFormats,
+            ));
         }
 
         return new RecordResult(inserted: $inserted, duplicates: $duplicates);
@@ -98,10 +117,11 @@ final class RecordTransactions implements RecordsTransactions
      * only this chunk; prior chunks remain committed.
      *
      * @param  list<CanonicalTransaction>  $chunk
+     * @param  list<string>  $sourceFormats
      */
-    private function persistChunk(array $chunk, User $user, int &$inserted, int &$duplicates): void
+    private function persistChunk(array $chunk, User $user, int &$inserted, int &$duplicates, array &$sourceFormats): void
     {
-        $this->db->connection()->transaction(function () use ($chunk, $user, &$inserted, &$duplicates): void {
+        $this->db->connection()->transaction(function () use ($chunk, $user, &$inserted, &$duplicates, &$sourceFormats): void {
             $now = $this->clock->now()->toDateTimeString();
             foreach ($chunk as $row) {
                 if ($row->userId === null) {
@@ -136,6 +156,7 @@ final class RecordTransactions implements RecordsTransactions
                 $effected = Transaction::insertOrIgnore($attrs);
                 if ($effected === 1) {
                     $inserted++;
+                    $sourceFormats[] = $row->sourceFormat;
 
                     /** @var Transaction $persisted */
                     $persisted = Transaction::query()
