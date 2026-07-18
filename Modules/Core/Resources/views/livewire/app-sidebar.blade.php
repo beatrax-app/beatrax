@@ -167,6 +167,18 @@
             <span class="side-badge alert" aria-label="{{ $navCounts['anomaly'] }} open unusual charges">{{ $navCount('anomaly') }}</span>
         @endif
     </a>
+    {{-- Notifications — the unified inbox (18-12, D-01/D-03). Placed in the
+         alerts-adjacent cluster, right after Unusual charges and before
+         Budgets. Default/inverted .side-badge (NOT .side-badge.alert) —
+         an unread count is an actionable-count-to-clear, not a problem
+         state, per component-library.md's badge-intensity taxonomy. --}}
+    <a href="{{ route('notifications.index') }}" class="side-item {{ $isActive('/notifications') }}">
+        <span class="ic" aria-hidden="true">◈</span>
+        Notifications
+        @if (($navCounts['notifications'] ?? 0) > 0)
+            <span class="side-badge" aria-label="{{ $navCounts['notifications'] }} unread notifications">{{ $navCount('notifications') }}</span>
+        @endif
+    </a>
     <a href="{{ route('budgets.index') }}" class="side-item {{ $isActive('/budgets') }}">
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets

@@ -4094,3 +4094,25 @@ mark {
         filter: brightness(0.97);
     }
 }
+
+/*
+ * Notification type chip (Phase 18 Plan 12, D-46). The one new CSS class
+ * this phase adds. One style for all 8 notification types — no per-type
+ * color; the glyph (from NotificationCopy::typeChip()) is the only
+ * per-type signal. Follows the import preview's leading Type-column
+ * glyph+word precedent.
+ */
+@layer components {
+    .type-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: var(--radius-full);
+        font-size: var(--text-xs);
+        font-weight: 400;
+        background: var(--color-surface-2);
+        color: var(--color-text-muted);
+        white-space: nowrap;
+    }
+}
