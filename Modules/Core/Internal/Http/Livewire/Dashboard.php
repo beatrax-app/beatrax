@@ -14,7 +14,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
-use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
+use Modules\Position\Public\Services\PositionQuery;
 
 /**
  * The `/` landing page. Renders the "this period at a glance" dashboard:
@@ -145,7 +145,7 @@ final class Dashboard extends Component
     public function render(
         CurrentUser $currentUser,
         PeriodQuery $periods,
-        ThisPeriodAtAGlanceQuery $glance,
+        PositionQuery $position,
         DatabaseManager $db,
         ViewFactory $views,
         Session $session,
@@ -153,21 +153,23 @@ final class Dashboard extends Component
         $user = $currentUser->user();
         $period = $this->resolvePeriod($periods);
 
-        // `$summary` is always computed: the top-spending and recent-
-        // transactions panels remain settled-EUR-only regardless of mode.
-        // The per-currency split applies only to the KPI tiles at the top
-        // of the page.
-        $summary = $glance->for($user, $period);
-
-        $tiles = null;
-        if ($user->default_currency_view === 'original') {
-            $tiles = $glance->forByCurrency($user, $period);
-        }
+        // Position data (D-30): net worth + budgets + upcoming + shortfalls,
+        // read through the single Modules\Position Public seam so the
+        // dashboard and the position digest can never disagree about what
+        // "your position" means. `$summary` is always computed: the top-
+        // spending and recent-transactions panels remain settled-EUR-only
+        // regardless of mode. The per-currency split applies only to the
+        // KPI tiles at the top of the page — `PositionSummaryDto::
+        // $tilesByCurrency` already mirrors that same
+        // `default_currency_view === 'original'` toggle byte-identically.
+        $positionSummary = $position->forUser($user, $period);
+        $summary = $positionSummary->summary;
+        $tiles = $positionSummary->tilesByCurrency;
 
         // Email-scan-health tile. Null = hide the tile entirely (no
         // connected inboxes). The dashboard Blade reads the same null-
         // first contract as the Next-ICS-settlement tile above.
-        $emailScanHealth = $glance->emailScanHealth($user);
+        $emailScanHealth = $positionSummary->emailScanHealth;
 
         // Persistent reauth toast trigger: lit when at least one inbox
         // is in needs_reauth state. The Blade also reads the session
