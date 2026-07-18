@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use Illuminate\Routing\Route;
+use Symfony\Component\Yaml\Yaml;
 
 // Arch tests powered by pest-plugin-arch. Empty module skeletons trivially
 // satisfy these rules; once subsequent plans add real code the assertions bind.
@@ -57,6 +58,10 @@ arch('Modules\\Anomaly\\Internal is only used inside Modules\\Anomaly')
 arch('Modules\\Desktop\\Internal is only used inside Modules\\Desktop')
     ->expect('Modules\\Desktop\\Internal')
     ->toOnlyBeUsedIn('Modules\\Desktop');
+
+arch('Modules\\Mobile\\Internal is only used inside Modules\\Mobile')
+    ->expect('Modules\\Mobile\\Internal')
+    ->toOnlyBeUsedIn('Modules\\Mobile');
 
 arch('Modules\\Onboarding\\Internal is only used inside Modules\\Onboarding')
     ->expect('Modules\\Onboarding\\Internal')
@@ -2002,3 +2007,199 @@ it('every raw merchant_aliases query in production code carries an explicit user
 arch('Modules\\Reports\\Internal is only used inside Modules\\Reports')
     ->expect('Modules\\Reports\\Internal')
     ->toOnlyBeUsedIn('Modules\\Reports');
+
+it('does not allow Recurring/Budgets/DriftAlerts/Position/Ledger to import Modules\\Notifications (noTriggerModuleImportsNotifications)', function (): void {
+    // D-38 invariant 1 (T-18-71) — plan 18-17. This is CONTEXT.md's own
+    // pick for "the decision most likely to erode": nothing else in the
+    // codebase catches a trigger module reaching straight for the
+    // notification store, and the first "just one field" makes a direct
+    // call the path of least resistance.
+    //
+    // D-28 requires every trigger module (Recurring, Budgets, DriftAlerts,
+    // Position, Ledger) to stay wholly ignorant of `Modules\Notifications`:
+    // it emits a readonly Public event (`PaymentReminderDue`,
+    // `TransactionBatchImported`, etc.) and lets one of
+    // `Modules\Notifications`'s `Persist*` listeners subscribe to it.
+    //
+    // The one legitimate exception is `routes/console.php`: application-
+    // level wiring, not module code, which reads
+    // `NotificationPreferenceQuery` and passes the preference-derived
+    // `$leadDays` / `$cadence` into `EmitPaymentRemindersJob` /
+    // `EmitPositionDigestJob` as constructor parameters — this walk never
+    // visits `routes/`, so that bridge needs no allow-list entry.
+    //
+    // Comments are stripped BEFORE matching: `TransactionBatchImported`'s
+    // own docblock names
+    // `Modules\Notifications\Internal\Listeners\PersistCoalescedImport` to
+    // explain who consumes the event, and an uncommented scan would make
+    // the codebase's own explanatory prose trip the rule it is describing.
+    $hits = [];
+    $triggerDirs = [
+        'Modules/Recurring',
+        'Modules/Budgets',
+        'Modules/DriftAlerts',
+        'Modules/Position',
+        'Modules/Ledger',
+    ];
+
+    foreach ($triggerDirs as $dir) {
+        $absolute = base_path($dir);
+        if (! is_dir($absolute)) {
+            // Module folder lands in a later wave; until it does the rule
+            // is trivially satisfied.
+            continue;
+        }
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($absolute, RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            if (! $file->isFile() || preg_match('/\.php$/', $file->getPathname()) !== 1) {
+                continue;
+            }
+            $path = $file->getPathname();
+            if (str_contains($path, '/tests/')) {
+                continue;
+            }
+            $contents = (string) file_get_contents($path);
+            $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+            if (preg_match('/Modules\\\\Notifications\\\\/', $stripped) === 1) {
+                $hits[] = str_replace(base_path().'/', '', $path);
+            }
+        }
+    }
+
+    expect($hits)->toBe(
+        [],
+        'Trigger modules (Recurring/Budgets/DriftAlerts/Position/Ledger) must never import '
+        ."Modules\\Notifications — this inverts D-28's dependency direction, and it is the decision "
+        .'most likely to erode: the first "just one field" makes a direct call the path of least '
+        .'resistance. Emit a readonly Public event from the trigger module instead and let '
+        .'Modules\\Notifications listen for it (routes/console.php is application wiring, not module '
+        .'code, and is the one sanctioned bridge — see how EmitPaymentRemindersJob / '
+        ."EmitPositionDigestJob take their preference-derived values as constructor parameters). Offenders:\n  "
+        .implode("\n  ", $hits),
+    );
+});
+
+it('does not allow the Desktop NativePHP facade allow-list to grow beyond the pinned set (pinnedDesktopFacadeAllowList)', function (): void {
+    // D-38 invariant 2 (T-18-72) / D-31 — plan 18-17. Turns "the allow-list
+    // and phpstan ignore list do not grow by even one entry" from a promise
+    // into something CI proves. A NEW Desktop file touching a NativePHP
+    // facade is exactly the "just add a helper" move this guards against —
+    // route new native-chrome logic through the existing
+    // `DispatchOsNotification` with plain constructor-DI collaborators
+    // instead.
+    //
+    // Two DIFFERENT lists are pinned here, and they are deliberately NOT
+    // the same length — each is read and pinned to its own real content:
+    //   1. `phpstan.neon`'s `Native\Desktop\Facades\(Menu|Window|System|
+    //      Notification|App|ChildProcess) facade should not be used.`
+    //      ignoreErrors entry's `paths` list — 9 files.
+    //   2. This file's own "no Laravel facade usage in module code" test's
+    //      `->ignoring([...])` list, Desktop-only entries (its
+    //      `Modules\Core\Public\Support\LockStore` entry belongs to a
+    //      DIFFERENT carve-out — the Cache facade, not Native\Desktop — and
+    //      is excluded from this pin) — 7 class names. This ignoring() list
+    //      matches `Illuminate\Support\Facades\*` usage, a different rule
+    //      from the `Native\Desktop\Facades\*` phpstan entry (NativePHP's
+    //      facades are NOT `Illuminate\Support\Facades\*` classes), so the
+    //      two lists cover different symbols and legitimately differ in
+    //      length and membership.
+    //
+    // Scoped to the Desktop list ONLY — plan 18-15 legitimately grew the
+    // separate `Native\Mobile\Facades\*` path list (a genuinely new,
+    // sanctioned crossing point for the mobile local-notifications
+    // plugin), so pinning that list here would fail on correct, reviewed
+    // work.
+    $pinnedPhpstanDesktopPaths = [
+        'Modules/Desktop/Internal/NativeAppServiceProvider.php',
+        'Modules/Desktop/Internal/Native/AppMenuBuilder.php',
+        'Modules/Desktop/Internal/Native/OsThemeProbe.php',
+        'Modules/Desktop/Internal/Native/NativeBiometricUnlock.php',
+        'Modules/Desktop/Internal/Native/DesktopKeyCustodian.php',
+        'Modules/Desktop/Internal/Listeners/DispatchOsNotification.php',
+        'Modules/Desktop/Internal/Listeners/SurfaceWorkerCrashAlert.php',
+        'Modules/Desktop/Internal/Listeners/NavigateOnNotificationDeepLink.php',
+        'Modules/Desktop/Internal/Listeners/ApplyCloseWindowChoice.php',
+    ];
+
+    $pinnedIgnoringDesktopEntries = [
+        'Modules\\Desktop\\Internal\\NativeAppServiceProvider',
+        'Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
+        'Modules\\Desktop\\Internal\\Native\\OsThemeProbe',
+        'Modules\\Desktop\\Internal\\Listeners\\DispatchOsNotification',
+        'Modules\\Desktop\\Internal\\Listeners\\SurfaceWorkerCrashAlert',
+        'Modules\\Desktop\\Internal\\Listeners\\NavigateOnNotificationDeepLink',
+        'Modules\\Desktop\\Internal\\Listeners\\ApplyCloseWindowChoice',
+    ];
+
+    // --- 1. phpstan.neon's Native\Desktop\Facades\* ignoreErrors entry ---
+    $neon = Yaml::parseFile(base_path('phpstan.neon'));
+    /** @var list<array<string, mixed>> $ignoreErrors */
+    $ignoreErrors = is_array($neon['parameters']['ignoreErrors'] ?? null)
+        ? $neon['parameters']['ignoreErrors']
+        : [];
+
+    $desktopEntry = null;
+    foreach ($ignoreErrors as $entry) {
+        $message = is_array($entry) && isset($entry['message']) && is_string($entry['message'])
+            ? $entry['message']
+            : null;
+        if (
+            $message !== null
+            && str_contains($message, 'Native')
+            && str_contains($message, 'Desktop')
+            && str_contains($message, 'Facades')
+            && str_contains($message, 'facade should not be used')
+        ) {
+            $desktopEntry = $entry;
+            break;
+        }
+    }
+
+    expect($desktopEntry)->not->toBeNull(
+        'phpstan.neon must carry a Native\\Desktop\\Facades\\* "facade should not be used" ignoreErrors '
+        .'entry — the Desktop native-chrome carve-out has disappeared entirely.',
+    );
+
+    /** @var array{paths?: mixed} $desktopEntry */
+    $actualPaths = is_array($desktopEntry['paths'] ?? null) ? $desktopEntry['paths'] : [];
+
+    expect($actualPaths)->toEqualCanonicalizing(
+        $pinnedPhpstanDesktopPaths,
+        "phpstan.neon's Native\\Desktop\\Facades\\* ignoreErrors path list has changed from the pinned "
+        .'set. A NEW Desktop file touching a NativePHP facade is exactly what D-31 promises never to '
+        .'permit silently — route new native-chrome logic through the existing DispatchOsNotification '
+        ."with plain constructor-DI collaborators instead. Actual:\n  ".implode("\n  ", $actualPaths),
+    );
+
+    // --- 2. This file's own "no Laravel facade usage in module code" ->ignoring([...]) list ---
+    $selfContents = (string) file_get_contents(__FILE__);
+    if (preg_match(
+        "/no Laravel facade usage in module code'\\)[\\s\\S]*?->ignoring\\(\\[([\\s\\S]*?)\\]\\)/",
+        $selfContents,
+        $m,
+    ) !== 1) {
+        throw new RuntimeException(
+            'Could not locate the "no Laravel facade usage in module code" ->ignoring([...]) list in '
+            .'this file — has the test been renamed or restructured?',
+        );
+    }
+
+    $strippedList = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $m[1]) ?? $m[1];
+    preg_match_all("/'([^']*)'/", $strippedList, $entryMatches);
+    $ignoringDesktopEntries = array_values(array_filter(
+        array_map(
+            static fn (string $raw): string => str_replace('\\\\', '\\', $raw),
+            $entryMatches[1],
+        ),
+        static fn (string $s): bool => str_starts_with($s, 'Modules\\Desktop\\'),
+    ));
+
+    expect($ignoringDesktopEntries)->toEqualCanonicalizing(
+        $pinnedIgnoringDesktopEntries,
+        "This file's own facade-usage ->ignoring([...]) list's Desktop-only entries have changed from "
+        ."the pinned set. Actual:\n  ".implode("\n  ", $ignoringDesktopEntries),
+    );
+});
