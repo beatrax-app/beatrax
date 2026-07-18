@@ -6,7 +6,9 @@ use App\Providers\NativeServiceProvider;
 use Native\Mobile\Providers\BiometricsServiceProvider;
 use Native\Mobile\Providers\NetworkServiceProvider;
 use Native\Mobile\Providers\ScannerServiceProvider;
+use Native\Mobile\Providers\SecureStorageServiceProvider;
 use NativePHP\BackgroundTasks\BackgroundTasksServiceProvider;
+use NativePHP\LocalNotifications\LocalNotificationsServiceProvider;
 
 /*
  * Device-UAT fix wiring test (Phase 15 close-out): NativeServiceProvider was
@@ -44,7 +46,7 @@ it('does NOT register NativeServiceProvider in the desktop provider manifest (bo
     expect($manifest)->not->toContain('NativeServiceProvider');
 });
 
-it('NativeServiceProvider::plugins() lists all 4 registered NativePHP mobile plugin providers', function (): void {
+it('NativeServiceProvider::plugins() lists all 6 registered NativePHP mobile plugin providers', function (): void {
     $provider = new NativeServiceProvider(app());
 
     $plugins = $provider->plugins();
@@ -54,10 +56,12 @@ it('NativeServiceProvider::plugins() lists all 4 registered NativePHP mobile plu
         ScannerServiceProvider::class,
         BackgroundTasksServiceProvider::class,
         NetworkServiceProvider::class,
+        SecureStorageServiceProvider::class,
+        LocalNotificationsServiceProvider::class,
     ]);
 });
 
-it('NativeServiceProvider.php source references the 4 plugin FQCNs verbatim (belt-and-suspenders on the compiled-build source)', function (): void {
+it('NativeServiceProvider.php source references the 6 plugin FQCNs verbatim (belt-and-suspenders on the compiled-build source)', function (): void {
     $source = (string) file_get_contents(base_path('app/Providers/NativeServiceProvider.php'));
 
     foreach ([
@@ -65,6 +69,8 @@ it('NativeServiceProvider.php source references the 4 plugin FQCNs verbatim (bel
         'Native\Mobile\Providers\ScannerServiceProvider',
         'NativePHP\BackgroundTasks\BackgroundTasksServiceProvider',
         'Native\Mobile\Providers\NetworkServiceProvider',
+        'Native\Mobile\Providers\SecureStorageServiceProvider',
+        'NativePHP\LocalNotifications\LocalNotificationsServiceProvider',
     ] as $expectedFqcn) {
         expect($source)->toContain($expectedFqcn);
     }
