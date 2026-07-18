@@ -9,17 +9,23 @@ use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\Schedule;
 use Modules\Anomaly\Internal\Jobs\ReviveExpiredAnomalySnoozesJob;
 use Modules\Anomaly\Internal\Jobs\SafetyNetAnomalySweepJob;
+use Modules\Budgets\Internal\Jobs\EmitBudgetNudgesJob;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Internal\Jobs\CounterpartyGarbageCollectorJob;
+use Modules\DriftAlerts\Internal\Jobs\EmitSavingsPromptsJob;
 use Modules\DriftAlerts\Internal\Jobs\RevivedExpiredDriftSnoozesJob;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\FX\Internal\Jobs\FetchFxRatesJob;
+use Modules\Notifications\Internal\Jobs\PruneNotificationsJob;
+use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
+use Modules\Position\Internal\Jobs\EmitPositionDigestJob;
 use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
 use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
+use Modules\Recurring\Internal\Jobs\EmitPaymentRemindersJob;
 
 // App-wide artisan command bindings live here. Module-local artisan
 // commands are registered from each module's ServiceProvider.
@@ -361,3 +367,85 @@ Schedule::call(function (Dispatcher $bus): void {
     ->dailyAt('04:00')
     ->timezone('Europe/Amsterdam')
     ->withoutOverlapping(30);
+
+// D-14 — the five Phase 18 notifications-and-reminders schedule entries:
+// four proactive triggers (payment reminders, position digest, budget
+// nudges, savings prompts) plus the D-18/D-37 retention sweep. All five
+// fan out one job per user via ->lazyById(100), mirroring every per-user
+// entry above.
+//
+// `routes/console.php` is application-level wiring, outside the `Modules\`
+// namespace, so it is the ONE sanctioned place allowed to read
+// `Modules\Notifications`' `NotificationPreferenceQuery` AND dispatch a
+// trigger module's job in the same closure — this is why
+// `EmitPaymentRemindersJob` takes `$leadDays` and `EmitPositionDigestJob`
+// takes `$cadence` as constructor parameters rather than reading
+// `NotificationPreferenceQuery` themselves: reading it from inside
+// `Modules\Recurring` / `Modules\Position` would violate D-38 invariant 1
+// ("no trigger module may import `Modules\Notifications`"). Bridging here
+// keeps both of those modules wholly ignorant of notification delivery
+// concerns (see 18-14's `<planner_decisions>`).
+//
+// Trigger toggles (reminders/budget-nudges/savings-prompts enabled,
+// digest-cadence) are DELIBERATELY not consulted here to decide whether to
+// dispatch — `SuppressionEvaluator::shouldDeliver()` is the ONE place
+// delivery suppression is decided (D-38 invariant 4), and it always stores
+// the row even when a trigger is toggled off; only the OS/mobile push is
+// suppressed. Gating dispatch on a toggle here would silently stop rows
+// from ever being written for that trigger, which no other suppression
+// path assumes and Req 9's inbox-first contract would then be violated for
+// a disabled trigger's own history.
+Schedule::call(function (Dispatcher $bus, NotificationPreferenceQuery $prefs): void {
+    User::query()->lazyById(100)->each(function (User $user) use ($bus, $prefs): void {
+        $leadDays = $prefs->forCurrentDevice($user)->reminderLeadDays;
+        $bus->dispatch(new EmitPaymentRemindersJob($user->id, $leadDays));
+    });
+})->name('notifications.reminders')->dailyAt('09:15')->withoutOverlapping(30);
+
+// 09:15 — deliberately AFTER `fx.daily-refresh` (09:00 above): any
+// converted figure the digest shows uses the day's already-fresh FX rate
+// rather than yesterday's. The same 09:00-then-09:15 reasoning applies to
+// `notifications.savings-prompts` below. `$cadence` is resolved per
+// user/device from `NotificationPreferenceQuery::forCurrentDevice()`; a
+// cadence of 'off' still dispatches unconditionally —
+// `EmitPositionDigestJob` itself returns immediately on 'off' (18-09),
+// keeping that one decision in the single place that already owns it
+// rather than duplicating an off-check here too.
+Schedule::call(function (Dispatcher $bus, NotificationPreferenceQuery $prefs): void {
+    User::query()->lazyById(100)->each(function (User $user) use ($bus, $prefs): void {
+        $cadence = $prefs->forCurrentDevice($user)->digestCadence;
+        $bus->dispatch(new EmitPositionDigestJob($user->id, $cadence));
+    });
+})->name('notifications.digest')->dailyAt('09:15')->withoutOverlapping(30);
+
+// Hourly (not daily) so "you're at 90%" arrives near the spend that
+// actually crossed the threshold rather than up to a day later. D-06's
+// per-period occurrence key already prevents the same crossing from
+// re-firing on the next tick within the same budget period.
+Schedule::call(function (Dispatcher $bus): void {
+    User::query()->lazyById(100)->each(function (User $user) use ($bus): void {
+        $bus->dispatch(new EmitBudgetNudgesJob($user->id));
+    });
+})->name('notifications.budget-nudges')->hourly()->withoutOverlapping(30);
+
+// 09:15 — same 09:00-FX-then-09:15 reasoning as `notifications.reminders`
+// and `notifications.digest` above.
+Schedule::call(function (Dispatcher $bus): void {
+    User::query()->lazyById(100)->each(function (User $user) use ($bus): void {
+        $bus->dispatch(new EmitSavingsPromptsJob($user->id));
+    });
+})->name('notifications.savings-prompts')->dailyAt('09:15')->withoutOverlapping(30);
+
+// 04:30 — the D-18/D-37 notification-inbox retention sweep. 04:30
+// deliberately sits between the two other daily-maintenance windows
+// already claimed above — `db:backup` at 03:00 and `counterparties.gc` at
+// 04:00 — so the prune never contends with either for the SQLite
+// single-writer lock. `PruneNotificationsJob` itself needs no KEK (D-37):
+// its predicate keys solely on the always-plaintext `created_at` column,
+// never `title`/`body`/`params`/`trigger_type`, so the sweep stays bounded
+// even on a usually-locked or headless device.
+Schedule::call(function (Dispatcher $bus): void {
+    User::query()->lazyById(100)->each(function (User $user) use ($bus): void {
+        $bus->dispatch(new PruneNotificationsJob($user->id));
+    });
+})->name('notifications.prune')->dailyAt('04:30')->withoutOverlapping(30);
