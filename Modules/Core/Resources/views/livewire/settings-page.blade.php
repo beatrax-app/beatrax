@@ -244,6 +244,14 @@
         </section>
     </div>
 
+    {{-- ===== Notifications (D-36) — anchored next to Anomaly detection ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2" id="notifications-settings">
+            <h2 class="{{ $cardHead }}">Notifications</h2>
+            @livewire('notifications.settings-section')
+        </section>
+    </div>
+
     {{-- ===== Forecasting ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-3" id="forecast-buffers">
