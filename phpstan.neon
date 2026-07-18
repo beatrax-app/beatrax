@@ -39,6 +39,17 @@ parameters:
             # exclusively from `mobile-app/bootstrap/providers.php`; the
             # desktop root's own manifest never loads this provider.
             - app/Providers/NativeServiceProvider.php
+            # NativePHP desktop's published app-provider stub, scaffolded by
+            # `php artisan native:install` (re-run by the composer
+            # `post-update-cmd` hook, so it is regenerated on every update and
+            # cannot be durably edited or deleted). It is NOT registered in
+            # either `bootstrap/providers.php` — the real desktop native
+            # provider is `Modules/Desktop/Internal/NativeAppServiceProvider`,
+            # which owns window composition and carries the Native\Desktop
+            # facade allow-list. This stray stub only calls `Window::open()`
+            # and returns an untyped phpIni() array; excluded here for the
+            # same reason as the mobile NativeServiceProvider stub above.
+            - app/Providers/NativeAppServiceProvider.php
     reportUnmatchedIgnoredErrors: true
     ignoreErrors:
         # Single permitted facade + config() use in module code: the
@@ -149,12 +160,39 @@ parameters:
         # contains a matching facade call (the nativephp/mobile-* packages
         # are not installed until Plan 03).
         -
-            message: '#Native\\Mobile\\Facades\\(Network|Biometrics|Scanner) facade should not be used\.#'
+            message: '#Native\\Mobile\\Facades\\(Network|Biometrics|Scanner|SecureStorage) facade should not be used\.#'
             paths:
                 - Modules/Mobile/Internal/NativeMobileAppServiceProvider.php
                 - Modules/Mobile/Internal/Identity/*.php
                 - Modules/Mobile/Internal/Pairing/*.php
                 - Modules/Mobile/Internal/Sync/*.php
+            reportUnmatched: false
+        # 18-15: `Internal/Listeners/` is a genuinely NEW sanctioned crossing
+        # point in this same carve-out family — the mobile delivery adapter
+        # (`DispatchMobileNotification`, D-31/D-32's mobile mirror) reaches
+        # `nativephp/mobile-local-notifications`'s `LocalNotifications`
+        # facade, which lives only in `mobile-app/vendor` (never this
+        # toolchain), exactly like the Network/Biometrics/Scanner/
+        # SecureStorage facades above. Single-owner forward-registration:
+        # this is the one file in that directory today; a future listener
+        # added to `Internal/Listeners/` reuses this same path glob.
+        # reportUnmatched: false because no file the main analysis sees
+        # contains a matching call target (the plugin is unresolvable here).
+        -
+            message: '#NativePHP\\LocalNotifications\\Facades\\LocalNotifications facade should not be used\.#'
+            paths:
+                - Modules/Mobile/Internal/Listeners/*.php
+            reportUnmatched: false
+        # First-party cold-start biometric-vault plugin facade (spike). Same
+        # carve-out rationale as the nativephp/mobile facades above: the plugin
+        # lives only in mobile-app/vendor, so the enclave-gated vault is reached
+        # through its facade, confined to the Mobile identity bridge classes,
+        # each call class_exists()-guarded. reportUnmatched:false until the
+        # plugin is wired into the build.
+        -
+            message: '#Beatrax\\BiometricVault\\Facades\\BiometricVault facade should not be used\.#'
+            paths:
+                - Modules/Mobile/Internal/Identity/*.php
             reportUnmatched: false
         # Phase 15 Plan 05 (MOBILE-01) wire-protocol carve-out: the phone's
         # client-only LAN transport (LanSyncClient) and its KEK-gated

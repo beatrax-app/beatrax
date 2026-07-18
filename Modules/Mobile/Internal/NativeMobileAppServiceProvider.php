@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal;
 
+use Illuminate\Contracts\Events\Dispatcher;
+use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -41,6 +43,7 @@ final class NativeMobileAppServiceProvider
 {
     public function __construct(
         private readonly LoggerInterface $logger,
+        private readonly Dispatcher $events,
     ) {}
 
     public function boot(): void
@@ -52,6 +55,16 @@ final class NativeMobileAppServiceProvider
             // the app from opening (mirrors the desktop analog's own
             // sync-listener try/catch discipline).
             $this->logger->warning('NativePHP mobile boot: dial-out hook failed non-fatally.', [
+                'exception' => $e,
+            ]);
+        }
+
+        try {
+            $this->registerMobileNotificationListenerIfWired();
+        } catch (Throwable $e) {
+            // Same non-fatal discipline as the dial-out hook above: a
+            // failed listener registration must never crash mobile boot.
+            $this->logger->warning('NativePHP mobile boot: notification listener wiring failed non-fatally.', [
                 'exception' => $e,
             ]);
         }
@@ -74,5 +87,30 @@ final class NativeMobileAppServiceProvider
         // burst via MobileSyncTriggerService::syncOnce() here. MUST remain
         // a single open -> sync-burst -> close call — never a background
         // listener kept alive across requests (RESEARCH Pitfall 1).
+    }
+
+    /**
+     * 18-15: subscribes the mobile delivery adapter to the SAME
+     * `NotificationDeliverable` event Desktop's `DispatchOsNotification`
+     * subscribes to (D-31/D-32). Registered ONLY here — never from the
+     * shared `Modules\Mobile\Providers\MobileServiceProvider` — because
+     * this provider's `boot()` runs exclusively in the true on-device/
+     * mobile-app runtime (`config('nativephp.provider')` is mobile-app-
+     * specific); the shared provider is also loaded by non-mobile contexts
+     * where this subscription has no business firing.
+     *
+     * `class_exists()`-guarded by a runtime-built FQCN string, mirroring
+     * `triggerBoundedDialOutIfWired()`'s own forward-registration idiom
+     * above, even though the listener class ships in this same plan.
+     */
+    private function registerMobileNotificationListenerIfWired(): void
+    {
+        $listener = 'Modules\Mobile\Internal\Listeners\DispatchMobileNotification';
+
+        if (! class_exists($listener)) {
+            return;
+        }
+
+        $this->events->listen(NotificationDeliverable::class, [$listener, 'handleNotificationDeliverable']);
     }
 }
