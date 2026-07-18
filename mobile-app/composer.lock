@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f78cf25344399b3799b972516b24d37e",
+    "content-hash": "45f95ef56044743859f92ca8a6dc746b",
     "packages": [
         {
             "name": "amphp/amp",
@@ -5335,6 +5335,55 @@
             "time": "2026-03-20T22:08:33+00:00"
         },
         {
+            "name": "nativephp/mobile-local-notifications",
+            "version": "0.0.2",
+            "dist": {
+                "type": "zip",
+                "url": "https://plugins.nativephp.com/dist/nativephp/mobile-local-notifications/nativephp-mobile-local-notifications-c07086e88ea43380e3874d83d3f20f5d0f6c616e-zip-8093ed.zip",
+                "reference": "c07086e88ea43380e3874d83d3f20f5d0f6c616e",
+                "shasum": "5571f4a934b89276ab4b01e6cbe26882a225b046"
+            },
+            "require": {
+                "nativephp/mobile": "^3.2.1",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "pestphp/pest": "^3.0"
+            },
+            "type": "nativephp-plugin",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "NativePHP\\LocalNotifications\\LocalNotificationsServiceProvider"
+                    ]
+                },
+                "nativephp": {
+                    "manifest": "nativephp.json"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "NativePHP\\LocalNotifications\\": "src/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "NativePHP",
+                    "email": "support@nativephp.com"
+                }
+            ],
+            "description": "Local notifications for NativePHP Mobile with Laravel Notification channel integration",
+            "time": "2026-04-04T20:01:19+00:00"
+        },
+        {
             "name": "nativephp/mobile-network",
             "version": "1.0.1",
             "source": {
@@ -5426,6 +5475,50 @@
             "description": "QR code and barcode scanner plugin for NativePHP Mobile - supports multiple barcode formats with continuous scanning",
             "support": {
                 "issues": "https://github.com/NativePHP/mobile-scanner/issues"
+            },
+            "time": "2026-03-20T22:08:33+00:00"
+        },
+        {
+            "name": "nativephp/mobile-secure-storage",
+            "version": "1.0.1",
+            "dist": {
+                "type": "zip",
+                "url": "https://plugins.nativephp.com/dist/nativephp/mobile-secure-storage/nativephp-mobile-secure-storage-5b87aae690dfe7f216afba4ceedd383233ac1892-zip-30ac0b.zip",
+                "reference": "5b87aae690dfe7f216afba4ceedd383233ac1892",
+                "shasum": "996db6d8be4c8de9ce336624aa8c86de2a24fc5a"
+            },
+            "require": {
+                "nativephp/mobile": "^3.0",
+                "php": "^8.2"
+            },
+            "type": "nativephp-plugin",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Native\\Mobile\\Providers\\SecureStorageServiceProvider"
+                    ]
+                },
+                "nativephp": {
+                    "manifest": "nativephp.json"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Native\\Mobile\\Providers\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "NativePHP",
+                    "email": "support@nativephp.com"
+                }
+            ],
+            "description": "Secure storage plugin for NativePHP Mobile (Keychain/EncryptedSharedPreferences)",
+            "support": {
+                "issues": "https://github.com/NativePHP/mobile-secure-storage/issues"
             },
             "time": "2026-03-20T22:08:33+00:00"
         },
