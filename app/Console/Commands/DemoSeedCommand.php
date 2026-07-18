@@ -24,6 +24,7 @@ use Modules\Ledger\Database\Seeders\Demo\DemoAccountsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoTransactionsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoTransferPairsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoUsersSeeder;
+use Modules\Notifications\Database\Seeders\Demo\DemoNotificationsSeeder;
 use Modules\Onboarding\Database\Seeders\Demo\DemoWizardProgressSeeder;
 use Modules\Receipts\Database\Seeders\Demo\DemoReceiptsSeeder;
 use Modules\Recurring\Database\Seeders\Demo\DemoRecurringSeeder;
@@ -39,7 +40,9 @@ use Modules\Recurring\Database\Seeders\Demo\DemoRecurringSeeder;
  * dataset, system-alert banners for every kind, a Gmail + Microsoft
  * inbox-scanning slate, recovery codes, community mappings, wizard
  * progress in mixed states, receipts + a pending enrichment conflict,
- * a cross-account transfer pair, and merchant memory / alias rows.
+ * a cross-account transfer pair, merchant memory / alias rows, and (18-16)
+ * a mixed notification inbox covering all 8 trigger types with a realistic
+ * read/unread/dismissed/resolved/dead-link spread.
  * It is the canonical path to a realistic-looking install for
  * screenshot capture, onboarding shake-out, and dev-experience parity.
  *
@@ -88,6 +91,7 @@ final class DemoSeedCommand extends Command
         private readonly DemoTransferPairsSeeder $transferPairs,
         private readonly DemoMerchantMemorySeeder $merchantMemory,
         private readonly DemoMerchantAliasesSeeder $merchantAliases,
+        private readonly DemoNotificationsSeeder $notifications,
     ) {
         parent::__construct();
     }
@@ -188,6 +192,13 @@ final class DemoSeedCommand extends Command
         $this->line('Seeding demo receipts + pending enrichment conflicts…');
         $fileImportCount = $this->receipts->run($userMap);
         $this->info(sprintf('  %d demo file-import rows present', $fileImportCount));
+
+        // Runs LAST — references series/budget-category/account/drift-alert
+        // rows seeded above (D-41), dispatching the real trigger events with
+        // delivery suppressed (D-43) so no OS notification ever fires here.
+        $this->line('Seeding demo notification inbox (all 8 types, mixed read/unread/dismissed/resolved/dead-link)…');
+        $notificationCount = $this->notifications->run($userMap);
+        $this->info(sprintf('  %d demo notifications present', $notificationCount));
 
         $this->newLine();
         $this->info('Demo dataset is ready. Log in as demo-1@beatrax.local (password: demo-only).');
