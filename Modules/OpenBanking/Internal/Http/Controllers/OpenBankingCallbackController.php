@@ -132,12 +132,24 @@ final class OpenBankingCallbackController
         $consentExpiresAt = $now->addDays(self::CONSENT_VALID_FOR_DAYS);
         $consentExpiresAtString = $consentExpiresAt->toDateTimeString();
 
-        $existingIdRaw = $this->db->connection()->table('open_banking_connections')
+        $existingRow = $this->db->connection()->table('open_banking_connections')
             ->where('user_id', $userId)
             ->where('institution_id', $institutionId)
-            ->value('id');
-        $existingId = is_numeric($existingIdRaw) ? (int) $existingIdRaw : null;
+            ->first(['id', 'consent_expires_at', 'account_uid']);
+        $existingId = ($existingRow !== null && is_numeric($existingRow->id)) ? (int) $existingRow->id : null;
         $isNew = $existingId === null;
+
+        // WR-04: snapshot the pre-update values so the re-link (update)
+        // path can restore them if the secrets write below fails —
+        // otherwise the row would advertise a fresh 180-day consent + new
+        // account_uid while open-banking.json still holds the old/absent
+        // session_id.
+        $priorConsentExpiresAt = ($existingRow !== null && is_string($existingRow->consent_expires_at))
+            ? $existingRow->consent_expires_at
+            : null;
+        $priorAccountUid = ($existingRow !== null && is_string($existingRow->account_uid))
+            ? $existingRow->account_uid
+            : null;
 
         $connectionId = $this->db->connection()->transaction(function () use (
             $existingId, $userId, $institutionId, $accountUid, $nowString, $consentExpiresAtString,
@@ -192,16 +204,33 @@ final class OpenBankingCallbackController
                 institutionId: $institutionId,
             ));
         } catch (SecretsWriteFailed $e) {
-            if ($isNew) {
-                $this->db->connection()->transaction(function () use ($connectionId, $userId): void {
-                    $connection = $this->db->connection();
-                    $connection->statement('PRAGMA busy_timeout = 5000');
+            $this->db->connection()->transaction(function () use (
+                $isNew, $connectionId, $userId, $priorConsentExpiresAt, $priorAccountUid, $nowString,
+            ): void {
+                $connection = $this->db->connection();
+                $connection->statement('PRAGMA busy_timeout = 5000');
+
+                if ($isNew) {
                     $connection->table('open_banking_connections')
                         ->where('id', $connectionId)
                         ->where('user_id', $userId)
                         ->delete();
-                });
-            }
+
+                    return;
+                }
+
+                // WR-04: re-link path — roll the row back to its pre-update
+                // consent_expires_at/account_uid so it never advertises a
+                // fresh consent the secrets file cannot back.
+                $connection->table('open_banking_connections')
+                    ->where('id', $connectionId)
+                    ->where('user_id', $userId)
+                    ->update([
+                        'consent_expires_at' => $priorConsentExpiresAt,
+                        'account_uid' => $priorAccountUid,
+                        'updated_at' => $nowString,
+                    ]);
+            });
 
             return $this->redirector
                 ->route('settings.open-banking')
