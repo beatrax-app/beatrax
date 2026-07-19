@@ -53,14 +53,20 @@ it('discovered_senders has the expected columns', function (): void {
     }
 });
 
-it('seeds known_senders with the three system rows', function (): void {
+it('seeds known_senders with the three original system rows plus the Phase 19 icscards.nl statement-sender row', function (): void {
     $patterns = $this->db
         ->table('known_senders')
         ->where('source', 'system')
         ->pluck('email_pattern')
         ->toArray();
     expect($patterns)->toContain('paypal.com', '@ics.nl', 'googleplay-noreply@google.com');
-    expect(count($patterns))->toBe(3);
+    // Phase 19 (Req 14, D-14/D-15): IcsStatementSenderSeeder's companion
+    // data migration lands '@icscards.nl' — the second ICS domain
+    // IcsReceiptMatcher already claims but this table did not yet know
+    // about — so DetectIcsStatementReadyJob's statement-ready email is
+    // actually fetched in the first place.
+    expect($patterns)->toContain('@icscards.nl');
+    expect(count($patterns))->toBe(4);
 });
 
 it('enforces UNIQUE on inbox_messages (inbox_id, provider_message_id)', function (): void {
