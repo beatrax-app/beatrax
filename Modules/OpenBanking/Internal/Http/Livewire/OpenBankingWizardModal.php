@@ -313,6 +313,10 @@ final class OpenBankingWizardModal extends Component
         return $views->make('openbanking::livewire.open-banking-wizard-modal', [
             'redirectUri' => $loopback->forProvider('open-banking', scheme: 'https'),
             'bankName' => $this->bankDisplayName(),
+            // WR-10: exposed so the Step 5 same-tab link's no-JS/middle-click
+            // href fallback can carry institution_id (the connect controller
+            // rejects the flow without it).
+            'consentInstitutionId' => $this->resolveInstitutionId(),
         ]);
     }
 
