@@ -53,9 +53,19 @@ final class NotificationCopy
     public const TITLE_SAVINGS_PROMPT = 'A cheaper plan exists';
 
     /**
-     * The 8 type-chip glyph/word pairs (D-46), keyed by
-     * `DeterministicKeyDeriver::TRIGGER_*` values (the `trigger_type` column
-     * this phase persists). Glyph map taken verbatim from 18-UI-SPEC.md § 3.
+     * Phase 19 (Req 14, D-14/D-15) — the ICS "statement ready" nudge.
+     * Not part of the original locked 18-UI-SPEC.md § 3 set; added here
+     * (Rule 1 fix) because `typeChip()` below THROWS for any trigger_type
+     * missing from `TYPE_CHIPS` — without this entry, rendering
+     * `/notifications` for a user with this notification would 500.
+     */
+    public const TITLE_ICS_STATEMENT_READY = 'New ICS statement ready';
+
+    /**
+     * The type-chip glyph/word pairs (originally 8, D-46; Phase 19 (19-16)
+     * adds a 9th), keyed by `DeterministicKeyDeriver::TRIGGER_*` values
+     * (the `trigger_type` column this phase persists). Glyph map for the
+     * original 8 taken verbatim from 18-UI-SPEC.md § 3.
      *
      * @var array<string, array{glyph: string, word: string}>
      */
@@ -68,6 +78,7 @@ final class NotificationCopy
         DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST => ['glyph' => '◆', 'word' => 'Digest'],
         DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE => ['glyph' => '⊙', 'word' => 'Budget'],
         DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT => ['glyph' => '◎', 'word' => 'Savings'],
+        DeterministicKeyDeriver::TRIGGER_ICS_STATEMENT_READY => ['glyph' => '▤', 'word' => 'Statement'],
     ];
 
     /**

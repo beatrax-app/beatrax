@@ -38,9 +38,12 @@ use Modules\Notifications\Public\Services\SuppressionEvaluator;
  *
  * boot() conditionally loads the module's migrations, routes, and views via
  * `is_dir`/`is_file` guards, and — per this plan's
- * <planner_decisions> — is the SINGLE OWNER of the eight trigger-listener
+ * <planner_decisions> — is the SINGLE OWNER of the trigger-listener
  * registrations for the whole phase (plans 18-06..18-11 add ONLY their
- * listener classes; none of them may edit this file). Every registration is
+ * listener classes; none of them may edit this file). Phase 19 (19-16)
+ * legitimately extends this ownership with a 9th guarded pair
+ * (`PersistIcsStatementReady` / `IcsStatementReady`) rather than creating a
+ * parallel registration site. Every registration is
  * guarded on BOTH the listener class and the trigger event class existing,
  * each referenced by a runtime-built FQCN string constant (never `::class`
  * on a not-yet-existing class) so PHPStan does not fold the `class_exists()`
@@ -87,6 +90,11 @@ final class NotificationsServiceProvider extends ServiceProvider
     private const LISTENER_PERSIST_FORECAST_SHORTFALL = 'Modules\Notifications\Internal\Listeners\PersistForecastShortfall';
 
     private const EVENT_FORECAST_SHORTFALL_DETECTED = 'Modules\Forecasting\Public\Events\ForecastShortfallDetected';
+
+    /** Phase 19 (Req 14, D-14/D-15) — the 9th guarded pair, legitimately extending this single-owner file. */
+    private const LISTENER_PERSIST_ICS_STATEMENT_READY = 'Modules\Notifications\Internal\Listeners\PersistIcsStatementReady';
+
+    private const EVENT_ICS_STATEMENT_READY = 'Modules\EmailScan\Public\Events\IcsStatementReady';
 
     public function register(): void
     {
@@ -177,11 +185,12 @@ final class NotificationsServiceProvider extends ServiceProvider
     }
 
     /**
-     * The eight guarded listener registrations (this plan's
-     * <planner_decisions> §2) — none of these listener classes exist yet,
-     * and four of the trigger event classes do not either. An unguarded
-     * reference would fatal the boot; every pair is checked with
-     * `class_exists()` before `Dispatcher::listen()` is ever called.
+     * The guarded listener registrations (originally eight, this plan's
+     * <planner_decisions> §2; Phase 19 (19-16) adds a 9th) — none of these
+     * listener classes exist yet, and several of the trigger event classes
+     * do not either. An unguarded reference would fatal the boot; every
+     * pair is checked with `class_exists()` before `Dispatcher::listen()`
+     * is ever called.
      */
     private function registerTriggerListeners(Dispatcher $events): void
     {
@@ -215,6 +224,10 @@ final class NotificationsServiceProvider extends ServiceProvider
 
         if (class_exists(self::LISTENER_PERSIST_FORECAST_SHORTFALL) && class_exists(self::EVENT_FORECAST_SHORTFALL_DETECTED)) {
             $events->listen(self::EVENT_FORECAST_SHORTFALL_DETECTED, [self::LISTENER_PERSIST_FORECAST_SHORTFALL, 'handle']);
+        }
+
+        if (class_exists(self::LISTENER_PERSIST_ICS_STATEMENT_READY) && class_exists(self::EVENT_ICS_STATEMENT_READY)) {
+            $events->listen(self::EVENT_ICS_STATEMENT_READY, [self::LISTENER_PERSIST_ICS_STATEMENT_READY, 'handle']);
         }
     }
 }
