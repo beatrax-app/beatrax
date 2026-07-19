@@ -6,6 +6,7 @@ namespace Modules\Import\Public\Actions;
 
 use Generator;
 use Illuminate\Contracts\Filesystem\Factory as StorageFactory;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
@@ -86,29 +87,33 @@ final class RunImport implements RunsImports
             // wizard's status string and counters match the new attempt;
             // otherwise a discarded run would silently retain status =
             // 'discarded' and stale insertion counts on the re-upload.
-            // `source_format` is included so re-previewing the same file
-            // under a different adapter (once a second format ships)
-            // refreshes the audit row to match the parser actually used.
-            $existing->update([
-                'source_format' => $sourceFormat,
-                'status' => 'previewed',
-                'raw_file_path' => $stablePath,
-                'uploaded_at' => $this->clock->now(),
-                'confirmed_at' => null,
-                'inserted_count' => 0,
-                'duplicate_count' => 0,
-                'error_count' => 0,
-            ]);
-            $importRun = $existing;
+            $importRun = $this->resetPreviewedRun($existing, $sourceFormat, $stablePath);
         } else {
-            $importRun = ImportRun::create([
-                'user_id' => $user->id,
-                'source_format' => $sourceFormat,
-                'raw_file_path' => $stablePath,
-                'sha256' => $sha,
-                'uploaded_at' => $this->clock->now(),
-                'status' => 'previewed',
-            ]);
+            try {
+                $importRun = ImportRun::create([
+                    'user_id' => $user->id,
+                    'source_format' => $sourceFormat,
+                    'raw_file_path' => $stablePath,
+                    'sha256' => $sha,
+                    'uploaded_at' => $this->clock->now(),
+                    'status' => 'previewed',
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                // WR-14: a concurrent preview for the same (user_id, sha256)
+                // committed the row between our SELECT and this INSERT.
+                // Re-read the winner's row and fall through to the same
+                // confirmed-short-circuit / reuse-reset semantics instead
+                // of surfacing an unhandled 500.
+                $raced = $this->reReadAfterRace($user, $sha);
+                if ($raced->status === 'confirmed') {
+                    return new ImportPreviewResult(
+                        importRunId: $raced->id,
+                        rows: [],
+                        accountsToName: [],
+                    );
+                }
+                $importRun = $this->resetPreviewedRun($raced, $sourceFormat, $stablePath);
+            }
         }
 
         $accounts = new EloquentAccountResolver($user);
@@ -222,26 +227,33 @@ final class RunImport implements RunsImports
             // Reused row from a prior 'previewed' or 'discarded' attempt —
             // reset the audit fields exactly like runFromUpload()'s reuse
             // branch so stale counters/status never leak into the fresh
-            // preview.
-            $existing->update([
-                'source_format' => $sourceFormat,
-                'status' => 'previewed',
-                'uploaded_at' => $this->clock->now(),
-                'confirmed_at' => null,
-                'inserted_count' => 0,
-                'duplicate_count' => 0,
-                'error_count' => 0,
-            ]);
-            $importRun = $existing;
+            // preview. `raw_file_path` keeps its deterministic synthetic
+            // marker (passed null here, so it is left untouched).
+            $importRun = $this->resetPreviewedRun($existing, $sourceFormat, null);
         } else {
-            $importRun = ImportRun::create([
-                'user_id' => $user->id,
-                'source_format' => $sourceFormat,
-                'raw_file_path' => $this->syntheticRawFilePath($idempotencyKey),
-                'sha256' => $idempotencyKey,
-                'uploaded_at' => $this->clock->now(),
-                'status' => 'previewed',
-            ]);
+            try {
+                $importRun = ImportRun::create([
+                    'user_id' => $user->id,
+                    'source_format' => $sourceFormat,
+                    'raw_file_path' => $this->syntheticRawFilePath($idempotencyKey),
+                    'sha256' => $idempotencyKey,
+                    'uploaded_at' => $this->clock->now(),
+                    'status' => 'previewed',
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                // WR-14: same-key concurrent preview won the insert race;
+                // re-read and fall through to the reuse/confirmed semantics
+                // rather than 500-ing the loser.
+                $raced = $this->reReadAfterRace($user, $idempotencyKey);
+                if ($raced->status === 'confirmed') {
+                    return new ImportPreviewResult(
+                        importRunId: $raced->id,
+                        rows: [],
+                        accountsToName: [],
+                    );
+                }
+                $importRun = $this->resetPreviewedRun($raced, $sourceFormat, null);
+            }
         }
 
         $accounts = new EloquentAccountResolver($user);
@@ -276,5 +288,56 @@ final class RunImport implements RunsImports
     private function syntheticRawFilePath(string $idempotencyKey): string
     {
         return sprintf('open-banking://%s', $idempotencyKey);
+    }
+
+    /**
+     * Reset a reused `ImportRun` row's audit fields for a fresh preview
+     * attempt — shared by the normal reuse branch and the WR-14
+     * unique-violation race-recovery path. `$stablePath` is null for the
+     * remote-fetch path (its synthetic `raw_file_path` marker is left
+     * unchanged); non-null for the upload path.
+     */
+    private function resetPreviewedRun(ImportRun $run, string $sourceFormat, ?string $stablePath): ImportRun
+    {
+        $attributes = [
+            'source_format' => $sourceFormat,
+            'status' => 'previewed',
+            'uploaded_at' => $this->clock->now(),
+            'confirmed_at' => null,
+            'inserted_count' => 0,
+            'duplicate_count' => 0,
+            'error_count' => 0,
+        ];
+
+        if ($stablePath !== null) {
+            $attributes['raw_file_path'] = $stablePath;
+        }
+
+        $run->update($attributes);
+
+        return $run;
+    }
+
+    /**
+     * Re-read the row a concurrent preview just committed under the same
+     * `(user_id, sha256)` unique key after our own INSERT lost the race
+     * (WR-14). The row must exist — the violation proves it was committed —
+     * so a null here is a genuine, unexpected invariant break.
+     */
+    private function reReadAfterRace(User $user, string $sha256): ImportRun
+    {
+        /** @var ImportRun|null $raced */
+        $raced = ImportRun::query()
+            ->where('user_id', $user->id)
+            ->where('sha256', $sha256)
+            ->first();
+
+        if ($raced === null) {
+            throw new RuntimeException(
+                'RunImport: import_runs row for the raced key vanished immediately after a unique-constraint violation.'
+            );
+        }
+
+        return $raced;
     }
 }
