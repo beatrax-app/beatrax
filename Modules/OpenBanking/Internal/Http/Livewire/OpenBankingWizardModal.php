@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
@@ -286,12 +287,23 @@ final class OpenBankingWizardModal extends Component
      * (T-19-06-04). A fully-registered application — `hasApplication()`
      * true, e.g. a reconnect flow that skipped straight to Step 4 reusing
      * the existing registration — is left untouched.
+     *
+     * D-16 Wave 3 review-and-fix gate (19-14) hardening: also forgets the
+     * `open_banking_acknowledged` session flag `OpenBankingSettingsPage::
+     * confirmWarning()` sets before dispatching this wizard's open event.
+     * Without this, cancelling mid-wizard (checkbox already confirmed,
+     * consent dance never completed) would leave that flag standing —
+     * `enableOpenBanking()`'s own TTL is the second, bounded-time backstop
+     * for the same gap, but an explicit cancel should close it
+     * immediately rather than only after the TTL lapses.
      */
-    public function cancel(OpenBankingSecretsRepository $secrets): void
+    public function cancel(OpenBankingSecretsRepository $secrets, Session $session): void
     {
         if (! $secrets->hasApplication()) {
             $secrets->clear();
         }
+
+        $session->forget('open_banking_acknowledged');
 
         $this->dispatch('modal-close', name: 'open-banking-wizard');
     }

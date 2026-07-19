@@ -93,12 +93,13 @@ it('confirmWarning without the checkbox checked does nothing', function (): void
         ->call('confirmWarning')
         ->assertSet('showWarningModal', true);
 
-    expect(session('open_banking_acknowledged'))->not->toBe(true);
+    expect(session('open_banking_acknowledged'))->toBeNull();
 });
 
-it('confirmWarning with the checkbox checked persists the session ack and opens the wizard', function (): void {
+it('confirmWarning with the checkbox checked persists a fresh session-ack timestamp and opens the wizard', function (): void {
     $user = owgUser('owg-confirm-checked');
     $this->actingAs($user);
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-19 12:00:00'));
 
     Livewire::test(OpenBankingSettingsPage::class)
         ->call('requestEnable')
@@ -108,7 +109,9 @@ it('confirmWarning with the checkbox checked persists the session ack and opens 
         ->assertSet('acknowledged', false)
         ->assertDispatched('open-banking-wizard:open');
 
-    expect(session('open_banking_acknowledged'))->toBe(true);
+    expect(session('open_banking_acknowledged'))->toBe(CarbonImmutable::parse('2026-07-19 12:00:00')->getTimestamp());
+
+    CarbonImmutable::setTestNow();
 });
 
 it('a direct enableOpenBanking call WITHOUT acknowledgement leaves OB off (Req 4 server-side proof)', function (): void {
@@ -133,7 +136,7 @@ it('the full acknowledged path enables OB', function (): void {
     owgSeedInstitutionSecrets('ASNBNL21');
     $connectionId = owgSeedConnection($user);
 
-    session(['open_banking_acknowledged' => true]);
+    session(['open_banking_acknowledged' => CarbonImmutable::now()->getTimestamp()]);
 
     Livewire::test(OpenBankingSettingsPage::class)
         ->set('pendingConnectionId', $connectionId)
@@ -156,7 +159,7 @@ it('enableOpenBanking cannot flip a DIFFERENT user\'s connection', function (): 
     $connectionId = owgSeedConnection($owner);
 
     $this->actingAs($attacker);
-    session(['open_banking_acknowledged' => true]);
+    session(['open_banking_acknowledged' => CarbonImmutable::now()->getTimestamp()]);
 
     Livewire::test(OpenBankingSettingsPage::class)
         ->set('pendingConnectionId', $connectionId)
@@ -176,12 +179,61 @@ it('mount auto-finalizes the enable when both the redirect flash and the session
 
     session([
         'open_banking_connected' => $connectionId,
-        'open_banking_acknowledged' => true,
+        'open_banking_acknowledged' => CarbonImmutable::now()->getTimestamp(),
     ]);
 
     Livewire::test(OpenBankingSettingsPage::class)
         ->assertSet('enabled', true)
         ->assertSet('pendingConnectionId', null);
+});
+
+/*
+ * D-16 Wave 3 review-and-fix gate (19-14): a STALE session-ack timestamp
+ * (older than enableOpenBanking()'s TTL) must not authorize a flip, even
+ * though it satisfies a naive "is the flag present" check. This is the
+ * server-side proof that the acknowledgement itself expires rather than
+ * remaining a standing authorization for the lifetime of the session —
+ * closing the gap where an abandoned (never explicitly cancelled) wizard
+ * tab could otherwise leave a live "enable" token sitting in session
+ * indefinitely.
+ */
+it('a STALE session ack (older than the TTL) does not authorize enableOpenBanking (Req 4 hardening)', function (): void {
+    $user = owgUser('owg-stale-ack');
+    $this->actingAs($user);
+    owgSeedInstitutionSecrets('ASNBNL21');
+    $connectionId = owgSeedConnection($user);
+
+    // 31 minutes old — one minute past the 30-minute TTL.
+    session(['open_banking_acknowledged' => CarbonImmutable::now()->subMinutes(31)->getTimestamp()]);
+
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->set('pendingConnectionId', $connectionId)
+        ->call('enableOpenBanking')
+        ->assertSet('enabled', false);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $enabled = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->value('enabled');
+    expect((bool) $enabled)->toBeFalse();
+});
+
+it('a non-integer session ack value (e.g. a legacy boolean true) does not authorize enableOpenBanking', function (): void {
+    $user = owgUser('owg-legacy-boolean-ack');
+    $this->actingAs($user);
+    owgSeedInstitutionSecrets('ASNBNL21');
+    $connectionId = owgSeedConnection($user);
+
+    session(['open_banking_acknowledged' => true]);
+
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->set('pendingConnectionId', $connectionId)
+        ->call('enableOpenBanking')
+        ->assertSet('enabled', false);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $enabled = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->value('enabled');
+    expect((bool) $enabled)->toBeFalse();
 });
 
 it('the B2 modal carries the exact UI-SPEC copy, alertdialog role, and 2px rose border', function (): void {
