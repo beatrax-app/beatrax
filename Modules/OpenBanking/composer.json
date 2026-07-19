@@ -1,0 +1,16 @@
+{
+    "name": "beatrax/open-banking",
+    "description": "OpenBanking module — optional, off-by-default Enable Banking (AIS-only) connector for ASN/SNS accounts, landing fetched rows through the existing import-preview pipeline.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Modules\\OpenBanking\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\OpenBanking\\Tests\\": "tests/"
+        }
+    }
+}

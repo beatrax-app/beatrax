@@ -16,6 +16,7 @@
         "ext-intl": "*",
         "ext-libxml": "*",
         "ext-mbstring": "*",
+        "ext-openssl": "*",
         "ext-pcntl": "*",
         "ext-pdo": "*",
         "ext-posix": "*",
@@ -29,6 +30,7 @@
         "brick/money": "^0.11",
         "doctrine/sql-formatter": "^1.5",
         "dompdf/dompdf": "^3.0",
+        "firebase/php-jwt": "^7.1",
         "genkgo/camt": "^2.10",
         "google/apiclient": "^2.19",
         "google/apiclient-services": "*",
@@ -119,7 +121,8 @@
             "Modules\\Mobile\\Tests\\": "Modules/Mobile/tests/",
             "Modules\\Reports\\Tests\\": "Modules/Reports/tests/",
             "Modules\\Notifications\\Tests\\": "Modules/Notifications/tests/",
-            "Modules\\Position\\Tests\\": "Modules/Position/tests/"
+            "Modules\\Position\\Tests\\": "Modules/Position/tests/",
+            "Modules\\OpenBanking\\Tests\\": "Modules/OpenBanking/tests/"
         }
     },
     "scripts": {

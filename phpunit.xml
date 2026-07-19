@@ -105,6 +105,18 @@
         <testsuite name="EmailScanIntegration">
             <directory suffix="Test.php">./Modules/EmailScan/tests/Integration</directory>
         </testsuite>
+        <testsuite name="OpenBankingUnit">
+            <directory suffix="Test.php">./Modules/OpenBanking/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="OpenBankingFeature">
+            <directory suffix="Test.php">./Modules/OpenBanking/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="OpenBankingContracts">
+            <directory suffix="Test.php">./Modules/OpenBanking/tests/Contracts</directory>
+        </testsuite>
+        <testsuite name="OpenBankingIntegration">
+            <directory suffix="Test.php">./Modules/OpenBanking/tests/Integration</directory>
+        </testsuite>
         <testsuite name="ReceiptsContracts">
             <directory suffix="Test.php">./Modules/Receipts/tests/Contracts</directory>
         </testsuite>
