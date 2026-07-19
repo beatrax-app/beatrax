@@ -114,14 +114,18 @@ it('confirmWarning with the checkbox checked persists a fresh session-ack timest
     CarbonImmutable::setTestNow();
 });
 
-it('a direct enableOpenBanking call WITHOUT acknowledgement leaves OB off (Req 4 server-side proof)', function (): void {
+it('a redirect flash WITHOUT acknowledgement leaves OB off (Req 4 server-side proof)', function (): void {
     $user = owgUser('owg-direct-no-ack');
     $this->actingAs($user);
     $connectionId = owgSeedConnection($user);
 
+    // WR-05: pendingConnectionId is #[Locked] — it can only be populated
+    // by the server-set redirect flash, never a client ->set(). mount()
+    // consumes the flash and runs enableOpenBanking(), which no-ops here
+    // because no session acknowledgement is present.
+    session(['open_banking_connected' => $connectionId]);
+
     Livewire::test(OpenBankingSettingsPage::class)
-        ->set('pendingConnectionId', $connectionId)
-        ->call('enableOpenBanking')
         ->assertSet('enabled', false);
 
     /** @var DatabaseManager $db */
@@ -136,11 +140,15 @@ it('the full acknowledged path enables OB', function (): void {
     owgSeedInstitutionSecrets('ASNBNL21');
     $connectionId = owgSeedConnection($user);
 
-    session(['open_banking_acknowledged' => CarbonImmutable::now()->getTimestamp()]);
+    // WR-05: drive the enable through the legitimate server path — the
+    // redirect flash (server-set) + a fresh session ack. mount() consumes
+    // both and finalizes the enable.
+    session([
+        'open_banking_connected' => $connectionId,
+        'open_banking_acknowledged' => CarbonImmutable::now()->getTimestamp(),
+    ]);
 
     Livewire::test(OpenBankingSettingsPage::class)
-        ->set('pendingConnectionId', $connectionId)
-        ->call('enableOpenBanking')
         ->assertSet('pendingConnectionId', null)
         ->assertSet('enabled', true);
 
@@ -159,11 +167,16 @@ it('enableOpenBanking cannot flip a DIFFERENT user\'s connection', function (): 
     $connectionId = owgSeedConnection($owner);
 
     $this->actingAs($attacker);
-    session(['open_banking_acknowledged' => CarbonImmutable::now()->getTimestamp()]);
+    // Even if a foreign connection id somehow reaches the attacker's
+    // server-set redirect flash, enableOpenBanking()'s user_id predicate
+    // blocks the cross-user flip (pendingConnectionId is #[Locked], so a
+    // client ->set() is no longer even possible — WR-05).
+    session([
+        'open_banking_connected' => $connectionId,
+        'open_banking_acknowledged' => CarbonImmutable::now()->getTimestamp(),
+    ]);
 
-    Livewire::test(OpenBankingSettingsPage::class)
-        ->set('pendingConnectionId', $connectionId)
-        ->call('enableOpenBanking');
+    Livewire::test(OpenBankingSettingsPage::class);
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -204,11 +217,12 @@ it('a STALE session ack (older than the TTL) does not authorize enableOpenBankin
     $connectionId = owgSeedConnection($user);
 
     // 31 minutes old — one minute past the 30-minute TTL.
-    session(['open_banking_acknowledged' => CarbonImmutable::now()->subMinutes(31)->getTimestamp()]);
+    session([
+        'open_banking_connected' => $connectionId,
+        'open_banking_acknowledged' => CarbonImmutable::now()->subMinutes(31)->getTimestamp(),
+    ]);
 
     Livewire::test(OpenBankingSettingsPage::class)
-        ->set('pendingConnectionId', $connectionId)
-        ->call('enableOpenBanking')
         ->assertSet('enabled', false);
 
     /** @var DatabaseManager $db */
@@ -223,11 +237,12 @@ it('a non-integer session ack value (e.g. a legacy boolean true) does not author
     owgSeedInstitutionSecrets('ASNBNL21');
     $connectionId = owgSeedConnection($user);
 
-    session(['open_banking_acknowledged' => true]);
+    session([
+        'open_banking_connected' => $connectionId,
+        'open_banking_acknowledged' => true,
+    ]);
 
     Livewire::test(OpenBankingSettingsPage::class)
-        ->set('pendingConnectionId', $connectionId)
-        ->call('enableOpenBanking')
         ->assertSet('enabled', false);
 
     /** @var DatabaseManager $db */
