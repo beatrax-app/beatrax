@@ -33,9 +33,14 @@ use RuntimeException;
  * authorization `code` for a `session_id` via `EnableBankingHttpClient::
  * createSession()`. Persists `session_id` + consent expiry + the
  * previously-resolved bank SCA host to the secrets file, and non-secret
- * metadata (institution_id, consent_expires_at, last_successful_sync_at,
- * last_attempt_at, enabled) to `open_banking_connections` — a
- * secrets-write failure after a NEW row insert compensating-rolls-back
+ * metadata (institution_id, account_uid, consent_expires_at,
+ * last_successful_sync_at, last_attempt_at, enabled) to
+ * `open_banking_connections` — `account_uid` is the FIRST entry of the
+ * session response's `accounts[]` list (19-09 carried gap: nothing
+ * persisted this before), resolved via `EnableBankingHttpClient::
+ * accountUidFrom()` so `OpenBankingFetchService` has a value to thread
+ * into `RemoteSourceAdapter::fetch()`. A secrets-write failure after a
+ * NEW row insert compensating-rolls-back
  * that row (T-19-05-03); an existing-row update (re-link) surfaces a
  * flash instead of rewinding, mirroring OAuthCallbackController's
  * identical trade-off for its reconnect branch (the prior consent may
@@ -114,6 +119,13 @@ final class OpenBankingCallbackController
                 ->with('open_banking_failed', 'Enable Banking did not return a session id.');
         }
 
+        // Not gated (unlike sessionId above): a missing accounts[] entry
+        // does not invalidate the completed consent — it only means a
+        // later fetch attempt (OpenBankingFetchService) has nothing to
+        // sync against yet, which that service reports with its own
+        // explicit error rather than blocking the callback here.
+        $accountUid = $this->client->accountUidFrom($session);
+
         $institutionId = $credentials->institutionId;
         $now = $this->clock->now();
         $nowString = $now->toDateTimeString();
@@ -128,7 +140,7 @@ final class OpenBankingCallbackController
         $isNew = $existingId === null;
 
         $connectionId = $this->db->connection()->transaction(function () use (
-            $existingId, $userId, $institutionId, $nowString, $consentExpiresAtString,
+            $existingId, $userId, $institutionId, $accountUid, $nowString, $consentExpiresAtString,
         ): int {
             $connection = $this->db->connection();
             $connection->statement('PRAGMA busy_timeout = 5000');
@@ -139,6 +151,11 @@ final class OpenBankingCallbackController
                     ->where('user_id', $userId)
                     ->update([
                         'consent_expires_at' => $consentExpiresAtString,
+                        // Re-link may surface a different account_uid than
+                        // the original consent (or resolve one for the
+                        // first time if it was null before) — always
+                        // refresh it from THIS session's response.
+                        'account_uid' => $accountUid,
                         'updated_at' => $nowString,
                     ]);
 
@@ -148,6 +165,7 @@ final class OpenBankingCallbackController
             return $connection->table('open_banking_connections')->insertGetId([
                 'user_id' => $userId,
                 'institution_id' => $institutionId,
+                'account_uid' => $accountUid,
                 'bank_display_name' => null,
                 'enabled' => false,
                 'consent_expires_at' => $consentExpiresAtString,
