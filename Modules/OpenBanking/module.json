@@ -1,0 +1,11 @@
+{
+    "name": "OpenBanking",
+    "alias": "openbanking",
+    "description": "Optional, off-by-default open-banking import connector — links ASN/SNS via the Enable Banking aggregator (BYO-key), fetches booked transactions + balances local-machine-to-aggregator directly, and lands them idempotently through the existing import-preview + FingerprintStage pipeline.",
+    "keywords": ["open-banking", "enable-banking", "ais", "import"],
+    "priority": 15,
+    "providers": [
+        "Modules\\OpenBanking\\Providers\\OpenBankingServiceProvider"
+    ],
+    "files": []
+}
