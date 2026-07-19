@@ -145,6 +145,19 @@ final class OpenBankingConnectController
                 ->with('open_banking_failed', $e->getMessage());
         }
 
+        // WR-02: the consent URL is an outward redirect target. Require
+        // https and that its host matches the SCA host we just resolved
+        // and allow-listed — otherwise fail the flow rather than emit an
+        // unvalidated (potentially open) redirect.
+        $consentScheme = parse_url($consentUrl, PHP_URL_SCHEME);
+        $consentHost = parse_url($consentUrl, PHP_URL_HOST);
+        if (! is_string($consentScheme) || strtolower($consentScheme) !== 'https'
+            || ! is_string($consentHost) || strtolower($consentHost) !== $scaHost) {
+            return $this->redirector
+                ->route('settings.open-banking')
+                ->with('open_banking_failed', 'Enable Banking returned an unsafe consent URL.');
+        }
+
         return $this->redirector->away($consentUrl);
     }
 
