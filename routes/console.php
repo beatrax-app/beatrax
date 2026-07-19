@@ -21,6 +21,7 @@ use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\FX\Internal\Jobs\FetchFxRatesJob;
 use Modules\Notifications\Internal\Jobs\PruneNotificationsJob;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
+use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
 use Modules\Position\Internal\Jobs\EmitPositionDigestJob;
 use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
 use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
@@ -449,3 +450,41 @@ Schedule::call(function (Dispatcher $bus): void {
         $bus->dispatch(new PruneNotificationsJob($user->id));
     });
 })->name('notifications.prune')->dailyAt('04:30')->withoutOverlapping(30);
+
+// Daily open-banking auto-sync (D-13/Req 9): fans out one
+// SyncOpenBankingAccountJob per connection that is BOTH enabled AND has a
+// non-expired consent — the "no-op when OB is off or consent has expired"
+// requirement (Req 9 acceptance) is enforced HERE, at this enumeration
+// query's WHERE clause, not solely inside the job. `SyncOpenBankingAccountJob::
+// handle()` additionally re-checks both conditions defensively on pickup
+// (mirrors `IncrementalScanJob`'s "Early exit #1" needs_reauth check) for the
+// same crash-between-dispatch-and-pickup race that entry's docblock
+// documents — a connection that is disabled or whose consent expires between
+// this tick's enumeration and the worker actually picking up the job must
+// still result in zero fetch attempts and zero timestamp writes.
+//
+// The job's ShouldBeUniqueUntilProcessing lock (uniqueId=connectionId,
+// uniqueFor=600) collapses a same-window duplicate dispatch (this daily tick
+// racing a manual "Sync now" click) into a single in-flight fetch.
+//
+// Closure DI mirrors every other entry above — DatabaseManager + Bus
+// Dispatcher resolved through the container; no facade reaches into module
+// code. Method order .name() BEFORE .dailyAt('06:00') BEFORE
+// .withoutOverlapping(30) matches every other entry in this file —
+// CallbackEvent::withoutOverlapping throws LogicException when the
+// description has not been set yet.
+//
+// 06:00 window: ahead of the 09:00 FX refresh and the 09:15
+// notifications/digest entries above, so any dashboard figure computed from
+// a freshly-synced OB transaction on the same morning already reflects it.
+Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
+    $connectionIds = $db->connection()
+        ->table('open_banking_connections')
+        ->where('enabled', true)
+        ->whereNotNull('consent_expires_at')
+        ->where('consent_expires_at', '>', now())   // no-op when expired, per Req 9
+        ->pluck('id');
+    foreach ($connectionIds as $id) {
+        $bus->dispatch(new SyncOpenBankingAccountJob((int) $id));
+    }
+})->name('open-banking.daily-sync')->dailyAt('06:00')->withoutOverlapping(30);
