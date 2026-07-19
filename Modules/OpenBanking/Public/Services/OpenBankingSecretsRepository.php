@@ -86,15 +86,26 @@ class OpenBankingSecretsRepository
         ]);
     }
 
+    /**
+     * Gated ONLY on the private key being present. `application_id` is
+     * intentionally NOT required here (unlike `hasApplication()`, which
+     * gates on both): the onboarding wizard (19-06) writes the private
+     * key first (Step 1) and the application_id afterwards (Step 3), and
+     * Step 3 must be able to `load()` the just-generated private key to
+     * merge the pasted application_id into it. Any caller that needs the
+     * "fully registered" signal uses `hasApplication()`, not a null
+     * check on `load()`.
+     */
     public function load(): ?OpenBankingCredentials
     {
         $data = $this->readAll();
 
-        $applicationId = self::stringOrNull($data['application_id'] ?? null);
         $privateKeyPem = self::stringOrNull($data['private_key_pem'] ?? null);
-        if ($applicationId === null || $privateKeyPem === null) {
+        if ($privateKeyPem === null) {
             return null;
         }
+
+        $applicationId = self::stringOrNull($data['application_id'] ?? null) ?? '';
 
         return new OpenBankingCredentials(
             applicationId: $applicationId,
