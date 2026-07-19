@@ -1,0 +1,224 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\OpenBanking\Internal\Adapters\EnableBanking;
+
+use Brick\Money\Money;
+use Carbon\CarbonImmutable;
+use Generator;
+use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Public\Dto\FetchWindow;
+use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use RuntimeException;
+
+/**
+ * The live reference `RemoteSourceAdapter` implementation for Enable
+ * Banking (Req 1/5/12) — the remote-fetch analog of
+ * `Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter`.
+ *
+ * This is the load-bearing dedup contract (D-03/Req 5): every mapped
+ * field below is chosen so the fingerprint tuple `FingerprintComposer`
+ * derives from the yielded `SourceTransactionDto` collides, byte for
+ * byte, with the SAME real-world transaction imported from an ASN
+ * CAMT.053 export. Getting one field wrong (date, sign, currency)
+ * silently breaks "zero net-new duplicates" with no error — see
+ * `Camt053Adapter::buildDto()` for the field choices mirrored here:
+ *
+ *  - `bookedAt` AND `postedAt` are BOTH `booking_date`, zeroed to
+ *    midnight (NEVER `value_date`) — exactly the CAMT adapter's
+ *    `CarbonImmutable::instance($booking)->startOfDay()` called twice.
+ *  - `amountMinor` is derived via `Brick\Money\Money` (never `(float)`)
+ *    and explicitly negated when `credit_debit_indicator === 'DBIT'`,
+ *    mirroring the CAMT adapter's explicit sign application.
+ *  - Counterparty name/IBAN follow the identical DBIT->creditor /
+ *    CRDT->debtor direction rule `Camt053Adapter::extractCounterparty()`
+ *    applies. The raw name is carried on the DTO's `counterpartyName`
+ *    field unmodified — `FingerprintComposer::normalize()` is called
+ *    exactly ONCE for every adapter's rows, downstream in
+ *    `Modules\Import\Public\Pipeline\NormalizeStage::run()`. Neither
+ *    this adapter nor `Camt053Adapter` calls `normalize()` directly;
+ *    writing a second normalizer here would risk producing a
+ *    subtly-different string for the identical raw name.
+ *
+ * Booked-only filter (T-19-08-03): any row whose `status !== 'BOOK'`
+ * (e.g. PSD2 `'PDNG'` pending rows) is dropped before it ever reaches
+ * `SourceTransactionDto` — the project has no concept of a pending
+ * transaction anywhere in `CanonicalTransaction`.
+ *
+ * Institution-parameterized (Req 12): `fetch()`'s `$institutionId`
+ * parameter is threaded straight through to
+ * `EnableBankingHttpClient::accountDetails()`/`transactions()` as the
+ * Enable Banking account `uid` — no bank name is ever hardcoded, so the
+ * SAME adapter instance proves both ASN and SNS.
+ *
+ * Deliberately does NOT fetch `/balances`: `RemoteSourceAdapter` has no
+ * channel for point-in-time balance data (see that contract's docblock —
+ * a balance reading is not a statement-level opening/closing pair), so
+ * balance ingestion is out of this adapter's scope entirely.
+ */
+final class EnableBankingSourceAdapter implements RemoteSourceAdapter
+{
+    public function __construct(
+        private readonly EnableBankingHttpClient $client,
+    ) {}
+
+    public function format(): string
+    {
+        return 'enable-banking';
+    }
+
+    /**
+     * @return Generator<int, SourceTransactionDto>
+     */
+    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
+    {
+        $ownIban = $this->resolveOwnIban($institutionId);
+
+        $rowIndex = 0;
+        $continuationKey = null;
+
+        do {
+            $response = $this->client->transactions($institutionId, $window, $continuationKey);
+            $rows = EnableBankingTransactionData::collectionFromArray($this->transactionRows($response));
+
+            foreach ($rows as $row) {
+                if (! $row->isBooked()) {
+                    continue;
+                }
+
+                yield $this->buildDto($row, $ownIban, $rowIndex);
+                $rowIndex++;
+            }
+
+            $continuationKey = $this->continuationKeyFrom($response);
+        } while ($continuationKey !== null);
+    }
+
+    private function resolveOwnIban(string $institutionId): string
+    {
+        $details = $this->client->accountDetails($institutionId);
+
+        $accountId = $details['account_id'] ?? null;
+        if (is_array($accountId)) {
+            $iban = $accountId['iban'] ?? null;
+            if (is_string($iban) && $iban !== '') {
+                return $iban;
+            }
+        }
+
+        $topLevelIban = $details['iban'] ?? null;
+        if (is_string($topLevelIban) && $topLevelIban !== '') {
+            return $topLevelIban;
+        }
+
+        throw new RuntimeException(
+            'EnableBankingSourceAdapter: could not resolve the own-account IBAN from the accountDetails() response.'
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     * @return list<array<string, mixed>>
+     */
+    private function transactionRows(array $response): array
+    {
+        $raw = $response['transactions'] ?? null;
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ($raw as $row) {
+            if (is_array($row)) {
+                /** @var array<string, mixed> $row */
+                $rows[] = $row;
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     */
+    private function continuationKeyFrom(array $response): ?string
+    {
+        $key = $response['continuation_key'] ?? null;
+
+        return is_string($key) && $key !== '' ? $key : null;
+    }
+
+    private function buildDto(EnableBankingTransactionData $row, string $ownIban, int $rowIndex): SourceTransactionDto
+    {
+        $currency = strtoupper($row->currency);
+        $isDebit = $row->creditDebitIndicator === 'DBIT';
+
+        $amountMinor = Money::of($row->amount, $currency)->getMinorAmount()->toInt();
+        if ($isDebit && $amountMinor > 0) {
+            $amountMinor = -$amountMinor;
+        }
+
+        $counterpartyName = $isDebit ? $row->creditorName : $row->debtorName;
+        $counterpartyIban = $isDebit ? $row->creditorIban : $row->debtorIban;
+
+        // booking_date drives BOTH bookedAt and postedAt, zeroed to
+        // midnight — the single most important substitution in the
+        // whole field table (RESEARCH.md Pattern 2). value_date is
+        // carried on valueDate only, which is outside the fingerprint
+        // hash tuple.
+        $bookedAt = CarbonImmutable::parse($row->bookingDate)->startOfDay();
+
+        return new SourceTransactionDto(
+            bookedAt: $bookedAt,
+            postedAt: CarbonImmutable::parse($row->bookingDate)->startOfDay(),
+            valueDate: CarbonImmutable::parse($row->valueDate)->startOfDay(),
+            ownIban: $ownIban,
+            counterpartyIban: $counterpartyIban,
+            counterpartyName: $counterpartyName,
+            currency: $currency,
+            amountMinor: $amountMinor,
+            sourceRef: null,
+            description: $this->collapseRemittance($row->remittanceInformation),
+            rawPayload: $this->serialiseEnableBankingFragment($row),
+            sourceRowIndex: $rowIndex,
+        );
+    }
+
+    /**
+     * @param  list<string>  $remittanceInformation
+     */
+    private function collapseRemittance(array $remittanceInformation): ?string
+    {
+        $joined = implode(' ', $remittanceInformation);
+        $collapsed = preg_replace('/\s+/u', ' ', $joined);
+        $trimmed = trim(is_string($collapsed) ? $collapsed : $joined);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * Mirrors `Camt053Adapter::serialiseSepaFragment()`'s
+     * `rawPayload['sepa']` pattern — every secondary reference the
+     * aggregator carries is stashed verbatim here rather than promoted
+     * to `sourceRef`.
+     *
+     * @return array{enable_banking: array<string, mixed>}
+     */
+    private function serialiseEnableBankingFragment(EnableBankingTransactionData $row): array
+    {
+        return [
+            'enable_banking' => [
+                'transactionId' => $row->transactionId,
+                'entryReference' => $row->entryReference,
+                'status' => $row->status,
+                'bankTransactionCode' => [
+                    'domain' => $row->bankTransactionDomain,
+                    'family' => $row->bankTransactionFamily,
+                    'subFamily' => $row->bankTransactionSubFamily,
+                ],
+            ],
+        ];
+    }
+}
