@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\EmailScan\Database\Seeders\IcsStatementSenderSeeder;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
@@ -18,6 +19,7 @@ use Modules\EmailScan\Internal\Http\Livewire\BackfillWindowModal;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
+use Modules\EmailScan\Internal\Jobs\DetectIcsStatementReadyJob;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Internal\Listeners\EmitOAuthReauthRequiredAlert;
@@ -111,6 +113,11 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(DiscoveryScanJob::class);
         $this->app->singleton(EmitOAuthReauthRequiredAlert::class);
         $this->app->singleton(RaiseReconsentAlertOnTokenFailure::class);
+
+        // Req 14 (D-14/D-15): the ICS "statement ready" nudge detector +
+        // its companion system-known-sender seeder.
+        $this->app->singleton(DetectIcsStatementReadyJob::class);
+        $this->app->singleton(IcsStatementSenderSeeder::class);
     }
 
     public function boot(LivewireManager $livewire, EventsDispatcher $events): void

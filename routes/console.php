@@ -14,6 +14,7 @@ use Modules\Core\Models\User;
 use Modules\Counterparties\Internal\Jobs\CounterpartyGarbageCollectorJob;
 use Modules\DriftAlerts\Internal\Jobs\EmitSavingsPromptsJob;
 use Modules\DriftAlerts\Internal\Jobs\RevivedExpiredDriftSnoozesJob;
+use Modules\EmailScan\Internal\Jobs\DetectIcsStatementReadyJob;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
@@ -143,6 +144,24 @@ Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
         $bus->dispatch(new ProcessFetchedInboxMessagesJob((int) $id));
     }
 })->name('receipts.process-fetched-inbox-messages')->hourly()->withoutOverlapping(30);
+
+// Hourly ICS "statement ready" nudge detector (Req 14, D-14/D-15):
+// dispatches DetectIcsStatementReadyJob per user. The job reads ONLY
+// inbox_messages.sender_email/.subject (metadata-only, never the .eml
+// body) and dispatches Modules\EmailScan\Public\Events\IcsStatementReady
+// for each match; Modules\Notifications\Internal\Listeners\PersistIcsStatementReady
+// persists the once-per-statement-month nudge. Cadence matches the
+// email-scan + receipts entries above so a statement-ready email surfaces
+// within the same wall-clock hour it is fetched. Method order .name()
+// BEFORE .hourly()->withoutOverlapping(30) matches every other entry in
+// this file (CallbackEvent::withoutOverlapping throws LogicException if
+// description isn't set first).
+Schedule::call(function (DatabaseManager $db, Dispatcher $bus): void {
+    $userIds = $db->connection()->table('users')->pluck('id');
+    foreach ($userIds as $id) {
+        $bus->dispatch(new DetectIcsStatementReadyJob((int) $id));
+    }
+})->name('email-scan.detect-ics-statement-ready')->hourly()->withoutOverlapping(30);
 
 // Watched-folder secondary path: per-user 5-minute scanner over
 // storage/app/inbox-drop/{userId}/ that imports .eml / .mbox files

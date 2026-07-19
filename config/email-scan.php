@@ -28,4 +28,33 @@ return [
     */
     'oauth_loopback_port' => env('OAUTH_LOOPBACK_PORT'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | ICS "statement ready" nudge detection (Req 14, D-14/D-15)
+    |--------------------------------------------------------------------------
+    |
+    | `DetectIcsStatementReadyJob` reads sender_email/subject columns from
+    | `inbox_messages` ONLY (never the email body) and matches them against
+    | this tunable pattern. No real ICS statement-ready email sample was
+    | available at plan time (19-RESEARCH.md Open Question 1), so both
+    | values below are a data-driven best guess — correct them here,
+    | without a redeploy, once a real sample surfaces during UAT.
+    |
+    */
+    'ics_statement_ready' => [
+        // Sender domains the detector treats as ICS-authored. Matched via
+        // EXACT domain-part equality (never substring) — mirrors
+        // Modules\Receipts\Internal\Matchers\IcsReceiptMatcher::ICS_DOMAINS
+        // so a spoofed 'ics.nl.attacker.example' sender is rejected
+        // (T-19-16-02). `IcsStatementSenderSeeder` reads this SAME list so
+        // the primary fetch filter (known_senders) and the detector never
+        // drift out of sync.
+        'sender_domains' => ['ics.nl', 'icscards.nl'],
+
+        // Subject-line pattern (PCRE) the detector matches against. Covers
+        // the English "statement" and Dutch "afschrift" wording ICS Cards
+        // is known to use elsewhere in its correspondence.
+        'subject_pattern' => '/\b(statement|afschrift)\b/i',
+    ],
+
 ];
