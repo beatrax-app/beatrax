@@ -64,11 +64,16 @@
                             ><span>Copy public key</span></button>
 
                             <label class="block text-xs font-medium text-slate-500 mt-3 dark:text-slate-400">Redirect URI</label>
+                            {{-- IN-04: the redirect URI is carried on a
+                                 data-* attribute (HTML-escaped by Blade) and
+                                 read via $el.dataset — never string-baked into
+                                 the inline JS handler. --}}
                             <button
                                 type="button"
                                 x-data
+                                data-redirect-uri="{{ $redirectUri }}"
                                 aria-label="Copy redirect URI"
-                                x-on:click="navigator.clipboard.writeText($el.querySelector('span').textContent); $el.querySelector('span').textContent = 'Copied'; setTimeout(() => $el.querySelector('span').textContent = '{{ $redirectUri }}', 2000);"
+                                x-on:click="navigator.clipboard.writeText($el.querySelector('span').textContent); $el.querySelector('span').textContent = 'Copied'; setTimeout(() => $el.querySelector('span').textContent = $el.dataset.redirectUri, 2000);"
                                 class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-mono text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
                             ><span>{{ $redirectUri }}</span></button>
                         </div>
