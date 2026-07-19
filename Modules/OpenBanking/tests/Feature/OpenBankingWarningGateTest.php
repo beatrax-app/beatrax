@@ -213,6 +213,75 @@ it('the full acknowledged path enables OB', function (): void {
     expect(session('open_banking_acknowledged'))->toBeNull();
 });
 
+it('WR-07: a post-callback mount with a pending connection but a STALE ack sets needsReconfirm and leaves OB off', function (): void {
+    $user = owgUser('owg-reconfirm-stale');
+    $this->actingAs($user);
+    owgSeedInstitutionSecrets('ASNBNL21');
+    $connectionId = owgSeedConnection($user);
+
+    // Consent dance completed (pending connection flashed back) but the ack
+    // lapsed — 3 hours old, past the new 2-hour TTL.
+    session([
+        'open_banking_connected' => $connectionId,
+        'open_banking_acknowledged' => CarbonImmutable::now()->subHours(3)->getTimestamp(),
+    ]);
+
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->assertSet('enabled', false)
+        ->assertSet('needsReconfirm', true)
+        ->assertSeeHtml('data-testid="ob-reconfirm-button"');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $enabled = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->value('enabled');
+    expect((bool) $enabled)->toBeFalse();
+});
+
+it('WR-07: reconfirmEnable re-mints a fresh ack and completes the enable', function (): void {
+    $user = owgUser('owg-reconfirm-completes');
+    $this->actingAs($user);
+    owgSeedInstitutionSecrets('ASNBNL21');
+    $connectionId = owgSeedConnection($user);
+
+    session([
+        'open_banking_connected' => $connectionId,
+        'open_banking_acknowledged' => CarbonImmutable::now()->subHours(3)->getTimestamp(),
+    ]);
+
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->assertSet('needsReconfirm', true)
+        ->call('reconfirmEnable')
+        ->assertSet('needsReconfirm', false)
+        ->assertSet('enabled', true)
+        ->assertSet('pendingConnectionId', null);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $enabled = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->value('enabled');
+    expect((bool) $enabled)->toBeTrue();
+
+    // Single-use: the re-minted ack is consumed by the successful enable.
+    expect(session('open_banking_acknowledged'))->toBeNull();
+});
+
+it('WR-07: a fresh ack within the raised 2-hour TTL still finalizes at mount without needing re-confirm', function (): void {
+    $user = owgUser('owg-reconfirm-not-needed');
+    $this->actingAs($user);
+    owgSeedInstitutionSecrets('ASNBNL21');
+    $connectionId = owgSeedConnection($user);
+
+    // 90 minutes old — lapsed under the OLD 30-minute TTL, still fresh
+    // under the raised 2-hour one, so it finalizes silently.
+    session([
+        'open_banking_connected' => $connectionId,
+        'open_banking_acknowledged' => CarbonImmutable::now()->subMinutes(90)->getTimestamp(),
+    ]);
+
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->assertSet('enabled', true)
+        ->assertSet('needsReconfirm', false);
+});
+
 it('enableOpenBanking cannot flip a DIFFERENT user\'s connection', function (): void {
     $owner = owgUser('owg-owner');
     $attacker = owgUser('owg-attacker');
@@ -268,10 +337,10 @@ it('a STALE session ack (older than the TTL) does not authorize enableOpenBankin
     owgSeedInstitutionSecrets('ASNBNL21');
     $connectionId = owgSeedConnection($user);
 
-    // 31 minutes old — one minute past the 30-minute TTL.
+    // WR-07: 121 minutes old — one minute past the raised 2-hour TTL.
     session([
         'open_banking_connected' => $connectionId,
-        'open_banking_acknowledged' => CarbonImmutable::now()->subMinutes(31)->getTimestamp(),
+        'open_banking_acknowledged' => CarbonImmutable::now()->subMinutes(121)->getTimestamp(),
     ]);
 
     Livewire::test(OpenBankingSettingsPage::class)

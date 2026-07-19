@@ -83,12 +83,17 @@ final class OpenBankingSettingsPage extends Component
     use WithFileUploads;
 
     /**
-     * Generous enough to survive the full wizard dance (the user leaves
-     * this tab, logs into their bank, completes 2FA, and returns) without
-     * ever needing to re-acknowledge — but bounded, so an abandoned tab
-     * cannot leave a standing authorization to enable OB indefinitely.
+     * WR-07: 2 hours. Must comfortably survive not just the wizard dance
+     * but a FIRST-TIME Enable Banking application registration — a user
+     * creating their EB developer application, pasting the application id,
+     * and completing the initial SCA can easily run past the old 30-minute
+     * window, and a lapsed ack there silently left a fully-consented
+     * connector disabled (the exact WR-07 failure). Still bounded, so an
+     * abandoned tab cannot leave a standing authorization indefinitely; a
+     * lapse now surfaces the visible re-confirm CTA (`$needsReconfirm`)
+     * rather than a silent no-op.
      */
-    private const ACK_TTL_SECONDS = 1800;
+    private const ACK_TTL_SECONDS = 7200;
 
     /**
      * The leaf format key the EXISTING ICS SourceAdapter consumes
@@ -177,6 +182,17 @@ final class OpenBankingSettingsPage extends Component
     #[Locked]
     public ?int $pendingConnectionId = null;
 
+    /**
+     * WR-07: true only when the SCA redirect brought back a fully-consented
+     * `pendingConnectionId` but the session acknowledgement had already
+     * lapsed by the time `mount()` tried to finalize the enable. Drives the
+     * visible "re-confirm to finish enabling" CTA instead of silently
+     * leaving a completed connection disabled. Server-authoritative
+     * (`#[Locked]`) — set only in `mount()`, cleared by `reconfirmEnable()`.
+     */
+    #[Locked]
+    public bool $needsReconfirm = false;
+
     public string $flashMessage = '';
 
     /** One of '' | 'success' | 'error'. */
@@ -218,6 +234,14 @@ final class OpenBankingSettingsPage extends Component
         // AND the session's acknowledgement flag is set (see class
         // docblock) — reuses the same gated sink a direct test call hits.
         $this->enableOpenBanking($db, $clock, $session, $currentUser, $query);
+
+        // WR-07: the enable above no-ops (leaving pendingConnectionId set,
+        // since it clears it only on success) when the SCA callback brought
+        // back a real connection but the ack had lapsed. Surface a visible
+        // re-confirm CTA rather than a silent disabled connector.
+        if ($this->pendingConnectionId !== null && ! $this->hasFreshAcknowledgement($session, $clock)) {
+            $this->needsReconfirm = true;
+        }
     }
 
     // -------------------------------------------------------------------
@@ -361,6 +385,43 @@ final class OpenBankingSettingsPage extends Component
         $session->forget('open_banking_acknowledged');
         $this->pendingConnectionId = null;
         $this->refreshState($currentUser, $query);
+    }
+
+    /**
+     * WR-07 re-confirm fallback: `wire:click="reconfirmEnable"` on the
+     * `$needsReconfirm` CTA. Reached only when a fully-consented
+     * `pendingConnectionId` survived the SCA redirect but its session ack
+     * lapsed before `mount()` could finalize the enable. Re-mints a fresh
+     * acknowledgement and re-runs the one enable sink on the SAME
+     * `pendingConnectionId` — it never restarts the consent dance.
+     *
+     * Security: `pendingConnectionId` is `#[Locked]` and could only have
+     * been populated by the server's own `open_banking_connected` redirect
+     * flash, which in turn is only ever emitted AFTER the loud B2 warning
+     * was confirmed (`confirmWarning()` -> wizard -> SCA callback). So this
+     * re-confirm refreshes the lapsed TTL for a connection the user already
+     * acknowledged; it cannot mint an ack for an arbitrary row. The
+     * `enableOpenBanking()` sink still independently re-scopes the write to
+     * the current user's own `user_id`.
+     */
+    public function reconfirmEnable(
+        DatabaseManager $db,
+        Clock $clock,
+        Session $session,
+        CurrentUser $currentUser,
+        OpenBankingConnectionQuery $query,
+    ): void {
+        if ($this->pendingConnectionId === null) {
+            // Nothing legitimate to finalize — clear the CTA and bail.
+            $this->needsReconfirm = false;
+
+            return;
+        }
+
+        $session->put('open_banking_acknowledged', $clock->now()->getTimestamp());
+
+        $this->enableOpenBanking($db, $clock, $session, $currentUser, $query);
+        $this->needsReconfirm = false;
     }
 
     // -------------------------------------------------------------------
