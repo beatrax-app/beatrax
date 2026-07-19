@@ -71,9 +71,20 @@ class EnableBankingHttpClient
      * (Req 11) is built from the typed `EnableBankingAccessScope` DTO,
      * so a `payments` key can never appear in the request body.
      *
+     * Named `initiateAuth()` rather than the more obvious `auth()`:
+     * `BoundaryArchTest`'s cross-module Auth-facade/helper guard bans the
+     * literal pattern `auth(` (its lookbehind only excludes `->`/`::`
+     * prefixes, not a `function ` declaration or a `->client->auth(...)`
+     * call site), which would otherwise false-positive-flag this
+     * method's declaration and its one call site in
+     * `OpenBankingConnectController` as an `auth()`-global-helper call
+     * even though neither has anything to do with Laravel's Auth facade
+     * (T-19-07-01 review-gate finding, fixed here rather than weakening
+     * the shared project-wide arch guard).
+     *
      * @return array<string, mixed>
      */
-    public function auth(
+    public function initiateAuth(
         string $institutionId,
         string $country,
         string $redirectUrl,
