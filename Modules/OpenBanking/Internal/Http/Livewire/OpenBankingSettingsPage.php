@@ -289,6 +289,21 @@ final class OpenBankingSettingsPage extends Component
      * entry (credentials + session/consent) and flips `enabled=false` +
      * blanks the local consent-expiry column so this connection can never
      * read as still-live (T-19-11-03).
+     *
+     * D-16 Wave 3 review-and-fix gate (19-14) hardening — single-live-
+     * session vs multi-row-connections honesty (19-10 deferred-items.md):
+     * `open_banking_connections` has no unique constraint stopping a user
+     * from accumulating one enabled row per institution over time (e.g.
+     * linking a second bank without disconnecting the first — the secrets
+     * file only ever holds ONE live session, so the earlier institution's
+     * row is silently orphaned but stays `enabled=true` with a still-valid
+     * `consent_expires_at`). The disconnect confirm copy promises
+     * unconditionally that "Automatic syncing stops immediately" — so this
+     * write is scoped to EVERY row belonging to the current user, not just
+     * the ONE connection `OpenBankingConnectionQuery` currently resolves
+     * and displays, otherwise an orphaned row from a different institution
+     * would keep being picked up by the `open-banking.daily-sync`
+     * scheduler after the user believes they have fully disconnected.
      */
     public function disconnect(
         OpenBankingSecretsRepository $secrets,
@@ -299,16 +314,13 @@ final class OpenBankingSettingsPage extends Component
     ): void {
         $secrets->clear();
 
-        if ($this->connectionId > 0) {
-            $db->connection()->table('open_banking_connections')
-                ->where('id', $this->connectionId)
-                ->where('user_id', $currentUser->user()->id)
-                ->update([
-                    'enabled' => false,
-                    'consent_expires_at' => null,
-                    'updated_at' => $clock->now()->toDateTimeString(),
-                ]);
-        }
+        $db->connection()->table('open_banking_connections')
+            ->where('user_id', $currentUser->user()->id)
+            ->update([
+                'enabled' => false,
+                'consent_expires_at' => null,
+                'updated_at' => $clock->now()->toDateTimeString(),
+            ]);
 
         $this->showDisconnectModal = false;
         $this->refreshState($currentUser, $query);

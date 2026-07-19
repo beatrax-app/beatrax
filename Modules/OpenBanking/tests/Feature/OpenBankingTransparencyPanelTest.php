@@ -177,6 +177,50 @@ it('the ON->OFF toggle click and the panel Disconnect button reach the SAME conf
     expect((bool) $enabled)->toBeFalse();
 });
 
+/*
+ * D-16 Wave 3 review-and-fix gate (19-14): single-live-session vs
+ * multi-row-connections honesty (19-10 deferred-items.md). The secrets
+ * file holds exactly ONE live Enable Banking session at a time, while
+ * `open_banking_connections` has no unique constraint stopping a user
+ * from accumulating one enabled row per institution (e.g. linking a
+ * second bank without ever disconnecting the first) — the orphaned first
+ * row stays enabled=true with a still-valid consent_expires_at, invisible
+ * to OpenBankingConnectionQuery (which only ever resolves the ONE row
+ * matching the secrets file's active institution). disconnect() must
+ * flip EVERY one of the user's rows to enabled=false, not just the one
+ * currently displayed, so the confirm-modal's unconditional "Automatic
+ * syncing stops immediately" promise is actually true — otherwise the
+ * orphaned row would still be picked up by the open-banking.daily-sync
+ * scheduler after the user believes they fully disconnected.
+ */
+it('disconnect() disables ALL of the user\'s connections, not just the one currently displayed', function (): void {
+    $user = otpUser('otp-disconnect-all-rows');
+    $this->actingAs($user);
+    otpSeedSecrets('ASNBNL21');
+    $displayedConnectionId = otpSeedConnection($user, ['institution_id' => 'ASNBNL21']);
+    $orphanedConnectionId = otpSeedConnection($user, [
+        'institution_id' => 'SNSBNL21',
+        'enabled' => true,
+        'consent_expires_at' => CarbonImmutable::now()->addDays(90)->toDateTimeString(),
+    ]);
+
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->assertSet('connectionId', $displayedConnectionId)
+        ->call('startDisconnect')
+        ->call('disconnect')
+        ->assertSet('enabled', false);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $orphanedRow = $db->connection()->table('open_banking_connections')->where('id', $orphanedConnectionId)->first();
+    expect((bool) $orphanedRow->enabled)->toBeFalse();
+    expect($orphanedRow->consent_expires_at)->toBeNull();
+
+    $displayedRow = $db->connection()->table('open_banking_connections')->where('id', $displayedConnectionId)->first();
+    expect((bool) $displayedRow->enabled)->toBeFalse();
+    expect($displayedRow->consent_expires_at)->toBeNull();
+});
+
 it('cancelDisconnect closes the modal without disconnecting', function (): void {
     $user = otpUser('otp-cancel-disconnect');
     $this->actingAs($user);
