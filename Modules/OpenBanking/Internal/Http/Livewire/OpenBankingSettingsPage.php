@@ -50,6 +50,14 @@ use Throwable;
  * `Livewire::test(...)->call('enableOpenBanking')` bypassing the wizard
  * sequencing entirely is a structural no-op without that flag.
  *
+ * WR-06: the genuine "the warning was shown" gate is the server-set,
+ * `#[Locked]` `$warningShown` flag (flipped true only inside
+ * `requestEnable()`), NOT the client-bound `$acknowledged` property.
+ * `$acknowledged` is a forgeable `wire:model.live` value; `confirmWarning()`
+ * therefore checks `$warningShown` first, so the real server-enforced gate
+ * is `$warningShown` (set server-side) plus the external SCA dance —
+ * `$acknowledged` is only the checkbox-level UX gate on top of it.
+ *
  * D-16 Wave 3 review-and-fix gate (19-14) hardening: the session
  * acknowledgement is stored as an EPOCH TIMESTAMP, not a bare boolean, and
  * `enableOpenBanking()` rejects it once it is older than
@@ -134,6 +142,20 @@ final class OpenBankingSettingsPage extends Component
     public bool $showWarningModal = false;
 
     public bool $acknowledged = false;
+
+    /**
+     * WR-06: the REAL server-side "the B2 warning was actually shown" gate.
+     * `$acknowledged` is a `wire:model.live` client property and is
+     * therefore forgeable — a crafted request can set it true without ever
+     * opening the modal. `$warningShown` is `#[Locked]` (client can never
+     * set it) and is flipped true ONLY inside `requestEnable()`, i.e. only
+     * once the server itself opened the B2 modal. `confirmWarning()` gates
+     * on it first, so a direct `confirmWarning()` call that skips
+     * `requestEnable()` is a no-op regardless of a forged `$acknowledged`.
+     * Single-use: reset to false on confirm-success and on cancel/close.
+     */
+    #[Locked]
+    public bool $warningShown = false;
 
     // -------------------------------------------------------------------
     // Disconnect confirm (shared by the ON->OFF toggle click AND the B4
@@ -231,6 +253,9 @@ final class OpenBankingSettingsPage extends Component
         }
 
         $this->acknowledged = false;
+        // WR-06: server-side proof the loud B2 modal was genuinely opened
+        // here — the load-bearing gate confirmWarning() checks first.
+        $this->warningShown = true;
         $this->showWarningModal = true;
     }
 
@@ -238,22 +263,38 @@ final class OpenBankingSettingsPage extends Component
     {
         $this->showWarningModal = false;
         $this->acknowledged = false;
+        // WR-06: closing the warning without confirming revokes the
+        // server-side "warning shown" proof — a later confirmWarning()
+        // must go back through requestEnable() first.
+        $this->warningShown = false;
     }
 
     /**
-     * B2's "Enable open banking" confirm action. Gated on
-     * `$this->acknowledged === true` — the Blade template already disables
-     * the button until the checkbox is checked, but this server-side check
-     * is not decorative: it is the FIRST of two independent gates (the
-     * second, load-bearing one is `enableOpenBanking()`'s own re-check —
-     * see class docblock). Persists the acknowledgement to the session as
-     * an epoch timestamp (not a bare boolean) so `enableOpenBanking()` can
-     * reject it once it goes stale (`ACK_TTL_SECONDS`) — it survives the
-     * external SCA redirect the wizard is about to start, but not
-     * indefinitely.
+     * B2's "Enable open banking" confirm action. Gated FIRST on the
+     * server-set `$this->warningShown` flag (WR-06): `$acknowledged` is a
+     * client-bound `wire:model.live` property and is forgeable, so on its
+     * own it proves nothing. `$warningShown` is `#[Locked]` and is set true
+     * only inside `requestEnable()`, so a direct `confirmWarning()` that
+     * never went through `requestEnable()` is a structural no-op here —
+     * regardless of a crafted `$acknowledged=true`. The `$acknowledged`
+     * check remains as the second, checkbox-level gate (the Blade template
+     * also disables the button until it is ticked).
+     *
+     * Persists the acknowledgement to the session as an epoch timestamp
+     * (not a bare boolean) so `enableOpenBanking()` can reject it once it
+     * goes stale (`ACK_TTL_SECONDS`) — it survives the external SCA redirect
+     * the wizard is about to start, but not indefinitely. `$warningShown`
+     * is single-use: it is cleared here on success so a second
+     * `confirmWarning()` cannot reuse the same "warning shown" proof.
      */
     public function confirmWarning(Session $session, Clock $clock): void
     {
+        // WR-06: genuine server-side gate — the modal must have been opened
+        // by requestEnable() on the server, not merely asserted by a forged
+        // client property.
+        if (! $this->warningShown) {
+            return;
+        }
         if ($this->acknowledged !== true) {
             return;
         }
@@ -261,6 +302,9 @@ final class OpenBankingSettingsPage extends Component
         $session->put('open_banking_acknowledged', $clock->now()->getTimestamp());
         $this->showWarningModal = false;
         $this->acknowledged = false;
+        // WR-06: single-use — consume the "warning shown" proof so it can
+        // never authorize a second confirm without a fresh requestEnable().
+        $this->warningShown = false;
 
         $this->dispatch('open-banking-wizard:open');
     }

@@ -96,6 +96,58 @@ it('confirmWarning without the checkbox checked does nothing', function (): void
     expect(session('open_banking_acknowledged'))->toBeNull();
 });
 
+it('WR-06: confirmWarning WITHOUT a prior requestEnable is a no-op even with a forged acknowledged flag', function (): void {
+    $user = owgUser('owg-forged-ack-no-request');
+    $this->actingAs($user);
+
+    // A crafted client can set the wire:model.live $acknowledged property
+    // directly, but never the #[Locked] $warningShown flag — so skipping
+    // requestEnable() leaves the server-side "warning shown" gate closed.
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->assertSet('warningShown', false)
+        ->set('acknowledged', true)
+        ->call('confirmWarning')
+        ->assertNotDispatched('open-banking-wizard:open');
+
+    expect(session('open_banking_acknowledged'))->toBeNull();
+});
+
+it('WR-06: the full requestEnable -> check -> confirmWarning path still works and consumes warningShown', function (): void {
+    $user = owgUser('owg-warning-shown-happy');
+    $this->actingAs($user);
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-19 12:00:00'));
+
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->call('requestEnable')
+        ->assertSet('warningShown', true)
+        ->set('acknowledged', true)
+        ->call('confirmWarning')
+        ->assertSet('warningShown', false)
+        ->assertDispatched('open-banking-wizard:open');
+
+    expect(session('open_banking_acknowledged'))->toBe(CarbonImmutable::parse('2026-07-19 12:00:00')->getTimestamp());
+
+    CarbonImmutable::setTestNow();
+});
+
+it('WR-06: cancelWarning revokes the warningShown proof', function (): void {
+    $user = owgUser('owg-cancel-revokes-proof');
+    $this->actingAs($user);
+
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->call('requestEnable')
+        ->assertSet('warningShown', true)
+        ->call('cancelWarning')
+        ->assertSet('warningShown', false)
+        // A confirm after cancel — even with the checkbox forged true —
+        // must not proceed without a fresh requestEnable().
+        ->set('acknowledged', true)
+        ->call('confirmWarning')
+        ->assertNotDispatched('open-banking-wizard:open');
+
+    expect(session('open_banking_acknowledged'))->toBeNull();
+});
+
 it('confirmWarning with the checkbox checked persists a fresh session-ack timestamp and opens the wizard', function (): void {
     $user = owgUser('owg-confirm-checked');
     $this->actingAs($user);
