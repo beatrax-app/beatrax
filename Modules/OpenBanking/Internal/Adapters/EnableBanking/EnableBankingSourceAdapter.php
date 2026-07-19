@@ -66,7 +66,7 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
 {
     public function __construct(
         private readonly EnableBankingHttpClient $client,
-        private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly LoggerInterface $logger = new NullLogger,
     ) {}
 
     public function format(): string
