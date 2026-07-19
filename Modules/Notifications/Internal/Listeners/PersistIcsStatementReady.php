@@ -10,6 +10,7 @@ use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\NotificationCopy;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Throwable;
 
 /**
@@ -48,6 +49,15 @@ final class PersistIcsStatementReady
 
     public function handle(IcsStatementReady $event): void
     {
+        // WR-15: resolve the deep link FIRST, tolerating a missing
+        // settings.open-banking route (OpenBanking is optional and may be
+        // disabled/unregistered). Evaluating route() inside the write()
+        // call would let a RouteNotFoundException abort the persist
+        // entirely — violating the store's "never prevent a row from being
+        // written" invariant — so a failed lookup degrades to a null (no)
+        // deep link instead.
+        $deepLinkRoute = $this->resolveDeepLinkRoute();
+
         try {
             $this->writer->write(
                 userId: $event->userId,
@@ -57,7 +67,7 @@ final class PersistIcsStatementReady
                 title: NotificationCopy::TITLE_ICS_STATEMENT_READY,
                 body: "Download it from the ICS portal and drop it into beatrax to keep this card's spending up to date.",
                 params: ['target_kind' => 'ics-import'],
-                deepLinkRoute: $this->urls->route('settings.open-banking').'#ics-import',
+                deepLinkRoute: $deepLinkRoute,
             );
         } catch (Throwable $e) {
             // Swallow — a failed persist must NEVER break the originating
@@ -66,6 +76,21 @@ final class PersistIcsStatementReady
                 'exception' => $e->getMessage(),
                 'userId' => $event->userId,
             ]);
+        }
+    }
+
+    /**
+     * The ICS nudge is conceptually independent of the OpenBanking module,
+     * so a missing `settings.open-banking` route (module disabled/route
+     * unregistered) must degrade to "no deep link", never stop the row
+     * being written (WR-15).
+     */
+    private function resolveDeepLinkRoute(): ?string
+    {
+        try {
+            return $this->urls->route('settings.open-banking').'#ics-import';
+        } catch (RouteNotFoundException) {
+            return null;
         }
     }
 }

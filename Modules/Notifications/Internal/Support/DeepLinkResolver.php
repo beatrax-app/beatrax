@@ -15,6 +15,7 @@ use Modules\Notifications\Public\Dto\NotificationDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
 /**
  * D-25's render-time deep-link existence check — the collaborator that
@@ -162,18 +163,27 @@ final readonly class DeepLinkResolver
 
     private function urlForAlwaysLive(string $targetKind): ?string
     {
-        return match ($targetKind) {
-            'dashboard' => $this->urls->route('dashboard'),
-            'forecast' => $this->urls->route('forecast.index'),
-            'inbox' => $this->urls->route('inboxes.index'),
-            'import' => $this->urls->route('imports.new'),
-            // Phase 19 (Req 14, D-14/D-15): the guided ICS file-import
-            // card's anchor (Surface B7, 19-15) — same target
-            // `PersistIcsStatementReady::handle()` passes as its
-            // `deepLinkRoute` OS-push argument.
-            'ics-import' => $this->urls->route('settings.open-banking').'#ics-import',
-            default => null,
-        };
+        try {
+            return match ($targetKind) {
+                'dashboard' => $this->urls->route('dashboard'),
+                'forecast' => $this->urls->route('forecast.index'),
+                'inbox' => $this->urls->route('inboxes.index'),
+                'import' => $this->urls->route('imports.new'),
+                // Phase 19 (Req 14, D-14/D-15): the guided ICS file-import
+                // card's anchor (Surface B7, 19-15) — same target
+                // `PersistIcsStatementReady::handle()` passes as its
+                // `deepLinkRoute` OS-push argument.
+                'ics-import' => $this->urls->route('settings.open-banking').'#ics-import',
+                default => null,
+            };
+        } catch (RouteNotFoundException) {
+            // WR-15: an always-live kind whose route is not registered
+            // (e.g. 'ics-import' when the optional OpenBanking module is
+            // disabled) degrades to a disabled link — the caller turns a
+            // null url into the [null, true] shape — rather than 500-ing
+            // /notifications, consistent with the other resolver arms.
+            return null;
+        }
     }
 
     /**
