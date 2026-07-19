@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Config\Repository;
-use Modules\EmailScan\Internal\LoopbackRedirectUri;
+use Modules\EmailScan\Public\LoopbackRedirectUri;
 
 it('uses the explicit OAUTH_LOOPBACK_PORT override when set', function (): void {
     $config = new Repository([
@@ -67,4 +67,24 @@ it('defaults to port 8000 when app.url is unset entirely', function (): void {
 
     expect((new LoopbackRedirectUri($config))->forProvider('gmail'))
         ->toBe('http://127.0.0.1:8000/oauth/callback/gmail');
+});
+
+it('defaults to the http scheme when no scheme argument is passed (gmail/microsoft are unaffected by the Public promotion)', function (): void {
+    $config = new Repository([
+        'email-scan' => ['oauth_loopback_port' => 9123],
+        'app' => ['url' => 'https://beatrax.test'],
+    ]);
+
+    expect((new LoopbackRedirectUri($config))->forProvider('microsoft'))
+        ->toBe('http://127.0.0.1:9123/oauth/callback/microsoft');
+});
+
+it('honors an explicit https scheme override (19-05 Gate 0/A2: Enable Banking requires HTTPS-only loopback redirects)', function (): void {
+    $config = new Repository([
+        'email-scan' => ['oauth_loopback_port' => 9123],
+        'app' => ['url' => 'https://beatrax.test'],
+    ]);
+
+    expect((new LoopbackRedirectUri($config))->forProvider('open-banking', scheme: 'https'))
+        ->toBe('https://127.0.0.1:9123/oauth/callback/open-banking');
 });
