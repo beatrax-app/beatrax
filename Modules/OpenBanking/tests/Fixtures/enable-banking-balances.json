@@ -1,0 +1,22 @@
+{
+    "balances": [
+        {
+            "name": "Closing booked",
+            "balance_amount": {
+                "amount": "1230.57",
+                "currency": "EUR"
+            },
+            "balance_type": "CLBD",
+            "reference_date": "2026-02-07"
+        },
+        {
+            "name": "Expected",
+            "balance_amount": {
+                "amount": "1218.08",
+                "currency": "EUR"
+            },
+            "balance_type": "XPCD",
+            "reference_date": "2026-02-07"
+        }
+    ]
+}

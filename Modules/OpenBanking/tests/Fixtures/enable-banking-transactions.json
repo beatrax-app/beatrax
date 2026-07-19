@@ -1,0 +1,117 @@
+{
+    "transactions": [
+        {
+            "entry_reference": "20260202-898406",
+            "transaction_id": "EB-TXN-0001",
+            "status": "BOOK",
+            "booking_date": "2026-02-02",
+            "value_date": "2026-02-02",
+            "transaction_amount": {
+                "amount": "3.99",
+                "currency": "EUR"
+            },
+            "credit_debit_indicator": "DBIT",
+            "creditor": {
+                "name": "Albert Heijn"
+            },
+            "creditor_account": {
+                "iban": "NL67BANK0000000019"
+            },
+            "debtor": null,
+            "debtor_account": null,
+            "remittance_information": [
+                "Betaling voor factuur"
+            ],
+            "bank_transaction_code": {
+                "domain": "PMNT",
+                "family": "RDDT",
+                "sub_family": "ESDD"
+            }
+        },
+        {
+            "entry_reference": "20260205-2850362",
+            "transaction_id": "EB-TXN-0002",
+            "status": "BOOK",
+            "booking_date": "2026-02-05",
+            "value_date": "2026-02-05",
+            "transaction_amount": {
+                "amount": "11.67",
+                "currency": "EUR"
+            },
+            "credit_debit_indicator": "CRDT",
+            "creditor": null,
+            "creditor_account": null,
+            "debtor": {
+                "name": "Coolblue 2"
+            },
+            "debtor_account": {
+                "iban": "NL89BANK0000000011"
+            },
+            "remittance_information": [
+                "XXXXXXXXXXXX/KLANT XXXXXXXXX KNMRK XXXXXXXXX/FACT XXXXXXXXXXX DAT. XXXXXXXX/ 11,67"
+            ],
+            "bank_transaction_code": {
+                "domain": "PMNT",
+                "family": "RCDT",
+                "sub_family": "ESCT"
+            }
+        },
+        {
+            "entry_reference": "20260206-0000001",
+            "transaction_id": "EB-TXN-0003",
+            "status": "PDNG",
+            "booking_date": "2026-02-06",
+            "value_date": "2026-02-06",
+            "transaction_amount": {
+                "amount": "24.50",
+                "currency": "EUR"
+            },
+            "credit_debit_indicator": "DBIT",
+            "creditor": {
+                "name": "Pending Merchant BV"
+            },
+            "creditor_account": {
+                "iban": "NL20BANK0000000099"
+            },
+            "debtor": null,
+            "debtor_account": null,
+            "remittance_information": [
+                "Card authorisation hold, not yet booked"
+            ],
+            "bank_transaction_code": {
+                "domain": "PMNT",
+                "family": "ICDT",
+                "sub_family": "CARD"
+            }
+        },
+        {
+            "entry_reference": "20260207-0000042",
+            "transaction_id": "EB-TXN-0004",
+            "status": "BOOK",
+            "booking_date": "2026-02-07",
+            "value_date": "2026-02-07",
+            "transaction_amount": {
+                "amount": "12.99",
+                "currency": "EUR"
+            },
+            "credit_debit_indicator": "DBIT",
+            "creditor": {
+                "name": "Netflix"
+            },
+            "creditor_account": {
+                "iban": "IE00BANK0000000042"
+            },
+            "debtor": null,
+            "debtor_account": null,
+            "remittance_information": [
+                "Netflix.com subscription"
+            ],
+            "bank_transaction_code": {
+                "domain": "PMNT",
+                "family": "RDDT",
+                "sub_family": "ESDD"
+            }
+        }
+    ],
+    "continuation_key": null
+}
