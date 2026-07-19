@@ -236,6 +236,53 @@ it('cancel() leaves a fully-registered application untouched (reconnect flow ski
     expect($loaded->applicationId)->toBe('existing-application-id');
 });
 
+/*
+ * D-16 Wave 3 review-and-fix gate (19-14): cancel() must forget the
+ * `open_banking_acknowledged` session flag `OpenBankingSettingsPage::
+ * confirmWarning()` sets before dispatching this wizard's open event —
+ * otherwise abandoning the wizard mid-flow (after confirming the B2
+ * warning but before completing the consent dance) leaves a live
+ * "enable" authorization token sitting in the session, reachable later
+ * without ever repeating the warning gate (see OpenBankingSettingsPage's
+ * own hardening + OpenBankingWarningGateTest's stale-ack coverage).
+ */
+it('cancel() forgets the session open-banking-acknowledged flag, regardless of registration state', function (): void {
+    $user = obwUser('obw-cancel-forgets-ack');
+
+    session(['open_banking_acknowledged' => now()->getTimestamp()]);
+
+    Livewire::actingAs($user)
+        ->test(OpenBankingWizardModal::class)
+        ->call('generateKeypair')
+        ->call('cancel');
+
+    expect(session('open_banking_acknowledged'))->toBeNull();
+});
+
+it('cancel() forgets the session ack flag even when a fully-registered application is left untouched', function (): void {
+    $user = obwUser('obw-cancel-forgets-ack-registered');
+
+    /** @var OpenBankingSecretsRepository $secrets */
+    $secrets = $this->app->make(OpenBankingSecretsRepository::class);
+    $secrets->save(new OpenBankingCredentials(
+        applicationId: 'existing-application-id',
+        privateKeyPem: "-----BEGIN PRIVATE KEY-----\nexisting-fixture\n-----END PRIVATE KEY-----",
+        sessionId: null,
+        consentExpiresAt: null,
+        bankScaHost: null,
+        institutionId: null,
+    ));
+    session(['open_banking_acknowledged' => now()->getTimestamp()]);
+
+    Livewire::actingAs($user)
+        ->test(OpenBankingWizardModal::class)
+        ->call('chooseBank', 'asn')
+        ->call('cancel');
+
+    expect(session('open_banking_acknowledged'))->toBeNull();
+    expect($secrets->hasApplication())->toBeTrue();
+});
+
 it('has no constructor — service collaborators arrive only as action-method parameters (Livewire strict-rules requirement)', function (): void {
     $reflection = new ReflectionClass(OpenBankingWizardModal::class);
     expect($reflection->getConstructor())->toBeNull();

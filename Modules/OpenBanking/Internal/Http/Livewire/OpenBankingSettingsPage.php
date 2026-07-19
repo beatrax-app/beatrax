@@ -43,6 +43,21 @@ use Throwable;
  * `Livewire::test(...)->call('enableOpenBanking')` bypassing the wizard
  * sequencing entirely is a structural no-op without that flag.
  *
+ * D-16 Wave 3 review-and-fix gate (19-14) hardening: the session
+ * acknowledgement is stored as an EPOCH TIMESTAMP, not a bare boolean, and
+ * `enableOpenBanking()` rejects it once it is older than
+ * `ACK_TTL_SECONDS`. Without this, a user who checks the box and confirms
+ * the B2 warning but then abandons the wizard (closes the tab instead of
+ * clicking "Cancel") would leave a live, indefinitely-valid authorization
+ * token sitting in their session — later reachable directly by setting
+ * the attacker-settable `$pendingConnectionId` property (see
+ * `enableOpenBanking()`'s own docblock) to any of the user's own OTHER,
+ * previously-disconnected connection rows, re-enabling one WITHOUT ever
+ * repeating the loud-warning gate or a fresh consent dance for it.
+ * `OpenBankingWizardModal::cancel()` additionally clears the flag
+ * immediately on an explicit cancel, so the TTL is only ever the residual
+ * (bounded) exposure window for a silently-abandoned tab.
+ *
  * Service collaborators arrive as parameters on each action method — the
  * Livewire strict-rules ruleset forbids constructor-DI on Component
  * subclasses (verbatim convention from every other Livewire component in
@@ -50,6 +65,14 @@ use Throwable;
  */
 final class OpenBankingSettingsPage extends Component
 {
+    /**
+     * Generous enough to survive the full wizard dance (the user leaves
+     * this tab, logs into their bank, completes 2FA, and returns) without
+     * ever needing to re-acknowledge — but bounded, so an abandoned tab
+     * cannot leave a standing authorization to enable OB indefinitely.
+     */
+    private const ACK_TTL_SECONDS = 1800;
+
     // -------------------------------------------------------------------
     // Connection state (OpenBankingConnectionQuery::current() projection)
     // -------------------------------------------------------------------
@@ -185,16 +208,19 @@ final class OpenBankingSettingsPage extends Component
      * the button until the checkbox is checked, but this server-side check
      * is not decorative: it is the FIRST of two independent gates (the
      * second, load-bearing one is `enableOpenBanking()`'s own re-check —
-     * see class docblock). Persists the acknowledgement to the session so
-     * it survives the external SCA redirect the wizard is about to start.
+     * see class docblock). Persists the acknowledgement to the session as
+     * an epoch timestamp (not a bare boolean) so `enableOpenBanking()` can
+     * reject it once it goes stale (`ACK_TTL_SECONDS`) — it survives the
+     * external SCA redirect the wizard is about to start, but not
+     * indefinitely.
      */
-    public function confirmWarning(Session $session): void
+    public function confirmWarning(Session $session, Clock $clock): void
     {
         if ($this->acknowledged !== true) {
             return;
         }
 
-        $session->put('open_banking_acknowledged', true);
+        $session->put('open_banking_acknowledged', $clock->now()->getTimestamp());
         $this->showWarningModal = false;
         $this->acknowledged = false;
 
@@ -221,7 +247,7 @@ final class OpenBankingSettingsPage extends Component
         if ($this->pendingConnectionId === null) {
             return;
         }
-        if ($session->get('open_banking_acknowledged') !== true) {
+        if (! $this->hasFreshAcknowledgement($session, $clock)) {
             return;
         }
 
@@ -547,6 +573,25 @@ final class OpenBankingSettingsPage extends Component
         $this->lastAttemptStatus = $view->lastAttemptStatus;
         $this->aggregator = $view->aggregator;
         $this->whatsFetched = $view->whatsFetched;
+    }
+
+    /**
+     * True only when the session carries an `open_banking_acknowledged`
+     * epoch timestamp AND that timestamp is within `ACK_TTL_SECONDS` of
+     * now. Rejects a stale/leftover flag from an abandoned confirmWarning()
+     * call (D-16 Wave 3 review hardening — see class docblock) as well as
+     * any non-integer value a legacy/tampered session might carry.
+     */
+    private function hasFreshAcknowledgement(Session $session, Clock $clock): bool
+    {
+        $ackAt = $session->get('open_banking_acknowledged');
+        if (! is_int($ackAt)) {
+            return false;
+        }
+
+        $age = $clock->now()->getTimestamp() - $ackAt;
+
+        return $age >= 0 && $age <= self::ACK_TTL_SECONDS;
     }
 
     private function consumeRedirectFlashes(Session $session): void
