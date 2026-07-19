@@ -168,12 +168,22 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
         // whole field table (RESEARCH.md Pattern 2). value_date is
         // carried on valueDate only, which is outside the fingerprint
         // hash tuple.
-        $bookedAt = CarbonImmutable::parse($row->bookingDate)->startOfDay();
+        $bookedAt = $this->parseRequiredDate($row->bookingDate, 'booking_date');
+
+        // Mirrors Camt053Adapter's `$entry->getValueDate() ?? $booking`
+        // fallback: an EB row missing value_date reuses the booking date
+        // rather than silently falling through to CarbonImmutable::parse('')
+        // (which resolves to the WALL CLOCK, not a date derived from the
+        // response — see parseRequiredDate()'s docblock for why that is
+        // unacceptable; valueDate itself is outside the fingerprint hash
+        // tuple, but a wall-clock value here would still be a silent
+        // data-integrity defect on the DTO).
+        $valueDateRaw = $row->valueDate !== '' ? $row->valueDate : $row->bookingDate;
 
         return new SourceTransactionDto(
             bookedAt: $bookedAt,
-            postedAt: CarbonImmutable::parse($row->bookingDate)->startOfDay(),
-            valueDate: CarbonImmutable::parse($row->valueDate)->startOfDay(),
+            postedAt: $bookedAt,
+            valueDate: $this->parseRequiredDate($valueDateRaw, 'value_date'),
             ownIban: $ownIban,
             counterpartyIban: $counterpartyIban,
             counterpartyName: $counterpartyName,
@@ -184,6 +194,32 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
             rawPayload: $this->serialiseEnableBankingFragment($row),
             sourceRowIndex: $rowIndex,
         );
+    }
+
+    /**
+     * `CarbonImmutable::parse('')` does NOT throw — it silently resolves
+     * to the WALL CLOCK ("now"), not a date derived from the aggregator's
+     * response. `EnableBankingTransactionData::fromArray()` defaults a
+     * missing/non-string `booking_date`/`value_date` to `''`
+     * (`stringOrEmpty()`), so without this guard a malformed or
+     * incomplete EB response would silently derive the fingerprinted
+     * `bookedAt`/`postedAt` fields from the moment the fetch happened to
+     * run — exactly the failure mode `Camt053Adapter::buildDto()`
+     * explicitly rejects (`InvalidAmountException` when both `BookgDt`
+     * and `ValDt` are absent) rather than allow. Getting this wrong here
+     * is silent and would break "zero net-new duplicates" on any re-fetch
+     * of the same window, since two fetches of an incomplete row would
+     * each stamp a different wall-clock date and never re-collide.
+     */
+    private function parseRequiredDate(string $raw, string $fieldName): CarbonImmutable
+    {
+        if ($raw === '') {
+            throw new RuntimeException(
+                "EnableBankingSourceAdapter: transaction row is missing {$fieldName}; refusing to derive a fingerprinted date from the wall clock."
+            );
+        }
+
+        return CarbonImmutable::parse($raw)->startOfDay();
     }
 
     /**

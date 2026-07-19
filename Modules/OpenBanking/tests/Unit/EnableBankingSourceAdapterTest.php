@@ -268,6 +268,65 @@ it('produces fingerprint parity with the overlapping ASN CAMT.053 fixture rows',
     expect(hash('sha256', $albertTuple))->toBe(hash('sha256', $camtAlbertTuple));
 });
 
+it('throws rather than silently deriving a fingerprinted date from the wall clock when booking_date is missing', function (): void {
+    // `CarbonImmutable::parse('')` does NOT throw — it silently resolves
+    // to "now". A malformed/incomplete EB row must never let that reach
+    // `bookedAt`/`postedAt` (the fingerprinted fields), mirroring
+    // `Camt053Adapter::buildDto()`'s explicit rejection of an `<Ntry>`
+    // missing both `BookgDt` and `ValDt`.
+    $transactions = [
+        'transactions' => [[
+            'entry_reference' => 'REF-MISSING-DATE',
+            'transaction_id' => 'TXN-MISSING-DATE',
+            'status' => 'BOOK',
+            'booking_date' => '',
+            'value_date' => '2026-03-12',
+            'transaction_amount' => ['amount' => '5.00', 'currency' => 'EUR'],
+            'credit_debit_indicator' => 'DBIT',
+            'creditor' => ['name' => 'Test Merchant'],
+            'creditor_account' => ['iban' => 'NL00TEST0000000001'],
+            'debtor' => null,
+            'debtor_account' => null,
+            'remittance_information' => ['test'],
+            'bank_transaction_code' => null,
+        ]],
+        'continuation_key' => null,
+    ];
+    $client = ebFixtureHttpClient($transactions, $this->accountDetailsResponse);
+    $adapter = new EnableBankingSourceAdapter($client);
+
+    expect(fn () => iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials())))
+        ->toThrow(RuntimeException::class, 'booking_date');
+});
+
+it('falls back value_date to booking_date rather than the wall clock when value_date is missing', function (): void {
+    $transactions = [
+        'transactions' => [[
+            'entry_reference' => 'REF-MISSING-VALUE-DATE',
+            'transaction_id' => 'TXN-MISSING-VALUE-DATE',
+            'status' => 'BOOK',
+            'booking_date' => '2026-03-10',
+            'value_date' => '',
+            'transaction_amount' => ['amount' => '5.00', 'currency' => 'EUR'],
+            'credit_debit_indicator' => 'DBIT',
+            'creditor' => ['name' => 'Test Merchant'],
+            'creditor_account' => ['iban' => 'NL00TEST0000000001'],
+            'debtor' => null,
+            'debtor_account' => null,
+            'remittance_information' => ['test'],
+            'bank_transaction_code' => null,
+        ]],
+        'continuation_key' => null,
+    ];
+    $client = ebFixtureHttpClient($transactions, $this->accountDetailsResponse);
+    $adapter = new EnableBankingSourceAdapter($client);
+
+    $rows = iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials()));
+
+    expect($rows)->toHaveCount(1);
+    expect($rows[0]->valueDate->toDateTimeString())->toBe('2026-03-10 00:00:00');
+});
+
 it('supports pagination via continuation_key without dropping later pages', function (): void {
     $firstPage = [
         'transactions' => [[
