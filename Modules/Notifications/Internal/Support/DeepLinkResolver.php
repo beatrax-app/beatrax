@@ -45,9 +45,11 @@ final readonly class DeepLinkResolver
      * `target_kind` values that never carry a deletable per-user entity —
      * always live, never disabled. `dashboard`/`forecast` per D-25;
      * `inbox`/`import` are the coalesced-import trigger's equivalent
-     * no-deletable-entity targets (PersistCoalescedImport).
+     * no-deletable-entity targets (PersistCoalescedImport); `ics-import`
+     * (Phase 19, Req 14) is `PersistIcsStatementReady`'s equivalent — a
+     * static settings anchor, never a per-user deletable row.
      */
-    private const ALWAYS_LIVE_KINDS = ['dashboard', 'forecast', 'inbox', 'import'];
+    private const ALWAYS_LIVE_KINDS = ['dashboard', 'forecast', 'inbox', 'import', 'ics-import'];
 
     public function __construct(
         private DatabaseManager $db,
@@ -165,6 +167,11 @@ final readonly class DeepLinkResolver
             'forecast' => $this->urls->route('forecast.index'),
             'inbox' => $this->urls->route('inboxes.index'),
             'import' => $this->urls->route('imports.new'),
+            // Phase 19 (Req 14, D-14/D-15): the guided ICS file-import
+            // card's anchor (Surface B7, 19-15) — same target
+            // `PersistIcsStatementReady::handle()` passes as its
+            // `deepLinkRoute` OS-push argument.
+            'ics-import' => $this->urls->route('settings.open-banking').'#ics-import',
             default => null,
         };
     }

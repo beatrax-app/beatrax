@@ -51,6 +51,9 @@ final class DeterministicKeyDeriver
 
     public const TRIGGER_SAVINGS_PROMPT = 'savings_prompt';
 
+    /** Phase 19 (Req 14, D-14/D-15) — the ICS "statement ready" nudge. */
+    public const TRIGGER_ICS_STATEMENT_READY = 'ics_statement_ready';
+
     public function derive(int $userId, string $triggerType, string $subjectKey, string $occurrence): string
     {
         $payload = json_encode(

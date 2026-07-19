@@ -43,12 +43,22 @@ use Psr\Log\LoggerInterface;
  */
 final class SuppressionEvaluator
 {
-    /** Trigger types that carry no D-36 control-list toggle — always deliverable. */
+    /**
+     * Trigger types that carry no D-36 control-list toggle — always
+     * deliverable. `TRIGGER_ICS_STATEMENT_READY` (Phase 19, Req 14) joins
+     * this set rather than `triggerEnabled()`'s default arm: this plan
+     * introduces no new NotificationPreferencesDto field for it, and the
+     * default arm's "unrecognised trigger" fallback silently suppresses
+     * delivery + logs a warning on every single fire — the correct
+     * behaviour for a genuinely forgotten pref-wiring bug, not for a
+     * trigger that intentionally has no per-trigger toggle yet.
+     */
     private const ALWAYS_DELIVERABLE = [
         DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
         DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
         DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
         DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
+        DeterministicKeyDeriver::TRIGGER_ICS_STATEMENT_READY,
     ];
 
     private bool $seeding = false;
