@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Internal\Jobs;
 
 use Carbon\CarbonImmutable;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
@@ -141,10 +142,20 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
                 continue;
             }
 
+            // WR-13: one malformed internal_date must not abort the whole
+            // per-user sweep (and re-fail every $tries retry). Skip the row
+            // on an unparseable date, matching the is_numeric/is_string
+            // guard style above.
+            try {
+                $internalDate = CarbonImmutable::parse($internalDateRaw);
+            } catch (InvalidFormatException) {
+                continue;
+            }
+
             $events->dispatch(new IcsStatementReady(
                 userId: $this->userId,
                 messageId: $messageId,
-                internalDate: CarbonImmutable::parse($internalDateRaw),
+                internalDate: $internalDate,
             ));
         }
     }
