@@ -115,6 +115,23 @@ final class OpenBankingFetchService
             );
         }
 
+        // WR-11: self-guard on enabled + consent-not-expired, re-loaded
+        // from the row, using the SAME predicate SyncOpenBankingAccountJob::
+        // handle() applies on pickup. syncNow()'s only other gate is the
+        // (now #[Locked]) component props; this makes the fetch service
+        // safe regardless of caller state.
+        $enabled = (bool) $connection->enabled;
+        $consentExpiresAtRaw = $connection->consent_expires_at ?? null;
+        $consentValid = is_string($consentExpiresAtRaw)
+            && $consentExpiresAtRaw !== ''
+            && CarbonImmutable::parse($consentExpiresAtRaw)->isFuture();
+
+        if (! $enabled || ! $consentValid) {
+            throw new RuntimeException(
+                "OpenBankingFetchService: connection {$connectionId} is not enabled or its consent has expired — refusing to fetch."
+            );
+        }
+
         $institutionIdRaw = $connection->institution_id ?? null;
         $institutionId = is_string($institutionIdRaw) ? $institutionIdRaw : '';
 
