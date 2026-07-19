@@ -47,6 +47,10 @@
         </div>
     </div>
 
+    {{-- ===== B5: consent-expiry banner (Req 7/8) — rendered above the
+         transparency panel when consent has expired ===== --}}
+    @include('openbanking::partials.open-banking-consent-banner')
+
     {{-- ===== B4: transparency panel (Req 6) ===== --}}
     @include('openbanking::partials.open-banking-transparency-panel')
 

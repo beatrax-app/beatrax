@@ -271,6 +271,62 @@ final class OpenBankingSettingsPage extends Component
         $this->refreshState($currentUser, $query);
     }
 
+    // -------------------------------------------------------------------
+    // B5: consent-expiry re-link flow (Req 7/8)
+    // -------------------------------------------------------------------
+
+    /**
+     * `wire:click="reconnect"` on the B5 banner. Re-opens the wizard at
+     * Step 4 (bank picker) — reusing the already-registered application —
+     * with the previously-connected institution pre-selected, rather than
+     * making the user re-choose a bank they already linked once. Never
+     * touches `last_successful_sync_at`; consent status flips back to
+     * "Connected" only once the re-link's callback updates
+     * `consent_expires_at`, and the freshness signal itself advances only
+     * on the NEXT actual successful fetch (Req 7).
+     */
+    public function reconnect(): void
+    {
+        if ($this->connectionId <= 0 || $this->institutionId === '') {
+            return;
+        }
+
+        [$bankChoice, $otherInstitutionId] = self::wizardChoiceFor($this->institutionId);
+
+        $this->dispatch(
+            'open-banking-wizard:open',
+            startStep: 4,
+            bankChoice: $bankChoice,
+            otherInstitutionId: $otherInstitutionId,
+        );
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private static function wizardChoiceFor(string $institutionId): array
+    {
+        return match ($institutionId) {
+            'ASNBNL21' => ['asn', ''],
+            'SNSBNL21' => ['sns', ''],
+            default => ['other', $institutionId],
+        };
+    }
+
+    /**
+     * B5 banner body: "Your last successful sync was {relative time}." —
+     * relative-only (unlike the panel's combined relative+absolute
+     * display), matching the UI-SPEC copy exactly.
+     */
+    public function lastSuccessfulSyncRelative(): ?string
+    {
+        if ($this->lastSuccessfulSyncAtIso === null) {
+            return null;
+        }
+
+        return CarbonImmutable::parse($this->lastSuccessfulSyncAtIso)->diffForHumans();
+    }
+
     public function render(ViewFactory $views): View
     {
         return $views->make('openbanking::livewire.open-banking-settings-page');
