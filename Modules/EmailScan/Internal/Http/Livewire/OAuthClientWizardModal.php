@@ -8,7 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Modules\EmailScan\Internal\LoopbackRedirectUri;
+use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 
