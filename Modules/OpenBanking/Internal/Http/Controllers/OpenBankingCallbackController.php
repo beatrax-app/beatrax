@@ -74,7 +74,7 @@ final class OpenBankingCallbackController
                 : $errorParam;
 
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_canceled', $message);
         }
 
@@ -93,14 +93,14 @@ final class OpenBankingCallbackController
         $code = is_string($codeRaw) ? $codeRaw : '';
         if ($code === '') {
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', 'Enable Banking callback returned no authorization code.');
         }
 
         $credentials = $this->secrets->load();
         if ($credentials === null || $credentials->institutionId === null) {
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', 'Finish the Open Banking setup wizard first.');
         }
 
@@ -108,14 +108,14 @@ final class OpenBankingCallbackController
             $session = $this->client->createSession($code);
         } catch (RuntimeException $e) {
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', $e->getMessage());
         }
 
         $sessionId = $this->client->sessionIdFrom($session);
         if ($sessionId === null) {
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', 'Enable Banking did not return a session id.');
         }
 
@@ -204,12 +204,12 @@ final class OpenBankingCallbackController
             }
 
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', $e->getMessage());
         }
 
         return $this->redirector
-            ->route('settings')
+            ->route('settings.open-banking')
             ->with('open_banking_connected', $connectionId);
     }
 }

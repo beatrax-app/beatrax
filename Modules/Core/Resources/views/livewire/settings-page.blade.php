@@ -293,6 +293,13 @@
         </section>
     </div>
 
+    {{-- ===== Open banking (Phase 19) — Aliases link-out shape, Surface A ===== --}}
+    <div class="{{ $card }}">
+        <section id="open-banking">
+            @livewire('openbanking.open-banking-status-row')
+        </section>
+    </div>
+
     {{-- ===== Importing (auto-import + aliases) ===== --}}
     <div class="{{ $card }} space-y-8">
         <section class="space-y-2">

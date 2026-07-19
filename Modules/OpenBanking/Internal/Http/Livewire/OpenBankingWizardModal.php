@@ -81,14 +81,39 @@ final class OpenBankingWizardModal extends Component
 
     public string $errorMessage = '';
 
+    /**
+     * Opens the wizard. Called with no arguments for the FIRST-time
+     * onboarding flow (19-11's `confirmWarning()`) — always resets to
+     * Step 1. Called with `$startStep`/`$bankChoice`/`$otherInstitutionId`
+     * for the RECONNECT flow (19-11's `reconnect()`, UI-SPEC Surface B5):
+     * skips straight to the bank-picker step, reusing the already-
+     * registered application.
+     *
+     * 19-07's Wave 1 review flagged that always resetting to Step 1 would
+     * silently overwrite an already-generated RSA private key + wipe
+     * `application_id` if this method were ever reached by a reconnect
+     * while a full registration already existed — confirmed unreachable
+     * at the time because the wizard was not yet mounted on any page.
+     * Now that 19-11 mounts it, `$startStep` is honored ONLY when
+     * `hasApplication()` is true (a defensive re-check, not just trusting
+     * the caller) — a reconnect can never regenerate a keypair, and a
+     * missing/incomplete registration always falls back to Step 1
+     * regardless of what the caller requested.
+     */
     #[On('open-banking-wizard:open')]
-    public function open(): void
-    {
-        $this->step = self::STEP_KEYPAIR;
+    public function open(
+        OpenBankingSecretsRepository $secrets,
+        ?int $startStep = null,
+        string $bankChoice = '',
+        string $otherInstitutionId = '',
+    ): void {
+        $canSkipToRequestedStep = $startStep !== null && $secrets->hasApplication();
+
+        $this->step = $canSkipToRequestedStep ? $startStep : self::STEP_KEYPAIR;
         $this->publicKeyPem = '';
         $this->applicationId = '';
-        $this->bankChoice = '';
-        $this->otherInstitutionId = '';
+        $this->bankChoice = $canSkipToRequestedStep ? $bankChoice : '';
+        $this->otherInstitutionId = $canSkipToRequestedStep ? $otherInstitutionId : '';
         $this->errorMessage = '';
 
         $this->dispatch('modal-show', name: 'open-banking-wizard');

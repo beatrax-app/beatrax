@@ -78,7 +78,7 @@ final class OpenBankingConnectController
     {
         if (! $this->secrets->hasApplication()) {
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', 'Finish the Open Banking setup wizard first.');
         }
 
@@ -86,7 +86,7 @@ final class OpenBankingConnectController
         $institutionId = is_string($institutionIdRaw) ? trim($institutionIdRaw) : '';
         if ($institutionId === '') {
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', 'Choose a bank before connecting.');
         }
 
@@ -106,21 +106,21 @@ final class OpenBankingConnectController
             );
         } catch (RuntimeException $e) {
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', $e->getMessage());
         }
 
         $consentUrl = $response['url'] ?? null;
         if (! is_string($consentUrl) || $consentUrl === '') {
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', 'Enable Banking did not return a consent URL.');
         }
 
         $scaHost = parse_url($consentUrl, PHP_URL_HOST);
         if (! is_string($scaHost) || $scaHost === '') {
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', 'Enable Banking returned an unparseable consent URL.');
         }
 
@@ -128,7 +128,7 @@ final class OpenBankingConnectController
             $this->persistResolvedScaHost(strtolower($scaHost), $institutionId);
         } catch (SecretsWriteFailed $e) {
             return $this->redirector
-                ->route('settings')
+                ->route('settings.open-banking')
                 ->with('open_banking_failed', $e->getMessage());
         }
 

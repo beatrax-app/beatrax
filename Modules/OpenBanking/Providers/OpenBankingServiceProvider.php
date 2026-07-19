@@ -10,11 +10,14 @@ use Livewire\LivewireManager;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingSourceAdapter;
+use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
+use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingStatusRow;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingWizardModal;
 use Modules\OpenBanking\Internal\Listeners\RaiseOpenBankingReconsentAlert;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
 use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
 use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
@@ -41,9 +44,9 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
  * the dependency `OpenBankingFetchService` (and, transitively,
  * `SyncOpenBankingAccountJob`) resolves through the interface —
  * and registers `OpenBankingFetchService` as a singleton (stateless:
- * every call reads fresh connection/credential state). Later waves own
- * the scheduler entries and the settings-page wiring; this plan's
- * single-owner discipline forbids adding any of that here yet.
+ * every call reads fresh connection/credential state). 19-11 additionally
+ * registers `OpenBankingConnectionQuery` (stateless read service) and the
+ * `/settings/open-banking` page + Settings entry row Livewire components.
  */
 final class OpenBankingServiceProvider extends ServiceProvider
 {
@@ -56,6 +59,7 @@ final class OpenBankingServiceProvider extends ServiceProvider
         $this->app->singleton(RaiseOpenBankingReconsentAlert::class);
         $this->app->singleton(RemoteSourceAdapter::class, EnableBankingSourceAdapter::class);
         $this->app->singleton(OpenBankingFetchService::class);
+        $this->app->singleton(OpenBankingConnectionQuery::class);
     }
 
     public function boot(LivewireManager $livewire, EventsDispatcher $events): void
@@ -73,5 +77,7 @@ final class OpenBankingServiceProvider extends ServiceProvider
         }
 
         $livewire->component('openbanking.open-banking-wizard-modal', OpenBankingWizardModal::class);
+        $livewire->component('openbanking.open-banking-settings-page', OpenBankingSettingsPage::class);
+        $livewire->component('openbanking.open-banking-status-row', OpenBankingStatusRow::class);
     }
 }
