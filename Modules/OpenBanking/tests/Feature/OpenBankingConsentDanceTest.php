@@ -173,7 +173,7 @@ it('connect redirects to settings with a flash when the wizard has not been comp
 
     $response = $this->get('/oauth/connect/open-banking?institution_id=ASNBNL21');
 
-    $response->assertRedirect(route('settings'));
+    $response->assertRedirect(route('settings.open-banking'));
     $response->assertSessionHas('open_banking_failed');
 });
 
@@ -185,7 +185,7 @@ it('connect redirects to settings with a flash when no institution_id is supplie
 
     $response = $this->get('/oauth/connect/open-banking');
 
-    $response->assertRedirect(route('settings'));
+    $response->assertRedirect(route('settings.open-banking'));
     $response->assertSessionHas('open_banking_failed');
 });
 
@@ -205,7 +205,7 @@ it('callback happy path creates one open_banking_connections row and persists th
 
     $response = $this->get('/oauth/callback/open-banking?state='.$state.'&code=fake-code-abcdef');
 
-    $response->assertRedirect(route('settings'));
+    $response->assertRedirect(route('settings.open-banking'));
     $response->assertSessionHas('open_banking_connected');
 
     /** @var DatabaseManager $db */
@@ -253,7 +253,7 @@ it('callback with provider error redirects with open_banking_canceled flash and 
 
     $response = $this->get('/oauth/callback/open-banking?error=access_denied&error_description=user%20denied');
 
-    $response->assertRedirect(route('settings'));
+    $response->assertRedirect(route('settings.open-banking'));
     $response->assertSessionHas('open_banking_canceled');
     expect(session('open_banking_canceled'))->toContain('user denied');
 
@@ -274,7 +274,7 @@ it('callback with no code redirects with a flash and inserts no rows', function 
 
     $response = $this->get('/oauth/callback/open-banking?state='.$state);
 
-    $response->assertRedirect(route('settings'));
+    $response->assertRedirect(route('settings.open-banking'));
     $response->assertSessionHas('open_banking_failed');
 
     /** @var DatabaseManager $db */
@@ -330,7 +330,7 @@ it('compensating rollback: secret-write failure after a NEW row insert deletes t
 
     $response = $this->get('/oauth/callback/open-banking?state='.$state.'&code=fake');
 
-    $response->assertRedirect(route('settings'));
+    $response->assertRedirect(route('settings.open-banking'));
     $response->assertSessionHas('open_banking_failed');
     expect(session('open_banking_failed'))->toContain('simulated write failure');
 
