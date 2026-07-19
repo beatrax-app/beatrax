@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\OpenBanking\Internal\Http\Livewire;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
@@ -12,8 +13,12 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
+use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Throwable;
 
 /**
  * `/settings/open-banking` trust surface (19-11, UI-SPEC Surface B): the
@@ -103,6 +108,18 @@ final class OpenBankingSettingsPage extends Component
 
     /** One of '' | 'success' | 'error'. */
     public string $flashTone = '';
+
+    // -------------------------------------------------------------------
+    // B6: manual "Sync now" result flash (Req 9)
+    // -------------------------------------------------------------------
+
+    public string $syncFlashMessage = '';
+
+    /** One of '' | 'success' | 'zero' | 'error'. */
+    public string $syncFlashTone = '';
+
+    /** Set only on a success flash carrying new rows — the "Review import →" target. */
+    public ?int $syncReviewImportRunId = null;
 
     public function mount(
         CurrentUser $currentUser,
@@ -325,6 +342,129 @@ final class OpenBankingSettingsPage extends Component
         }
 
         return CarbonImmutable::parse($this->lastSuccessfulSyncAtIso)->diffForHumans();
+    }
+
+    // -------------------------------------------------------------------
+    // B6: manual "Sync now" action (D-13/Req 9)
+    // -------------------------------------------------------------------
+
+    /**
+     * `wire:click="syncNow"` (UI-SPEC Surface B6). No-ops — no fetch
+     * attempt, no timestamp write — when OB is off or consent has expired,
+     * mirroring the same no-op rule the `open-banking.daily-sync`
+     * scheduler entry enforces at its enumeration query and
+     * `SyncOpenBankingAccountJob` re-checks defensively on pickup. Uses
+     * `OpenBankingFetchService::preview()` (NOT `fetchAndConfirm()`) —
+     * per that service's own docblock, "Sync now" routes the fetched rows
+     * through the EXISTING consolidated import-preview page (Req 5) for
+     * the user to review/confirm; this action never auto-commits a
+     * ledger write itself.
+     *
+     * Two-timestamp accounting mirrors `SyncOpenBankingAccountJob::handle()`
+     * exactly (RESEARCH.md Pitfall 5 — never-stale-as-fresh, Req 7):
+     * `last_successful_sync_at` is written ONLY when the fetch/preview
+     * itself succeeds (new rows or zero rows are both a genuine successful
+     * fetch); a failed fetch updates ONLY `last_attempt_*`, leaving
+     * `last_successful_sync_at` untouched. A 401/403 from Enable Banking
+     * is detected the same way the job detects it (message-inspection —
+     * no typed exception exists yet) and additionally dispatches
+     * `OpenBankingConsentFailed` so the existing reconsent alert fires
+     * immediately rather than waiting for the next scheduled tick.
+     */
+    public function syncNow(
+        OpenBankingFetchService $fetchService,
+        DatabaseManager $db,
+        Clock $clock,
+        Dispatcher $events,
+        CurrentUser $currentUser,
+        OpenBankingConnectionQuery $query,
+    ): void {
+        $this->syncFlashMessage = '';
+        $this->syncFlashTone = '';
+        $this->syncReviewImportRunId = null;
+
+        if (! $this->enabled || $this->consentStatus === 'expired') {
+            return;
+        }
+
+        $user = $currentUser->user();
+        $now = $clock->now()->toDateTimeString();
+
+        try {
+            $preview = $fetchService->preview($this->connectionId, $user);
+        } catch (Throwable $e) {
+            $isConsentFailure = self::isConsentFailure($e);
+
+            $db->connection()->table('open_banking_connections')
+                ->where('id', $this->connectionId)
+                ->where('user_id', $user->id)
+                ->update([
+                    // Deliberately NOT included: last_successful_sync_at —
+                    // a failed attempt must never advance the freshness
+                    // signal (RESEARCH.md Pitfall 5 / Req 7).
+                    'last_attempt_at' => $now,
+                    'last_attempt_status' => $isConsentFailure ? 'consent_failed' : 'error',
+                    'updated_at' => $now,
+                ]);
+
+            if ($isConsentFailure) {
+                $events->dispatch(new OpenBankingConsentFailed(
+                    connectionId: $this->connectionId,
+                    userId: $user->id,
+                    reason: substr($e->getMessage(), 0, 500),
+                ));
+            }
+
+            $this->refreshState($currentUser, $query);
+            $this->syncFlashTone = 'error';
+            $this->syncFlashMessage = $isConsentFailure
+                ? 'Consent expired — reconnect.'
+                : 'Enable Banking is temporarily unavailable. Try again shortly.';
+
+            return;
+        }
+
+        $db->connection()->table('open_banking_connections')
+            ->where('id', $this->connectionId)
+            ->where('user_id', $user->id)
+            ->update([
+                'last_successful_sync_at' => $now,
+                'last_attempt_at' => $now,
+                'last_attempt_status' => 'ok',
+                'updated_at' => $now,
+            ]);
+
+        $this->refreshState($currentUser, $query);
+
+        $newCount = count(array_filter(
+            $preview->rows,
+            static fn (PreviewRowDto $row): bool => $row->status === 'new',
+        ));
+
+        if ($newCount > 0) {
+            $this->syncFlashTone = 'success';
+            $this->syncFlashMessage = "{$newCount} new transactions found.";
+            $this->syncReviewImportRunId = $preview->importRunId;
+
+            return;
+        }
+
+        $this->syncFlashTone = 'zero';
+        $this->syncFlashMessage = 'No new transactions.';
+    }
+
+    /**
+     * No typed exception distinguishes a 401/403 consent failure from any
+     * other Enable Banking error today — mirrors
+     * `SyncOpenBankingAccountJob::isConsentFailure()` verbatim (both read
+     * `EnableBankingHttpClient::mapErrorResponse()`'s embedded HTTP status
+     * out of a generic `RuntimeException` message).
+     */
+    private static function isConsentFailure(Throwable $e): bool
+    {
+        $message = $e->getMessage();
+
+        return str_contains($message, 'HTTP 401') || str_contains($message, 'HTTP 403');
     }
 
     public function render(ViewFactory $views): View
