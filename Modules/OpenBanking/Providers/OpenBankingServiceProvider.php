@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Providers;
 
+use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Support\ServiceProvider;
+use Livewire\LivewireManager;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
+use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingWizardModal;
+use Modules\OpenBanking\Internal\Listeners\RaiseOpenBankingReconsentAlert;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
+use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 /**
@@ -19,13 +24,18 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
  * per-flow CSRF state repository the connect/callback controllers
  * consume. All are stateless and singleton-safe (each request reads
  * fresh state from disk/session rather than caching in memory).
+ * 19-06 adds the never-throw reconsent-alert listener.
  *
  * boot() conditionally loads migrations / routes / views — the
  * project-wide convention every module provider in this codebase
  * carries (cloned from `Modules\Position\Providers\PositionServiceProvider`).
- * Later waves own the scheduler entries and the settings-page wiring;
- * this plan's single-owner discipline forbids adding any of that here
- * yet.
+ * 19-06 additionally registers the onboarding wizard's Livewire SFC and
+ * the `OpenBankingConsentFailed` -> `RaiseOpenBankingReconsentAlert`
+ * event wiring (single-owner: no other file in this module registers
+ * that listener), mirroring `EmailScanServiceProvider::boot()`'s
+ * identical `InboxTokenFailed` wiring. Later waves own the scheduler
+ * entries and the settings-page wiring; this plan's single-owner
+ * discipline forbids adding any of that here yet.
  */
 final class OpenBankingServiceProvider extends ServiceProvider
 {
@@ -35,10 +45,13 @@ final class OpenBankingServiceProvider extends ServiceProvider
         $this->app->singleton(EnableBankingJwtSigner::class);
         $this->app->singleton(EnableBankingHttpClient::class);
         $this->app->singleton(OpenBankingStateRepository::class);
+        $this->app->singleton(RaiseOpenBankingReconsentAlert::class);
     }
 
-    public function boot(): void
+    public function boot(LivewireManager $livewire, EventsDispatcher $events): void
     {
+        $events->listen(OpenBankingConsentFailed::class, RaiseOpenBankingReconsentAlert::class);
+
         if (is_dir(__DIR__.'/../Database/Migrations')) {
             $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         }
@@ -48,5 +61,7 @@ final class OpenBankingServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'openbanking');
         }
+
+        $livewire->component('openbanking.open-banking-wizard-modal', OpenBankingWizardModal::class);
     }
 }
