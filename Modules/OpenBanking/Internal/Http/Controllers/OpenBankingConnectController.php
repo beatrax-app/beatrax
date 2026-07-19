@@ -97,7 +97,7 @@ final class OpenBankingConnectController
             .'?state='.rawurlencode($state);
 
         try {
-            $response = $this->client->auth(
+            $response = $this->client->initiateAuth(
                 institutionId: $institutionId,
                 country: self::COUNTRY,
                 redirectUrl: $redirectUri,
