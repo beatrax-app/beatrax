@@ -112,6 +112,11 @@
         </div>
     @endif
 
+    {{-- ===== B7: guided ICS file-import affordance (Req 13) — always
+         visible regardless of OB state, visually separated from the OB
+         cards above by its own section label ===== --}}
+    @include('openbanking::partials.open-banking-ics-import-card')
+
     @include('openbanking::partials.open-banking-warning-modal')
 
     {{-- ===== Disconnect confirm — shared by the ON->OFF toggle click and

@@ -6,18 +6,24 @@ namespace Modules\OpenBanking\Internal\Http\Livewire;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\SafeTrace;
+use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
 use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -65,6 +71,8 @@ use Throwable;
  */
 final class OpenBankingSettingsPage extends Component
 {
+    use WithFileUploads;
+
     /**
      * Generous enough to survive the full wizard dance (the user leaves
      * this tab, logs into their bank, completes 2FA, and returns) without
@@ -72,6 +80,17 @@ final class OpenBankingSettingsPage extends Component
      * cannot leave a standing authorization to enable OB indefinitely.
      */
     private const ACK_TTL_SECONDS = 1800;
+
+    /**
+     * The leaf format key the EXISTING ICS SourceAdapter consumes
+     * (`Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter`, registered
+     * in `IngestionServiceProvider`). ICS Cards's consumer portal only
+     * ever exports monthly PDF statements — there is no CAMT.053/CSV ICS
+     * adapter in this codebase — so Surface B7's guided drop pre-selects
+     * this single format, matching `ConnectCardStep` (the onboarding
+     * wizard's equivalent step) verbatim.
+     */
+    private const ICS_SOURCE_FORMAT = 'ics-pdf';
 
     // -------------------------------------------------------------------
     // Connection state (OpenBankingConnectionQuery::current() projection)
@@ -143,6 +162,16 @@ final class OpenBankingSettingsPage extends Component
 
     /** Set only on a success flash carrying new rows — the "Review import →" target. */
     public ?int $syncReviewImportRunId = null;
+
+    // -------------------------------------------------------------------
+    // B7: guided ICS file-import affordance (Req 13, 19-15). Visually and
+    // functionally separate from live OB — stores NO credentials, routes
+    // to the EXISTING ics-pdf SourceAdapter via RunsImports::runFromUpload.
+    // -------------------------------------------------------------------
+
+    public ?TemporaryUploadedFile $icsStatement = null;
+
+    public ?string $icsImportError = null;
 
     public function mount(
         CurrentUser $currentUser,
@@ -503,6 +532,97 @@ final class OpenBankingSettingsPage extends Component
         $message = $e->getMessage();
 
         return str_contains($message, 'HTTP 401') || str_contains($message, 'HTTP 403');
+    }
+
+    // -------------------------------------------------------------------
+    // B7: guided ICS file-import affordance (Req 13, UI-SPEC Surface B7)
+    // -------------------------------------------------------------------
+
+    /**
+     * @return array<string, list<string>>
+     */
+    public function rules(): array
+    {
+        return [
+            'icsStatement' => ['required', 'file', 'max:10240', 'extensions:pdf'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'icsStatement.required' => 'Drop the ICS statement you downloaded from Mijn ICS.',
+            'icsStatement.max' => 'That file is too large. ICS PDF statements are normally under 1 MB each.',
+            'icsStatement.extensions' => "That isn't a PDF. Mijn ICS only exports PDF statements.",
+        ];
+    }
+
+    /**
+     * `wire:click="importIcsStatement"` — the ONLY action this card
+     * exposes. Routes the dropped file DIRECTLY through the existing ICS
+     * `SourceAdapter` (`ics-pdf`) via `RunsImports::runFromUpload()`,
+     * skipping the generic import wizard's source-picker entirely (the
+     * format is pre-selected here, never chosen by the user). Lands in
+     * the EXISTING consolidated import-preview page (Req 5/13 — reused
+     * unchanged, no new preview UI) so the drop itself never auto-commits
+     * a ledger write; the user still confirms on that page.
+     *
+     * Deliberately touches NOTHING in `OpenBankingSecretsRepository` or
+     * `open_banking_connections` — this path stores no credentials and is
+     * entirely independent of the OB connection state above it on the
+     * page (T-19-15-01).
+     */
+    public function importIcsStatement(
+        RunsImports $importer,
+        CurrentUser $currentUser,
+        LoggerInterface $logger,
+        Application $app,
+    ): void {
+        $this->icsImportError = null;
+        $this->validate();
+
+        if ($this->icsStatement === null) {
+            return;
+        }
+
+        $user = $currentUser->user();
+        $tmp = $this->icsStatement->getRealPath();
+        $originalFilename = self::sanitiseIcsFilename($this->icsStatement->getClientOriginalName());
+
+        try {
+            $result = $importer->runFromUpload($tmp, self::ICS_SOURCE_FORMAT, $user, $originalFilename);
+        } catch (Throwable $e) {
+            $logger->error('OpenBankingSettingsPage: guided ICS import preview failed.', [
+                'source_format' => self::ICS_SOURCE_FORMAT,
+                'filename' => $originalFilename,
+                'exception_class' => $e::class,
+                'exception_message' => $e->getMessage(),
+                'exception_trace' => SafeTrace::cap($e, $app->basePath()),
+            ]);
+            $this->icsImportError = "Could not read {$originalFilename}. The full error is in /dev/logs.";
+
+            return;
+        }
+
+        $this->redirectRoute('imports.preview', ['id' => $result->importRunId], navigate: false);
+    }
+
+    /**
+     * Strips path-traversal characters and locks the extension to .pdf —
+     * verbatim copy of `ConnectCardStep::sanitiseFilename()` (the
+     * onboarding wizard's equivalent ICS step) since both feed the same
+     * `ics-pdf` adapter.
+     */
+    private static function sanitiseIcsFilename(string $original): string
+    {
+        $stem = pathinfo($original, PATHINFO_FILENAME);
+        $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);
+        $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;
+
+        return $stemPart.'.pdf';
     }
 
     public function render(ViewFactory $views): View

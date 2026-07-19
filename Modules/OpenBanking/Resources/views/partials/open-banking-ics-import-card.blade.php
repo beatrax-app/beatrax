@@ -1,0 +1,115 @@
+{{-- Surface B7: Guided ICS file-import affordance (Req 13, UI-SPEC Surface
+     B7, 19-15). Visually and functionally SEPARATE from the live OB cards
+     above — this path stores NO credentials and routes a dropped statement
+     directly through the EXISTING ICS SourceAdapter (`ics-pdf`) via
+     RunsImports::runFromUpload, skipping the generic import wizard's
+     source-picker entirely. Always visible (State Display Matrix: every
+     OB state renders this card). Carries the `#ics-import` anchor the
+     Notifications "statement ready" nudge deep-links to (Surface C) — the
+     browser's native fragment scroll handles the scroll-on-load, same as
+     the existing `#app-lock` / `#anomaly-detection` anchors elsewhere in
+     Settings; no extra JS is needed since this is a full page load, not a
+     Livewire SPA navigation.
+
+     ICS Cards's consumer portal only ever exports monthly PDF statements —
+     there is no CAMT.053/CSV ICS adapter in this codebase (confirmed
+     against `Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter`) — so
+     the mini-step row and format chip below say "PDF statement", matching
+     what the existing adapter actually accepts (Rule 1 correction vs the
+     UI-SPEC's generic "CAMT.053 or CSV" placeholder copy, which described
+     the ASN bank-statement shape, not ICS). --}}
+<section id="ics-import" class="space-y-3" data-testid="open-banking-ics-import-card">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        File import — no credentials stored
+    </p>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">ICS credit card statement</h2>
+
+        <ol class="mt-4 grid grid-cols-3 gap-3">
+            <li class="rounded-md bg-slate-50 p-3 text-center dark:bg-slate-900">
+                <span class="mb-2 block text-2xl leading-none" aria-hidden="true">&#128272;</span>
+                <span class="block text-sm font-medium text-slate-700 dark:text-slate-200">Log in</span>
+                <span class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">Mijn ICS</span>
+            </li>
+            <li class="rounded-md bg-slate-50 p-3 text-center dark:bg-slate-900">
+                <span class="mb-2 block text-2xl leading-none" aria-hidden="true">&#128220;</span>
+                <span class="block text-sm font-medium text-slate-700 dark:text-slate-200">Download statement</span>
+                <span class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">PDF statement</span>
+            </li>
+            <li class="rounded-md bg-slate-50 p-3 text-center dark:bg-slate-900">
+                <span class="mb-2 block text-2xl leading-none" aria-hidden="true">&#128229;</span>
+                <span class="block text-sm font-medium text-slate-700 dark:text-slate-200">Drop it below</span>
+            </li>
+        </ol>
+
+        <div class="mt-4">
+            <span
+                class="inline-flex items-center rounded-md border border-slate-200 px-2.5 py-1 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400"
+                data-testid="ob-ics-format-chip"
+            >PDF statement</span>
+        </div>
+
+        @if ($icsImportError !== null)
+            <div
+                role="alert"
+                class="mt-3 rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                data-testid="ob-ics-import-error"
+            >{{ $icsImportError }}</div>
+        @endif
+
+        @error('icsStatement')
+            <div role="alert" class="mt-3 rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                {{ $message }}
+            </div>
+        @enderror
+
+        <div class="mt-4">
+            <label
+                for="ob-ics-statement-input"
+                class="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-5 py-7 text-center text-sm text-slate-500 transition hover:border-slate-400 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                data-testid="ob-ics-drop-zone"
+            >
+                <span class="text-2xl leading-none" aria-hidden="true">&#128229;</span>
+                @if ($icsStatement !== null)
+                    <span class="font-medium text-slate-700 dark:text-slate-200" data-testid="ob-ics-selected-filename">{{ $icsStatement->getClientOriginalName() }}</span>
+                @else
+                    <span class="font-medium text-slate-700 dark:text-slate-200">Drop your statement file here</span>
+                @endif
+                <span class="text-xs text-slate-500 dark:text-slate-400">or browse for a file</span>
+                <input
+                    id="ob-ics-statement-input"
+                    type="file"
+                    accept="application/pdf"
+                    wire:model="icsStatement"
+                    class="sr-only"
+                    aria-label="Browse for an ICS statement file"
+                    data-testid="ob-ics-file-input"
+                >
+            </label>
+        </div>
+
+        @if ($icsStatement !== null)
+            <div class="mt-4">
+                <button
+                    type="button"
+                    wire:click="importIcsStatement"
+                    wire:loading.attr="disabled"
+                    wire:target="importIcsStatement,icsStatement"
+                    class="inline-flex min-h-[44px] items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white
+                           hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                           disabled:cursor-not-allowed disabled:opacity-50
+                           dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
+                    data-testid="ob-ics-import-button"
+                >
+                    <span
+                        wire:loading
+                        wire:target="importIcsStatement"
+                        class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-slate-900/40 dark:border-t-slate-900"
+                    ></span>
+                    Import statement
+                </button>
+            </div>
+        @endif
+    </div>
+</section>
