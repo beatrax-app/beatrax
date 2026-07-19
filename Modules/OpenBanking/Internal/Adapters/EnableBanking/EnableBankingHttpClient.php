@@ -248,6 +248,11 @@ class EnableBankingHttpClient
         return new GuzzleClient([
             'timeout' => 30,
             'connect_timeout' => 10,
+            // JSON API must not redirect; a 3xx is an error body, not a
+            // silent egress. Following redirects would let a Location
+            // target bypass the once-only `assertAllowedUrl()` allow-list
+            // check and downgrade https->http (CR-01 / SSRF guarantee).
+            'allow_redirects' => false,
         ]);
     }
 
