@@ -289,12 +289,29 @@ final class OpenBankingSettingsPage extends Component
             return;
         }
 
+        $userId = $currentUser->user()->id;
+        $now = $clock->now()->toDateTimeString();
+
+        // WR-09: single-live-connection model — enabling this row disables
+        // every OTHER row for the same user (and blanks its consent, as
+        // disconnect() does) so a stale prior-institution row can never
+        // stay enabled=true invisibly and keep being picked up by the
+        // daily-sync scheduler.
+        $db->connection()->table('open_banking_connections')
+            ->where('user_id', $userId)
+            ->where('id', '!=', $this->pendingConnectionId)
+            ->update([
+                'enabled' => false,
+                'consent_expires_at' => null,
+                'updated_at' => $now,
+            ]);
+
         $db->connection()->table('open_banking_connections')
             ->where('id', $this->pendingConnectionId)
-            ->where('user_id', $currentUser->user()->id)
+            ->where('user_id', $userId)
             ->update([
                 'enabled' => true,
-                'updated_at' => $clock->now()->toDateTimeString(),
+                'updated_at' => $now,
             ]);
 
         $session->forget('open_banking_acknowledged');
