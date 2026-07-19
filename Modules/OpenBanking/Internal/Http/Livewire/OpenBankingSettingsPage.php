@@ -11,6 +11,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -96,8 +97,14 @@ final class OpenBankingSettingsPage extends Component
     // Connection state (OpenBankingConnectionQuery::current() projection)
     // -------------------------------------------------------------------
 
+    // WR-05: server-authoritative props — only ever assigned server-side
+    // (mount()/refreshState()/enableOpenBanking()), never bound via
+    // wire:model. #[Locked] blocks client-side tampering that could
+    // re-enable / gate-spoof a connection.
+    #[Locked]
     public bool $enabled = false;
 
+    #[Locked]
     public int $connectionId = 0;
 
     public string $institutionId = '';
@@ -105,6 +112,7 @@ final class OpenBankingSettingsPage extends Component
     public string $bankDisplayName = '';
 
     /** One of 'off' | 'connected' | 'expiring' | 'expired'. */
+    #[Locked]
     public string $consentStatus = 'off';
 
     public ?string $consentExpiresAtIso = null;
@@ -144,6 +152,7 @@ final class OpenBankingSettingsPage extends Component
      * only for the one request immediately following the SCA redirect
      * back to this page.
      */
+    #[Locked]
     public ?int $pendingConnectionId = null;
 
     public string $flashMessage = '';
