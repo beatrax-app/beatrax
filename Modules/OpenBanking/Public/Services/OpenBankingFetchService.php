@@ -44,6 +44,17 @@ use RuntimeException;
  * resolved account_uid yet cannot be fetched — `buildFetch()` throws a
  * clear `RuntimeException` rather than passing an empty string through
  * to the adapter/HTTP client.
+ *
+ * Single-live-session guard (19-10 review-gate finding, T-19-10-01):
+ * `OpenBankingSecretsRepository` holds exactly ONE Enable Banking
+ * session (`session_id` + `institutionId`) at a time — every
+ * `EnableBankingHttpClient` call resolves its credentials from that one
+ * file, never from the connection row that triggered the fetch. If the
+ * user has since (re-)linked a DIFFERENT institution, the secrets
+ * file's live session no longer matches an older connection row's
+ * `institution_id`. `buildFetch()` compares the two and throws rather
+ * than silently pairing one bank's session with another bank's
+ * `account_uid`.
  */
 final class OpenBankingFetchService
 {
@@ -120,6 +131,30 @@ final class OpenBankingFetchService
         if ($credentials === null) {
             throw new RuntimeException(
                 'OpenBankingFetchService: no Enable Banking application credentials are persisted.'
+            );
+        }
+
+        // The secrets file holds exactly ONE live session (`session_id`
+        // + `institutionId`) at a time — `EnableBankingHttpClient`
+        // resolves its credentials from that single file on every call,
+        // NOT from this connection row. If the user has re-linked a
+        // DIFFERENT institution since this connection's row was created
+        // (e.g. connected ASN, then separately connected SNS without
+        // disconnecting ASN first), the secrets file's session now
+        // belongs to the OTHER institution while this row's `account_uid`
+        // belongs to THIS one. Silently proceeding would send Enable
+        // Banking a request pairing one bank's session with another
+        // bank's account uid — at best a hard EB-side rejection
+        // misreported as this connection's own "consent failed" (feeding
+        // a misleading re-link prompt for the wrong bank), at worst
+        // cross-account data exposure if EB's API were ever lenient about
+        // the mismatch. Fail loudly and specifically instead.
+        if ($credentials->institutionId !== null && $credentials->institutionId !== $institutionId) {
+            throw new RuntimeException(
+                "OpenBankingFetchService: connection {$connectionId}'s institution ({$institutionId}) does not "
+                ."match the currently active Enable Banking session's institution ({$credentials->institutionId}). "
+                .'Only one Enable Banking connection can be live at a time — re-link '.$institutionId
+                .' before syncing this connection.'
             );
         }
 
