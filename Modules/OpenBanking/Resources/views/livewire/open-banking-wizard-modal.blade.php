@@ -134,7 +134,7 @@
             @elseif ($step === 5)
                 <div class="space-y-3">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Complete consent in your browser</p>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Click below to open your bank's login and consent screen in a new browser tab. Complete the login and any 2-factor step there, then return to this window.</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Click below to open your bank's login and consent screen. Complete the login and any 2-factor step, then you'll be brought back here automatically to finish enabling Open Banking.</p>
                 </div>
             @endif
 
@@ -171,11 +171,14 @@
                         class="inline-flex min-h-[44px] items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                     >Continue →</button>
                 @elseif ($step === 5)
+                    {{-- WR-10: same-tab redirect (no target="_blank") so the
+                         callback re-mounts THIS page and the return-flash
+                         enable fires. The href fallback (middle/cmd-click or
+                         no-JS) carries institution_id, which the connect
+                         controller requires. --}}
                     <a
-                        href="{{ route('oauth.open-banking.connect') }}"
+                        href="{{ route('oauth.open-banking.connect', $consentInstitutionId !== null ? ['institution_id' => $consentInstitutionId] : []) }}"
                         wire:click.prevent="connect"
-                        target="_blank"
-                        rel="noopener"
                         class="inline-flex min-h-[44px] items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                     >Continue to {{ $bankName }} →</a>
                 @endif
