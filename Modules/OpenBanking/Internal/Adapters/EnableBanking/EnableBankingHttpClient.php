@@ -140,6 +140,39 @@ class EnableBankingHttpClient
     }
 
     /**
+     * Extracts the FIRST linked account's `uid` from a `createSession()`
+     * response array — isolated here for the identical D-07 arch-guard
+     * reason `sessionIdFrom()` documents: `OpenBankingCallbackController`
+     * must never index the raw response array itself.
+     *
+     * A single PSD2 consent can, in principle, cover multiple accounts at
+     * the same bank; this project's connection model
+     * (`open_banking_connections` is keyed one row per (user_id,
+     * institution_id), per that migration's docblock) tracks only ONE
+     * account per connection, so the first `accounts[]` entry is the one
+     * `OpenBankingCallbackController` persists. Extending to a
+     * multi-account-per-connection model is out of this method's scope.
+     *
+     * @param  array<string, mixed>  $sessionResponse
+     */
+    public function accountUidFrom(array $sessionResponse): ?string
+    {
+        $accounts = $sessionResponse['accounts'] ?? null;
+        if (! is_array($accounts) || $accounts === []) {
+            return null;
+        }
+
+        $first = $accounts[0] ?? null;
+        if (! is_array($first)) {
+            return null;
+        }
+
+        $uid = $first['uid'] ?? null;
+
+        return is_string($uid) && $uid !== '' ? $uid : null;
+    }
+
+    /**
      * GET /aspsps — institution discovery (Req 12), filtered by
      * country.
      *

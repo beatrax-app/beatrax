@@ -217,6 +217,11 @@ it('callback happy path creates one open_banking_connections row and persists th
     expect($row)->not->toBeNull();
     expect((bool) $row->enabled)->toBeFalse();
     expect($row->consent_expires_at)->not->toBeNull();
+    // 19-09: the FIRST accounts[] entry's uid is persisted so
+    // OpenBankingFetchService has a value to thread into
+    // RemoteSourceAdapter::fetch() — see EnableBankingHttpClient::
+    // accountUidFrom() and this fixture's ocdSessionResponse() shape.
+    expect($row->account_uid)->toBe('acc-fixture-1');
 
     $loaded = $secrets->load();
     expect($loaded->sessionId)->toBe('session-fixture-abc');
