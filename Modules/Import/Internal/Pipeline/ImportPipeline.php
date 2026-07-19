@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Pipeline;
 
+use Generator;
 use Illuminate\Contracts\Foundation\Application;
 use InvalidArgumentException;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
@@ -23,6 +24,7 @@ use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\KnownAccount;
+use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
@@ -84,6 +86,66 @@ final class ImportPipeline
             throw new InvalidArgumentException('CSV imports require a format hint.');
         }
 
+        $built = $this->buildPreviewRows(
+            $this->parse->run($localPath, $sourceFormat, $accounts, $user),
+            $sourceFormat,
+            $accounts,
+            $user,
+            $importRunId,
+        );
+
+        $this->persistStatementMetadata($sourceFormat, $importRunId, $built['lastResolvedAccountId'], $user);
+
+        return [
+            'rows' => $built['rows'],
+            'canonical' => $built['canonical'],
+            'enrichments' => $built['enrichments'],
+            'unknownIbans' => $built['unknownIbans'],
+        ];
+    }
+
+    /**
+     * Generator-driven counterpart to `preview()` for callers with no local
+     * file to parse (e.g. Modules\OpenBanking's remote fetch, via the
+     * Public `RunsImports::runFromRemoteFetch()` contract). Feeds the
+     * caller-supplied `Generator<SourceTransactionDto>` into the SAME
+     * shared per-row body `preview()` uses, so cross-source fingerprint
+     * dedup and the consolidated preview are inherited unchanged.
+     *
+     * Deliberately does NOT call `persistStatementMetadata()` — a fetched
+     * balance is a point-in-time reading, not an opening/closing
+     * statement pair, so it does not map onto `StatementSummaryData`'s
+     * CAMT-shaped fields. Balance/last-sync surfacing belongs on the
+     * OpenBanking module's own connection metadata, not this seam.
+     *
+     * @param  Generator<int, SourceTransactionDto>  $sourceRows
+     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>}
+     */
+    public function previewFromGenerator(Generator $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
+    {
+        $built = $this->buildPreviewRows($sourceRows, $sourceFormat, $accounts, $user, $importRunId);
+
+        return [
+            'rows' => $built['rows'],
+            'canonical' => $built['canonical'],
+            'enrichments' => $built['enrichments'],
+            'unknownIbans' => $built['unknownIbans'],
+        ];
+    }
+
+    /**
+     * The shared per-row body both `preview()` and `previewFromGenerator()`
+     * feed: resolve account → NormalizeStage → ClassifyTransactionType →
+     * PaymentTypeClassifier → applyAutoCategory → ResolveCounterparties →
+     * FingerprintStage-classify → build PreviewRowDto → append. Both the
+     * inner (per-row) and outer (whole-loop) error tiers are preserved
+     * verbatim from the original `preview()` implementation.
+     *
+     * @param  iterable<int, SourceTransactionDto>  $sourceRows
+     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, lastResolvedAccountId: ?int}
+     */
+    private function buildPreviewRows(iterable $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
+    {
         /** @var list<PreviewRowDto> $preview */
         $preview = [];
         /** @var list<CanonicalTransaction> $canonical */
@@ -95,7 +157,7 @@ final class ImportPipeline
         $lastResolvedAccountId = null;
 
         try {
-            foreach ($this->parse->run($localPath, $sourceFormat, $accounts, $user) as $source) {
+            foreach ($sourceRows as $source) {
                 $resolution = $accounts->resolve($source->ownIban);
                 $rowDescription = self::trimToNull($source->description);
 
@@ -249,13 +311,12 @@ final class ImportPipeline
             );
         }
 
-        $this->persistStatementMetadata($sourceFormat, $importRunId, $lastResolvedAccountId, $user);
-
         return [
             'rows' => $preview,
             'canonical' => $canonical,
             'enrichments' => $enrichments,
             'unknownIbans' => array_values($unknownIbans),
+            'lastResolvedAccountId' => $lastResolvedAccountId,
         ];
     }
 
