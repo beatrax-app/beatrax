@@ -50,10 +50,10 @@ use stdClass;
  * matching row dispatches `IcsStatementReady` on every tick this job
  * runs, and `Modules\Notifications\Internal\Support\NotificationWriter`'s
  * `insertOrIgnore` on the deterministic `(userId, triggerType, subjectKey,
- * occurrence='Y-m')` key absorbs the repeats into a single persisted
- * notification per statement-month (D-15) — the SAME idempotency seam
- * every other trigger listener in this codebase already relies on, so no
- * second dedup mechanism is introduced here.
+ * occurrence='Y-m-d')` key absorbs the repeats into a single persisted
+ * notification per statement-arrival-DAY (WR-12/D-15) — the SAME idempotency
+ * seam every other trigger listener in this codebase already relies on, so
+ * no second dedup mechanism is introduced here.
  *
  * Sender allow-list + subject pattern are read from the tunable
  * `email-scan.ics_statement_ready` config block (no real ICS

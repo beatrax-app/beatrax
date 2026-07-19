@@ -17,11 +17,12 @@ use Carbon\CarbonImmutable;
  * read from the message body.
  *
  * `internalDate` is `Modules\Notifications\Internal\Listeners\PersistIcsStatementReady`'s
- * occurrence-key source (`->format('Y-m')`) — the calendar month the
- * statement-ready email arrived, deliberately NOT the message id, so a
- * bank-side resend within the same month collapses to one notification
- * rather than fracturing into a second (D-15's "fires once per statement,
- * not per message" — 19-RESEARCH.md Pitfall 4).
+ * occurrence-key source (`->format('Y-m-d')`) — the statement-arrival DAY,
+ * deliberately NOT the message id, so a bank-side resend on the same day
+ * collapses to one notification rather than fracturing into a second, while
+ * two DISTINCT statements arriving on different days in the same month each
+ * get their own nudge (WR-12; D-15's "fires once per statement, not per
+ * message" — 19-RESEARCH.md Pitfall 4).
  *
  * `final readonly` mirrors `Modules\Recurring\Public\Events\PaymentReminderDue`'s
  * minimal constructor-only shape — EmailScan dispatches this Public event

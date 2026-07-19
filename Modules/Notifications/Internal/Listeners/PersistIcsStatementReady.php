@@ -23,11 +23,14 @@ use Throwable;
  * this class's exact name/namespace is what flips that guard on.
  *
  * `subjectKey` is the static `'ics-card'` (there is one ICS card per user
- * in this project's model); `occurrence` is the calendar month the
- * statement-ready email arrived (`Y-m`), NOT the message id — a bank-side
- * resend within the same month must collapse to one notification rather
- * than fracture into a second (D-15 "fires once per statement, not per
- * message" — 19-RESEARCH.md Pitfall 4). `params.target_kind = 'ics-import'`
+ * in this project's model); `occurrence` is the statement-arrival DAY
+ * (`Y-m-d`), NOT the message id — so at most one ICS nudge fires per
+ * (user, statement-arrival-DAY). A bank-side resend or the detector
+ * re-scanning the same row on a later tick lands on the same day key and
+ * dedups idempotently, while two DISTINCT statements arriving on different
+ * days in the same calendar month no longer collide into one nudge (WR-12;
+ * D-15 "fires once per statement, not per message" — 19-RESEARCH.md
+ * Pitfall 4). `params.target_kind = 'ics-import'`
  * mirrors `PersistCoalescedImport`'s no-deletable-entity `'inbox'`/`'import'`
  * shape — `DeepLinkResolver::ALWAYS_LIVE_KINDS` resolves it to the same
  * `settings.open-banking#ics-import` anchor passed as `deepLinkRoute`
@@ -63,7 +66,7 @@ final class PersistIcsStatementReady
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_ICS_STATEMENT_READY,
                 subjectKey: 'ics-card',
-                occurrence: $event->internalDate->format('Y-m'),
+                occurrence: $event->internalDate->format('Y-m-d'),
                 title: NotificationCopy::TITLE_ICS_STATEMENT_READY,
                 body: "Download it from the ICS portal and drop it into beatrax to keep this card's spending up to date.",
                 params: ['target_kind' => 'ics-import'],

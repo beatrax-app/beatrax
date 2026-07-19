@@ -84,21 +84,27 @@ it('deep-links to the guided ICS import anchor and carries no transaction data i
     expect((string) $row->body)->not->toContain('€');
 });
 
-it('does not re-fire for the same statement month (dedup) but DOES fire again next month (Pitfall 4)', function (): void {
-    $user = isrtUser('isrt-month-dedup');
+it('WR-12: dedups a same-DAY re-dispatch but fires a second nudge for a different-day statement in the same month (Pitfall 4)', function (): void {
+    $user = isrtUser('isrt-day-dedup');
 
     isrtFire($user, CarbonImmutable::parse('2026-07-15'), messageId: 1);
     expect(isrtCount($user->id))->toBe(1);
 
-    // Same month, a different message id (e.g. the detector re-scanning
-    // the same row on the next hourly tick, or a bank-side resend) — must
-    // still collapse to one row.
-    isrtFire($user, CarbonImmutable::parse('2026-07-28'), messageId: 2);
+    // Same DAY, a different message id (e.g. the detector re-scanning the
+    // same row on the next hourly tick, or a bank-side resend) — must still
+    // collapse to one row (same-day idempotency holds).
+    isrtFire($user, CarbonImmutable::parse('2026-07-15'), messageId: 2);
     expect(isrtCount($user->id))->toBe(1);
 
-    // Next month's statement legitimately fires a second, distinct nudge.
-    isrtFire($user, CarbonImmutable::parse('2026-08-16'), messageId: 3);
+    // WR-12: a SECOND distinct statement arriving on a DIFFERENT day in the
+    // SAME calendar month is a genuinely separate nudge — the old Y-m key
+    // wrongly swallowed it; the Y-m-d key keeps it.
+    isrtFire($user, CarbonImmutable::parse('2026-07-28'), messageId: 3);
     expect(isrtCount($user->id))->toBe(2);
+
+    // Next month's statement legitimately fires a third, distinct nudge.
+    isrtFire($user, CarbonImmutable::parse('2026-08-16'), messageId: 4);
+    expect(isrtCount($user->id))->toBe(3);
 });
 
 it('never leaks one user\'s nudge into another user\'s notifications (cross-user)', function (): void {
