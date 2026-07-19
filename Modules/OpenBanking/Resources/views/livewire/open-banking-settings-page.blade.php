@@ -47,6 +47,30 @@
         </div>
     </div>
 
+    {{-- ===== WR-07: re-confirm CTA — the SCA dance completed but the
+         acknowledgement TTL lapsed before mount() could finalize the
+         enable. Surface a visible re-confirm instead of a silent no-op. ===== --}}
+    @if ($needsReconfirm)
+        <div
+            role="alert"
+            class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800
+                   dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+            data-testid="ob-reconfirm-banner"
+        >
+            <p>Your acknowledgement expired before we could finish connecting. Re-confirm to finish enabling open banking.</p>
+            <button
+                type="button"
+                wire:click="reconfirmEnable"
+                wire:loading.attr="disabled"
+                wire:target="reconfirmEnable"
+                class="mt-3 inline-flex min-h-[44px] items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white
+                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
+                data-testid="ob-reconfirm-button"
+            >Re-confirm to finish enabling</button>
+        </div>
+    @endif
+
     {{-- ===== B5: consent-expiry banner (Req 7/8) — rendered above the
          transparency panel when consent has expired ===== --}}
     @include('openbanking::partials.open-banking-consent-banner')
