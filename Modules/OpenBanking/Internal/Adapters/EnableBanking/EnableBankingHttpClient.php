@@ -110,6 +110,25 @@ class EnableBankingHttpClient
     }
 
     /**
+     * Extracts the session identifier field from a `createSession()`
+     * response array. Deliberately isolated here — inside the sole
+     * Enable Banking HTTP boundary class — rather than inline at DB-
+     * touching call sites: `OpenBankingSecretsFileGuardTest` (D-07,
+     * 19-03) asserts no file that references `DatabaseManager` also
+     * references a raw credential field name, so
+     * `OpenBankingCallbackController` calls this method instead of
+     * indexing the response array itself (19-05).
+     *
+     * @param  array<string, mixed>  $sessionResponse
+     */
+    public function sessionIdFrom(array $sessionResponse): ?string
+    {
+        $sessionId = $sessionResponse['session_id'] ?? null;
+
+        return is_string($sessionId) && $sessionId !== '' ? $sessionId : null;
+    }
+
+    /**
      * GET /aspsps — institution discovery (Req 12), filtered by
      * country.
      *
