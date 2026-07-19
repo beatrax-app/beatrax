@@ -7,8 +7,11 @@ namespace Modules\OpenBanking\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Filesystem\Filesystem;
 use JsonException;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use RuntimeException;
 use Throwable;
 
@@ -47,6 +50,17 @@ use Throwable;
  * never contains the JSON payload — only the absolute path and a
  * generic description — so any logging surface above this class can
  * never accidentally leak credential material.
+ *
+ * SINGLE-USER v1 (WR-08): this is a single GLOBAL secrets file
+ * (`storage/app/secrets/open-banking.json`) with NO per-user or
+ * per-connection keying. The `user_id` columns on
+ * `open_banking_connections` therefore do NOT imply any secret-store
+ * isolation yet — a second user's `save()` would silently overwrite the
+ * first user's credentials in the same global blob. Per-user (or
+ * per-connection) keying of this store is REQUIRED before a second user
+ * is onboarded. Until then `save()` carries a defensive guard (see
+ * `guardSingleUser()`) that logs loudly if it is ever asked to write
+ * while more than one user account exists.
  */
 class OpenBankingSecretsRepository
 {
@@ -59,6 +73,11 @@ class OpenBankingSecretsRepository
     public function __construct(
         private readonly Filesystem $files,
         private readonly SecretShield $shield,
+        // WR-08: injected (not the Log facade — larastan strict rules
+        // forbid facades here) so the single-user guard can warn. Defaults
+        // to NullLogger so the DB-less unit construction stays 2-arg,
+        // mirroring EnableBankingSourceAdapter's logger seam.
+        private readonly LoggerInterface $logger = new NullLogger,
     ) {}
 
     /**
@@ -76,6 +95,8 @@ class OpenBankingSecretsRepository
 
     public function save(OpenBankingCredentials $credentials): void
     {
+        $this->guardSingleUser();
+
         $this->writeAtomic([
             'application_id' => $credentials->applicationId,
             'private_key_pem' => $credentials->privateKeyPem,
@@ -138,6 +159,51 @@ class OpenBankingSecretsRepository
     protected function performRename(string $tmp, string $final): bool
     {
         return @rename($tmp, $final);
+    }
+
+    /**
+     * WR-08 single-user guard: the count of application users, or null
+     * when it cannot be determined (e.g. a pure-unit context with no
+     * migrated database). Extracted as a hook — mirroring
+     * {@see performRename()} — so tests can drive the multi-user branch
+     * without seeding a second real user, and so a DB-less unit context
+     * degrades to "unknown" rather than throwing.
+     */
+    protected function userCount(): ?int
+    {
+        try {
+            return User::count();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * SINGLE-USER v1 guard (WR-08): the on-disk secrets file is one GLOBAL
+     * blob with no per-user keying, so a second user's credentials would
+     * silently overwrite the first's. Until per-user (or per-connection)
+     * keying exists, writing while more than one user account exists is
+     * unsupported — log LOUDLY so the constraint is auditable.
+     *
+     * A hard throw was considered but deliberately rejected: it would (a)
+     * break the DB-less unit suite that exercises `save()` without a
+     * migrated `users` table, and (b) risk breaking green feature suites
+     * that legitimately seed multiple users around a `save()`. The warning
+     * preserves every green suite while still creating the audit trail the
+     * review asked for; a null user count (unknown / no DB) is treated as
+     * "cannot violate the constraint" and is silent.
+     */
+    private function guardSingleUser(): void
+    {
+        $count = $this->userCount();
+        if ($count !== null && $count > 1) {
+            $this->logger->warning(
+                'OpenBankingSecretsRepository: writing the single global secrets file while '
+                .'more than one user account exists. This store has no per-user isolation '
+                .'yet (WR-08, SINGLE-USER v1) — per-user or per-connection secret keying is '
+                .'required before a second user can safely use open banking.'
+            );
+        }
     }
 
     /**
