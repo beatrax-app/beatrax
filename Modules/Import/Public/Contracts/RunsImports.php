@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Contracts;
 
+use Generator;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 
 /**
  * Single public surface for kicking off an import. The wizard's
@@ -45,4 +47,23 @@ interface RunsImports
      * `runFromUpload()` contract.
      */
     public function runAndConfirm(string $localPath, string $sourceFormat, User $user, string $originalFilename = 'fixture.csv', ?BankCsvFormatHint $formatHint = null): ImportConfirmResult;
+
+    /**
+     * Generator-driven entry point for a remote fetch with no local file to
+     * hash — the ONLY legal way a module other than Import (e.g.
+     * `Modules\OpenBanking`) can drive the import pipeline, since
+     * `ImportPipeline` itself is `Modules\Import\Internal`.
+     *
+     * `$idempotencyKey` substitutes `runFromUpload()`'s file-SHA256 dedup
+     * layer: the caller derives it deterministically from the fetch window
+     * (e.g. `hash('sha256', "open-banking:{institutionId}:{accountId}:{dateFrom}:{dateTo}")`),
+     * NEVER from wall-clock time, so re-running "Sync now" within the same
+     * fetch window reuses one `ImportRun` row instead of creating a fresh
+     * one on every click, while a genuinely new fetch window naturally
+     * produces a new row. Per-row duplicate detection is still enforced
+     * downstream by `FingerprintStage`, independent of this layer.
+     *
+     * @param  Generator<int, SourceTransactionDto>  $sourceRows
+     */
+    public function runFromRemoteFetch(Generator $sourceRows, string $sourceFormat, User $user, string $idempotencyKey): ImportPreviewResult;
 }

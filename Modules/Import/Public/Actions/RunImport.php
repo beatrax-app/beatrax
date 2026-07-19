@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Actions;
 
+use Generator;
 use Illuminate\Contracts\Filesystem\Factory as StorageFactory;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -14,6 +15,7 @@ use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Import\Public\Services\EloquentAccountResolver;
+use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Models\ImportRun;
 use RuntimeException;
 
@@ -173,5 +175,106 @@ final class RunImport implements RunsImports
         $preview = $this->runFromUpload($localPath, $sourceFormat, $user, $originalFilename, $formatHint);
 
         return ($this->confirmAction)($preview->importRunId, $user);
+    }
+
+    /**
+     * Mirrors `runFromUpload()`'s shape for a remote-fetch caller (e.g.
+     * `Modules\OpenBanking`'s Enable Banking adapter) with no local file
+     * to hash and copy:
+     *
+     *  1. Dedup at the `ImportRun` grain on `$idempotencyKey` instead of a
+     *     file SHA-256 (there is no file — see the contract's docblock for
+     *     the deterministic-window-key requirement).
+     *  2. Create-or-reuse an `ImportRun` row with `status='previewed'`.
+     *     `raw_file_path` has no real file to point at, so it carries a
+     *     synthetic, deterministic marker derived from the same key —
+     *     stable across re-fetches of the same window, distinct across
+     *     windows, and never mistaken for a real on-disk path.
+     *  3. Run `ImportPipeline::previewFromGenerator()` (not `preview()`) —
+     *     the generator-driven counterpart that skips
+     *     `persistStatementMetadata()` (no CAMT-shaped statement summary
+     *     for a point-in-time OB balance).
+     *  4. Count enriched rows, wrap in `ImportPreviewResult`, cache via
+     *     `PreviewCache::put()` — identical to the upload path.
+     *
+     * @param  Generator<int, SourceTransactionDto>  $sourceRows
+     */
+    public function runFromRemoteFetch(Generator $sourceRows, string $sourceFormat, User $user, string $idempotencyKey): ImportPreviewResult
+    {
+        /** @var ImportRun|null $existing */
+        $existing = ImportRun::query()
+            ->where('user_id', $user->id)
+            ->where('sha256', $idempotencyKey)
+            ->first();
+
+        if ($existing !== null && $existing->status === 'confirmed') {
+            // Same short-circuit as runFromUpload(): the window was
+            // already fetched and landed, so there is nothing left to
+            // preview for this exact idempotency key.
+            return new ImportPreviewResult(
+                importRunId: $existing->id,
+                rows: [],
+                accountsToName: [],
+            );
+        }
+
+        if ($existing !== null) {
+            // Reused row from a prior 'previewed' or 'discarded' attempt —
+            // reset the audit fields exactly like runFromUpload()'s reuse
+            // branch so stale counters/status never leak into the fresh
+            // preview.
+            $existing->update([
+                'source_format' => $sourceFormat,
+                'status' => 'previewed',
+                'uploaded_at' => $this->clock->now(),
+                'confirmed_at' => null,
+                'inserted_count' => 0,
+                'duplicate_count' => 0,
+                'error_count' => 0,
+            ]);
+            $importRun = $existing;
+        } else {
+            $importRun = ImportRun::create([
+                'user_id' => $user->id,
+                'source_format' => $sourceFormat,
+                'raw_file_path' => $this->syntheticRawFilePath($idempotencyKey),
+                'sha256' => $idempotencyKey,
+                'uploaded_at' => $this->clock->now(),
+                'status' => 'previewed',
+            ]);
+        }
+
+        $accounts = new EloquentAccountResolver($user);
+        $result = $this->pipeline->previewFromGenerator($sourceRows, $sourceFormat, $accounts, $user, $importRun->id);
+
+        $enrichedCount = 0;
+        foreach ($result['rows'] as $row) {
+            if ($row->status === 'enriched') {
+                $enrichedCount++;
+            }
+        }
+
+        $previewResult = new ImportPreviewResult(
+            importRunId: $importRun->id,
+            rows: $result['rows'],
+            accountsToName: $result['unknownIbans'],
+            enrichedCount: $enrichedCount,
+        );
+
+        $this->cache->put($importRun->id, $previewResult, $result['canonical'], $result['enrichments']);
+
+        return $previewResult;
+    }
+
+    /**
+     * `raw_file_path` is a required, non-nullable column with no FK to
+     * storage — it is a plain audit string. There is no on-disk file for a
+     * remote fetch, so this carries a marker that is deterministic (same
+     * key -> same marker, matching the row-reuse behaviour above) and is
+     * unambiguously not a real filesystem path.
+     */
+    private function syntheticRawFilePath(string $idempotencyKey): string
+    {
+        return sprintf('open-banking://%s', $idempotencyKey);
     }
 }
