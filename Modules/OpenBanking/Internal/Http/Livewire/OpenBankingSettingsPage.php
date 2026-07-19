@@ -570,7 +570,10 @@ final class OpenBankingSettingsPage extends Component
     public function rules(): array
     {
         return [
-            'icsStatement' => ['required', 'file', 'max:10240', 'extensions:pdf'],
+            // IN-03: max:1024 KB (1 MB) matches the "normally under 1 MB"
+            // copy below; mimetypes checks the actual sniffed content type
+            // rather than trusting the client-supplied extension alone.
+            'icsStatement' => ['required', 'file', 'max:1024', 'mimetypes:application/pdf', 'extensions:pdf'],
         ];
     }
 
