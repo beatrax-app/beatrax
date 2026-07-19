@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Internal\Adapters\EnableBanking;
 
+use Brick\Math\Exception\MathException;
+use Brick\Money\Exception\MoneyException;
 use Brick\Money\Money;
 use Carbon\CarbonImmutable;
 use Generator;
@@ -11,6 +13,8 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use RuntimeException;
 
 /**
@@ -62,6 +66,7 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
 {
     public function __construct(
         private readonly EnableBankingHttpClient $client,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {}
 
     public function format(): string
@@ -88,7 +93,15 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
                     continue;
                 }
 
-                yield $this->buildDto($row, $ownIban, $rowIndex);
+                $dto = $this->buildDto($row, $ownIban, $rowIndex);
+                if ($dto === null) {
+                    // WR-03: a single malformed-money booked row is skipped
+                    // at row level (logged in buildDto) rather than aborting
+                    // the whole generator-driven fetch mid-import.
+                    continue;
+                }
+
+                yield $dto;
                 $rowIndex++;
             }
 
@@ -150,12 +163,28 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
         return is_string($key) && $key !== '' ? $key : null;
     }
 
-    private function buildDto(EnableBankingTransactionData $row, string $ownIban, int $rowIndex): SourceTransactionDto
+    private function buildDto(EnableBankingTransactionData $row, string $ownIban, int $rowIndex): ?SourceTransactionDto
     {
         $currency = strtoupper($row->currency);
         $isDebit = $row->creditDebitIndicator === 'DBIT';
 
-        $amountMinor = Money::of($row->amount, $currency)->getMinorAmount()->toInt();
+        // WR-03: validate money before touching Money::of(). An empty/
+        // unknown currency (UnknownCurrencyException) or a non-numeric /
+        // over-precise amount (Math\*Exception) must skip THIS row, not
+        // abort the entire fetch generator. Exact-money semantics are
+        // preserved for valid rows (still derived via Brick\Money, never
+        // via (float)).
+        try {
+            $amountMinor = Money::of($row->amount, $currency)->getMinorAmount()->toInt();
+        } catch (MoneyException|MathException $e) {
+            $this->logger->warning(
+                'EnableBankingSourceAdapter: skipping booked row with malformed money.',
+                ['currency' => $currency, 'reason' => $e->getMessage()],
+            );
+
+            return null;
+        }
+
         if ($isDebit && $amountMinor > 0) {
             $amountMinor = -$amountMinor;
         }
