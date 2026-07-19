@@ -124,8 +124,21 @@ final class OpenBankingConnectController
                 ->with('open_banking_failed', 'Enable Banking returned an unparseable consent URL.');
         }
 
+        $scaHost = strtolower($scaHost);
+
+        // WR-01: the SCA host is about to be persisted into the egress
+        // allow-list. An aggregator response (or TLS-defeating MITM)
+        // supplying a loopback / link-local / private / bare host must
+        // never widen that allow-list to an internal target — reject it
+        // cleanly before persisting.
+        if (! $this->isPublicScaHost($scaHost)) {
+            return $this->redirector
+                ->route('settings.open-banking')
+                ->with('open_banking_failed', 'Enable Banking returned a non-public consent host.');
+        }
+
         try {
-            $this->persistResolvedScaHost(strtolower($scaHost), $institutionId);
+            $this->persistResolvedScaHost($scaHost, $institutionId);
         } catch (SecretsWriteFailed $e) {
             return $this->redirector
                 ->route('settings.open-banking')
@@ -156,5 +169,31 @@ final class OpenBankingConnectController
             bankScaHost: $scaHost,
             institutionId: $institutionId,
         ));
+    }
+
+    /**
+     * A bank SCA host is only allow-listable if it is a public FQDN.
+     * Refuse `localhost`, bare single-label hostnames, and IP literals
+     * that resolve into loopback / link-local / private / reserved
+     * ranges (WR-01) so the egress allow-list can never be widened to an
+     * internal target.
+     */
+    private function isPublicScaHost(string $host): bool
+    {
+        if ($host === '' || $host === 'localhost') {
+            return false;
+        }
+
+        // IP literal (v4 or v6): accept only public, non-reserved addresses.
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            return filter_var(
+                $host,
+                FILTER_VALIDATE_IP,
+                FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
+            ) !== false;
+        }
+
+        // Otherwise require a dotted FQDN — reject bare single-label hosts.
+        return str_contains($host, '.');
     }
 }
