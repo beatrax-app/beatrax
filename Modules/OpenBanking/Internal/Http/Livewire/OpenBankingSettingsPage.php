@@ -296,6 +296,17 @@ final class OpenBankingSettingsPage extends Component
         return self::relativeAndAbsolute($this->lastAttemptAtIso);
     }
 
+    /**
+     * The B4 "Last attempt" row renders ONLY when the last attempt did not
+     * succeed — `SyncOpenBankingAccountJob` writes `last_attempt_status`
+     * as `'ok'` on success and `'consent_failed'`/`'error'` on failure
+     * (never null once at least one attempt has run).
+     */
+    public function lastAttemptFailed(): bool
+    {
+        return $this->lastAttemptStatus !== null && $this->lastAttemptStatus !== 'ok';
+    }
+
     private static function relativeAndAbsolute(?string $iso): ?string
     {
         if ($iso === null) {

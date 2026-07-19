@@ -47,6 +47,9 @@
         </div>
     </div>
 
+    {{-- ===== B4: transparency panel (Req 6) ===== --}}
+    @include('openbanking::partials.open-banking-transparency-panel')
+
     @include('openbanking::partials.open-banking-warning-modal')
 
     {{-- ===== Disconnect confirm — shared by the ON->OFF toggle click and
