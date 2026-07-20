@@ -67,14 +67,9 @@ final class EncryptedBackupDownload extends Component
 
         $stamp = $clock->now()->format('Y-m-d-His');
         // Stage the plaintext snapshot inside a private 0700 directory under
-        // the app storage root — NEVER sys_get_temp_dir(), which is world-
-        // traversable (e.g. /tmp at mode 1777). VACUUM INTO bypasses PHP's
-        // umask and creates the file at 0644, so during the (potentially
-        // long) snapshot the entire plaintext database would otherwise be
-        // readable by any other local user; a 0700 parent dir closes that
-        // window regardless of the file's own transient mode. Mirrors the
-        // db:backup command, which likewise stages under app storage rather
-        // than /tmp.
+        // app storage — NEVER sys_get_temp_dir() (world-traversable, e.g.
+        // /tmp at 1777). VACUUM INTO creates the file at 0644 via PHP's
+        // umask bypass, so the 0700 parent dir is what keeps it private.
         $stagingDir = UserDataPathService::appPath('tmp-backups');
         @mkdir($stagingDir, 0700, true);
         @chmod($stagingDir, 0700);
@@ -102,7 +97,8 @@ final class EncryptedBackupDownload extends Component
 
             return null;
         } finally {
-            // The plaintext snapshot must never outlive the encryption step.
+            // The plaintext snapshot must never outlive the encryption step —
+            // unlink runs unconditionally, success or failure.
             @unlink($plainPath);
         }
 

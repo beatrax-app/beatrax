@@ -16,7 +16,7 @@ use Modules\Core\Public\Services\NavCountsService;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 
 /**
- * Persistent left sidebar (Phase 16 D-05). Rendered from
+ * Persistent left sidebar. Rendered from
  * `layouts/app.blade.php` within an `@auth` guard so unauthenticated
  * pages (login, error pages) do not see it.
  *

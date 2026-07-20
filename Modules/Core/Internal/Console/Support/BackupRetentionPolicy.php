@@ -97,27 +97,20 @@ final class BackupRetentionPolicy
             return array_values($kept);
         }
 
-        // Sort matched entries by date+time DESC (newest first).
         usort(
             $matched,
             static fn (array $a, array $b): int => strcmp($b['date_key'], $a['date_key']),
         );
 
-        // Daily: take the 7 most-recent matched files.
         $dailyKeepIndexes = [];
         foreach (array_slice($matched, 0, self::DAILY_KEEP_COUNT) as $entry) {
             $dailyKeepIndexes[$entry['index']] = true;
         }
 
-        // Weekly: take the 4 most-recent matched files whose date is a Sunday.
-        // The regex captures digit-shaped components but does not enforce
-        // calendar validity — a filename like beatrax-2026-13-99-250000.sqlite
-        // passes the regex and would crash CarbonImmutable::parse() with
-        // an InvalidFormatException, breaking the otherwise-pure policy
-        // and aborting the retention sweep mid-flight. Treat calendar-
-        // invalid dates the same as non-Sunday entries (skipped, never
-        // promoted into the keep set) so a malformed filename never
-        // halts the sweep.
+        // Weekly: take the 4 most-recent Sunday-dated matched files. The
+        // regex accepts digit-shaped components without calendar validity,
+        // so a bogus date like 2026-13-99 would crash CarbonImmutable::parse()
+        // — treat it as non-Sunday (skipped) rather than halting the sweep.
         $sundayKeepIndexes = [];
         $sundayCount = 0;
         foreach ($matched as $entry) {
@@ -141,7 +134,8 @@ final class BackupRetentionPolicy
             }
         }
 
-        // Re-key in original input order so the output is stable.
+        // Re-key in original input order (not the DESC sort above) so the
+        // output is stable for downstream logging.
         ksort($kept);
 
         return array_values($kept);

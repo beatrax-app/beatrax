@@ -57,12 +57,14 @@ final class LoopbackOnly
         $length = strlen($binary);
 
         if ($length === 4) {
-            // 127.0.0.0/8 — first byte 0x7f covers every IPv4 loopback.
+            // 127.0.0.0/8 covers every IPv4 loopback address — checking only
+            // the first byte (0x7f) is sufficient for the full /8 range.
             return $binary[0] === "\x7f";
         }
 
         if ($length === 16) {
-            // ::1 — fifteen NUL bytes followed by 0x01.
+            // ::1 is fifteen NUL bytes followed by 0x01 — compare the exact
+            // 16-byte binary form rather than parsing text representations.
             if ($binary === str_repeat("\x00", 15)."\x01") {
                 return true;
             }

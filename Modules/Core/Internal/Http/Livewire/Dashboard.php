@@ -102,7 +102,7 @@ final class Dashboard extends Component
      * `user_id` match. Never reads `failed_jobs.payload` with a
      * substring `LIKE` (issue #1 + #8 lock — prevents the user_id=1
      * vs user_id=11 cross-user false-positive). Latest "failed" row
-     * for this user surfaces the persistent toast (D-103); when the
+     * for this user surfaces the persistent toast; when the
      * row is cleared from the audit table (e.g. user retried via
      * `/horizon/failed`) the toast hides on the next poll.
      */
@@ -153,15 +153,10 @@ final class Dashboard extends Component
         $user = $currentUser->user();
         $period = $this->resolvePeriod($periods);
 
-        // Position data (D-30): net worth + budgets + upcoming + shortfalls,
-        // read through the single Modules\Position Public seam so the
-        // dashboard and the position digest can never disagree about what
-        // "your position" means. `$summary` is always computed: the top-
-        // spending and recent-transactions panels remain settled-EUR-only
-        // regardless of mode. The per-currency split applies only to the
-        // KPI tiles at the top of the page — `PositionSummaryDto::
-        // $tilesByCurrency` already mirrors that same
-        // `default_currency_view === 'original'` toggle byte-identically.
+        // Position data: net worth + budgets + upcoming + shortfalls, read
+        // through the single Modules\Position Public seam so the dashboard
+        // and the position digest can never disagree about "your position".
+        // `$summary` stays settled-EUR-only; only the KPI tiles split per-currency.
         $positionSummary = $position->forUser($user, $period);
         $summary = $positionSummary->summary;
         $tiles = $positionSummary->tilesByCurrency;
@@ -171,11 +166,10 @@ final class Dashboard extends Component
         // first contract as the Next-ICS-settlement tile above.
         $emailScanHealth = $positionSummary->emailScanHealth;
 
-        // Persistent reauth toast trigger: lit when at least one inbox
-        // is in needs_reauth state. The Blade also reads the session
-        // dismiss-flag to suppress the toast once the user clicks the
-        // × icon; the toast re-surfaces if a fresh needs_reauth state
-        // appears after dismissal in a later session.
+        // Persistent reauth toast trigger: lit when at least one inbox is in
+        // needs_reauth state. The Blade also reads the session dismiss-flag
+        // to suppress the toast once clicked; it re-surfaces if a fresh
+        // needs_reauth state appears after dismissal in a later session.
         $reauthInboxCount = $db->connection()
             ->table('inbox_scan_state')
             ->where('user_id', $user->id)

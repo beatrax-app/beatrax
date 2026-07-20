@@ -33,13 +33,13 @@ use Modules\Ledger\Models\Currency;
  *  - `recurringIncomeMinAmountMinor` — incomes whose absolute amount is
  *    below this threshold are not auto-clustered into income series.
  *    Stored as signed BIGINT minor units; 0 disables the threshold.
- *  - `baseCurrency` — the ISO-4217 reporting currency for all roll-ups
+ *  - `baseCurrency` — the ISO 4217 reporting currency for all roll-ups
  *    (net worth, dashboard totals, budgets, forecasts). Saved with the
  *    batch Save button; validated against the seeded currencies table.
  *  - `fxOnlineEnabled` — opt-in toggle for online exchange-rate fetch.
- *    Persists instantly (no Save button); defaults false per D-04.
+ *    Persists instantly (no Save button); defaults false.
  *  - `refreshFxRates()` — dispatches FetchFxRatesJob for the current user
- *    on demand (D-06 manual refresh).
+ *    on demand.
  *
  * Service collaborators arrive as parameters on each action method; the
  * Livewire strict-rules ruleset forbids constructor-DI on Component
@@ -131,14 +131,14 @@ final class SettingsPage extends Component
      * DB. Saved with the batch Save button (deferred wire:model), consistent
      * with defaultCurrencyView and periodStartDay.
      *
-     * D-03: when base_currency equals the figure's currency, zero overhead.
+     * When base_currency equals the figure's currency, zero conversion overhead applies.
      */
     #[Validate('nullable|string|size:3|exists:currencies,code')]
     public string $baseCurrency = 'EUR';
 
     /**
-     * Opt-in toggle for online exchange-rate fetch (D-04). Off by default
-     * (T-04-03: outbound fetch is explicit user consent). Persists instantly
+     * Opt-in toggle for online exchange-rate fetch. Off by default since
+     * outbound fetch requires explicit user consent. Persists instantly
      * via toggleFxOnline() without a Save round-trip — mirrors the
      * autoImportFromDropFolder pattern.
      */
@@ -173,7 +173,6 @@ final class SettingsPage extends Component
         $this->baseCurrency = $user->base_currency ?? 'EUR';
         $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
 
-        // Hydrate fxLastUpdated from the latest exchange_rates row (if any).
         $latestRate = $db->connection()
             ->table('exchange_rates')
             ->orderByDesc('rate_date')
@@ -266,11 +265,11 @@ final class SettingsPage extends Component
     }
 
     /**
-     * Instant-apply toggle for the online exchange-rate fetch opt-in (D-04).
+     * Instant-apply toggle for the online exchange-rate fetch opt-in.
      * Mirrors toggleAutoImport: flips the property, then writes via raw
      * query-builder so the DB change is a single round-trip without Eloquent
      * change tracking. Scoped to the current user's row — user_id is never
-     * read from the request (T-04-02 / V4 access-control).
+     * read from the request.
      */
     public function toggleFxOnline(CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
     {
@@ -287,13 +286,12 @@ final class SettingsPage extends Component
     }
 
     /**
-     * Dispatches FetchFxRatesJob for the current user on demand (D-06).
+     * Dispatches FetchFxRatesJob for the current user on demand.
      * Sets fxRefreshing to give the UI immediate feedback while the job
      * is queued. The dispatch goes through DispatchFxRatesRefresh (the FX
      * module's Public action) so this Core component never reaches into
      * FX's Internal namespace (cross-module boundary rule).
-     * User id is always resolved from CurrentUser — never from the request
-     * (T-04-02 / V4 access-control).
+     * User id is always resolved from CurrentUser — never from the request.
      */
     public function refreshFxRates(DispatchFxRatesRefresh $dispatch, CurrentUser $currentUser): void
     {

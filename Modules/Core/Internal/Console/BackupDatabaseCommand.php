@@ -79,13 +79,10 @@ final class BackupDatabaseCommand extends Command
         try {
             $liveDataVersion = $this->readDataVersion($livePath);
         } catch (PDOException $e) {
-            // Corrupt source detected before VACUUM INTO even runs. No
-            // backup file or .suspect file exists on disk yet (VACUUM
-            // INTO never ran), so the alert intentionally carries a
-            // null suspect path — recordCorruptAlert() phrases the
-            // message around "aborted before any file was produced"
-            // rather than pointing the operator at a file they will
-            // never find.
+            // Corrupt source detected before VACUUM INTO even runs — no
+            // backup or .suspect file exists yet, so the alert's suspect
+            // path is null and the message says "aborted before any file
+            // was produced" rather than pointing at a nonexistent file.
             $basenameForAlert = 'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
             $destinationForAlert = $backupsDir.DIRECTORY_SEPARATOR.$basenameForAlert;
             $this->recordCorruptAlert($destinationForAlert, null, [
@@ -107,30 +104,24 @@ final class BackupDatabaseCommand extends Command
         $destination = $backupsDir.DIRECTORY_SEPARATOR.$basename;
 
         try {
-            // SQLite does not accept bound parameters for VACUUM INTO's
-            // target string (the target is a parse-time constant), so
-            // the destination is interpolated literally. Reject any
-            // path that carries shell- or SQL-hostile bytes before the
-            // sprintf so a future change to the backups() directory
-            // composition cannot smuggle a NUL byte, newline, or
-            // unescaped single quote into the statement.
+            // VACUUM INTO's target string is a parse-time constant with no
+            // bound parameters, so the destination is interpolated literally.
+            // Reject shell/SQL-hostile bytes first so a future directory-
+            // composition change cannot smuggle a NUL, newline, or quote in.
             if (preg_match('/[\x00\n\r]/', $destination) === 1) {
                 throw new RuntimeException('Backup destination path contains an unsafe byte (NUL / newline).');
             }
             $escaped = str_replace("'", "''", $destination);
-            // VACUUM INTO must NOT run inside a transaction (SQLite refuses).
-            // The destination path must not exist yet; SQLite refuses to
-            // overwrite. The basename includes seconds resolution so a
-            // re-invocation in the same second is the only ambiguous case
-            // — acceptable for v1.
+            // VACUUM INTO must NOT run inside a transaction (SQLite refuses)
+            // and the destination path must not already exist. The basename
+            // includes seconds resolution, so a re-invocation within the same
+            // second is the one ambiguous case — acceptable for v1.
             $this->db->connection('sqlite')->statement(sprintf("VACUUM INTO '%s'", $escaped));
         } catch (PDOException $e) {
-            // Corrupt-source exception bridge: VACUUM INTO refused the
-            // source DB (truncated, malformed header, etc.). The output
-            // file may or may not exist; if it does, rename it to
-            // .suspect for the operator to inspect. Surface the failure
-            // via the same system_alerts row the integrity-check branch
-            // produces.
+            // Corrupt-source bridge: VACUUM INTO refused the source DB
+            // (truncated, malformed header, etc). If an output file exists,
+            // rename it to .suspect for inspection, then surface the failure
+            // via the same system_alerts row the integrity-check branch uses.
             $suspect = $destination.'.suspect';
             if ($this->files->exists($destination)) {
                 $this->files->move($destination, $suspect);
@@ -158,20 +149,15 @@ final class BackupDatabaseCommand extends Command
             return self::FAILURE;
         }
 
-        // Immediately chmod 0600. `VACUUM INTO` bypassed PHP's umask
-        // narrowing trick (the file was created by SQLite via open(2)),
-        // so the explicit chmod is the only thing keeping the file out
-        // of group / world read.
-        // Filesystem::chmod returns mixed (bool on write, string-octal on
-        // read), so compare against the explicit failure sentinel rather
-        // than negating an unknown-typed value.
+        // Immediately chmod 0600 since VACUUM INTO bypassed PHP's umask
+        // narrowing (SQLite created the file via open(2)). Filesystem::chmod
+        // returns mixed (bool on write, string-octal on read), so the check
+        // below compares against the explicit `false` failure sentinel.
         if ($this->files->chmod($destination, 0o600) === false) {
-            // Chmod failure makes the file unsafe to retain (group /
-            // world readability cannot be ruled out), so it is deleted
-            // immediately. The alert intentionally carries a null
-            // suspect path — by the time recordCorruptAlert() runs the
-            // file no longer exists, and pointing the operator at a
-            // path they will never find would be misleading.
+            // Chmod failure makes the file unsafe to retain (group/world
+            // readability cannot be ruled out), so it is deleted immediately.
+            // The alert's suspect path is null since the file no longer
+            // exists by the time recordCorruptAlert() runs.
             $this->files->delete($destination);
             $this->recordCorruptAlert($destination, null, [
                 'phase' => 'chmod',
@@ -200,13 +186,10 @@ final class BackupDatabaseCommand extends Command
         try {
             $this->writeSidecar($destination, $liveDataVersion, $startedAt->toIso8601String(), $completedAt->toIso8601String());
         } catch (RuntimeException $e) {
-            // Sidecar I/O failure leaves the backup file on disk but
-            // without a .meta.json sidecar, which would cause the next
-            // db:backup to misread "no recent backup exists" via the
-            // smart-skip path and silently re-write or skip. Surface
-            // the failure as the same critical system_alerts row the
-            // other corrupt-path branches produce so the operator is
-            // notified instead of debugging a phantom backup.
+            // Sidecar I/O failure leaves the backup on disk without a
+            // .meta.json, which would make the next db:backup misread "no
+            // recent backup exists" via smart-skip and silently re-write.
+            // Surface it via the same critical system_alerts row instead.
             $this->recordCorruptAlert($destination, null, [
                 'phase' => 'sidecar_write',
                 'reason' => $e->getMessage(),
@@ -323,14 +306,10 @@ final class BackupDatabaseCommand extends Command
             return false;
         }
 
-        // Most-recent by parsed-timestamp basename. Sorting the basenames
-        // (not the full paths) means a future refactor that introduces
-        // a sibling filename family or changes the parent directory
-        // shape cannot accidentally flip the "newest" winner — only the
-        // YYYY-MM-DD-HHMMSS suffix governs the order. The basename
-        // shape is fixed (`beatrax-` prefix + zero-padded fixed-width
-        // timestamp + `.sqlite.meta.json` suffix), so basename strcmp
-        // descending IS chronological descending.
+        // Most-recent by parsed-timestamp basename: sorting basenames (not
+        // full paths) means directory-shape changes cannot flip the winner.
+        // The fixed `beatrax-` + zero-padded timestamp + `.sqlite.meta.json`
+        // shape makes basename strcmp descending == chronological descending.
         usort($candidates, static fn (string $a, string $b): int => strcmp(basename($b), basename($a)));
         $newest = $candidates[0];
         if (! is_file($newest)) {
@@ -386,11 +365,10 @@ final class BackupDatabaseCommand extends Command
             if (rename($tmp, $sidecar) === false) {
                 throw new RuntimeException('Failed to rename sidecar tmp file to '.$sidecar.'.');
             }
-            // Belt-and-braces chmod on the final path. rename() preserves
-            // the tmp file's mode on every common filesystem, so failure
-            // here is non-fatal — but the @-suppression keeps a spurious
-            // warning from polluting `db:backup` stdout in the rare case
-            // the underlying filesystem rejects fchmod after the rename.
+            // Belt-and-braces chmod: rename() preserves the tmp file's mode
+            // on every common filesystem, so failure here is non-fatal — the
+            // @-suppression only guards against a filesystem that rejects
+            // fchmod after the rename.
             @chmod($sidecar, 0o600);
         } finally {
             umask($prevUmask);
@@ -423,14 +401,12 @@ final class BackupDatabaseCommand extends Command
             if (isset($keeperSet[$name])) {
                 continue;
             }
-            // The retention policy never returns a non-matching basename
-            // as "to-be-pruned" — non-matching names (.suspect,
-            // pre-restore-*, .meta.json) are always kept. The names that
-            // reach this branch are matching daily basenames the policy
-            // omitted from the keep set.
+            // The retention policy never marks a non-matching basename
+            // (.suspect, pre-restore-*, .meta.json) as "to-be-pruned" — only
+            // matching daily basenames the policy omitted from the keep set
+            // reach this branch.
             $this->files->delete($backupsDir.DIRECTORY_SEPARATOR.$name);
 
-            // Drop the matching sidecar alongside its parent.
             $sidecar = $backupsDir.DIRECTORY_SEPARATOR.$name.'.meta.json';
             if ($this->files->exists($sidecar)) {
                 $this->files->delete($sidecar);

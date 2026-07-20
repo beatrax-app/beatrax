@@ -68,19 +68,16 @@ final class CoreServiceProvider extends ServiceProvider
 
         // Single source of truth for every filesystem path the app reads or
         // writes. Dependency-free and stateless, so a plain singleton (no
-        // closure, no contextual binding) is the correct shape; DI consumers
-        // resolve it through ordinary constructor injection. The backup
-        // command, restore command, and freshness probe all inject this
-        // service to resolve the backups directory.
+        // closure) is correct; the backup command, restore command, and
+        // freshness probe all inject this service to resolve the backups dir.
         $this->app->singleton(UserDataPathService::class);
         $this->app->singleton(NavCountsService::class);
         $this->app->singleton(RestoreEncryptedBackup::class);
 
-        // D-09: the enable-time backup-first atomic encryption migration
-        // (CRYPT-01, Phase 14 Plan 06). Depends on Modules\Sync\Internal\Crypto
-        // singletons (GdkKeyringService/OpLogFieldCrypto) already registered
-        // by SyncServiceProvider::register() — binding order across module
-        // providers does not matter since container resolution is lazy.
+        // The backup-first atomic encryption migration depends on
+        // Modules\Sync\Internal\Crypto singletons (GdkKeyringService /
+        // OpLogFieldCrypto) already registered by SyncServiceProvider::
+        // register() — binding order across module providers doesn't matter.
         $this->app->singleton(EncryptionMigrationService::class);
 
         if (! class_exists(User::class, false)) {

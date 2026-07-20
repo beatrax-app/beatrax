@@ -164,21 +164,10 @@ final class BackupFreshnessProbe implements Probe
     private function recordOverdueAlert(?int $hoursOld): void
     {
         try {
-            // Recency check via the raw Query Builder rather than
-            // Eloquent — the project's larastan-strict-rules profile
-            // rejects chained Eloquent\Builder calls (whereNull / where
-            // / exists) after Model::query(). The write below uses
-            // Eloquent so the timestamp casts + fillable filtering
-            // apply.
-            //
-            // The cutoff is normalised to UTC before serialising into
-            // the query because SQLite's `useCurrent()` /
-            // CURRENT_TIMESTAMP default writes the column in UTC, while
-            // `CarbonImmutable::now()` returns the configured app
-            // timezone. Comparing a local-time Carbon against a UTC
-            // string would silently exclude rows whose UTC clock-time
-            // is earlier than the local-time cutoff, defeating the
-            // duplicate-suppression gate.
+            // Recency check uses the raw Query Builder (not Eloquent) since
+            // larastan-strict-rules rejects chained Eloquent\Builder calls
+            // after Model::query(). The cutoff is normalised to UTC because
+            // SQLite's CURRENT_TIMESTAMP default writes in UTC, not app-local.
             $cutoff = $this->clock->now()->subHour()->setTimezone('UTC');
             $recentExists = $this->db->connection()->table('system_alerts')
                 ->where('kind', 'backup_overdue')

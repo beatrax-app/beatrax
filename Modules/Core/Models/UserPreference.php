@@ -37,13 +37,13 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  *     can apply the suppression filter without per-row decoding.
  *   - `calendar_entries_accounts` — JSON array of account IDs whose
  *     recurring entries appear on the /calendar grid. Null = all accounts
- *     (entries all ON per D-03). Resolved at CalendarQuery read time.
+ *     (entries all ON by default). Resolved at CalendarQuery read time.
  *   - `calendar_balance_accounts` — JSON array of account IDs whose
  *     forecast balances are summed for the calendar balance line. Null =
- *     spendable default (checking + PayPal ON; savings + ICS OFF per D-03).
+ *     spendable default (checking + PayPal ON; savings + ICS OFF).
  *     Resolved at CalendarQuery read time.
  *   - `reports_index_view` — `/reports/library` index view mode
- *     (`cards` | `list`, 999.6-09). Default `cards` materialises at the
+ *     (`cards` | `list`). Default `cards` materialises at the
  *     DB boundary, same convention as `counterparty_index_view`.
  *
  * @property int $id
