@@ -27,6 +27,7 @@ historical provenance.
 | [0008](0008-multi-user-belongstouser.md)    | Multi-user readiness via `BelongsToUser` + explicit `user_id` filters | Accepted |
 | [0009](0009-brick-money-multi-currency.md)  | `brick/money` for multi-currency arithmetic                 | Accepted |
 | [0010](0010-recovery-codes-no-smtp.md)      | Password reset via recovery codes; no SMTP-based reset in v2.0 | Accepted |
+| [0011](0011-code-comment-policy.md)         | Code comment policy: readable code, architecture in `.docs`   | Accepted |
 
 ## Reading order
 
@@ -52,3 +53,7 @@ Then the domain-specific calls:
 8. [ADR 0009 — `brick/money`](0009-brick-money-multi-currency.md)
 9. [ADR 0008 — Multi-user via `BelongsToUser`](0008-multi-user-belongstouser.md)
 10. [ADR 0010 — Recovery codes, no SMTP reset](0010-recovery-codes-no-smtp.md)
+
+And the coding-convention invariant that shapes every source file:
+
+11. [ADR 0011 — Code comment policy](0011-code-comment-policy.md)

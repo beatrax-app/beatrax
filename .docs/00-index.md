@@ -19,6 +19,7 @@ but the rest of the tree reads as standalone reference — no "we used to do X" 
 |---|---|
 | [Architecture Decision Records](adr/) | Why the system is shaped the way it is |
 | [Architecture](architecture/) | Module boundaries, pipelines, data model |
+| [Conventions](conventions/) | Day-to-day coding rules (e.g. code comments) |
 | [Features](features/) | Per-module deep dives |
 | [CI/CD](cicd/) | Quality gate, release pipeline, branch protection |
 | [Local Development](local_development/) | Setup, database, troubleshooting, dev mode |
